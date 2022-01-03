@@ -20,10 +20,14 @@ pub struct GoXLR<T: UsbContext> {
     command_count: u16,
 }
 
+const VID_GOXLR: u16 = 0x1220;
+const PID_GOXLR_MINI: u16 = 0x8fe4;
+const PID_GOXLR_FULL: u16 = 0x8fe0;
+
 impl GoXLR<GlobalContext> {
     pub fn open() -> Result<Self, ConnectError> {
         let mut handle =
-            rusb::open_device_with_vid_pid(0x1220, 0x8fe4).ok_or(ConnectError::DeviceNotFound)?;
+            rusb::open_device_with_vid_pid(VID_GOXLR, PID_GOXLR_FULL).ok_or(ConnectError::DeviceNotFound)?;
         let device = handle.device();
         let device_descriptor = device.device_descriptor()?;
         let timeout = Duration::from_secs(1);
