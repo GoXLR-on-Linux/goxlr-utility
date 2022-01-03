@@ -1,22 +1,24 @@
+use crate::channels::Channel;
 use crate::commands::Command;
+use crate::commands::SystemInfoCommand;
+use crate::commands::SystemInfoCommand::SupportsDCPCategory;
 use crate::dcp::DCPCategory;
 use crate::error::ConnectError;
-use crate::SystemInfoCommand::SupportsDCPCategory;
-use crate::{Channel, Fader, SystemInfoCommand};
+use crate::faders::Fader;
 use byteorder::{ByteOrder, LittleEndian};
 use rusb::{
-    Device, DeviceDescriptor, DeviceHandle, Direction, GlobalContext, Language, Recipient,
-    RequestType, UsbContext,
+    Device, DeviceDescriptor, DeviceHandle, Direction, GlobalContext, Language, LogLevel,
+    Recipient, RequestType, UsbContext,
 };
 use std::thread::sleep;
 use std::time::Duration;
 
 pub struct GoXLR<T: UsbContext> {
     handle: DeviceHandle<T>,
-    device: Device<T>,
-    device_descriptor: DeviceDescriptor,
+    _device: Device<T>,
+    _device_descriptor: DeviceDescriptor,
     timeout: Duration,
-    language: Language,
+    _language: Language,
     command_count: u16,
 }
 
@@ -26,8 +28,9 @@ const PID_GOXLR_FULL: u16 = 0x8fe0;
 
 impl GoXLR<GlobalContext> {
     pub fn open() -> Result<Self, ConnectError> {
-        let mut handle =
-            rusb::open_device_with_vid_pid(VID_GOXLR, PID_GOXLR_FULL).ok_or(ConnectError::DeviceNotFound)?;
+        rusb::set_log_level(LogLevel::Debug);
+        let mut handle = rusb::open_device_with_vid_pid(VID_GOXLR, PID_GOXLR_FULL)
+            .ok_or(ConnectError::DeviceNotFound)?;
         let device = handle.device();
         let device_descriptor = device.device_descriptor()?;
         let timeout = Duration::from_secs(1);
@@ -41,14 +44,42 @@ impl GoXLR<GlobalContext> {
         handle.set_active_configuration(1);
         handle.claim_interface(0);
 
-        Ok(Self {
+        let mut goxlr = Self {
             handle,
-            device,
-            device_descriptor,
+            _device: device,
+            _device_descriptor: device_descriptor,
             timeout,
-            language,
+            _language: language,
             command_count: 0,
-        })
+        };
+
+        println!(
+            "{:X?}",
+            goxlr.read_control(RequestType::Vendor, 0, 0, 0, 24)?
+        ); // ??
+           /* Expected output:
+           0000   73 19 06 04 66 19 10 18 02 00 00 00 01 00 00 00
+           0010   00 04 00 00 00 00 00 00
+                */
+
+        println!(
+            "{:X?}",
+            goxlr.write_control(RequestType::Vendor, 1, 0, 0, &[])?
+        ); // ??
+        println!(
+            "{:X?}",
+            goxlr.read_control(RequestType::Vendor, 3, 0, 0, 1040)?
+        ); // ??
+           /* Expected output:
+           0000   00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+                */
+
+        println!(
+            "{:02X?}",
+            goxlr.request_data(Command::SystemInfo(SystemInfoCommand::FirmwareVersion), &[])?
+        );
+
+        Ok(goxlr)
     }
 }
 
@@ -127,7 +158,7 @@ impl<T: UsbContext> GoXLR<T> {
     }
 
     pub fn get_system_info(&mut self) -> Result<(), rusb::Error> {
-        let result =
+        let _result =
             self.request_data(Command::SystemInfo(SystemInfoCommand::FirmwareVersion), &[])?;
         // TODO: parse that?
         Ok(())
