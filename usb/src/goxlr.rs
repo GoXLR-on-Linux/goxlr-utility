@@ -136,8 +136,9 @@ impl<T: UsbContext> GoXLR<T> {
 
         self.write_control(RequestType::Vendor, 2, 0, 0, &full_request)?;
 
-        // TODO: Find a way to wait for the interrupt, and also a retry mechanism
+        // TODO: A retry mechanism
         sleep(Duration::from_millis(10));
+        self.await_interrupt(Duration::from_secs(2));
 
         let mut response_header = self.read_control(RequestType::Vendor, 3, 0, 0, 1040)?;
         let response = response_header.split_off(16);
@@ -175,10 +176,9 @@ impl<T: UsbContext> GoXLR<T> {
         Ok(())
     }
 
-    pub fn await_interrupt(&mut self) -> Result<(), rusb::Error> {
+    pub fn await_interrupt(&mut self, duration: Duration) -> Result<(), rusb::Error> {
         let mut buffer = [0u8; 6];
-        self.handle
-            .read_interrupt(0x81, &mut buffer, Duration::from_secs(60));
+        self.handle.read_interrupt(0x81, &mut buffer, duration);
         Ok(())
     }
 }
