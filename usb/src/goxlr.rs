@@ -6,9 +6,10 @@ use crate::dcp::DCPCategory;
 use crate::error::ConnectError;
 use crate::faders::Fader;
 use byteorder::{ByteOrder, LittleEndian};
+use log::info;
 use rusb::{
-    Device, DeviceDescriptor, DeviceHandle, Direction, GlobalContext, Language, LogLevel,
-    Recipient, RequestType, UsbContext,
+    Device, DeviceDescriptor, DeviceHandle, Direction, GlobalContext, Language, Recipient,
+    RequestType, UsbContext,
 };
 use std::thread::sleep;
 use std::time::Duration;
@@ -28,12 +29,13 @@ const PID_GOXLR_FULL: u16 = 0x8fe0;
 
 impl GoXLR<GlobalContext> {
     pub fn open() -> Result<Self, ConnectError> {
-        rusb::set_log_level(LogLevel::Debug);
         let mut handle = rusb::open_device_with_vid_pid(VID_GOXLR, PID_GOXLR_FULL)
             .ok_or(ConnectError::DeviceNotFound)?;
         let device = handle.device();
         let device_descriptor = device.device_descriptor()?;
         let timeout = Duration::from_secs(1);
+
+        info!("Found possible GoXLR device at {:?}", device);
 
         let languages = handle.read_languages(timeout)?;
         let language = languages
@@ -53,31 +55,10 @@ impl GoXLR<GlobalContext> {
             command_count: 0,
         };
 
-        println!(
-            "{:X?}",
-            goxlr.read_control(RequestType::Vendor, 0, 0, 0, 24)?
-        ); // ??
-           /* Expected output:
-           0000   73 19 06 04 66 19 10 18 02 00 00 00 01 00 00 00
-           0010   00 04 00 00 00 00 00 00
-                */
+        goxlr.read_control(RequestType::Vendor, 0, 0, 0, 24)?; // ??
 
-        println!(
-            "{:X?}",
-            goxlr.write_control(RequestType::Vendor, 1, 0, 0, &[])?
-        ); // ??
-        println!(
-            "{:X?}",
-            goxlr.read_control(RequestType::Vendor, 3, 0, 0, 1040)?
-        ); // ??
-           /* Expected output:
-           0000   00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-                */
-
-        println!(
-            "{:02X?}",
-            goxlr.request_data(Command::SystemInfo(SystemInfoCommand::FirmwareVersion), &[])?
-        );
+        goxlr.write_control(RequestType::Vendor, 1, 0, 0, &[])?;
+        goxlr.read_control(RequestType::Vendor, 3, 0, 0, 1040)?; // ??
 
         Ok(goxlr)
     }

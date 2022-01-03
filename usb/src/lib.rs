@@ -1,3 +1,4 @@
+pub use rusb;
 pub mod channels;
 pub mod commands;
 pub mod dcp;

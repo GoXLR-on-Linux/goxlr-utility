@@ -1,8 +1,17 @@
 use goxlr_usb::channels::Channel;
 use goxlr_usb::faders::Fader;
 use goxlr_usb::goxlr::GoXLR;
+use simplelog::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    CombinedLogger::init(vec![TermLogger::new(
+        LevelFilter::Debug,
+        Config::default(),
+        TerminalMode::Mixed,
+        ColorChoice::Auto,
+    )])
+    .unwrap();
+
     let mut goxlr = GoXLR::open()?;
 
     goxlr.set_volume(Channel::Mic, 0xFF)?;
