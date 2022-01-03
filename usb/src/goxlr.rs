@@ -29,13 +29,34 @@ const PID_GOXLR_FULL: u16 = 0x8fe0;
 
 impl GoXLR<GlobalContext> {
     pub fn open() -> Result<Self, ConnectError> {
-        let mut handle = rusb::open_device_with_vid_pid(VID_GOXLR, PID_GOXLR_FULL)
-            .ok_or(ConnectError::DeviceNotFound)?;
+        let mut error = ConnectError::DeviceNotFound;
+        for device in rusb::devices()?.iter() {
+            if let Ok(descriptor) = device.device_descriptor() {
+                if descriptor.vendor_id() == VID_GOXLR
+                    && (descriptor.product_id() == PID_GOXLR_FULL
+                        || descriptor.product_id() == PID_GOXLR_MINI)
+                {
+                    match device.open() {
+                        Ok(handle) => return GoXLR::from_device(handle, descriptor),
+                        Err(e) => error = e.into(),
+                    }
+                }
+            }
+        }
+
+        Err(error)
+    }
+}
+
+impl<T: UsbContext> GoXLR<T> {
+    pub fn from_device(
+        mut handle: DeviceHandle<T>,
+        device_descriptor: DeviceDescriptor,
+    ) -> Result<Self, ConnectError> {
         let device = handle.device();
-        let device_descriptor = device.device_descriptor()?;
         let timeout = Duration::from_secs(1);
 
-        info!("Found possible GoXLR device at {:?}", device);
+        info!("Connected to possible GoXLR device at {:?}", device);
 
         let languages = handle.read_languages(timeout)?;
         let language = languages
@@ -62,9 +83,7 @@ impl GoXLR<GlobalContext> {
 
         Ok(goxlr)
     }
-}
 
-impl<T: UsbContext> GoXLR<T> {
     pub fn read_control(
         &mut self,
         request_type: RequestType,
