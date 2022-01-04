@@ -182,6 +182,11 @@ impl<T: UsbContext> GoXLR<T> {
         Ok(())
     }
 
+    pub fn set_button_states(&mut self, data: [u8;24]) -> Result<(), rusb::Error> {
+        self.request_data(Command::SetButtonStates(), &data)?;
+        Ok(())
+    }
+
     pub fn await_interrupt(&mut self, duration: Duration) -> Result<(), rusb::Error> {
         let mut buffer = [0u8; 6];
         self.handle.read_interrupt(0x81, &mut buffer, duration);

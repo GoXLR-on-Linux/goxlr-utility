@@ -4,6 +4,9 @@ use goxlr_usb::faders::Fader;
 use goxlr_usb::goxlr::GoXLR;
 use simplelog::*;
 use goxlr_usb::channelstate::ChannelState;
+use goxlr_usb::buttonstate;
+use goxlr_usb::buttonstate::{Buttons, ButtonStates};
+use goxlr_usb::commands::Command::SetButtonStates;
 
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]
@@ -50,5 +53,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     goxlr.set_channel_state(Channel::System, ChannelState::Unmuted);
 
+    // IMPORTANT: THIS CODE ONLY WORKS WITH THE FULL GOXLR.
+    // So this is a complex one, there's no direct way to retrieve the button colour states
+    // directly from the GoXLR, it's all managed by the app.. So for testing, all we're going
+    // to do here, is a simple example of managing the buttons.
+
+    // Code will be left commented until GoXLR Mini support is added.
+
+    /*
+    // Define our buttons, set them all to a Dimmed State..
+    let mut buttonStates : [u8;24] = [ButtonStates::Dimmed.id(); 24];
+
+    // Now set 'Mute' to a lit state..
+    buttonStates[Buttons::MicrophoneMute.position()] = ButtonStates::On.id();
+
+    // Apply the state.
+    goxlr.set_button_states(buttonStates);
+    */
     Ok(())
 }
