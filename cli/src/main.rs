@@ -7,6 +7,7 @@ use goxlr_usb::channelstate::ChannelState;
 use goxlr_usb::buttonstate;
 use goxlr_usb::buttonstate::{Buttons, ButtonStates};
 use goxlr_usb::commands::Command::SetButtonStates;
+use goxlr_usb::microphone::MicrophoneType;
 use goxlr_usb::routing::{InputDevice, OutputDevice};
 
 #[derive(Parser, Debug)]
@@ -94,6 +95,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     gameRoutingStateRight[OutputDevice::BroadcastMixRight.position()] = 0x20;
     goxlr.set_routing(InputDevice::GameRight, gameRoutingStateRight);
 */
+
+    // Enables Phantom Mode..
+    // goxlr.set_microphone_type(MicrophoneType::Phantom, 40);
 
     Ok(())
 }

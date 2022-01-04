@@ -8,3 +8,4 @@ pub mod dcp;
 pub mod error;
 pub mod faders;
 pub mod goxlr;
+pub mod microphone;
