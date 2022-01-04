@@ -7,6 +7,7 @@ use goxlr_usb::channelstate::ChannelState;
 use goxlr_usb::buttonstate;
 use goxlr_usb::buttonstate::{Buttons, ButtonStates};
 use goxlr_usb::commands::Command::SetButtonStates;
+use goxlr_usb::routing::{InputDevice, OutputDevice};
 
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]
@@ -70,5 +71,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Apply the state.
     goxlr.set_button_states(buttonStates);
     */
+
+    /*
+    Ok, this is awkward as hell, this *WILL* need improving, but proof-of-concept currently..
+
+    Left and Right channels for both sources and destinations appear to be configured separately by
+    the GoXLR, but it's essentially handled with a list of 'on' or 'off' for channels in the
+    correct order. The defined 'on' value is 8192 as a u16, which as bytes and endiand is
+    [0x00, 0x20], so I'm just slapping the 0x20 into the correct byte slot of the list, and
+    sending it run through (correct byte position being provided by an enum for convenience)
+     */
+
+/*
+    let mut gameRoutingStateLeft: [u8;22] = [0; 22];
+    gameRoutingStateLeft[OutputDevice::HeadphonesRight.position()] = 0x20;
+    gameRoutingStateLeft[OutputDevice::BroadcastMixLeft.position()] = 0x20;
+    goxlr.set_routing(InputDevice::GameRight, gameRoutingStateLeft);
+
+
+    let mut gameRoutingStateRight : [u8;22] = [0; 22];
+    gameRoutingStateRight[OutputDevice::HeadphonesLeft.position()] = 0x20;
+    gameRoutingStateRight[OutputDevice::BroadcastMixRight.position()] = 0x20;
+    goxlr.set_routing(InputDevice::GameLeft, gameRoutingStateRight);
+*/
+
     Ok(())
 }

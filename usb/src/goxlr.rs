@@ -14,6 +14,7 @@ use rusb::{
 use std::thread::sleep;
 use std::time::Duration;
 use crate::channelstate::ChannelState;
+use crate::routing::{InputDevice};
 
 pub struct GoXLR<T: UsbContext> {
     handle: DeviceHandle<T>,
@@ -184,6 +185,11 @@ impl<T: UsbContext> GoXLR<T> {
 
     pub fn set_button_states(&mut self, data: [u8;24]) -> Result<(), rusb::Error> {
         self.request_data(Command::SetButtonStates(), &data)?;
+        Ok(())
+    }
+
+    pub fn set_routing(&mut self, input_device: InputDevice, data: [u8;22]) -> Result<(), rusb::Error> {
+        self.request_data(Command::SetRouting(input_device), &data)?;
         Ok(())
     }
 
