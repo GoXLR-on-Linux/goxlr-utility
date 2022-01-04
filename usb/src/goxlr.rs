@@ -176,6 +176,14 @@ impl<T: UsbContext> GoXLR<T> {
         Ok(())
     }
 
+    pub fn set_channel_mute(&mut self, channel: Channel, muted: bool) -> Result<(), rusb::Error> {
+        // If I ever discover this isn't a simple boolean, I'll change it.
+        let state = if !muted { 0x00 } else { 0x01 } as u8;
+
+        self.request_data(Command::SetChannelMute(channel), &[state])?;
+        Ok(())
+    }
+
     pub fn await_interrupt(&mut self, duration: Duration) -> Result<(), rusb::Error> {
         let mut buffer = [0u8; 6];
         self.handle.read_interrupt(0x81, &mut buffer, duration);
