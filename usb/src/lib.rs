@@ -2,6 +2,7 @@ pub use rusb;
 pub mod channels;
 pub mod channelstate;
 pub mod buttonstate;
+pub mod routing;
 pub mod commands;
 pub mod dcp;
 pub mod error;
