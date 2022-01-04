@@ -3,6 +3,7 @@ use goxlr_usb::channels::Channel;
 use goxlr_usb::faders::Fader;
 use goxlr_usb::goxlr::GoXLR;
 use simplelog::*;
+use goxlr_usb::channelstate::ChannelState;
 
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]
@@ -47,7 +48,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     goxlr.set_fader(Fader::C, Channel::Music)?;
     goxlr.set_fader(Fader::D, Channel::System)?;
 
-    //goxlr.set_channel_mute(Channel::System, false);
+    goxlr.set_channel_state(Channel::System, ChannelState::Unmuted);
 
     Ok(())
 }

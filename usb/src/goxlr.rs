@@ -13,6 +13,7 @@ use rusb::{
 };
 use std::thread::sleep;
 use std::time::Duration;
+use crate::channelstate::ChannelState;
 
 pub struct GoXLR<T: UsbContext> {
     handle: DeviceHandle<T>,
@@ -176,11 +177,8 @@ impl<T: UsbContext> GoXLR<T> {
         Ok(())
     }
 
-    pub fn set_channel_mute(&mut self, channel: Channel, muted: bool) -> Result<(), rusb::Error> {
-        // If I ever discover this isn't a simple boolean, I'll change it.
-        let state = if !muted { 0x00 } else { 0x01 } as u8;
-
-        self.request_data(Command::SetChannelMute(channel), &[state])?;
+    pub fn set_channel_state(&mut self, channel: Channel, state: ChannelState) -> Result<(), rusb::Error> {
+        self.request_data(Command::SetChannelState(channel), &[state.id()])?;
         Ok(())
     }
 
