@@ -84,15 +84,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 /*
     let mut gameRoutingStateLeft: [u8;22] = [0; 22];
-    gameRoutingStateLeft[OutputDevice::HeadphonesRight.position()] = 0x20;
+    gameRoutingStateLeft[OutputDevice::HeadphonesLeft.position()] = 0x20;
     gameRoutingStateLeft[OutputDevice::BroadcastMixLeft.position()] = 0x20;
-    goxlr.set_routing(InputDevice::GameRight, gameRoutingStateLeft);
+    goxlr.set_routing(InputDevice::GameLeft, gameRoutingStateLeft);
 
 
     let mut gameRoutingStateRight : [u8;22] = [0; 22];
-    gameRoutingStateRight[OutputDevice::HeadphonesLeft.position()] = 0x20;
+    gameRoutingStateRight[OutputDevice::HeadphonesRight.position()] = 0x20;
     gameRoutingStateRight[OutputDevice::BroadcastMixRight.position()] = 0x20;
-    goxlr.set_routing(InputDevice::GameLeft, gameRoutingStateRight);
+    goxlr.set_routing(InputDevice::GameRight, gameRoutingStateRight);
 */
 
     Ok(())
