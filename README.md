@@ -5,4 +5,5 @@ A tool to initialize and configure a GoXLR without requiring a Windows VM.
 Copy `50-goxlr.rules` to `/etc/udev/rules.d/` and then reload with `sudo udevadm control --reload-rules`
 
 ## Running
-For now `cargo run`. An actual application coming Soon™.
+
+For now `cargo build && sudo ./target/debug/goxlr-cli run`. An actual application coming Soon™.
