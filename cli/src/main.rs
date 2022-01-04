@@ -4,10 +4,12 @@ use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::channels::Channel;
 use goxlr_usb::channelstate::ChannelState;
 use goxlr_usb::commands::Command::SetButtonStates;
+use goxlr_usb::error::ConnectError;
 use goxlr_usb::faders::Fader;
 use goxlr_usb::goxlr::GoXLR;
 use goxlr_usb::microphone::MicrophoneType;
 use goxlr_usb::routing::{InputDevice, OutputDevice};
+use goxlr_usb::rusb::GlobalContext;
 use simplelog::*;
 
 #[derive(Parser, Debug)]
@@ -41,7 +43,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         goxlr_usb::rusb::set_log_level(goxlr_usb::rusb::LogLevel::Debug);
     }
 
-    let mut goxlr = GoXLR::open()?;
+    let mut goxlr = match GoXLR::open() {
+        Ok(goxlr) => goxlr,
+        Err(ConnectError::DeviceNotFound) => {
+            return Err("No GoXLR device (full or mini) was found.".into())
+        }
+        Err(ConnectError::UsbError(goxlr_usb::rusb::Error::Access)) => {
+            return Err("A GoXLR device was found but this application has insufficient permissions to connect to it. (Have you checked the udev config?)".into())
+        }
+        Err(e) => return Err(e.into()),
+    };
 
     goxlr.set_fader(Fader::A, Channel::Mic)?;
     goxlr.set_fader(Fader::B, Channel::Chat)?;
