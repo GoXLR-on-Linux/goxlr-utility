@@ -17,8 +17,7 @@ impl ButtonStates {
 }
 
 pub enum Buttons {
-    // These are all the buttons from the GoXLR Mini, I'm not sure how it handles button states
-    // or commands, but we may need to do some splitting
+    // These are all the buttons from the GoXLR Mini.
     Fader1Mute,
     Fader2Mute,
     Fader3Mute,
@@ -26,7 +25,7 @@ pub enum Buttons {
     Bleep,
     MicrophoneMute,
 
-    // The rest are GoXLR Full Buttons
+    // The rest are GoXLR Full Buttons. On the mini, they will simply be ignored.
     EffectSelect1,
     EffectSelect2,
     EffectSelect3,
