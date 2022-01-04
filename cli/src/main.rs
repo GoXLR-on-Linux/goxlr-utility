@@ -47,5 +47,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     goxlr.set_fader(Fader::C, Channel::Music)?;
     goxlr.set_fader(Fader::D, Channel::System)?;
 
+    //goxlr.set_channel_mute(Channel::System, false);
+
     Ok(())
 }
