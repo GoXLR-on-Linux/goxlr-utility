@@ -2,7 +2,7 @@ pub enum ButtonStates {
     On,
     Off,
     Dimmed,
-    Flashing
+    Flashing,
 }
 
 impl ButtonStates {
@@ -11,7 +11,7 @@ impl ButtonStates {
             ButtonStates::On => 0x01,
             ButtonStates::Off => 0x04,
             ButtonStates::Dimmed => 0x02,
-            ButtonStates::Flashing => 0x03
+            ButtonStates::Flashing => 0x03,
         }
     }
 }
@@ -47,13 +47,13 @@ pub enum Buttons {
     SamplerTopRight,
     SamplerBottomLeft,
     SamplerBottomRight,
-    SamplerClear
+    SamplerClear,
 }
 
 /**
-  * This might be abstractable, I'm only currently aware of this specific order for the full fat
-  * GoXLR colour state set command, but it may be used in other commands I haven't seen yet
-  */
+ * This might be abstractable, I'm only currently aware of this specific order for the full fat
+ * GoXLR colour state set command, but it may be used in other commands I haven't seen yet
+ */
 impl Buttons {
     pub fn position(&self) -> usize {
         match self {
@@ -80,7 +80,7 @@ impl Buttons {
             Buttons::SamplerTopRight => 8,
             Buttons::SamplerBottomLeft => 17,
             Buttons::SamplerBottomRight => 13,
-            Buttons::SamplerClear => 18
+            Buttons::SamplerClear => 18,
         }
     }
 }

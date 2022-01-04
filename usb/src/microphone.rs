@@ -12,7 +12,7 @@ impl MicrophoneType {
             MicrophoneType::None => 0x00,
             MicrophoneType::Dynamic => 0x01,
             MicrophoneType::Phantom => 0x02,
-            MicrophoneType::Basic => 0x03
+            MicrophoneType::Basic => 0x03,
         }
     }
 }

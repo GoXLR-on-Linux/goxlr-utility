@@ -1,14 +1,14 @@
 use clap::Parser;
+use goxlr_usb::buttonstate;
+use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::channels::Channel;
+use goxlr_usb::channelstate::ChannelState;
+use goxlr_usb::commands::Command::SetButtonStates;
 use goxlr_usb::faders::Fader;
 use goxlr_usb::goxlr::GoXLR;
-use simplelog::*;
-use goxlr_usb::channelstate::ChannelState;
-use goxlr_usb::buttonstate;
-use goxlr_usb::buttonstate::{Buttons, ButtonStates};
-use goxlr_usb::commands::Command::SetButtonStates;
 use goxlr_usb::microphone::MicrophoneType;
 use goxlr_usb::routing::{InputDevice, OutputDevice};
+use simplelog::*;
 
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]
@@ -53,7 +53,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     goxlr.set_volume(Channel::Music, 0xFF)?;
     goxlr.set_volume(Channel::System, 0xFF)?;
 
-
     goxlr.set_channel_state(Channel::System, ChannelState::Unmuted);
 
     // IMPORTANT: THIS CODE ONLY WORKS WITH THE FULL GOXLR.
@@ -84,18 +83,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     sending it run through (correct byte position being provided by an enum for convenience)
      */
 
-/*
-    let mut gameRoutingStateLeft: [u8;22] = [0; 22];
-    gameRoutingStateLeft[OutputDevice::HeadphonesLeft.position()] = 0x20;
-    gameRoutingStateLeft[OutputDevice::BroadcastMixLeft.position()] = 0x20;
-    goxlr.set_routing(InputDevice::GameLeft, gameRoutingStateLeft);
+    /*
+        let mut gameRoutingStateLeft: [u8;22] = [0; 22];
+        gameRoutingStateLeft[OutputDevice::HeadphonesLeft.position()] = 0x20;
+        gameRoutingStateLeft[OutputDevice::BroadcastMixLeft.position()] = 0x20;
+        goxlr.set_routing(InputDevice::GameLeft, gameRoutingStateLeft);
 
 
-    let mut gameRoutingStateRight : [u8;22] = [0; 22];
-    gameRoutingStateRight[OutputDevice::HeadphonesRight.position()] = 0x20;
-    gameRoutingStateRight[OutputDevice::BroadcastMixRight.position()] = 0x20;
-    goxlr.set_routing(InputDevice::GameRight, gameRoutingStateRight);
-*/
+        let mut gameRoutingStateRight : [u8;22] = [0; 22];
+        gameRoutingStateRight[OutputDevice::HeadphonesRight.position()] = 0x20;
+        gameRoutingStateRight[OutputDevice::BroadcastMixRight.position()] = 0x20;
+        goxlr.set_routing(InputDevice::GameRight, gameRoutingStateRight);
+    */
 
     // Enables Phantom Mode..
     // goxlr.set_microphone_type(MicrophoneType::Phantom, 40);

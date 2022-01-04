@@ -10,7 +10,7 @@ pub enum OutputDevice {
     SamplerLeft,
     LineOutRight,
     LineOutLeft,
-    Unknown
+    Unknown,
 }
 
 impl OutputDevice {
@@ -26,7 +26,7 @@ impl OutputDevice {
             OutputDevice::SamplerLeft => 15,
             OutputDevice::LineOutRight => 17,
             OutputDevice::LineOutLeft => 19,
-            OutputDevice::Unknown => 21
+            OutputDevice::Unknown => 21,
         }
     }
 }

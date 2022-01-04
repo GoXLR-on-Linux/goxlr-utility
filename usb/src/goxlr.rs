@@ -1,10 +1,13 @@
 use crate::channels::Channel;
+use crate::channelstate::ChannelState;
 use crate::commands::Command;
 use crate::commands::SystemInfoCommand;
 use crate::commands::SystemInfoCommand::SupportsDCPCategory;
 use crate::dcp::DCPCategory;
 use crate::error::ConnectError;
 use crate::faders::Fader;
+use crate::microphone::MicrophoneType;
+use crate::routing::InputDevice;
 use byteorder::{ByteOrder, LittleEndian};
 use log::info;
 use rusb::{
@@ -13,9 +16,6 @@ use rusb::{
 };
 use std::thread::sleep;
 use std::time::Duration;
-use crate::channelstate::ChannelState;
-use crate::microphone::MicrophoneType;
-use crate::routing::{InputDevice};
 
 pub struct GoXLR<T: UsbContext> {
     handle: DeviceHandle<T>,
@@ -179,23 +179,35 @@ impl<T: UsbContext> GoXLR<T> {
         Ok(())
     }
 
-    pub fn set_channel_state(&mut self, channel: Channel, state: ChannelState) -> Result<(), rusb::Error> {
+    pub fn set_channel_state(
+        &mut self,
+        channel: Channel,
+        state: ChannelState,
+    ) -> Result<(), rusb::Error> {
         self.request_data(Command::SetChannelState(channel), &[state.id()])?;
         Ok(())
     }
 
-    pub fn set_button_states(&mut self, data: [u8;24]) -> Result<(), rusb::Error> {
+    pub fn set_button_states(&mut self, data: [u8; 24]) -> Result<(), rusb::Error> {
         self.request_data(Command::SetButtonStates(), &data)?;
         Ok(())
     }
 
-    pub fn set_routing(&mut self, input_device: InputDevice, data: [u8;22]) -> Result<(), rusb::Error> {
+    pub fn set_routing(
+        &mut self,
+        input_device: InputDevice,
+        data: [u8; 22],
+    ) -> Result<(), rusb::Error> {
         self.request_data(Command::SetRouting(input_device), &data)?;
         Ok(())
     }
 
-    pub fn set_microphone_type(&mut self, microphone_type: MicrophoneType, gain: u8) -> Result<(), rusb::Error> {
-        let mut data: [u8;8] = [0; 8];
+    pub fn set_microphone_type(
+        &mut self,
+        microphone_type: MicrophoneType,
+        gain: u8,
+    ) -> Result<(), rusb::Error> {
+        let mut data: [u8; 8] = [0; 8];
 
         // Before we do *ANYTHING*, we need to reset the mic type..
         self.request_data(Command::SetMicrophoneType(), &data);
