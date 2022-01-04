@@ -8,6 +8,7 @@ pub enum Command {
     SetChannelVolume(Channel),
     SetFader(Fader),
     SetRouting(Channel),
+    SetButtonStates(),
 }
 
 impl Command {
@@ -18,6 +19,9 @@ impl Command {
             Command::SetChannelVolume(channel) => (0x806 << 12) | channel.id() as u32,
             Command::SetFader(fader) => (0x805 << 12) | fader.id(),
             Command::SetRouting(channel) => (0x804 << 12) | channel.id() as u32,
+
+            // Unknown if secondary Id is used here.
+            Command::SetButtonStates() => (0x808 << 12) | 0x00 as u32,
         }
     }
 }
