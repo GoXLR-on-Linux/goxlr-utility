@@ -1,4 +1,5 @@
 use std::str::FromStr;
+use std::char;
 use clap::Parser;
 use goxlr_usb::buttonstate;
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
@@ -16,24 +17,24 @@ use simplelog::*;
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]
 struct Args {
-    /// Initialize
+    /// Initialize the GoXLR
     #[clap(short, long)]
     initialize: bool,
 
     /// Assign fader A
-    #[clap(long, default_value = "Mic")]
+    #[clap(short = 'a', long, default_value = "Mic")]
     fader_a: String,
 
     /// Assign fader B
-    #[clap(long, default_value = "Chat")]
+    #[clap(short = 'b', long, default_value = "Chat")]
     fader_b: String,
 
     /// Assign fader C
-    #[clap(long, default_value = "Music")]
+    #[clap(short = 'c', long, default_value = "Music")]
     fader_c: String,
 
     /// Assign fader D
-    #[clap(long, default_value = "System")]
+    #[clap(short = 'd', long, default_value = "System")]
     fader_d: String,
 
     /// How verbose should the output be (can be repeated for super verbosity!)
