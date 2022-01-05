@@ -18,19 +18,19 @@ use simplelog::*;
 struct Args {
     /// Assign fader A
     #[clap(long, default_value = "Mic")]
-    faderA: String,
+    fader_a: String,
 
     /// Assign fader B
     #[clap(long, default_value = "Chat")]
-    faderB: String,
+    fader_b: String,
 
     /// Assign fader C
     #[clap(long, default_value = "Music")]
-    faderC: String,
+    fader_c: String,
 
     /// Assign fader D
     #[clap(long, default_value = "System")]
-    faderD: String,
+    fader_d: String,
 
     /// How verbose should the output be (can be repeated for super verbosity!)
     #[clap(short, long, parse(from_occurrences))]
@@ -71,10 +71,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Err(e) => return Err(e.into()),
     };
 
-    goxlr.set_fader(Fader::A, Channel::from_str(&cli.faderA).unwrap())?;
-    goxlr.set_fader(Fader::B, Channel::from_str(&cli.faderB).unwrap())?;
-    goxlr.set_fader(Fader::C, Channel::from_str(&cli.faderC).unwrap())?;
-    goxlr.set_fader(Fader::D, Channel::from_str(&cli.faderD).unwrap())?;
+    goxlr.set_fader(Fader::A, Channel::from_str(&cli.fader_a).unwrap())?;
+    goxlr.set_fader(Fader::B, Channel::from_str(&cli.fader_b).unwrap())?;
+    goxlr.set_fader(Fader::C, Channel::from_str(&cli.fader_c).unwrap())?;
+    goxlr.set_fader(Fader::D, Channel::from_str(&cli.fader_d).unwrap())?;
 
     goxlr.set_volume(Channel::Mic, 0xFF)?;
     goxlr.set_volume(Channel::Game, 0xFF)?;
