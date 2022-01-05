@@ -76,10 +76,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     goxlr.set_fader(Fader::C, Channel::from_str(&cli.fader_c).unwrap())?;
     goxlr.set_fader(Fader::D, Channel::from_str(&cli.fader_d).unwrap())?;
 
-    goxlr.set_volume(Channel::Mic, 0xFF)?;
-    goxlr.set_volume(Channel::Game, 0xFF)?;
-    goxlr.set_volume(Channel::Chat, 0xFF)?;
-    goxlr.set_volume(Channel::System, 0xFF)?;
+    goxlr.set_volume(Channel::from_str(&cli.fader_a).unwrap(), 0xFF)?;
+    goxlr.set_volume(Channel::from_str(&cli.fader_b).unwrap(), 0xFF)?;
+    goxlr.set_volume(Channel::from_str(&cli.fader_c).unwrap(), 0xFF)?;
+    goxlr.set_volume(Channel::from_str(&cli.fader_d).unwrap(), 0xFF)?;
 
     goxlr.set_channel_state(Channel::System, ChannelState::Unmuted);
 
