@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use clap::Parser;
 use goxlr_usb::buttonstate;
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
@@ -15,6 +16,22 @@ use simplelog::*;
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]
 struct Args {
+    /// Assign fader A
+    #[clap(long, default_value = "Mic")]
+    faderA: String,
+
+    /// Assign fader B
+    #[clap(long, default_value = "Chat")]
+    faderB: String,
+
+    /// Assign fader C
+    #[clap(long, default_value = "Music")]
+    faderC: String,
+
+    /// Assign fader D
+    #[clap(long, default_value = "System")]
+    faderD: String,
+
     /// How verbose should the output be (can be repeated for super verbosity!)
     #[clap(short, long, parse(from_occurrences))]
     verbose: u8,
@@ -54,14 +71,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Err(e) => return Err(e.into()),
     };
 
-    goxlr.set_fader(Fader::A, Channel::Mic)?;
-    goxlr.set_fader(Fader::B, Channel::Chat)?;
-    goxlr.set_fader(Fader::C, Channel::Music)?;
-    goxlr.set_fader(Fader::D, Channel::System)?;
+    goxlr.set_fader(Fader::A, Channel::from_str(&cli.faderA).unwrap())?;
+    goxlr.set_fader(Fader::B, Channel::from_str(&cli.faderB).unwrap())?;
+    goxlr.set_fader(Fader::C, Channel::from_str(&cli.faderC).unwrap())?;
+    goxlr.set_fader(Fader::D, Channel::from_str(&cli.faderD).unwrap())?;
 
     goxlr.set_volume(Channel::Mic, 0xFF)?;
+    goxlr.set_volume(Channel::Game, 0xFF)?;
     goxlr.set_volume(Channel::Chat, 0xFF)?;
-    goxlr.set_volume(Channel::Music, 0xFF)?;
     goxlr.set_volume(Channel::System, 0xFF)?;
 
     goxlr.set_channel_state(Channel::System, ChannelState::Unmuted);
