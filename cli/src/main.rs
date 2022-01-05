@@ -16,6 +16,10 @@ use simplelog::*;
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]
 struct Args {
+    /// Initialize
+    #[clap(short, long)]
+    initialize: bool,
+
     /// Assign fader A
     #[clap(long, default_value = "Mic")]
     fader_a: String,
@@ -76,11 +80,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     goxlr.set_fader(Fader::C, Channel::from_str(&cli.fader_c).unwrap())?;
     goxlr.set_fader(Fader::D, Channel::from_str(&cli.fader_d).unwrap())?;
 
-    goxlr.set_volume(Channel::from_str(&cli.fader_a).unwrap(), 0xFF)?;
-    goxlr.set_volume(Channel::from_str(&cli.fader_b).unwrap(), 0xFF)?;
-    goxlr.set_volume(Channel::from_str(&cli.fader_c).unwrap(), 0xFF)?;
-    goxlr.set_volume(Channel::from_str(&cli.fader_d).unwrap(), 0xFF)?;
-
+    if cli.initialize {
+        goxlr.set_volume(Channel::from_str(&cli.fader_a).unwrap(), 0xFF)?;
+        goxlr.set_volume(Channel::from_str(&cli.fader_b).unwrap(), 0xFF)?;
+        goxlr.set_volume(Channel::from_str(&cli.fader_c).unwrap(), 0xFF)?;
+        goxlr.set_volume(Channel::from_str(&cli.fader_d).unwrap(), 0xFF)?;
+    }
     goxlr.set_channel_state(Channel::System, ChannelState::Unmuted);
 
     // So this is a complex one, there's no direct way to retrieve the button colour states
