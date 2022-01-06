@@ -1,16 +1,18 @@
 pub enum ButtonStates {
-    On,
-    Off,
-    Dimmed,
+    Colour1,
+    Colour2,
+    DimmedColour1,
+    DimmedColour2,
     Flashing,
 }
 
 impl ButtonStates {
     pub fn id(&self) -> u8 {
         match self {
-            ButtonStates::On => 0x01,
-            ButtonStates::Off => 0x04,
-            ButtonStates::Dimmed => 0x02,
+            ButtonStates::Colour1 => 0x01,
+            ButtonStates::Colour2 => 0x00,
+            ButtonStates::DimmedColour1 => 0x02,
+            ButtonStates::DimmedColour2 => 0x04,
             ButtonStates::Flashing => 0x03,
         }
     }

@@ -9,3 +9,4 @@ pub mod faders;
 pub mod goxlr;
 pub mod microphone;
 pub mod routing;
+pub mod colouring;
