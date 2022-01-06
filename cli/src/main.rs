@@ -131,10 +131,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     positions, manually set colours on buttons, then ship it.
      */
 
+
+    /*
     // First, create an array (this will default to all lights being off)
     let mut colourSettings: [u8;328] = [0; 328];
 
-    // Turn on the Microphone Button, and set it's 'on' colour to Red, and 'Off' colour to blue..
+    // Turn on the Microphone Button, and set it's 'on' colour to Red, and 'Off' colour to blue.
+    // Note that the Colour Type (Coming Soon) needs to be set to 'Colour2' and not 'Dimmed'
     // Todo: possibly change 'position' so it accepts '1' as the first colour!
     let startColour1 = ColourTargets::MicrophoneMute.position(0);
     colourSettings[startColour1] = 0x00;      // Blue
@@ -146,8 +149,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     colourSettings[startColour1] = 0xff;      // Blue
     colourSettings[startColour1 + 1] = 0x00;  // Green
     colourSettings[startColour1 + 2] = 0x00;  // Red
-    colourSettings[startColour1 + 3] = 0x00;  // 'X'
+    colourSettings[startColour1 + 3] = 0xff;  // 'X'
+    */
 
+     */
     // Ship it!
     goxlr.set_button_colours(colourSettings);
 
