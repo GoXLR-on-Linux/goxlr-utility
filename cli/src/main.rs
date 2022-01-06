@@ -92,7 +92,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut button_states: [u8; 24] = [ButtonStates::DimmedColour1.id(); 24];
 
     // Now set 'Mute' to a lit state..
-    button_states[Buttons::Fader1Mute.position()] = ButtonStates::Colour1.id();
+    button_states[Buttons::Fader2Mute.position()] = ButtonStates::Colour1.id();
 
     // Apply the state.
     goxlr.set_button_states(button_states);
@@ -153,6 +153,74 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Ship it!
     goxlr.set_button_colours(colourSettings);
+    */
+
+    // TIME TO SCRIBBLE!
+
+    /*
+    Notes:
+    I recognise binary when I see it..
+
+    The display is 128px across, and each byte represents a 1x8px vertical column.
+    The display is 64px high, so 8 rows total.
+
+    Data in each vertical column is a simple binary 'on / off' flag for each bit, with 0 being
+    'dark', and 1 being 'light'. The bit order goes from Bottom -> Top
+
+    So to colour the top and bottom pixel of the bar, the binary would be 01111110, in hex 0x7E
+
+    The following code will draw a 2px border around the scribble area, leaving a one pixel 'safe
+    zone' around the edge.
+     */
+
+    /*
+    let mut scribble: [u8;1024] = [0xff; 1024];
+
+    // scribble[0] is in the safe zone, don't draw it.
+    // For 1 and 2, we need to simply draw everything *EXCEPT* the first pixel (safe zone)
+    // 00000001 = 0x01
+    scribble[1] = 0x01;
+    scribble[2] = 0x01;
+
+    // For the next 124 pixels, we only need to draw the top two pixels, leaving a pixel safe.
+    for n in 3 .. 125 {
+        // 11111001 = 0xF9 (Top 2 pixels and safe zone)
+        scribble[n] = 0xF9;
+    }
+
+    // As above, fill except safe zone.
+    scribble[125] = 0x01;
+    scribble[126] = 0x01;
+    // scribble[127] is in the safe zone, don't draw it.
+
+    // For the next 6 rows, we need to full fill columns 1, 2, 125 and 126..
+    for n in 1 .. 7 {
+        scribble[1 + (n * 128)] = 0x00;
+        scribble[2 + (n * 128)] = 0x00;
+
+        scribble[125 + (n * 128)] = 0x00;
+        scribble[126 + (n * 128)] = 0x00;
+    }
+
+    // And for the final row, the reverse of the first set..
+    // 10000000 = 0x80
+    scribble[1 + (7 * 128)] = 0x80;
+    scribble[2 + (7 * 128)] = 0x80;
+
+
+    for n in 3 .. 125 {
+        // Only need the bottom pixels and not the safe zone..
+        // 10011111 = 0x9F
+
+        scribble[n + (7 * 128)] = 0x9F;
+    }
+
+    // Full fill the last two columns.
+    scribble[125 + (7 * 128)] = 0x80;
+    scribble[126 + (7 * 128)] = 0x80;
+
+    // Send this to fader 1..
+    goxlr.set_fader_scribble(Fader::A, scribble);
     */
 
     Ok(())

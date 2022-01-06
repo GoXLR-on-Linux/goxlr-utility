@@ -203,6 +203,7 @@ impl<T: UsbContext> GoXLR<T> {
         let gradientByte :u8 = if gradient { 0x01 } else { 0x00 };
         let meterByte :u8 = if meter { 0x01 } else { 0x00 };
 
+        // TODO: Seemingly broken?
         self.request_data(Command::SetFaderDisplayMode(fader), &[gradientByte, meterByte]);
         Ok(())
     }
@@ -210,7 +211,7 @@ impl<T: UsbContext> GoXLR<T> {
     pub fn set_fader_scribble(&mut self, fader: Fader, data: [u8; 1024]) -> Result<(), rusb::Error> {
         // Dump it, see what happens..
         self.request_data(Command::SetScribble(fader), &data);
-        Ok(());
+        Ok(())
     }
 
     pub fn set_routing(
