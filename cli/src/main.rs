@@ -146,15 +146,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     colourSettings[startColour1 + 3] = 0x00;  // 'X'
 
     let startColour2 = ColourTargets::MicrophoneMute.position(1);
-    colourSettings[startColour1] = 0xff;      // Blue
-    colourSettings[startColour1 + 1] = 0x00;  // Green
-    colourSettings[startColour1 + 2] = 0x00;  // Red
-    colourSettings[startColour1 + 3] = 0xff;  // 'X'
-    */
+    colourSettings[startColour2] = 0xff;      // Blue
+    colourSettings[startColour2 + 1] = 0x00;  // Green
+    colourSettings[startColour2 + 2] = 0x00;  // Red
+    colourSettings[startColour2 + 3] = 0xff;  // 'X'
 
-     */
     // Ship it!
     goxlr.set_button_colours(colourSettings);
+    */
 
     Ok(())
 }
