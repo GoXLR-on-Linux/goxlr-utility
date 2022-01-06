@@ -37,7 +37,7 @@ impl GoXLR<GlobalContext> {
             if let Ok(descriptor) = device.device_descriptor() {
                 if descriptor.vendor_id() == VID_GOXLR
                     && (descriptor.product_id() == PID_GOXLR_FULL
-                        || descriptor.product_id() == PID_GOXLR_MINI)
+                    || descriptor.product_id() == PID_GOXLR_MINI)
                 {
                     match device.open() {
                         Ok(handle) => return GoXLR::from_device(handle, descriptor),
@@ -191,6 +191,10 @@ impl<T: UsbContext> GoXLR<T> {
     pub fn set_button_states(&mut self, data: [u8; 24]) -> Result<(), rusb::Error> {
         self.request_data(Command::SetButtonStates(), &data)?;
         Ok(())
+    }
+
+    pub fn set_button_colours(&mut self, data: [u8; 328]) {
+        self.request_data(Command::SetColourMap(), &data);
     }
 
     pub fn set_routing(

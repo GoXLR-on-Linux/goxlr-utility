@@ -12,6 +12,7 @@ use goxlr_usb::microphone::MicrophoneType;
 use goxlr_usb::routing::{InputDevice, OutputDevice};
 use goxlr_usb::rusb::GlobalContext;
 use simplelog::*;
+use goxlr_usb::colouring::ColourTargets;
 
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]
@@ -121,6 +122,34 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Enables Phantom Mode..
     // goxlr.set_microphone_type(MicrophoneType::Phantom, 40);
+
+    /*
+    Again, this will need some level of improvement and structuring, more proof-of-concept..
+
+    Colour setting is 328 bytes, which are a repeated reversed RGBX bytes (TODO: Find out X), so
+    for now, we're just going to create an array, use helpers to determine the correct array
+    positions, manually set colours on buttons, then ship it.
+     */
+
+    // First, create an array (this will default to all lights being off)
+    let mut colourSettings: [u8;328] = [0; 328];
+
+    // Turn on the Microphone Button, and set it's 'on' colour to Red, and 'Off' colour to blue..
+    // Todo: possibly change 'position' so it accepts '1' as the first colour!
+    let startColour1 = ColourTargets::MicrophoneMute.position(0);
+    colourSettings[startColour1] = 0x00;      // Blue
+    colourSettings[startColour1 + 1] = 0x00;  // Green
+    colourSettings[startColour1 + 2] = 0xff;  // Red
+    colourSettings[startColour1 + 3] = 0x00;  // 'X'
+
+    let startColour2 = ColourTargets::MicrophoneMute.position(1);
+    colourSettings[startColour1] = 0xff;      // Blue
+    colourSettings[startColour1 + 1] = 0x00;  // Green
+    colourSettings[startColour1 + 2] = 0x00;  // Red
+    colourSettings[startColour1 + 3] = 0x00;  // 'X'
+
+    // Ship it!
+    goxlr.set_button_colours(colourSettings);
 
     Ok(())
 }
