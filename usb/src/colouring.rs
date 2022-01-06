@@ -155,53 +155,50 @@ impl ColourTargets {
         match self {
             ColourTargets::PitchEncoder => {
                 if colour == 0 {
-                    self.getStart() * 4 + 4
+                    return self.getStart() * 4 + 4 as usize
                 }
-                if color == 1 {
-                    self.getStart()
+                if colour == 1 {
+                    return self.getStart() * 4 as usize
                 }
 
-                // Not sure how matches work, can we just fall this through to the bottom?
-                self.getStart() + (color * 4)
+                return self.getStart() + (colour * 4) as usize
             }
 
             ColourTargets::GenderEncoder => {
                 if colour == 0 {
-                    self.getStart() * 4 + 4
+                    return self.getStart() * 4 + 4 as usize
                 }
-                if color == 1 {
-                    self.getStart()
+                if colour == 1 {
+                    return self.getStart() * 4 as usize
                 }
 
                 // Not sure how matches work, can we just fall this through to the bottom?
-                self.getStart() + (color * 4)
+                self.getStart() + (colour * 4) as usize
             }
 
             ColourTargets::ReverbEncoder => {
                 if colour == 0 {
-                    self.getStart() * 4 + 4
+                    return self.getStart() * 4 + 4 as usize
                 }
-                if color == 1 {
-                    self.getStart()
+                if colour == 1 {
+                    return self.getStart() * 4 as usize
                 }
 
-                // Not sure how matches work, can we just fall this through to the bottom?
-                self.getStart() + (color * 4)
+                return self.getStart() + (colour * 4) as usize
             }
 
             ColourTargets::EchoEncoder => {
                 if colour == 0 {
-                    self.getStart() * 4 + 4
+                    return self.getStart() * 4 + 4 as usize
                 }
-                if color == 1 {
-                    (self.getStart() * 4)
+                if colour == 1 {
+                    return self.getStart() * 4 as usize
                 }
 
-                // Not sure how matches work, can we just fall this through to the bottom?
-                (self.getStart() * 4) + (color * 4)
+                self.getStart() + (colour * 4) as usize
             }
 
-            _ => (self.getStart() * 4) + (colour * 4)
+            _ => (self.getStart() * 4) + (colour * 4) as usize
         }
     }
 }
