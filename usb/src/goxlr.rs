@@ -179,6 +179,11 @@ impl<T: UsbContext> GoXLR<T> {
         Ok(())
     }
 
+    pub fn set_volume_percent(&mut self, channel: Channel, percent: f64) -> Result<(), rusb::Error> {
+        self.request_data(Command::SetChannelVolume(channel), &[(0xFF as f64 * percent) as u8])?;
+        Ok(())
+    }
+
     pub fn set_channel_state(
         &mut self,
         channel: Channel,

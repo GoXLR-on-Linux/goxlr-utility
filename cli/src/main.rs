@@ -17,10 +17,6 @@ use simplelog::*;
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]
 struct Args {
-    /// Initialize the GoXLR
-    #[clap(short, long)]
-    initialize: bool,
-
     /// Assign fader A
     #[clap(short = 'a', long, default_value = "Mic")]
     fader_a: String,
@@ -81,13 +77,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     goxlr.set_fader(Fader::C, Channel::from_str(&cli.fader_c).unwrap())?;
     goxlr.set_fader(Fader::D, Channel::from_str(&cli.fader_d).unwrap())?;
 
-    if cli.initialize {
-        goxlr.set_volume(Channel::from_str(&cli.fader_a).unwrap(), 0xFF)?;
-        goxlr.set_volume(Channel::from_str(&cli.fader_b).unwrap(), 0xFF)?;
-        goxlr.set_volume(Channel::from_str(&cli.fader_c).unwrap(), 0xFF)?;
-        goxlr.set_volume(Channel::from_str(&cli.fader_d).unwrap(), 0xFF)?;
-    }
-    goxlr.set_channel_state(Channel::System, ChannelState::Unmuted);
+
+    goxlr.set_volume_percent(Channel::from_str(&cli.fader_a).unwrap(), 0.8)?;
+    goxlr.set_volume_percent(Channel::from_str(&cli.fader_b).unwrap(), 0.8)?;
+    goxlr.set_volume_percent(Channel::from_str(&cli.fader_c).unwrap(), 0.8)?;
+    goxlr.set_volume_percent(Channel::from_str(&cli.fader_d).unwrap(), 0.8)?;
+    goxlr.set_channel_state(Channel::from_str(&cli.fader_a).unwrap(), ChannelState::Unmuted);
+    goxlr.set_channel_state(Channel::from_str(&cli.fader_b).unwrap(), ChannelState::Unmuted);
+    goxlr.set_channel_state(Channel::from_str(&cli.fader_c).unwrap(), ChannelState::Unmuted);
+    goxlr.set_channel_state(Channel::from_str(&cli.fader_d).unwrap(), ChannelState::Unmuted);
 
     // So this is a complex one, there's no direct way to retrieve the button colour states
     // directly from the GoXLR, it's all managed by the app.. So for testing, all we're going
