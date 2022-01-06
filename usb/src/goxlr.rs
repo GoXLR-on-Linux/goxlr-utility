@@ -193,8 +193,25 @@ impl<T: UsbContext> GoXLR<T> {
         Ok(())
     }
 
-    pub fn set_button_colours(&mut self, data: [u8; 328]) {
+    pub fn set_button_colours(&mut self, data: [u8; 328]) -> Result<(), rusb::Error> {
         self.request_data(Command::SetColourMap(), &data);
+        Ok(())
+    }
+
+    pub fn set_fader_display_mode(&mut self, fader: Fader, gradient: bool, meter: bool) -> Result<(), rusb::Error> {
+        // This one really doesn't need anything fancy..
+        let gradientByte :u8 = if gradient { 0x01 } else { 0x00 };
+        let meterByte :u8 = if meter { 0x01 } else { 0x00 };
+
+        // TODO: Seemingly broken?
+        self.request_data(Command::SetFaderDisplayMode(fader), &[gradientByte, meterByte]);
+        Ok(())
+    }
+
+    pub fn set_fader_scribble(&mut self, fader: Fader, data: [u8; 1024]) -> Result<(), rusb::Error> {
+        // Dump it, see what happens..
+        self.request_data(Command::SetScribble(fader), &data);
+        Ok(())
     }
 
     pub fn set_routing(
