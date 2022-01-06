@@ -11,6 +11,7 @@ pub enum Command {
     SetRouting(InputDevice),
     SetButtonStates(),
     SetMicrophoneType(),
+    SetColourMap(),
 }
 
 impl Command {
@@ -21,10 +22,11 @@ impl Command {
             Command::SetChannelVolume(channel) => (0x806 << 12) | channel.id() as u32,
             Command::SetFader(fader) => (0x805 << 12) | fader.id(),
             Command::SetRouting(input_device) => (0x804 << 12) | input_device.id() as u32,
-            Command::SetMicrophoneType() => (0x80b << 12) | 0x00 as u32,
-
-            // Unknown if secondary Id is used here.
+            Command::SetColourMap() => (0x803 << 12) | 0x00 as u32,
             Command::SetButtonStates() => (0x808 << 12) | 0x00 as u32,
+
+            // There are multiple versions of this command, we only support one currently..
+            Command::SetMicrophoneType() => (0x80b << 12) | 0x00 as u32,
         }
     }
 }
