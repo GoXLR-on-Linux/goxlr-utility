@@ -207,6 +207,12 @@ impl<T: UsbContext> GoXLR<T> {
         Ok(())
     }
 
+    pub fn set_fader_scribble(&mut self, fader: Fader, data: [u8; 1024]) -> Result<(), rusb::Error> {
+        // Dump it, see what happens..
+        self.request_data(Command::SetScribble(fader), &data);
+        Ok(());
+    }
+
     pub fn set_routing(
         &mut self,
         input_device: InputDevice,

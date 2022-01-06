@@ -13,6 +13,7 @@ pub enum Command {
     SetMicrophoneType(),
     SetColourMap(),
     SetFaderDisplayMode(Fader),
+    SetScribble(Fader)
 }
 
 impl Command {
@@ -26,7 +27,7 @@ impl Command {
             Command::SetColourMap() => (0x803 << 12) | 0x00 as u32,
             Command::SetButtonStates() => (0x808 << 12) | 0x00 as u32,
             Command::SetFaderDisplayMode(fader) => (0x814 << 12) | fader.id() as u32,
-
+            Command::SetScribble(fader) => (0x802) | fader.id() as u32,
 
             // There are multiple versions of this command, we only support one currently..
             Command::SetMicrophoneType() => (0x80b << 12) | 0x00 as u32,
