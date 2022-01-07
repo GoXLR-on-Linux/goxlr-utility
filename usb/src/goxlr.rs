@@ -67,8 +67,12 @@ impl<T: UsbContext> GoXLR<T> {
             .ok_or(ConnectError::DeviceNotGoXLR)?
             .to_owned();
 
-        handle.set_active_configuration(1);
-        handle.claim_interface(0);
+        if let Err(e) = handle.set_active_configuration(1) {
+            warn!("Couldn't set GoXLR active configuration to 1: {}", e);
+        }
+        if let Err(e) = handle.claim_interface(0) {
+            warn!("Couldn't claim GoXLR usb interface 0: {}", e);
+        }
 
         let mut goxlr = Self {
             handle,
