@@ -1,4 +1,4 @@
-use crate::buttonstate::Buttons;
+use crate::buttonstate::{ButtonStates, Buttons};
 use crate::channels::Channel;
 use crate::channelstate::ChannelState;
 use crate::commands::Command;
@@ -194,8 +194,8 @@ impl<T: UsbContext> GoXLR<T> {
         Ok(())
     }
 
-    pub fn set_button_states(&mut self, data: [u8; 24]) -> Result<(), rusb::Error> {
-        self.request_data(Command::SetButtonStates(), &data)?;
+    pub fn set_button_states(&mut self, data: [ButtonStates; 24]) -> Result<(), rusb::Error> {
+        self.request_data(Command::SetButtonStates(), &data.map(|state| state as u8))?;
         Ok(())
     }
 

@@ -1,23 +1,12 @@
 use enumset::EnumSetType;
 
+#[derive(Debug, Copy, Clone)]
 pub enum ButtonStates {
-    Colour1,
-    Colour2,
-    DimmedColour1,
-    DimmedColour2,
-    Flashing,
-}
-
-impl ButtonStates {
-    pub fn id(&self) -> u8 {
-        match self {
-            ButtonStates::Colour1 => 0x01,
-            ButtonStates::Colour2 => 0x00,
-            ButtonStates::DimmedColour1 => 0x02,
-            ButtonStates::DimmedColour2 => 0x04,
-            ButtonStates::Flashing => 0x03,
-        }
-    }
+    Colour1 = 0x01,
+    Colour2 = 0x00,
+    DimmedColour1 = 0x02,
+    DimmedColour2 = 0x04,
+    Flashing = 0x03,
 }
 
 #[derive(EnumSetType, Debug)]

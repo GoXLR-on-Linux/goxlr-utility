@@ -89,10 +89,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // to do here, is a simple example of managing the buttons.
 
     // Define our buttons, set them all to a Dimmed State..
-    let mut button_states: [u8; 24] = [ButtonStates::DimmedColour1.id(); 24];
+    let mut button_states: [ButtonStates; 24] = [ButtonStates::DimmedColour1; 24];
 
     // Now set 'Mute' to a lit state..
-    button_states[Buttons::Fader2Mute as usize] = ButtonStates::Colour1.id();
+    button_states[Buttons::Fader2Mute as usize] = ButtonStates::Colour1;
 
     // Apply the state.
     goxlr.set_button_states(button_states);
