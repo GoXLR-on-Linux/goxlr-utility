@@ -96,6 +96,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "goxlr-daemon"
+version = "0.1.0"
+dependencies = [
+ "goxlr-usb",
+ "simplelog",
+]
+
+[[package]]
 name = "goxlr-usb"
 version = "0.1.0"
 dependencies = [
