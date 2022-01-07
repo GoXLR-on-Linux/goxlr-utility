@@ -262,9 +262,11 @@ impl<T: UsbContext> GoXLR<T> {
         Ok(())
     }
 
-    pub fn await_interrupt(&mut self, duration: Duration) -> Result<(), rusb::Error> {
+    pub fn await_interrupt(&mut self, duration: Duration) -> bool {
         let mut buffer = [0u8; 6];
-        self.handle.read_interrupt(0x81, &mut buffer, duration);
-        Ok(())
+        matches!(
+            self.handle.read_interrupt(0x81, &mut buffer, duration),
+            Ok(_)
+        )
     }
 }
