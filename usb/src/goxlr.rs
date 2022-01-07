@@ -9,7 +9,7 @@ use crate::faders::Fader;
 use crate::microphone::MicrophoneType;
 use crate::routing::InputDevice;
 use byteorder::{ByteOrder, LittleEndian};
-use log::info;
+use log::{info, warn};
 use rusb::{
     Device, DeviceDescriptor, DeviceHandle, Direction, GlobalContext, Language, Recipient,
     RequestType, UsbContext,
@@ -37,7 +37,7 @@ impl GoXLR<GlobalContext> {
             if let Ok(descriptor) = device.device_descriptor() {
                 if descriptor.vendor_id() == VID_GOXLR
                     && (descriptor.product_id() == PID_GOXLR_FULL
-                    || descriptor.product_id() == PID_GOXLR_MINI)
+                        || descriptor.product_id() == PID_GOXLR_MINI)
                 {
                     match device.open() {
                         Ok(handle) => return GoXLR::from_device(handle, descriptor),
@@ -198,17 +198,29 @@ impl<T: UsbContext> GoXLR<T> {
         Ok(())
     }
 
-    pub fn set_fader_display_mode(&mut self, fader: Fader, gradient: bool, meter: bool) -> Result<(), rusb::Error> {
+    pub fn set_fader_display_mode(
+        &mut self,
+        fader: Fader,
+        gradient: bool,
+        meter: bool,
+    ) -> Result<(), rusb::Error> {
         // This one really doesn't need anything fancy..
-        let gradientByte :u8 = if gradient { 0x01 } else { 0x00 };
-        let meterByte :u8 = if meter { 0x01 } else { 0x00 };
+        let gradientByte: u8 = if gradient { 0x01 } else { 0x00 };
+        let meterByte: u8 = if meter { 0x01 } else { 0x00 };
 
         // TODO: Seemingly broken?
-        self.request_data(Command::SetFaderDisplayMode(fader), &[gradientByte, meterByte]);
+        self.request_data(
+            Command::SetFaderDisplayMode(fader),
+            &[gradientByte, meterByte],
+        );
         Ok(())
     }
 
-    pub fn set_fader_scribble(&mut self, fader: Fader, data: [u8; 1024]) -> Result<(), rusb::Error> {
+    pub fn set_fader_scribble(
+        &mut self,
+        fader: Fader,
+        data: [u8; 1024],
+    ) -> Result<(), rusb::Error> {
         // Dump it, see what happens..
         self.request_data(Command::SetScribble(fader), &data);
         Ok(())

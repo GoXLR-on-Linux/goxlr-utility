@@ -13,7 +13,7 @@ pub enum Command {
     SetMicrophoneType(),
     SetColourMap(),
     SetFaderDisplayMode(Fader),
-    SetScribble(Fader)
+    SetScribble(Fader),
 }
 
 impl Command {
