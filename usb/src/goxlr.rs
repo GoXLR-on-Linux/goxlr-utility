@@ -1,3 +1,4 @@
+use crate::buttonstate::Buttons;
 use crate::channels::Channel;
 use crate::channelstate::ChannelState;
 use crate::commands::Command;
@@ -9,6 +10,7 @@ use crate::faders::Fader;
 use crate::microphone::MicrophoneType;
 use crate::routing::InputDevice;
 use byteorder::{ByteOrder, LittleEndian};
+use enumset::EnumSet;
 use log::{info, warn};
 use rusb::{
     Device, DeviceDescriptor, DeviceHandle, Direction, GlobalContext, Language, Recipient,
@@ -257,9 +259,23 @@ impl<T: UsbContext> GoXLR<T> {
         Ok(())
     }
 
-    pub fn get_button_states(&mut self) -> Result<(), rusb::Error> {
+    pub fn get_button_states(&mut self) -> Result<(EnumSet<Buttons>, [u8; 4]), rusb::Error> {
         let result = self.request_data(Command::GetButtonStates, &[])?;
-        Ok(())
+        let mut pressed = EnumSet::empty();
+        let mut mixers = [0; 4];
+        let mut button_states = LittleEndian::read_u32(&result[0..4]);
+        mixers[0] = result[8];
+        mixers[1] = result[9];
+        mixers[2] = result[10];
+        mixers[3] = result[11];
+
+        for button in EnumSet::<Buttons>::all() {
+            if button_states & (1 << button.position()) != 0 {
+                pressed.insert(button);
+            }
+        }
+
+        Ok((pressed, mixers))
     }
 
     pub fn await_interrupt(&mut self, duration: Duration) -> bool {

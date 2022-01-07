@@ -1,3 +1,5 @@
+use enumset::EnumSetType;
+
 pub enum ButtonStates {
     Colour1,
     Colour2,
@@ -18,6 +20,7 @@ impl ButtonStates {
     }
 }
 
+#[derive(EnumSetType, Debug)]
 pub enum Buttons {
     // These are all the buttons from the GoXLR Mini.
     Fader1Mute,

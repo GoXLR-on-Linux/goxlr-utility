@@ -9,7 +9,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     loop {
         if goxlr.await_interrupt(interrupt_duration) {
-            goxlr.get_button_states();
+            let buttons = goxlr.get_button_states()?;
+            dbg!(buttons);
         }
         sleep(sleep_duration);
     }
