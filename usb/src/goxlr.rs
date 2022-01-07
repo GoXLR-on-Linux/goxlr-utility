@@ -270,7 +270,7 @@ impl<T: UsbContext> GoXLR<T> {
         mixers[3] = result[11];
 
         for button in EnumSet::<Buttons>::all() {
-            if button_states & (1 << button.position()) != 0 {
+            if button_states & (1 << button as u8) != 0 {
                 pressed.insert(button);
             }
         }

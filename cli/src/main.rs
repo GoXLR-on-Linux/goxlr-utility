@@ -1,9 +1,9 @@
-use std::str::FromStr;
 use clap::Parser;
 use goxlr_usb::buttonstate;
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::channels::Channel;
 use goxlr_usb::channelstate::ChannelState;
+use goxlr_usb::colouring::ColourTargets;
 use goxlr_usb::commands::Command::SetButtonStates;
 use goxlr_usb::error::ConnectError;
 use goxlr_usb::faders::Fader;
@@ -12,7 +12,7 @@ use goxlr_usb::microphone::MicrophoneType;
 use goxlr_usb::routing::{InputDevice, OutputDevice};
 use goxlr_usb::rusb::GlobalContext;
 use simplelog::*;
-use goxlr_usb::colouring::ColourTargets;
+use std::str::FromStr;
 
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]
@@ -92,7 +92,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut button_states: [u8; 24] = [ButtonStates::DimmedColour1.id(); 24];
 
     // Now set 'Mute' to a lit state..
-    button_states[Buttons::Fader2Mute.position()] = ButtonStates::Colour1.id();
+    button_states[Buttons::Fader2Mute as usize] = ButtonStates::Colour1.id();
 
     // Apply the state.
     goxlr.set_button_states(button_states);
@@ -130,7 +130,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for now, we're just going to create an array, use helpers to determine the correct array
     positions, manually set colours on buttons, then ship it.
      */
-
 
     /*
     // First, create an array (this will default to all lights being off)

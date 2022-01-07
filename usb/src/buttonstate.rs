@@ -23,68 +23,33 @@ impl ButtonStates {
 #[derive(EnumSetType, Debug)]
 pub enum Buttons {
     // These are all the buttons from the GoXLR Mini.
-    Fader1Mute,
-    Fader2Mute,
-    Fader3Mute,
-    Fader4Mute,
-    Bleep,
-    MicrophoneMute,
+    Fader1Mute = 4,
+    Fader2Mute = 9,
+    Fader3Mute = 14,
+    Fader4Mute = 19,
+    Bleep = 22,
+    MicrophoneMute = 23,
 
     // The rest are GoXLR Full Buttons. On the mini, they will simply be ignored.
-    EffectSelect1,
-    EffectSelect2,
-    EffectSelect3,
-    EffectSelect4,
-    EffectSelect5,
-    EffectSelect6,
+    EffectSelect1 = 0,
+    EffectSelect2 = 5,
+    EffectSelect3 = 11,
+    EffectSelect4 = 15,
+    EffectSelect5 = 1,
+    EffectSelect6 = 6,
 
-    EffectFx,
-    EffectMegaphone,
-    EffectRobot,
-    EffectHardTune,
+    EffectFx = 21,
+    EffectMegaphone = 20,
+    EffectRobot = 10,
+    EffectHardTune = 16,
 
-    SamplerSelectA,
-    SamplerSelectB,
-    SamplerSelectC,
+    SamplerSelectA = 2,
+    SamplerSelectB = 7,
+    SamplerSelectC = 12,
 
-    SamplerTopLeft,
-    SamplerTopRight,
-    SamplerBottomLeft,
-    SamplerBottomRight,
-    SamplerClear,
-}
-
-/**
- * This might be abstractable, I'm only currently aware of this specific order for the full fat
- * GoXLR colour state set command, but it may be used in other commands I haven't seen yet
- */
-impl Buttons {
-    pub fn position(&self) -> usize {
-        match self {
-            Buttons::Fader1Mute => 4,
-            Buttons::Fader2Mute => 9,
-            Buttons::Fader3Mute => 14,
-            Buttons::Fader4Mute => 19,
-            Buttons::Bleep => 22,
-            Buttons::MicrophoneMute => 23,
-            Buttons::EffectSelect1 => 0,
-            Buttons::EffectSelect2 => 5,
-            Buttons::EffectSelect3 => 11,
-            Buttons::EffectSelect4 => 15,
-            Buttons::EffectSelect5 => 1,
-            Buttons::EffectSelect6 => 6,
-            Buttons::EffectFx => 21,
-            Buttons::EffectMegaphone => 20,
-            Buttons::EffectRobot => 10,
-            Buttons::EffectHardTune => 16,
-            Buttons::SamplerSelectA => 2,
-            Buttons::SamplerSelectB => 7,
-            Buttons::SamplerSelectC => 12,
-            Buttons::SamplerTopLeft => 3,
-            Buttons::SamplerTopRight => 8,
-            Buttons::SamplerBottomLeft => 17,
-            Buttons::SamplerBottomRight => 13,
-            Buttons::SamplerClear => 18,
-        }
-    }
+    SamplerTopLeft = 3,
+    SamplerTopRight = 8,
+    SamplerBottomLeft = 17,
+    SamplerBottomRight = 13,
+    SamplerClear = 18,
 }
