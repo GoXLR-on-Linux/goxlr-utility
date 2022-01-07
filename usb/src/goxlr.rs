@@ -263,7 +263,7 @@ impl<T: UsbContext> GoXLR<T> {
         let result = self.request_data(Command::GetButtonStates, &[])?;
         let mut pressed = EnumSet::empty();
         let mut mixers = [0; 4];
-        let mut button_states = LittleEndian::read_u32(&result[0..4]);
+        let button_states = LittleEndian::read_u32(&result[0..4]);
         mixers[0] = result[8];
         mixers[1] = result[9];
         mixers[2] = result[10];

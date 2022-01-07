@@ -1,16 +1,16 @@
 use clap::Parser;
-use goxlr_usb::buttonstate;
+
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::channels::Channel;
 use goxlr_usb::channelstate::ChannelState;
-use goxlr_usb::colouring::ColourTargets;
-use goxlr_usb::commands::Command::SetButtonStates;
+
+
 use goxlr_usb::error::ConnectError;
 use goxlr_usb::faders::Fader;
 use goxlr_usb::goxlr::GoXLR;
-use goxlr_usb::microphone::MicrophoneType;
-use goxlr_usb::routing::{InputDevice, OutputDevice};
-use goxlr_usb::rusb::GlobalContext;
+
+
+
 use simplelog::*;
 use std::str::FromStr;
 
