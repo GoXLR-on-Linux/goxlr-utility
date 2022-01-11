@@ -5,7 +5,9 @@ use crate::client::Client;
 use anyhow::{Context, Result};
 use clap::Parser;
 use faders::FaderControls;
-use goxlr_ipc::{DaemonRequest, DaemonResponse, DeviceType, GoXLRCommand, UsbProductInformation};
+use goxlr_ipc::{
+    DaemonRequest, DaemonResponse, DeviceType, GoXLRCommand, MixerStatus, UsbProductInformation,
+};
 use goxlr_ipc::{DeviceStatus, Socket};
 use tokio::net::UnixStream;
 
@@ -56,6 +58,10 @@ fn print_device(device: &DeviceStatus) {
     if let Some(usb) = &device.usb_device {
         print_usb_info(usb);
     }
+
+    if let Some(mixer) = &device.mixer {
+        print_mixer_info(mixer);
+    }
 }
 
 fn print_usb_info(usb: &UsbProductInformation) {
@@ -74,4 +80,11 @@ fn print_usb_info(usb: &UsbProductInformation) {
         "USB Address: bus {}, address {}",
         usb.bus_number, usb.address
     );
+}
+
+fn print_mixer_info(mixer: &MixerStatus) {
+    println!("Fader A assignment: {}", mixer.fader_a_assignment);
+    println!("Fader B assignment: {}", mixer.fader_b_assignment);
+    println!("Fader C assignment: {}", mixer.fader_c_assignment);
+    println!("Fader D assignment: {}", mixer.fader_d_assignment);
 }

@@ -1,9 +1,19 @@
+use goxlr_types::ChannelName;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct DeviceStatus {
     pub device_type: DeviceType,
     pub usb_device: Option<UsbProductInformation>,
+    pub mixer: Option<MixerStatus>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MixerStatus {
+    pub fader_a_assignment: ChannelName,
+    pub fader_b_assignment: ChannelName,
+    pub fader_c_assignment: ChannelName,
+    pub fader_d_assignment: ChannelName,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

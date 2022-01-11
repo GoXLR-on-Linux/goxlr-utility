@@ -2,8 +2,9 @@
 use clap::ArgEnum;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+use strum::Display;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Display)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ChannelName {
@@ -20,7 +21,7 @@ pub enum ChannelName {
     LineOut,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Display)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum FaderName {

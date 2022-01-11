@@ -1,5 +1,6 @@
 use anyhow::Result;
-use goxlr_ipc::{DeviceStatus, DeviceType, GoXLRCommand, UsbProductInformation};
+use goxlr_ipc::{DeviceStatus, DeviceType, GoXLRCommand, MixerStatus, UsbProductInformation};
+use goxlr_types::{ChannelName, FaderName};
 use goxlr_usb::goxlr;
 use goxlr_usb::goxlr::GoXLR;
 use goxlr_usb::rusb::UsbContext;
@@ -27,6 +28,7 @@ impl<T: UsbContext> Device<T> {
             _ => DeviceType::Unknown,
         };
         self.fill_usb_information()?;
+        self.initialize_mixer()?;
 
         Ok(())
     }
@@ -44,6 +46,21 @@ impl<T: UsbContext> Device<T> {
             bus_number: self.goxlr.usb_bus_number(),
             address: self.goxlr.usb_address(),
             version,
+        });
+
+        Ok(())
+    }
+
+    fn initialize_mixer(&mut self) -> Result<()> {
+        self.goxlr.set_fader(FaderName::A, ChannelName::Mic)?;
+        self.goxlr.set_fader(FaderName::B, ChannelName::Chat)?;
+        self.goxlr.set_fader(FaderName::C, ChannelName::Music)?;
+        self.goxlr.set_fader(FaderName::D, ChannelName::System)?;
+        self.status.mixer = Some(MixerStatus {
+            fader_a_assignment: ChannelName::Mic,
+            fader_b_assignment: ChannelName::Chat,
+            fader_c_assignment: ChannelName::Music,
+            fader_d_assignment: ChannelName::System,
         });
 
         Ok(())
@@ -70,6 +87,14 @@ impl<T: UsbContext> Device<T> {
             GoXLRCommand::GetStatus => Ok(Some(self.status.clone())),
             GoXLRCommand::AssignFader(fader, channel) => {
                 self.goxlr.set_fader(fader, channel)?;
+                if let Some(mixer) = &mut self.status.mixer {
+                    match fader {
+                        FaderName::A => mixer.fader_a_assignment = channel,
+                        FaderName::B => mixer.fader_b_assignment = channel,
+                        FaderName::C => mixer.fader_c_assignment = channel,
+                        FaderName::D => mixer.fader_d_assignment = channel,
+                    }
+                }
                 Ok(None)
             }
         }
