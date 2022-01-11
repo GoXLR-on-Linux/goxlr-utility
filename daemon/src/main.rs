@@ -16,6 +16,8 @@ use std::path::Path;
 use tokio::net::{UnixListener, UnixStream};
 use tokio::sync::mpsc;
 use tokio::{join, signal};
+use std::fs;
+use std::os::unix::fs::PermissionsExt;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -28,6 +30,10 @@ async fn main() -> Result<()> {
     .context("Could not configure the logger")?;
 
     let listener = create_listener("/tmp/goxlr.socket").await?;
+
+    let mut perms = fs::metadata("/tmp/goxlr.socket")?.permissions();
+    perms.set_mode(0o777);
+    fs::set_permissions("/tmp/goxlr.socket", perms)?;
 
     let mut shutdown = Shutdown::new();
     let (usb_tx, usb_rx) = mpsc::channel(32);
