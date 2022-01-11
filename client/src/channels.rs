@@ -114,47 +114,47 @@ impl ChannelVolumes {
 
 #[derive(Debug, Args)]
 pub struct ChannelStates {
-    /// Set Mic muted status
+    /// Set Mic muted status (true/false)
     #[clap(long)]
     mic_muted: Option<bool>,
 
-    /// Set Line-In muted status
+    /// Set Line-In muted status (true/false)
     #[clap(long)]
     line_in_muted: Option<bool>,
 
-    /// Set Console muted status
+    /// Set Console muted status (true/false)
     #[clap(long)]
     console_muted: Option<bool>,
 
-    /// Set System muted status
+    /// Set System muted status (true/false)
     #[clap(long)]
     system_muted: Option<bool>,
 
-    /// Set Game muted status
+    /// Set Game muted status (true/false)
     #[clap(long)]
     game_muted: Option<bool>,
 
-    /// Set Chat muted status
+    /// Set Chat muted status (true/false)
     #[clap(long)]
     chat_muted: Option<bool>,
 
-    /// Set Sample muted status
+    /// Set Sample muted status (true/false)
     #[clap(long)]
     sample_muted: Option<bool>,
 
-    /// Set Music muted status
+    /// Set Music muted status (true/false)
     #[clap(long)]
     music_muted: Option<bool>,
 
-    /// Set Headphones muted status
+    /// Set Headphones muted status (true/false)
     #[clap(long)]
     headphones_muted: Option<bool>,
 
-    /// Set Mic-Monitor muted status
+    /// Set Mic-Monitor muted status (true/false)
     #[clap(long)]
     mic_monitor_muted: Option<bool>,
 
-    /// Set Line-Out muted status
+    /// Set Line-Out muted status (true/false)
     #[clap(long)]
     line_out_muted: Option<bool>,
 }
