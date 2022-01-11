@@ -7,6 +7,12 @@ This utility is currently not 'user ready', it's extremely rough around the edge
 ## Setting Permissions
 Copy `50-goxlr.rules` to `/etc/udev/rules.d/` and then reload with `sudo udevadm control --reload-rules`
 
-## Running
+## Running test demo
 
-For now `cargo build && sudo ./target/debug/goxlr-cli`. An actual application coming Soon™.
+For now `cargo build && sudo ./target/debug/goxlr-cli`.
+
+## Running daemon & client
+
+- First build the project with `cargo build`.
+- Start the daemon with `sudo ./target/debug/goxlr-daemon`
+- Interact with it using `./target/debug/goxlr-client`
