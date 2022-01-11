@@ -25,4 +25,5 @@ pub enum GoXLRCommand {
     GetStatus,
     AssignFader(FaderName, ChannelName),
     SetVolume(ChannelName, u8),
+    SetChannelMuted(ChannelName, bool),
 }

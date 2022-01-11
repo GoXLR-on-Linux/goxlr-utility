@@ -2,7 +2,7 @@ mod channels;
 mod client;
 mod faders;
 
-use crate::channels::ChannelControls;
+use crate::channels::{ChannelStates, ChannelVolumes};
 use crate::client::Client;
 use anyhow::{Context, Result};
 use clap::Parser;
@@ -21,8 +21,11 @@ struct Cli {
     #[clap(flatten, help_heading = "Fader controls")]
     faders: FaderControls,
 
-    #[clap(flatten, help_heading = "Channel controls")]
-    channels: ChannelControls,
+    #[clap(flatten, help_heading = "Channel volumes")]
+    channel_volumes: ChannelVolumes,
+
+    #[clap(flatten, help_heading = "Channel states")]
+    channel_states: ChannelStates,
 }
 
 #[tokio::main]
@@ -42,10 +45,15 @@ async fn main() -> Result<()> {
         .await
         .context("Could not apply fader settings")?;
 
-    cli.channels
+    cli.channel_volumes
         .apply(&mut client)
         .await
-        .context("Could not apply channel settings")?;
+        .context("Could not apply channel volumes")?;
+
+    cli.channel_states
+        .apply(&mut client)
+        .await
+        .context("Could not apply channel states")?;
 
     client
         .send(GoXLRCommand::GetStatus)
@@ -104,10 +112,11 @@ fn print_mixer_info(mixer: &MixerStatus) {
     }
 
     for channel in ChannelName::iter() {
-        println!(
-            "{} volume: {:.0}%",
-            channel,
-            (mixer.get_channel_volume(channel) as f32 / 255.0) * 100.0
-        );
+        let pct = (mixer.get_channel_volume(channel) as f32 / 255.0) * 100.0;
+        if mixer.get_channel_muted(channel) {
+            println!("{} volume: {:.0}% (Muted)", channel, pct);
+        } else {
+            println!("{} volume: {:.0}%", channel, pct);
+        }
     }
 }

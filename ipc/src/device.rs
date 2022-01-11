@@ -25,6 +25,17 @@ pub struct MixerStatus {
     pub headphones_volume: u8,
     pub mic_monitor_volume: u8,
     pub line_out_volume: u8,
+    pub mic_muted: bool,
+    pub line_in_muted: bool,
+    pub console_muted: bool,
+    pub system_muted: bool,
+    pub game_muted: bool,
+    pub chat_muted: bool,
+    pub sample_muted: bool,
+    pub music_muted: bool,
+    pub headphones_muted: bool,
+    pub mic_monitor_muted: bool,
+    pub line_out_muted: bool,
 }
 
 impl MixerStatus {
@@ -75,6 +86,38 @@ impl MixerStatus {
             ChannelName::Headphones => self.headphones_volume = volume,
             ChannelName::MicMonitor => self.mic_monitor_volume = volume,
             ChannelName::LineOut => self.line_out_volume = volume,
+        }
+    }
+
+    pub fn get_channel_muted(&self, channel: ChannelName) -> bool {
+        match channel {
+            ChannelName::Mic => self.mic_muted,
+            ChannelName::LineIn => self.line_in_muted,
+            ChannelName::Console => self.console_muted,
+            ChannelName::System => self.system_muted,
+            ChannelName::Game => self.game_muted,
+            ChannelName::Chat => self.chat_muted,
+            ChannelName::Sample => self.sample_muted,
+            ChannelName::Music => self.music_muted,
+            ChannelName::Headphones => self.headphones_muted,
+            ChannelName::MicMonitor => self.mic_monitor_muted,
+            ChannelName::LineOut => self.line_out_muted,
+        }
+    }
+
+    pub fn set_channel_muted(&mut self, channel: ChannelName, muted: bool) {
+        match channel {
+            ChannelName::Mic => self.mic_muted = muted,
+            ChannelName::LineIn => self.line_in_muted = muted,
+            ChannelName::Console => self.console_muted = muted,
+            ChannelName::System => self.system_muted = muted,
+            ChannelName::Game => self.game_muted = muted,
+            ChannelName::Chat => self.chat_muted = muted,
+            ChannelName::Sample => self.sample_muted = muted,
+            ChannelName::Music => self.music_muted = muted,
+            ChannelName::Headphones => self.headphones_muted = muted,
+            ChannelName::MicMonitor => self.mic_monitor_muted = muted,
+            ChannelName::LineOut => self.line_out_muted = muted,
         }
     }
 }

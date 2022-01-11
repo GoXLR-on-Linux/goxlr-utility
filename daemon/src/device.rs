@@ -1,6 +1,7 @@
 use anyhow::Result;
 use goxlr_ipc::{DeviceStatus, DeviceType, GoXLRCommand, MixerStatus, UsbProductInformation};
 use goxlr_types::{ChannelName, FaderName};
+use goxlr_usb::channelstate::ChannelState;
 use goxlr_usb::goxlr;
 use goxlr_usb::goxlr::GoXLR;
 use goxlr_usb::rusb::UsbContext;
@@ -59,6 +60,8 @@ impl<T: UsbContext> Device<T> {
         self.goxlr.set_fader(FaderName::D, ChannelName::System)?;
         for channel in ChannelName::iter() {
             self.goxlr.set_volume(channel, 255)?;
+            self.goxlr
+                .set_channel_state(channel, ChannelState::Unmuted)?;
         }
         self.status.mixer = Some(MixerStatus {
             fader_a_assignment: ChannelName::Mic,
@@ -76,6 +79,17 @@ impl<T: UsbContext> Device<T> {
             headphones_volume: 255,
             mic_monitor_volume: 255,
             line_out_volume: 255,
+            mic_muted: false,
+            line_in_muted: false,
+            console_muted: false,
+            system_muted: false,
+            game_muted: false,
+            chat_muted: false,
+            sample_muted: false,
+            music_muted: false,
+            headphones_muted: false,
+            mic_monitor_muted: false,
+            line_out_muted: false,
         });
 
         Ok(())
@@ -111,6 +125,20 @@ impl<T: UsbContext> Device<T> {
                 self.goxlr.set_volume(channel, volume)?;
                 if let Some(mixer) = &mut self.status.mixer {
                     mixer.set_channel_volume(channel, volume);
+                }
+                Ok(None)
+            }
+            GoXLRCommand::SetChannelMuted(channel, muted) => {
+                self.goxlr.set_channel_state(
+                    channel,
+                    if muted {
+                        ChannelState::Muted
+                    } else {
+                        ChannelState::Unmuted
+                    },
+                )?;
+                if let Some(mixer) = &mut self.status.mixer {
+                    mixer.set_channel_muted(channel, muted);
                 }
                 Ok(None)
             }
