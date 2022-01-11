@@ -1,12 +1,14 @@
 mod channels;
+mod cli;
 mod client;
 mod faders;
 
-use crate::channels::{ChannelStates, ChannelVolumes};
+use crate::channels::{apply_channel_states, apply_channel_volumes};
 use crate::client::Client;
+use crate::faders::apply_fader_controls;
 use anyhow::{Context, Result};
 use clap::Parser;
-use faders::FaderControls;
+use cli::Cli;
 use goxlr_ipc::{
     DaemonRequest, DaemonResponse, DeviceType, GoXLRCommand, MixerStatus, UsbProductInformation,
 };
@@ -14,19 +16,6 @@ use goxlr_ipc::{DeviceStatus, Socket};
 use goxlr_types::{ChannelName, FaderName};
 use strum::IntoEnumIterator;
 use tokio::net::UnixStream;
-
-#[derive(Parser, Debug)]
-#[clap(about, version, author)]
-struct Cli {
-    #[clap(flatten, help_heading = "Fader controls")]
-    faders: FaderControls,
-
-    #[clap(flatten, help_heading = "Channel volumes")]
-    channel_volumes: ChannelVolumes,
-
-    #[clap(flatten, help_heading = "Channel states")]
-    channel_states: ChannelStates,
-}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -40,18 +29,15 @@ async fn main() -> Result<()> {
     let socket: Socket<DaemonResponse, DaemonRequest> = Socket::new(address, &mut stream);
     let mut client = Client::new(socket);
 
-    cli.faders
-        .apply(&mut client)
+    apply_fader_controls(&cli.faders, &mut client)
         .await
         .context("Could not apply fader settings")?;
 
-    cli.channel_volumes
-        .apply(&mut client)
+    apply_channel_volumes(&cli.channel_volumes, &mut client)
         .await
         .context("Could not apply channel volumes")?;
 
-    cli.channel_states
-        .apply(&mut client)
+    apply_channel_states(&cli.channel_states, &mut client)
         .await
         .context("Could not apply channel states")?;
 
