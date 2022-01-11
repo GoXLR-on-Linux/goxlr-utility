@@ -6,4 +6,5 @@ members = [
     "daemon",
     "client",
     "ipc",
+    "types",
 ]

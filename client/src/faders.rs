@@ -1,8 +1,8 @@
 use crate::Client;
 use anyhow::Result;
 use clap::Args;
-use goxlr_ipc::types::{ChannelName, FaderName};
 use goxlr_ipc::GoXLRCommand;
+use goxlr_types::{ChannelName, FaderName};
 
 #[derive(Debug, Args)]
 pub struct FaderControls {

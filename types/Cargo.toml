@@ -1,0 +1,13 @@
+[package]
+name = "goxlr-types"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+default = []
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"], optional = true}
+clap = { version = "3.0.0", features = ["derive"], optional = true}

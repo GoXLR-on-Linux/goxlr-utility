@@ -1,37 +1,32 @@
 use clap::Parser;
 
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
-use goxlr_usb::channels::Channel;
 use goxlr_usb::channelstate::ChannelState;
 
-
 use goxlr_usb::error::ConnectError;
-use goxlr_usb::faders::Fader;
 use goxlr_usb::goxlr::GoXLR;
 
-
-
+use goxlr_types::{ChannelName, FaderName};
 use simplelog::*;
-use std::str::FromStr;
 
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]
 struct Args {
     /// Assign fader A
-    #[clap(long, default_value = "Mic")]
-    fader_a: String,
+    #[clap(long, arg_enum, default_value = "Mic")]
+    fader_a: ChannelName,
 
     /// Assign fader B
-    #[clap(long, default_value = "Chat")]
-    fader_b: String,
+    #[clap(long, arg_enum, default_value = "Chat")]
+    fader_b: ChannelName,
 
     /// Assign fader C
-    #[clap(long, default_value = "Music")]
-    fader_c: String,
+    #[clap(long, arg_enum, default_value = "Music")]
+    fader_c: ChannelName,
 
     /// Assign fader D
-    #[clap(long, default_value = "System")]
-    fader_d: String,
+    #[clap(long, arg_enum, default_value = "System")]
+    fader_d: ChannelName,
 
     /// How verbose should the output be (can be repeated for super verbosity!)
     #[clap(short, long, parse(from_occurrences))]
@@ -72,17 +67,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Err(e) => return Err(e.into()),
     };
 
-    goxlr.set_fader(Fader::A, Channel::from_str(&cli.fader_a).unwrap())?;
-    goxlr.set_fader(Fader::B, Channel::from_str(&cli.fader_b).unwrap())?;
-    goxlr.set_fader(Fader::C, Channel::from_str(&cli.fader_c).unwrap())?;
-    goxlr.set_fader(Fader::D, Channel::from_str(&cli.fader_d).unwrap())?;
+    goxlr.set_fader(FaderName::A, cli.fader_a)?;
+    goxlr.set_fader(FaderName::B, cli.fader_b)?;
+    goxlr.set_fader(FaderName::C, cli.fader_c)?;
+    goxlr.set_fader(FaderName::D, cli.fader_d)?;
 
-    goxlr.set_volume(Channel::from_str(&cli.fader_a).unwrap(), 0xFF)?;
-    goxlr.set_volume(Channel::from_str(&cli.fader_b).unwrap(), 0xFF)?;
-    goxlr.set_volume(Channel::from_str(&cli.fader_c).unwrap(), 0xFF)?;
-    goxlr.set_volume(Channel::from_str(&cli.fader_d).unwrap(), 0xFF)?;
+    goxlr.set_volume(cli.fader_a, 0xFF)?;
+    goxlr.set_volume(cli.fader_b, 0xFF)?;
+    goxlr.set_volume(cli.fader_c, 0xFF)?;
+    goxlr.set_volume(cli.fader_d, 0xFF)?;
 
-    goxlr.set_channel_state(Channel::System, ChannelState::Unmuted);
+    goxlr.set_channel_state(ChannelName::System, ChannelState::Unmuted);
 
     // So this is a complex one, there's no direct way to retrieve the button colour states
     // directly from the GoXLR, it's all managed by the app.. So for testing, all we're going

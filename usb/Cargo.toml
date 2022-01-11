@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+goxlr-types = {path = "../types"}
 rusb = "0.9"
 thiserror = "1.0"
 byteorder = "1"

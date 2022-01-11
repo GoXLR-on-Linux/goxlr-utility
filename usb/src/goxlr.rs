@@ -1,16 +1,15 @@
 use crate::buttonstate::{ButtonStates, Buttons};
-use crate::channels::Channel;
 use crate::channelstate::ChannelState;
 use crate::commands::Command;
 use crate::commands::SystemInfoCommand;
 use crate::commands::SystemInfoCommand::SupportsDCPCategory;
 use crate::dcp::DCPCategory;
 use crate::error::ConnectError;
-use crate::faders::Fader;
 use crate::microphone::MicrophoneType;
 use crate::routing::InputDevice;
 use byteorder::{ByteOrder, LittleEndian};
 use enumset::EnumSet;
+use goxlr_types::{ChannelName, FaderName};
 use log::{info, warn};
 use rusb::{
     Device, DeviceDescriptor, DeviceHandle, Direction, GlobalContext, Language, Recipient,
@@ -209,20 +208,20 @@ impl<T: UsbContext> GoXLR<T> {
         Ok(())
     }
 
-    pub fn set_fader(&mut self, fader: Fader, channel: Channel) -> Result<(), rusb::Error> {
+    pub fn set_fader(&mut self, fader: FaderName, channel: ChannelName) -> Result<(), rusb::Error> {
         // Channel ID, unknown, unknown, unknown
-        self.request_data(Command::SetFader(fader), &[channel.id(), 0x00, 0x00, 0x00])?;
+        self.request_data(Command::SetFader(fader), &[channel as u8, 0x00, 0x00, 0x00])?;
         Ok(())
     }
 
-    pub fn set_volume(&mut self, channel: Channel, volume: u8) -> Result<(), rusb::Error> {
+    pub fn set_volume(&mut self, channel: ChannelName, volume: u8) -> Result<(), rusb::Error> {
         self.request_data(Command::SetChannelVolume(channel), &[volume])?;
         Ok(())
     }
 
     pub fn set_channel_state(
         &mut self,
-        channel: Channel,
+        channel: ChannelName,
         state: ChannelState,
     ) -> Result<(), rusb::Error> {
         self.request_data(Command::SetChannelState(channel), &[state.id()])?;
@@ -241,7 +240,7 @@ impl<T: UsbContext> GoXLR<T> {
 
     pub fn set_fader_display_mode(
         &mut self,
-        fader: Fader,
+        fader: FaderName,
         gradient: bool,
         meter: bool,
     ) -> Result<(), rusb::Error> {
@@ -259,7 +258,7 @@ impl<T: UsbContext> GoXLR<T> {
 
     pub fn set_fader_scribble(
         &mut self,
-        fader: Fader,
+        fader: FaderName,
         data: [u8; 1024],
     ) -> Result<(), rusb::Error> {
         // Dump it, see what happens..

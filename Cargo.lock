@@ -288,6 +288,7 @@ name = "goxlr-cli"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "goxlr-types",
  "goxlr-usb",
  "simplelog",
 ]
@@ -299,6 +300,7 @@ dependencies = [
  "anyhow",
  "clap",
  "goxlr-ipc",
+ "goxlr-types",
  "simplelog",
  "tokio",
 ]
@@ -319,12 +321,20 @@ dependencies = [
 name = "goxlr-ipc"
 version = "0.1.0"
 dependencies = [
- "clap",
  "futures",
+ "goxlr-types",
  "serde",
  "tokio",
  "tokio-serde",
  "tokio-util",
+]
+
+[[package]]
+name = "goxlr-types"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "serde",
 ]
 
 [[package]]
@@ -333,6 +343,7 @@ version = "0.1.0"
 dependencies = [
  "byteorder",
  "enumset",
+ "goxlr-types",
  "log",
  "rusb",
  "thiserror",
