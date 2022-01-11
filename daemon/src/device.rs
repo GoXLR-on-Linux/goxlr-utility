@@ -88,12 +88,7 @@ impl<T: UsbContext> Device<T> {
             GoXLRCommand::AssignFader(fader, channel) => {
                 self.goxlr.set_fader(fader, channel)?;
                 if let Some(mixer) = &mut self.status.mixer {
-                    match fader {
-                        FaderName::A => mixer.fader_a_assignment = channel,
-                        FaderName::B => mixer.fader_b_assignment = channel,
-                        FaderName::C => mixer.fader_c_assignment = channel,
-                        FaderName::D => mixer.fader_d_assignment = channel,
-                    }
+                    mixer.set_fader_assignment(fader, channel);
                 }
                 Ok(None)
             }

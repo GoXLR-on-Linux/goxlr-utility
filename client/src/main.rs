@@ -9,6 +9,8 @@ use goxlr_ipc::{
     DaemonRequest, DaemonResponse, DeviceType, GoXLRCommand, MixerStatus, UsbProductInformation,
 };
 use goxlr_ipc::{DeviceStatus, Socket};
+use goxlr_types::FaderName;
+use strum::IntoEnumIterator;
 use tokio::net::UnixStream;
 
 #[derive(Parser, Debug)]
@@ -83,8 +85,11 @@ fn print_usb_info(usb: &UsbProductInformation) {
 }
 
 fn print_mixer_info(mixer: &MixerStatus) {
-    println!("Fader A assignment: {}", mixer.fader_a_assignment);
-    println!("Fader B assignment: {}", mixer.fader_b_assignment);
-    println!("Fader C assignment: {}", mixer.fader_c_assignment);
-    println!("Fader D assignment: {}", mixer.fader_d_assignment);
+    for fader in FaderName::iter() {
+        println!(
+            "Fader {} assignment: {}",
+            fader,
+            mixer.get_fader_assignment(fader)
+        )
+    }
 }

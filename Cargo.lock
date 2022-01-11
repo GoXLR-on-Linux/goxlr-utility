@@ -302,6 +302,7 @@ dependencies = [
  "goxlr-ipc",
  "goxlr-types",
  "simplelog",
+ "strum",
  "tokio",
 ]
 
