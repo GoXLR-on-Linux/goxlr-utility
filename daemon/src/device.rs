@@ -5,6 +5,7 @@ use goxlr_usb::goxlr;
 use goxlr_usb::goxlr::GoXLR;
 use goxlr_usb::rusb::UsbContext;
 use std::time::Duration;
+use strum::IntoEnumIterator;
 
 #[derive(Debug)]
 pub struct Device<T: UsbContext> {
@@ -56,11 +57,25 @@ impl<T: UsbContext> Device<T> {
         self.goxlr.set_fader(FaderName::B, ChannelName::Chat)?;
         self.goxlr.set_fader(FaderName::C, ChannelName::Music)?;
         self.goxlr.set_fader(FaderName::D, ChannelName::System)?;
+        for channel in ChannelName::iter() {
+            self.goxlr.set_volume(channel, 255)?;
+        }
         self.status.mixer = Some(MixerStatus {
             fader_a_assignment: ChannelName::Mic,
             fader_b_assignment: ChannelName::Chat,
             fader_c_assignment: ChannelName::Music,
             fader_d_assignment: ChannelName::System,
+            mic_volume: 255,
+            line_in_volume: 255,
+            console_volume: 255,
+            system_volume: 255,
+            game_volume: 255,
+            chat_volume: 255,
+            sample_volume: 255,
+            music_volume: 255,
+            headphones_volume: 255,
+            mic_monitor_volume: 255,
+            line_out_volume: 255,
         });
 
         Ok(())
@@ -89,6 +104,13 @@ impl<T: UsbContext> Device<T> {
                 self.goxlr.set_fader(fader, channel)?;
                 if let Some(mixer) = &mut self.status.mixer {
                     mixer.set_fader_assignment(fader, channel);
+                }
+                Ok(None)
+            }
+            GoXLRCommand::SetVolume(channel, volume) => {
+                self.goxlr.set_volume(channel, volume)?;
+                if let Some(mixer) = &mut self.status.mixer {
+                    mixer.set_channel_volume(channel, volume);
                 }
                 Ok(None)
             }

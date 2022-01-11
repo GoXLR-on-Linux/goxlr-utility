@@ -24,4 +24,5 @@ pub enum DaemonResponse {
 pub enum GoXLRCommand {
     GetStatus,
     AssignFader(FaderName, ChannelName),
+    SetVolume(ChannelName, u8),
 }

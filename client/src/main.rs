@@ -1,6 +1,8 @@
+mod channels;
 mod client;
 mod faders;
 
+use crate::channels::ChannelControls;
 use crate::client::Client;
 use anyhow::{Context, Result};
 use clap::Parser;
@@ -9,15 +11,18 @@ use goxlr_ipc::{
     DaemonRequest, DaemonResponse, DeviceType, GoXLRCommand, MixerStatus, UsbProductInformation,
 };
 use goxlr_ipc::{DeviceStatus, Socket};
-use goxlr_types::FaderName;
+use goxlr_types::{ChannelName, FaderName};
 use strum::IntoEnumIterator;
 use tokio::net::UnixStream;
 
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]
 struct Cli {
-    #[clap(flatten)]
+    #[clap(flatten, help_heading = "Fader controls")]
     faders: FaderControls,
+
+    #[clap(flatten, help_heading = "Channel controls")]
+    channels: ChannelControls,
 }
 
 #[tokio::main]
@@ -35,7 +40,12 @@ async fn main() -> Result<()> {
     cli.faders
         .apply(&mut client)
         .await
-        .context("Could not apply fader assignments")?;
+        .context("Could not apply fader settings")?;
+
+    cli.channels
+        .apply(&mut client)
+        .await
+        .context("Could not apply channel settings")?;
 
     client
         .send(GoXLRCommand::GetStatus)
@@ -91,5 +101,13 @@ fn print_mixer_info(mixer: &MixerStatus) {
             fader,
             mixer.get_fader_assignment(fader)
         )
+    }
+
+    for channel in ChannelName::iter() {
+        println!(
+            "{} volume: {:.0}%",
+            channel,
+            (mixer.get_channel_volume(channel) as f32 / 255.0) * 100.0
+        );
     }
 }

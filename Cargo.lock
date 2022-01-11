@@ -316,6 +316,7 @@ dependencies = [
  "goxlr-usb",
  "log",
  "simplelog",
+ "strum",
  "tokio",
 ]
 
