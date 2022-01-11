@@ -5,6 +5,7 @@ members = [
     "cli",
     "daemon",
     "client",
+    "gui",
     "ipc",
     "types",
 ]

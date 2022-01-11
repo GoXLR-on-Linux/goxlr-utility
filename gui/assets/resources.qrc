@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+        <!-- Needed to reference images.. -->
+        <!-- <file>images/something.png</file> -->
+    </qresource>
+</RCC>

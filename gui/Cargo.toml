@@ -1,0 +1,21 @@
+[package]
+name = "goxlr-gui"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+goxlr-ipc = {path = "../ipc"}
+goxlr-types = { path = "../types", features = ["clap"] }
+tokio = {version = "1.0", features=["full"]}
+anyhow = "1.0"
+strum = { version = "0.23"}
+
+# QT Dependencies..
+cpp_core = "0.6.0"
+qt_core = "0.5.0"
+qt_gui = "0.5.0"
+qt_widgets = "0.5.0"
+qt_ui_tools = "0.5.0"
+
+[build-dependencies]
+qt_ritual_build = "0.5.0"
