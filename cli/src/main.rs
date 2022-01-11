@@ -13,19 +13,19 @@ use simplelog::*;
 #[clap(about, version, author)]
 struct Args {
     /// Assign fader A
-    #[clap(long, arg_enum, default_value = "Mic")]
+    #[clap(long, arg_enum, default_value = "mic")]
     fader_a: ChannelName,
 
     /// Assign fader B
-    #[clap(long, arg_enum, default_value = "Chat")]
+    #[clap(long, arg_enum, default_value = "chat")]
     fader_b: ChannelName,
 
     /// Assign fader C
-    #[clap(long, arg_enum, default_value = "Music")]
+    #[clap(long, arg_enum, default_value = "music")]
     fader_c: ChannelName,
 
     /// Assign fader D
-    #[clap(long, arg_enum, default_value = "System")]
+    #[clap(long, arg_enum, default_value = "system")]
     fader_d: ChannelName,
 
     /// How verbose should the output be (can be repeated for super verbosity!)
