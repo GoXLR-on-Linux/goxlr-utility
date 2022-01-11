@@ -19,18 +19,20 @@ use rusb::{
 use std::thread::sleep;
 use std::time::Duration;
 
+#[derive(Debug)]
 pub struct GoXLR<T: UsbContext> {
     handle: DeviceHandle<T>,
-    _device: Device<T>,
-    _device_descriptor: DeviceDescriptor,
+    device: Device<T>,
+    device_descriptor: DeviceDescriptor,
     timeout: Duration,
-    _language: Language,
+    language: Language,
     command_count: u16,
+    device_is_claimed: bool,
 }
 
-const VID_GOXLR: u16 = 0x1220;
-const PID_GOXLR_MINI: u16 = 0x8fe4;
-const PID_GOXLR_FULL: u16 = 0x8fe0;
+pub const VID_GOXLR: u16 = 0x1220;
+pub const PID_GOXLR_MINI: u16 = 0x8fe4;
+pub const PID_GOXLR_FULL: u16 = 0x8fe0;
 
 impl GoXLR<GlobalContext> {
     pub fn open() -> Result<Self, ConnectError> {
@@ -69,20 +71,17 @@ impl<T: UsbContext> GoXLR<T> {
             .ok_or(ConnectError::DeviceNotGoXLR)?
             .to_owned();
 
-        if let Err(e) = handle.set_active_configuration(1) {
-            warn!("Couldn't set GoXLR active configuration to 1: {}", e);
-        }
-        if let Err(e) = handle.claim_interface(0) {
-            warn!("Couldn't claim GoXLR usb interface 0: {}", e);
-        }
+        let _ = handle.set_active_configuration(1);
+        let device_is_claimed = handle.claim_interface(0).is_ok();
 
         let mut goxlr = Self {
             handle,
-            _device: device,
-            _device_descriptor: device_descriptor,
+            device,
+            device_descriptor,
             timeout,
-            _language: language,
+            language,
             command_count: 0,
+            device_is_claimed,
         };
 
         goxlr.read_control(RequestType::Vendor, 0, 0, 0, 24)?; // ??
@@ -91,6 +90,42 @@ impl<T: UsbContext> GoXLR<T> {
         goxlr.read_control(RequestType::Vendor, 3, 0, 0, 1040)?; // ??
 
         Ok(goxlr)
+    }
+
+    pub fn usb_device_descriptor(&self) -> &DeviceDescriptor {
+        &self.device_descriptor
+    }
+
+    pub fn usb_device_manufacturer(&self) -> Result<String, rusb::Error> {
+        self.handle.read_manufacturer_string(
+            self.language,
+            &self.device_descriptor,
+            Duration::from_millis(100),
+        )
+    }
+
+    pub fn usb_device_product_name(&self) -> Result<String, rusb::Error> {
+        self.handle.read_product_string(
+            self.language,
+            &self.device_descriptor,
+            Duration::from_millis(100),
+        )
+    }
+
+    pub fn usb_device_is_claimed(&self) -> bool {
+        self.device_is_claimed
+    }
+
+    pub fn usb_device_has_kernel_driver_active(&self) -> Result<bool, rusb::Error> {
+        self.handle.kernel_driver_active(0)
+    }
+
+    pub fn usb_bus_number(&self) -> u8 {
+        self.device.bus_number()
+    }
+
+    pub fn usb_address(&self) -> u8 {
+        self.device.address()
     }
 
     pub fn read_control(

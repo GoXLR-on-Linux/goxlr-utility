@@ -1,11 +1,11 @@
 #[derive(thiserror::Error, Debug, Copy, Clone, Eq, PartialEq)]
 pub enum ConnectError {
-    #[error("GoXLR not found")]
+    #[error("No GoXLR device was found")]
     DeviceNotFound,
 
-    #[error("usb error")]
+    #[error("USB error: {0}")]
     UsbError(#[from] rusb::Error),
 
-    #[error("device is not a GoXLR")]
+    #[error("Device is not a GoXLR")]
     DeviceNotGoXLR,
 }

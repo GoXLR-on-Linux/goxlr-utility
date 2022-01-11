@@ -1,14 +1,13 @@
 [package]
-name = "goxlr-daemon"
+name = "goxlr-client"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-goxlr-usb = {path = "../usb" }
 goxlr-ipc = {path = "../ipc" }
-simplelog = "0.11.1"
 tokio = {version = "1.0", features=["full"]}
-log = "0.4.14"
+simplelog = "0.11.1"
 anyhow = "1.0"
+

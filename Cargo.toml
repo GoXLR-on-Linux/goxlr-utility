@@ -4,4 +4,6 @@ members = [
     "usb",
     "cli",
     "daemon",
+    "client",
+    "ipc",
 ]
