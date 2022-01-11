@@ -1,6 +1,7 @@
 use anyhow::Result;
 use goxlr_ipc::{DeviceStatus, DeviceType, GoXLRCommand, MixerStatus, UsbProductInformation};
 use goxlr_types::{ChannelName, FaderName};
+use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::channelstate::ChannelState;
 use goxlr_usb::goxlr;
 use goxlr_usb::goxlr::GoXLR;
@@ -63,6 +64,7 @@ impl<T: UsbContext> Device<T> {
             self.goxlr
                 .set_channel_state(channel, ChannelState::Unmuted)?;
         }
+        self.goxlr.set_button_states(self.create_button_states())?;
         self.status.mixer = Some(MixerStatus {
             fader_a_assignment: ChannelName::Mic,
             fader_b_assignment: ChannelName::Chat,
@@ -119,6 +121,7 @@ impl<T: UsbContext> Device<T> {
                 if let Some(mixer) = &mut self.status.mixer {
                     mixer.set_fader_assignment(fader, channel);
                 }
+                self.goxlr.set_button_states(self.create_button_states())?;
                 Ok(None)
             }
             GoXLRCommand::SetVolume(channel, volume) => {
@@ -140,8 +143,28 @@ impl<T: UsbContext> Device<T> {
                 if let Some(mixer) = &mut self.status.mixer {
                     mixer.set_channel_muted(channel, muted);
                 }
+                self.goxlr.set_button_states(self.create_button_states())?;
                 Ok(None)
             }
         }
+    }
+
+    fn create_button_states(&self) -> [ButtonStates; 24] {
+        let mut result = [ButtonStates::DimmedColour1; 24];
+        if let Some(mixer) = &self.status.mixer {
+            if mixer.get_channel_muted(mixer.get_fader_assignment(FaderName::A)) {
+                result[Buttons::Fader1Mute as usize] = ButtonStates::Colour1;
+            }
+            if mixer.get_channel_muted(mixer.get_fader_assignment(FaderName::B)) {
+                result[Buttons::Fader2Mute as usize] = ButtonStates::Colour1;
+            }
+            if mixer.get_channel_muted(mixer.get_fader_assignment(FaderName::C)) {
+                result[Buttons::Fader3Mute as usize] = ButtonStates::Colour1;
+            }
+            if mixer.get_channel_muted(mixer.get_fader_assignment(FaderName::D)) {
+                result[Buttons::Fader4Mute as usize] = ButtonStates::Colour1;
+            }
+        }
+        result
     }
 }

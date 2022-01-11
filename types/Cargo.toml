@@ -12,3 +12,4 @@ default = []
 strum = { version = "0.23", features = ["derive"] }
 serde = { version = "1.0", features = ["derive"], optional = true}
 clap = { version = "3.0.0", features = ["derive"], optional = true}
+enumset = { version = "1.0.8", optional = true }

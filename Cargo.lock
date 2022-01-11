@@ -337,6 +337,7 @@ name = "goxlr-types"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "enumset",
  "serde",
  "strum",
 ]
