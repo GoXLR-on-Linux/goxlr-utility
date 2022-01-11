@@ -1,10 +1,10 @@
 use crate::device::Device;
 use crate::Shutdown;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use goxlr_ipc::{DeviceStatus, GoXLRCommand};
 use goxlr_usb::goxlr::GoXLR;
 use goxlr_usb::rusb::UsbContext;
-use log::{error, info};
+use log::{error, info, warn};
 use std::time::Duration;
 use tokio::sync::{mpsc, oneshot};
 use tokio::time::sleep;
@@ -56,6 +56,10 @@ pub async fn handle_changes(mut rx: DeviceReceiver, mut shutdown: Shutdown) {
             () = shutdown.recv() => {
                 info!("Shutting down device worker");
                 return;
+            },
+            Some((_command, response)) = rx.recv() => {
+                warn!("Received command whilst no device is connected");
+                let _ = response.send(Err(anyhow!("No device is connected or the daemon does not have permission to access it")));
             },
         };
     }
