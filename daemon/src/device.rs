@@ -1,5 +1,8 @@
 use anyhow::Result;
+use goxlr_ipc::types::{ChannelName, FaderName};
 use goxlr_ipc::{DeviceStatus, DeviceType, GoXLRCommand, UsbProductInformation};
+use goxlr_usb::channels::Channel;
+use goxlr_usb::faders::Fader;
 use goxlr_usb::goxlr;
 use goxlr_usb::goxlr::GoXLR;
 use goxlr_usb::rusb::UsbContext;
@@ -68,6 +71,38 @@ impl<T: UsbContext> Device<T> {
     pub fn perform_command(&mut self, command: GoXLRCommand) -> Result<Option<DeviceStatus>> {
         match command {
             GoXLRCommand::GetStatus => Ok(Some(self.status.clone())),
+            GoXLRCommand::AssignFader(fader, channel) => {
+                self.goxlr.set_fader(
+                    ipc_fader_to_usb_fader(fader),
+                    ipc_channel_to_usb_channel(channel),
+                )?;
+                Ok(None)
+            }
         }
+    }
+}
+
+fn ipc_fader_to_usb_fader(fader: FaderName) -> Fader {
+    match fader {
+        FaderName::A => Fader::A,
+        FaderName::B => Fader::B,
+        FaderName::C => Fader::C,
+        FaderName::D => Fader::D,
+    }
+}
+
+fn ipc_channel_to_usb_channel(channel: ChannelName) -> Channel {
+    match channel {
+        ChannelName::Mic => Channel::Mic,
+        ChannelName::Chat => Channel::Chat,
+        ChannelName::Music => Channel::Music,
+        ChannelName::Game => Channel::Game,
+        ChannelName::Console => Channel::Console,
+        ChannelName::LineIn => Channel::LineIn,
+        ChannelName::LineOut => Channel::LineOut,
+        ChannelName::System => Channel::System,
+        ChannelName::Sample => Channel::Sample,
+        ChannelName::Headphones => Channel::Headphones,
+        ChannelName::MicMonitor => Channel::MicMonitor,
     }
 }

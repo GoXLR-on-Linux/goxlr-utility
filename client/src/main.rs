@@ -1,13 +1,24 @@
 mod client;
+mod faders;
 
 use crate::client::Client;
 use anyhow::{Context, Result};
+use clap::Parser;
+use faders::FaderControls;
 use goxlr_ipc::{DaemonRequest, DaemonResponse, DeviceType, GoXLRCommand, UsbProductInformation};
 use goxlr_ipc::{DeviceStatus, Socket};
 use tokio::net::UnixStream;
 
+#[derive(Parser, Debug)]
+#[clap(about, version, author)]
+struct Cli {
+    #[clap(flatten)]
+    faders: FaderControls,
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
+    let cli: Cli = Cli::parse();
     let mut stream = UnixStream::connect("/tmp/goxlr.socket")
         .await
         .context("Could not connect to the GoXLR daemon process")?;
@@ -16,6 +27,11 @@ async fn main() -> Result<()> {
         .context("Could not get the address of the GoXLR daemon process")?;
     let socket: Socket<DaemonResponse, DaemonRequest> = Socket::new(address, &mut stream);
     let mut client = Client::new(socket);
+
+    cli.faders
+        .apply(&mut client)
+        .await
+        .context("Could not apply fader assignments")?;
 
     client
         .send(GoXLRCommand::GetStatus)

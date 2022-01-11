@@ -297,6 +297,7 @@ name = "goxlr-client"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "clap",
  "goxlr-ipc",
  "simplelog",
  "tokio",
@@ -318,6 +319,7 @@ dependencies = [
 name = "goxlr-ipc"
 version = "0.1.0"
 dependencies = [
+ "clap",
  "futures",
  "serde",
  "tokio",

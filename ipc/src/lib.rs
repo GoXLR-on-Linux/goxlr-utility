@@ -3,7 +3,9 @@ use serde::{Deserialize, Serialize};
 
 mod device;
 mod socket;
+pub mod types;
 
+use crate::types::{ChannelName, FaderName};
 pub use device::*;
 pub use socket::*;
 
@@ -22,4 +24,5 @@ pub enum DaemonResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum GoXLRCommand {
     GetStatus,
+    AssignFader(FaderName, ChannelName),
 }
