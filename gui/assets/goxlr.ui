@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>827</width>
-    <height>305</height>
+    <width>851</width>
+    <height>308</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,42 +19,37 @@
      <x>0</x>
      <y>15</y>
      <width>113</width>
-     <height>164</height>
+     <height>206</height>
     </rect>
    </property>
-   <layout class="QVBoxLayout" name="verticalLayout">
+   <layout class="QVBoxLayout" name="faderSelectionGroup">
     <item>
-     <widget class="QSplitter" name="splitter_2">
-      <property name="orientation">
-       <enum>Qt::Vertical</enum>
-      </property>
-      <widget class="QComboBox" name="fader_a">
-       <item>
-        <property name="text">
-         <string>Mic</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Voice Chat</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Music</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Game</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>System</string>
-        </property>
-       </item>
-      </widget>
+     <widget class="QComboBox" name="fader_a">
+      <item>
+       <property name="text">
+        <string>Mic</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>Voice Chat</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>Music</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>Game</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>System</string>
+       </property>
+      </item>
      </widget>
     </item>
     <item>
@@ -151,7 +146,7 @@
     <rect>
      <x>135</x>
      <y>15</y>
-     <width>691</width>
+     <width>712</width>
      <height>286</height>
     </rect>
    </property>
@@ -159,9 +154,7 @@
     <item>
      <widget class="QWidget" name="micWidget" native="true">
       <property name="styleSheet">
-       <string notr="true">#chatWidget {
-	border: 1px solid #000
-}</string>
+       <string notr="true"/>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <property name="sizeConstraint">
@@ -212,19 +205,36 @@
          </property>
         </widget>
        </item>
+       <item>
+        <widget class="QCheckBox" name="mic_mute_check">
+         <property name="text">
+          <string>Mute</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </widget>
     </item>
     <item>
      <widget class="QWidget" name="chatWidget" native="true">
       <property name="styleSheet">
-       <string notr="true">#chatWidget {
-	border: 1px solid #000
-}</string>
+       <string notr="true"/>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <property name="sizeConstraint">
         <enum>QLayout::SetNoConstraint</enum>
+       </property>
+       <property name="leftMargin">
+        <number>6</number>
+       </property>
+       <property name="topMargin">
+        <number>6</number>
+       </property>
+       <property name="rightMargin">
+        <number>6</number>
+       </property>
+       <property name="bottomMargin">
+        <number>6</number>
        </property>
        <item>
         <widget class="QLabel" name="chat_label">
@@ -271,15 +281,20 @@
          </property>
         </widget>
        </item>
+       <item>
+        <widget class="QCheckBox" name="chat_mute_check">
+         <property name="text">
+          <string>Mute</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </widget>
     </item>
     <item>
      <widget class="QWidget" name="musicWidget" native="true">
       <property name="styleSheet">
-       <string notr="true">#chatWidget {
-	border: 1px solid #000
-}</string>
+       <string notr="true"/>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_4">
        <property name="sizeConstraint">
@@ -330,15 +345,20 @@
          </property>
         </widget>
        </item>
+       <item>
+        <widget class="QCheckBox" name="music_mute_check">
+         <property name="text">
+          <string>Mute</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </widget>
     </item>
     <item>
      <widget class="QWidget" name="gameWidget" native="true">
       <property name="styleSheet">
-       <string notr="true">#chatWidget {
-	border: 1px solid #000
-}</string>
+       <string notr="true"/>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_5">
        <property name="sizeConstraint">
@@ -389,15 +409,20 @@
          </property>
         </widget>
        </item>
+       <item>
+        <widget class="QCheckBox" name="game_mute_check">
+         <property name="text">
+          <string>Mute</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </widget>
     </item>
     <item>
      <widget class="QWidget" name="consoleWidget" native="true">
       <property name="styleSheet">
-       <string notr="true">#chatWidget {
-	border: 1px solid #000
-}</string>
+       <string notr="true"/>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_6">
        <property name="sizeConstraint">
@@ -448,15 +473,20 @@
          </property>
         </widget>
        </item>
+       <item>
+        <widget class="QCheckBox" name="console_mute_check">
+         <property name="text">
+          <string>Mute</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </widget>
     </item>
     <item>
      <widget class="QWidget" name="lineInWidget" native="true">
       <property name="styleSheet">
-       <string notr="true">#chatWidget {
-	border: 1px solid #000
-}</string>
+       <string notr="true"/>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_7">
        <property name="sizeConstraint">
@@ -507,22 +537,27 @@
          </property>
         </widget>
        </item>
+       <item>
+        <widget class="QCheckBox" name="linein_mute_check">
+         <property name="text">
+          <string>Mute</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </widget>
     </item>
     <item>
      <widget class="QWidget" name="systemWidget" native="true">
       <property name="styleSheet">
-       <string notr="true">#chatWidget {
-	border: 1px solid #000
-}</string>
+       <string notr="true"/>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_8">
        <property name="sizeConstraint">
         <enum>QLayout::SetNoConstraint</enum>
        </property>
        <item>
-        <widget class="QLabel" name="systemLabel">
+        <widget class="QLabel" name="system_label">
          <property name="styleSheet">
           <string notr="true"/>
          </property>
@@ -566,27 +601,32 @@
          </property>
         </widget>
        </item>
+       <item>
+        <widget class="QCheckBox" name="system_mute_check">
+         <property name="text">
+          <string>Mute</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </widget>
     </item>
     <item>
      <widget class="QWidget" name="sampleWidget" native="true">
       <property name="styleSheet">
-       <string notr="true">#chatWidget {
-	border: 1px solid #000
-}</string>
+       <string notr="true"/>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_9">
        <property name="sizeConstraint">
         <enum>QLayout::SetNoConstraint</enum>
        </property>
        <item>
-        <widget class="QLabel" name="sampleLabel">
+        <widget class="QLabel" name="sample_label">
          <property name="styleSheet">
           <string notr="true"/>
          </property>
          <property name="text">
-          <string>Line In</string>
+          <string>Sample</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignCenter</set>
@@ -622,6 +662,13 @@
          </property>
          <property name="maximum">
           <number>100</number>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="sample_mute_check">
+         <property name="text">
+          <string>Mute</string>
          </property>
         </widget>
        </item>
