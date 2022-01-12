@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>851</width>
-    <height>308</height>
+    <width>839</width>
+    <height>309</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -141,14 +141,37 @@
     </item>
    </layout>
   </widget>
-  <widget class="QWidget" name="horizontalLayoutWidget">
+  <widget class="QWidget" name="mixerPanel" native="true">
    <property name="geometry">
     <rect>
-     <x>135</x>
+     <x>120</x>
      <y>15</y>
      <width>712</width>
      <height>286</height>
     </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">#mixerPanel {
+	background-color: #2d3130;
+}
+
+#mixerPanel &gt; QWidget {
+	background-color: #353938
+}
+
+#mixerPanel &gt; QWidget &gt; QLabel, #mixerPanel &gt; QWidget &gt; QCheckBox {
+	color: #fff;
+}
+
+#mixerPanel &gt; QWidget &gt; QSpinBox {
+	background-color: #3b413f;
+	color: #59b1b5;
+	font-weight: bold;
+	border: 0px;
+
+	text-align: right;
+}
+</string>
    </property>
    <layout class="QHBoxLayout" name="horizontalLayout">
     <item>
@@ -190,6 +213,9 @@
         <widget class="QSpinBox" name="mic_spin">
          <property name="frame">
           <bool>true</bool>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
          </property>
          <property name="buttonSymbols">
           <enum>QAbstractSpinBox::NoButtons</enum>
@@ -257,6 +283,9 @@
          <property name="maximum">
           <number>255</number>
          </property>
+         <property name="value">
+          <number>0</number>
+         </property>
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
@@ -266,6 +295,9 @@
         <widget class="QSpinBox" name="chat_spin">
          <property name="frame">
           <bool>true</bool>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
          </property>
          <property name="buttonSymbols">
           <enum>QAbstractSpinBox::NoButtons</enum>
@@ -331,6 +363,9 @@
          <property name="frame">
           <bool>true</bool>
          </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
          <property name="buttonSymbols">
           <enum>QAbstractSpinBox::NoButtons</enum>
          </property>
@@ -395,6 +430,9 @@
          <property name="frame">
           <bool>true</bool>
          </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
          <property name="buttonSymbols">
           <enum>QAbstractSpinBox::NoButtons</enum>
          </property>
@@ -425,8 +463,23 @@
        <string notr="true"/>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_6">
+       <property name="spacing">
+        <number>6</number>
+       </property>
        <property name="sizeConstraint">
         <enum>QLayout::SetNoConstraint</enum>
+       </property>
+       <property name="leftMargin">
+        <number>6</number>
+       </property>
+       <property name="topMargin">
+        <number>6</number>
+       </property>
+       <property name="rightMargin">
+        <number>6</number>
+       </property>
+       <property name="bottomMargin">
+        <number>6</number>
        </property>
        <item>
         <widget class="QLabel" name="console_label">
@@ -458,6 +511,9 @@
         <widget class="QSpinBox" name="console_spin">
          <property name="frame">
           <bool>true</bool>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
          </property>
          <property name="buttonSymbols">
           <enum>QAbstractSpinBox::NoButtons</enum>
@@ -523,6 +579,9 @@
          <property name="frame">
           <bool>true</bool>
          </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
          <property name="buttonSymbols">
           <enum>QAbstractSpinBox::NoButtons</enum>
          </property>
@@ -587,6 +646,9 @@
          <property name="frame">
           <bool>true</bool>
          </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
          <property name="buttonSymbols">
           <enum>QAbstractSpinBox::NoButtons</enum>
          </property>
@@ -650,6 +712,9 @@
         <widget class="QSpinBox" name="sample_spin">
          <property name="frame">
           <bool>true</bool>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
          </property>
          <property name="buttonSymbols">
           <enum>QAbstractSpinBox::NoButtons</enum>
