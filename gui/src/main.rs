@@ -1,24 +1,24 @@
 mod client;
 
-use std::borrow::{Borrow, BorrowMut};
-use tokio::net::UnixStream;
-use std::rc::Rc;
-use std::sync::Arc;
-use std::thread;
-use cpp_core::{Ptr, StaticUpcast};
-use qt_core::{q_init_resource, qs, QPtr, QBox, slot, SlotNoArgs, SlotOfInt, QObject};
-use qt_ui_tools::ui_form;
 use crate::client::Client;
-use qt_widgets::{QApplication, QComboBox, QWidget, QSlider, QSpinBox};
-use strum::IntoEnumIterator;
 use anyhow::{Context, Result};
-use tokio::task::block_in_place;
-use goxlr_ipc::{DeviceStatus, Socket};
+use cpp_core::{Ptr, StaticUpcast};
 use goxlr_ipc::{
     DaemonRequest, DaemonResponse, DeviceType, GoXLRCommand, MixerStatus, UsbProductInformation,
 };
-use tokio::runtime::Runtime;
+use goxlr_ipc::{DeviceStatus, Socket};
 use goxlr_types::{ChannelName, FaderName};
+use qt_core::{q_init_resource, qs, slot, QBox, QObject, QPtr, SlotNoArgs, SlotOfInt};
+use qt_ui_tools::ui_form;
+use qt_widgets::{QApplication, QComboBox, QSlider, QSpinBox, QWidget};
+use std::borrow::{Borrow, BorrowMut};
+use std::rc::Rc;
+use std::sync::Arc;
+use std::thread;
+use strum::IntoEnumIterator;
+use tokio::net::UnixStream;
+use tokio::runtime::Runtime;
+use tokio::task::block_in_place;
 
 #[ui_form("../assets/goxlr.ui")]
 #[derive(Debug)]
@@ -27,7 +27,6 @@ struct Form {
 
     // Ignore any warnings about snake case here, these map by name to their
     // relevant form control..
-
     fader_a: QPtr<QComboBox>,
     fader_b: QPtr<QComboBox>,
     fader_c: QPtr<QComboBox>,
@@ -50,13 +49,11 @@ struct Form {
     music_spin: QPtr<QSpinBox>,
     sample_spin: QPtr<QSpinBox>,
     system_spin: QPtr<QSpinBox>,
-
 }
 
 struct GoXLR {
     // We may need other models later, so keeping this open..
     form: Form,
-
 }
 
 impl StaticUpcast<QObject> for GoXLR {
@@ -68,10 +65,7 @@ impl StaticUpcast<QObject> for GoXLR {
 impl GoXLR {
     fn new() -> Rc<Self> {
         unsafe {
-            let this = Rc::new(GoXLR {
-                form: Form::load(),
-
-            });
+            let this = Rc::new(GoXLR { form: Form::load() });
             this.init();
             this
         }
@@ -80,37 +74,94 @@ impl GoXLR {
     unsafe fn init(self: &Rc<Self>) {
         // These are a little annoying, I'm not sure if it's possible to extract the combobox which
         // was changed from the method call, so for now we'll just smash them into different methods.
-        self.form.fader_a.current_index_changed().connect(&self.slot_on_fader_a_changed());
-        self.form.fader_b.current_index_changed().connect(&self.slot_on_fader_b_changed());
-        self.form.fader_c.current_index_changed().connect(&self.slot_on_fader_c_changed());
-        self.form.fader_d.current_index_changed().connect(&self.slot_on_fader_d_changed());
+        self.form
+            .fader_a
+            .current_index_changed()
+            .connect(&self.slot_on_fader_a_changed());
+        self.form
+            .fader_b
+            .current_index_changed()
+            .connect(&self.slot_on_fader_b_changed());
+        self.form
+            .fader_c
+            .current_index_changed()
+            .connect(&self.slot_on_fader_c_changed());
+        self.form
+            .fader_d
+            .current_index_changed()
+            .connect(&self.slot_on_fader_d_changed());
 
         // Same Here :p
-        self.form.chat_slider.value_changed().connect(&self.slot_on_chat_slider_moved());
-        self.form.console_slider.value_changed().connect(&self.slot_on_console_slider_moved());
-        self.form.game_slider.value_changed().connect(&self.slot_on_game_slider_moved());
-        self.form.linein_slider.value_changed().connect(&self.slot_on_line_in_slider_moved());
-        self.form.mic_slider.value_changed().connect(&self.slot_on_mic_slider_moved());
-        self.form.music_slider.value_changed().connect(&self.slot_on_music_slider_moved());
-        self.form.sample_slider.value_changed().connect(&self.slot_on_sample_slider_moved());
-        self.form.system_slider.value_changed().connect(&self.slot_on_system_slider_moved());
+        self.form
+            .chat_slider
+            .value_changed()
+            .connect(&self.slot_on_chat_slider_moved());
+        self.form
+            .console_slider
+            .value_changed()
+            .connect(&self.slot_on_console_slider_moved());
+        self.form
+            .game_slider
+            .value_changed()
+            .connect(&self.slot_on_game_slider_moved());
+        self.form
+            .linein_slider
+            .value_changed()
+            .connect(&self.slot_on_line_in_slider_moved());
+        self.form
+            .mic_slider
+            .value_changed()
+            .connect(&self.slot_on_mic_slider_moved());
+        self.form
+            .music_slider
+            .value_changed()
+            .connect(&self.slot_on_music_slider_moved());
+        self.form
+            .sample_slider
+            .value_changed()
+            .connect(&self.slot_on_sample_slider_moved());
+        self.form
+            .system_slider
+            .value_changed()
+            .connect(&self.slot_on_system_slider_moved());
 
-        self.form.chat_spin.value_changed().connect(&self.slot_on_chat_spin_change());
-        self.form.console_spin.value_changed().connect(&self.slot_on_console_spin_change());
-        self.form.game_spin.value_changed().connect(&self.slot_on_game_spin_change());
-        self.form.linein_spin.value_changed().connect(&self.slot_on_line_in_spin_change());
-        self.form.mic_spin.value_changed().connect(&self.slot_on_mic_spin_change());
-        self.form.music_spin.value_changed().connect(&self.slot_on_music_spin_change());
-        self.form.sample_spin.value_changed().connect(&self.slot_on_sample_spin_change());
-        self.form.system_spin.value_changed().connect(&self.slot_on_system_spin_change());
-
-
+        self.form
+            .chat_spin
+            .value_changed()
+            .connect(&self.slot_on_chat_spin_change());
+        self.form
+            .console_spin
+            .value_changed()
+            .connect(&self.slot_on_console_spin_change());
+        self.form
+            .game_spin
+            .value_changed()
+            .connect(&self.slot_on_game_spin_change());
+        self.form
+            .linein_spin
+            .value_changed()
+            .connect(&self.slot_on_line_in_spin_change());
+        self.form
+            .mic_spin
+            .value_changed()
+            .connect(&self.slot_on_mic_spin_change());
+        self.form
+            .music_spin
+            .value_changed()
+            .connect(&self.slot_on_music_spin_change());
+        self.form
+            .sample_spin
+            .value_changed()
+            .connect(&self.slot_on_sample_spin_change());
+        self.form
+            .system_spin
+            .value_changed()
+            .connect(&self.slot_on_system_spin_change());
     }
 
     #[slot(SlotNoArgs)]
     unsafe fn on_fader_a_changed(self: &Rc<Self>) {
         dbg!("Fader A Changed..");
-
     }
 
     #[slot(SlotNoArgs)]
@@ -134,7 +185,9 @@ impl GoXLR {
 
         // Calculate the percentage (this needs fixing, it rounds down..)
         let mut percent = (((value * 1000) / 255) * 100) / 1000;
-        if percent != 0 { percent += 1 }
+        if percent != 0 {
+            percent += 1
+        }
 
         // Prevent QT from sending a 'Changed' value on the spinner while we update..
         self.form.chat_spin.block_signals(true);
@@ -148,7 +201,9 @@ impl GoXLR {
         set_slider_sync(ChannelName::Console, value as u8);
 
         let mut percent = (((value * 1000) / 255) * 100) / 1000;
-        if percent != 0 { percent += 1 }
+        if percent != 0 {
+            percent += 1
+        }
         self.form.console_spin.block_signals(true);
         self.form.console_spin.set_value(percent);
         self.form.console_spin.block_signals(false);
@@ -160,7 +215,9 @@ impl GoXLR {
         set_slider_sync(ChannelName::Game, value as u8);
 
         let mut percent = (((value * 1000) / 255) * 100) / 1000;
-        if percent != 0 { percent += 1 }
+        if percent != 0 {
+            percent += 1
+        }
         self.form.game_spin.block_signals(true);
         self.form.game_spin.set_value(percent);
         self.form.game_spin.block_signals(false);
@@ -172,7 +229,9 @@ impl GoXLR {
         set_slider_sync(ChannelName::LineIn, value as u8);
 
         let mut percent = (((value * 1000) / 255) * 100) / 1000;
-        if percent != 0 { percent += 1 }
+        if percent != 0 {
+            percent += 1
+        }
         self.form.linein_spin.block_signals(true);
         self.form.linein_spin.set_value(percent);
         self.form.linein_spin.block_signals(false);
@@ -184,7 +243,9 @@ impl GoXLR {
         set_slider_sync(ChannelName::Mic, value as u8);
 
         let mut percent = (((value * 1000) / 255) * 100) / 1000;
-        if percent != 0 { percent += 1 }
+        if percent != 0 {
+            percent += 1
+        }
         self.form.mic_spin.block_signals(true);
         self.form.mic_spin.set_value(percent);
         self.form.mic_spin.block_signals(false);
@@ -196,7 +257,9 @@ impl GoXLR {
         set_slider_sync(ChannelName::Music, value as u8);
 
         let mut percent = (((value * 1000) / 255) * 100) / 1000;
-        if percent != 0 { percent += 1 }
+        if percent != 0 {
+            percent += 1
+        }
         self.form.music_spin.block_signals(true);
         self.form.music_spin.set_value(percent);
         self.form.music_spin.block_signals(false);
@@ -208,7 +271,9 @@ impl GoXLR {
         set_slider_sync(ChannelName::Sample, value as u8);
 
         let mut percent = (((value * 1000) / 255) * 100) / 1000;
-        if percent != 0 { percent += 1 }
+        if percent != 0 {
+            percent += 1
+        }
         self.form.sample_spin.block_signals(true);
         self.form.sample_spin.set_value(percent);
         self.form.sample_spin.block_signals(false);
@@ -220,7 +285,9 @@ impl GoXLR {
         set_slider_sync(ChannelName::System, value as u8);
 
         let mut percent = (((value * 1000) / 255) * 100) / 1000;
-        if percent != 0 { percent += 1 }
+        if percent != 0 {
+            percent += 1
+        }
         self.form.system_spin.block_signals(true);
         self.form.system_spin.set_value(percent);
         self.form.system_spin.block_signals(false);
@@ -281,12 +348,17 @@ impl GoXLR {
 fn set_slider_sync(channel: ChannelName, value: u8) {
     thread::spawn(move || unsafe {
         set_slider(channel, value);
-    }).join().expect("Thread Panicked");
+    })
+    .join()
+    .expect("Thread Panicked");
 }
 
 #[tokio::main]
 async unsafe fn set_slider(channel: ChannelName, value: u8) {
-    CLIENT.as_mut().unwrap().send(GoXLRCommand::SetVolume(channel, value))
+    CLIENT
+        .as_mut()
+        .unwrap()
+        .send(GoXLRCommand::SetVolume(channel, value))
         .await
         .context("Couldn't set Slider");
 }
@@ -315,15 +387,15 @@ async fn main() -> Result<()> {
         let socket = Socket::new(address, STREAM.borrow_mut().as_mut().unwrap());
         CLIENT = Some(Client::new(socket));
 
-        CLIENT.as_mut().unwrap().send(GoXLRCommand::GetStatus)
+        CLIENT
+            .as_mut()
+            .unwrap()
+            .send(GoXLRCommand::GetStatus)
             .await
             .context("Couldn't retrieve device status..");
 
         print_device(CLIENT.as_ref().unwrap().device());
     }
-
-
-
 
     //let mut client = Client::new(socket);
 
@@ -331,7 +403,7 @@ async fn main() -> Result<()> {
         q_init_resource!("resources");
         let goxlr_gui = GoXLR::new();
         goxlr_gui.show();
-        unsafe { QApplication:: exec() }
+        unsafe { QApplication::exec() }
     });
 
     dbg!("Hi?");
