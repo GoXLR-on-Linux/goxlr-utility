@@ -2,13 +2,13 @@ use anyhow::{anyhow, Context, Result};
 use goxlr_ipc::{DaemonRequest, DaemonResponse, DeviceStatus, GoXLRCommand, Socket};
 
 #[derive(Debug)]
-pub struct Client<'a> {
-    socket: Socket<'a, DaemonResponse, DaemonRequest>,
+pub struct Client {
+    socket: Socket<DaemonResponse, DaemonRequest>,
     device: DeviceStatus,
 }
 
-impl<'a> Client<'a> {
-    pub fn new(socket: Socket<'a, DaemonResponse, DaemonRequest>) -> Self {
+impl Client {
+    pub fn new(socket: Socket<DaemonResponse, DaemonRequest>) -> Self {
         Self {
             socket,
             device: DeviceStatus::default(),

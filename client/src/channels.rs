@@ -6,7 +6,7 @@ use goxlr_types::ChannelName;
 
 pub async fn apply_channel_volumes(
     channel_volumes: &ChannelVolumes,
-    client: &mut Client<'_>,
+    client: &mut Client,
 ) -> Result<()> {
     if let Some(volume) = channel_volumes.mic_volume {
         client
@@ -68,7 +68,7 @@ pub async fn apply_channel_volumes(
 
 pub async fn apply_channel_states(
     channel_states: &ChannelStates,
-    client: &mut Client<'_>,
+    client: &mut Client,
 ) -> Result<()> {
     if let Some(muted) = channel_states.mic_muted {
         client

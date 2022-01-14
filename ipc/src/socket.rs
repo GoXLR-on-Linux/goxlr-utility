@@ -1,34 +1,34 @@
 use crate::{SinkExt, StreamExt, TryStreamExt};
 use serde::{Deserialize, Serialize};
 use std::io::Error;
-use tokio::net::unix::{ReadHalf, SocketAddr, WriteHalf};
+use tokio::net::unix::{OwnedReadHalf, OwnedWriteHalf, SocketAddr};
 use tokio::net::UnixStream;
 use tokio_serde::formats::SymmetricalBincode;
 use tokio_serde::SymmetricallyFramed;
 use tokio_util::codec::{FramedRead, FramedWrite, LengthDelimitedCodec};
 
 #[derive(Debug)]
-pub struct Socket<'a, In, Out> {
+pub struct Socket<In, Out> {
     address: SocketAddr,
     reader: SymmetricallyFramed<
-        FramedRead<ReadHalf<'a>, LengthDelimitedCodec>,
+        FramedRead<OwnedReadHalf, LengthDelimitedCodec>,
         In,
         SymmetricalBincode<In>,
     >,
     writer: SymmetricallyFramed<
-        FramedWrite<WriteHalf<'a>, LengthDelimitedCodec>,
+        FramedWrite<OwnedWriteHalf, LengthDelimitedCodec>,
         Out,
         SymmetricalBincode<Out>,
     >,
 }
 
-impl<'a, In, Out> Socket<'a, In, Out>
+impl<In, Out> Socket<In, Out>
 where
-    for<'b> In: Deserialize<'b> + Unpin,
+    for<'a> In: Deserialize<'a> + Unpin,
     Out: Serialize + Unpin,
 {
-    pub fn new(address: SocketAddr, stream: &'a mut UnixStream) -> Self {
-        let (stream_read, stream_write) = stream.split();
+    pub fn new(address: SocketAddr, stream: UnixStream) -> Self {
+        let (stream_read, stream_write) = stream.into_split();
         let length_delimited_read = FramedRead::new(stream_read, LengthDelimitedCodec::new());
         let reader = tokio_serde::SymmetricallyFramed::new(
             length_delimited_read,

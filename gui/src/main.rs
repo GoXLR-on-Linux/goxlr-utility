@@ -365,7 +365,6 @@ async unsafe fn set_slider(channel: ChannelName, value: u8) {
 
 // F*** it, we're gonna do some unsafe globalisation here, until I can work out a less
 // painful way to handle this..
-static mut STREAM: Option<UnixStream> = None;
 static mut CLIENT: Option<Client> = None;
 static mut SOCKET: Option<Socket<DaemonResponse, DaemonRequest>> = None;
 
@@ -382,9 +381,8 @@ async fn main() -> Result<()> {
         .context("Could not get the address of the GoXLR daemon process")?;
 
     unsafe {
-        STREAM = Some(stream);
         //SOCKET = Some(Socket::new(address, STREAM.borrow_mut().as_mut().unwrap()));
-        let socket = Socket::new(address, STREAM.borrow_mut().as_mut().unwrap());
+        let socket = Socket::new(address, stream);
         CLIENT = Some(Client::new(socket));
 
         CLIENT

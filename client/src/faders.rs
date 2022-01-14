@@ -6,7 +6,7 @@ use goxlr_types::FaderName;
 
 pub async fn apply_fader_controls(
     fader_controls: &FaderControls,
-    client: &mut Client<'_>,
+    client: &mut Client,
 ) -> Result<()> {
     if let Some(channel) = fader_controls.fader_a {
         client
