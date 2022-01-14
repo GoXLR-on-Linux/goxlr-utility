@@ -81,7 +81,7 @@ async fn create_listener<P: AsRef<Path>>(path: P) -> Result<UnixListener> {
 }
 
 async fn is_already_running(path: &Path) -> bool {
-    let mut stream = match UnixStream::connect(path).await {
+    let stream = match UnixStream::connect(path).await {
         Ok(stream) => stream,
         Err(_) => return false,
     };
@@ -89,7 +89,7 @@ async fn is_already_running(path: &Path) -> bool {
         Ok(address) => address,
         Err(_) => return false,
     };
-    let mut socket: Socket<DaemonResponse, DaemonRequest> = Socket::new(address, &mut stream);
+    let mut socket: Socket<DaemonResponse, DaemonRequest> = Socket::new(address, stream);
 
     if socket.send(DaemonRequest::Ping).await.is_err() {
         return false;

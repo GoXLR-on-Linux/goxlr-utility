@@ -14,10 +14,10 @@ pub async fn listen_for_connections(
 ) {
     loop {
         tokio::select! {
-            Ok((mut stream, addr)) = listener.accept() => {
+            Ok((stream, addr)) = listener.accept() => {
                 let usb_tx = usb_tx.clone();
                 tokio::spawn(async move {
-                    let socket = Socket::new(addr, &mut stream);
+                    let socket = Socket::new(addr, stream);
                     handle_connection(socket, usb_tx).await
                 });
             }
@@ -30,7 +30,7 @@ pub async fn listen_for_connections(
 }
 
 async fn handle_connection(
-    mut socket: Socket<'_, DaemonRequest, DaemonResponse>,
+    mut socket: Socket<DaemonRequest, DaemonResponse>,
     mut usb_tx: DeviceSender,
 ) {
     while let Some(msg) = socket.read().await {

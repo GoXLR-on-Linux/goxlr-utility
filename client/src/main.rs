@@ -22,13 +22,13 @@ use tokio::net::UnixStream;
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli: Cli = Cli::parse();
-    let mut stream = UnixStream::connect("/tmp/goxlr.socket")
+    let stream = UnixStream::connect("/tmp/goxlr.socket")
         .await
         .context("Could not connect to the GoXLR daemon process")?;
     let address = stream
         .peer_addr()
         .context("Could not get the address of the GoXLR daemon process")?;
-    let socket: Socket<DaemonResponse, DaemonRequest> = Socket::new(address, &mut stream);
+    let socket: Socket<DaemonResponse, DaemonRequest> = Socket::new(address, stream);
     let mut client = Client::new(socket);
 
     apply_fader_controls(&cli.faders, &mut client)
