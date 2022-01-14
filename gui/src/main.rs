@@ -3,22 +3,17 @@ mod client;
 use crate::client::Client;
 use anyhow::{Context, Result};
 use cpp_core::{Ptr, StaticUpcast};
-use goxlr_ipc::{
-    DaemonRequest, DaemonResponse, DeviceType, GoXLRCommand, MixerStatus, UsbProductInformation,
-};
 use goxlr_ipc::{DeviceStatus, Socket};
+use goxlr_ipc::{DeviceType, GoXLRCommand, MixerStatus, UsbProductInformation};
 use goxlr_types::{ChannelName, FaderName};
-use qt_core::{q_init_resource, qs, slot, QBox, QObject, QPtr, SlotNoArgs, SlotOfInt};
+use qt_core::{q_init_resource, slot, QBox, QObject, QPtr, SlotNoArgs, SlotOfInt};
 use qt_ui_tools::ui_form;
 use qt_widgets::{QApplication, QComboBox, QSlider, QSpinBox, QWidget};
-use std::borrow::{Borrow, BorrowMut};
+use std::cell::RefCell;
 use std::rc::Rc;
-use std::sync::Arc;
-use std::thread;
 use strum::IntoEnumIterator;
 use tokio::net::UnixStream;
 use tokio::runtime::Runtime;
-use tokio::task::block_in_place;
 
 #[ui_form("../assets/goxlr.ui")]
 #[derive(Debug)]
@@ -54,6 +49,8 @@ struct Form {
 struct GoXLR {
     // We may need other models later, so keeping this open..
     form: Form,
+    client: RefCell<Client>,
+    rt: Runtime,
 }
 
 impl StaticUpcast<QObject> for GoXLR {
@@ -63,9 +60,13 @@ impl StaticUpcast<QObject> for GoXLR {
 }
 
 impl GoXLR {
-    fn new() -> Rc<Self> {
+    fn new(rt: Runtime, client: Client) -> Rc<Self> {
         unsafe {
-            let this = Rc::new(GoXLR { form: Form::load() });
+            let this = Rc::new(GoXLR {
+                rt,
+                form: Form::load(),
+                client: RefCell::new(client),
+            });
             this.init();
             this
         }
@@ -181,7 +182,7 @@ impl GoXLR {
 
     #[slot(SlotOfInt)]
     unsafe fn on_chat_slider_moved(self: &Rc<Self>, value: i32) {
-        set_slider_sync(ChannelName::Chat, value as u8);
+        self.set_slider_sync(ChannelName::Chat, value as u8);
 
         // Calculate the percentage (this needs fixing, it rounds down..)
         let mut percent = (((value * 1000) / 255) * 100) / 1000;
@@ -198,7 +199,7 @@ impl GoXLR {
     #[slot(SlotOfInt)]
     unsafe fn on_console_slider_moved(self: &Rc<Self>, value: i32) {
         dbg!("Console Slider Moved {}:", value);
-        set_slider_sync(ChannelName::Console, value as u8);
+        self.set_slider_sync(ChannelName::Console, value as u8);
 
         let mut percent = (((value * 1000) / 255) * 100) / 1000;
         if percent != 0 {
@@ -212,7 +213,7 @@ impl GoXLR {
     #[slot(SlotOfInt)]
     unsafe fn on_game_slider_moved(self: &Rc<Self>, value: i32) {
         dbg!("Game Slider Moved {}:", value);
-        set_slider_sync(ChannelName::Game, value as u8);
+        self.set_slider_sync(ChannelName::Game, value as u8);
 
         let mut percent = (((value * 1000) / 255) * 100) / 1000;
         if percent != 0 {
@@ -226,7 +227,7 @@ impl GoXLR {
     #[slot(SlotOfInt)]
     unsafe fn on_line_in_slider_moved(self: &Rc<Self>, value: i32) {
         dbg!("LineIn Slider Moved {}:", value);
-        set_slider_sync(ChannelName::LineIn, value as u8);
+        self.set_slider_sync(ChannelName::LineIn, value as u8);
 
         let mut percent = (((value * 1000) / 255) * 100) / 1000;
         if percent != 0 {
@@ -240,7 +241,7 @@ impl GoXLR {
     #[slot(SlotOfInt)]
     unsafe fn on_mic_slider_moved(self: &Rc<Self>, value: i32) {
         dbg!("Mic Slider Moved {}:", value);
-        set_slider_sync(ChannelName::Mic, value as u8);
+        self.set_slider_sync(ChannelName::Mic, value as u8);
 
         let mut percent = (((value * 1000) / 255) * 100) / 1000;
         if percent != 0 {
@@ -254,7 +255,7 @@ impl GoXLR {
     #[slot(SlotOfInt)]
     unsafe fn on_music_slider_moved(self: &Rc<Self>, value: i32) {
         dbg!("Music Slider Moved {}:", value);
-        set_slider_sync(ChannelName::Music, value as u8);
+        self.set_slider_sync(ChannelName::Music, value as u8);
 
         let mut percent = (((value * 1000) / 255) * 100) / 1000;
         if percent != 0 {
@@ -268,7 +269,7 @@ impl GoXLR {
     #[slot(SlotOfInt)]
     unsafe fn on_sample_slider_moved(self: &Rc<Self>, value: i32) {
         dbg!("Sample Slider Moved {}:", value);
-        set_slider_sync(ChannelName::Sample, value as u8);
+        self.set_slider_sync(ChannelName::Sample, value as u8);
 
         let mut percent = (((value * 1000) / 255) * 100) / 1000;
         if percent != 0 {
@@ -282,7 +283,7 @@ impl GoXLR {
     #[slot(SlotOfInt)]
     unsafe fn on_system_slider_moved(self: &Rc<Self>, value: i32) {
         dbg!("System Slider Moved {}:", value);
-        set_slider_sync(ChannelName::System, value as u8);
+        self.set_slider_sync(ChannelName::System, value as u8);
 
         let mut percent = (((value * 1000) / 255) * 100) / 1000;
         if percent != 0 {
@@ -343,36 +344,35 @@ impl GoXLR {
             self.form.widget.show();
         }
     }
+
+    fn set_slider_sync(&self, channel: ChannelName, value: u8) {
+        let _ = self.rt.block_on(
+            self.client
+                .borrow_mut()
+                .send(GoXLRCommand::SetVolume(channel, value)),
+        );
+    }
 }
 
-fn set_slider_sync(channel: ChannelName, value: u8) {
-    thread::spawn(move || unsafe {
-        set_slider(channel, value);
+fn main() -> Result<()> {
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()?;
+
+    let client = rt.block_on(connect_to_device())?;
+
+    //let mut client = Client::new(socket);
+
+    QApplication::init(|_| {
+        q_init_resource!("resources");
+        let goxlr_gui = GoXLR::new(rt, client);
+        goxlr_gui.show();
+        unsafe { QApplication::exec() }
     })
-    .join()
-    .expect("Thread Panicked");
 }
 
-#[tokio::main]
-async unsafe fn set_slider(channel: ChannelName, value: u8) {
-    CLIENT
-        .as_mut()
-        .unwrap()
-        .send(GoXLRCommand::SetVolume(channel, value))
-        .await
-        .context("Couldn't set Slider");
-}
-
-// F*** it, we're gonna do some unsafe globalisation here, until I can work out a less
-// painful way to handle this..
-static mut CLIENT: Option<Client> = None;
-static mut SOCKET: Option<Socket<DaemonResponse, DaemonRequest>> = None;
-
-#[tokio::main]
-async fn main() -> Result<()> {
-    // Connect to the GoXLR..
-
-    let mut stream = UnixStream::connect("/tmp/goxlr.socket")
+async fn connect_to_device() -> Result<Client> {
+    let stream = UnixStream::connect("/tmp/goxlr.socket")
         .await
         .context("Could not connect to the GoXLR Daemon Socket")?;
 
@@ -380,33 +380,16 @@ async fn main() -> Result<()> {
         .peer_addr()
         .context("Could not get the address of the GoXLR daemon process")?;
 
-    unsafe {
-        //SOCKET = Some(Socket::new(address, STREAM.borrow_mut().as_mut().unwrap()));
-        let socket = Socket::new(address, stream);
-        CLIENT = Some(Client::new(socket));
+    //SOCKET = Some(Socket::new(address, STREAM.borrow_mut().as_mut().unwrap()));
+    let socket = Socket::new(address, stream);
+    let mut client = Client::new(socket);
+    client
+        .send(GoXLRCommand::GetStatus)
+        .await
+        .context("Couldn't retrieve device status..")?;
 
-        CLIENT
-            .as_mut()
-            .unwrap()
-            .send(GoXLRCommand::GetStatus)
-            .await
-            .context("Couldn't retrieve device status..");
-
-        print_device(CLIENT.as_ref().unwrap().device());
-    }
-
-    //let mut client = Client::new(socket);
-
-    QApplication::init(|_| {
-        q_init_resource!("resources");
-        let goxlr_gui = GoXLR::new();
-        goxlr_gui.show();
-        unsafe { QApplication::exec() }
-    });
-
-    dbg!("Hi?");
-    // Technically, this line is unreachable due to initing the QApplication..
-    Ok(())
+    print_device(client.device());
+    Ok(client)
 }
 
 fn print_device(device: &DeviceStatus) {
