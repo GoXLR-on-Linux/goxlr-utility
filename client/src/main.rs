@@ -89,6 +89,15 @@ fn print_usb_info(usb: &UsbProductInformation) {
 }
 
 fn print_mixer_info(mixer: &MixerStatus) {
+    println!("Mixer firmware: {}", mixer.hardware.versions.firmware);
+    println!("Mixer dice: {}", mixer.hardware.versions.dice);
+    println!("Mixer FPGA count: {}", mixer.hardware.versions.fpga_count);
+    println!("Mixer serial number: {}", mixer.hardware.serial_number);
+    println!(
+        "Mixer manufacture date: {}",
+        mixer.hardware.manufactured_date
+    );
+
     for fader in FaderName::iter() {
         println!(
             "Fader {} assignment: {}",

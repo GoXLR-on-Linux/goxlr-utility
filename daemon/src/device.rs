@@ -1,5 +1,7 @@
 use anyhow::Result;
-use goxlr_ipc::{DeviceStatus, DeviceType, GoXLRCommand, MixerStatus, UsbProductInformation};
+use goxlr_ipc::{
+    DeviceStatus, DeviceType, GoXLRCommand, HardwareStatus, MixerStatus, UsbProductInformation,
+};
 use goxlr_types::{ChannelName, FaderName};
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::channelstate::ChannelState;
@@ -65,7 +67,13 @@ impl<T: UsbContext> Device<T> {
                 .set_channel_state(channel, ChannelState::Unmuted)?;
         }
         self.goxlr.set_button_states(self.create_button_states())?;
+        let (serial_number, manufactured_date) = self.goxlr.get_serial_number()?;
         self.status.mixer = Some(MixerStatus {
+            hardware: HardwareStatus {
+                versions: self.goxlr.get_firmware_version()?,
+                serial_number,
+                manufactured_date,
+            },
             fader_a_assignment: ChannelName::Mic,
             fader_b_assignment: ChannelName::Chat,
             fader_c_assignment: ChannelName::Music,

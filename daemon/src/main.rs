@@ -11,13 +11,13 @@ use goxlr_ipc::Socket;
 use goxlr_ipc::{DaemonRequest, DaemonResponse};
 use log::{info, warn, LevelFilter};
 use simplelog::{ColorChoice, CombinedLogger, Config, TermLogger, TerminalMode};
+use std::fs;
 use std::fs::remove_file;
+use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use tokio::net::{UnixListener, UnixStream};
 use tokio::sync::mpsc;
 use tokio::{join, signal};
-use std::fs;
-use std::os::unix::fs::PermissionsExt;
 
 #[tokio::main]
 async fn main() -> Result<()> {

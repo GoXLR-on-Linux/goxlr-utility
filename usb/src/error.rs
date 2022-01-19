@@ -1,4 +1,4 @@
-#[derive(thiserror::Error, Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(thiserror::Error, Debug)]
 pub enum ConnectError {
     #[error("No GoXLR device was found")]
     DeviceNotFound,
@@ -8,4 +8,13 @@ pub enum ConnectError {
 
     #[error("Device is not a GoXLR")]
     DeviceNotGoXLR,
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum CommandError {
+    #[error("USB error: {0}")]
+    UsbError(#[from] rusb::Error),
+
+    #[error("Malformed response from GoXLR")]
+    MalformedResponse(#[from] std::io::Error),
 }

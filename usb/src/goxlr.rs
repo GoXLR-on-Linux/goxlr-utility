@@ -1,20 +1,21 @@
 use crate::buttonstate::{ButtonStates, Buttons};
 use crate::channelstate::ChannelState;
-use crate::commands::Command;
 use crate::commands::SystemInfoCommand;
 use crate::commands::SystemInfoCommand::SupportsDCPCategory;
+use crate::commands::{Command, HardwareInfoCommand};
 use crate::dcp::DCPCategory;
-use crate::error::ConnectError;
+use crate::error::{CommandError, ConnectError};
 use crate::microphone::MicrophoneType;
 use crate::routing::InputDevice;
-use byteorder::{ByteOrder, LittleEndian};
+use byteorder::{ByteOrder, LittleEndian, ReadBytesExt};
 use enumset::EnumSet;
-use goxlr_types::{ChannelName, FaderName};
-use log::{info, warn};
+use goxlr_types::{ChannelName, FaderName, FirmwareVersions, VersionNumber};
+use log::info;
 use rusb::{
     Device, DeviceDescriptor, DeviceHandle, Direction, GlobalContext, Language, Recipient,
     RequestType, UsbContext,
 };
+use std::io::Cursor;
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -206,6 +207,62 @@ impl<T: UsbContext> GoXLR<T> {
             self.request_data(Command::SystemInfo(SystemInfoCommand::FirmwareVersion), &[])?;
         // TODO: parse that?
         Ok(())
+    }
+
+    pub fn get_firmware_version(&mut self) -> Result<FirmwareVersions, CommandError> {
+        let result = self.request_data(
+            Command::GetHardwareInfo(HardwareInfoCommand::FirmwareVersion),
+            &[],
+        )?;
+        let mut cursor = Cursor::new(result);
+        let firmware_packed = cursor.read_u32::<LittleEndian>()?;
+        let firmware_build = cursor.read_u32::<LittleEndian>()?;
+        let firmware = VersionNumber(
+            firmware_packed >> 12,
+            (firmware_packed >> 8) & 0xF,
+            firmware_packed & 0xFF,
+            firmware_build,
+        );
+
+        let _unknown = cursor.read_u32::<LittleEndian>()?;
+        let fpga_count = cursor.read_u32::<LittleEndian>()?;
+
+        let dice_build = cursor.read_u32::<LittleEndian>()?;
+        let dice_packed = cursor.read_u32::<LittleEndian>()?;
+        let dice = VersionNumber(
+            (dice_packed >> 20) & 0xF,
+            (dice_packed >> 12) & 0xFF,
+            dice_packed & 0xFFF,
+            dice_build,
+        );
+
+        Ok(FirmwareVersions {
+            firmware,
+            fpga_count,
+            dice,
+        })
+    }
+
+    pub fn get_serial_number(&mut self) -> Result<(String, String), CommandError> {
+        let result = self.request_data(
+            Command::GetHardwareInfo(HardwareInfoCommand::SerialNumber),
+            &[],
+        )?;
+
+        let serial_slice = &result[..24];
+        let serial_len = serial_slice
+            .iter()
+            .position(|&c| c == 0)
+            .unwrap_or(serial_slice.len()) as usize;
+        let serial_number = String::from_utf8_lossy(&serial_slice[..serial_len]).to_string();
+
+        let date_slice = &result[24..];
+        let date_len = date_slice
+            .iter()
+            .position(|&c| c == 0)
+            .unwrap_or(date_slice.len()) as usize;
+        let manufacture_date = String::from_utf8_lossy(&date_slice[..date_len]).to_string();
+        Ok((serial_number, manufacture_date))
     }
 
     pub fn set_fader(&mut self, fader: FaderName, channel: ChannelName) -> Result<(), rusb::Error> {

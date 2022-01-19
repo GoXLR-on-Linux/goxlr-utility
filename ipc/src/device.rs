@@ -1,4 +1,4 @@
-use goxlr_types::{ChannelName, FaderName};
+use goxlr_types::{ChannelName, FaderName, FirmwareVersions};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -9,7 +9,15 @@ pub struct DeviceStatus {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HardwareStatus {
+    pub versions: FirmwareVersions,
+    pub serial_number: String,
+    pub manufactured_date: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MixerStatus {
+    pub hardware: HardwareStatus,
     pub fader_a_assignment: ChannelName,
     pub fader_b_assignment: ChannelName,
     pub fader_c_assignment: ChannelName,

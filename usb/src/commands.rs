@@ -14,6 +14,7 @@ pub enum Command {
     SetFaderDisplayMode(FaderName),
     SetScribble(FaderName),
     GetButtonStates,
+    GetHardwareInfo(HardwareInfoCommand),
 }
 
 impl Command {
@@ -29,6 +30,7 @@ impl Command {
             Command::SetFaderDisplayMode(fader) => (0x814 << 12) | *fader as u32,
             Command::SetScribble(fader) => (0x802 << 12) | *fader as u32,
             Command::GetButtonStates => (0x800 << 12) | 0x00 as u32,
+            Command::GetHardwareInfo(sub) => (0x80f << 12) | *sub as u32,
 
             // There are multiple versions of this command, we only support one currently..
             Command::SetMicrophoneType() => (0x80b << 12) | 0x00 as u32,
@@ -40,6 +42,12 @@ impl Command {
 pub enum SystemInfoCommand {
     FirmwareVersion,
     SupportsDCPCategory,
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum HardwareInfoCommand {
+    FirmwareVersion = 0,
+    SerialNumber = 1,
 }
 
 impl SystemInfoCommand {

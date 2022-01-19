@@ -69,7 +69,7 @@ impl ColourTargets {
             ColourTargets::GenderEncoder => 3,
             ColourTargets::ReverbEncoder => 3,
             ColourTargets::EchoEncoder => 3,
-            _ => 2
+            _ => 2,
         }
     }
 
@@ -151,25 +151,24 @@ impl ColourTargets {
 
         // We should also error check here, make sure colour is in the range of getColourCount..
 
-
         match self {
             ColourTargets::PitchEncoder => {
                 if colour == 0 {
-                    return self.getStart() * 4 + 4 as usize
+                    return self.getStart() * 4 + 4 as usize;
                 }
                 if colour == 1 {
-                    return self.getStart() * 4 as usize
+                    return self.getStart() * 4 as usize;
                 }
 
-                return self.getStart() + (colour * 4) as usize
+                return self.getStart() + (colour * 4) as usize;
             }
 
             ColourTargets::GenderEncoder => {
                 if colour == 0 {
-                    return self.getStart() * 4 + 4 as usize
+                    return self.getStart() * 4 + 4 as usize;
                 }
                 if colour == 1 {
-                    return self.getStart() * 4 as usize
+                    return self.getStart() * 4 as usize;
                 }
 
                 // Not sure how matches work, can we just fall this through to the bottom?
@@ -178,27 +177,27 @@ impl ColourTargets {
 
             ColourTargets::ReverbEncoder => {
                 if colour == 0 {
-                    return self.getStart() * 4 + 4 as usize
+                    return self.getStart() * 4 + 4 as usize;
                 }
                 if colour == 1 {
-                    return self.getStart() * 4 as usize
+                    return self.getStart() * 4 as usize;
                 }
 
-                return self.getStart() + (colour * 4) as usize
+                return self.getStart() + (colour * 4) as usize;
             }
 
             ColourTargets::EchoEncoder => {
                 if colour == 0 {
-                    return self.getStart() * 4 + 4 as usize
+                    return self.getStart() * 4 + 4 as usize;
                 }
                 if colour == 1 {
-                    return self.getStart() * 4 as usize
+                    return self.getStart() * 4 as usize;
                 }
 
                 self.getStart() + (colour * 4) as usize
             }
 
-            _ => (self.getStart() * 4) + (colour * 4) as usize
+            _ => (self.getStart() * 4) + (colour * 4) as usize,
         }
     }
 }
