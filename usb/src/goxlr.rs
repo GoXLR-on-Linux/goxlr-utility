@@ -84,10 +84,9 @@ impl<T: UsbContext> GoXLR<T> {
             device_is_claimed,
         };
 
-        goxlr.read_control(RequestType::Vendor, 0, 0, 0, 24)?; // ??
-
-        goxlr.write_control(RequestType::Vendor, 1, 0, 0, &[])?;
-        goxlr.read_control(RequestType::Vendor, 3, 0, 0, 1040)?; // ??
+        // Resets the state of the device (unconfirmed)
+        goxlr.write_control(1, 0, 0, &[])?;
+        goxlr.read_control(3, 0, 0, 1040)?;
 
         Ok(goxlr)
     }
@@ -130,7 +129,6 @@ impl<T: UsbContext> GoXLR<T> {
 
     pub fn read_control(
         &mut self,
-        request_type: RequestType,
         request: u8,
         value: u16,
         index: u16,
@@ -138,7 +136,7 @@ impl<T: UsbContext> GoXLR<T> {
     ) -> Result<Vec<u8>, rusb::Error> {
         let mut buf = vec![0; length];
         let response_length = self.handle.read_control(
-            rusb::request_type(Direction::In, request_type, Recipient::Interface),
+            rusb::request_type(Direction::In, RequestType::Vendor, Recipient::Interface),
             request,
             value,
             index,
@@ -151,14 +149,13 @@ impl<T: UsbContext> GoXLR<T> {
 
     pub fn write_control(
         &mut self,
-        request_type: RequestType,
         request: u8,
         value: u16,
         index: u16,
         data: &[u8],
     ) -> Result<(), rusb::Error> {
         self.handle.write_control(
-            rusb::request_type(Direction::Out, request_type, Recipient::Interface),
+            rusb::request_type(Direction::Out, RequestType::Vendor, Recipient::Interface),
             request,
             value,
             index,
@@ -178,13 +175,13 @@ impl<T: UsbContext> GoXLR<T> {
         LittleEndian::write_u16(&mut full_request[6..8], command_index);
         full_request.extend(body);
 
-        self.write_control(RequestType::Vendor, 2, 0, 0, &full_request)?;
+        self.write_control(2, 0, 0, &full_request)?;
 
         // TODO: A retry mechanism
         sleep(Duration::from_millis(10));
         self.await_interrupt(Duration::from_secs(2));
 
-        let mut response_header = self.read_control(RequestType::Vendor, 3, 0, 0, 1040)?;
+        let mut response_header = self.read_control(3, 0, 0, 1040)?;
         let response = response_header.split_off(16);
         let response_length = LittleEndian::read_u16(&response_header[4..6]);
         let response_command_index = LittleEndian::read_u16(&response_header[6..8]);
