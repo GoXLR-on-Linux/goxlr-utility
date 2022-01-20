@@ -337,6 +337,7 @@ dependencies = [
  "futures",
  "goxlr-types",
  "serde",
+ "strum",
  "tokio",
  "tokio-serde",
  "tokio-util",
