@@ -1,12 +1,16 @@
 use anyhow::Result;
+use enumset::{enum_set, EnumSet};
 use goxlr_ipc::{
     DeviceStatus, DeviceType, GoXLRCommand, HardwareStatus, MixerStatus, UsbProductInformation,
 };
-use goxlr_types::{ChannelName, FaderName};
+use goxlr_types::{
+    ChannelName, FaderName, InputDevice as BasicInputDevice, OutputDevice as BasicOutputDevice,
+};
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::channelstate::ChannelState;
 use goxlr_usb::goxlr;
 use goxlr_usb::goxlr::GoXLR;
+use goxlr_usb::routing::{InputDevice, OutputDevice};
 use goxlr_usb::rusb::UsbContext;
 use log::debug;
 use strum::{EnumCount, IntoEnumIterator};
@@ -71,6 +75,51 @@ impl<T: UsbContext> Device<T> {
                 .set_channel_state(channel, ChannelState::Unmuted)?;
         }
         self.goxlr.set_button_states(self.create_button_states())?;
+
+        let mut router = [EnumSet::empty(); BasicInputDevice::COUNT];
+        router[BasicInputDevice::Microphone as usize] = enum_set!(
+            BasicOutputDevice::Headphones
+                | BasicOutputDevice::BroadcastMix
+                | BasicOutputDevice::LineOut
+                | BasicOutputDevice::ChatMic
+                | BasicOutputDevice::Sampler
+        );
+        router[BasicInputDevice::Chat as usize] = enum_set!(
+            BasicOutputDevice::Headphones
+                | BasicOutputDevice::BroadcastMix
+                | BasicOutputDevice::LineOut
+        );
+        router[BasicInputDevice::Music as usize] = enum_set!(
+            BasicOutputDevice::Headphones
+                | BasicOutputDevice::BroadcastMix
+                | BasicOutputDevice::LineOut
+        );
+        router[BasicInputDevice::Game as usize] = enum_set!(
+            BasicOutputDevice::Headphones
+                | BasicOutputDevice::BroadcastMix
+                | BasicOutputDevice::LineOut
+        );
+        router[BasicInputDevice::Console as usize] = enum_set!(
+            BasicOutputDevice::Headphones
+                | BasicOutputDevice::BroadcastMix
+                | BasicOutputDevice::LineOut
+        );
+        router[BasicInputDevice::LineIn as usize] =
+            enum_set!(BasicOutputDevice::Headphones | BasicOutputDevice::BroadcastMix);
+        router[BasicInputDevice::System as usize] = enum_set!(
+            BasicOutputDevice::Headphones
+                | BasicOutputDevice::BroadcastMix
+                | BasicOutputDevice::LineOut
+        );
+        router[BasicInputDevice::Samples as usize] = enum_set!(
+            BasicOutputDevice::Headphones
+                | BasicOutputDevice::BroadcastMix
+                | BasicOutputDevice::LineOut
+                | BasicOutputDevice::ChatMic
+        );
+
+        self.apply_router(&router)?;
+
         let (serial_number, manufactured_date) = self.goxlr.get_serial_number()?;
         self.status.mixer = Some(MixerStatus {
             hardware: HardwareStatus {
@@ -84,6 +133,7 @@ impl<T: UsbContext> Device<T> {
             fader_d_assignment: ChannelName::System,
             volumes: [255; ChannelName::COUNT],
             muted: [false; ChannelName::COUNT],
+            router,
         });
 
         Ok(())
@@ -183,5 +233,28 @@ impl<T: UsbContext> Device<T> {
             }
         }
         result
+    }
+
+    fn apply_router(
+        &mut self,
+        router: &[EnumSet<BasicOutputDevice>; BasicInputDevice::COUNT],
+    ) -> Result<()> {
+        for simple_input in BasicInputDevice::iter() {
+            let outputs = &router[simple_input as usize];
+
+            for input in InputDevice::from_basic(&simple_input) {
+                let mut result = [0; 22];
+
+                for simple_output in outputs.iter() {
+                    for output in OutputDevice::from_basic(&simple_output) {
+                        result[output.position()] = 0x20;
+                    }
+                }
+
+                self.goxlr.set_routing(*input, result)?;
+            }
+        }
+
+        Ok(())
     }
 }

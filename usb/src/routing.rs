@@ -1,3 +1,5 @@
+use goxlr_types::{InputDevice as BasicInputDevice, OutputDevice as BasicOutputDevice};
+
 #[derive(Copy, Clone, Debug)]
 pub enum OutputDevice {
     HeadphonesRight,
@@ -29,6 +31,21 @@ impl OutputDevice {
             OutputDevice::Unknown => 21,
         }
     }
+
+    pub fn from_basic(basic: &BasicOutputDevice) -> &'static [OutputDevice; 2] {
+        match basic {
+            BasicOutputDevice::Headphones => {
+                &[OutputDevice::HeadphonesLeft, OutputDevice::HeadphonesRight]
+            }
+            BasicOutputDevice::BroadcastMix => &[
+                OutputDevice::BroadcastMixLeft,
+                OutputDevice::BroadcastMixRight,
+            ],
+            BasicOutputDevice::ChatMic => &[OutputDevice::ChatMicLeft, OutputDevice::ChatMicRight],
+            BasicOutputDevice::Sampler => &[OutputDevice::SamplerLeft, OutputDevice::SamplerRight],
+            BasicOutputDevice::LineOut => &[OutputDevice::LineOutLeft, OutputDevice::LineOutRight],
+        }
+    }
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -39,6 +56,8 @@ pub enum InputDevice {
     MusicLeft,
     GameRight,
     GameLeft,
+    ChatRight,
+    ChatLeft,
     ConsoleRight,
     ConsoleLeft,
     LineInRight,
@@ -58,6 +77,8 @@ impl InputDevice {
             InputDevice::MusicLeft => 0x0f,
             InputDevice::GameRight => 0x0a,
             InputDevice::GameLeft => 0x0b,
+            InputDevice::ChatRight => 0x0c,
+            InputDevice::ChatLeft => 0x0d,
             InputDevice::ConsoleRight => 0x06,
             InputDevice::ConsoleLeft => 0x07,
             InputDevice::LineInRight => 0x04,
@@ -66,6 +87,21 @@ impl InputDevice {
             InputDevice::SystemLeft => 0x09,
             InputDevice::SamplesRight => 0x10,
             InputDevice::SamplesLeft => 0x11,
+        }
+    }
+
+    pub fn from_basic(basic: &BasicInputDevice) -> &'static [InputDevice; 2] {
+        match basic {
+            BasicInputDevice::Microphone => {
+                &[InputDevice::MicrophoneLeft, InputDevice::MicrophoneRight]
+            }
+            BasicInputDevice::Chat => &[InputDevice::ChatLeft, InputDevice::ChatRight],
+            BasicInputDevice::Music => &[InputDevice::MusicLeft, InputDevice::MusicRight],
+            BasicInputDevice::Game => &[InputDevice::GameLeft, InputDevice::GameRight],
+            BasicInputDevice::Console => &[InputDevice::ConsoleLeft, InputDevice::ConsoleRight],
+            BasicInputDevice::LineIn => &[InputDevice::LineInLeft, InputDevice::LineInRight],
+            BasicInputDevice::System => &[InputDevice::SystemLeft, InputDevice::SystemRight],
+            BasicInputDevice::Samples => &[InputDevice::SamplesLeft, InputDevice::SamplesRight],
         }
     }
 }

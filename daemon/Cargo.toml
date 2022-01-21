@@ -14,3 +14,4 @@ tokio = {version = "1.0", features=["full"]}
 log = "0.4.14"
 anyhow = "1.0"
 strum = { version = "0.23"}
+enumset = "1.0.8"

@@ -13,7 +13,7 @@ use goxlr_ipc::{
     DaemonRequest, DaemonResponse, DeviceType, GoXLRCommand, MixerStatus, UsbProductInformation,
 };
 use goxlr_ipc::{DeviceStatus, Socket};
-use goxlr_types::{ChannelName, FaderName};
+use goxlr_types::{ChannelName, FaderName, InputDevice, OutputDevice};
 use strum::IntoEnumIterator;
 use tokio::net::UnixStream;
 
@@ -114,4 +114,35 @@ fn print_mixer_info(mixer: &MixerStatus) {
             println!("{} volume: {:.0}%", channel, pct);
         }
     }
+
+    let max_col_len = OutputDevice::iter()
+        .map(|s| s.to_string().len())
+        .max()
+        .unwrap_or_default();
+    let mut table_width = max_col_len + 1;
+    print!(" {}", " ".repeat(max_col_len));
+    for input in InputDevice::iter() {
+        let col_name = input.to_string();
+        print!(" |{}|", col_name);
+        table_width += col_name.len() + 3;
+    }
+    println!();
+    println!("{}", "-".repeat(table_width));
+
+    for output in OutputDevice::iter() {
+        let row_name = output.to_string();
+        print!("|{}{}|", " ".repeat(max_col_len - row_name.len()), row_name,);
+        for input in InputDevice::iter() {
+            let col_name = input.to_string();
+            if mixer.router[input as usize].contains(output) {
+                let len = col_name.len() + 1;
+                print!("{}X{} ", " ".repeat(len / 2), " ".repeat(len - (len / 2)));
+            } else {
+                let len = col_name.len() + 2;
+                print!("{} ", " ".repeat(len));
+            }
+        }
+        println!();
+    }
+    println!("{}", "-".repeat(table_width));
 }

@@ -183,6 +183,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6216d2c19a6fb5f29d1ada1dc7bc4367a8cbf0fa4af5cf12e07b5bbdde6b5b2c"
 dependencies = [
  "enumset_derive",
+ "serde",
 ]
 
 [[package]]
@@ -321,6 +322,7 @@ name = "goxlr-daemon"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "enumset",
  "goxlr-ipc",
  "goxlr-types",
  "goxlr-usb",
@@ -334,6 +336,7 @@ dependencies = [
 name = "goxlr-ipc"
 version = "0.1.0"
 dependencies = [
+ "enumset",
  "futures",
  "goxlr-types",
  "serde",
