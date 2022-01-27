@@ -49,6 +49,7 @@ impl MuteButton {
                     if function.get_str("Value").unwrap() == attr.value {
                         self.mute_function = function;
                         found = true;
+                        break;
                     }
                 }
                 if !found {

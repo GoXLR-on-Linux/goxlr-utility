@@ -1,24 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
-<mixerTree lineInToStream="8192" micToStream="0" chatLevel="193" gameToChat="0" lineInToLineOut="0"
-           systemToSampler="8192" consoleToStream="8192" mixerTreeoffStyle="DIMMED" musicToSampler="8192"
-           sampleToChat="8192" consoleToHP="8192" lineInToHP="8192" sampleToLineOut="8192" gameToHP="8192"
-           gameToSampler="8192" systemToChat="0" sampleToStream="8192" systemToLineOut="8192" micToChat="8192"
-           lineInToChat="0" systemToHP="8192" consoleToLineOut="8192" sampleToHP="8192" mic2headphoneSubLevel="255"
-           sampleToSampler="0" gameLevel="158" lineInLevel="128" micToHP="8192" chatToLineOut="8192" gameToStream="8192"
-           systemToStream="0" lineOutLevel="255" lineInToSampler="8192" musicToStream="0" consoleToChat="0"
-           headphoneLevel="255" chatToStream="8192" sampleLevel="128" chatToSampler="8192" musicLevel="95"
-           musicToHP="8192" micLevel="230" chatToHP="8192" systemLevel="202" consoleLevel="128" musicToLineOut="8192"
-           musicToChat="0" micToLineOut="8192" micToSampler="8192" chatToChat="0" gameToLineOut="8192"
-           consoleToSampler="8192"/>
-<mute1 mute1prevLevel="160" mute1offStyle="DIMMED" mute1velocity="127" mute1blink="0" mute1selected="0"
-       mute1color1="FFFFFFFF" fromMuteAllFlag="1" mute1state="0" mute1Function="Mute All" mute1colorGroup="muteGroup"
-       mute1color0="FF00FFFF"/>
-<mute2 mute2prevLevel="94" mute2Function="Mute All" mute2selected="0" mute2offStyle="DIMMED" mute2velocity="127"
-       mute2color0="FF00FFFF" mute2blink="0" mute2state="0" mute2color1="FFFFFFFF" fromMuteAllFlag="1"
-       mute2colorGroup="muteGroup"/>
-<mute3 mute3prevLevel="193" mute3velocity="127" mute3blink="0" mute3color1="FFFFFFFF" fromMuteAllFlag="0" mute3state="0"
-       mute3color0="FF00FFFF" mute3selected="0" mute3colorGroup="muteGroup" mute3Function="Mute to Stream"
-       mute3offStyle="DIMMED"/>
-<mute4 mute4color0="FF00FFFF" mute4prevLevel="202" mute4velocity="127" mute4blink="0" mute4state="0"
-       mute4offStyle="DIMMED" mute4selected="0" mute4color1="FFFFFFFF" mute4Function="Mute All"
-       mute4colorGroup="muteGroup"/>
+<mixerTree musicToSampler="8192" lineInToSampler="8192" musicToStream="0" systemToHP="8192" systemToLineOut="8192" systemToSampler="8192" sampleToSampler="0" mixerTreeoffStyle="DIMMED" gameToHP="8192" gameToChat="0" musicToChat="0" sampleLevel="128" systemToChat="0" lineInToChat="0" consoleToStream="8192" chatToStream="8192" consoleToSampler="8192" headphoneLevel="255" sampleToLineOut="8192" musicToLineOut="8192" sampleToChat="8192" musicLevel="95" gameToStream="8192" gameToSampler="8192" micToChat="8192" consoleLevel="128" sampleToHP="8192" micToLineOut="8192" lineInToLineOut="0" consoleToHP="8192" gameLevel="158" musicToHP="8192" micToSampler="8192" consoleToChat="0" micToHP="8192" systemLevel="202" chatToChat="0" mic2headphoneSubLevel="255" sampleToStream="8192" lineOutLevel="255" chatToSampler="8192" lineInLevel="128" lineInToHP="8192" systemToStream="0" micToStream="0" chatLevel="193" chatToLineOut="8192" chatToHP="8192" micLevel="230" gameToLineOut="8192" consoleToLineOut="8192" lineInToStream="8192" />
+<mute1 mute1offStyle="DIMMED" mute1state="0" mute1color1="FFFFFFFF" mute1blink="0" mute1colorGroup="muteGroup" mute1Function="Mute All" fromMuteAllFlag="1" mute1prevLevel="160" mute1selected="0" mute1velocity="127" mute1color0="FF00FFFF" />
+<mute2 mute2prevLevel="94" mute2color0="FF00FFFF" mute2offStyle="DIMMED" mute2Function="Mute All" mute2color1="FFFFFFFF" mute2colorGroup="muteGroup" fromMuteAllFlag="1" mute2velocity="127" mute2state="0" mute2blink="0" mute2selected="0" />
+<mute3 mute3prevLevel="193" mute3state="0" mute3offStyle="DIMMED" mute3selected="0" mute3blink="0" mute3color0="FF00FFFF" fromMuteAllFlag="0" mute3Function="Mute to Stream" mute3colorGroup="muteGroup" mute3velocity="127" mute3color1="FFFFFFFF" />
+<mute4 mute4blink="0" mute4color1="FFFFFFFF" mute4Function="Mute All" mute4velocity="127" mute4prevLevel="202" mute4offStyle="DIMMED" mute4selected="0" mute4colorGroup="muteGroup" mute4state="0" mute4color0="FF00FFFF" />
+<FaderMeter0 FaderMeter0Display="GRADIENT" FaderMeter0selected="0" FaderMeter0offStyle="DIMMED" FaderMeter0listIndex="3" FaderMeter0colorGroup="faderGroup" FaderMeter0color0="FFFF0055" FaderMeter0color1="FF00FFFF" />
+<FaderMeter1 FaderMeter1listIndex="2" FaderMeter1selected="0" FaderMeter1color1="FF00FFFF" FaderMeter1Display="GRADIENT" FaderMeter1offStyle="DIMMED" FaderMeter1colorGroup="faderGroup" FaderMeter1color0="FFFF0055" />
+<FaderMeter2 FaderMeter2offStyle="DIMMED" FaderMeter2colorGroup="faderGroup" FaderMeter2listIndex="1" FaderMeter2color0="FFFF0055" FaderMeter2color1="FF00FFFF" FaderMeter2Display="GRADIENT" FaderMeter2selected="0" />
+<FaderMeter3 FaderMeter3Display="GRADIENT_METER" FaderMeter3colorGroup="faderGroup" FaderMeter3color1="FF00FFFF" FaderMeter3listIndex="6" FaderMeter3selected="0" FaderMeter3offStyle="DIMMED" FaderMeter3color0="FFFF0055" />
+<effects1 effects1blink="0" effects1colorGroup="effectsGroup" effects1velocity="127" effects1color0="FF00FFFF" effects1color1="FFFFFFFF" effects1Name="Big Verb" effects1state="0" effects1selected="0" effects1offStyle="DIMMED" />
+<effects2 effects2selected="0" effects2offStyle="DIMMED" effects2velocity="127" effects2colorGroup="effectsGroup" effects2state="1" effects2Name="Comms Radio" effects2color0="FF00FFFF" effects2color1="FFFFFFFF" effects2blink="0" />
+<effects3 effects3Name="HardTune Music" effects3selected="0" effects3color0="FF00FFFF" effects3color1="FFFFFFFF" effects3colorGroup="effectsGroup" effects3blink="0" effects3offStyle="DIMMED" effects3velocity="127" effects3state="0" />
+<effects4 effects4selected="0" effects4velocity="127" effects4blink="0" effects4color1="FFFFFFFF" effects4offStyle="DIMMED" effects4colorGroup="effectsGroup" effects4color0="FF00FFFF" effects4Name="Kid Robot" effects4state="0" />
+<effects5 effects5selected="0" effects5color0="FF00FFFF" effects5colorGroup="effectsGroup" effects5color1="FFFFFFFF" effects5velocity="127" effects5offStyle="DIMMED" effects5blink="0" effects5state="0" effects5Name="PitchDn Echo" />
+<effects6 effects6velocity="127" effects6colorGroup="effectsGroup" effects6color1="FFFFFFFF" effects6blink="0" effects6state="0" effects6color0="FF00FFFF" effects6Name="Tank" effects6selected="0" effects6offStyle="DIMMED" />
+<scribble1 scribble1offStyle="DIMMED" scribble1selected="0" scribble1textSize="1" scribble1alpha="0.800000011920929" scribble1string0="" scribble1bitmap="scribble1.png" scribble1color0="FF00FFFF" scribble1inverted="0" scribble1string1="Game" scribble1iconFile="lightbulb2.png" />
+<scribble2 scribble2selected="0" scribble2inverted="0" scribble2bitmap="scribble2.png" scribble2string1="Music" scribble2textSize="1" scribble2alpha="0.800000011920929" scribble2string0="" scribble2offStyle="DIMMED" scribble2color0="FF00FFFF" scribble2iconFile="music.png" />
+<scribble3 scribble3textSize="1" scribble3selected="0" scribble3offStyle="DIMMED" scribble3inverted="0" scribble3string1="Voice Chat" scribble3color0="FF00FFFF" scribble3bitmap="scribble3.png" scribble3iconFile="person.png" scribble3alpha="0.800000011920929" scribble3string0="" />
+<scribble4 scribble4color0="FF00FFFF" scribble4string0="" scribble4selected="0" scribble4textSize="1" scribble4string1="System" scribble4iconFile="scale.png" scribble4alpha="0.800000011920929" scribble4inverted="0" scribble4bitmap="scribble4.png" scribble4offStyle="DIMMED" />
+<swear swearoffStyle="DIMMED" swearstate="0" swearcolor0="FF00FFFF" swearcolor1="FFFFFFFF" swearselected="0" swearvelocity="127" />
+<globalColour globalColourcolor0="FF00FFFF" globalColouroffStyle="DIMMED" globalColourcolor2="00000000" />
+<logoX logoXoffStyle="DIMMED" logoXselected="0" logoXcolor0="FF00FFFF" logoXvelocity="127" logoXstate="0" logoXcolor1="FFFFFFFF" />
+<fxClear fxClearoffStyle="DIMMED" fxClearstate="0" fxClearvelocity="127" fxClearselected="0" fxClearcolor1="FF00FFFF" fxClearcolor0="FF00FFFF" />
+<sampleBankA sampleBankAvelocity="127" sampleBankAcolor1="FFFFFFFF" sampleBankAoffStyle="DIMMED" sampleBankAstate="0" sampleBankAcolor2="00000000" sampleBankAselected="0" sampleBankAcolor0="FF00FFFF" />
+<sampleBankB sampleBankBoffStyle="DIMMED" sampleBankBcolor1="FFFFFFFF" sampleBankBstate="0" sampleBankBcolor0="FF00FFFF" sampleBankBcolor2="00000000" sampleBankBselected="0" sampleBankBvelocity="127" />
+<sampleBankC sampleBankCoffStyle="DIMMED" sampleBankCcolor0="FF00FFFF" sampleBankCvelocity="127" sampleBankCcolor2="00000000" sampleBankCselected="0" sampleBankCcolor1="FFFFFFFF" sampleBankCstate="1" />

@@ -130,7 +130,7 @@
              scribble4bitmap="scribble4.png"/>
   <FaderMeter3 FaderMeter3selected="0" colorGroup="faderGroup" FaderMeter3listIndex="6"
                FaderMeter3colour0="FFFF0055" FaderMeter3colour1="FF00FFFF" FaderMeter3offStyle="DIMMED"
-               FaderMeter3Display="GRADIENT"/>
+               FaderMeter3Display="GRADIENT_METER"/>
   <mute4 mute4selected="0" mute4state="0" mute4offStyle="DIMMED" mute4colour0="FF00FFFF"
          colorGroup="muteGroup" mute4Function="Mute All" mute4velocity="127"
          mute4colour1="ffffffff" mute4blink="0" mute4prevLevel="202"/>

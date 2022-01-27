@@ -13,7 +13,7 @@ use crate::components::colours::ColourMap;
 
 pub struct Mixers {
     mixer_table: EnumMap<InputChannels, EnumMap<OutputChannels, u16>>,
-    volume_table: EnumMap<VolumeChannels, u8>,
+    volume_table: EnumMap<FullChannelList, u8>,
     colour_map: ColourMap,
 }
 
@@ -38,7 +38,7 @@ impl Mixers {
                 let value: u8 = attr.value.parse().unwrap();
 
                 // Find the channel from the Prefix..
-                for volume in VolumeChannels::iter() {
+                for volume in FullChannelList::iter() {
                     if volume.get_str("Name").unwrap() == channel {
                         // Set the value..
                         self.volume_table[volume] = value;
@@ -91,7 +91,7 @@ impl Mixers {
 
         // Create the values..
         let mut attributes: HashMap<String, String> = HashMap::default();
-        for volume in VolumeChannels::iter() {
+        for volume in FullChannelList::iter() {
             let key = format!("{}Level", volume.get_str("Name").unwrap());
             let value = format!("{}", self.volume_table[volume]);
 
@@ -174,39 +174,40 @@ pub enum OutputChannels {
  * There are a couple of volumes that aren't part of the general mixer, so this needs mapping..
  */
 #[derive(Debug, Enum, EnumIter, EnumProperty)]
-pub enum VolumeChannels {
+pub enum FullChannelList {
     // Base Mixer Channels
-    #[strum(props(Name="mic"))]
+    #[strum(props(Name="mic", faderIndex="0"))]
     MIC,
 
-    #[strum(props(Name="chat"))]
+    #[strum(props(Name="chat", faderIndex="1"))]
     CHAT,
 
-    #[strum(props(Name="music"))]
+    #[strum(props(Name="music", faderIndex="2"))]
     MUSIC,
 
-    #[strum(props(Name="game"))]
+    #[strum(props(Name="game", faderIndex="3"))]
     GAME,
 
-    #[strum(props(Name="console"))]
+    #[strum(props(Name="console", faderIndex="4"))]
     CONSOLE,
 
-    #[strum(props(Name="lineIn"))]
+    #[strum(props(Name="lineIn", faderIndex="5"))]
     LINE_IN,
 
-    #[strum(props(Name="system"))]
+    #[strum(props(Name="system", faderIndex="6"))]
     SYSTEM,
 
-    #[strum(props(Name="sample"))]
+    #[strum(props(Name="sample", faderIndex="7"))]
     SAMPLE,
 
     // Extra Volume Mixers
-    #[strum(props(Name="headphone"))]
+    #[strum(props(Name="headphone", faderIndex="8"))]
     HEADPHONE,
 
-    #[strum(props(Name="mic2headphoneSub"))]
+    // Not Present in the Fader 'Source' List..
+    #[strum(props(Name="mic2headphoneSub", faderIndex="-1"))]
     MIC_MONITOR,
 
-    #[strum(props(Name="lineOut"))]
+    #[strum(props(Name="lineOut", faderIndex="9"))]
     LINE_OUT,
 }

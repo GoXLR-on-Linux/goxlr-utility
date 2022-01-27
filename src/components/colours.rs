@@ -36,6 +36,7 @@ pub struct ColourMap {
 }
 
 impl ColourMap {
+    // In hindsight, the prefix should probably be a ref, it's generally stored elsewhere..
     pub fn new(prefix: String) -> Self {
         Self {
             prefix,
@@ -60,7 +61,6 @@ impl ColourMap {
 
         attr_key = format!("{}selected", &self.prefix);
         if attribute.name.local_name == attr_key {
-            println!("Found Selected Attribute..");
             self.selected = Option::Some(u8::from_str(attribute.value.as_str()).unwrap());
             return true;
         }
