@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mixerTree lineInToStream="8192" micToStream="0" chatLevel="193" gameToChat="0" lineInToLineOut="0"
+           systemToSampler="8192" consoleToStream="8192" mixerTreeoffStyle="DIMMED" musicToSampler="8192"
+           sampleToChat="8192" consoleToHP="8192" lineInToHP="8192" sampleToLineOut="8192" gameToHP="8192"
+           gameToSampler="8192" systemToChat="0" sampleToStream="8192" systemToLineOut="8192" micToChat="8192"
+           lineInToChat="0" systemToHP="8192" consoleToLineOut="8192" sampleToHP="8192" mic2headphoneSubLevel="255"
+           sampleToSampler="0" gameLevel="158" lineInLevel="128" micToHP="8192" chatToLineOut="8192" gameToStream="8192"
+           systemToStream="0" lineOutLevel="255" lineInToSampler="8192" musicToStream="0" consoleToChat="0"
+           headphoneLevel="255" chatToStream="8192" sampleLevel="128" chatToSampler="8192" musicLevel="95"
+           musicToHP="8192" micLevel="230" chatToHP="8192" systemLevel="202" consoleLevel="128" musicToLineOut="8192"
+           musicToChat="0" micToLineOut="8192" micToSampler="8192" chatToChat="0" gameToLineOut="8192"
+           consoleToSampler="8192"/>
+<mute1 mute1prevLevel="160" mute1offStyle="DIMMED" mute1velocity="127" mute1blink="0" mute1selected="0"
+       mute1color1="FFFFFFFF" fromMuteAllFlag="1" mute1state="0" mute1Function="Mute All" mute1colorGroup="muteGroup"
+       mute1color0="FF00FFFF"/>
+<mute2 mute2prevLevel="94" mute2Function="Mute All" mute2selected="0" mute2offStyle="DIMMED" mute2velocity="127"
+       mute2color0="FF00FFFF" mute2blink="0" mute2state="0" mute2color1="FFFFFFFF" fromMuteAllFlag="1"
+       mute2colorGroup="muteGroup"/>
+<mute3 mute3prevLevel="193" mute3velocity="127" mute3blink="0" mute3color1="FFFFFFFF" fromMuteAllFlag="0" mute3state="0"
+       mute3color0="FF00FFFF" mute3selected="0" mute3colorGroup="muteGroup" mute3Function="Mute to Stream"
+       mute3offStyle="DIMMED"/>
+<mute4 mute4color0="FF00FFFF" mute4prevLevel="202" mute4velocity="127" mute4blink="0" mute4state="0"
+       mute4offStyle="DIMMED" mute4selected="0" mute4color1="FFFFFFFF" mute4Function="Mute All"
+       mute4colorGroup="muteGroup"/>
