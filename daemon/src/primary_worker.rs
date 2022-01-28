@@ -70,7 +70,7 @@ async fn device_loop<C: UsbContext>(
     rx: &mut DeviceReceiver,
     shutdown_signal: &mut Shutdown,
 ) -> Result<()> {
-    let sleep_duration = Duration::from_secs(1);
+    let sleep_duration = Duration::from_millis(100);
     loop {
         tokio::select! {
             Some((command, response)) = rx.recv() => {

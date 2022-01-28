@@ -22,6 +22,7 @@ pub struct Device<T: UsbContext> {
     goxlr: GoXLR<T>,
     volumes_before_muted: [u8; ChannelName::COUNT],
     status: DeviceStatus,
+    last_buttons: EnumSet<Buttons>,
 }
 
 impl<T: UsbContext> Device<T> {
@@ -30,6 +31,7 @@ impl<T: UsbContext> Device<T> {
             goxlr,
             status: DeviceStatus::default(),
             volumes_before_muted: [255; ChannelName::COUNT],
+            last_buttons: EnumSet::empty(),
         }
     }
 
@@ -145,25 +147,64 @@ impl<T: UsbContext> Device<T> {
                 self.goxlr.usb_device_has_kernel_driver_active()?;
         }
 
-        self.update_volumes_from_device();
+        if let Ok((buttons, volumes)) = self.goxlr.get_button_states() {
+            self.update_volumes_to(volumes);
+            let released_buttons = self.last_buttons.difference(buttons);
+            for button in released_buttons {
+                self.on_button_press(button)?;
+            }
+            self.last_buttons = buttons;
+        }
 
         Ok(())
     }
 
-    fn update_volumes_from_device(&mut self) {
-        if let Ok((_buttons, volumes)) = self.goxlr.get_button_states() {
-            if let Some(mixer) = &mut self.status.mixer {
-                for fader in FaderName::iter() {
-                    let channel = mixer.get_fader_assignment(fader);
-                    let old_volume = mixer.get_channel_volume(channel);
-                    let new_volume = volumes[fader as usize];
-                    if new_volume != old_volume {
-                        debug!(
-                            "Updating {} volume from {} to {} as a human moved the fader",
-                            channel, old_volume, new_volume
-                        );
-                        mixer.set_channel_volume(channel, new_volume);
-                    }
+    fn on_button_press(&mut self, button: Buttons) -> Result<()> {
+        debug!("Handling button press: {:?}", button);
+        match button {
+            Buttons::Fader1Mute => {
+                self.toggle_fader_mute(FaderName::A)?;
+            }
+            Buttons::Fader2Mute => {
+                self.toggle_fader_mute(FaderName::B)?;
+            }
+            Buttons::Fader3Mute => {
+                self.toggle_fader_mute(FaderName::C)?;
+            }
+            Buttons::Fader4Mute => {
+                self.toggle_fader_mute(FaderName::D)?;
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+
+    fn toggle_fader_mute(&mut self, fader: FaderName) -> Result<()> {
+        let (channel, muted) = if let Some(mixer) = &self.status.mixer {
+            let channel = mixer.get_fader_assignment(fader);
+            let muted = mixer.get_channel_muted(channel);
+            (channel, muted)
+        } else {
+            return Ok(());
+        };
+
+        self.perform_command(GoXLRCommand::SetChannelMuted(channel, !muted))?;
+
+        Ok(())
+    }
+
+    fn update_volumes_to(&mut self, volumes: [u8; 4]) {
+        if let Some(mixer) = &mut self.status.mixer {
+            for fader in FaderName::iter() {
+                let channel = mixer.get_fader_assignment(fader);
+                let old_volume = mixer.get_channel_volume(channel);
+                let new_volume = volumes[fader as usize];
+                if new_volume != old_volume {
+                    debug!(
+                        "Updating {} volume from {} to {} as a human moved the fader",
+                        channel, old_volume, new_volume
+                    );
+                    mixer.set_channel_volume(channel, new_volume);
                 }
             }
         }
@@ -188,7 +229,8 @@ impl<T: UsbContext> Device<T> {
                 Ok(None)
             }
             GoXLRCommand::SetChannelMuted(channel, muted) => {
-                self.update_volumes_from_device();
+                let (_, device_volumes) = self.goxlr.get_button_states()?;
+                self.update_volumes_to(device_volumes);
                 self.goxlr.set_channel_state(
                     channel,
                     if muted {
@@ -207,7 +249,7 @@ impl<T: UsbContext> Device<T> {
                         // Don't restore the old volume if the new volume is above minimum.
                         // This seems to match the official GoXLR software behaviour.
                         self.goxlr
-                            .set_volume(channel, self.volumes_before_muted[0])?;
+                            .set_volume(channel, self.volumes_before_muted[channel as usize])?;
                     }
                 }
                 self.goxlr.set_button_states(self.create_button_states())?;
