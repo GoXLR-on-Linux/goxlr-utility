@@ -1,7 +1,22 @@
+local COMMAND_NAMES = {
+    [0x000] = "SystemInfo",
+    [0x800] = "GetButtonStates",
+    [0x802] = "SetScribble",
+    [0x803] = "SetColourMap",
+    [0x804] = "SetRouting",
+    [0x805] = "SetFader",
+    [0x806] = "SetChannelVolume",
+    [0x808] = "SetButtonStates",
+    [0x809] = "SetChannelState",
+    [0x80b] = "SetMicrophoneType",
+    [0x80f] = "GetHardwareInfo",
+    [0x814] = "SetFaderDisplayMode",
+}
+
 goxlr_protocol = Proto("GoXLR", "GoXLR USB protocol")
 
 local f_header = ProtoField.bytes("goxlr.header", "Header")
-local f_header_command = ProtoField.uint24("goxlr.header.command", "Command", base.HEX)
+local f_header_command = ProtoField.uint24("goxlr.header.command", "Command", base.HEX, COMMAND_NAMES)
 local f_header_subcommand = ProtoField.uint24("goxlr.header.subcommand", "Subcommand", base.HEX)
 local f_header_length = ProtoField.uint16("goxlr.header.length", "Body Length", base.DEC)
 local f_command_index = ProtoField.uint16("goxlr.header.index", "Index", base.DEC)
