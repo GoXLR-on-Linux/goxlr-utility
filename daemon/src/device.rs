@@ -66,8 +66,8 @@ impl<T: UsbContext> Device<T> {
 
     fn initialize_mixer(&mut self) -> Result<()> {
         self.goxlr.set_fader(FaderName::A, ChannelName::Mic)?;
-        self.goxlr.set_fader(FaderName::B, ChannelName::Chat)?;
-        self.goxlr.set_fader(FaderName::C, ChannelName::Music)?;
+        self.goxlr.set_fader(FaderName::B, ChannelName::Music)?;
+        self.goxlr.set_fader(FaderName::C, ChannelName::Chat)?;
         self.goxlr.set_fader(FaderName::D, ChannelName::System)?;
         for channel in ChannelName::iter() {
             self.goxlr.set_volume(channel, 255)?;
@@ -128,8 +128,8 @@ impl<T: UsbContext> Device<T> {
                 manufactured_date,
             },
             fader_a_assignment: ChannelName::Mic,
-            fader_b_assignment: ChannelName::Chat,
-            fader_c_assignment: ChannelName::Music,
+            fader_b_assignment: ChannelName::Music,
+            fader_c_assignment: ChannelName::Chat,
             fader_d_assignment: ChannelName::System,
             volumes: [255; ChannelName::COUNT],
             muted: [false; ChannelName::COUNT],
