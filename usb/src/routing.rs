@@ -18,16 +18,16 @@ pub enum OutputDevice {
 impl OutputDevice {
     pub fn position(&self) -> usize {
         match self {
-            OutputDevice::HeadphonesRight => 1,
-            OutputDevice::HeadphonesLeft => 3,
-            OutputDevice::BroadcastMixRight => 5,
-            OutputDevice::BroadcastMixLeft => 7,
-            OutputDevice::ChatMicRight => 9,
-            OutputDevice::ChatMicLeft => 11,
-            OutputDevice::SamplerRight => 13,
-            OutputDevice::SamplerLeft => 15,
-            OutputDevice::LineOutRight => 17,
-            OutputDevice::LineOutLeft => 19,
+            OutputDevice::HeadphonesLeft => 1,
+            OutputDevice::HeadphonesRight => 3,
+            OutputDevice::BroadcastMixLeft => 5,
+            OutputDevice::BroadcastMixRight => 7,
+            OutputDevice::ChatMicLeft => 9,
+            OutputDevice::ChatMicRight => 11,
+            OutputDevice::SamplerLeft => 13,
+            OutputDevice::SamplerRight => 15,
+            OutputDevice::LineOutLeft => 17,
+            OutputDevice::LineOutRight => 19,
             OutputDevice::Unknown => 21,
         }
     }
@@ -71,22 +71,22 @@ pub enum InputDevice {
 impl InputDevice {
     pub fn id(&self) -> u8 {
         match self {
-            InputDevice::MicrophoneRight => 0x02,
-            InputDevice::MicrophoneLeft => 0x03,
-            InputDevice::MusicRight => 0x0e,
-            InputDevice::MusicLeft => 0x0f,
-            InputDevice::GameRight => 0x0a,
-            InputDevice::GameLeft => 0x0b,
-            InputDevice::ChatRight => 0x0c,
-            InputDevice::ChatLeft => 0x0d,
-            InputDevice::ConsoleRight => 0x06,
-            InputDevice::ConsoleLeft => 0x07,
-            InputDevice::LineInRight => 0x04,
-            InputDevice::LineInLeft => 0x05,
-            InputDevice::SystemRight => 0x08,
-            InputDevice::SystemLeft => 0x09,
-            InputDevice::SamplesRight => 0x10,
-            InputDevice::SamplesLeft => 0x11,
+            InputDevice::MicrophoneLeft => 0x02,
+            InputDevice::MicrophoneRight => 0x03,
+            InputDevice::MusicLeft => 0x0e,
+            InputDevice::MusicRight => 0x0f,
+            InputDevice::GameLeft => 0x0a,
+            InputDevice::GameRight => 0x0b,
+            InputDevice::ChatLeft => 0x0c,
+            InputDevice::ChatRight => 0x0d,
+            InputDevice::ConsoleLeft => 0x06,
+            InputDevice::ConsoleRight => 0x07,
+            InputDevice::LineInLeft => 0x04,
+            InputDevice::LineInRight => 0x05,
+            InputDevice::SystemLeft => 0x08,
+            InputDevice::SystemRight => 0x09,
+            InputDevice::SamplesLeft => 0x10,
+            InputDevice::SamplesRight => 0x11,
         }
     }
 

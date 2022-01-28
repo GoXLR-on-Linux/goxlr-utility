@@ -247,6 +247,7 @@ impl<T: UsbContext> Device<T> {
 
             for simple_output in outputs.iter() {
                 let (left_output, right_output) = OutputDevice::from_basic(&simple_output);
+                // 0x20 is 100% volume. This is adjustable. 100% isn't the maximum, either! :D
                 left[left_output.position()] = 0x20;
                 right[right_output.position()] = 0x20;
             }
