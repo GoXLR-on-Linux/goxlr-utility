@@ -71,8 +71,15 @@ impl<T: UsbContext> GoXLR<T> {
             .ok_or(ConnectError::DeviceNotGoXLR)?
             .to_owned();
 
-        let _ = handle.set_active_configuration(1);
+        let _ = dbg!(handle.set_active_configuration(1));
         let device_is_claimed = handle.claim_interface(0).is_ok();
+
+        // let config = device.active_config_descriptor()?;
+        // for interface in config.interfaces() {
+        //     for descriptor in interface.descriptors() {
+        //         dbg!(descriptor);
+        //     }
+        // }
 
         let mut goxlr = Self {
             handle,

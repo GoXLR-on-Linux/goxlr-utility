@@ -32,18 +32,18 @@ impl OutputDevice {
         }
     }
 
-    pub fn from_basic(basic: &BasicOutputDevice) -> &'static [OutputDevice; 2] {
+    pub fn from_basic(basic: &BasicOutputDevice) -> (OutputDevice, OutputDevice) {
         match basic {
             BasicOutputDevice::Headphones => {
-                &[OutputDevice::HeadphonesLeft, OutputDevice::HeadphonesRight]
+                (OutputDevice::HeadphonesLeft, OutputDevice::HeadphonesRight)
             }
-            BasicOutputDevice::BroadcastMix => &[
+            BasicOutputDevice::BroadcastMix => (
                 OutputDevice::BroadcastMixLeft,
                 OutputDevice::BroadcastMixRight,
-            ],
-            BasicOutputDevice::ChatMic => &[OutputDevice::ChatMicLeft, OutputDevice::ChatMicRight],
-            BasicOutputDevice::Sampler => &[OutputDevice::SamplerLeft, OutputDevice::SamplerRight],
-            BasicOutputDevice::LineOut => &[OutputDevice::LineOutLeft, OutputDevice::LineOutRight],
+            ),
+            BasicOutputDevice::ChatMic => (OutputDevice::ChatMicLeft, OutputDevice::ChatMicRight),
+            BasicOutputDevice::Sampler => (OutputDevice::SamplerLeft, OutputDevice::SamplerRight),
+            BasicOutputDevice::LineOut => (OutputDevice::LineOutLeft, OutputDevice::LineOutRight),
         }
     }
 }
@@ -90,18 +90,18 @@ impl InputDevice {
         }
     }
 
-    pub fn from_basic(basic: &BasicInputDevice) -> &'static [InputDevice; 2] {
+    pub fn from_basic(basic: &BasicInputDevice) -> (InputDevice, InputDevice) {
         match basic {
             BasicInputDevice::Microphone => {
-                &[InputDevice::MicrophoneLeft, InputDevice::MicrophoneRight]
+                (InputDevice::MicrophoneLeft, InputDevice::MicrophoneRight)
             }
-            BasicInputDevice::Chat => &[InputDevice::ChatLeft, InputDevice::ChatRight],
-            BasicInputDevice::Music => &[InputDevice::MusicLeft, InputDevice::MusicRight],
-            BasicInputDevice::Game => &[InputDevice::GameLeft, InputDevice::GameRight],
-            BasicInputDevice::Console => &[InputDevice::ConsoleLeft, InputDevice::ConsoleRight],
-            BasicInputDevice::LineIn => &[InputDevice::LineInLeft, InputDevice::LineInRight],
-            BasicInputDevice::System => &[InputDevice::SystemLeft, InputDevice::SystemRight],
-            BasicInputDevice::Samples => &[InputDevice::SamplesLeft, InputDevice::SamplesRight],
+            BasicInputDevice::Chat => (InputDevice::ChatLeft, InputDevice::ChatRight),
+            BasicInputDevice::Music => (InputDevice::MusicLeft, InputDevice::MusicRight),
+            BasicInputDevice::Game => (InputDevice::GameLeft, InputDevice::GameRight),
+            BasicInputDevice::Console => (InputDevice::ConsoleLeft, InputDevice::ConsoleRight),
+            BasicInputDevice::LineIn => (InputDevice::LineInLeft, InputDevice::LineInRight),
+            BasicInputDevice::System => (InputDevice::SystemLeft, InputDevice::SystemRight),
+            BasicInputDevice::Samples => (InputDevice::SamplesLeft, InputDevice::SamplesRight),
         }
     }
 }

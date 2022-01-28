@@ -241,18 +241,18 @@ impl<T: UsbContext> Device<T> {
     ) -> Result<()> {
         for simple_input in BasicInputDevice::iter() {
             let outputs = &router[simple_input as usize];
+            let (left_input, right_input) = InputDevice::from_basic(&simple_input);
+            let mut left = [0; 22];
+            let mut right = [0; 22];
 
-            for input in InputDevice::from_basic(&simple_input) {
-                let mut result = [0; 22];
-
-                for simple_output in outputs.iter() {
-                    for output in OutputDevice::from_basic(&simple_output) {
-                        result[output.position()] = 0x20;
-                    }
-                }
-
-                self.goxlr.set_routing(*input, result)?;
+            for simple_output in outputs.iter() {
+                let (left_output, right_output) = OutputDevice::from_basic(&simple_output);
+                left[left_output.position()] = 0x20;
+                right[right_output.position()] = 0x20;
             }
+
+            self.goxlr.set_routing(left_input, left)?;
+            self.goxlr.set_routing(right_input, right)?;
         }
 
         Ok(())
