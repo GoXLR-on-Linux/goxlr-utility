@@ -354,6 +354,12 @@ impl<T: UsbContext> GoXLR<T> {
         Ok(())
     }
 
+    pub fn get_microphone_level(&mut self) -> Result<u16, rusb::Error> {
+        let result = self.request_data(Command::GetMicrophoneLevel, &[])?;
+
+        Ok(LittleEndian::read_u16(&result))
+    }
+
     pub fn get_button_states(&mut self) -> Result<(EnumSet<Buttons>, [u8; 4]), rusb::Error> {
         let result = self.request_data(Command::GetButtonStates, &[])?;
         let mut pressed = EnumSet::empty();
