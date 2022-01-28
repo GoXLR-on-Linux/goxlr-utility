@@ -363,6 +363,10 @@ impl<T: UsbContext> GoXLR<T> {
         mixers[1] = result[9];
         mixers[2] = result[10];
         mixers[3] = result[11];
+        let _pitch = result[4];
+        let _gender = result[5];
+        let _reverb = result[6];
+        let _echo = result[7];
 
         for button in EnumSet::<Buttons>::all() {
             if button_states & (1 << button as u8) != 0 {
