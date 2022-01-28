@@ -7,9 +7,9 @@ use crate::dcp::DCPCategory;
 use crate::error::{CommandError, ConnectError};
 use crate::microphone::MicrophoneType;
 use crate::routing::InputDevice;
-use byteorder::{ByteOrder, LittleEndian, ReadBytesExt};
+use byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
 use enumset::EnumSet;
-use goxlr_types::{ChannelName, FaderName, FirmwareVersions, VersionNumber};
+use goxlr_types::{ChannelName, EffectKey, FaderName, FirmwareVersions, VersionNumber};
 use log::info;
 use rusb::{
     Device, DeviceDescriptor, DeviceHandle, Direction, GlobalContext, Language, Recipient,
@@ -358,6 +358,18 @@ impl<T: UsbContext> GoXLR<T> {
         let result = self.request_data(Command::GetMicrophoneLevel, &[])?;
 
         Ok(LittleEndian::read_u16(&result))
+    }
+
+    pub fn set_effect_values(&mut self, effects: &[(EffectKey, i16)]) -> Result<(), rusb::Error> {
+        let mut data = Vec::with_capacity(effects.len() * 8);
+        let mut cursor = Cursor::new(&mut data);
+        for (key, value) in effects {
+            cursor.write_u16::<LittleEndian>(*key as u16);
+            cursor.write_i16::<LittleEndian>(*value);
+        }
+        self.request_data(Command::GetMicrophoneLevel, &data)?;
+
+        Ok(())
     }
 
     pub fn get_button_states(&mut self) -> Result<(EnumSet<Buttons>, [u8; 4]), rusb::Error> {

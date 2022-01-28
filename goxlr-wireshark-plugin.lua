@@ -73,6 +73,7 @@ local EFFECT_KEYS = {
     [0x005d] = "PitchAmount",
     [0x0167] = "PitchCharacter",
     [0x0159] = "PitchStyle",
+    [0x0060] = "GenderAmount",
     [0x003c] = "MegaphoneAmount",
     [0x0040] = "MegaphonePostGain",
     -- [0x003a] = "MegaphoneUnknown1",
