@@ -9,6 +9,7 @@ local COMMAND_NAMES = {
     [0x806] = "SetChannelVolume",
     [0x808] = "SetButtonStates",
     [0x809] = "SetChannelState",
+    [0x80a] = "SetEncoderValue",
     [0x80b] = "SetMicrophoneType",
     [0x80c] = "GetMicrophoneLevel",
     [0x80f] = "GetHardwareInfo",

@@ -34,6 +34,16 @@ pub enum FaderName {
     D,
 }
 
+#[derive(Copy, Clone, Debug, Display, EnumIter, EnumCount)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum EncoderName {
+    Pitch = 0x00,
+    Gender = 0x01,
+    Reverb = 0x02,
+    Echo = 0x03,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct FirmwareVersions {
@@ -87,7 +97,7 @@ pub enum InputDevice {
     Samples,
 }
 
-#[derive(Debug, Copy, Clone, Display, EnumIter)]
+#[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum EffectKey {

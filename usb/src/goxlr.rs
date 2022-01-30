@@ -9,7 +9,9 @@ use crate::microphone::MicrophoneType;
 use crate::routing::InputDevice;
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
 use enumset::EnumSet;
-use goxlr_types::{ChannelName, EffectKey, FaderName, FirmwareVersions, VersionNumber};
+use goxlr_types::{
+    ChannelName, EffectKey, EncoderName, FaderName, FirmwareVersions, VersionNumber,
+};
 use log::info;
 use rusb::{
     Device, DeviceDescriptor, DeviceHandle, Direction, GlobalContext, Language, Recipient,
@@ -277,6 +279,15 @@ impl<T: UsbContext> GoXLR<T> {
 
     pub fn set_volume(&mut self, channel: ChannelName, volume: u8) -> Result<(), rusb::Error> {
         self.request_data(Command::SetChannelVolume(channel), &[volume])?;
+        Ok(())
+    }
+
+    pub fn set_encoder_value(
+        &mut self,
+        encoder: EncoderName,
+        value: u8,
+    ) -> Result<(), rusb::Error> {
+        self.request_data(Command::SetEncoderValue(encoder), &[value])?;
         Ok(())
     }
 

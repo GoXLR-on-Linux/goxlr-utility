@@ -1,11 +1,12 @@
 use crate::routing::InputDevice;
-use goxlr_types::{ChannelName, FaderName};
+use goxlr_types::{ChannelName, EncoderName, FaderName};
 
 #[derive(Copy, Clone, Debug)]
 pub enum Command {
     SystemInfo(SystemInfoCommand),
     SetChannelState(ChannelName),
     SetChannelVolume(ChannelName),
+    SetEncoderValue(EncoderName),
     SetFader(FaderName),
     SetRouting(InputDevice),
     SetButtonStates(),
@@ -24,6 +25,7 @@ impl Command {
             Command::SystemInfo(sub) => sub.id(),
             Command::SetChannelState(channel) => (0x809 << 12) | *channel as u32,
             Command::SetChannelVolume(channel) => (0x806 << 12) | *channel as u32,
+            Command::SetEncoderValue(encoder) => (0x80a << 12) | *encoder as u32,
             Command::SetFader(fader) => (0x805 << 12) | *fader as u32,
             Command::SetRouting(input_device) => (0x804 << 12) | input_device.id() as u32,
             Command::SetColourMap() => (0x803 << 12) | 0x00 as u32,
