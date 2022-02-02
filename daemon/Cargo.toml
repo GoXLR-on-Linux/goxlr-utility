@@ -2,6 +2,11 @@
 name = "goxlr-daemon"
 version = "0.1.0"
 edition = "2021"
+authors = ["Nathan Adams <dinnerbone@dinnerbone.com>"]
+description = "Allows control of a TC-Helicon GoXLR or GoXLR Mini, by maintaining an interaction with it over USB in the background."
+repository = "https://github.com/GoXLR-on-Linux/GoXLR-Utility"
+license = "MIT"
+categories = ["hardware-support", "command-line-utilities"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
