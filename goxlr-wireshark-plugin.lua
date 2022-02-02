@@ -17,6 +17,7 @@ local COMMAND_NAMES = {
 }
 
 local EFFECT_KEYS = {
+    [0x0073] = "BleepLevel",
     [0x0011] = "GateThreshold",
     [0x0015] = "GateAttenuation",
     [0x0016] = "GateAttack",
@@ -109,7 +110,22 @@ local EFFECT_KEYS = {
     [0x005b] = "HardTuneWindow",
 }
 
-local MIC_PARAM_KEYS = {}
+local MIC_PARAM_KEYS = {
+    [0x000] = "MicType",
+    [0x001] = "DynamicGain",
+    [0x002] = "CondenserGain",
+    [0x003] = "JackGain",
+    [0x30200] = "GateThreshold",
+    [0x30400] = "GateAttack",
+    [0x30600] = "GateRelease",
+    [0x30900] = "GateAttenuation",
+    [0x60200] = "CompressorThreshold",
+    [0x60300] = "CompressorRatio",
+    [0x60400] = "CompressorAttack",
+    [0x60600] = "CompressorRelease",
+    [0x60700] = "CompressorMakeUpGain",
+    [0x70100] = "BleepLevel",
+}
 
 goxlr_protocol = Proto("GoXLR", "GoXLR USB protocol")
 
@@ -120,10 +136,10 @@ local f_header_length = ProtoField.uint16("goxlr.header.length", "Body Length", 
 local f_command_index = ProtoField.uint16("goxlr.header.index", "Index", base.DEC)
 local f_body = ProtoField.bytes("goxlr.body", "Body")
 local f_body_effect = ProtoField.bytes("goxlr.body.effect", "Effect")
-local f_body_effect_key = ProtoField.uint16("goxlr.body.effect.key", "Effect Key", base.HEX, EFFECT_KEYS)
-local f_body_effect_value = ProtoField.int16("goxlr.body.effect.value", "Effect Value", base.DEC)
+local f_body_effect_key = ProtoField.uint32("goxlr.body.effect.key", "Effect Key", base.HEX, EFFECT_KEYS)
+local f_body_effect_value = ProtoField.int32("goxlr.body.effect.value", "Effect Value", base.DEC)
 local f_body_mic_param = ProtoField.bytes("goxlr.bodymic_param", "Mic Param")
-local f_body_mic_param_key = ProtoField.uint16("goxlr.body.mic_param.key", "Param Key", base.HEX, EFFECT_KEYS)
+local f_body_mic_param_key = ProtoField.uint32("goxlr.body.mic_param.key", "Param Key", base.HEX, MIC_PARAM_KEYS)
 local f_body_mic_param_value = ProtoField.float("goxlr.body.mic_param.value", "Param Value", base.DEC)
 local f_request = ProtoField.framenum("goxlr.request", "Request Packet", base.NONE, frametype.REQUEST)
 local f_response = ProtoField.framenum("goxlr.response", "Response Packet", base.NONE, frametype.RESPONSE)
