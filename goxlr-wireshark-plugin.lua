@@ -109,6 +109,8 @@ local EFFECT_KEYS = {
     [0x005b] = "HardTuneWindow",
 }
 
+local MIC_PARAM_KEYS = {}
+
 goxlr_protocol = Proto("GoXLR", "GoXLR USB protocol")
 
 local f_header = ProtoField.bytes("goxlr.header", "Header")
@@ -117,9 +119,12 @@ local f_header_subcommand = ProtoField.uint24("goxlr.header.subcommand", "Subcom
 local f_header_length = ProtoField.uint16("goxlr.header.length", "Body Length", base.DEC)
 local f_command_index = ProtoField.uint16("goxlr.header.index", "Index", base.DEC)
 local f_body = ProtoField.bytes("goxlr.body", "Body")
-local f_body_effect = ProtoField.bytes("goxlr.body", "Effect")
+local f_body_effect = ProtoField.bytes("goxlr.body.effect", "Effect")
 local f_body_effect_key = ProtoField.uint16("goxlr.body.effect.key", "Effect Key", base.HEX, EFFECT_KEYS)
 local f_body_effect_value = ProtoField.int16("goxlr.body.effect.value", "Effect Value", base.DEC)
+local f_body_mic_param = ProtoField.bytes("goxlr.bodymic_param", "Mic Param")
+local f_body_mic_param_key = ProtoField.uint16("goxlr.body.mic_param.key", "Param Key", base.HEX, EFFECT_KEYS)
+local f_body_mic_param_value = ProtoField.float("goxlr.body.mic_param.value", "Param Value", base.DEC)
 local f_request = ProtoField.framenum("goxlr.request", "Request Packet", base.NONE, frametype.REQUEST)
 local f_response = ProtoField.framenum("goxlr.response", "Response Packet", base.NONE, frametype.RESPONSE)
 
@@ -131,6 +136,7 @@ goxlr_protocol.fields = {
     f_request, f_response,
     f_body,
     f_body_effect, f_body_effect_key, f_body_effect_value,
+    f_body_mic_param, f_body_mic_param_key, f_body_mic_param_value,
 }
 
 local conversations = {}
@@ -202,6 +208,19 @@ function goxlr_protocol.dissector(buffer, pinfo, tree)
                 effect:add_le(f_body_effect_value, value)
                 local key_name = EFFECT_KEYS[key:le_uint()] or "Unknown"
                 effect:append_text(" (Set " .. key_name .. " to " .. value:le_int() .. ")")
+            end
+        end
+
+        if command_id == 0x80b then
+            for i = 0, body_buffer:len() - 1, 8 do
+                local param_buffer = body_buffer(i, 8)
+                local key = param_buffer(0, 4)
+                local value = param_buffer(4, 4)
+                local effect = body:add(f_body_mic_param, param_buffer)
+                effect:add_le(f_body_mic_param_key, key)
+                effect:add_le(f_body_mic_param_value, value)
+                local key_name = MIC_PARAM_KEYS[key:le_uint()] or "Unknown"
+                effect:append_text(" (Set " .. key_name .. " to " .. value:le_float() .. ")")
             end
         end
     end
