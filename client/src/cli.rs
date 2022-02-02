@@ -1,5 +1,5 @@
 use clap::{Args, Parser};
-use goxlr_types::ChannelName;
+use goxlr_types::{ChannelName, MicrophoneType};
 
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]
@@ -12,6 +12,9 @@ pub struct Cli {
 
     #[clap(flatten, help_heading = "Channel states")]
     pub channel_states: ChannelStates,
+
+    #[clap(flatten, help_heading = "Microphone controls")]
+    pub microphone_controls: MicrophoneControls,
 }
 
 #[derive(Debug, Args)]
@@ -125,4 +128,22 @@ pub struct ChannelStates {
     /// Set Line-Out muted status (true/false)
     #[clap(long)]
     pub line_out_muted: Option<bool>,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrophoneControls {
+    /// Set the gain of the plugged in dynamic (XLR) microphone.
+    /// Value is in decibels and recommended to be lower than 72dB.
+    #[clap(long)]
+    pub dynamic_gain: Option<u16>,
+
+    /// Set the gain of the plugged in condenser (XLR with phantom power) microphone.
+    /// Value is in decibels and recommended to be lower than 72dB.
+    #[clap(long)]
+    pub condenser_gain: Option<u16>,
+
+    /// Set the gain of the plugged in jack (3.5mm) microphone.
+    /// Value is in decibels and recommended to be lower than 72dB.
+    #[clap(long)]
+    pub jack_gain: Option<u16>,
 }

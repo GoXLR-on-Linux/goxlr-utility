@@ -1,5 +1,7 @@
 use enumset::EnumSet;
-use goxlr_types::{ChannelName, FaderName, FirmwareVersions, InputDevice, OutputDevice};
+use goxlr_types::{
+    ChannelName, FaderName, FirmwareVersions, InputDevice, MicrophoneType, OutputDevice,
+};
 use serde::{Deserialize, Serialize};
 use strum::EnumCount;
 
@@ -27,6 +29,8 @@ pub struct MixerStatus {
     pub volumes: [u8; ChannelName::COUNT],
     pub muted: [bool; ChannelName::COUNT],
     pub router: [EnumSet<OutputDevice>; InputDevice::COUNT],
+    pub mic_gains: [u16; MicrophoneType::COUNT],
+    pub mic_type: MicrophoneType,
 }
 
 impl MixerStatus {

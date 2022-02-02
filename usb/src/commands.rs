@@ -10,7 +10,8 @@ pub enum Command {
     SetFader(FaderName),
     SetRouting(InputDevice),
     SetButtonStates(),
-    SetMicrophoneType(),
+    SetEffectParameters,
+    SetMicrophoneParameters,
     GetMicrophoneLevel,
     SetColourMap(),
     SetFaderDisplayMode(FaderName),
@@ -35,9 +36,8 @@ impl Command {
             Command::GetButtonStates => (0x800 << 12) | 0x00 as u32,
             Command::GetHardwareInfo(sub) => (0x80f << 12) | *sub as u32,
             Command::GetMicrophoneLevel => (0x80c << 12) | 0x00 as u32,
-
-            // There are multiple versions of this command, we only support one currently..
-            Command::SetMicrophoneType() => (0x80b << 12) | 0x00 as u32,
+            Command::SetMicrophoneParameters => (0x80b << 12) | 0x00 as u32,
+            Command::SetEffectParameters => (0x801 << 12) | 0x00 as u32,
         }
     }
 }

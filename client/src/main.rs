@@ -2,10 +2,12 @@ mod channels;
 mod cli;
 mod client;
 mod faders;
+mod microphone;
 
 use crate::channels::{apply_channel_states, apply_channel_volumes};
 use crate::client::Client;
 use crate::faders::apply_fader_controls;
+use crate::microphone::apply_microphone_controls;
 use anyhow::{Context, Result};
 use clap::Parser;
 use cli::Cli;
@@ -13,7 +15,7 @@ use goxlr_ipc::{
     DaemonRequest, DaemonResponse, DeviceType, GoXLRCommand, MixerStatus, UsbProductInformation,
 };
 use goxlr_ipc::{DeviceStatus, Socket};
-use goxlr_types::{ChannelName, FaderName, InputDevice, OutputDevice};
+use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice};
 use strum::IntoEnumIterator;
 use tokio::net::UnixStream;
 
@@ -40,6 +42,10 @@ async fn main() -> Result<()> {
     apply_channel_states(&cli.channel_states, &mut client)
         .await
         .context("Could not apply channel states")?;
+
+    apply_microphone_controls(&cli.microphone_controls, &mut client)
+        .await
+        .context("Could not apply microphone controls")?;
 
     client
         .send(GoXLRCommand::GetStatus)
@@ -112,6 +118,20 @@ fn print_mixer_info(mixer: &MixerStatus) {
             println!("{} volume: {:.0}% (Muted)", channel, pct);
         } else {
             println!("{} volume: {:.0}%", channel, pct);
+        }
+    }
+
+    for microphone in MicrophoneType::iter() {
+        if mixer.mic_type == microphone {
+            println!(
+                "{} mic gain: {} dB (ACTIVE)",
+                microphone, mixer.mic_gains[microphone as usize]
+            );
+        } else {
+            println!(
+                "{} mic gain: {} dB (Inactive)",
+                microphone, mixer.mic_gains[microphone as usize]
+            );
         }
     }
 

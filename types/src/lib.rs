@@ -101,6 +101,7 @@ pub enum InputDevice {
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum EffectKey {
+    BleepLevel = 0x0073,
     GateThreshold = 0x0011,
     GateAttenuation = 0x0015,
     GateAttack = 0x0016,
@@ -174,4 +175,47 @@ pub enum EffectKey {
     HardTuneAmount = 0x005a,
     HardTuneRate = 0x005c,
     HardTuneWindow = 0x005b,
+}
+
+#[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum MicrophoneParamKey {
+    MicType = 0x000,
+    DynamicGain = 0x001,
+    CondenserGain = 0x002,
+    JackGain = 0x003,
+    GateThreshold = 0x30200,
+    GateAttack = 0x30400,
+    GateRelease = 0x30600,
+    GateAttenuation = 0x30900,
+    CompressorThreshold = 0x60200,
+    CompressorRatio = 0x60300,
+    CompressorAttack = 0x60400,
+    CompressorRelease = 0x60600,
+    CompressorMakeUpGain = 0x60700,
+    BleepLevel = 0x70100,
+}
+
+#[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum MicrophoneType {
+    Dynamic,
+    Condenser,
+    Jack,
+}
+
+impl MicrophoneType {
+    pub fn get_gain_param(&self) -> MicrophoneParamKey {
+        match self {
+            MicrophoneType::Dynamic => MicrophoneParamKey::DynamicGain,
+            MicrophoneType::Condenser => MicrophoneParamKey::CondenserGain,
+            MicrophoneType::Jack => MicrophoneParamKey::JackGain,
+        }
+    }
+
+    pub fn has_phantom_power(&self) -> bool {
+        matches!(self, MicrophoneType::Condenser)
+    }
 }

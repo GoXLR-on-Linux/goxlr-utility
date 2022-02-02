@@ -4,7 +4,8 @@ use goxlr_ipc::{
     DeviceStatus, DeviceType, GoXLRCommand, HardwareStatus, MixerStatus, UsbProductInformation,
 };
 use goxlr_types::{
-    ChannelName, FaderName, InputDevice as BasicInputDevice, OutputDevice as BasicOutputDevice,
+    ChannelName, FaderName, InputDevice as BasicInputDevice, MicrophoneType,
+    OutputDevice as BasicOutputDevice,
 };
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::channelstate::ChannelState;
@@ -77,6 +78,7 @@ impl<T: UsbContext> Device<T> {
                 .set_channel_state(channel, ChannelState::Unmuted)?;
         }
         self.goxlr.set_button_states(self.create_button_states())?;
+        self.goxlr.set_microphone_gain(MicrophoneType::Jack, 72)?;
 
         let mut router = [EnumSet::empty(); BasicInputDevice::COUNT];
         router[BasicInputDevice::Microphone as usize] = enum_set!(
@@ -135,6 +137,8 @@ impl<T: UsbContext> Device<T> {
             fader_d_assignment: ChannelName::System,
             volumes: [255; ChannelName::COUNT],
             muted: [false; ChannelName::COUNT],
+            mic_gains: [0; MicrophoneType::COUNT],
+            mic_type: MicrophoneType::Jack,
             router,
         });
 
@@ -253,6 +257,14 @@ impl<T: UsbContext> Device<T> {
                     }
                 }
                 self.goxlr.set_button_states(self.create_button_states())?;
+                Ok(None)
+            }
+            GoXLRCommand::SetMicrophoneGain(mic_type, gain) => {
+                self.goxlr.set_microphone_gain(mic_type, gain)?;
+                if let Some(mixer) = &mut self.status.mixer {
+                    mixer.mic_type = mic_type;
+                    mixer.mic_gains[mic_type as usize] = gain;
+                }
                 Ok(None)
             }
         }

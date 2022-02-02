@@ -10,7 +10,7 @@ local COMMAND_NAMES = {
     [0x808] = "SetButtonStates",
     [0x809] = "SetChannelState",
     [0x80a] = "SetEncoderValue",
-    [0x80b] = "SetMicrophoneType",
+    [0x80b] = "SetMicrophoneParameters",
     [0x80c] = "GetMicrophoneLevel",
     [0x80f] = "GetHardwareInfo",
     [0x814] = "SetFaderDisplayMode",
@@ -231,12 +231,18 @@ function goxlr_protocol.dissector(buffer, pinfo, tree)
             for i = 0, body_buffer:len() - 1, 8 do
                 local param_buffer = body_buffer(i, 8)
                 local key = param_buffer(0, 4)
-                local value = param_buffer(4, 4)
+                local decoded_key = key:le_int()
                 local effect = body:add(f_body_mic_param, param_buffer)
+                local value = param_buffer(4, 4)
+                local decoded_value = value:le_float()
+                if decoded_key == 0x001 or decoded_key == 0x002 or decoded_key == 0x003 then
+                    value = param_buffer(6, 2)
+                    decoded_value = value:le_int()
+                end
                 effect:add_le(f_body_mic_param_key, key)
-                effect:add_le(f_body_mic_param_value, value)
+                effect:add_le(f_body_mic_param_value, value, decoded_value)
                 local key_name = MIC_PARAM_KEYS[key:le_uint()] or "Unknown"
-                effect:append_text(" (Set " .. key_name .. " to " .. value:le_float() .. ")")
+                effect:append_text(" (Set " .. key_name .. " to " .. decoded_value .. ")")
             end
         end
     end

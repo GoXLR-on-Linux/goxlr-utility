@@ -5,19 +5,19 @@ use crate::commands::SystemInfoCommand::SupportsDCPCategory;
 use crate::commands::{Command, HardwareInfoCommand};
 use crate::dcp::DCPCategory;
 use crate::error::{CommandError, ConnectError};
-use crate::microphone::MicrophoneType;
 use crate::routing::InputDevice;
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
 use enumset::EnumSet;
 use goxlr_types::{
-    ChannelName, EffectKey, EncoderName, FaderName, FirmwareVersions, VersionNumber,
+    ChannelName, EffectKey, EncoderName, FaderName, FirmwareVersions, MicrophoneParamKey,
+    MicrophoneType, VersionNumber,
 };
 use log::info;
 use rusb::{
     Device, DeviceDescriptor, DeviceHandle, Direction, GlobalContext, Language, Recipient,
     RequestType, UsbContext,
 };
-use std::io::Cursor;
+use std::io::{Cursor, Write};
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -347,21 +347,23 @@ impl<T: UsbContext> GoXLR<T> {
         Ok(())
     }
 
-    pub fn set_microphone_type(
+    pub fn set_microphone_gain(
         &mut self,
         microphone_type: MicrophoneType,
-        gain: u8,
+        gain: u16,
     ) -> Result<(), rusb::Error> {
-        let mut data: [u8; 8] = [0; 8];
-
-        // Before we do *ANYTHING*, we need to reset the mic type..
-        self.request_data(Command::SetMicrophoneType(), &data);
-
-        // Set the Microphone Type:
-        data[0] = microphone_type.id();
-        data[6] = gain;
-
-        self.request_data(Command::SetMicrophoneType(), &data)?;
+        let mut gain_value = [0; 4];
+        LittleEndian::write_u16(&mut gain_value[2..], gain);
+        self.set_mic_param(&[
+            (
+                MicrophoneParamKey::MicType,
+                match microphone_type.has_phantom_power() {
+                    true => &[0x01, 0x00, 0x00, 0x00],
+                    false => &[0x00, 0x00, 0x00, 0x00],
+                },
+            ),
+            (microphone_type.get_gain_param(), &gain_value),
+        ]);
         Ok(())
     }
 
@@ -371,14 +373,29 @@ impl<T: UsbContext> GoXLR<T> {
         Ok(LittleEndian::read_u16(&result))
     }
 
-    pub fn set_effect_values(&mut self, effects: &[(EffectKey, i16)]) -> Result<(), rusb::Error> {
+    pub fn set_effect_values(&mut self, effects: &[(EffectKey, i32)]) -> Result<(), rusb::Error> {
         let mut data = Vec::with_capacity(effects.len() * 8);
         let mut cursor = Cursor::new(&mut data);
         for (key, value) in effects {
-            cursor.write_u16::<LittleEndian>(*key as u16);
-            cursor.write_i16::<LittleEndian>(*value);
+            cursor.write_u32::<LittleEndian>(*key as u32);
+            cursor.write_i32::<LittleEndian>(*value);
         }
-        self.request_data(Command::GetMicrophoneLevel, &data)?;
+        self.request_data(Command::SetEffectParameters, &data)?;
+
+        Ok(())
+    }
+
+    pub fn set_mic_param(
+        &mut self,
+        params: &[(MicrophoneParamKey, &[u8; 4])],
+    ) -> Result<(), rusb::Error> {
+        let mut data = Vec::with_capacity(params.len() * 8);
+        let mut cursor = Cursor::new(&mut data);
+        for (key, value) in params {
+            cursor.write_u32::<LittleEndian>(*key as u32);
+            cursor.write(*value);
+        }
+        self.request_data(Command::SetMicrophoneParameters, &data)?;
 
         Ok(())
     }
