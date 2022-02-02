@@ -120,11 +120,20 @@ local f_body = ProtoField.bytes("goxlr.body", "Body")
 local f_body_effect = ProtoField.bytes("goxlr.body", "Effect")
 local f_body_effect_key = ProtoField.uint16("goxlr.body.effect.key", "Effect Key", base.HEX, EFFECT_KEYS)
 local f_body_effect_value = ProtoField.int16("goxlr.body.effect.value", "Effect Value", base.DEC)
+local f_request = ProtoField.framenum("goxlr.request", "Request Packet", base.NONE, frametype.REQUEST)
+local f_response = ProtoField.framenum("goxlr.response", "Response Packet", base.NONE, frametype.RESPONSE)
 
 local f_data_fragment = Field.new("usb.data_fragment")
 local f_control_response = Field.new("usb.control.Response")
 
-goxlr_protocol.fields = { f_header, f_header_command, f_header_subcommand, f_header_length, f_command_index, f_body, f_body_effect, f_body_effect_key, f_body_effect_value }
+goxlr_protocol.fields = {
+    f_header, f_header_command, f_header_subcommand, f_header_length, f_command_index,
+    f_request, f_response,
+    f_body,
+    f_body_effect, f_body_effect_key, f_body_effect_value,
+}
+
+local conversations = {}
 
 function goxlr_protocol.dissector(buffer, pinfo, tree)
     data_fragment = f_data_fragment()
@@ -136,11 +145,40 @@ function goxlr_protocol.dissector(buffer, pinfo, tree)
     else
         return 0
     end
+
+    local addr_lo = pinfo.net_src
+    local addr_hi = pinfo.net_dst
+
+    if addr_lo > addr_hi then
+        addr_hi,addr_lo = addr_lo,addr_hi
+    end
+
+    local command_index = buffer(6, 2):le_uint()
+    local convo_id = tostring(addr_lo) .. " " .. tostring(addr_hi) .. " " .. command_index
+
+    if not conversations[convo_id] then
+        conversations[convo_id] = {}
+    end
+    --pinfo.conversation = conversations[convo_id] -- bug in wireshark. fun.
+
     local length = buffer:len()
 
     pinfo.cols.protocol = goxlr_protocol.name
 
     local subtree = tree:add(goxlr_protocol, buffer(), "GoXLR Command")
+
+    if data_fragment then
+        conversations[convo_id].request = pinfo.number
+        if conversations[convo_id].response then
+            subtree:add(f_response, conversations[convo_id].response)
+        end
+    else
+        conversations[convo_id].response = pinfo.number
+        if conversations[convo_id].request then
+            subtree:add(f_request, conversations[convo_id].request)
+        end
+    end
+
     local header = subtree:add(f_header, buffer(0, 16))
     local command = buffer(0, 4):le_uint()
     local command_id = bit.band(bit.rshift(command, 12), 0xfff)
