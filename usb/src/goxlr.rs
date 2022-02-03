@@ -306,7 +306,7 @@ impl<T: UsbContext> GoXLR<T> {
     }
 
     pub fn set_button_colours(&mut self, data: [u8; 328]) -> Result<(), rusb::Error> {
-        self.request_data(Command::SetColourMap(), &data);
+        self.request_data(Command::SetColourMap(), &data)?;
         Ok(())
     }
 
@@ -317,14 +317,14 @@ impl<T: UsbContext> GoXLR<T> {
         meter: bool,
     ) -> Result<(), rusb::Error> {
         // This one really doesn't need anything fancy..
-        let gradientByte: u8 = if gradient { 0x01 } else { 0x00 };
-        let meterByte: u8 = if meter { 0x01 } else { 0x00 };
+        let gradient_byte: u8 = if gradient { 0x01 } else { 0x00 };
+        let meter_byte: u8 = if meter { 0x01 } else { 0x00 };
 
         // TODO: Seemingly broken?
         self.request_data(
             Command::SetFaderDisplayMode(fader),
-            &[gradientByte, meterByte],
-        );
+            &[gradient_byte, meter_byte],
+        )?;
         Ok(())
     }
 
@@ -334,7 +334,7 @@ impl<T: UsbContext> GoXLR<T> {
         data: [u8; 1024],
     ) -> Result<(), rusb::Error> {
         // Dump it, see what happens..
-        self.request_data(Command::SetScribble(fader), &data);
+        self.request_data(Command::SetScribble(fader), &data)?;
         Ok(())
     }
 
@@ -351,7 +351,7 @@ impl<T: UsbContext> GoXLR<T> {
         &mut self,
         microphone_type: MicrophoneType,
         gain: u16,
-    ) -> Result<(), rusb::Error> {
+    ) -> Result<(), CommandError> {
         let mut gain_value = [0; 4];
         LittleEndian::write_u16(&mut gain_value[2..], gain);
         self.set_mic_param(&[
@@ -363,7 +363,7 @@ impl<T: UsbContext> GoXLR<T> {
                 },
             ),
             (microphone_type.get_gain_param(), &gain_value),
-        ]);
+        ])?;
         Ok(())
     }
 
@@ -373,12 +373,12 @@ impl<T: UsbContext> GoXLR<T> {
         Ok(LittleEndian::read_u16(&result))
     }
 
-    pub fn set_effect_values(&mut self, effects: &[(EffectKey, i32)]) -> Result<(), rusb::Error> {
+    pub fn set_effect_values(&mut self, effects: &[(EffectKey, i32)]) -> Result<(), CommandError> {
         let mut data = Vec::with_capacity(effects.len() * 8);
         let mut cursor = Cursor::new(&mut data);
         for (key, value) in effects {
-            cursor.write_u32::<LittleEndian>(*key as u32);
-            cursor.write_i32::<LittleEndian>(*value);
+            cursor.write_u32::<LittleEndian>(*key as u32)?;
+            cursor.write_i32::<LittleEndian>(*value)?;
         }
         self.request_data(Command::SetEffectParameters, &data)?;
 
@@ -388,12 +388,12 @@ impl<T: UsbContext> GoXLR<T> {
     pub fn set_mic_param(
         &mut self,
         params: &[(MicrophoneParamKey, &[u8; 4])],
-    ) -> Result<(), rusb::Error> {
+    ) -> Result<(), CommandError> {
         let mut data = Vec::with_capacity(params.len() * 8);
         let mut cursor = Cursor::new(&mut data);
         for (key, value) in params {
-            cursor.write_u32::<LittleEndian>(*key as u32);
-            cursor.write(*value);
+            cursor.write_u32::<LittleEndian>(*key as u32)?;
+            cursor.write_all(*value)?;
         }
         self.request_data(Command::SetMicrophoneParameters, &data)?;
 

@@ -1,5 +1,5 @@
 use clap::{Args, Parser};
-use goxlr_types::{ChannelName, MicrophoneType};
+use goxlr_types::ChannelName;
 
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]

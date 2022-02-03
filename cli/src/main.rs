@@ -77,7 +77,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     goxlr.set_volume(cli.fader_c, 0xFF)?;
     goxlr.set_volume(cli.fader_d, 0xFF)?;
 
-    goxlr.set_channel_state(ChannelName::System, ChannelState::Unmuted);
+    goxlr.set_channel_state(ChannelName::System, ChannelState::Unmuted)?;
 
     // So this is a complex one, there's no direct way to retrieve the button colour states
     // directly from the GoXLR, it's all managed by the app.. So for testing, all we're going
@@ -90,7 +90,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     button_states[Buttons::Fader2Mute as usize] = ButtonStates::Colour1;
 
     // Apply the state.
-    goxlr.set_button_states(button_states);
+    goxlr.set_button_states(button_states)?;
 
     /*
     Ok, this is awkward as hell, this *WILL* need improving, but proof-of-concept currently..

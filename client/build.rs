@@ -17,8 +17,7 @@ fn main() -> Result<(), Error> {
 
         println!(
             "cargo:warning={} completion file is generated: {:?}",
-            shell.to_string(),
-            path
+            shell, path
         );
     }
 

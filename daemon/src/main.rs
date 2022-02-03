@@ -91,7 +91,7 @@ async fn is_already_running(path: &Path) -> bool {
     };
     let mut socket: Socket<DaemonResponse, DaemonRequest> = Socket::new(address, &mut stream);
 
-    if let Err(_) = socket.send(DaemonRequest::Ping).await {
+    if socket.send(DaemonRequest::Ping).await.is_err() {
         return false;
     }
 

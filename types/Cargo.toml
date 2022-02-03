@@ -20,4 +20,5 @@ clap = { version = "3.0.0", features = ["derive"], optional = true}
 enumset = { version = "1.0.8", optional = true }
 
 [target.'cfg(serde)'.dependencies.enumset]
+version = "1.0.8"
 features = ["serde"]

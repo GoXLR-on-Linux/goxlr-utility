@@ -59,7 +59,7 @@ pub enum ColourTargets {
 }
 
 impl ColourTargets {
-    pub fn getColourCount(&self) -> u8 {
+    pub fn get_colour_count(&self) -> u8 {
         match self {
             ColourTargets::Scribble1 => 1,
             ColourTargets::Scribble2 => 1,
@@ -73,7 +73,7 @@ impl ColourTargets {
         }
     }
 
-    fn getStart(&self) -> usize {
+    fn get_start(&self) -> usize {
         match self {
             ColourTargets::Fader1Mute => 12,
             ColourTargets::Fader2Mute => 14,
@@ -118,29 +118,29 @@ impl ColourTargets {
 
     // There are a few buttons which seem to configure as 00000000 when offStyle is set to
     // 'dimmed', this indicates whether or not that's true for a button..
-    pub fn isBlankWhenDimmed(&self) -> bool {
-        match self {
-            ColourTargets::Fader1Mute => true,
-            ColourTargets::Fader2Mute => true,
-            ColourTargets::Fader3Mute => true,
-            ColourTargets::Fader4Mute => true,
-            ColourTargets::Bleep => true,
-            ColourTargets::MicrophoneMute => true,
-            ColourTargets::EffectSelect1 => true,
-            ColourTargets::EffectSelect2 => true,
-            ColourTargets::EffectSelect3 => true,
-            ColourTargets::EffectSelect4 => true,
-            ColourTargets::EffectSelect5 => true,
-            ColourTargets::EffectSelect6 => true,
-            ColourTargets::EffectFx => true,
-            ColourTargets::EffectMegaphone => true,
-            ColourTargets::EffectRobot => true,
-            ColourTargets::EffectHardTune => true,
-            ColourTargets::SamplerSelectA => true,
-            ColourTargets::SamplerSelectB => true,
-            ColourTargets::SamplerSelectC => true,
-            _ => false,
-        }
+    pub fn is_blank_when_dimmed(&self) -> bool {
+        matches!(
+            self,
+            ColourTargets::Fader1Mute
+                | ColourTargets::Fader2Mute
+                | ColourTargets::Fader3Mute
+                | ColourTargets::Fader4Mute
+                | ColourTargets::Bleep
+                | ColourTargets::MicrophoneMute
+                | ColourTargets::EffectSelect1
+                | ColourTargets::EffectSelect2
+                | ColourTargets::EffectSelect3
+                | ColourTargets::EffectSelect4
+                | ColourTargets::EffectSelect5
+                | ColourTargets::EffectSelect6
+                | ColourTargets::EffectFx
+                | ColourTargets::EffectMegaphone
+                | ColourTargets::EffectRobot
+                | ColourTargets::EffectHardTune
+                | ColourTargets::SamplerSelectA
+                | ColourTargets::SamplerSelectB
+                | ColourTargets::SamplerSelectC
+        )
     }
 
     pub fn position(&self, colour: u8) -> usize {
@@ -149,55 +149,55 @@ impl ColourTargets {
         // there are three colours, the order will be different, for now I'm just adding a simple
         // exception for the Encoders.
 
-        // We should also error check here, make sure colour is in the range of getColourCount..
+        // We should also error check here, make sure colour is in the range of get_colour_count..
 
         match self {
             ColourTargets::PitchEncoder => {
                 if colour == 0 {
-                    return self.getStart() * 4 + 4 as usize;
+                    return self.get_start() * 4 + 4;
                 }
                 if colour == 1 {
-                    return self.getStart() * 4 as usize;
+                    return self.get_start() * 4;
                 }
 
-                return self.getStart() + (colour * 4) as usize;
+                self.get_start() + (colour * 4) as usize
             }
 
             ColourTargets::GenderEncoder => {
                 if colour == 0 {
-                    return self.getStart() * 4 + 4 as usize;
+                    return self.get_start() * 4 + 4;
                 }
                 if colour == 1 {
-                    return self.getStart() * 4 as usize;
+                    return self.get_start() * 4;
                 }
 
                 // Not sure how matches work, can we just fall this through to the bottom?
-                self.getStart() + (colour * 4) as usize
+                self.get_start() + (colour * 4) as usize
             }
 
             ColourTargets::ReverbEncoder => {
                 if colour == 0 {
-                    return self.getStart() * 4 + 4 as usize;
+                    return self.get_start() * 4 + 4;
                 }
                 if colour == 1 {
-                    return self.getStart() * 4 as usize;
+                    return self.get_start() * 4;
                 }
 
-                return self.getStart() + (colour * 4) as usize;
+                self.get_start() + (colour * 4) as usize
             }
 
             ColourTargets::EchoEncoder => {
                 if colour == 0 {
-                    return self.getStart() * 4 + 4 as usize;
+                    return self.get_start() * 4 + 4;
                 }
                 if colour == 1 {
-                    return self.getStart() * 4 as usize;
+                    return self.get_start() * 4;
                 }
 
-                self.getStart() + (colour * 4) as usize
+                self.get_start() + (colour * 4) as usize
             }
 
-            _ => (self.getStart() * 4) + (colour * 4) as usize,
+            _ => (self.get_start() * 4) + (colour * 4) as usize,
         }
     }
 }
