@@ -38,7 +38,7 @@ impl SampleBase {
     pub fn parse_sample_root(&mut self, attributes: &Vec<OwnedAttribute>) {
         for attr in attributes {
             if attr.name.local_name.ends_with("state") && self.element_name != "sampleClear" {
-                if attr.value != "Empty" {
+                if attr.value != "Empty" && attr.value != "Stopped" {
                     println!("[Sampler] Unknown State: {}", &attr.value);
                 }
                 self.state = attr.value.clone();
@@ -65,6 +65,10 @@ impl SampleBase {
         // Pull out any 'extra' attributes which may be useful..
         if map.contains_key("playbackMode") {
             sample_stack.playback_mode = Option::Some(PlaybackMode::from_usize(map.get("playbackMode").unwrap().parse::<usize>().unwrap()));
+        }
+
+        if map.contains_key("playOrder") {
+            sample_stack.play_order = Option::Some(PlayOrder::from_usize(map.get("playOrder").unwrap().parse::<usize>().unwrap()));
         }
 
         // Ok, somewhere in here we should have a key that tells us how many tracks are configured..
@@ -128,6 +132,11 @@ impl SampleBase {
                 sub_attributes.insert("playbackMode".to_string(), format!("{}", output.get_str("index").unwrap()));
             }
 
+            if value.play_order.is_some() {
+                let order = value.play_order.as_ref().unwrap();
+                sub_attributes.insert("playOrder".to_string(), format!("{}", order.get_str("index").unwrap()));
+            }
+
             // Write the attributes into the tag, and close it.
             for (key, value) in &sub_attributes {
                 sub_element = sub_element.attr(key.as_str(), value.as_str());
@@ -144,13 +153,15 @@ impl SampleBase {
 struct SampleStack {
     tracks: Vec<Track>,
     playback_mode: Option<PlaybackMode>,
+    play_order: Option<PlayOrder>
 }
 
 impl SampleStack {
     pub fn new() -> Self {
         Self {
             tracks: vec![],
-            playback_mode: None
+            playback_mode: None,
+            play_order: None
         }
     }
 }
@@ -188,4 +199,12 @@ enum PlaybackMode {
     FADE_ON_RELEASE,
     #[strum(props(index="5"))]
     LOOP
+}
+
+#[derive(Debug, Enum, EnumProperty)]
+enum PlayOrder {
+    #[strum(props(index="0"))]
+    SEQUENTIAL,
+    #[strum(props(index="1"))]
+    RANDOM
 }
