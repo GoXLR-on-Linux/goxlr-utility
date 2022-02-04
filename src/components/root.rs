@@ -48,7 +48,8 @@ impl RootElement {
 
         // Create the hashmap of values..
         let mut attributes: HashMap<String, String> = HashMap::default();
-        attributes.insert("version".to_string(), format!("{}", self.version));
+        //attributes.insert("version".to_string(), format!("{}", self.version));
+        attributes.insert("version".to_string(), "2".to_string());
         attributes.insert("loudness".to_string(), format!("{}", self.loudness));
         attributes.insert("device".to_string(), format!("{}", self.device));
 
