@@ -1,15 +1,17 @@
 use std::collections::HashMap;
 use std::fs::File;
-use crate::components::colours::ColourMap;
-use strum_macros::{EnumProperty, EnumIter};
-use strum::{IntoEnumIterator, EnumProperty};
+
+use enum_map_derive::Enum;
+use strum::{EnumProperty, IntoEnumIterator};
+use strum_macros::{EnumIter, EnumProperty};
 use xml::attribute::OwnedAttribute;
 use xml::EventWriter;
-use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::writer::events::StartElementBuilder;
+use xml::writer::XmlEvent as XmlWriterEvent;
+
+use crate::components::colours::ColourMap;
 
 pub struct MuteButton {
-    id: u8,
     element_name: String,
     colour_map: ColourMap,
     mute_function: MuteFunction,
@@ -25,7 +27,6 @@ impl MuteButton {
         let element_name = format!("mute{}", id);
         let colour_prefix = format!("mute{}", id);
         Self {
-            id,
             element_name,
             colour_map: ColourMap::new(colour_prefix),
             mute_function: MuteFunction::MUTE_ALL,
@@ -81,7 +82,7 @@ impl MuteButton {
         }
     }
 
-    pub fn write_button(&self, mut writer: &mut EventWriter<&mut File>) {
+    pub fn write_button(&self, writer: &mut EventWriter<&mut File>) {
         let mut element: StartElementBuilder = XmlWriterEvent::start_element(self.element_name.as_str());
 
         let mut attributes: HashMap<String, String> = HashMap::default();
@@ -104,20 +105,20 @@ impl MuteButton {
 }
 
 // MuteChat
-#[derive(Debug, EnumProperty, EnumIter)]
-enum MuteFunction {
-    #[strum(props(Value="Mute All"))]
+#[derive(Debug, Enum, EnumProperty, EnumIter)]
+pub enum MuteFunction {
+    #[strum(props(Value="Mute All", uiIndex="0"))]
     MUTE_ALL,
 
-    #[strum(props(Value="Mute to Stream"))]
+    #[strum(props(Value="Mute to Stream", uiIndex="1"))]
     MUTE_TO_STREAM,
 
-    #[strum(props(Value="Mute to Voice Chat"))]
+    #[strum(props(Value="Mute to Voice Chat", uiIndex="2"))]
     MUTE_TO_VOICE_CHAT,
 
-    #[strum(props(Value="Mute to Phones"))]
+    #[strum(props(Value="Mute to Phones", uiIndex="3"))]
     MUTE_TO_PHONES,
 
-    #[strum(props(Value="Mute to Line Out"))]
+    #[strum(props(Value="Mute to Line Out", uiIndex="4"))]
     MUTE_TO_LINE_OUT,
 }

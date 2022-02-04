@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::str::FromStr;
-use strum_macros::{EnumString, Display};
+
+use strum_macros::{Display, EnumString};
 use xml::attribute::OwnedAttribute;
 
 pub struct ColourMap {
@@ -107,7 +108,8 @@ impl ColourMap {
 
             // TODO: Tidy this monster up..
             let index = usize::from_str(attribute.name.local_name.chars().last().unwrap().to_string().as_str()).unwrap();
-            self.colour_list.as_mut().unwrap().insert(index, Option::Some(Colour::new(&attribute.value)));
+
+            self.colour_list.as_mut().unwrap()[index] = Option::Some(Colour::new(&attribute.value));
 
             return true;
         }
@@ -121,7 +123,7 @@ impl ColourMap {
         return false;
     }
 
-    pub fn write_colours(&self, mut attributes: &mut HashMap<String, String>) {
+    pub fn write_colours(&self, attributes: &mut HashMap<String, String>) {
         // Add the 'OffStyle'
         let mut key = format!("{}offStyle", self.prefix);
         attributes.insert(key, self.off_style.to_string());
@@ -137,7 +139,7 @@ impl ColourMap {
 
         if self.state.is_some() {
             key = format!("{}state", self.prefix);
-            let mut output;
+            let output;
             if self.state.as_ref().unwrap() == &ColourState::OFF {
                 output = "0".to_string();
             } else {
@@ -148,7 +150,7 @@ impl ColourMap {
 
         if self.blink.is_some() {
             key = format!("{}blink", self.prefix);
-            let mut output;
+            let output;
             if self.blink.as_ref().unwrap() == &ColourState::OFF {
                 output = "0".to_string();
             } else {
@@ -159,9 +161,8 @@ impl ColourMap {
 
 
         if self.colour_group.is_some() {
-            key = format!("{}colorGroup", self.prefix);
             let colour = self.colour_group.as_ref().unwrap().clone();
-            attributes.insert(key, colour);
+            attributes.insert("colorGroup".to_string(), colour);
         }
 
         if self.colour_list.is_some() {
@@ -170,7 +171,7 @@ impl ColourMap {
                 if vector.get(i).is_some() {
                     let colour = vector.get(i).unwrap();
                     if colour.is_some() {
-                        key = format!("{}color{}", self.prefix, i);
+                        key = format!("{}colour{}", self.prefix, i);
                         attributes.insert(key, colour.as_ref().unwrap().to_rgba());
                     }
                 }
@@ -199,11 +200,12 @@ enum ColourDisplay {
 }
 
 #[derive(Debug, PartialEq)]
-enum ColourState {
+pub enum ColourState {
     OFF,
     ON,
 }
 
+#[derive(Debug)]
 struct Colour {
     red: u8,
     green: u8,

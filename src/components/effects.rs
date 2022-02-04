@@ -1,16 +1,14 @@
 use std::collections::HashMap;
 use std::fs::File;
-use std::sync::mpsc::TrySendError::Full;
+
 use xml::attribute::OwnedAttribute;
 use xml::EventWriter;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
-use strum::{IntoEnumIterator, EnumProperty};
+
 use crate::components::colours::ColourMap;
-use crate::components::mixer::FullChannelList;
 
 pub struct Effects {
-    id: u8,
     element_name: String,
     colour_map: ColourMap,
 
@@ -24,7 +22,6 @@ impl Effects {
         let colour_map = format!("effects{}", id);
         let default_name = format!("Effects Group {}", id);
         Self {
-            id,
             element_name,
             colour_map: ColourMap::new(colour_map),
             name: default_name
@@ -45,7 +42,7 @@ impl Effects {
         }
     }
 
-    pub fn write_effects(&self, mut writer: &mut EventWriter<&mut File>) {
+    pub fn write_effects(&self, writer: &mut EventWriter<&mut File>) {
         let mut element: StartElementBuilder = XmlWriterEvent::start_element(self.element_name.as_str());
 
         let mut attributes: HashMap<String, String> = HashMap::default();

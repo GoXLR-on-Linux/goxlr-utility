@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 use std::fs::File;
+
 use xml::attribute::OwnedAttribute;
 use xml::EventWriter;
-use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::writer::events::StartElementBuilder;
+use xml::writer::XmlEvent as XmlWriterEvent;
+
 use crate::components::colours::ColourMap;
 
 /**
@@ -32,7 +34,7 @@ impl SimpleElement {
         }
     }
 
-    pub fn write_simple(&self, mut writer: &mut EventWriter<&mut File>) {
+    pub fn write_simple(&self, writer: &mut EventWriter<&mut File>) {
         let mut element: StartElementBuilder = XmlWriterEvent::start_element(self.element_name.as_str());
 
         let mut attributes: HashMap<String, String> = HashMap::default();

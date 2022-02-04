@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 use std::fs::File;
 
+use enum_map::{Enum, EnumMap};
+use strum::{EnumProperty, IntoEnumIterator};
 use strum_macros::{EnumIter, EnumProperty};
-use strum::{IntoEnumIterator, EnumProperty};
-
-use enum_map::{EnumMap, Enum};
 use xml::attribute::OwnedAttribute;
 use xml::EventWriter;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
+
 use crate::components::colours::ColourMap;
 
 pub struct Mixers {
@@ -56,22 +56,22 @@ impl Mixers {
                 // Extract the two sides of the string..
                 let name = attr.name.local_name.as_str();
 
-                let middleIndex = name.find("To").unwrap();
-                let input = &name[0..middleIndex];
-                let output = &name[middleIndex + 2..];
+                let middle_index = name.find("To").unwrap();
+                let input = &name[0..middle_index];
+                let output = &name[middle_index + 2..];
 
                 let value: u16 = attr.value.parse().unwrap();
 
                 // We need to find the two matching channels..
-                for inputChannel in InputChannels::iter() {
-                    if inputChannel.get_str("Name").unwrap() == input {
+                for input_channel in InputChannels::iter() {
+                    if input_channel.get_str("Name").unwrap() == input {
                         // Borrow this section of the mixer table before checkout outputs..
-                        let table = &mut self.mixer_table[inputChannel];
+                        let table = &mut self.mixer_table[input_channel];
 
-                        for outputChannel in OutputChannels::iter() {
-                            if outputChannel.get_str("Name").unwrap() == output {
+                        for output_channel in OutputChannels::iter() {
+                            if output_channel.get_str("Name").unwrap() == output {
                                 // Matched the output, store the value.
-                                table[outputChannel] = value;
+                                table[output_channel] = value;
                             }
                         }
                     }
@@ -86,7 +86,7 @@ impl Mixers {
         }
     }
 
-    pub fn write_mixers(&self, mut writer: &mut EventWriter<&mut File>) {
+    pub fn write_mixers(&self, writer: &mut EventWriter<&mut File>) {
         let mut element: StartElementBuilder = XmlWriterEvent::start_element("mixerTree");
 
         // Create the values..
@@ -100,11 +100,11 @@ impl Mixers {
 
         for input in InputChannels::iter() {
             // Get the map for this channel..
-            let inputText = input.get_str("Name").unwrap();
+            let input_text = input.get_str("Name").unwrap();
             let table = self.mixer_table[input];
 
             for output in OutputChannels::iter() {
-                let key = format!("{}To{}", inputText, output.get_str("Name").unwrap());
+                let key = format!("{}To{}", input_text, output.get_str("Name").unwrap());
                 let value = format!("{}", table[output]);
 
                 attributes.insert(key, value);
