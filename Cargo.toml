@@ -12,4 +12,6 @@ enum-map-derive = "*"
 strum = "0.23"
 strum_macros = "0.23"
 
+ritelinked = "0.3.2"
+
 xml-rs = "0.8"

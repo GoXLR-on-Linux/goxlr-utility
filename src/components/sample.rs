@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::fs::File;
 
 use enum_map::Enum;
+use ritelinked::LinkedHashMap;
 use strum::EnumProperty;
 use strum_macros::EnumProperty;
 use xml::attribute::OwnedAttribute;
@@ -114,14 +115,20 @@ impl SampleBase {
             let sub_element_name = format!("sampleStack{}", key);
 
             let mut sub_element = XmlWriterEvent::start_element(sub_element_name.as_str());
-            let mut sub_attributes: HashMap<String, String> = HashMap::default();
+
+            // Welcome to the only place where order seems to matter, the track_X attributes must all appear together
+            // in an ordered, unbroken list, otherwise the GoXLR App will crash :D
+            let mut sub_attributes: LinkedHashMap<String, String> = Default::default();
+
+            for i in 0 .. value.tracks.len() {
+                sub_attributes.insert(format!("track_{}", i), format!("{}", value.tracks.get(i).unwrap().track));
+            }
 
             if value.tracks.len() > 0 {
                 sub_attributes.insert(format!("sampleStack{}stackSize", key), format!("{}", value.tracks.len()));
             }
 
             for i in 0 .. value.tracks.len() {
-                sub_attributes.insert(format!("track_{}", i), format!("{}", value.tracks.get(i).unwrap().track));
                 sub_attributes.insert(format!("track_{}NormalizedGain", i), format!("{}", value.tracks.get(i).unwrap().normalized_gain));
                 sub_attributes.insert(format!("track_{}StartPosition", i), format!("{}", value.tracks.get(i).unwrap().start_position));
                 sub_attributes.insert(format!("track_{}EndPosition", i), format!("{}", value.tracks.get(i).unwrap().end_position));
