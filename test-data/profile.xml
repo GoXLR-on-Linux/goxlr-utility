@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <ValueTreeRoot version="2" loudness="100" device="36832">
-  <browserPreviewTree playing="0" playToggle="0" file="" currentRelativeTime="0" browserPreviewTreeoffStyle="DIMMED"/>
+  <browserPreviewTree playing="0" playToggle="0" file="" browserPreviewTreeoffStyle="DIMMED"
+                      currentRelativeTime="0"/>
   <mixerTree headphoneLevel="255" mic2headphoneSubLevel="255" micLevel="230"
-             chatLevel="193" gameLevel="158" consoleLevel="128" musicLevel="95"
-             lineInLevel="128" systemLevel="202" sampleLevel="128" lineOutLevel="255"
+             chatLevel="193" gameLevel="158" consoleLevel="128" musicLevel="92"
+             lineInLevel="128" systemLevel="201" sampleLevel="128" lineOutLevel="255"
              micToStream="0" micToChat="8192" micToHP="8192" micToSampler="8192"
              micToLineOut="8192" lineInToStream="8192" lineInToChat="0" lineInToHP="8192"
              lineInToSampler="8192" lineInToLineOut="0" systemToStream="0"
@@ -16,16 +17,16 @@
              sampleToStream="8192" sampleToChat="8192" sampleToHP="8192" sampleToSampler="0"
              sampleToLineOut="8192" consoleToStream="8192" consoleToChat="0"
              consoleToHP="8192" consoleToSampler="8192" consoleToLineOut="8192"
-             mixerTreeoffStyle="DIMMED" />
+             mixerTreeoffStyle="DIMMED"/>
   <selectedContext numselected="0" selectedID="" selectedSampleStack="sampleStackC"
                    selectedContextoffStyle="DIMMED" selectedEffectBank="effects2"/>
   <muteChat micIsAnActiveFader="4" coughButtonToggleSetting="1" coughButtonMuteSourceSelection="0"
             blink="0" muteChatselected="0" muteChatstate="0" muteChatoffStyle="DIMMED"
-            muteChatcolour0="FF00FFFF" muteChatvelocity="127" muteChatcolour1="ffffffff"
+            muteChatcolour0="FF00FFFF" muteChatvelocity="127" muteChatcolour1="FFFFFFFF"
             coughButtonIsOn="1"/>
   <mute1 mute1offStyle="DIMMED" mute1selected="0" mute1state="0" mute1colour0="FF00FFFF"
          colorGroup="muteGroup" mute1Function="Mute All" fromMuteAllFlag="1"
-         mute1velocity="127" mute1colour1="FFFFFFFF" mute1blink="0" mute1prevLevel="160"/>
+         mute1velocity="127" mute1colour1="FFFFFFFF" mute1blink="0" mute1prevLevel="158"/>
   <FaderMeter0 FaderMeter0selected="0" colorGroup="faderGroup" FaderMeter0listIndex="3"
                FaderMeter0colour0="FFFF0055" FaderMeter0colour1="FF00FFFF" FaderMeter0offStyle="DIMMED"
                FaderMeter0Display="GRADIENT"/>
@@ -53,12 +54,11 @@
                           REVERB_PREDELAY="15" REVERB_DIFFUSE="0" REVERB_LOCOLOR="0" REVERB_HICOLOR="0"
                           REVERB_HIFACTOR="0" REVERB_MODSPEED="0" REVERB_MODDEPTH="0" REVERB_EARLYLEVEL="0"
                           REVERB_TAILLEVEL="0" REVERB_DRYLEVEL="0"/>
-    <reverbEncoderpreset6 REVERB_KNOB_POSITION="18" REVERB_STYLE="3" REVERB_TYPE="9" REVERB_DECAY="3.00000000000000000000"
-                          REVERB_PREDELAY="100.00000000000000000000" REVERB_DIFFUSE="43.00000000000000000000"
-                          REVERB_LOCOLOR="-27.00000000000000000000" REVERB_HICOLOR="26.00000000000000000000"
-                          REVERB_HIFACTOR="16.00000000000000000000" REVERB_MODSPEED="21.00000000000000000000"
-                          REVERB_MODDEPTH="8" REVERB_EARLYLEVEL="0.00000000000000000000"
-                          REVERB_TAILLEVEL="0.00000000000000000000" REVERB_DRYLEVEL="0"/>
+    <reverbEncoderpreset6 REVERB_KNOB_POSITION="18" REVERB_STYLE="3" REVERB_TYPE="9" REVERB_DECAY="3"
+                          REVERB_PREDELAY="100" REVERB_DIFFUSE="43" REVERB_LOCOLOR="-27"
+                          REVERB_HICOLOR="26" REVERB_HIFACTOR="16" REVERB_MODSPEED="21"
+                          REVERB_MODDEPTH="8" REVERB_EARLYLEVEL="0" REVERB_TAILLEVEL="0"
+                          REVERB_DRYLEVEL="0"/>
   </reverbEncoder>
   <megaphoneEffect megaphoneEffectselected="0" megaphoneEffectstate="0" megaphoneEffectoffStyle="DIMMED"
                    megaphoneEffectcolour0="FF00FFFF" megaphoneEffectvelocity="127"
@@ -69,7 +69,7 @@
                             TRANS_PRESENCE_BW="7" TRANS_BEATBOX_ENABLE="0" TRANS_FILTER_CONTROL="2"
                             TRANS_FILTER="59" TRANS_DRIVE_POT_GAIN_COMP_MID="0" TRANS_DRIVE_POT_GAIN_COMP_MAX="0"/>
     <megaphoneEffectpreset2 megaphoneEffectstate="0" MEGAPHONE_STYLE="1" TRANS_DIST_AMT="30"
-                            TRANS_HP="110" TRANS_LP="190" TRANS_PREGAIN="0" TRANS_POSTGAIN="5.00000000000000000000"
+                            TRANS_HP="110" TRANS_LP="190" TRANS_PREGAIN="0" TRANS_POSTGAIN="5"
                             TRANS_DIST_TYPE="4" TRANS_PRESENCE_GAIN="7" TRANS_PRESENCE_FC="160"
                             TRANS_PRESENCE_BW="5" TRANS_BEATBOX_ENABLE="0" TRANS_FILTER_CONTROL="1"
                             TRANS_FILTER="59" TRANS_DRIVE_POT_GAIN_COMP_MID="0" TRANS_DRIVE_POT_GAIN_COMP_MAX="5"/>
@@ -88,8 +88,8 @@
                             TRANS_DIST_TYPE="12" TRANS_PRESENCE_GAIN="10" TRANS_PRESENCE_FC="165"
                             TRANS_PRESENCE_BW="5" TRANS_BEATBOX_ENABLE="0" TRANS_FILTER_CONTROL="3"
                             TRANS_FILTER="0" TRANS_DRIVE_POT_GAIN_COMP_MID="0" TRANS_DRIVE_POT_GAIN_COMP_MAX="0"/>
-    <megaphoneEffectpreset6 megaphoneEffectstate="1" MEGAPHONE_STYLE="5" TRANS_DIST_AMT="0.00000000000000000000"
-                            TRANS_HP="78" TRANS_LP="192" TRANS_PREGAIN="10" TRANS_POSTGAIN="-4.00000000000000000000"
+    <megaphoneEffectpreset6 megaphoneEffectstate="1" MEGAPHONE_STYLE="5" TRANS_DIST_AMT="0"
+                            TRANS_HP="78" TRANS_LP="192" TRANS_PREGAIN="10" TRANS_POSTGAIN="-4"
                             TRANS_DIST_TYPE="13" TRANS_PRESENCE_GAIN="0" TRANS_PRESENCE_FC="168"
                             TRANS_PRESENCE_BW="8" TRANS_BEATBOX_ENABLE="0" TRANS_FILTER_CONTROL="3"
                             TRANS_FILTER="59" TRANS_DRIVE_POT_GAIN_COMP_MID="3" TRANS_DRIVE_POT_GAIN_COMP_MAX="4"/>
@@ -99,59 +99,59 @@
   <globalColour globalColourcolour1="00000000" globalColourcolour0="FF00FFFF"
                 globalColouroffStyle="DIMMED"/>
   <logoX logoXselected="0" logoXstate="0" logoXoffStyle="DIMMED" logoXcolour0="FF00FFFF"
-         logoXvelocity="127" logoXcolour1="ffffffff"/>
-  <scribble1 scribble1selected="0" scribble1colour0="FF00FFFF" scribble1iconFile="lightbulb2.png"
+         logoXvelocity="127" logoXcolour1="FFFFFFFF"/>
+  <scribble1 scribble1selected="0" scribble1colour0="FF00FFFF" scribble1iconFile="mic3.png"
              scribble1string0="" scribble1string1="Game" scribble1alpha="0.80000001192092895508"
-             scribble1inverted="0" scribble1textSize="1" scribble1offStyle="DIMMED"
+             scribble1inverted="0" scribble1offStyle="DIMMED" scribble1textSize="1"
              scribble1bitmap="scribble1.png"/>
   <scribble2 scribble2selected="0" scribble2colour0="FF00FFFF" scribble2iconFile="music.png"
-             scribble2string0="" scribble2string1="Music" scribble2alpha="0.80000001192092895508"
-             scribble2inverted="0" scribble2textSize="1" scribble2offStyle="DIMMED"
+             scribble2string0="" scribble2string1="Music" scribble2alpha="0.800000011920929"
+             scribble2inverted="0" scribble2offStyle="DIMMED" scribble2textSize="1"
              scribble2bitmap="scribble2.png"/>
   <FaderMeter1 FaderMeter1selected="0" colorGroup="faderGroup" FaderMeter1listIndex="2"
                FaderMeter1colour0="FFFF0055" FaderMeter1colour1="FF00FFFF" FaderMeter1offStyle="DIMMED"
                FaderMeter1Display="GRADIENT"/>
   <mute2 mute2selected="0" mute2state="0" mute2offStyle="DIMMED" mute2colour0="FF00FFFF"
-         colorGroup="muteGroup" mute2Function="All" mute2velocity="127"
-         mute2colour1="ffffffff" mute2blink="0" mute2prevLevel="94" fromMuteAllFlag="1"/>
+         colorGroup="muteGroup" mute2Function="Mute All" mute2velocity="127"
+         mute2colour1="FFFFFFFF" mute2blink="0" mute2prevLevel="92" fromMuteAllFlag="1"/>
   <scribble3 scribble3selected="0" scribble3colour0="FF00FFFF" scribble3iconFile="person.png"
-             scribble3string0="" scribble3string1="Voice Chat" scribble3alpha="0.80000001192092895508"
-             scribble3inverted="0" scribble3textSize="1" scribble3offStyle="DIMMED"
+             scribble3string0="" scribble3string1="Voice Chat" scribble3alpha="0.800000011920929"
+             scribble3inverted="0" scribble3offStyle="DIMMED" scribble3textSize="1"
              scribble3bitmap="scribble3.png"/>
   <FaderMeter2 FaderMeter2selected="0" colorGroup="faderGroup" FaderMeter2listIndex="1"
                FaderMeter2colour0="FFFF0055" FaderMeter2colour1="FF00FFFF" FaderMeter2offStyle="DIMMED"
                FaderMeter2Display="GRADIENT"/>
   <mute3 mute3selected="0" mute3state="0" mute3offStyle="DIMMED" mute3colour0="FF00FFFF"
          colorGroup="muteGroup" mute3Function="Mute to Stream" mute3velocity="127"
-         mute3colour1="ffffffff" mute3blink="0" mute3prevLevel="193" fromMuteAllFlag="0"/>
+         mute3colour1="FFFFFFFF" mute3blink="0" mute3prevLevel="193" fromMuteAllFlag="0"/>
   <scribble4 scribble4selected="0" scribble4colour0="FF00FFFF" scribble4iconFile="scale.png"
-             scribble4string0="" scribble4string1="System" scribble4alpha="0.80000001192092895508"
-             scribble4inverted="0" scribble4textSize="1" scribble4offStyle="DIMMED"
+             scribble4string0="" scribble4string1="System" scribble4alpha="0.800000011920929"
+             scribble4inverted="0" scribble4offStyle="DIMMED" scribble4textSize="1"
              scribble4bitmap="scribble4.png"/>
   <FaderMeter3 FaderMeter3selected="0" colorGroup="faderGroup" FaderMeter3listIndex="6"
                FaderMeter3colour0="FFFF0055" FaderMeter3colour1="FF00FFFF" FaderMeter3offStyle="DIMMED"
-               FaderMeter3Display="GRADIENT_METER"/>
+               FaderMeter3Display="GRADIENT"/>
   <mute4 mute4selected="0" mute4state="0" mute4offStyle="DIMMED" mute4colour0="FF00FFFF"
          colorGroup="muteGroup" mute4Function="Mute All" mute4velocity="127"
-         mute4colour1="ffffffff" mute4blink="0" mute4prevLevel="202"/>
+         mute4colour1="FFFFFFFF" mute4blink="0" mute4prevLevel="201"/>
   <effects1 effects1selected="0" effects1state="0" effects1offStyle="DIMMED"
             effects1colour0="FF00FFFF" colorGroup="effectsGroup" effects1velocity="127"
-            effects1colour1="ffffffff" effects1Name="Big Verb" effects1blink="0"/>
+            effects1colour1="FFFFFFFF" effects1Name="Big Verb" effects1blink="0"/>
   <effects2 effects2selected="0" effects2state="1" effects2offStyle="DIMMED"
             effects2colour0="FF00FFFF" colorGroup="effectsGroup" effects2velocity="127"
-            effects2colour1="ffffffff" effects2Name="Comms Radio" effects2blink="0"/>
+            effects2colour1="FFFFFFFF" effects2Name="Comms Radio" effects2blink="0"/>
   <effects3 effects3selected="0" effects3state="0" effects3offStyle="DIMMED"
             effects3colour0="FF00FFFF" colorGroup="effectsGroup" effects3velocity="127"
-            effects3colour1="ffffffff" effects3Name="HardTune Music" effects3blink="0"/>
+            effects3colour1="FFFFFFFF" effects3Name="HardTune Music" effects3blink="0"/>
   <effects4 effects4selected="0" effects4state="0" effects4offStyle="DIMMED"
             effects4colour0="FF00FFFF" colorGroup="effectsGroup" effects4velocity="127"
-            effects4colour1="ffffffff" effects4Name="Kid Robot" effects4blink="0"/>
+            effects4colour1="FFFFFFFF" effects4Name="Kid Robot" effects4blink="0"/>
   <effects5 effects5selected="0" effects5state="0" effects5offStyle="DIMMED"
             effects5colour0="FF00FFFF" colorGroup="effectsGroup" effects5velocity="127"
-            effects5colour1="ffffffff" effects5Name="PitchDn Echo" effects5blink="0"/>
+            effects5colour1="FFFFFFFF" effects5Name="PitchDn Echo" effects5blink="0"/>
   <effects6 effects6selected="0" effects6state="0" effects6offStyle="DIMMED"
             effects6colour0="FF00FFFF" colorGroup="effectsGroup" effects6velocity="127"
-            effects6colour1="ffffffff" effects6Name="Tank" effects6blink="0"/>
+            effects6colour1="FFFFFFFF" effects6Name="Tank" effects6blink="0"/>
   <robotEffect robotEffectselected="0" robotEffectstate="0" robotEffectoffStyle="DIMMED"
                robotEffectcolour0="FF00FFFF" robotEffectvelocity="127" robotEffectcolour1="FF00FFFF">
     <robotEffectpreset1 robotEffectstate="0" ROBOT_STYLE="0" ROBOT_SYNTHOSC_PULSEWIDTH="50"
@@ -219,16 +219,16 @@
                sampleBankAcolour0="FF00FFFF" sampleBankAvelocity="127" sampleBankAcolour1="FFFFFFFF"
                sampleBankAcolour2="00000000"/>
   <sampleBankB sampleBankBselected="0" sampleBankBstate="0" sampleBankBoffStyle="DIMMED"
-               sampleBankBcolour0="FF00FFFF" sampleBankBvelocity="127" sampleBankBcolour1="ffffffff"
+               sampleBankBcolour0="FF00FFFF" sampleBankBvelocity="127" sampleBankBcolour1="FFFFFFFF"
                sampleBankBcolour2="00000000"/>
   <sampleBankC sampleBankCselected="0" sampleBankCstate="1" sampleBankCoffStyle="DIMMED"
-               sampleBankCcolour0="FF00FFFF" sampleBankCvelocity="127" sampleBankCcolour1="ffffffff"
+               sampleBankCcolour0="FF00FFFF" sampleBankCvelocity="127" sampleBankCcolour1="FFFFFFFF"
                sampleBankCcolour2="00000000"/>
   <sampleTopLeft sampleTopLeftselected="0" sampleTopLeftstate="Empty" sampleTopLeftoffStyle="DIMMED"
                  sampleTopLeftcolour0="FF00FFFF" colorGroup="samplesGroup" sampleTopLeftvelocity="127"
                  sampleTopLeftcolour1="00000000">
-    <sampleStackA track_0NormalizedGain="11.26597213745117187500" sampleStackAstackSize="1"
-                  track_0StartPosition="0" track_0EndPosition="100" playbackMode="1"
+    <sampleStackA sampleStackAstackSize="1" track_0StartPosition="0" track_0EndPosition="100"
+                  track_0NormalizedGain="11.26597213745117187500" playbackMode="1"
                   track_0="Walkie Talkie Static.wav"/>
     <sampleStackB/>
     <sampleStackC/>
@@ -236,17 +236,17 @@
   <sampleTopRight sampleTopRightselected="0" sampleTopRightstate="Empty" sampleTopRightoffStyle="DIMMED"
                   sampleTopRightcolour0="FF00FFFF" colorGroup="samplesGroup" sampleTopRightvelocity="127"
                   sampleTopRightcolour1="00000000">
-    <sampleStackA track_0NormalizedGain="0.37440386414527893066" track_0StartPosition="0"
-                  track_0EndPosition="100" sampleStackAstackSize="1" track_0="Dictionary_1.wav"/>
+    <sampleStackA sampleStackAstackSize="1" track_0NormalizedGain="0.37440386414527893066"
+                  track_0StartPosition="0" track_0EndPosition="100" track_0="Dictionary_1.wav"/>
     <sampleStackB/>
     <sampleStackC/>
   </sampleTopRight>
   <sampleBottomLeft sampleBottomLeftselected="0" sampleBottomLeftstate="Empty" sampleBottomLeftoffStyle="DIMMED"
                     sampleBottomLeftcolour0="FF00FFFF" colorGroup="samplesGroup"
                     sampleBottomLeftvelocity="127" sampleBottomLeftcolour1="00000000">
-    <sampleStackA track_0NormalizedGain="0.45130670070648193359" track_1NormalizedGain="0.38898876309394836426"
-                  track_2NormalizedGain="0.31103518605232238770" track_0StartPosition="0"
-                  track_0EndPosition="100" sampleStackAstackSize="3" track_1StartPosition="0"
+    <sampleStackA sampleStackAstackSize="3" track_0NormalizedGain="0.45130670070648193359"
+                  track_1NormalizedGain="0.38898876309394836426" track_2NormalizedGain="0.31103518605232238770"
+                  track_0StartPosition="0" track_0EndPosition="100" track_1StartPosition="0"
                   track_1EndPosition="100" track_2StartPosition="0" track_2EndPosition="100"
                   track_0="sonic_1.wav" track_1="lesson.wav" track_2="DJ_1.wav"/>
     <sampleStackB/>
@@ -255,7 +255,7 @@
   <sampleBottomRight sampleBottomRightselected="0" sampleBottomRightstate="Empty"
                      sampleBottomRightoffStyle="DIMMED" sampleBottomRightcolour0="FF00FFFF"
                      colorGroup="samplesGroup" sampleBottomRightvelocity="127" sampleBottomRightcolour1="00000000">
-    <sampleStackA track_0NormalizedGain="0.31103518605232238770" sampleStackAstackSize="1"
+    <sampleStackA sampleStackAstackSize="1" track_0NormalizedGain="0.31103518605232238770"
                   track_0StartPosition="0" track_0EndPosition="100" track_0="DJ_2.wav"/>
     <sampleStackB/>
     <sampleStackC/>
@@ -292,21 +292,20 @@
                         DELAY_FILTER_STYLE="0" DELAY_TEMPO="120"/>
     <echoEncoderpreset6 DELAY_KNOB_POSITION="6" DELAY_STYLE="4" DELAY_SOURCE="0" DELAY_DIV_L="18"
                         DELAY_DIV_R="18" DELAY_FB_L="50" DELAY_FB_R="50" DELAY_XFB_L_R="0"
-                        DELAY_XFB_R_L="0" DELAY_FB_CONTROL="11.00000000000000000000"
-                        DELAY_FILTER_STYLE="0" DELAY_TIME_L="110" DELAY_TIME_R="110"
-                        DELAY_TEMPO="120"/>
+                        DELAY_XFB_R_L="0" DELAY_FB_CONTROL="11" DELAY_FILTER_STYLE="0"
+                        DELAY_TIME_L="110" DELAY_TIME_R="110" DELAY_TEMPO="120"/>
   </echoEncoder>
   <pitchEncoder pitchEncoderselected="0" active_set="0" colorGroup="encoderGroup"
                 pitchEncodercolour0="00000000" pitchEncodercolour1="FF00FFFF"
                 pitchEncodercolour2="FF00FFFF" pitchEncoderstate="0" pitchEncoderoffStyle="DIMMED">
     <pitchEncoderpreset1 PITCH_KNOB_POSITION="24" PITCH_STYLE="0" PITCH_RANGE="12" PITCH_SHIFT_THRESHOLD="-36"
-                         PITCH_SHIFT_INST_RATIO="100.00000000000000000000"/>
-    <pitchEncoderpreset2 PITCH_KNOB_POSITION="0" PITCH_STYLE="0" PITCH_RANGE="12" PITCH_SHIFT_INST_RATIO="100.00000000000000000000"
-                         PITCH_SHIFT_THRESHOLD="-36"/>
-    <pitchEncoderpreset3 PITCH_KNOB_POSITION="-14" PITCH_STYLE="1" PITCH_RANGE="24" PITCH_SHIFT_THRESHOLD="-26.00000000000000000000"/>
-    <pitchEncoderpreset4 PITCH_KNOB_POSITION="12" PITCH_STYLE="1" PITCH_RANGE="24" PITCH_SHIFT_THRESHOLD="-26.00000000000000000000"/>
-    <pitchEncoderpreset5 PITCH_KNOB_POSITION="-14" PITCH_STYLE="0" PITCH_RANGE="12" PITCH_SHIFT_THRESHOLD="-26.00000000000000000000"/>
-    <pitchEncoderpreset6 PITCH_KNOB_POSITION="0" PITCH_STYLE="1" PITCH_RANGE="24" PITCH_SHIFT_THRESHOLD="-26.00000000000000000000"/>
+                         PITCH_SHIFT_INST_RATIO="100"/>
+    <pitchEncoderpreset2 PITCH_KNOB_POSITION="0" PITCH_STYLE="0" PITCH_RANGE="12" PITCH_SHIFT_THRESHOLD="-36"
+                         PITCH_SHIFT_INST_RATIO="100"/>
+    <pitchEncoderpreset3 PITCH_KNOB_POSITION="-14" PITCH_STYLE="1" PITCH_RANGE="24" PITCH_SHIFT_THRESHOLD="-26"/>
+    <pitchEncoderpreset4 PITCH_KNOB_POSITION="12" PITCH_STYLE="1" PITCH_RANGE="24" PITCH_SHIFT_THRESHOLD="-26"/>
+    <pitchEncoderpreset5 PITCH_KNOB_POSITION="-14" PITCH_STYLE="0" PITCH_RANGE="12" PITCH_SHIFT_THRESHOLD="-26"/>
+    <pitchEncoderpreset6 PITCH_KNOB_POSITION="0" PITCH_STYLE="1" PITCH_RANGE="24" PITCH_SHIFT_THRESHOLD="-26"/>
   </pitchEncoder>
   <genderEncoder genderEncoderselected="0" active_set="0" colorGroup="encoderGroup"
                  genderEncodercolour0="00000000" genderEncodercolour1="FF00FFFF"
