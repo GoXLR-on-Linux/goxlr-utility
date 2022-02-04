@@ -80,9 +80,13 @@ fn main() {
                     root.parse_root(&attributes);
 
                     // This code was made for XML version 2, v1 not currently supported.
-                    if root.get_version() != 2 {
+                    if root.get_version() > 2 {
                         println!("XML Version Not Supported: {}", root.get_version());
                         exit(-1);
+                    }
+
+                    if root.get_version() < 2 {
+                        println!("XML Version {} detected, will be upgraded to v2", root.get_version());
                     }
                     continue;
                 }
