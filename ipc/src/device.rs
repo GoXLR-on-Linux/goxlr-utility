@@ -3,13 +3,12 @@ use goxlr_types::{
     ChannelName, FaderName, FirmwareVersions, InputDevice, MicrophoneType, OutputDevice,
 };
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use strum::EnumCount;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct DeviceStatus {
-    pub device_type: DeviceType,
-    pub usb_device: Option<UsbProductInformation>,
-    pub mixer: Option<MixerStatus>,
+pub struct DaemonStatus {
+    pub mixers: HashMap<String, MixerStatus>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -17,6 +16,8 @@ pub struct HardwareStatus {
     pub versions: FirmwareVersions,
     pub serial_number: String,
     pub manufactured_date: String,
+    pub device_type: DeviceType,
+    pub usb_device: UsbProductInformation,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

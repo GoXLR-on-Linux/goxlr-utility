@@ -1,8 +1,8 @@
-use crate::primary_worker::DeviceSender;
+use crate::primary_worker::{DeviceCommand, DeviceSender};
 use crate::Shutdown;
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
+use goxlr_ipc::Socket;
 use goxlr_ipc::{DaemonRequest, DaemonResponse};
-use goxlr_ipc::{DeviceStatus, Socket};
 use log::{debug, info, warn};
 use tokio::net::UnixListener;
 use tokio::sync::oneshot;
@@ -36,8 +36,8 @@ async fn handle_connection(
     while let Some(msg) = socket.read().await {
         match msg {
             Ok(msg) => match handle_packet(msg, &mut usb_tx).await {
-                Ok(device_status) => {
-                    if let Err(e) = socket.send(DaemonResponse::Ok(device_status)).await {
+                Ok(response) => {
+                    if let Err(e) = socket.send(response).await {
                         warn!("Couldn't reply to {:?}: {}", socket.address(), e);
                         return;
                     }
@@ -58,17 +58,30 @@ async fn handle_connection(
 async fn handle_packet(
     request: DaemonRequest,
     usb_tx: &mut DeviceSender,
-) -> Result<Option<DeviceStatus>> {
+) -> Result<DaemonResponse> {
     match request {
-        DaemonRequest::Ping => Ok(None),
-        DaemonRequest::Command(command) => {
+        DaemonRequest::Ping => Ok(DaemonResponse::Ok),
+        DaemonRequest::GetStatus => {
             let (tx, rx) = oneshot::channel();
             usb_tx
-                .send((command, tx))
+                .send(DeviceCommand::SendDaemonStatus(tx))
                 .await
+                .map_err(|e| anyhow!(e.to_string()))
+                .context("Could not communicate with the device task")?;
+            Ok(DaemonResponse::Status(rx.await.context(
+                "Could not execute the command on the device task",
+            )?))
+        }
+        DaemonRequest::Command(serial, command) => {
+            let (tx, rx) = oneshot::channel();
+            usb_tx
+                .send(DeviceCommand::RunDeviceCommand(serial, command, tx))
+                .await
+                .map_err(|e| anyhow!(e.to_string()))
                 .context("Could not communicate with the GoXLR device")?;
             rx.await
-                .context("Could not execute the command on the GoXLR device")?
+                .context("Could not execute the command on the GoXLR device")??;
+            Ok(DaemonResponse::Ok)
         }
     }
 }

@@ -4,6 +4,11 @@ use goxlr_types::ChannelName;
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]
 pub struct Cli {
+    /// The specific device's serial number to execute commands on.
+    /// This field is optional if you have exactly one GoXLR, but required if you have more.
+    #[clap(long)]
+    pub device: Option<String>,
+
     #[clap(flatten, help_heading = "Fader controls")]
     pub faders: FaderControls,
 

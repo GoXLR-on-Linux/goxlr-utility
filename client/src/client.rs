@@ -1,23 +1,23 @@
 use anyhow::{anyhow, Context, Result};
-use goxlr_ipc::{DaemonRequest, DaemonResponse, DeviceStatus, GoXLRCommand, Socket};
+use goxlr_ipc::{DaemonRequest, DaemonResponse, DaemonStatus, GoXLRCommand, Socket};
 
 #[derive(Debug)]
 pub struct Client {
     socket: Socket<DaemonResponse, DaemonRequest>,
-    device: DeviceStatus,
+    status: DaemonStatus,
 }
 
 impl Client {
     pub fn new(socket: Socket<DaemonResponse, DaemonRequest>) -> Self {
         Self {
             socket,
-            device: DeviceStatus::default(),
+            status: DaemonStatus::default(),
         }
     }
 
-    pub async fn send(&mut self, command: GoXLRCommand) -> Result<()> {
+    pub async fn send(&mut self, request: DaemonRequest) -> Result<()> {
         self.socket
-            .send(DaemonRequest::Command(command))
+            .send(request)
             .await
             .context("Failed to send a command to the GoXLR daemon process")?;
         let result = self
@@ -28,16 +28,25 @@ impl Client {
             .context("Failed to parse the command result from the GoXLR daemon process")?;
 
         match result {
-            DaemonResponse::Ok(Some(device)) => {
-                self.device = device;
+            DaemonResponse::Status(status) => {
+                self.status = status;
                 Ok(())
             }
-            DaemonResponse::Ok(None) => Ok(()),
+            DaemonResponse::Ok => Ok(()),
             DaemonResponse::Error(error) => Err(anyhow!("{}", error)),
         }
     }
 
-    pub fn device(&self) -> &DeviceStatus {
-        &self.device
+    pub async fn poll_status(&mut self) -> Result<()> {
+        self.send(DaemonRequest::GetStatus).await
+    }
+
+    pub async fn command(&mut self, serial: &str, command: GoXLRCommand) -> Result<()> {
+        self.send(DaemonRequest::Command(serial.to_string(), command))
+            .await
+    }
+
+    pub fn status(&self) -> &DaemonStatus {
+        &self.status
     }
 }

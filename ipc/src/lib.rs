@@ -11,18 +11,19 @@ pub use socket::*;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DaemonRequest {
     Ping,
-    Command(GoXLRCommand),
+    GetStatus,
+    Command(String, GoXLRCommand),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DaemonResponse {
-    Ok(Option<DeviceStatus>),
+    Ok,
     Error(String),
+    Status(DaemonStatus),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum GoXLRCommand {
-    GetStatus,
     AssignFader(FaderName, ChannelName),
     SetVolume(ChannelName, u8),
     SetChannelMuted(ChannelName, bool),

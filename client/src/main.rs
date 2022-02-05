@@ -8,13 +8,11 @@ use crate::channels::{apply_channel_states, apply_channel_volumes};
 use crate::client::Client;
 use crate::faders::apply_fader_controls;
 use crate::microphone::apply_microphone_controls;
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use cli::Cli;
-use goxlr_ipc::{
-    DaemonRequest, DaemonResponse, DeviceType, GoXLRCommand, MixerStatus, UsbProductInformation,
-};
-use goxlr_ipc::{DeviceStatus, Socket};
+use goxlr_ipc::Socket;
+use goxlr_ipc::{DaemonRequest, DaemonResponse, DeviceType, MixerStatus, UsbProductInformation};
 use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice};
 use strum::IntoEnumIterator;
 use tokio::net::UnixStream;
@@ -30,50 +28,55 @@ async fn main() -> Result<()> {
         .context("Could not get the address of the GoXLR daemon process")?;
     let socket: Socket<DaemonResponse, DaemonRequest> = Socket::new(address, stream);
     let mut client = Client::new(socket);
+    client.poll_status().await?;
 
-    apply_fader_controls(&cli.faders, &mut client)
+    let serial = if let Some(serial) = &cli.device {
+        serial.to_owned()
+    } else if client.status().mixers.len() == 1 {
+        client.status().mixers.keys().next().unwrap().to_owned()
+    } else {
+        return Err(anyhow!(
+            "Multiple GoXLR devices are connected, please specify which one to control"
+        ));
+    };
+
+    apply_fader_controls(&cli.faders, &mut client, &serial)
         .await
         .context("Could not apply fader settings")?;
 
-    apply_channel_volumes(&cli.channel_volumes, &mut client)
+    apply_channel_volumes(&cli.channel_volumes, &mut client, &serial)
         .await
         .context("Could not apply channel volumes")?;
 
-    apply_channel_states(&cli.channel_states, &mut client)
+    apply_channel_states(&cli.channel_states, &mut client, &serial)
         .await
         .context("Could not apply channel states")?;
 
-    apply_microphone_controls(&cli.microphone_controls, &mut client)
+    apply_microphone_controls(&cli.microphone_controls, &mut client, &serial)
         .await
         .context("Could not apply microphone controls")?;
 
-    client
-        .send(GoXLRCommand::GetStatus)
-        .await
-        .context("Could not retrieve device status")?;
-
-    print_device(client.device());
+    client.poll_status().await?;
+    for mixer in client.status().mixers.values() {
+        print_device(mixer);
+    }
 
     Ok(())
 }
 
-fn print_device(device: &DeviceStatus) {
+fn print_device(device: &MixerStatus) {
     println!(
         "Device type: {}",
-        match device.device_type {
+        match device.hardware.device_type {
             DeviceType::Unknown => "Unknown",
             DeviceType::Full => "GoXLR (Full)",
             DeviceType::Mini => "GoXLR (Mini)",
         }
     );
 
-    if let Some(usb) = &device.usb_device {
-        print_usb_info(usb);
-    }
+    print_usb_info(&device.hardware.usb_device);
 
-    if let Some(mixer) = &device.mixer {
-        print_mixer_info(mixer);
-    }
+    print_mixer_info(device);
 }
 
 fn print_usb_info(usb: &UsbProductInformation) {
