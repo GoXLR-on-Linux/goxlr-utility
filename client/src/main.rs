@@ -35,6 +35,19 @@ async fn main() -> Result<()> {
     } else if client.status().mixers.len() == 1 {
         client.status().mixers.keys().next().unwrap().to_owned()
     } else {
+        for mixer in client.status().mixers.values() {
+            println!(
+                "{} - {} on bus {}, address {}",
+                mixer.hardware.serial_number,
+                match mixer.hardware.device_type {
+                    DeviceType::Unknown => "Unknown device",
+                    DeviceType::Full => "Regular GoXLR",
+                    DeviceType::Mini => "Mini GoXLR",
+                },
+                mixer.hardware.usb_device.bus_number,
+                mixer.hardware.usb_device.address
+            );
+        }
         return Err(anyhow!(
             "Multiple GoXLR devices are connected, please specify which one to control"
         ));
