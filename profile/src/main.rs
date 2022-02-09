@@ -29,7 +29,7 @@ use crate::SampleButtons::{BOTTOM_LEFT, BOTTOM_RIGHT, CLEAR, TOP_LEFT, TOP_RIGHT
 
 mod components;
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut root = RootElement::new();
     let mut browser = BrowserPreviewTree::new("browserPreviewTree".to_string());
 
@@ -352,50 +352,51 @@ fn main() {
         .create_writer(&mut out_file);
 
     // Write the initial root tag..
-    root.write_initial(&mut writer);
-    browser.write_browser(&mut writer);
+    root.write_initial(&mut writer)?;
+    browser.write_browser(&mut writer)?;
 
-    mixer.write_mixers(&mut writer);
-    context.write_context(&mut writer);
-    mute_chat.write_mute_chat(&mut writer);
+    mixer.write_mixers(&mut writer)?;
+    context.write_context(&mut writer)?;
+    mute_chat.write_mute_chat(&mut writer)?;
 
     for mute_button in mute_buttons.iter() {
-        mute_button.write_button(&mut writer);
+        mute_button.write_button(&mut writer)?;
     }
 
     for fader in faders.iter() {
-        fader.write_fader(&mut writer);
+        fader.write_fader(&mut writer)?;
     }
 
     for effect in effects.iter() {
-        effect.write_effects(&mut writer);
+        effect.write_effects(&mut writer)?;
     }
 
     for scribble in scribbles.iter() {
-        scribble.write_scribble(&mut writer);
+        scribble.write_scribble(&mut writer)?;
     }
 
-    megaphone_effect.write_megaphone(&mut writer);
-    robot_effect.write_robot(&mut writer);
-    hardtune_effect.write_hardtune(&mut writer);
+    megaphone_effect.write_megaphone(&mut writer)?;
+    robot_effect.write_robot(&mut writer)?;
+    hardtune_effect.write_hardtune(&mut writer)?;
 
-    reverb_encoder.write_reverb(&mut writer);
-    echo_encoder.write_echo(&mut writer);
-    pitch_encoder.write_pitch(&mut writer);
-    gender_encoder.write_gender(&mut writer);
+    reverb_encoder.write_reverb(&mut writer)?;
+    echo_encoder.write_echo(&mut writer)?;
+    pitch_encoder.write_pitch(&mut writer)?;
+    gender_encoder.write_gender(&mut writer)?;
 
     for (_key, value) in sampler_map {
         if value.is_some() {
-            value.unwrap().write_sample(&mut writer);
+            value.unwrap().write_sample(&mut writer)?;
         }
     }
 
     for simple_element in simple_elements {
-        simple_element.write_simple(&mut writer);
+        simple_element.write_simple(&mut writer)?;
     }
 
     // Finalise the XML..
-    root.write_final(&mut writer);
+    root.write_final(&mut writer)?;
+    Ok(())
 }
 
 struct GoXLR {

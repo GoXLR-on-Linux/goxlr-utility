@@ -43,7 +43,10 @@ impl RootElement {
         }
     }
 
-    pub fn write_initial(&self, writer: &mut EventWriter<&mut File>) {
+    pub fn write_initial(
+        &self,
+        writer: &mut EventWriter<&mut File>,
+    ) -> Result<(), xml::writer::Error> {
         let mut element: StartElementBuilder = XmlWriterEvent::start_element("ValueTreeRoot");
 
         // Create the hashmap of values..
@@ -56,12 +59,16 @@ impl RootElement {
         for (key, value) in &attributes {
             element = element.attr(key.as_str(), value.as_str());
         }
-        writer.write(element);
+        writer.write(element)?;
 
         // WE DO NOT CLOSE THE ELEMENT HERE!!
+        Ok(())
     }
 
-    pub fn write_final(&self, writer: &mut EventWriter<&mut File>) {
+    pub fn write_final(
+        &self,
+        writer: &mut EventWriter<&mut File>,
+    ) -> Result<(), xml::writer::Error> {
         // The AppTree element seems to just be a tag containing the device id..
         let mut element: StartElementBuilder = XmlWriterEvent::start_element("AppTree");
 
@@ -71,11 +78,12 @@ impl RootElement {
             element = element.attr(key.as_str(), value.as_str());
         }
 
-        writer.write(element);
-        writer.write(XmlWriterEvent::end_element());
+        writer.write(element)?;
+        writer.write(XmlWriterEvent::end_element())?;
 
         // Finally, close the ValueTreeRoot
-        writer.write(XmlWriterEvent::end_element());
+        writer.write(XmlWriterEvent::end_element())?;
+        Ok(())
     }
 
     pub fn get_version(&self) -> u8 {

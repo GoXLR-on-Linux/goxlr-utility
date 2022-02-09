@@ -94,7 +94,10 @@ impl GenderEncoderBase {
         }
     }
 
-    pub fn write_gender(&self, writer: &mut EventWriter<&mut File>) {
+    pub fn write_gender(
+        &self,
+        writer: &mut EventWriter<&mut File>,
+    ) -> Result<(), xml::writer::Error> {
         let mut element: StartElementBuilder = XmlWriterEvent::start_element("genderEncoder");
 
         let mut attributes: HashMap<String, String> = HashMap::default();
@@ -106,7 +109,7 @@ impl GenderEncoderBase {
             element = element.attr(key.as_str(), value.as_str());
         }
 
-        writer.write(element);
+        writer.write(element)?;
 
         // Because all of these are seemingly 'guaranteed' to exist, we can straight dump..
         for (key, value) in &self.preset_map {
@@ -130,12 +133,13 @@ impl GenderEncoderBase {
                 sub_element = sub_element.attr(key.as_str(), value.as_str());
             }
 
-            writer.write(sub_element);
-            writer.write(XmlWriterEvent::end_element());
+            writer.write(sub_element)?;
+            writer.write(XmlWriterEvent::end_element())?;
         }
 
         // Finally, close the 'main' tag.
-        writer.write(XmlWriterEvent::end_element());
+        writer.write(XmlWriterEvent::end_element())?;
+        Ok(())
     }
 }
 

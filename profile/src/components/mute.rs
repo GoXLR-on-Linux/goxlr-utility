@@ -81,7 +81,10 @@ impl MuteButton {
         }
     }
 
-    pub fn write_button(&self, writer: &mut EventWriter<&mut File>) {
+    pub fn write_button(
+        &self,
+        writer: &mut EventWriter<&mut File>,
+    ) -> Result<(), xml::writer::Error> {
         let mut element: StartElementBuilder =
             XmlWriterEvent::start_element(self.element_name.as_str());
 
@@ -108,8 +111,9 @@ impl MuteButton {
             element = element.attr(key.as_str(), value.as_str());
         }
 
-        writer.write(element);
-        writer.write(XmlWriterEvent::end_element());
+        writer.write(element)?;
+        writer.write(XmlWriterEvent::end_element())?;
+        Ok(())
     }
 }
 

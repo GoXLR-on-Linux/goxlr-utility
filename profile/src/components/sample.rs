@@ -108,7 +108,10 @@ impl SampleBase {
         self.sample_stack.insert(id, sample_stack);
     }
 
-    pub fn write_sample(&self, writer: &mut EventWriter<&mut File>) {
+    pub fn write_sample(
+        &self,
+        writer: &mut EventWriter<&mut File>,
+    ) -> Result<(), xml::writer::Error> {
         let mut element: StartElementBuilder =
             XmlWriterEvent::start_element(self.element_name.as_str());
 
@@ -124,7 +127,7 @@ impl SampleBase {
             element = element.attr(key.as_str(), value.as_str());
         }
 
-        writer.write(element);
+        writer.write(element)?;
 
         // Now onto the damn stacks..
         for (key, value) in &self.sample_stack {
@@ -185,11 +188,12 @@ impl SampleBase {
             for (key, value) in &sub_attributes {
                 sub_element = sub_element.attr(key.as_str(), value.as_str());
             }
-            writer.write(sub_element);
-            writer.write(XmlWriterEvent::end_element());
+            writer.write(sub_element)?;
+            writer.write(XmlWriterEvent::end_element())?;
         }
 
-        writer.write(XmlWriterEvent::end_element());
+        writer.write(XmlWriterEvent::end_element())?;
+        Ok(())
     }
 }
 

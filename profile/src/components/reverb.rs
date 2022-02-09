@@ -139,7 +139,10 @@ impl ReverbEncoderBase {
         }
     }
 
-    pub fn write_reverb(&self, writer: &mut EventWriter<&mut File>) {
+    pub fn write_reverb(
+        &self,
+        writer: &mut EventWriter<&mut File>,
+    ) -> Result<(), xml::writer::Error> {
         let mut element: StartElementBuilder = XmlWriterEvent::start_element("reverbEncoder");
 
         let mut attributes: HashMap<String, String> = HashMap::default();
@@ -151,7 +154,7 @@ impl ReverbEncoderBase {
             element = element.attr(key.as_str(), value.as_str());
         }
 
-        writer.write(element);
+        writer.write(element)?;
 
         // Because all of these are seemingly 'guaranteed' to exist, we can straight dump..
         for (key, value) in &self.preset_map {
@@ -201,12 +204,13 @@ impl ReverbEncoderBase {
                 sub_element = sub_element.attr(key.as_str(), value.as_str());
             }
 
-            writer.write(sub_element);
-            writer.write(XmlWriterEvent::end_element());
+            writer.write(sub_element)?;
+            writer.write(XmlWriterEvent::end_element())?;
         }
 
         // Finally, close the 'main' tag.
-        writer.write(XmlWriterEvent::end_element());
+        writer.write(XmlWriterEvent::end_element())?;
+        Ok(())
     }
 }
 
