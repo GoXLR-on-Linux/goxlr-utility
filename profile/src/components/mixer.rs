@@ -130,28 +130,28 @@ impl Mixers {
 #[derive(Debug, EnumIter, Enum, EnumProperty)]
 pub enum InputChannels {
     #[strum(props(Name = "mic"))]
-    MIC,
+    Mic,
 
     #[strum(props(Name = "chat"))]
-    CHAT,
+    Chat,
 
     #[strum(props(Name = "music"))]
-    MUSIC,
+    Music,
 
     #[strum(props(Name = "game"))]
-    GAME,
+    Game,
 
     #[strum(props(Name = "console"))]
-    CONSOLE,
+    Console,
 
     #[strum(props(Name = "lineIn"))]
-    LINE_IN,
+    LineIn,
 
     #[strum(props(Name = "system"))]
-    SYSTEM,
+    System,
 
     #[strum(props(Name = "sample"))]
-    SAMPLE,
+    Sample,
 }
 
 #[derive(Debug, EnumIter, Enum, EnumProperty)]
