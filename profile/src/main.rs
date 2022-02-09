@@ -399,10 +399,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-struct GoXLR {
-    mixer: Mixers,
-}
-
 #[derive(Debug, Enum)]
 enum SampleButtons {
     TopLeft,
