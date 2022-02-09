@@ -76,11 +76,8 @@ impl Context {
         let mut attributes: HashMap<String, String> = HashMap::default();
         attributes.insert("numselected".to_string(), format!("{}", self.selected));
 
-        if self.selected_id.is_some() {
-            attributes.insert(
-                "selectedID".to_string(),
-                format!("{}", self.selected_id.unwrap()),
-            );
+        if let Some(selected_id) = self.selected_id {
+            attributes.insert("selectedID".to_string(), format!("{}", selected_id));
         } else {
             attributes.insert("selectedID".to_string(), "".to_string());
         }

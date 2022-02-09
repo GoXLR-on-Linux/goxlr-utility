@@ -98,10 +98,10 @@ impl MuteButton {
             format!("{}", self.previous_volume),
         );
 
-        if self.from_mute_all.is_some() {
+        if let Some(from_mute_all) = self.from_mute_all {
             attributes.insert(
                 "fromMuteAllFlag".to_string(),
-                format!("{}", self.from_mute_all.unwrap() as u8),
+                format!("{}", from_mute_all as u8),
             );
         }
 

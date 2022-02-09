@@ -385,8 +385,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     gender_encoder.write_gender(&mut writer)?;
 
     for (_key, value) in sampler_map {
-        if value.is_some() {
-            value.unwrap().write_sample(&mut writer)?;
+        if let Some(value) = value {
+            value.write_sample(&mut writer)?;
         }
     }
 

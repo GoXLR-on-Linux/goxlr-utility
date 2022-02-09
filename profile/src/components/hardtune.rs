@@ -173,11 +173,8 @@ impl HardtuneEffectBase {
                 format!("{}", value.pitch_amt),
             );
 
-            if value.source.is_some() {
-                sub_attributes.insert(
-                    "HARDTUNE_SOURCE".to_string(),
-                    value.source.as_ref().unwrap().to_string(),
-                );
+            if let Some(source) = &value.source {
+                sub_attributes.insert("HARDTUNE_SOURCE".to_string(), source.to_string());
             }
 
             for (key, value) in &sub_attributes {

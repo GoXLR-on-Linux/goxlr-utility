@@ -140,10 +140,10 @@ impl PitchEncoderBase {
                 format!("{}", value.threshold),
             );
 
-            if value.inst_ratio.is_some() {
+            if let Some(inst_ratio) = value.inst_ratio {
                 sub_attributes.insert(
                     "PITCH_SHIFT_INST_RATIO".to_string(),
-                    format!("{}", value.inst_ratio.unwrap()),
+                    format!("{}", inst_ratio),
                 );
             }
 

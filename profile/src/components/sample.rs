@@ -168,16 +168,14 @@ impl SampleBase {
                 );
             }
 
-            if value.playback_mode.is_some() {
-                let output = value.playback_mode.as_ref().unwrap();
+            if let Some(output) = &value.playback_mode {
                 sub_attributes.insert(
                     "playbackMode".to_string(),
                     output.get_str("index").unwrap().to_string(),
                 );
             }
 
-            if value.play_order.is_some() {
-                let order = value.play_order.as_ref().unwrap();
+            if let Some(order) = &value.play_order {
                 sub_attributes.insert(
                     "playOrder".to_string(),
                     order.get_str("index").unwrap().to_string(),
