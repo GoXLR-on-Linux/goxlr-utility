@@ -252,7 +252,7 @@ enum PlaybackMode {
 #[derive(Debug, Enum, EnumProperty)]
 enum PlayOrder {
     #[strum(props(index = "0"))]
-    SEQUENTIAL,
+    Sequential,
     #[strum(props(index = "1"))]
-    RANDOM,
+    Random,
 }
