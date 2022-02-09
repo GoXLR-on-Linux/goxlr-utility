@@ -157,19 +157,19 @@ pub enum InputChannels {
 #[derive(Debug, EnumIter, Enum, EnumProperty)]
 pub enum OutputChannels {
     #[strum(props(Name = "HP"))]
-    HEADPHONES,
+    Headphones,
 
     #[strum(props(Name = "Stream"))]
-    BROADCAST,
+    Broadcast,
 
     #[strum(props(Name = "LineOut"))]
-    LINE_OUT,
+    LineOut,
 
     #[strum(props(Name = "Chat"))]
-    CHAT_MIC,
+    ChatMic,
 
     #[strum(props(Name = "Sampler"))]
-    SAMPLER,
+    Sampler,
 }
 
 /**
