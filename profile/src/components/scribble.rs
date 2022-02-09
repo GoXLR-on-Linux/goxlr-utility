@@ -100,7 +100,7 @@ impl Scribble {
             }
 
             // Send the rest out for colouring..
-            if !self.colour_map.read_colours(&attr) {
+            if !self.colour_map.read_colours(attr) {
                 println!("[SCRIBBLE] Unparsed Attribute: {}", attr.name);
             }
         }

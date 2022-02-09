@@ -44,7 +44,7 @@ impl Context {
             }
 
             if attr.name.local_name == "selectedID" {
-                if attr.value != "" {
+                if !attr.value.is_empty() {
                     self.selected_id = Some(attr.value.parse().unwrap());
                 }
                 continue;
@@ -60,7 +60,7 @@ impl Context {
                 continue;
             }
 
-            if !self.colour_map.read_colours(&attr) {
+            if !self.colour_map.read_colours(attr) {
                 println!("[{}] Unparsed Attribute: {}", self.element_name, attr.name);
             }
         }

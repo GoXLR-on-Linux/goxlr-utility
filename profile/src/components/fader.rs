@@ -48,7 +48,7 @@ impl Fader {
             }
 
             // Send the rest out for colouring..
-            if !self.colour_map.read_colours(&attr) {
+            if !self.colour_map.read_colours(attr) {
                 println!("[FADER] Unparsed Attribute: {}", attr.name);
             }
         }

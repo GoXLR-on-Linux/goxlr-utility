@@ -384,7 +384,7 @@ fn main() {
     pitch_encoder.write_pitch(&mut writer);
     gender_encoder.write_gender(&mut writer);
 
-    for (key, value) in sampler_map {
+    for (_key, value) in sampler_map {
         if value.is_some() {
             value.unwrap().write_sample(&mut writer);
         }

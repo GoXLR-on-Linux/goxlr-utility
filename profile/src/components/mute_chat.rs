@@ -65,7 +65,7 @@ impl MuteChat {
             }
 
             if attr.name.local_name == "coughButtonIsOn" {
-                self.cough_button_on = if attr.value == "0" { false } else { true };
+                self.cough_button_on = attr.value != "0";
                 continue;
             }
 
@@ -78,7 +78,7 @@ impl MuteChat {
                 continue;
             }
 
-            if !self.colour_map.read_colours(&attr) {
+            if !self.colour_map.read_colours(attr) {
                 println!("[{}] Unparsed Attribute: {}", self.element_name, attr.name);
             }
         }

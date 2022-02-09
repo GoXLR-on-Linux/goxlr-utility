@@ -31,7 +31,7 @@ pub struct HardtuneEffectBase {
 
 impl HardtuneEffectBase {
     pub fn new(element_name: String) -> Self {
-        let colour_map = element_name.clone();
+        let colour_map = element_name;
         Self {
             colour_map: ColourMap::new(colour_map),
             preset_map: EnumMap::default(),
@@ -47,7 +47,7 @@ impl HardtuneEffectBase {
                 continue;
             }
 
-            if !self.colour_map.read_colours(&attr) {
+            if !self.colour_map.read_colours(attr) {
                 println!("[hardTuneEffect] Unparsed Attribute: {}", attr.name);
             }
         }

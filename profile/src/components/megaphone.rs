@@ -27,7 +27,7 @@ pub struct MegaphoneEffectBase {
 
 impl MegaphoneEffectBase {
     pub fn new(element_name: String) -> Self {
-        let colour_map = element_name.clone();
+        let colour_map = element_name;
         Self {
             colour_map: ColourMap::new(colour_map),
             preset_map: EnumMap::default(),
@@ -36,7 +36,7 @@ impl MegaphoneEffectBase {
 
     pub fn parse_megaphone_root(&mut self, attributes: &Vec<OwnedAttribute>) {
         for attr in attributes {
-            if !self.colour_map.read_colours(&attr) {
+            if !self.colour_map.read_colours(attr) {
                 println!("[megaphoneEffect] Unparsed Attribute: {}", attr.name);
             }
         }
@@ -107,7 +107,7 @@ impl MegaphoneEffectBase {
                 continue;
             }
             if attr.name.local_name == "TRANS_BEATBOX_ENABLE" {
-                preset.trans_beatbox_enabled = if attr.value == "0" { false } else { true };
+                preset.trans_beatbox_enabled = attr.value != "0";
                 continue;
             }
             if attr.name.local_name == "TRANS_FILTER_CONTROL" {

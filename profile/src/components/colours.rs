@@ -130,7 +130,7 @@ impl ColourMap {
             return true;
         }
 
-        return false;
+        false
     }
 
     pub fn write_colours(&self, attributes: &mut HashMap<String, String>) {

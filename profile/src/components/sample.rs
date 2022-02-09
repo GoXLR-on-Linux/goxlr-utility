@@ -45,7 +45,7 @@ impl SampleBase {
                 continue;
             }
 
-            if !self.colour_map.read_colours(&attr) {
+            if !self.colour_map.read_colours(attr) {
                 println!("[Sampler] Unparsed Attribute: {}", attr.name);
             }
         }
@@ -115,7 +115,7 @@ impl SampleBase {
         let mut attributes: HashMap<String, String> = HashMap::default();
         attributes.insert(
             format!("{}state", self.element_name),
-            format!("{}", self.state),
+            self.state.to_string(),
         );
         self.colour_map.write_colours(&mut attributes);
 
@@ -139,11 +139,11 @@ impl SampleBase {
             for i in 0..value.tracks.len() {
                 sub_attributes.insert(
                     format!("track_{}", i),
-                    format!("{}", value.tracks.get(i).unwrap().track),
+                    value.tracks.get(i).unwrap().track.to_string(),
                 );
             }
 
-            if value.tracks.len() > 0 {
+            if !value.tracks.is_empty() {
                 sub_attributes.insert(
                     format!("sampleStack{}stackSize", key),
                     format!("{}", value.tracks.len()),
@@ -169,7 +169,7 @@ impl SampleBase {
                 let output = value.playback_mode.as_ref().unwrap();
                 sub_attributes.insert(
                     "playbackMode".to_string(),
-                    format!("{}", output.get_str("index").unwrap()),
+                    output.get_str("index").unwrap().to_string(),
                 );
             }
 
@@ -177,7 +177,7 @@ impl SampleBase {
                 let order = value.play_order.as_ref().unwrap();
                 sub_attributes.insert(
                     "playOrder".to_string(),
-                    format!("{}", order.get_str("index").unwrap()),
+                    order.get_str("index").unwrap().to_string(),
                 );
             }
 
