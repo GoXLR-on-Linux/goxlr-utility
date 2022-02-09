@@ -10,7 +10,7 @@ use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
 use crate::components::colours::ColourMap;
-use crate::components::megaphone::MegaphoneStyle::MEGAPHONE;
+use crate::components::megaphone::MegaphoneStyle::Megaphone;
 use crate::components::megaphone::Preset::{
     PRESET_1, PRESET_2, PRESET_3, PRESET_4, PRESET_5, PRESET_6,
 };
@@ -287,7 +287,7 @@ impl MegaphoneEffect {
     pub fn new() -> Self {
         Self {
             state: false,
-            style: MegaphoneStyle::MEGAPHONE,
+            style: MegaphoneStyle::Megaphone,
             trans_dist_amt: 0,
             trans_hp: 0,
             trans_lp: 0,
@@ -309,27 +309,27 @@ impl MegaphoneEffect {
 #[derive(Debug, EnumIter, EnumProperty)]
 enum MegaphoneStyle {
     #[strum(props(uiIndex = "0"))]
-    MEGAPHONE,
+    Megaphone,
 
     #[strum(props(uiIndex = "1"))]
-    RADIO,
+    Radio,
 
     #[strum(props(uiIndex = "2"))]
-    ON_THE_PHONE,
+    OnThePhone,
 
     #[strum(props(uiIndex = "3"))]
-    OVERDRIVE,
+    Overdrive,
 
     #[strum(props(uiIndex = "4"))]
-    BUZZ_CUT,
+    BuzzCut,
 
     #[strum(props(uiIndex = "5"))]
-    TWEED,
+    Tweed,
 }
 
 impl Default for MegaphoneStyle {
     fn default() -> Self {
-        MEGAPHONE
+        Megaphone
     }
 }
 
