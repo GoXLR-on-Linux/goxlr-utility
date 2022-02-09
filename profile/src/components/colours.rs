@@ -226,7 +226,7 @@ struct Colour {
 }
 
 impl Colour {
-    pub fn new(rgba: &String) -> Self {
+    pub fn new(rgba: &str) -> Self {
         Self {
             red: u8::from_str_radix(&rgba[0..2], 16).unwrap(),
             green: u8::from_str_radix(&rgba[2..4], 16).unwrap(),
