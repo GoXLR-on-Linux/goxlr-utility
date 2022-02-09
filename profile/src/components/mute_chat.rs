@@ -39,7 +39,7 @@ impl MuteChat {
             mic_fader_id: 4,
             blink: ColourState::Off,
             cough_behaviour: CoughToggle::HOLD,
-            cough_mute_source: MuteFunction::MUTE_ALL,
+            cough_mute_source: MuteFunction::All,
             cough_button_on: false,
         }
     }

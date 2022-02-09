@@ -28,7 +28,7 @@ impl MuteButton {
         Self {
             element_name,
             colour_map: ColourMap::new(colour_prefix),
-            mute_function: MuteFunction::MUTE_ALL,
+            mute_function: MuteFunction::All,
             previous_volume: 0,
             from_mute_all: None,
         }
@@ -41,7 +41,7 @@ impl MuteButton {
 
                 // First catch this seemingly legacy value..
                 if attr.value == "All" {
-                    self.mute_function = MuteFunction::MUTE_ALL;
+                    self.mute_function = MuteFunction::All;
                     continue;
                 }
 
@@ -121,17 +121,17 @@ impl MuteButton {
 #[derive(Debug, Enum, EnumProperty, EnumIter)]
 pub enum MuteFunction {
     #[strum(props(Value = "Mute All", uiIndex = "0"))]
-    MUTE_ALL,
+    All,
 
     #[strum(props(Value = "Mute to Stream", uiIndex = "1"))]
-    MUTE_TO_STREAM,
+    ToStream,
 
     #[strum(props(Value = "Mute to Voice Chat", uiIndex = "2"))]
-    MUTE_TO_VOICE_CHAT,
+    ToVoiceChat,
 
     #[strum(props(Value = "Mute to Phones", uiIndex = "3"))]
-    MUTE_TO_PHONES,
+    ToPhones,
 
     #[strum(props(Value = "Mute to Line Out", uiIndex = "4"))]
-    MUTE_TO_LINE_OUT,
+    ToLineOut,
 }
