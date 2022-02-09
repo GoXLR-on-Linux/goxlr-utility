@@ -42,7 +42,7 @@ impl ColourMap {
         Self {
             prefix,
             selected: None,
-            off_style: ColourOffStyle::DIMMED,
+            off_style: ColourOffStyle::Dimmed,
             state: None,
             blink: None,
             velocity: None,
@@ -199,16 +199,26 @@ impl ColourMap {
 
 #[derive(Debug, EnumString, Display)]
 enum ColourOffStyle {
-    DIMMED,
-    COLOUR2,
-    DIMMEDCOLOUR2,
+    #[strum(to_string = "DIMMED")]
+    Dimmed,
+
+    #[strum(to_string = "COLOUR2")]
+    Colour2,
+
+    #[strum(to_string = "DIMMEDCOLOUR2")]
+    DimmedColour2,
 }
 
 #[derive(Debug, EnumString, Display)]
 enum ColourDisplay {
-    GRADIENT,
-    METER,
-    GRADIENT_METER,
+    #[strum(to_string = "GRADIENT")]
+    Gradient,
+
+    #[strum(to_string = "METER")]
+    Meter,
+
+    #[strum(to_string = "GRADIENT_METER")]
+    GradientMeter,
 }
 
 #[derive(Debug, PartialEq)]
