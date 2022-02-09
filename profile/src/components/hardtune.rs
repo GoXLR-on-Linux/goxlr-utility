@@ -12,7 +12,7 @@ use xml::EventWriter;
 
 use crate::components::colours::ColourMap;
 use crate::components::hardtune::HardtuneSource::ALL;
-use crate::components::hardtune::HardtuneStyle::NORMAL;
+use crate::components::hardtune::HardtuneStyle::Normal;
 use crate::components::megaphone::Preset;
 use crate::components::megaphone::Preset::{
     PRESET_1, PRESET_2, PRESET_3, PRESET_4, PRESET_5, PRESET_6,
@@ -230,18 +230,18 @@ impl HardtuneEffect {
 #[derive(Debug, EnumIter, EnumProperty)]
 enum HardtuneStyle {
     #[strum(props(uiIndex = "0"))]
-    NORMAL,
+    Normal,
 
     #[strum(props(uiIndex = "1"))]
-    MEDIUM,
+    Medium,
 
     #[strum(props(uiIndex = "2"))]
-    HARD,
+    Hard,
 }
 
 impl Default for HardtuneStyle {
     fn default() -> Self {
-        NORMAL
+        Normal
     }
 }
 
