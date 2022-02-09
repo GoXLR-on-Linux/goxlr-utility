@@ -2,9 +2,9 @@ use std::collections::HashMap;
 use std::fs::File;
 
 use xml::attribute::OwnedAttribute;
-use xml::EventWriter;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
+use xml::EventWriter;
 
 use crate::components::colours::ColourMap;
 
@@ -24,7 +24,7 @@ impl Effects {
         Self {
             element_name,
             colour_map: ColourMap::new(colour_map),
-            name: default_name
+            name: default_name,
         }
     }
 
@@ -43,7 +43,8 @@ impl Effects {
     }
 
     pub fn write_effects(&self, writer: &mut EventWriter<&mut File>) {
-        let mut element: StartElementBuilder = XmlWriterEvent::start_element(self.element_name.as_str());
+        let mut element: StartElementBuilder =
+            XmlWriterEvent::start_element(self.element_name.as_str());
 
         let mut attributes: HashMap<String, String> = HashMap::default();
         attributes.insert(format!("{}Name", self.element_name), self.name.clone());

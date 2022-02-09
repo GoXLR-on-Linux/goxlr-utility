@@ -3,16 +3,17 @@ use std::fs::File;
 use std::os::raw::c_float;
 
 use enum_map::{Enum, EnumMap};
-use strum::{EnumProperty, IntoEnumIterator};
-use strum_macros::{EnumIter, EnumProperty};
+use strum::{EnumIter, EnumProperty, IntoEnumIterator};
 use xml::attribute::OwnedAttribute;
-use xml::EventWriter;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
+use xml::EventWriter;
 
 use crate::components::colours::ColourMap;
 use crate::components::megaphone::Preset;
-use crate::components::megaphone::Preset::{PRESET_1, PRESET_2, PRESET_3, PRESET_4, PRESET_5, PRESET_6};
+use crate::components::megaphone::Preset::{
+    PRESET_1, PRESET_2, PRESET_3, PRESET_4, PRESET_5, PRESET_6,
+};
 
 /**
  * This is relatively static, main tag contains standard colour mapping, subtags contain various
@@ -31,7 +32,7 @@ impl PitchEncoderBase {
         Self {
             colour_map: ColourMap::new(colour_map),
             preset_map: EnumMap::default(),
-            active_set: 0
+            active_set: 0,
         }
     }
 
@@ -80,7 +81,10 @@ impl PitchEncoderBase {
                 continue;
             }
 
-            println!("[PitchEncoder] Unparsed Child Attribute: {}", &attr.name.local_name);
+            println!(
+                "[PitchEncoder] Unparsed Child Attribute: {}",
+                &attr.name.local_name
+            );
         }
 
         // Ok, we should be able to store this now..
@@ -118,15 +122,28 @@ impl PitchEncoderBase {
             let mut sub_attributes: HashMap<String, String> = HashMap::default();
 
             let tag_name = format!("pitchEncoder{}", key.get_str("tagSuffix").unwrap());
-            let mut sub_element: StartElementBuilder = XmlWriterEvent::start_element(tag_name.as_str());
+            let mut sub_element: StartElementBuilder =
+                XmlWriterEvent::start_element(tag_name.as_str());
 
-            sub_attributes.insert("PITCH_KNOB_POSITION".to_string(), format!("{}", value.knob_position));
-            sub_attributes.insert("PITCH_STYLE".to_string(), value.style.get_str("uiIndex").unwrap().to_string());
+            sub_attributes.insert(
+                "PITCH_KNOB_POSITION".to_string(),
+                format!("{}", value.knob_position),
+            );
+            sub_attributes.insert(
+                "PITCH_STYLE".to_string(),
+                value.style.get_str("uiIndex").unwrap().to_string(),
+            );
             sub_attributes.insert("PITCH_RANGE".to_string(), format!("{}", value.range));
-            sub_attributes.insert("PITCH_SHIFT_THRESHOLD".to_string(), format!("{}", value.threshold));
+            sub_attributes.insert(
+                "PITCH_SHIFT_THRESHOLD".to_string(),
+                format!("{}", value.threshold),
+            );
 
             if value.inst_ratio.is_some() {
-                sub_attributes.insert("PITCH_SHIFT_INST_RATIO".to_string(), format!("{}", value.inst_ratio.unwrap()));
+                sub_attributes.insert(
+                    "PITCH_SHIFT_INST_RATIO".to_string(),
+                    format!("{}", value.inst_ratio.unwrap()),
+                );
             }
 
             for (key, value) in &sub_attributes {
@@ -158,18 +175,17 @@ impl PitchEncoder {
             style: PitchStyle::NARROW,
             range: 0,
             threshold: 0,
-            inst_ratio: None
+            inst_ratio: None,
         }
     }
 }
 
-
 #[derive(Debug, EnumIter, Enum, EnumProperty)]
 enum PitchStyle {
-    #[strum(props(uiIndex="0"))]
+    #[strum(props(uiIndex = "0"))]
     NARROW,
 
-    #[strum(props(uiIndex="1"))]
+    #[strum(props(uiIndex = "1"))]
     WIDE,
 }
 

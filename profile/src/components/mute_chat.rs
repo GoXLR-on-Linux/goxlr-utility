@@ -4,9 +4,9 @@ use std::fs::File;
 use enum_map::Enum;
 use strum::EnumProperty;
 use xml::attribute::OwnedAttribute;
-use xml::EventWriter;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
+use xml::EventWriter;
 
 use crate::components::colours::{ColourMap, ColourState};
 use crate::components::mute::MuteFunction;
@@ -39,7 +39,7 @@ impl MuteChat {
             blink: ColourState::OFF,
             cough_behaviour: CoughToggle::HOLD,
             cough_mute_source: MuteFunction::MUTE_ALL,
-            cough_button_on: false
+            cough_button_on: false,
         }
     }
 
@@ -51,7 +51,11 @@ impl MuteChat {
             }
 
             if attr.name.local_name == "coughButtonToggleSetting" {
-                self.cough_behaviour = if attr.value == "0" { CoughToggle::HOLD } else { CoughToggle::TOGGLE };
+                self.cough_behaviour = if attr.value == "0" {
+                    CoughToggle::HOLD
+                } else {
+                    CoughToggle::TOGGLE
+                };
                 continue;
             }
 
@@ -66,7 +70,11 @@ impl MuteChat {
             }
 
             if attr.name.local_name == "blink" {
-                self.blink = if attr.value == "0" { ColourState::OFF } else { ColourState::ON };
+                self.blink = if attr.value == "0" {
+                    ColourState::OFF
+                } else {
+                    ColourState::ON
+                };
                 continue;
             }
 
@@ -77,15 +85,46 @@ impl MuteChat {
     }
 
     pub fn write_mute_chat(&self, writer: &mut EventWriter<&mut File>) {
-        let mut element: StartElementBuilder = XmlWriterEvent::start_element(self.element_name.as_str());
+        let mut element: StartElementBuilder =
+            XmlWriterEvent::start_element(self.element_name.as_str());
 
         let mut attributes: HashMap<String, String> = HashMap::default();
 
-        attributes.insert("micIsAnActiveFader".to_string(), format!("{}", self.mic_fader_id));
-        attributes.insert("coughButtonToggleSetting".to_string(), if self.cough_behaviour == HOLD { "0".to_string() } else { "1".to_string() });
-        attributes.insert("coughButtonMuteSourceSelection".to_string(), self.cough_mute_source.get_str("uiIndex").unwrap().to_string());
-        attributes.insert("coughButtonIsOn".to_string(), if self.cough_button_on { "1".to_string() } else { "0".to_string() });
-        attributes.insert("blink".to_string(), if self.blink == ColourState::OFF { "0".to_string() } else { "1".to_string() });
+        attributes.insert(
+            "micIsAnActiveFader".to_string(),
+            format!("{}", self.mic_fader_id),
+        );
+        attributes.insert(
+            "coughButtonToggleSetting".to_string(),
+            if self.cough_behaviour == HOLD {
+                "0".to_string()
+            } else {
+                "1".to_string()
+            },
+        );
+        attributes.insert(
+            "coughButtonMuteSourceSelection".to_string(),
+            self.cough_mute_source
+                .get_str("uiIndex")
+                .unwrap()
+                .to_string(),
+        );
+        attributes.insert(
+            "coughButtonIsOn".to_string(),
+            if self.cough_button_on {
+                "1".to_string()
+            } else {
+                "0".to_string()
+            },
+        );
+        attributes.insert(
+            "blink".to_string(),
+            if self.blink == ColourState::OFF {
+                "0".to_string()
+            } else {
+                "1".to_string()
+            },
+        );
 
         self.colour_map.write_colours(&mut attributes);
 
@@ -101,5 +140,5 @@ impl MuteChat {
 #[derive(PartialEq)]
 enum CoughToggle {
     HOLD,
-    TOGGLE
+    TOGGLE,
 }

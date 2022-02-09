@@ -7,4 +7,5 @@ members = [
     "client",
     "ipc",
     "types",
+    "profile",
 ]

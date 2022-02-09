@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 
-use strum_macros::{Display, EnumString};
+use strum::{Display, EnumString};
 use xml::attribute::OwnedAttribute;
 
 pub struct ColourMap {
@@ -12,7 +12,7 @@ pub struct ColourMap {
     // state that notes that the current object is being pressed, but saving that would be crazy..
     // I'll place this here for now, despite it seemingly always being 0.
     selected: Option<u8>,
-    
+
     // The Presented Style when object is 'Off'
     off_style: ColourOffStyle,
 
@@ -48,7 +48,7 @@ impl ColourMap {
             velocity: None,
             colour_group: None,
             colour_list: None,
-            colour_display: None
+            colour_display: None,
         }
     }
 
@@ -107,7 +107,17 @@ impl ColourMap {
             }
 
             // TODO: Tidy this monster up..
-            let index = usize::from_str(attribute.name.local_name.chars().last().unwrap().to_string().as_str()).unwrap();
+            let index = usize::from_str(
+                attribute
+                    .name
+                    .local_name
+                    .chars()
+                    .last()
+                    .unwrap()
+                    .to_string()
+                    .as_str(),
+            )
+            .unwrap();
 
             self.colour_list.as_mut().unwrap()[index] = Option::Some(Colour::new(&attribute.value));
 
@@ -129,7 +139,10 @@ impl ColourMap {
         attributes.insert(key, self.off_style.to_string());
 
         if self.selected.is_some() {
-            attributes.insert(format!("{}selected", self.prefix), format!("{}", self.selected.unwrap()));
+            attributes.insert(
+                format!("{}selected", self.prefix),
+                format!("{}", self.selected.unwrap()),
+            );
         }
 
         if self.velocity.is_some() {
@@ -158,7 +171,6 @@ impl ColourMap {
             }
             attributes.insert(key, output);
         }
-
 
         if self.colour_group.is_some() {
             let colour = self.colour_group.as_ref().unwrap().clone();
@@ -219,11 +231,14 @@ impl Colour {
             red: u8::from_str_radix(&rgba[0..2], 16).unwrap(),
             green: u8::from_str_radix(&rgba[2..4], 16).unwrap(),
             blue: u8::from_str_radix(&rgba[4..6], 16).unwrap(),
-            alpha: u8::from_str_radix(&rgba[6..8], 16).unwrap()
+            alpha: u8::from_str_radix(&rgba[6..8], 16).unwrap(),
         }
     }
 
     pub fn to_rgba(&self) -> String {
-        return format!("{:02X}{:02X}{:02X}{:02X}", self.red, self.green, self.blue, self.alpha);
+        return format!(
+            "{:02X}{:02X}{:02X}{:02X}",
+            self.red, self.green, self.blue, self.alpha
+        );
     }
 }

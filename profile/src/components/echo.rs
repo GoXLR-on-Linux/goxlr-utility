@@ -3,16 +3,17 @@ use std::fs::File;
 use std::os::raw::c_float;
 
 use enum_map::{Enum, EnumMap};
-use strum::{EnumProperty, IntoEnumIterator};
-use strum_macros::{EnumIter, EnumProperty};
+use strum::{EnumIter, EnumProperty, IntoEnumIterator};
 use xml::attribute::OwnedAttribute;
-use xml::EventWriter;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
+use xml::EventWriter;
 
 use crate::components::colours::ColourMap;
 use crate::components::megaphone::Preset;
-use crate::components::megaphone::Preset::{PRESET_1, PRESET_2, PRESET_3, PRESET_4, PRESET_5, PRESET_6};
+use crate::components::megaphone::Preset::{
+    PRESET_1, PRESET_2, PRESET_3, PRESET_4, PRESET_5, PRESET_6,
+};
 
 /**
  * This is relatively static, main tag contains standard colour mapping, subtags contain various
@@ -31,7 +32,7 @@ impl EchoEncoderBase {
         Self {
             colour_map: ColourMap::new(colour_map),
             preset_map: EnumMap::default(),
-            active_set: 0
+            active_set: 0,
         }
     }
 
@@ -115,7 +116,10 @@ impl EchoEncoderBase {
                 continue;
             }
 
-            println!("[EchoEncoder] Unparsed Child Attribute: {}", &attr.name.local_name);
+            println!(
+                "[EchoEncoder] Unparsed Child Attribute: {}",
+                &attr.name.local_name
+            );
         }
 
         // Ok, we should be able to store this now..
@@ -153,19 +157,35 @@ impl EchoEncoderBase {
             let mut sub_attributes: HashMap<String, String> = HashMap::default();
 
             let tag_name = format!("echoEncoder{}", key.get_str("tagSuffix").unwrap());
-            let mut sub_element: StartElementBuilder = XmlWriterEvent::start_element(tag_name.as_str());
+            let mut sub_element: StartElementBuilder =
+                XmlWriterEvent::start_element(tag_name.as_str());
 
-            sub_attributes.insert("DELAY_KNOB_POSITION".to_string(), format!("{}", value.knob_position));
-            sub_attributes.insert("DELAY_STYLE".to_string(), value.style.get_str("uiIndex").unwrap().to_string());
+            sub_attributes.insert(
+                "DELAY_KNOB_POSITION".to_string(),
+                format!("{}", value.knob_position),
+            );
+            sub_attributes.insert(
+                "DELAY_STYLE".to_string(),
+                value.style.get_str("uiIndex").unwrap().to_string(),
+            );
             sub_attributes.insert("DELAY_SOURCE".to_string(), format!("{}", value.source));
             sub_attributes.insert("DELAY_DIV_L".to_string(), format!("{}", value.div_l));
             sub_attributes.insert("DELAY_DIV_R".to_string(), format!("{}", value.div_r));
             sub_attributes.insert("DELAY_FB_L".to_string(), format!("{}", value.feedback_left));
-            sub_attributes.insert("DELAY_FB_R".to_string(), format!("{}", value.feedback_right));
+            sub_attributes.insert(
+                "DELAY_FB_R".to_string(),
+                format!("{}", value.feedback_right),
+            );
             sub_attributes.insert("DELAY_XFB_L_R".to_string(), format!("{}", value.xfb_l_to_r));
             sub_attributes.insert("DELAY_XFB_R_L".to_string(), format!("{}", value.xfb_r_to_l));
-            sub_attributes.insert("DELAY_FB_CONTROL".to_string(), format!("{}", value.feedback_control));
-            sub_attributes.insert("DELAY_FILTER_STYLE".to_string(), format!("{}", value.filter_style));
+            sub_attributes.insert(
+                "DELAY_FB_CONTROL".to_string(),
+                format!("{}", value.feedback_control),
+            );
+            sub_attributes.insert(
+                "DELAY_FILTER_STYLE".to_string(),
+                format!("{}", value.filter_style),
+            );
             sub_attributes.insert("DELAY_TIME_L".to_string(), format!("{}", value.time_left));
             sub_attributes.insert("DELAY_TIME_R".to_string(), format!("{}", value.time_right));
             sub_attributes.insert("DELAY_TEMPO".to_string(), format!("{}", value.tempo));
@@ -198,7 +218,7 @@ struct EchoEncoder {
     filter_style: u8,
     time_left: u16,
     time_right: u16,
-    tempo: u16
+    tempo: u16,
 }
 
 impl EchoEncoder {
@@ -217,31 +237,30 @@ impl EchoEncoder {
             filter_style: 0,
             time_left: 0,
             time_right: 0,
-            tempo: 0
+            tempo: 0,
         }
     }
 }
 
-
 #[derive(Debug, EnumIter, Enum, EnumProperty)]
 enum EchoStyle {
-    #[strum(props(uiIndex="0"))]
+    #[strum(props(uiIndex = "0"))]
     QUARTER,
 
-    #[strum(props(uiIndex="1"))]
+    #[strum(props(uiIndex = "1"))]
     EIGHTH,
 
-    #[strum(props(uiIndex="2"))]
+    #[strum(props(uiIndex = "2"))]
     TRIPLET,
 
-    #[strum(props(uiIndex="3"))]
+    #[strum(props(uiIndex = "3"))]
     PING_PONG,
 
-    #[strum(props(uiIndex="4"))]
+    #[strum(props(uiIndex = "4"))]
     CLASSIC_SLAP,
 
-    #[strum(props(uiIndex="5"))]
-    MULTI_TAP
+    #[strum(props(uiIndex = "5"))]
+    MULTI_TAP,
 }
 
 impl Default for EchoStyle {

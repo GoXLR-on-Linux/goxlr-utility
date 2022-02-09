@@ -4,8 +4,8 @@ use std::process::exit;
 use std::str::FromStr;
 
 use enum_map::{Enum, EnumMap};
-use xml::{EmitterConfig, EventReader};
 use xml::reader::XmlEvent as XmlReaderEvent;
+use xml::{EmitterConfig, EventReader};
 
 use crate::components::browser::BrowserPreviewTree;
 use crate::components::context::Context;
@@ -30,7 +30,6 @@ use crate::SampleButtons::{BOTTOM_LEFT, BOTTOM_RIGHT, CLEAR, TOP_LEFT, TOP_RIGHT
 mod components;
 
 fn main() {
-
     let mut root = RootElement::new();
     let mut browser = BrowserPreviewTree::new("browserPreviewTree".to_string());
 
@@ -64,7 +63,6 @@ fn main() {
 
     let mut sampler_map: EnumMap<SampleButtons, Option<SampleBase>> = EnumMap::default();
 
-
     let file = File::open("test-data/profile.xml").unwrap();
     let file = BufReader::new(file);
 
@@ -74,7 +72,9 @@ fn main() {
 
     for e in parser {
         match e {
-            Ok(XmlReaderEvent::StartElement { name, attributes, .. }) => {
+            Ok(XmlReaderEvent::StartElement {
+                name, attributes, ..
+            }) => {
                 if name.local_name == "ValueTreeRoot" {
                     // This also handles <AppTree, due to a single shared value.
                     root.parse_root(&attributes);
@@ -86,7 +86,10 @@ fn main() {
                     }
 
                     if root.get_version() < 2 {
-                        println!("XML Version {} detected, will be upgraded to v2", root.get_version());
+                        println!(
+                            "XML Version {} detected, will be upgraded to v2",
+                            root.get_version()
+                        );
                     }
                     continue;
                 }
@@ -114,7 +117,10 @@ fn main() {
                 // Might need to pattern match this..
                 if name.local_name.starts_with("mute") && name.local_name != "muteChat" {
                     // In the XML, the count starts as 1, here, we're gonna store as 0.
-                    let id = u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str()).unwrap() - 1;
+                    let id =
+                        u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str())
+                            .unwrap()
+                            - 1;
                     let mut mute_button = MuteButton::new(id + 1);
                     mute_button.parse_button(&attributes);
                     mute_buttons.insert(id as usize, mute_button);
@@ -123,7 +129,9 @@ fn main() {
 
                 if name.local_name.starts_with("FaderMeter") {
                     // In the XML, the count starts at 0, and we have different capitalisation :D
-                    let id = u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str()).unwrap();
+                    let id =
+                        u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str())
+                            .unwrap();
                     let mut fader = Fader::new(id);
                     fader.parse_fader(&attributes);
                     faders.insert(id as usize, fader);
@@ -131,7 +139,10 @@ fn main() {
                 }
 
                 if name.local_name.starts_with("effects") {
-                    let id = u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str()).unwrap() - 1;
+                    let id =
+                        u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str())
+                            .unwrap()
+                            - 1;
                     let mut effect = Effects::new(id + 1);
                     effect.parse_effect(&attributes);
                     effects.insert(id as usize, effect);
@@ -139,7 +150,10 @@ fn main() {
                 }
 
                 if name.local_name.starts_with("scribble") {
-                    let id = u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str()).unwrap() - 1;
+                    let id =
+                        u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str())
+                            .unwrap()
+                            - 1;
                     let mut scribble = Scribble::new(id + 1);
                     scribble.parse_scribble(&attributes);
                     scribbles.insert(id as usize, scribble);
@@ -155,7 +169,9 @@ fn main() {
                 // tracking the opening and closing of tags except when writing, so we'll continue treating the reading
                 // as if it were a very flat structure.
                 if name.local_name.starts_with("megaphoneEffectpreset") {
-                    let id = u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str()).unwrap();
+                    let id =
+                        u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str())
+                            .unwrap();
                     megaphone_effect.parse_megaphone_preset(id, &attributes);
                     continue;
                 }
@@ -166,7 +182,9 @@ fn main() {
                 }
 
                 if name.local_name.starts_with("robotEffectpreset") {
-                    let id = u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str()).unwrap();
+                    let id =
+                        u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str())
+                            .unwrap();
                     robot_effect.parse_robot_preset(id, &attributes);
                     continue;
                 }
@@ -177,7 +195,9 @@ fn main() {
                 }
 
                 if name.local_name.starts_with("hardtuneEffectpreset") {
-                    let id = u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str()).unwrap();
+                    let id =
+                        u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str())
+                            .unwrap();
                     hardtune_effect.parse_hardtune_preset(id, &attributes);
                     continue;
                 }
@@ -188,7 +208,9 @@ fn main() {
                 }
 
                 if name.local_name.starts_with("reverbEncoderpreset") {
-                    let id = u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str()).unwrap();
+                    let id =
+                        u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str())
+                            .unwrap();
                     reverb_encoder.parse_reverb_preset(id, &attributes);
                     continue;
                 }
@@ -199,7 +221,9 @@ fn main() {
                 }
 
                 if name.local_name.starts_with("echoEncoderpreset") {
-                    let id = u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str()).unwrap();
+                    let id =
+                        u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str())
+                            .unwrap();
                     echo_encoder.parse_echo_preset(id, &attributes);
                     continue;
                 }
@@ -210,7 +234,9 @@ fn main() {
                 }
 
                 if name.local_name.starts_with("pitchEncoderpreset") {
-                    let id = u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str()).unwrap();
+                    let id =
+                        u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str())
+                            .unwrap();
                     pitch_encoder.parse_pitch_preset(id, &attributes);
                     continue;
                 }
@@ -221,7 +247,9 @@ fn main() {
                 }
 
                 if name.local_name.starts_with("genderEncoderpreset") {
-                    let id = u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str()).unwrap();
+                    let id =
+                        u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str())
+                            .unwrap();
                     gender_encoder.parse_gender_preset(id, &attributes);
                     continue;
                 }
@@ -269,7 +297,10 @@ fn main() {
 
                 if name.local_name.starts_with("sampleStack") {
                     let id = name.local_name.chars().last().unwrap();
-                    active_sample_button.as_mut().unwrap().parse_sample_stack(id, &attributes);
+                    active_sample_button
+                        .as_mut()
+                        .unwrap()
+                        .parse_sample_stack(id, &attributes);
                     continue;
                 }
 
@@ -301,7 +332,8 @@ fn main() {
                     || name.local_name == "sampleTopRight"
                     || name.local_name == "sampleBottomLeft"
                     || name.local_name == "sampleBottomRight"
-                    || name.local_name == "sampleClear" {
+                    || name.local_name == "sampleClear"
+                {
                     active_sample_button = Option::None;
                 }
             }
@@ -315,7 +347,9 @@ fn main() {
 
     // Create the file, and the writer..
     let mut out_file = File::create("test-data/output.xml").unwrap();
-    let mut writer = EmitterConfig::new().perform_indent(true).create_writer(&mut out_file);
+    let mut writer = EmitterConfig::new()
+        .perform_indent(true)
+        .create_writer(&mut out_file);
 
     // Write the initial root tag..
     root.write_initial(&mut writer);
@@ -362,7 +396,6 @@ fn main() {
 
     // Finalise the XML..
     root.write_final(&mut writer);
-
 }
 
 struct GoXLR {
@@ -375,7 +408,5 @@ enum SampleButtons {
     TOP_RIGHT,
     BOTTOM_LEFT,
     BOTTOM_RIGHT,
-    CLEAR
+    CLEAR,
 }
-
-

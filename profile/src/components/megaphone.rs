@@ -3,16 +3,17 @@ use std::fs::File;
 use std::os::raw::c_float;
 
 use enum_map::{Enum, EnumMap};
-use strum::{EnumProperty, IntoEnumIterator};
-use strum_macros::{EnumIter, EnumProperty};
+use strum::{EnumIter, EnumProperty, IntoEnumIterator};
 use xml::attribute::OwnedAttribute;
-use xml::EventWriter;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
+use xml::EventWriter;
 
 use crate::components::colours::ColourMap;
 use crate::components::megaphone::MegaphoneStyle::MEGAPHONE;
-use crate::components::megaphone::Preset::{PRESET_1, PRESET_2, PRESET_3, PRESET_4, PRESET_5, PRESET_6};
+use crate::components::megaphone::Preset::{
+    PRESET_1, PRESET_2, PRESET_3, PRESET_4, PRESET_5, PRESET_6,
+};
 
 /**
  * This is relatively static, main tag contains standard colour mapping, subtags contain various
@@ -45,7 +46,11 @@ impl MegaphoneEffectBase {
         let mut preset = MegaphoneEffect::new();
         for attr in attributes {
             if attr.name.local_name == "megaphoneEffectstate" {
-                if attr.value == "1" { preset.state = true; } else { preset.state = false }
+                if attr.value == "1" {
+                    preset.state = true;
+                } else {
+                    preset.state = false
+                }
                 continue;
             }
             if attr.name.local_name == "MEGAPHONE_STYLE" {
@@ -121,7 +126,10 @@ impl MegaphoneEffectBase {
                 preset.trans_drive_pot_gain_comp_max = attr.value.parse::<c_float>().unwrap() as u8;
                 continue;
             }
-            println!("[MegaphoneEffect] Unparsed Child Attribute: {}", &attr.name.local_name);
+            println!(
+                "[MegaphoneEffect] Unparsed Child Attribute: {}",
+                &attr.name.local_name
+            );
         }
 
         // Ok, we should be able to store this now..
@@ -158,24 +166,75 @@ impl MegaphoneEffectBase {
             let mut sub_attributes: HashMap<String, String> = HashMap::default();
 
             let tag_name = format!("megaphoneEffect{}", key.get_str("tagSuffix").unwrap());
-            let mut sub_element: StartElementBuilder = XmlWriterEvent::start_element(tag_name.as_str());
+            let mut sub_element: StartElementBuilder =
+                XmlWriterEvent::start_element(tag_name.as_str());
 
-            sub_attributes.insert("megaphoneEffectstate".to_string(), if value.state { "1".to_string() } else { "0".to_string() });
-            sub_attributes.insert("MEGAPHONE_STYLE".to_string(), value.style.get_str("uiIndex").unwrap().to_string());
-            sub_attributes.insert("TRANS_DIST_AMT".to_string(), format!("{}", value.trans_dist_amt));
+            sub_attributes.insert(
+                "megaphoneEffectstate".to_string(),
+                if value.state {
+                    "1".to_string()
+                } else {
+                    "0".to_string()
+                },
+            );
+            sub_attributes.insert(
+                "MEGAPHONE_STYLE".to_string(),
+                value.style.get_str("uiIndex").unwrap().to_string(),
+            );
+            sub_attributes.insert(
+                "TRANS_DIST_AMT".to_string(),
+                format!("{}", value.trans_dist_amt),
+            );
             sub_attributes.insert("TRANS_HP".to_string(), format!("{}", value.trans_hp));
             sub_attributes.insert("TRANS_LP".to_string(), format!("{}", value.trans_lp));
-            sub_attributes.insert("TRANS_PREGAIN".to_string(), format!("{}", value.trans_pregain));
-            sub_attributes.insert("TRANS_POSTGAIN".to_string(), format!("{}", value.trans_postgain));
-            sub_attributes.insert("TRANS_DIST_TYPE".to_string(), format!("{}", value.trans_dist_type));
-            sub_attributes.insert("TRANS_PRESENCE_GAIN".to_string(), format!("{}", value.trans_presence_gain));
-            sub_attributes.insert("TRANS_PRESENCE_FC".to_string(), format!("{}", value.trans_presence_fc));
-            sub_attributes.insert("TRANS_PRESENCE_BW".to_string(), format!("{}", value.trans_presence_bw));
-            sub_attributes.insert("TRANS_BEATBOX_ENABLE".to_string(), if value.trans_beatbox_enabled { "1".to_string()} else { "0".to_string() });
-            sub_attributes.insert("TRANS_FILTER_CONTROL".to_string(), format!("{}", value.trans_filter_control));
-            sub_attributes.insert("TRANS_FILTER".to_string(), format!("{}", value.trans_filter));
-            sub_attributes.insert("TRANS_DRIVE_POT_GAIN_COMP_MID".to_string(), format!("{}", value.trans_drive_pot_gain_comp_mid));
-            sub_attributes.insert("TRANS_DRIVE_POT_GAIN_COMP_MAX".to_string(), format!("{}", value.trans_drive_pot_gain_comp_max));
+            sub_attributes.insert(
+                "TRANS_PREGAIN".to_string(),
+                format!("{}", value.trans_pregain),
+            );
+            sub_attributes.insert(
+                "TRANS_POSTGAIN".to_string(),
+                format!("{}", value.trans_postgain),
+            );
+            sub_attributes.insert(
+                "TRANS_DIST_TYPE".to_string(),
+                format!("{}", value.trans_dist_type),
+            );
+            sub_attributes.insert(
+                "TRANS_PRESENCE_GAIN".to_string(),
+                format!("{}", value.trans_presence_gain),
+            );
+            sub_attributes.insert(
+                "TRANS_PRESENCE_FC".to_string(),
+                format!("{}", value.trans_presence_fc),
+            );
+            sub_attributes.insert(
+                "TRANS_PRESENCE_BW".to_string(),
+                format!("{}", value.trans_presence_bw),
+            );
+            sub_attributes.insert(
+                "TRANS_BEATBOX_ENABLE".to_string(),
+                if value.trans_beatbox_enabled {
+                    "1".to_string()
+                } else {
+                    "0".to_string()
+                },
+            );
+            sub_attributes.insert(
+                "TRANS_FILTER_CONTROL".to_string(),
+                format!("{}", value.trans_filter_control),
+            );
+            sub_attributes.insert(
+                "TRANS_FILTER".to_string(),
+                format!("{}", value.trans_filter),
+            );
+            sub_attributes.insert(
+                "TRANS_DRIVE_POT_GAIN_COMP_MID".to_string(),
+                format!("{}", value.trans_drive_pot_gain_comp_mid),
+            );
+            sub_attributes.insert(
+                "TRANS_DRIVE_POT_GAIN_COMP_MAX".to_string(),
+                format!("{}", value.trans_drive_pot_gain_comp_max),
+            );
 
             for (key, value) in &sub_attributes {
                 sub_element = sub_element.attr(key.as_str(), value.as_str());
@@ -238,30 +297,30 @@ impl MegaphoneEffect {
             trans_filter_control: 0,
             trans_filter: 0,
             trans_drive_pot_gain_comp_mid: 0,
-            trans_drive_pot_gain_comp_max: 0
+            trans_drive_pot_gain_comp_max: 0,
         }
     }
 }
 
 #[derive(Debug, EnumIter, EnumProperty)]
 enum MegaphoneStyle {
-    #[strum(props(uiIndex="0"))]
+    #[strum(props(uiIndex = "0"))]
     MEGAPHONE,
 
-    #[strum(props(uiIndex="1"))]
+    #[strum(props(uiIndex = "1"))]
     RADIO,
 
-    #[strum(props(uiIndex="2"))]
+    #[strum(props(uiIndex = "2"))]
     ON_THE_PHONE,
 
-    #[strum(props(uiIndex="3"))]
+    #[strum(props(uiIndex = "3"))]
     OVERDRIVE,
 
-    #[strum(props(uiIndex="4"))]
+    #[strum(props(uiIndex = "4"))]
     BUZZ_CUT,
 
-    #[strum(props(uiIndex="5"))]
-    TWEED
+    #[strum(props(uiIndex = "5"))]
+    TWEED,
 }
 
 impl Default for MegaphoneStyle {
@@ -270,25 +329,24 @@ impl Default for MegaphoneStyle {
     }
 }
 
-
 // TODO: Move this.
 #[derive(Debug, EnumIter, Enum, EnumProperty)]
 pub enum Preset {
-    #[strum(props(tagSuffix="preset1"))]
+    #[strum(props(tagSuffix = "preset1"))]
     PRESET_1,
 
-    #[strum(props(tagSuffix="preset2"))]
+    #[strum(props(tagSuffix = "preset2"))]
     PRESET_2,
 
-    #[strum(props(tagSuffix="preset3"))]
+    #[strum(props(tagSuffix = "preset3"))]
     PRESET_3,
 
-    #[strum(props(tagSuffix="preset4"))]
+    #[strum(props(tagSuffix = "preset4"))]
     PRESET_4,
 
-    #[strum(props(tagSuffix="preset5"))]
+    #[strum(props(tagSuffix = "preset5"))]
     PRESET_5,
 
-    #[strum(props(tagSuffix="preset6"))]
-    PRESET_6
+    #[strum(props(tagSuffix = "preset6"))]
+    PRESET_6,
 }

@@ -2,12 +2,11 @@ use std::collections::HashMap;
 use std::fs::File;
 
 use enum_map::{Enum, EnumMap};
-use strum::{EnumProperty, IntoEnumIterator};
-use strum_macros::{EnumIter, EnumProperty};
+use strum::{EnumIter, EnumProperty, IntoEnumIterator};
 use xml::attribute::OwnedAttribute;
-use xml::EventWriter;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
+use xml::EventWriter;
 
 use crate::components::colours::ColourMap;
 
@@ -124,49 +123,48 @@ impl Mixers {
     }
 }
 
-
 #[derive(Debug, EnumIter, Enum, EnumProperty)]
 pub enum InputChannels {
-    #[strum(props(Name="mic"))]
+    #[strum(props(Name = "mic"))]
     MIC,
 
-    #[strum(props(Name="chat"))]
+    #[strum(props(Name = "chat"))]
     CHAT,
 
-    #[strum(props(Name="music"))]
+    #[strum(props(Name = "music"))]
     MUSIC,
 
-    #[strum(props(Name="game"))]
+    #[strum(props(Name = "game"))]
     GAME,
 
-    #[strum(props(Name="console"))]
+    #[strum(props(Name = "console"))]
     CONSOLE,
 
-    #[strum(props(Name="lineIn"))]
+    #[strum(props(Name = "lineIn"))]
     LINE_IN,
 
-    #[strum(props(Name="system"))]
+    #[strum(props(Name = "system"))]
     SYSTEM,
 
-    #[strum(props(Name="sample"))]
+    #[strum(props(Name = "sample"))]
     SAMPLE,
 }
 
 #[derive(Debug, EnumIter, Enum, EnumProperty)]
 pub enum OutputChannels {
-    #[strum(props(Name="HP"))]
+    #[strum(props(Name = "HP"))]
     HEADPHONES,
 
-    #[strum(props(Name="Stream"))]
+    #[strum(props(Name = "Stream"))]
     BROADCAST,
 
-    #[strum(props(Name="LineOut"))]
+    #[strum(props(Name = "LineOut"))]
     LINE_OUT,
 
-    #[strum(props(Name="Chat"))]
+    #[strum(props(Name = "Chat"))]
     CHAT_MIC,
 
-    #[strum(props(Name="Sampler"))]
+    #[strum(props(Name = "Sampler"))]
     SAMPLER,
 }
 
@@ -176,38 +174,38 @@ pub enum OutputChannels {
 #[derive(Debug, Enum, EnumIter, EnumProperty)]
 pub enum FullChannelList {
     // Base Mixer Channels
-    #[strum(props(Name="mic", faderIndex="0"))]
+    #[strum(props(Name = "mic", faderIndex = "0"))]
     MIC,
 
-    #[strum(props(Name="chat", faderIndex="1"))]
+    #[strum(props(Name = "chat", faderIndex = "1"))]
     CHAT,
 
-    #[strum(props(Name="music", faderIndex="2"))]
+    #[strum(props(Name = "music", faderIndex = "2"))]
     MUSIC,
 
-    #[strum(props(Name="game", faderIndex="3"))]
+    #[strum(props(Name = "game", faderIndex = "3"))]
     GAME,
 
-    #[strum(props(Name="console", faderIndex="4"))]
+    #[strum(props(Name = "console", faderIndex = "4"))]
     CONSOLE,
 
-    #[strum(props(Name="lineIn", faderIndex="5"))]
+    #[strum(props(Name = "lineIn", faderIndex = "5"))]
     LINE_IN,
 
-    #[strum(props(Name="system", faderIndex="6"))]
+    #[strum(props(Name = "system", faderIndex = "6"))]
     SYSTEM,
 
-    #[strum(props(Name="sample", faderIndex="7"))]
+    #[strum(props(Name = "sample", faderIndex = "7"))]
     SAMPLE,
 
     // Extra Volume Mixers
-    #[strum(props(Name="headphone", faderIndex="8"))]
+    #[strum(props(Name = "headphone", faderIndex = "8"))]
     HEADPHONE,
 
     // Not Present in the Fader 'Source' List..
-    #[strum(props(Name="mic2headphoneSub", faderIndex="-1"))]
+    #[strum(props(Name = "mic2headphoneSub", faderIndex = "-1"))]
     MIC_MONITOR,
 
-    #[strum(props(Name="lineOut", faderIndex="9"))]
+    #[strum(props(Name = "lineOut", faderIndex = "9"))]
     LINE_OUT,
 }

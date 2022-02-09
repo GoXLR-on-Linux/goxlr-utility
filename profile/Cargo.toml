@@ -6,11 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-enum-map = "*"
-enum-map-derive = "*"
+enum-map = "2.0"
+enum-map-derive = "0.8"
 
-strum = "0.23"
-strum_macros = "0.23"
+strum = { version = "0.23", features = ["derive"] }
 
 ritelinked = "0.3.2"
 

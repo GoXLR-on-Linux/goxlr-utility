@@ -3,16 +3,17 @@ use std::fs::File;
 use std::os::raw::c_float;
 
 use enum_map::{Enum, EnumMap};
-use strum::{EnumProperty, IntoEnumIterator};
-use strum_macros::{EnumIter, EnumProperty};
+use strum::{EnumIter, EnumProperty, IntoEnumIterator};
 use xml::attribute::OwnedAttribute;
-use xml::EventWriter;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
+use xml::EventWriter;
 
 use crate::components::colours::ColourMap;
 use crate::components::megaphone::Preset;
-use crate::components::megaphone::Preset::{PRESET_1, PRESET_2, PRESET_3, PRESET_4, PRESET_5, PRESET_6};
+use crate::components::megaphone::Preset::{
+    PRESET_1, PRESET_2, PRESET_3, PRESET_4, PRESET_5, PRESET_6,
+};
 use crate::components::reverb::ReverbStyle::LIBRARY;
 
 /**
@@ -32,7 +33,7 @@ impl ReverbEncoderBase {
         Self {
             colour_map: ColourMap::new(colour_map),
             preset_map: EnumMap::default(),
-            active_set: 0
+            active_set: 0,
         }
     }
 
@@ -116,7 +117,10 @@ impl ReverbEncoderBase {
                 continue;
             }
 
-            println!("[ReverbEncoder] Unparsed Child Attribute: {}", &attr.name.local_name);
+            println!(
+                "[ReverbEncoder] Unparsed Child Attribute: {}",
+                &attr.name.local_name
+            );
         }
 
         // Ok, we should be able to store this now..
@@ -154,10 +158,17 @@ impl ReverbEncoderBase {
             let mut sub_attributes: HashMap<String, String> = HashMap::default();
 
             let tag_name = format!("reverbEncoder{}", key.get_str("tagSuffix").unwrap());
-            let mut sub_element: StartElementBuilder = XmlWriterEvent::start_element(tag_name.as_str());
+            let mut sub_element: StartElementBuilder =
+                XmlWriterEvent::start_element(tag_name.as_str());
 
-            sub_attributes.insert("REVERB_KNOB_POSITION".to_string(), format!("{}", value.knob_position));
-            sub_attributes.insert("REVERB_STYLE".to_string(), value.style.get_str("uiIndex").unwrap().to_string());
+            sub_attributes.insert(
+                "REVERB_KNOB_POSITION".to_string(),
+                format!("{}", value.knob_position),
+            );
+            sub_attributes.insert(
+                "REVERB_STYLE".to_string(),
+                value.style.get_str("uiIndex").unwrap().to_string(),
+            );
             sub_attributes.insert("REVERB_TYPE".to_string(), format!("{}", value.reverb_type));
             sub_attributes.insert("REVERB_DECAY".to_string(), format!("{}", value.decay));
             sub_attributes.insert("REVERB_PREDELAY".to_string(), format!("{}", value.predelay));
@@ -165,11 +176,26 @@ impl ReverbEncoderBase {
             sub_attributes.insert("REVERB_LOCOLOR".to_string(), format!("{}", value.locolor));
             sub_attributes.insert("REVERB_HICOLOR".to_string(), format!("{}", value.hicolor));
             sub_attributes.insert("REVERB_HIFACTOR".to_string(), format!("{}", value.hifactor));
-            sub_attributes.insert("REVERB_MODSPEED".to_string(), format!("{}", value.mod_speed));
-            sub_attributes.insert("REVERB_MODDEPTH".to_string(), format!("{}", value.mod_depth));
-            sub_attributes.insert("REVERB_EARLYLEVEL".to_string(), format!("{}", value.early_level));
-            sub_attributes.insert("REVERB_TAILLEVEL".to_string(), format!("{}", value.tail_level));
-            sub_attributes.insert("REVERB_DRYLEVEL".to_string(), format!("{}", value.dry_level));
+            sub_attributes.insert(
+                "REVERB_MODSPEED".to_string(),
+                format!("{}", value.mod_speed),
+            );
+            sub_attributes.insert(
+                "REVERB_MODDEPTH".to_string(),
+                format!("{}", value.mod_depth),
+            );
+            sub_attributes.insert(
+                "REVERB_EARLYLEVEL".to_string(),
+                format!("{}", value.early_level),
+            );
+            sub_attributes.insert(
+                "REVERB_TAILLEVEL".to_string(),
+                format!("{}", value.tail_level),
+            );
+            sub_attributes.insert(
+                "REVERB_DRYLEVEL".to_string(),
+                format!("{}", value.dry_level),
+            );
 
             for (key, value) in &sub_attributes {
                 sub_element = sub_element.attr(key.as_str(), value.as_str());
@@ -188,8 +214,8 @@ impl ReverbEncoderBase {
 struct ReverbEncoder {
     knob_position: i8,
     style: ReverbStyle,
-    reverb_type: u8,    // I have no idea what this maps too..
-    decay: u16,         // Reaches 290 when set to max.
+    reverb_type: u8, // I have no idea what this maps too..
+    decay: u16,      // Reaches 290 when set to max.
     predelay: u8,
     diffuse: i8,
     locolor: i8,
@@ -218,31 +244,30 @@ impl ReverbEncoder {
             mod_depth: 0,
             early_level: 0,
             tail_level: 0,
-            dry_level: 0
+            dry_level: 0,
         }
     }
 }
 
-
 #[derive(Debug, EnumIter, Enum, EnumProperty)]
 enum ReverbStyle {
-    #[strum(props(uiIndex="0"))]
+    #[strum(props(uiIndex = "0"))]
     LIBRARY,
 
-    #[strum(props(uiIndex="1"))]
+    #[strum(props(uiIndex = "1"))]
     DARK_BLOOM,
 
-    #[strum(props(uiIndex="2"))]
+    #[strum(props(uiIndex = "2"))]
     MUSIC_CLUB,
 
-    #[strum(props(uiIndex="3"))]
+    #[strum(props(uiIndex = "3"))]
     REAL_PLATE,
 
-    #[strum(props(uiIndex="4"))]
+    #[strum(props(uiIndex = "4"))]
     CHAPEL,
 
-    #[strum(props(uiIndex="5"))]
-    HOCKEY_ARENA
+    #[strum(props(uiIndex = "5"))]
+    HOCKEY_ARENA,
 }
 
 impl Default for ReverbStyle {

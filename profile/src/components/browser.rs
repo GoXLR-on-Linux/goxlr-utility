@@ -2,9 +2,9 @@ use std::collections::HashMap;
 use std::fs::File;
 
 use xml::attribute::OwnedAttribute;
-use xml::EventWriter;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
+use xml::EventWriter;
 
 use crate::components::colours::ColourMap;
 
@@ -19,8 +19,7 @@ pub struct BrowserPreviewTree {
     playing: u8,
     file: String,
     play_toggle: u8,
-    current_relative_time: u8
-
+    current_relative_time: u8,
 }
 
 impl BrowserPreviewTree {
@@ -33,7 +32,7 @@ impl BrowserPreviewTree {
             playing: 0,
             file: "".to_string(),
             play_toggle: 0,
-            current_relative_time: 0
+            current_relative_time: 0,
         }
     }
 
@@ -66,13 +65,17 @@ impl BrowserPreviewTree {
     }
 
     pub fn write_browser(&self, writer: &mut EventWriter<&mut File>) {
-        let mut element: StartElementBuilder = XmlWriterEvent::start_element(self.element_name.as_str());
+        let mut element: StartElementBuilder =
+            XmlWriterEvent::start_element(self.element_name.as_str());
 
         let mut attributes: HashMap<String, String> = HashMap::default();
         attributes.insert("playing".to_string(), format!("{}", self.playing));
         attributes.insert("playToggle".to_string(), format!("{}", self.play_toggle));
         attributes.insert("file".to_string(), self.file.clone());
-        attributes.insert("currentRelativeTime".to_string(), format!("{}", self.current_relative_time));
+        attributes.insert(
+            "currentRelativeTime".to_string(),
+            format!("{}", self.current_relative_time),
+        );
 
         self.colour_map.write_colours(&mut attributes);
 

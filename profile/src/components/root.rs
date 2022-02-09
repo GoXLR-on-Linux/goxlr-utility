@@ -2,9 +2,9 @@ use std::collections::HashMap;
 use std::fs::File;
 
 use xml::attribute::OwnedAttribute;
-use xml::EventWriter;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
+use xml::EventWriter;
 
 /**
  * These have no special properties, they are literally just button colours..
@@ -21,7 +21,7 @@ impl RootElement {
         Self {
             version: 0,
             loudness: 0,
-            device: 0
+            device: 0,
         }
     }
 

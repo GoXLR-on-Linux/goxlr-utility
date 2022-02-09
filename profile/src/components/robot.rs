@@ -3,16 +3,17 @@ use std::fs::File;
 use std::os::raw::c_float;
 
 use enum_map::EnumMap;
-use strum::{EnumProperty, IntoEnumIterator};
-use strum_macros::{EnumIter, EnumProperty};
+use strum::{EnumIter, EnumProperty, IntoEnumIterator};
 use xml::attribute::OwnedAttribute;
-use xml::EventWriter;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
+use xml::EventWriter;
 
 use crate::components::colours::ColourMap;
 use crate::components::megaphone::Preset;
-use crate::components::megaphone::Preset::{PRESET_1, PRESET_2, PRESET_3, PRESET_4, PRESET_5, PRESET_6};
+use crate::components::megaphone::Preset::{
+    PRESET_1, PRESET_2, PRESET_3, PRESET_4, PRESET_5, PRESET_6,
+};
 use crate::components::robot::RobotStyle::ROBOT_1;
 
 /**
@@ -46,7 +47,11 @@ impl RobotEffectBase {
         let mut preset = RobotEffect::new();
         for attr in attributes {
             if attr.name.local_name == "robotEffectstate" {
-                if attr.value == "1" { preset.state = true; } else { preset.state = false }
+                if attr.value == "1" {
+                    preset.state = true;
+                } else {
+                    preset.state = false
+                }
                 continue;
             }
             if attr.name.local_name == "ROBOT_STYLE" {
@@ -151,23 +156,70 @@ impl RobotEffectBase {
             let mut sub_attributes: HashMap<String, String> = HashMap::default();
 
             let tag_name = format!("robotEffect{}", key.get_str("tagSuffix").unwrap());
-            let mut sub_element: StartElementBuilder = XmlWriterEvent::start_element(tag_name.as_str());
+            let mut sub_element: StartElementBuilder =
+                XmlWriterEvent::start_element(tag_name.as_str());
 
-            sub_attributes.insert("robotEffectstate".to_string(), if value.state { "1".to_string() } else { "0".to_string() });
-            sub_attributes.insert("ROBOT_STYLE".to_string(), value.style.get_str("uiIndex").unwrap().to_string());
-            sub_attributes.insert("ROBOT_SYNTHOSC_PULSEWIDTH".to_string(), format!("{}", value.synthosc_pulse_width));
-            sub_attributes.insert("ROBOT_SYNTHOSC_WAVEFORM".to_string(), format!("{}", value.synthosc_waveform));
-            sub_attributes.insert("ROBOT_VOCODER_GATE_THRESHOLD".to_string(), format!("{}", value.vocoder_gate_threshold));
+            sub_attributes.insert(
+                "robotEffectstate".to_string(),
+                if value.state {
+                    "1".to_string()
+                } else {
+                    "0".to_string()
+                },
+            );
+            sub_attributes.insert(
+                "ROBOT_STYLE".to_string(),
+                value.style.get_str("uiIndex").unwrap().to_string(),
+            );
+            sub_attributes.insert(
+                "ROBOT_SYNTHOSC_PULSEWIDTH".to_string(),
+                format!("{}", value.synthosc_pulse_width),
+            );
+            sub_attributes.insert(
+                "ROBOT_SYNTHOSC_WAVEFORM".to_string(),
+                format!("{}", value.synthosc_waveform),
+            );
+            sub_attributes.insert(
+                "ROBOT_VOCODER_GATE_THRESHOLD".to_string(),
+                format!("{}", value.vocoder_gate_threshold),
+            );
             sub_attributes.insert("ROBOT_DRY_MIX".to_string(), format!("{}", value.dry_mix));
-            sub_attributes.insert("ROBOT_VOCODER_LOW_FREQ".to_string(), format!("{}", value.vocoder_low_freq));
-            sub_attributes.insert("ROBOT_VOCODER_LOW_GAIN".to_string(), format!("{}", value.vocoder_low_gain));
-            sub_attributes.insert("ROBOT_VOCODER_LOW_BW".to_string(), format!("{}", value.vocoder_low_bw));
-            sub_attributes.insert("ROBOT_VOCODER_MID_FREQ".to_string(), format!("{}", value.vocoder_mid_freq));
-            sub_attributes.insert("ROBOT_VOCODER_MID_GAIN".to_string(), format!("{}", value.vocoder_mid_gain));
-            sub_attributes.insert("ROBOT_VOCODER_MID_BW".to_string(), format!("{}", value.vocoder_mid_bw));
-            sub_attributes.insert("ROBOT_VOCODER_HIGH_FREQ".to_string(), format!("{}", value.vocoder_high_freq));
-            sub_attributes.insert("ROBOT_VOCODER_HIGH_GAIN".to_string(), format!("{}", value.vocoder_high_gain));
-            sub_attributes.insert("ROBOT_VOCODER_HIGH_BW".to_string(), format!("{}", value.vocoder_high_bw));
+            sub_attributes.insert(
+                "ROBOT_VOCODER_LOW_FREQ".to_string(),
+                format!("{}", value.vocoder_low_freq),
+            );
+            sub_attributes.insert(
+                "ROBOT_VOCODER_LOW_GAIN".to_string(),
+                format!("{}", value.vocoder_low_gain),
+            );
+            sub_attributes.insert(
+                "ROBOT_VOCODER_LOW_BW".to_string(),
+                format!("{}", value.vocoder_low_bw),
+            );
+            sub_attributes.insert(
+                "ROBOT_VOCODER_MID_FREQ".to_string(),
+                format!("{}", value.vocoder_mid_freq),
+            );
+            sub_attributes.insert(
+                "ROBOT_VOCODER_MID_GAIN".to_string(),
+                format!("{}", value.vocoder_mid_gain),
+            );
+            sub_attributes.insert(
+                "ROBOT_VOCODER_MID_BW".to_string(),
+                format!("{}", value.vocoder_mid_bw),
+            );
+            sub_attributes.insert(
+                "ROBOT_VOCODER_HIGH_FREQ".to_string(),
+                format!("{}", value.vocoder_high_freq),
+            );
+            sub_attributes.insert(
+                "ROBOT_VOCODER_HIGH_GAIN".to_string(),
+                format!("{}", value.vocoder_high_gain),
+            );
+            sub_attributes.insert(
+                "ROBOT_VOCODER_HIGH_BW".to_string(),
+                format!("{}", value.vocoder_high_bw),
+            );
 
             for (key, value) in &sub_attributes {
                 sub_element = sub_element.attr(key.as_str(), value.as_str());

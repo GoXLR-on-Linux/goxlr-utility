@@ -4,18 +4,19 @@ use std::os::raw::c_float;
 use std::str::FromStr;
 
 use enum_map::EnumMap;
-use strum::{EnumProperty, IntoEnumIterator};
-use strum_macros::{Display, EnumIter, EnumProperty, EnumString};
+use strum::{Display, EnumIter, EnumProperty, EnumString, IntoEnumIterator};
 use xml::attribute::OwnedAttribute;
-use xml::EventWriter;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
+use xml::EventWriter;
 
 use crate::components::colours::ColourMap;
 use crate::components::hardtune::HardtuneSource::ALL;
 use crate::components::hardtune::HardtuneStyle::NORMAL;
 use crate::components::megaphone::Preset;
-use crate::components::megaphone::Preset::{PRESET_1, PRESET_2, PRESET_3, PRESET_4, PRESET_5, PRESET_6};
+use crate::components::megaphone::Preset::{
+    PRESET_1, PRESET_2, PRESET_3, PRESET_4, PRESET_5, PRESET_6,
+};
 
 /**
  * This is relatively static, main tag contains standard colour mapping, subtags contain various
@@ -34,13 +35,12 @@ impl HardtuneEffectBase {
         Self {
             colour_map: ColourMap::new(colour_map),
             preset_map: EnumMap::default(),
-            source: Default::default()
+            source: Default::default(),
         }
     }
 
     pub fn parse_hardtune_root(&mut self, attributes: &Vec<OwnedAttribute>) {
         for attr in attributes {
-
             // I honestly have no idea why this lives here :D
             if attr.name.local_name == "HARDTUNE_SOURCE" {
                 self.source = HardtuneSource::from_str(&attr.value).unwrap();
@@ -57,7 +57,11 @@ impl HardtuneEffectBase {
         let mut preset = HardtuneEffect::new();
         for attr in attributes {
             if attr.name.local_name == "hardtuneEffectstate" {
-                if attr.value == "1" { preset.state = true; } else { preset.state = false }
+                if attr.value == "1" {
+                    preset.state = true;
+                } else {
+                    preset.state = false
+                }
                 continue;
             }
             if attr.name.local_name == "HARDTUNE_STYLE" {
@@ -99,7 +103,10 @@ impl HardtuneEffectBase {
                 continue;
             }
 
-            println!("[HardtuneEffect] Unparsed Child Attribute: {}", &attr.name.local_name);
+            println!(
+                "[HardtuneEffect] Unparsed Child Attribute: {}",
+                &attr.name.local_name
+            );
         }
 
         // Ok, we should be able to store this now..
@@ -137,19 +144,39 @@ impl HardtuneEffectBase {
             let mut sub_attributes: HashMap<String, String> = HashMap::default();
 
             let tag_name = format!("hardtuneEffect{}", key.get_str("tagSuffix").unwrap());
-            let mut sub_element: StartElementBuilder = XmlWriterEvent::start_element(tag_name.as_str());
+            let mut sub_element: StartElementBuilder =
+                XmlWriterEvent::start_element(tag_name.as_str());
 
-            sub_attributes.insert("hardtuneEffectstate".to_string(), if value.state { "1".to_string() } else { "0".to_string() });
-            sub_attributes.insert("HARDTUNE_STYLE".to_string(), value.style.get_str("uiIndex").unwrap().to_string());
-            sub_attributes.insert("HARDTUNE_KEYSOURCE".to_string(), format!("{}", value.keysource));
+            sub_attributes.insert(
+                "hardtuneEffectstate".to_string(),
+                if value.state {
+                    "1".to_string()
+                } else {
+                    "0".to_string()
+                },
+            );
+            sub_attributes.insert(
+                "HARDTUNE_STYLE".to_string(),
+                value.style.get_str("uiIndex").unwrap().to_string(),
+            );
+            sub_attributes.insert(
+                "HARDTUNE_KEYSOURCE".to_string(),
+                format!("{}", value.keysource),
+            );
             sub_attributes.insert("HARDTUNE_AMOUNT".to_string(), format!("{}", value.amount));
             sub_attributes.insert("HARDTUNE_WINDOW".to_string(), format!("{}", value.window));
             sub_attributes.insert("HARDTUNE_RATE".to_string(), format!("{}", value.rate));
             sub_attributes.insert("HARDTUNE_SCALE".to_string(), format!("{}", value.scale));
-            sub_attributes.insert("HARDTUNE_PITCH_AMT".to_string(), format!("{}", value.pitch_amt));
+            sub_attributes.insert(
+                "HARDTUNE_PITCH_AMT".to_string(),
+                format!("{}", value.pitch_amt),
+            );
 
             if value.source.is_some() {
-                sub_attributes.insert("HARDTUNE_SOURCE".to_string(), value.source.as_ref().unwrap().to_string());
+                sub_attributes.insert(
+                    "HARDTUNE_SOURCE".to_string(),
+                    value.source.as_ref().unwrap().to_string(),
+                );
             }
 
             for (key, value) in &sub_attributes {
@@ -178,7 +205,6 @@ struct HardtuneEffect {
     scale: u8,
     pitch_amt: u8,
     source: Option<HardtuneSource>,
-
 }
 
 impl HardtuneEffect {
@@ -192,20 +218,20 @@ impl HardtuneEffect {
             rate: 0,
             scale: 0,
             pitch_amt: 0,
-            source: None
+            source: None,
         }
     }
 }
 
 #[derive(Debug, EnumIter, EnumProperty)]
 enum HardtuneStyle {
-    #[strum(props(uiIndex="0"))]
+    #[strum(props(uiIndex = "0"))]
     NORMAL,
 
-    #[strum(props(uiIndex="1"))]
+    #[strum(props(uiIndex = "1"))]
     MEDIUM,
 
-    #[strum(props(uiIndex="2"))]
+    #[strum(props(uiIndex = "2"))]
     HARD,
 }
 
@@ -220,7 +246,7 @@ enum HardtuneSource {
     ALL,
     MUSIC,
     GAME,
-    LINEIN
+    LINEIN,
 }
 
 impl Default for HardtuneSource {

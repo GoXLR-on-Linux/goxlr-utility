@@ -3,9 +3,9 @@ use std::fs::File;
 
 use strum::{EnumProperty, IntoEnumIterator};
 use xml::attribute::OwnedAttribute;
-use xml::EventWriter;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
+use xml::EventWriter;
 
 use crate::components::colours::ColourMap;
 use crate::components::mixer::FullChannelList;
@@ -13,7 +13,7 @@ use crate::components::mixer::FullChannelList;
 pub struct Fader {
     element_name: String,
     colour_map: ColourMap,
-    channel: FullChannelList
+    channel: FullChannelList,
 }
 
 impl Fader {
@@ -23,7 +23,7 @@ impl Fader {
         Self {
             element_name,
             colour_map: ColourMap::new(colour_map),
-            channel: FullChannelList::MIC
+            channel: FullChannelList::MIC,
         }
     }
 
@@ -55,10 +55,14 @@ impl Fader {
     }
 
     pub fn write_fader(&self, writer: &mut EventWriter<&mut File>) {
-        let mut element: StartElementBuilder = XmlWriterEvent::start_element(self.element_name.as_str());
+        let mut element: StartElementBuilder =
+            XmlWriterEvent::start_element(self.element_name.as_str());
 
         let mut attributes: HashMap<String, String> = HashMap::default();
-        attributes.insert(format!("{}listIndex", self.element_name), self.channel.get_str("faderIndex").unwrap().to_string());
+        attributes.insert(
+            format!("{}listIndex", self.element_name),
+            self.channel.get_str("faderIndex").unwrap().to_string(),
+        );
 
         self.colour_map.write_colours(&mut attributes);
 

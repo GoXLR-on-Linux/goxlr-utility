@@ -2,9 +2,9 @@ use std::collections::HashMap;
 use std::fs::File;
 
 use xml::attribute::OwnedAttribute;
-use xml::EventWriter;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
+use xml::EventWriter;
 
 use crate::components::colours::ColourMap;
 
@@ -18,7 +18,7 @@ pub struct Context {
 
     selected: u8,
     selected_id: Option<u8>,
-    selected_sample: String,  // These two should probably map to enums somewhere, matched up against
+    selected_sample: String, // These two should probably map to enums somewhere, matched up against
     selected_effects: String, // the relevant sections of the tags (for quickly pulling presets)
 }
 
@@ -32,7 +32,7 @@ impl Context {
             selected: 0,
             selected_id: None,
             selected_sample: "".to_string(),
-            selected_effects: "".to_string()
+            selected_effects: "".to_string(),
         }
     }
 
@@ -67,19 +67,29 @@ impl Context {
     }
 
     pub fn write_context(&self, writer: &mut EventWriter<&mut File>) {
-        let mut element: StartElementBuilder = XmlWriterEvent::start_element(self.element_name.as_str());
+        let mut element: StartElementBuilder =
+            XmlWriterEvent::start_element(self.element_name.as_str());
 
         let mut attributes: HashMap<String, String> = HashMap::default();
         attributes.insert("numselected".to_string(), format!("{}", self.selected));
 
         if self.selected_id.is_some() {
-            attributes.insert("selectedID".to_string(), format!("{}", self.selected_id.unwrap()));
+            attributes.insert(
+                "selectedID".to_string(),
+                format!("{}", self.selected_id.unwrap()),
+            );
         } else {
             attributes.insert("selectedID".to_string(), "".to_string());
         }
 
-        attributes.insert("selectedSampleStack".to_string(), self.selected_sample.clone());
-        attributes.insert("selectedEffectBank".to_string(), self.selected_effects.clone());
+        attributes.insert(
+            "selectedSampleStack".to_string(),
+            self.selected_sample.clone(),
+        );
+        attributes.insert(
+            "selectedEffectBank".to_string(),
+            self.selected_effects.clone(),
+        );
 
         self.colour_map.write_colours(&mut attributes);
 

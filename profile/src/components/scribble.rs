@@ -3,9 +3,9 @@ use std::fs::File;
 use std::str::FromStr;
 
 use xml::attribute::OwnedAttribute;
-use xml::EventWriter;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
+use xml::EventWriter;
 
 use crate::components::colours::ColourMap;
 use crate::components::scribble::ScribbleStyle::{INVERTED, NORMAL};
@@ -25,7 +25,7 @@ pub struct Scribble {
 
     // Size of the text..
     text_size: u8,
-    
+
     // Alpha level of.. something.. It should be noted, that this value has *MORE* precision than
     // an f64 in the official app, so we'll lose a little here when saving, but precision that high
     // is pretty up there on the 'wtf' list :D
@@ -36,7 +36,7 @@ pub struct Scribble {
 
     // Inverted or otherwise..
     style: ScribbleStyle,
-    
+
     // Filename in the .goxlr zip file to the prepared bitmap
     bitmap_file: String,
 }
@@ -54,7 +54,7 @@ impl Scribble {
             text_size: 0,
             alpha: 0.0,
             style: ScribbleStyle::NORMAL,
-            bitmap_file: "".to_string()
+            bitmap_file: "".to_string(),
         }
     }
 
@@ -74,12 +74,12 @@ impl Scribble {
                 self.text_bottom_middle = attr.value.clone();
                 continue;
             }
-            
+
             if attr.name.local_name.ends_with("alpha") {
                 self.alpha = f64::from_str(attr.value.as_str()).unwrap();
                 continue;
             }
-            
+
             if attr.name.local_name.ends_with("textSize") {
                 self.text_size = u8::from_str(attr.value.as_str()).unwrap();
                 continue;
@@ -107,16 +107,40 @@ impl Scribble {
     }
 
     pub fn write_scribble(&self, writer: &mut EventWriter<&mut File>) {
-        let mut element: StartElementBuilder = XmlWriterEvent::start_element(self.element_name.as_str());
+        let mut element: StartElementBuilder =
+            XmlWriterEvent::start_element(self.element_name.as_str());
 
         let mut attributes: HashMap<String, String> = HashMap::default();
-        attributes.insert(format!("{}iconFile", self.element_name), self.icon_file.clone());
-        attributes.insert(format!("{}string0", self.element_name), self.text_top_left.clone());
-        attributes.insert(format!("{}string1", self.element_name), self.text_bottom_middle.clone());
-        attributes.insert(format!("{}alpha", self.element_name), format!("{}", self.alpha));
-        attributes.insert(format!("{}inverted", self.element_name), if self.style == NORMAL { "0" } else { "1" }.parse().unwrap());
-        attributes.insert(format!("{}textSize", self.element_name), format!("{}", self.text_size));
-        attributes.insert(format!("{}bitmap", self.element_name), self.bitmap_file.clone());
+        attributes.insert(
+            format!("{}iconFile", self.element_name),
+            self.icon_file.clone(),
+        );
+        attributes.insert(
+            format!("{}string0", self.element_name),
+            self.text_top_left.clone(),
+        );
+        attributes.insert(
+            format!("{}string1", self.element_name),
+            self.text_bottom_middle.clone(),
+        );
+        attributes.insert(
+            format!("{}alpha", self.element_name),
+            format!("{}", self.alpha),
+        );
+        attributes.insert(
+            format!("{}inverted", self.element_name),
+            if self.style == NORMAL { "0" } else { "1" }
+                .parse()
+                .unwrap(),
+        );
+        attributes.insert(
+            format!("{}textSize", self.element_name),
+            format!("{}", self.text_size),
+        );
+        attributes.insert(
+            format!("{}bitmap", self.element_name),
+            self.bitmap_file.clone(),
+        );
 
         self.colour_map.write_colours(&mut attributes);
 
