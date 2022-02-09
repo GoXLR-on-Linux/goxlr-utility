@@ -236,17 +236,17 @@ impl Track {
 #[derive(Debug, Enum, EnumProperty)]
 enum PlaybackMode {
     #[strum(props(index = "0"))]
-    PLAY_NEXT,
+    PlayNext,
     #[strum(props(index = "1"))]
-    PLAY_STOP,
+    PlayStop,
     #[strum(props(index = "2"))]
-    PLAY_FADE,
+    PlayFade,
     #[strum(props(index = "3"))]
-    STOP_ON_RELEASE,
+    StopOnRelease,
     #[strum(props(index = "4"))]
-    FADE_ON_RELEASE,
+    FadeOnRelease,
     #[strum(props(index = "5"))]
-    LOOP,
+    Loop,
 }
 
 #[derive(Debug, Enum, EnumProperty)]
