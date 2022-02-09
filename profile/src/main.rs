@@ -25,7 +25,7 @@ use crate::components::root::RootElement;
 use crate::components::sample::SampleBase;
 use crate::components::scribble::Scribble;
 use crate::components::simple::SimpleElement;
-use crate::SampleButtons::{BOTTOM_LEFT, BOTTOM_RIGHT, CLEAR, TOP_LEFT, TOP_RIGHT};
+use crate::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
 
 mod components;
 
@@ -258,40 +258,40 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if name.local_name == "sampleTopLeft" {
                     let mut sampler = SampleBase::new("sampleTopLeft".to_string());
                     sampler.parse_sample_root(&attributes);
-                    sampler_map[TOP_LEFT] = Option::Some(sampler);
-                    active_sample_button = sampler_map[TOP_LEFT].as_mut();
+                    sampler_map[TopLeft] = Option::Some(sampler);
+                    active_sample_button = sampler_map[TopLeft].as_mut();
                     continue;
                 }
 
                 if name.local_name == "sampleTopRight" {
                     let mut sampler = SampleBase::new("sampleTopRight".to_string());
                     sampler.parse_sample_root(&attributes);
-                    sampler_map[TOP_RIGHT] = Option::Some(sampler);
-                    active_sample_button = sampler_map[TOP_RIGHT].as_mut();
+                    sampler_map[TopRight] = Option::Some(sampler);
+                    active_sample_button = sampler_map[TopRight].as_mut();
                     continue;
                 }
 
                 if name.local_name == "sampleBottomLeft" {
                     let mut sampler = SampleBase::new("sampleBottomLeft".to_string());
                     sampler.parse_sample_root(&attributes);
-                    sampler_map[BOTTOM_LEFT] = Option::Some(sampler);
-                    active_sample_button = sampler_map[BOTTOM_LEFT].as_mut();
+                    sampler_map[BottomLeft] = Option::Some(sampler);
+                    active_sample_button = sampler_map[BottomLeft].as_mut();
                     continue;
                 }
 
                 if name.local_name == "sampleBottomRight" {
                     let mut sampler = SampleBase::new("sampleBottomRight".to_string());
                     sampler.parse_sample_root(&attributes);
-                    sampler_map[BOTTOM_RIGHT] = Option::Some(sampler);
-                    active_sample_button = sampler_map[BOTTOM_RIGHT].as_mut();
+                    sampler_map[BottomRight] = Option::Some(sampler);
+                    active_sample_button = sampler_map[BottomRight].as_mut();
                     continue;
                 }
 
                 if name.local_name == "sampleClear" {
                     let mut sampler = SampleBase::new("sampleClear".to_string());
                     sampler.parse_sample_root(&attributes);
-                    sampler_map[CLEAR] = Option::Some(sampler);
-                    active_sample_button = sampler_map[CLEAR].as_mut();
+                    sampler_map[Clear] = Option::Some(sampler);
+                    active_sample_button = sampler_map[Clear].as_mut();
                     continue;
                 }
 
@@ -405,9 +405,9 @@ struct GoXLR {
 
 #[derive(Debug, Enum)]
 enum SampleButtons {
-    TOP_LEFT,
-    TOP_RIGHT,
-    BOTTOM_LEFT,
-    BOTTOM_RIGHT,
-    CLEAR,
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight,
+    Clear,
 }
