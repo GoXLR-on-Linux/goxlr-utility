@@ -12,7 +12,7 @@ use xml::EventWriter;
 use crate::components::colours::ColourMap;
 use crate::components::megaphone::Preset;
 use crate::components::megaphone::Preset::{Preset1, Preset2, Preset3, Preset4, Preset5, Preset6};
-use crate::components::robot::RobotStyle::ROBOT_1;
+use crate::components::robot::RobotStyle::Robot1;
 
 /**
  * This is relatively static, main tag contains standard colour mapping, subtags contain various
@@ -286,17 +286,17 @@ impl RobotEffect {
 #[derive(Debug, EnumIter, EnumProperty)]
 enum RobotStyle {
     #[strum(props(uiIndex = "0"))]
-    ROBOT_1,
+    Robot1,
 
     #[strum(props(uiIndex = "1"))]
-    ROBOT_2,
+    Robot2,
 
     #[strum(props(uiIndex = "2"))]
-    ROBOT_3,
+    Robot3,
 }
 
 impl Default for RobotStyle {
     fn default() -> Self {
-        ROBOT_1
+        Robot1
     }
 }
