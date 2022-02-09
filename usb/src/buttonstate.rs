@@ -22,14 +22,14 @@ pub enum Buttons {
     // The rest are GoXLR Full Buttons. On the mini, they will simply be ignored.
     EffectSelect1 = 0,
     EffectSelect2 = 5,
-    EffectSelect3 = 11,
+    EffectSelect3 = 10,
     EffectSelect4 = 15,
     EffectSelect5 = 1,
     EffectSelect6 = 6,
 
     EffectFx = 21,
     EffectMegaphone = 20,
-    EffectRobot = 10,
+    EffectRobot = 11,
     EffectHardTune = 16,
 
     SamplerSelectA = 2,
