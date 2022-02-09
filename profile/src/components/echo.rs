@@ -230,7 +230,7 @@ impl EchoEncoder {
     pub fn new() -> Self {
         Self {
             knob_position: 0,
-            style: EchoStyle::QUARTER,
+            style: EchoStyle::Quarter,
             source: 0,
             div_l: 0,
             div_r: 0,
@@ -250,26 +250,32 @@ impl EchoEncoder {
 #[derive(Debug, EnumIter, Enum, EnumProperty)]
 enum EchoStyle {
     #[strum(props(uiIndex = "0"))]
-    QUARTER,
+    #[strum(to_string = "QUARTER")]
+    Quarter,
 
     #[strum(props(uiIndex = "1"))]
-    EIGHTH,
+    #[strum(to_string = "EIGHTH")]
+    Eighth,
 
     #[strum(props(uiIndex = "2"))]
-    TRIPLET,
+    #[strum(to_string = "TRIPLET")]
+    Triplet,
 
     #[strum(props(uiIndex = "3"))]
-    PING_PONG,
+    #[strum(to_string = "PING_PONG")]
+    PingPong,
 
     #[strum(props(uiIndex = "4"))]
-    CLASSIC_SLAP,
+    #[strum(to_string = "CLASSIC_SLAP")]
+    ClassicSlap,
 
     #[strum(props(uiIndex = "5"))]
-    MULTI_TAP,
+    #[strum(to_string = "MULTI_TAP")]
+    MultiTap,
 }
 
 impl Default for EchoStyle {
     fn default() -> Self {
-        EchoStyle::QUARTER
+        EchoStyle::Quarter
     }
 }
