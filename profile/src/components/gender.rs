@@ -154,7 +154,7 @@ impl GenderEncoder {
     pub fn new() -> Self {
         Self {
             knob_position: 0,
-            style: GenderStyle::NARROW,
+            style: GenderStyle::Narrow,
             range: 0,
         }
     }
@@ -163,17 +163,17 @@ impl GenderEncoder {
 #[derive(Debug, EnumIter, Enum, EnumProperty)]
 enum GenderStyle {
     #[strum(props(uiIndex = "0"))]
-    NARROW,
+    Narrow,
 
     #[strum(props(uiIndex = "1"))]
-    MEDIUM,
+    Medium,
 
     #[strum(props(uiIndex = "2"))]
-    WIDE,
+    Wide,
 }
 
 impl Default for GenderStyle {
     fn default() -> Self {
-        GenderStyle::NARROW
+        GenderStyle::Narrow
     }
 }
