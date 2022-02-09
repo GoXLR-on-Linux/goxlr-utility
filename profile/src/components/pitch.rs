@@ -174,7 +174,7 @@ impl PitchEncoder {
     pub fn new() -> Self {
         Self {
             knob_position: 0,
-            style: PitchStyle::NARROW,
+            style: PitchStyle::Narrow,
             range: 0,
             threshold: 0,
             inst_ratio: None,
@@ -185,14 +185,14 @@ impl PitchEncoder {
 #[derive(Debug, EnumIter, Enum, EnumProperty)]
 enum PitchStyle {
     #[strum(props(uiIndex = "0"))]
-    NARROW,
+    Narrow,
 
     #[strum(props(uiIndex = "1"))]
-    WIDE,
+    Wide,
 }
 
 impl Default for PitchStyle {
     fn default() -> Self {
-        PitchStyle::NARROW
+        PitchStyle::Narrow
     }
 }
