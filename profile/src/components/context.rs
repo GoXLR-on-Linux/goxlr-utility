@@ -36,7 +36,7 @@ impl Context {
         }
     }
 
-    pub fn parse_context(&mut self, attributes: &Vec<OwnedAttribute>) {
+    pub fn parse_context(&mut self, attributes: &[OwnedAttribute]) {
         for attr in attributes {
             if attr.name.local_name == "numselected" {
                 self.selected = attr.value.parse().unwrap();

@@ -39,7 +39,7 @@ impl HardtuneEffectBase {
         }
     }
 
-    pub fn parse_hardtune_root(&mut self, attributes: &Vec<OwnedAttribute>) {
+    pub fn parse_hardtune_root(&mut self, attributes: &[OwnedAttribute]) {
         for attr in attributes {
             // I honestly have no idea why this lives here :D
             if attr.name.local_name == "HARDTUNE_SOURCE" {
@@ -53,7 +53,7 @@ impl HardtuneEffectBase {
         }
     }
 
-    pub fn parse_hardtune_preset(&mut self, id: u8, attributes: &Vec<OwnedAttribute>) {
+    pub fn parse_hardtune_preset(&mut self, id: u8, attributes: &[OwnedAttribute]) {
         let mut preset = HardtuneEffect::new();
         for attr in attributes {
             if attr.name.local_name == "hardtuneEffectstate" {

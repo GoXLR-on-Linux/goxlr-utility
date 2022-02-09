@@ -28,7 +28,7 @@ impl Effects {
         }
     }
 
-    pub fn parse_effect(&mut self, attributes: &Vec<OwnedAttribute>) {
+    pub fn parse_effect(&mut self, attributes: &[OwnedAttribute]) {
         for attr in attributes {
             if attr.name.local_name.ends_with("Name") {
                 self.name = attr.value.clone();

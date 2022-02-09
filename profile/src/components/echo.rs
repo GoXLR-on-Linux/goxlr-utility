@@ -36,7 +36,7 @@ impl EchoEncoderBase {
         }
     }
 
-    pub fn parse_echo_root(&mut self, attributes: &Vec<OwnedAttribute>) {
+    pub fn parse_echo_root(&mut self, attributes: &[OwnedAttribute]) {
         for attr in attributes {
             if attr.name.local_name == "active_set" {
                 self.active_set = attr.value.parse().unwrap();
@@ -49,7 +49,7 @@ impl EchoEncoderBase {
         }
     }
 
-    pub fn parse_echo_preset(&mut self, id: u8, attributes: &Vec<OwnedAttribute>) {
+    pub fn parse_echo_preset(&mut self, id: u8, attributes: &[OwnedAttribute]) {
         let mut preset = EchoEncoder::new();
         for attr in attributes {
             if attr.name.local_name == "DELAY_STYLE" {

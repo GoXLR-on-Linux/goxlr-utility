@@ -25,7 +25,7 @@ impl RootElement {
         }
     }
 
-    pub fn parse_root(&mut self, attributes: &Vec<OwnedAttribute>) {
+    pub fn parse_root(&mut self, attributes: &[OwnedAttribute]) {
         for attr in attributes {
             if attr.name.local_name == "version" {
                 self.version = attr.value.parse().unwrap();

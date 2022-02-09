@@ -36,7 +36,7 @@ impl BrowserPreviewTree {
         }
     }
 
-    pub fn parse_browser(&mut self, attributes: &Vec<OwnedAttribute>) {
+    pub fn parse_browser(&mut self, attributes: &[OwnedAttribute]) {
         for attr in attributes {
             if attr.name.local_name == "playing" {
                 self.playing = attr.value.parse().unwrap();

@@ -43,7 +43,7 @@ impl MuteChat {
         }
     }
 
-    pub fn parse_mute_chat(&mut self, attributes: &Vec<OwnedAttribute>) {
+    pub fn parse_mute_chat(&mut self, attributes: &[OwnedAttribute]) {
         for attr in attributes {
             if attr.name.local_name == "micIsAnActiveFader" {
                 self.mic_fader_id = attr.value.parse().unwrap();

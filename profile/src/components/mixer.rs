@@ -25,7 +25,7 @@ impl Mixers {
         }
     }
 
-    pub fn parse_mixers(&mut self, attributes: &Vec<OwnedAttribute>) {
+    pub fn parse_mixers(&mut self, attributes: &[OwnedAttribute]) {
         for attr in attributes {
             if attr.name.local_name.ends_with("Level") {
                 let mut found = false;

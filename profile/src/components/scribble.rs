@@ -58,7 +58,7 @@ impl Scribble {
         }
     }
 
-    pub fn parse_scribble(&mut self, attributes: &Vec<OwnedAttribute>) {
+    pub fn parse_scribble(&mut self, attributes: &[OwnedAttribute]) {
         for attr in attributes {
             if attr.name.local_name.ends_with("iconFile") {
                 self.icon_file = attr.value.clone();

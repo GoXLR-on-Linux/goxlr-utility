@@ -35,7 +35,7 @@ impl SampleBase {
         }
     }
 
-    pub fn parse_sample_root(&mut self, attributes: &Vec<OwnedAttribute>) {
+    pub fn parse_sample_root(&mut self, attributes: &[OwnedAttribute]) {
         for attr in attributes {
             if attr.name.local_name.ends_with("state") && self.element_name != "sampleClear" {
                 if attr.value != "Empty" && attr.value != "Stopped" {
@@ -51,7 +51,7 @@ impl SampleBase {
         }
     }
 
-    pub fn parse_sample_stack(&mut self, id: char, attributes: &Vec<OwnedAttribute>) {
+    pub fn parse_sample_stack(&mut self, id: char, attributes: &[OwnedAttribute]) {
         // The easiest way to handle this is to parse everything into key-value pairs, then try
         // to locate all the settings for each track inside it..
         let mut map: HashMap<String, String> = HashMap::default();

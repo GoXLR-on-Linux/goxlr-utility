@@ -34,7 +34,7 @@ impl MegaphoneEffectBase {
         }
     }
 
-    pub fn parse_megaphone_root(&mut self, attributes: &Vec<OwnedAttribute>) {
+    pub fn parse_megaphone_root(&mut self, attributes: &[OwnedAttribute]) {
         for attr in attributes {
             if !self.colour_map.read_colours(attr) {
                 println!("[megaphoneEffect] Unparsed Attribute: {}", attr.name);
@@ -42,7 +42,7 @@ impl MegaphoneEffectBase {
         }
     }
 
-    pub fn parse_megaphone_preset(&mut self, id: u8, attributes: &Vec<OwnedAttribute>) {
+    pub fn parse_megaphone_preset(&mut self, id: u8, attributes: &[OwnedAttribute]) {
         let mut preset = MegaphoneEffect::new();
         for attr in attributes {
             if attr.name.local_name == "megaphoneEffectstate" {
