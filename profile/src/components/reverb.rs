@@ -12,7 +12,7 @@ use xml::EventWriter;
 use crate::components::colours::ColourMap;
 use crate::components::megaphone::Preset;
 use crate::components::megaphone::Preset::{Preset1, Preset2, Preset3, Preset4, Preset5, Preset6};
-use crate::components::reverb::ReverbStyle::LIBRARY;
+use crate::components::reverb::ReverbStyle::Library;
 
 /**
  * This is relatively static, main tag contains standard colour mapping, subtags contain various
@@ -234,7 +234,7 @@ impl ReverbEncoder {
     pub fn new() -> Self {
         Self {
             knob_position: 0,
-            style: ReverbStyle::LIBRARY,
+            style: ReverbStyle::Library,
             reverb_type: 0,
             decay: 0,
             predelay: 0,
@@ -254,26 +254,26 @@ impl ReverbEncoder {
 #[derive(Debug, EnumIter, Enum, EnumProperty)]
 enum ReverbStyle {
     #[strum(props(uiIndex = "0"))]
-    LIBRARY,
+    Library,
 
     #[strum(props(uiIndex = "1"))]
-    DARK_BLOOM,
+    DarkBloom,
 
     #[strum(props(uiIndex = "2"))]
-    MUSIC_CLUB,
+    MusicClub,
 
     #[strum(props(uiIndex = "3"))]
-    REAL_PLATE,
+    RealPlate,
 
     #[strum(props(uiIndex = "4"))]
-    CHAPEL,
+    Chapel,
 
     #[strum(props(uiIndex = "5"))]
-    HOCKEY_ARENA,
+    HockeyArena,
 }
 
 impl Default for ReverbStyle {
     fn default() -> Self {
-        LIBRARY
+        Library
     }
 }
