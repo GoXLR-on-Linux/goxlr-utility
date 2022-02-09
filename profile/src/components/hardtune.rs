@@ -14,9 +14,7 @@ use crate::components::colours::ColourMap;
 use crate::components::hardtune::HardtuneSource::All;
 use crate::components::hardtune::HardtuneStyle::Normal;
 use crate::components::megaphone::Preset;
-use crate::components::megaphone::Preset::{
-    PRESET_1, PRESET_2, PRESET_3, PRESET_4, PRESET_5, PRESET_6,
-};
+use crate::components::megaphone::Preset::{Preset1, Preset2, Preset3, Preset4, Preset5, Preset6};
 
 /**
  * This is relatively static, main tag contains standard colour mapping, subtags contain various
@@ -111,17 +109,17 @@ impl HardtuneEffectBase {
 
         // Ok, we should be able to store this now..
         if id == 1 {
-            self.preset_map[PRESET_1] = preset;
+            self.preset_map[Preset1] = preset;
         } else if id == 2 {
-            self.preset_map[PRESET_2] = preset;
+            self.preset_map[Preset2] = preset;
         } else if id == 3 {
-            self.preset_map[PRESET_3] = preset;
+            self.preset_map[Preset3] = preset;
         } else if id == 4 {
-            self.preset_map[PRESET_4] = preset;
+            self.preset_map[Preset4] = preset;
         } else if id == 5 {
-            self.preset_map[PRESET_5] = preset;
+            self.preset_map[Preset5] = preset;
         } else if id == 6 {
-            self.preset_map[PRESET_6] = preset;
+            self.preset_map[Preset6] = preset;
         }
     }
 
