@@ -11,7 +11,7 @@ use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
 use crate::components::colours::ColourMap;
-use crate::components::hardtune::HardtuneSource::ALL;
+use crate::components::hardtune::HardtuneSource::All;
 use crate::components::hardtune::HardtuneStyle::Normal;
 use crate::components::megaphone::Preset;
 use crate::components::megaphone::Preset::{
@@ -247,14 +247,21 @@ impl Default for HardtuneStyle {
 
 #[derive(Debug, Display, EnumString)]
 enum HardtuneSource {
-    ALL,
-    MUSIC,
-    GAME,
-    LINEIN,
+    #[strum(to_string = "ALL")]
+    All,
+
+    #[strum(to_string = "MUSIC")]
+    Music,
+
+    #[strum(to_string = "GAME")]
+    Game,
+
+    #[strum(to_string = "LINEIN")]
+    LineIn,
 }
 
 impl Default for HardtuneSource {
     fn default() -> Self {
-        ALL
+        All
     }
 }
