@@ -10,7 +10,7 @@ use xml::EventWriter;
 
 use crate::components::colours::{ColourMap, ColourState};
 use crate::components::mute::MuteFunction;
-use crate::components::mute_chat::CoughToggle::HOLD;
+use crate::components::mute_chat::CoughToggle::Hold;
 use std::str::FromStr;
 
 /**
@@ -38,7 +38,7 @@ impl MuteChat {
             colour_map: ColourMap::new(colour_map),
             mic_fader_id: 4,
             blink: ColourState::Off,
-            cough_behaviour: CoughToggle::HOLD,
+            cough_behaviour: CoughToggle::Hold,
             cough_mute_source: MuteFunction::All,
             cough_button_on: false,
         }
@@ -53,9 +53,9 @@ impl MuteChat {
 
             if attr.name.local_name == "coughButtonToggleSetting" {
                 self.cough_behaviour = if attr.value == "0" {
-                    CoughToggle::HOLD
+                    CoughToggle::Hold
                 } else {
-                    CoughToggle::TOGGLE
+                    CoughToggle::Toggle
                 };
                 continue;
             }
@@ -96,7 +96,7 @@ impl MuteChat {
         );
         attributes.insert(
             "coughButtonToggleSetting".to_string(),
-            if self.cough_behaviour == HOLD {
+            if self.cough_behaviour == Hold {
                 "0".to_string()
             } else {
                 "1".to_string()
@@ -133,6 +133,6 @@ impl MuteChat {
 
 #[derive(PartialEq)]
 enum CoughToggle {
-    HOLD,
-    TOGGLE,
+    Hold,
+    Toggle,
 }
