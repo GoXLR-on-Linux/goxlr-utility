@@ -130,49 +130,42 @@ impl ColourMap {
         let mut key = format!("{}offStyle", self.prefix);
         attributes.insert(key, self.off_style.to_string());
 
-        if self.selected.is_some() {
-            attributes.insert(
-                format!("{}selected", self.prefix),
-                format!("{}", self.selected.unwrap()),
-            );
+        if let Some(selected) = self.selected {
+            attributes.insert(format!("{}selected", self.prefix), format!("{}", selected));
         }
 
-        if self.velocity.is_some() {
+        if let Some(velocity) = &self.velocity {
             key = format!("{}velocity", self.prefix);
-            attributes.insert(key, format!("{}", self.velocity.unwrap()));
+            attributes.insert(key, format!("{}", velocity));
         }
 
-        if let Some(value) = &self.state {
+        if let Some(state) = &self.state {
             key = format!("{}state", self.prefix);
-            attributes.insert(key, value.to_string());
+            attributes.insert(key, state.to_string());
         }
 
-        if let Some(value) = &self.blink {
+        if let Some(blink) = &self.blink {
             key = format!("{}blink", self.prefix);
-            attributes.insert(key, value.to_string());
+            attributes.insert(key, blink.to_string());
         }
 
-        if self.colour_group.is_some() {
-            let colour = self.colour_group.as_ref().unwrap().clone();
+        if let Some(colour_group) = &self.colour_group {
+            let colour = colour_group.to_string();
             attributes.insert("colorGroup".to_string(), colour);
         }
 
-        if self.colour_list.is_some() {
-            let vector = self.colour_list.as_ref().unwrap();
+        if let Some(vector) = &self.colour_list {
             for i in 0..3 {
-                if vector.get(i).is_some() {
-                    let colour = vector.get(i).unwrap();
-                    if colour.is_some() {
-                        key = format!("{}colour{}", self.prefix, i);
-                        attributes.insert(key, colour.as_ref().unwrap().to_rgba());
-                    }
+                if let Some(Some(colour)) = vector.get(i) {
+                    key = format!("{}colour{}", self.prefix, i);
+                    attributes.insert(key, colour.to_rgba());
                 }
             }
         }
 
-        if self.colour_display.is_some() {
+        if let Some(colour_display) = &self.colour_display {
             key = format!("{}Display", self.prefix);
-            attributes.insert(key, self.colour_display.as_ref().unwrap().to_string());
+            attributes.insert(key, colour_display.to_string());
         }
     }
 }
