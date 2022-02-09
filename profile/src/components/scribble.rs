@@ -8,7 +8,7 @@ use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
 use crate::components::colours::ColourMap;
-use crate::components::scribble::ScribbleStyle::{INVERTED, NORMAL};
+use crate::components::scribble::ScribbleStyle::{Inverted, Normal};
 
 pub struct Scribble {
     element_name: String,
@@ -53,7 +53,7 @@ impl Scribble {
             text_bottom_middle: "".to_string(),
             text_size: 0,
             alpha: 0.0,
-            style: ScribbleStyle::NORMAL,
+            style: ScribbleStyle::Normal,
             bitmap_file: "".to_string(),
         }
     }
@@ -87,9 +87,9 @@ impl Scribble {
 
             if attr.name.local_name.ends_with("inverted") {
                 if attr.value == "0" {
-                    self.style = NORMAL;
+                    self.style = Normal;
                 } else {
-                    self.style = INVERTED;
+                    self.style = Inverted;
                 }
                 continue;
             }
@@ -132,7 +132,7 @@ impl Scribble {
         );
         attributes.insert(
             format!("{}inverted", self.element_name),
-            if self.style == NORMAL { "0" } else { "1" }
+            if self.style == Normal { "0" } else { "1" }
                 .parse()
                 .unwrap(),
         );
@@ -159,6 +159,6 @@ impl Scribble {
 
 #[derive(PartialEq)]
 enum ScribbleStyle {
-    NORMAL,
-    INVERTED,
+    Normal,
+    Inverted,
 }
