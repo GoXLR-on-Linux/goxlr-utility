@@ -23,7 +23,7 @@ impl Fader {
         Self {
             element_name,
             colour_map: ColourMap::new(colour_map),
-            channel: FullChannelList::MIC,
+            channel: FullChannelList::Mic,
         }
     }
 

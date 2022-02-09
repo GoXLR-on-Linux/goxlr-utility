@@ -179,37 +179,37 @@ pub enum OutputChannels {
 pub enum FullChannelList {
     // Base Mixer Channels
     #[strum(props(Name = "mic", faderIndex = "0"))]
-    MIC,
+    Mic,
 
     #[strum(props(Name = "chat", faderIndex = "1"))]
-    CHAT,
+    Chat,
 
     #[strum(props(Name = "music", faderIndex = "2"))]
-    MUSIC,
+    Music,
 
     #[strum(props(Name = "game", faderIndex = "3"))]
-    GAME,
+    Game,
 
     #[strum(props(Name = "console", faderIndex = "4"))]
-    CONSOLE,
+    Console,
 
     #[strum(props(Name = "lineIn", faderIndex = "5"))]
-    LINE_IN,
+    LineIn,
 
     #[strum(props(Name = "system", faderIndex = "6"))]
-    SYSTEM,
+    System,
 
     #[strum(props(Name = "sample", faderIndex = "7"))]
-    SAMPLE,
+    Sample,
 
     // Extra Volume Mixers
     #[strum(props(Name = "headphone", faderIndex = "8"))]
-    HEADPHONE,
+    Headphones,
 
     // Not Present in the Fader 'Source' List..
     #[strum(props(Name = "mic2headphoneSub", faderIndex = "-1"))]
-    MIC_MONITOR,
+    MicMonitor,
 
     #[strum(props(Name = "lineOut", faderIndex = "9"))]
-    LINE_OUT,
+    LineOut,
 }
