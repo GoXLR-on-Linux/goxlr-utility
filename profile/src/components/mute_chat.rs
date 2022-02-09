@@ -11,6 +11,7 @@ use xml::EventWriter;
 use crate::components::colours::{ColourMap, ColourState};
 use crate::components::mute::MuteFunction;
 use crate::components::mute_chat::CoughToggle::HOLD;
+use std::str::FromStr;
 
 /**
  * These have no special properties, they are literally just button colours..
@@ -36,7 +37,7 @@ impl MuteChat {
             element_name,
             colour_map: ColourMap::new(colour_map),
             mic_fader_id: 4,
-            blink: ColourState::OFF,
+            blink: ColourState::Off,
             cough_behaviour: CoughToggle::HOLD,
             cough_mute_source: MuteFunction::MUTE_ALL,
             cough_button_on: false,
@@ -70,11 +71,7 @@ impl MuteChat {
             }
 
             if attr.name.local_name == "blink" {
-                self.blink = if attr.value == "0" {
-                    ColourState::OFF
-                } else {
-                    ColourState::ON
-                };
+                self.blink = ColourState::from_str(&attr.value).unwrap();
                 continue;
             }
 
@@ -120,14 +117,7 @@ impl MuteChat {
                 "0".to_string()
             },
         );
-        attributes.insert(
-            "blink".to_string(),
-            if self.blink == ColourState::OFF {
-                "0".to_string()
-            } else {
-                "1".to_string()
-            },
-        );
+        attributes.insert("blink".to_string(), self.blink.to_string());
 
         self.colour_map.write_colours(&mut attributes);
 

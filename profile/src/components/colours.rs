@@ -74,21 +74,13 @@ impl ColourMap {
 
         attr_key = format!("{}state", &self.prefix);
         if attribute.name.local_name == attr_key {
-            if attribute.value == "0" {
-                self.state = Option::Some(ColourState::OFF);
-            } else {
-                self.state = Option::Some(ColourState::ON);
-            }
+            self.state = Some(ColourState::from_str(&attribute.value).unwrap());
             return true;
         }
 
         attr_key = format!("{}blink", &self.prefix);
         if attribute.name.local_name == attr_key {
-            if attribute.value == "0" {
-                self.blink = Option::Some(ColourState::OFF);
-            } else {
-                self.blink = Option::Some(ColourState::ON);
-            }
+            self.blink = Some(ColourState::from_str(&attribute.value).unwrap());
             return true;
         }
 
@@ -150,26 +142,14 @@ impl ColourMap {
             attributes.insert(key, format!("{}", self.velocity.unwrap()));
         }
 
-        if self.state.is_some() {
+        if let Some(value) = &self.state {
             key = format!("{}state", self.prefix);
-            let output;
-            if self.state.as_ref().unwrap() == &ColourState::OFF {
-                output = "0".to_string();
-            } else {
-                output = "1".to_string();
-            }
-            attributes.insert(key, output);
+            attributes.insert(key, value.to_string());
         }
 
-        if self.blink.is_some() {
+        if let Some(value) = &self.blink {
             key = format!("{}blink", self.prefix);
-            let output;
-            if self.blink.as_ref().unwrap() == &ColourState::OFF {
-                output = "0".to_string();
-            } else {
-                output = "1".to_string();
-            }
-            attributes.insert(key, output);
+            attributes.insert(key, value.to_string());
         }
 
         if self.colour_group.is_some() {
@@ -221,10 +201,13 @@ enum ColourDisplay {
     GradientMeter,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, EnumString, PartialEq, Display)]
 pub enum ColourState {
-    OFF,
-    ON,
+    #[strum(to_string = "0")]
+    Off,
+
+    #[strum(to_string = "1")]
+    On,
 }
 
 #[derive(Debug)]
