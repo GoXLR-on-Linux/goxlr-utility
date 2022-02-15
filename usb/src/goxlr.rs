@@ -20,6 +20,7 @@ use rusb::{
 use std::io::{Cursor, Write};
 use std::thread::sleep;
 use std::time::Duration;
+use rusb::Error::Pipe;
 
 #[derive(Debug)]
 pub struct GoXLR<T: UsbContext> {
@@ -93,10 +94,29 @@ impl<T: UsbContext> GoXLR<T> {
             device_is_claimed,
         };
 
-        // Resets the state of the device (unconfirmed)
-        goxlr.write_control(1, 0, 0, &[])?;
-        goxlr.read_control(3, 0, 0, 1040)?;
+        // Resets the state of the device (unconfirmed - Might just be the command id counter)
+        let result = goxlr.write_control(1, 0, 0, &[]);
 
+        if result.is_err() && result.unwrap_err() == Pipe {
+            // The GoXLR is not initialised, we need to fix that..
+            goxlr.handle.release_interface(0);
+            goxlr.handle.set_auto_detach_kernel_driver(true);
+
+            if !goxlr.handle.claim_interface(0).is_ok() {
+                return Err(ConnectError::DeviceNotClaimed);
+            }
+
+            // Firstly, activate the command pipe..
+            goxlr.read_control(0, 0, 0, 24)?;
+
+            // Now activate audio..
+            goxlr.write_class_control(1,0x0100, 0x2900, &[0x80, 0xbb, 0x00, 0x00])?;
+
+            // We'll error here and prompt the user to reboot, until we can sort this properly.
+            return Err(ConnectError::DeviceNeedsReboot);
+        }
+
+        goxlr.read_control(3, 0, 0, 1040)?;
         Ok(goxlr)
     }
 
@@ -165,6 +185,25 @@ impl<T: UsbContext> GoXLR<T> {
     ) -> Result<(), rusb::Error> {
         self.handle.write_control(
             rusb::request_type(Direction::Out, RequestType::Vendor, Recipient::Interface),
+            request,
+            value,
+            index,
+            data,
+            self.timeout,
+        )?;
+
+        Ok(())
+    }
+
+    fn write_class_control(
+        &mut self,
+        request: u8,
+        value: u16,
+        index: u16,
+        data: &[u8],
+    ) -> Result<(), rusb::Error> {
+        self.handle.write_control(
+            rusb::request_type(Direction::Out, RequestType::Class, Recipient::Interface),
             request,
             value,
             index,
