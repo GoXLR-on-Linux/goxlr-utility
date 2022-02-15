@@ -112,6 +112,8 @@ impl<T: UsbContext> GoXLR<T> {
             // Now activate audio..
             goxlr.write_class_control(1,0x0100, 0x2900, &[0x80, 0xbb, 0x00, 0x00])?;
 
+            goxlr.handle.release_interface(0);
+
             // We'll error here and prompt the user to reboot, until we can sort this properly.
             return Err(ConnectError::DeviceNeedsReboot);
         }
