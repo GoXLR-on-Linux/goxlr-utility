@@ -97,7 +97,7 @@ impl<T: UsbContext> GoXLR<T> {
         // Resets the state of the device (unconfirmed - Might just be the command id counter)
         let result = goxlr.write_control(1, 0, 0, &[]);
 
-        if result.is_err() && result.unwrap_err() == Pipe {
+        if result == Err(Pipe) {
             // The GoXLR is not initialised, we need to fix that..
             goxlr.handle.release_interface(0);
             goxlr.handle.set_auto_detach_kernel_driver(true);
