@@ -8,6 +8,12 @@ pub enum ConnectError {
 
     #[error("Device is not a GoXLR")]
     DeviceNotGoXLR,
+
+    #[error("Unable to Claim Interface")]
+    DeviceNotClaimed,
+
+    #[error("GoXLR Initialised, please reboot your computer.")]
+    DeviceNeedsReboot
 }
 
 #[derive(thiserror::Error, Debug)]
