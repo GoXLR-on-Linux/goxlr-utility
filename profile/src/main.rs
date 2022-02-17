@@ -28,6 +28,7 @@ use crate::components::simple::SimpleElement;
 use crate::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
 
 mod components;
+mod error;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut root = RootElement::new();

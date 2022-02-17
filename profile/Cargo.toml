@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 enum-map = "2.0"
 enum-map-derive = "0.8"
+thiserror = "1.0"
 
 strum = { version = "0.23", features = ["derive"] }
 

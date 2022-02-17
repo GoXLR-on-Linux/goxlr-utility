@@ -7,6 +7,7 @@ use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
 use crate::components::colours::ColourMap;
+use crate::error::ParseError;
 
 /**
  * I've not seen, or been able to get any of the values in browserPreviewTree to actually set..
@@ -36,15 +37,15 @@ impl BrowserPreviewTree {
         }
     }
 
-    pub fn parse_browser(&mut self, attributes: &[OwnedAttribute]) {
+    pub fn parse_browser(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
         for attr in attributes {
             if attr.name.local_name == "playing" {
-                self.playing = attr.value.parse().unwrap();
+                self.playing = attr.value.parse()?;
                 continue;
             }
 
             if attr.name.local_name == "playToggle" {
-                self.play_toggle = attr.value.parse().unwrap();
+                self.play_toggle = attr.value.parse()?;
                 continue;
             }
 
@@ -54,7 +55,7 @@ impl BrowserPreviewTree {
             }
 
             if attr.name.local_name == "currentRelativeTime" {
-                self.current_relative_time = attr.value.parse().unwrap();
+                self.current_relative_time = attr.value.parse()?;
                 continue;
             }
 
@@ -62,6 +63,8 @@ impl BrowserPreviewTree {
                 println!("[{}] Unparsed Attribute: {}", self.element_name, attr.name);
             }
         }
+
+        Ok(())
     }
 
     pub fn write_browser(

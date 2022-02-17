@@ -396,6 +396,7 @@ dependencies = [
  "enum-map-derive",
  "ritelinked",
  "strum",
+ "thiserror",
  "xml-rs",
 ]
 
