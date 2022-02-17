@@ -7,6 +7,7 @@ use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
 use crate::components::colours::ColourMap;
+use crate::error::ParseError;
 
 /**
  * These have no special properties, they are literally just button colours..
@@ -36,16 +37,16 @@ impl Context {
         }
     }
 
-    pub fn parse_context(&mut self, attributes: &[OwnedAttribute]) {
+    pub fn parse_context(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
         for attr in attributes {
             if attr.name.local_name == "numselected" {
-                self.selected = attr.value.parse().unwrap();
+                self.selected = attr.value.parse()?;
                 continue;
             }
 
             if attr.name.local_name == "selectedID" {
                 if !attr.value.is_empty() {
-                    self.selected_id = Some(attr.value.parse().unwrap());
+                    self.selected_id = Some(attr.value.parse()?);
                 }
                 continue;
             }
@@ -60,10 +61,12 @@ impl Context {
                 continue;
             }
 
-            if !self.colour_map.read_colours(attr).unwrap() {
+            if !self.colour_map.read_colours(attr)? {
                 println!("[{}] Unparsed Attribute: {}", self.element_name, attr.name);
             }
         }
+
+        Ok(())
     }
 
     pub fn write_context(

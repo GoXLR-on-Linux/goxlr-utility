@@ -106,7 +106,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
 
                 if name.local_name == "selectedContext" {
-                    context.parse_context(&attributes);
+                    context.parse_context(&attributes).unwrap();
                     continue;
                 }
 
