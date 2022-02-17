@@ -11,6 +11,7 @@ use xml::EventWriter;
 use crate::components::colours::{ColourMap, ColourState};
 use crate::components::mute::MuteFunction;
 use crate::components::mute_chat::CoughToggle::Hold;
+use crate::error::ParseError;
 use std::str::FromStr;
 
 /**
@@ -44,10 +45,10 @@ impl MuteChat {
         }
     }
 
-    pub fn parse_mute_chat(&mut self, attributes: &[OwnedAttribute]) {
+    pub fn parse_mute_chat(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
         for attr in attributes {
             if attr.name.local_name == "micIsAnActiveFader" {
-                self.mic_fader_id = attr.value.parse().unwrap();
+                self.mic_fader_id = attr.value.parse()?;
                 continue;
             }
 
@@ -61,7 +62,7 @@ impl MuteChat {
             }
 
             if attr.name.local_name == "coughButtonMuteSourceSelection" {
-                self.cough_mute_source = MuteFunction::from_usize(attr.value.parse().unwrap());
+                self.cough_mute_source = MuteFunction::from_usize(attr.value.parse()?);
                 continue;
             }
 
@@ -71,14 +72,16 @@ impl MuteChat {
             }
 
             if attr.name.local_name == "blink" {
-                self.blink = ColourState::from_str(&attr.value).unwrap();
+                self.blink = ColourState::from_str(&attr.value)?;
                 continue;
             }
 
-            if !self.colour_map.read_colours(attr).unwrap() {
+            if !self.colour_map.read_colours(attr)? {
                 println!("[{}] Unparsed Attribute: {}", self.element_name, attr.name);
             }
         }
+
+        Ok(())
     }
 
     pub fn write_mute_chat(

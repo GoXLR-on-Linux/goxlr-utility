@@ -111,7 +111,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
 
                 if name.local_name == "muteChat" {
-                    mute_chat.parse_mute_chat(&attributes);
+                    mute_chat.parse_mute_chat(&attributes).unwrap();
                     continue;
                 }
 
@@ -123,7 +123,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             .unwrap()
                             - 1;
                     let mut mute_button = MuteButton::new(id + 1);
-                    mute_button.parse_button(&attributes);
+                    mute_button.parse_button(&attributes).unwrap();
                     mute_buttons.insert(id as usize, mute_button);
                     continue;
                 }

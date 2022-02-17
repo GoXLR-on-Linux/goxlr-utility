@@ -9,6 +9,7 @@ use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
 use crate::components::colours::ColourMap;
+use crate::error::ParseError;
 
 pub struct MuteButton {
     element_name: String,
@@ -34,7 +35,7 @@ impl MuteButton {
         }
     }
 
-    pub fn parse_button(&mut self, attributes: &[OwnedAttribute]) {
+    pub fn parse_button(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
         for attr in attributes {
             if attr.name.local_name.ends_with("Function") {
                 let mut found = false;
@@ -60,7 +61,7 @@ impl MuteButton {
 
             if attr.name.local_name.ends_with("prevLevel") {
                 // Simple, parse this into a u8 :)
-                let value: u8 = attr.value.parse().unwrap();
+                let value: u8 = attr.value.parse()?;
                 self.previous_volume = value;
                 continue;
             }
@@ -75,10 +76,12 @@ impl MuteButton {
             }
 
             // Check to see if this is a colour related attribute..
-            if !self.colour_map.read_colours(attr).unwrap() {
+            if !self.colour_map.read_colours(attr)? {
                 println!("[MUTE BUTTON] Unparsed Attribute: {}", attr.name);
             }
         }
+
+        Ok(())
     }
 
     pub fn write_button(
