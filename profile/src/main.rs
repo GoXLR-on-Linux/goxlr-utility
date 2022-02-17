@@ -64,7 +64,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut sampler_map: EnumMap<SampleButtons, Option<SampleBase>> = EnumMap::default();
 
-    let file = File::open("test-data/profile.xml").unwrap();
+    let file = File::open("test-data/profile.xml")?;
     let file = BufReader::new(file);
 
     let parser = EventReader::new(file);
@@ -78,7 +78,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }) => {
                 if name.local_name == "ValueTreeRoot" {
                     // This also handles <AppTree, due to a single shared value.
-                    root.parse_root(&attributes).unwrap();
+                    root.parse_root(&attributes)?;
 
                     // This code was made for XML version 2, v1 not currently supported.
                     if root.get_version() > 2 {
@@ -96,73 +96,90 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
 
                 if name.local_name == "browserPreviewTree" {
-                    browser.parse_browser(&attributes).unwrap();
+                    browser.parse_browser(&attributes)?;
                     continue;
                 }
 
                 if name.local_name == "mixerTree" {
-                    mixer.parse_mixers(&attributes).unwrap();
+                    mixer.parse_mixers(&attributes)?;
                     continue;
                 }
 
                 if name.local_name == "selectedContext" {
-                    context.parse_context(&attributes).unwrap();
+                    context.parse_context(&attributes)?;
                     continue;
                 }
 
                 if name.local_name == "muteChat" {
-                    mute_chat.parse_mute_chat(&attributes).unwrap();
+                    mute_chat.parse_mute_chat(&attributes)?;
                     continue;
                 }
 
                 // Might need to pattern match this..
                 if name.local_name.starts_with("mute") && name.local_name != "muteChat" {
                     // In the XML, the count starts as 1, here, we're gonna store as 0.
-                    let id =
-                        u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str())
-                            .unwrap()
-                            - 1;
-                    let mut mute_button = MuteButton::new(id + 1);
-                    mute_button.parse_button(&attributes).unwrap();
-                    mute_buttons.insert(id as usize, mute_button);
-                    continue;
+                    if let Some(id) = name
+                        .local_name
+                        .chars()
+                        .last()
+                        .map(|s| u8::from_str(&s.to_string()))
+                        .transpose()?
+                    {
+                        let mut mute_button = MuteButton::new(id);
+                        mute_button.parse_button(&attributes)?;
+                        mute_buttons.insert(id as usize - 1, mute_button);
+                        continue;
+                    }
                 }
 
                 if name.local_name.starts_with("FaderMeter") {
                     // In the XML, the count starts at 0, and we have different capitalisation :D
-                    let id =
-                        u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str())
-                            .unwrap();
-                    let mut fader = Fader::new(id);
-                    fader.parse_fader(&attributes).unwrap();
-                    faders.insert(id as usize, fader);
-                    continue;
+                    if let Some(id) = name
+                        .local_name
+                        .chars()
+                        .last()
+                        .map(|s| u8::from_str(&s.to_string()))
+                        .transpose()?
+                    {
+                        let mut fader = Fader::new(id);
+                        fader.parse_fader(&attributes)?;
+                        faders.insert(id as usize, fader);
+                        continue;
+                    }
                 }
 
                 if name.local_name.starts_with("effects") {
-                    let id =
-                        u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str())
-                            .unwrap()
-                            - 1;
-                    let mut effect = Effects::new(id + 1);
-                    effect.parse_effect(&attributes).unwrap();
-                    effects.insert(id as usize, effect);
-                    continue;
+                    if let Some(id) = name
+                        .local_name
+                        .chars()
+                        .last()
+                        .map(|s| u8::from_str(&s.to_string()))
+                        .transpose()?
+                    {
+                        let mut effect = Effects::new(id);
+                        effect.parse_effect(&attributes)?;
+                        effects.insert(id as usize - 1, effect);
+                        continue;
+                    }
                 }
 
                 if name.local_name.starts_with("scribble") {
-                    let id =
-                        u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str())
-                            .unwrap()
-                            - 1;
-                    let mut scribble = Scribble::new(id + 1);
-                    scribble.parse_scribble(&attributes).unwrap();
-                    scribbles.insert(id as usize, scribble);
-                    continue;
+                    if let Some(id) = name
+                        .local_name
+                        .chars()
+                        .last()
+                        .map(|s| u8::from_str(&s.to_string()))
+                        .transpose()?
+                    {
+                        let mut scribble = Scribble::new(id);
+                        scribble.parse_scribble(&attributes)?;
+                        scribbles.insert(id as usize - 1, scribble);
+                        continue;
+                    }
                 }
 
                 if name.local_name == "megaphoneEffect" {
-                    megaphone_effect.parse_megaphone_root(&attributes).unwrap();
+                    megaphone_effect.parse_megaphone_root(&attributes)?;
                     continue;
                 }
 
@@ -170,99 +187,130 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // tracking the opening and closing of tags except when writing, so we'll continue treating the reading
                 // as if it were a very flat structure.
                 if name.local_name.starts_with("megaphoneEffectpreset") {
-                    let id =
-                        u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str())
-                            .unwrap();
-                    megaphone_effect
-                        .parse_megaphone_preset(id, &attributes)
-                        .unwrap();
-                    continue;
+                    if let Some(id) = name
+                        .local_name
+                        .chars()
+                        .last()
+                        .map(|s| u8::from_str(&s.to_string()))
+                        .transpose()?
+                    {
+                        megaphone_effect.parse_megaphone_preset(id, &attributes)?;
+                        continue;
+                    }
                 }
 
                 if name.local_name == "robotEffect" {
-                    robot_effect.parse_robot_root(&attributes).unwrap();
+                    robot_effect.parse_robot_root(&attributes)?;
                     continue;
                 }
 
                 if name.local_name.starts_with("robotEffectpreset") {
-                    let id =
-                        u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str())
-                            .unwrap();
-                    robot_effect.parse_robot_preset(id, &attributes).unwrap();
-                    continue;
+                    if let Some(id) = name
+                        .local_name
+                        .chars()
+                        .last()
+                        .map(|s| u8::from_str(&s.to_string()))
+                        .transpose()?
+                    {
+                        robot_effect.parse_robot_preset(id, &attributes)?;
+                        continue;
+                    }
                 }
 
                 if name.local_name == "hardtuneEffect" {
-                    hardtune_effect.parse_hardtune_root(&attributes).unwrap();
+                    hardtune_effect.parse_hardtune_root(&attributes)?;
                     continue;
                 }
 
                 if name.local_name.starts_with("hardtuneEffectpreset") {
-                    let id =
-                        u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str())
-                            .unwrap();
-                    hardtune_effect
-                        .parse_hardtune_preset(id, &attributes)
-                        .unwrap();
-                    continue;
+                    if let Some(id) = name
+                        .local_name
+                        .chars()
+                        .last()
+                        .map(|s| u8::from_str(&s.to_string()))
+                        .transpose()?
+                    {
+                        hardtune_effect.parse_hardtune_preset(id, &attributes)?;
+                        continue;
+                    }
                 }
 
                 if name.local_name == "reverbEncoder" {
-                    reverb_encoder.parse_reverb_root(&attributes).unwrap();
+                    reverb_encoder.parse_reverb_root(&attributes)?;
                     continue;
                 }
 
                 if name.local_name.starts_with("reverbEncoderpreset") {
-                    let id =
-                        u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str())
-                            .unwrap();
-                    reverb_encoder.parse_reverb_preset(id, &attributes).unwrap();
-                    continue;
+                    if let Some(id) = name
+                        .local_name
+                        .chars()
+                        .last()
+                        .map(|s| u8::from_str(&s.to_string()))
+                        .transpose()?
+                    {
+                        reverb_encoder.parse_reverb_preset(id, &attributes)?;
+                        continue;
+                    }
                 }
 
                 if name.local_name == "echoEncoder" {
-                    echo_encoder.parse_echo_root(&attributes).unwrap();
+                    echo_encoder.parse_echo_root(&attributes)?;
                     continue;
                 }
 
                 if name.local_name.starts_with("echoEncoderpreset") {
-                    let id =
-                        u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str())
-                            .unwrap();
-                    echo_encoder.parse_echo_preset(id, &attributes).unwrap();
-                    continue;
+                    if let Some(id) = name
+                        .local_name
+                        .chars()
+                        .last()
+                        .map(|s| u8::from_str(&s.to_string()))
+                        .transpose()?
+                    {
+                        echo_encoder.parse_echo_preset(id, &attributes)?;
+                        continue;
+                    }
                 }
 
                 if name.local_name == "pitchEncoder" {
-                    pitch_encoder.parse_pitch_root(&attributes).unwrap();
+                    pitch_encoder.parse_pitch_root(&attributes)?;
                     continue;
                 }
 
                 if name.local_name.starts_with("pitchEncoderpreset") {
-                    let id =
-                        u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str())
-                            .unwrap();
-                    pitch_encoder.parse_pitch_preset(id, &attributes).unwrap();
-                    continue;
+                    if let Some(id) = name
+                        .local_name
+                        .chars()
+                        .last()
+                        .map(|s| u8::from_str(&s.to_string()))
+                        .transpose()?
+                    {
+                        pitch_encoder.parse_pitch_preset(id, &attributes)?;
+                        continue;
+                    }
                 }
 
                 if name.local_name == "genderEncoder" {
-                    gender_encoder.parse_gender_root(&attributes).unwrap();
+                    gender_encoder.parse_gender_root(&attributes)?;
                     continue;
                 }
 
                 if name.local_name.starts_with("genderEncoderpreset") {
-                    let id =
-                        u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str())
-                            .unwrap();
-                    gender_encoder.parse_gender_preset(id, &attributes).unwrap();
-                    continue;
+                    if let Some(id) = name
+                        .local_name
+                        .chars()
+                        .last()
+                        .map(|s| u8::from_str(&s.to_string()))
+                        .transpose()?
+                    {
+                        gender_encoder.parse_gender_preset(id, &attributes)?;
+                        continue;
+                    }
                 }
 
                 // These can probably be a little cleaner..
                 if name.local_name == "sampleTopLeft" {
                     let mut sampler = SampleBase::new("sampleTopLeft".to_string());
-                    sampler.parse_sample_root(&attributes).unwrap();
+                    sampler.parse_sample_root(&attributes)?;
                     sampler_map[TopLeft] = Option::Some(sampler);
                     active_sample_button = sampler_map[TopLeft].as_mut();
                     continue;
@@ -270,7 +318,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 if name.local_name == "sampleTopRight" {
                     let mut sampler = SampleBase::new("sampleTopRight".to_string());
-                    sampler.parse_sample_root(&attributes).unwrap();
+                    sampler.parse_sample_root(&attributes)?;
                     sampler_map[TopRight] = Option::Some(sampler);
                     active_sample_button = sampler_map[TopRight].as_mut();
                     continue;
@@ -278,7 +326,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 if name.local_name == "sampleBottomLeft" {
                     let mut sampler = SampleBase::new("sampleBottomLeft".to_string());
-                    sampler.parse_sample_root(&attributes).unwrap();
+                    sampler.parse_sample_root(&attributes)?;
                     sampler_map[BottomLeft] = Option::Some(sampler);
                     active_sample_button = sampler_map[BottomLeft].as_mut();
                     continue;
@@ -286,7 +334,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 if name.local_name == "sampleBottomRight" {
                     let mut sampler = SampleBase::new("sampleBottomRight".to_string());
-                    sampler.parse_sample_root(&attributes).unwrap();
+                    sampler.parse_sample_root(&attributes)?;
                     sampler_map[BottomRight] = Option::Some(sampler);
                     active_sample_button = sampler_map[BottomRight].as_mut();
                     continue;
@@ -294,20 +342,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 if name.local_name == "sampleClear" {
                     let mut sampler = SampleBase::new("sampleClear".to_string());
-                    sampler.parse_sample_root(&attributes).unwrap();
+                    sampler.parse_sample_root(&attributes)?;
                     sampler_map[Clear] = Option::Some(sampler);
                     active_sample_button = sampler_map[Clear].as_mut();
                     continue;
                 }
 
                 if name.local_name.starts_with("sampleStack") {
-                    let id = name.local_name.chars().last().unwrap();
-                    active_sample_button
-                        .as_mut()
-                        .unwrap()
-                        .parse_sample_stack(id, &attributes)
-                        .unwrap();
-                    continue;
+                    if let Some(id) = name.local_name.chars().last() {
+                        if let Some(button) = &mut active_sample_button {
+                            button.parse_sample_stack(id, &attributes)?;
+                            continue;
+                        }
+                    }
                 }
 
                 if name.local_name.starts_with("sampleBank")
@@ -352,7 +399,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Create the file, and the writer..
-    let mut out_file = File::create("test-data/output.xml").unwrap();
+    let mut out_file = File::create("test-data/output.xml")?;
     let mut writer = EmitterConfig::new()
         .perform_indent(true)
         .create_writer(&mut out_file);
