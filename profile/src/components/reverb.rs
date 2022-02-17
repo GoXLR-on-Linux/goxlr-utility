@@ -13,6 +13,7 @@ use crate::components::colours::ColourMap;
 use crate::components::megaphone::Preset;
 use crate::components::megaphone::Preset::{Preset1, Preset2, Preset3, Preset4, Preset5, Preset6};
 use crate::components::reverb::ReverbStyle::Library;
+use crate::error::ParseError;
 
 /**
  * This is relatively static, main tag contains standard colour mapping, subtags contain various
@@ -35,20 +36,26 @@ impl ReverbEncoderBase {
         }
     }
 
-    pub fn parse_reverb_root(&mut self, attributes: &[OwnedAttribute]) {
+    pub fn parse_reverb_root(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
         for attr in attributes {
             if attr.name.local_name == "active_set" {
-                self.active_set = attr.value.parse().unwrap();
+                self.active_set = attr.value.parse()?;
                 continue;
             }
 
-            if !self.colour_map.read_colours(attr).unwrap() {
+            if !self.colour_map.read_colours(attr)? {
                 println!("[ReverbEncoder] Unparsed Attribute: {}", attr.name);
             }
         }
+
+        Ok(())
     }
 
-    pub fn parse_reverb_preset(&mut self, id: u8, attributes: &[OwnedAttribute]) {
+    pub fn parse_reverb_preset(
+        &mut self,
+        id: u8,
+        attributes: &[OwnedAttribute],
+    ) -> Result<(), ParseError> {
         let mut preset = ReverbEncoder::new();
         for attr in attributes {
             if attr.name.local_name == "REVERB_STYLE" {
@@ -62,56 +69,56 @@ impl ReverbEncoderBase {
             }
 
             if attr.name.local_name == "REVERB_KNOB_POSITION" {
-                preset.knob_position = attr.value.parse::<c_float>().unwrap() as i8;
+                preset.knob_position = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
 
             if attr.name.local_name == "REVERB_TYPE" {
-                preset.reverb_type = attr.value.parse::<c_float>().unwrap() as u8;
+                preset.reverb_type = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
             if attr.name.local_name == "REVERB_DECAY" {
-                preset.decay = attr.value.parse::<c_float>().unwrap() as u16;
+                preset.decay = attr.value.parse::<c_float>()? as u16;
                 continue;
             }
             if attr.name.local_name == "REVERB_PREDELAY" {
-                preset.predelay = attr.value.parse::<c_float>().unwrap() as u8;
+                preset.predelay = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
             if attr.name.local_name == "REVERB_DIFFUSE" {
-                preset.diffuse = attr.value.parse::<c_float>().unwrap() as i8;
+                preset.diffuse = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
             if attr.name.local_name == "REVERB_LOCOLOR" {
-                preset.locolor = attr.value.parse::<c_float>().unwrap() as i8;
+                preset.locolor = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
             if attr.name.local_name == "REVERB_HICOLOR" {
-                preset.hicolor = attr.value.parse::<c_float>().unwrap() as i8;
+                preset.hicolor = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
             if attr.name.local_name == "REVERB_HIFACTOR" {
-                preset.hifactor = attr.value.parse::<c_float>().unwrap() as i8;
+                preset.hifactor = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
             if attr.name.local_name == "REVERB_MODSPEED" {
-                preset.mod_speed = attr.value.parse::<c_float>().unwrap() as i8;
+                preset.mod_speed = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
             if attr.name.local_name == "REVERB_MODDEPTH" {
-                preset.mod_depth = attr.value.parse::<c_float>().unwrap() as i8;
+                preset.mod_depth = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
             if attr.name.local_name == "REVERB_EARLYLEVEL" {
-                preset.early_level = attr.value.parse::<c_float>().unwrap() as i8;
+                preset.early_level = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
             if attr.name.local_name == "REVERB_TAILLEVEL" {
-                preset.tail_level = attr.value.parse::<c_float>().unwrap() as i8;
+                preset.tail_level = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
             if attr.name.local_name == "REVERB_DRYLEVEL" {
-                preset.dry_level = attr.value.parse::<c_float>().unwrap() as i8;
+                preset.dry_level = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
 
@@ -135,6 +142,8 @@ impl ReverbEncoderBase {
         } else if id == 6 {
             self.preset_map[Preset6] = preset;
         }
+
+        Ok(())
     }
 
     pub fn write_reverb(
