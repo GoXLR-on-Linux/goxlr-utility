@@ -134,7 +134,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str())
                             .unwrap();
                     let mut fader = Fader::new(id);
-                    fader.parse_fader(&attributes);
+                    fader.parse_fader(&attributes).unwrap();
                     faders.insert(id as usize, fader);
                     continue;
                 }

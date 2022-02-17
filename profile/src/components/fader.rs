@@ -9,6 +9,7 @@ use xml::EventWriter;
 
 use crate::components::colours::ColourMap;
 use crate::components::mixer::FullChannelList;
+use crate::error::ParseError;
 
 pub struct Fader {
     element_name: String,
@@ -27,7 +28,7 @@ impl Fader {
         }
     }
 
-    pub fn parse_fader(&mut self, attributes: &[OwnedAttribute]) {
+    pub fn parse_fader(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
         for attr in attributes {
             if attr.name.local_name.ends_with("listIndex") {
                 let mut found = false;
@@ -48,10 +49,12 @@ impl Fader {
             }
 
             // Send the rest out for colouring..
-            if !self.colour_map.read_colours(attr).unwrap() {
+            if !self.colour_map.read_colours(attr)? {
                 println!("[FADER] Unparsed Attribute: {}", attr.name);
             }
         }
+
+        Ok(())
     }
 
     pub fn write_fader(
