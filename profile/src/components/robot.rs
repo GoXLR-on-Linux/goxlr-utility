@@ -13,6 +13,7 @@ use crate::components::colours::ColourMap;
 use crate::components::megaphone::Preset;
 use crate::components::megaphone::Preset::{Preset1, Preset2, Preset3, Preset4, Preset5, Preset6};
 use crate::components::robot::RobotStyle::Robot1;
+use crate::error::ParseError;
 
 /**
  * This is relatively static, main tag contains standard colour mapping, subtags contain various
@@ -33,15 +34,21 @@ impl RobotEffectBase {
         }
     }
 
-    pub fn parse_robot_root(&mut self, attributes: &[OwnedAttribute]) {
+    pub fn parse_robot_root(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
         for attr in attributes {
-            if !self.colour_map.read_colours(attr).unwrap() {
+            if !self.colour_map.read_colours(attr)? {
                 println!("[robotEffect] Unparsed Attribute: {}", attr.name);
             }
         }
+
+        Ok(())
     }
 
-    pub fn parse_robot_preset(&mut self, id: u8, attributes: &[OwnedAttribute]) {
+    pub fn parse_robot_preset(
+        &mut self,
+        id: u8,
+        attributes: &[OwnedAttribute],
+    ) -> Result<(), ParseError> {
         let mut preset = RobotEffect::new();
         for attr in attributes {
             if attr.name.local_name == "robotEffectstate" {
@@ -66,55 +73,55 @@ impl RobotEffectBase {
              * but I'm not gonna rule it out.. */
 
             if attr.name.local_name == "ROBOT_SYNTHOSC_PULSEWIDTH" {
-                preset.synthosc_pulse_width = attr.value.parse::<c_float>().unwrap() as u8;
+                preset.synthosc_pulse_width = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
             if attr.name.local_name == "ROBOT_SYNTHOSC_WAVEFORM" {
-                preset.synthosc_waveform = attr.value.parse::<c_float>().unwrap() as u8;
+                preset.synthosc_waveform = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
             if attr.name.local_name == "ROBOT_VOCODER_GATE_THRESHOLD" {
-                preset.vocoder_gate_threshold = attr.value.parse::<c_float>().unwrap() as i8;
+                preset.vocoder_gate_threshold = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
             if attr.name.local_name == "ROBOT_DRY_MIX" {
-                preset.dry_mix = attr.value.parse::<c_float>().unwrap() as i8;
+                preset.dry_mix = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
             if attr.name.local_name == "ROBOT_VOCODER_LOW_FREQ" {
-                preset.vocoder_low_freq = attr.value.parse::<c_float>().unwrap() as u8;
+                preset.vocoder_low_freq = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
             if attr.name.local_name == "ROBOT_VOCODER_LOW_GAIN" {
-                preset.vocoder_low_gain = attr.value.parse::<c_float>().unwrap() as i8;
+                preset.vocoder_low_gain = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
             if attr.name.local_name == "ROBOT_VOCODER_LOW_BW" {
-                preset.vocoder_low_bw = attr.value.parse::<c_float>().unwrap() as u8;
+                preset.vocoder_low_bw = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
             if attr.name.local_name == "ROBOT_VOCODER_MID_FREQ" {
-                preset.vocoder_mid_freq = attr.value.parse::<c_float>().unwrap() as u8;
+                preset.vocoder_mid_freq = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
             if attr.name.local_name == "ROBOT_VOCODER_MID_GAIN" {
-                preset.vocoder_mid_gain = attr.value.parse::<c_float>().unwrap() as i8;
+                preset.vocoder_mid_gain = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
             if attr.name.local_name == "ROBOT_VOCODER_MID_BW" {
-                preset.vocoder_mid_bw = attr.value.parse::<c_float>().unwrap() as u8;
+                preset.vocoder_mid_bw = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
             if attr.name.local_name == "ROBOT_VOCODER_HIGH_FREQ" {
-                preset.vocoder_high_freq = attr.value.parse::<c_float>().unwrap() as u8;
+                preset.vocoder_high_freq = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
             if attr.name.local_name == "ROBOT_VOCODER_HIGH_GAIN" {
-                preset.vocoder_high_gain = attr.value.parse::<c_float>().unwrap() as i8;
+                preset.vocoder_high_gain = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
             if attr.name.local_name == "ROBOT_VOCODER_HIGH_BW" {
-                preset.vocoder_high_bw = attr.value.parse::<c_float>().unwrap() as u8;
+                preset.vocoder_high_bw = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
             println!("[RobotEffect] Unparsed Child Attribute: {}", attr.name);
@@ -134,6 +141,8 @@ impl RobotEffectBase {
         } else if id == 6 {
             self.preset_map[Preset6] = preset;
         }
+
+        Ok(())
     }
 
     pub fn write_robot(

@@ -180,7 +180,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
 
                 if name.local_name == "robotEffect" {
-                    robot_effect.parse_robot_root(&attributes);
+                    robot_effect.parse_robot_root(&attributes).unwrap();
                     continue;
                 }
 
@@ -188,7 +188,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let id =
                         u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str())
                             .unwrap();
-                    robot_effect.parse_robot_preset(id, &attributes);
+                    robot_effect.parse_robot_preset(id, &attributes).unwrap();
                     continue;
                 }
 
