@@ -12,6 +12,7 @@ use xml::EventWriter;
 use crate::components::colours::ColourMap;
 use crate::components::megaphone::Preset;
 use crate::components::megaphone::Preset::{Preset1, Preset2, Preset3, Preset4, Preset5, Preset6};
+use crate::error::ParseError;
 
 /**
  * This is relatively static, main tag contains standard colour mapping, subtags contain various
@@ -34,20 +35,26 @@ impl GenderEncoderBase {
         }
     }
 
-    pub fn parse_gender_root(&mut self, attributes: &[OwnedAttribute]) {
+    pub fn parse_gender_root(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
         for attr in attributes {
             if attr.name.local_name == "active_set" {
-                self.active_set = attr.value.parse().unwrap();
+                self.active_set = attr.value.parse()?;
                 continue;
             }
 
-            if !self.colour_map.read_colours(attr).unwrap() {
+            if !self.colour_map.read_colours(attr)? {
                 println!("[GenderEncoder] Unparsed Attribute: {}", attr.name);
             }
         }
+
+        Ok(())
     }
 
-    pub fn parse_gender_preset(&mut self, id: u8, attributes: &[OwnedAttribute]) {
+    pub fn parse_gender_preset(
+        &mut self,
+        id: u8,
+        attributes: &[OwnedAttribute],
+    ) -> Result<(), ParseError> {
         let mut preset = GenderEncoder::new();
         for attr in attributes {
             if attr.name.local_name == "GENDER_STYLE" {
@@ -61,12 +68,12 @@ impl GenderEncoderBase {
             }
 
             if attr.name.local_name == "GENDER_KNOB_POSITION" {
-                preset.knob_position = attr.value.parse::<c_float>().unwrap() as i8;
+                preset.knob_position = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
 
             if attr.name.local_name == "GENDER_RANGE" {
-                preset.range = attr.value.parse::<c_float>().unwrap() as u8;
+                preset.range = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
 
@@ -90,6 +97,8 @@ impl GenderEncoderBase {
         } else if id == 6 {
             self.preset_map[Preset6] = preset;
         }
+
+        Ok(())
     }
 
     pub fn write_gender(
