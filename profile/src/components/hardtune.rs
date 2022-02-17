@@ -15,6 +15,7 @@ use crate::components::hardtune::HardtuneSource::All;
 use crate::components::hardtune::HardtuneStyle::Normal;
 use crate::components::megaphone::Preset;
 use crate::components::megaphone::Preset::{Preset1, Preset2, Preset3, Preset4, Preset5, Preset6};
+use crate::error::ParseError;
 
 /**
  * This is relatively static, main tag contains standard colour mapping, subtags contain various
@@ -37,21 +38,27 @@ impl HardtuneEffectBase {
         }
     }
 
-    pub fn parse_hardtune_root(&mut self, attributes: &[OwnedAttribute]) {
+    pub fn parse_hardtune_root(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
         for attr in attributes {
             // I honestly have no idea why this lives here :D
             if attr.name.local_name == "HARDTUNE_SOURCE" {
-                self.source = HardtuneSource::from_str(&attr.value).unwrap();
+                self.source = HardtuneSource::from_str(&attr.value)?;
                 continue;
             }
 
-            if !self.colour_map.read_colours(attr).unwrap() {
+            if !self.colour_map.read_colours(attr)? {
                 println!("[hardTuneEffect] Unparsed Attribute: {}", attr.name);
             }
         }
+
+        Ok(())
     }
 
-    pub fn parse_hardtune_preset(&mut self, id: u8, attributes: &[OwnedAttribute]) {
+    pub fn parse_hardtune_preset(
+        &mut self,
+        id: u8,
+        attributes: &[OwnedAttribute],
+    ) -> Result<(), ParseError> {
         let mut preset = HardtuneEffect::new();
         for attr in attributes {
             if attr.name.local_name == "hardtuneEffectstate" {
@@ -73,31 +80,31 @@ impl HardtuneEffectBase {
             }
 
             if attr.name.local_name == "HARDTUNE_KEYSOURCE" {
-                preset.keysource = attr.value.parse::<c_float>().unwrap() as u8;
+                preset.keysource = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
             if attr.name.local_name == "HARDTUNE_AMOUNT" {
-                preset.amount = attr.value.parse::<c_float>().unwrap() as u8;
+                preset.amount = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
             if attr.name.local_name == "HARDTUNE_WINDOW" {
-                preset.window = attr.value.parse::<c_float>().unwrap() as u8;
+                preset.window = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
             if attr.name.local_name == "HARDTUNE_RATE" {
-                preset.rate = attr.value.parse::<c_float>().unwrap() as u8;
+                preset.rate = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
             if attr.name.local_name == "HARDTUNE_SCALE" {
-                preset.scale = attr.value.parse::<c_float>().unwrap() as u8;
+                preset.scale = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
             if attr.name.local_name == "HARDTUNE_PITCH_AMT" {
-                preset.pitch_amt = attr.value.parse::<c_float>().unwrap() as u8;
+                preset.pitch_amt = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
             if attr.name.local_name == "HARDTUNE_SOURCE" {
-                preset.source = Option::Some(HardtuneSource::from_str(&attr.value).unwrap());
+                preset.source = Option::Some(HardtuneSource::from_str(&attr.value)?);
                 continue;
             }
 
@@ -121,6 +128,8 @@ impl HardtuneEffectBase {
         } else if id == 6 {
             self.preset_map[Preset6] = preset;
         }
+
+        Ok(())
     }
 
     pub fn write_hardtune(
