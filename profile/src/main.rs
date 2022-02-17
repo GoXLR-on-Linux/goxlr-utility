@@ -318,7 +318,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 {
                     // In this case, the tag name, and attribute prefixes are the same..
                     let mut simple_element = SimpleElement::new(name.local_name.clone());
-                    simple_element.parse_simple(&attributes);
+                    simple_element.parse_simple(&attributes)?;
                     simple_elements.push(simple_element);
                     continue;
                 }

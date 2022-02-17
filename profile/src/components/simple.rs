@@ -7,6 +7,7 @@ use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
 use crate::components::colours::ColourMap;
+use crate::error::ParseError;
 
 /**
  * These have no special properties, they are literally just button colours..
@@ -26,12 +27,14 @@ impl SimpleElement {
         }
     }
 
-    pub fn parse_simple(&mut self, attributes: &[OwnedAttribute]) {
+    pub fn parse_simple(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
         for attr in attributes {
-            if !self.colour_map.read_colours(attr).unwrap() {
+            if !self.colour_map.read_colours(attr)? {
                 println!("[{}] Unparsed Attribute: {}", self.element_name, attr.name);
             }
         }
+
+        Ok(())
     }
 
     pub fn write_simple(
