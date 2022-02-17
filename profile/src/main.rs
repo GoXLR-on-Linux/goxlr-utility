@@ -262,7 +262,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // These can probably be a little cleaner..
                 if name.local_name == "sampleTopLeft" {
                     let mut sampler = SampleBase::new("sampleTopLeft".to_string());
-                    sampler.parse_sample_root(&attributes);
+                    sampler.parse_sample_root(&attributes).unwrap();
                     sampler_map[TopLeft] = Option::Some(sampler);
                     active_sample_button = sampler_map[TopLeft].as_mut();
                     continue;
@@ -270,7 +270,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 if name.local_name == "sampleTopRight" {
                     let mut sampler = SampleBase::new("sampleTopRight".to_string());
-                    sampler.parse_sample_root(&attributes);
+                    sampler.parse_sample_root(&attributes).unwrap();
                     sampler_map[TopRight] = Option::Some(sampler);
                     active_sample_button = sampler_map[TopRight].as_mut();
                     continue;
@@ -278,7 +278,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 if name.local_name == "sampleBottomLeft" {
                     let mut sampler = SampleBase::new("sampleBottomLeft".to_string());
-                    sampler.parse_sample_root(&attributes);
+                    sampler.parse_sample_root(&attributes).unwrap();
                     sampler_map[BottomLeft] = Option::Some(sampler);
                     active_sample_button = sampler_map[BottomLeft].as_mut();
                     continue;
@@ -286,7 +286,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 if name.local_name == "sampleBottomRight" {
                     let mut sampler = SampleBase::new("sampleBottomRight".to_string());
-                    sampler.parse_sample_root(&attributes);
+                    sampler.parse_sample_root(&attributes).unwrap();
                     sampler_map[BottomRight] = Option::Some(sampler);
                     active_sample_button = sampler_map[BottomRight].as_mut();
                     continue;
@@ -294,7 +294,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 if name.local_name == "sampleClear" {
                     let mut sampler = SampleBase::new("sampleClear".to_string());
-                    sampler.parse_sample_root(&attributes);
+                    sampler.parse_sample_root(&attributes).unwrap();
                     sampler_map[Clear] = Option::Some(sampler);
                     active_sample_button = sampler_map[Clear].as_mut();
                     continue;
@@ -305,7 +305,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     active_sample_button
                         .as_mut()
                         .unwrap()
-                        .parse_sample_stack(id, &attributes);
+                        .parse_sample_stack(id, &attributes)
+                        .unwrap();
                     continue;
                 }
 

@@ -10,6 +10,7 @@ use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
 use crate::components::colours::ColourMap;
+use crate::error::ParseError;
 
 /**
  * This is relatively static, main tag contains standard colour mapping, subtags contain various
@@ -35,7 +36,7 @@ impl SampleBase {
         }
     }
 
-    pub fn parse_sample_root(&mut self, attributes: &[OwnedAttribute]) {
+    pub fn parse_sample_root(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
         for attr in attributes {
             if attr.name.local_name.ends_with("state") && self.element_name != "sampleClear" {
                 if attr.value != "Empty" && attr.value != "Stopped" {
@@ -45,13 +46,19 @@ impl SampleBase {
                 continue;
             }
 
-            if !self.colour_map.read_colours(attr).unwrap() {
+            if !self.colour_map.read_colours(attr)? {
                 println!("[Sampler] Unparsed Attribute: {}", attr.name);
             }
         }
+
+        Ok(())
     }
 
-    pub fn parse_sample_stack(&mut self, id: char, attributes: &[OwnedAttribute]) {
+    pub fn parse_sample_stack(
+        &mut self,
+        id: char,
+        attributes: &[OwnedAttribute],
+    ) -> Result<(), ParseError> {
         // The easiest way to handle this is to parse everything into key-value pairs, then try
         // to locate all the settings for each track inside it..
         let mut map: HashMap<String, String> = HashMap::default();
@@ -63,16 +70,13 @@ impl SampleBase {
         let mut sample_stack = SampleStack::new();
 
         // Pull out any 'extra' attributes which may be useful..
-        if map.contains_key("playbackMode") {
-            sample_stack.playback_mode = Option::Some(PlaybackMode::from_usize(
-                map.get("playbackMode").unwrap().parse::<usize>().unwrap(),
-            ));
+        if let Some(value) = map.get("playbackMode") {
+            sample_stack.playback_mode =
+                Option::Some(PlaybackMode::from_usize(value.parse::<usize>()?));
         }
 
-        if map.contains_key("playOrder") {
-            sample_stack.play_order = Option::Some(PlayOrder::from_usize(
-                map.get("playOrder").unwrap().parse::<usize>().unwrap(),
-            ));
+        if let Some(value) = map.get("playOrder") {
+            sample_stack.play_order = Option::Some(PlayOrder::from_usize(value.parse::<usize>()?));
         }
 
         // Ok, somewhere in here we should have a key that tells us how many tracks are configured..
@@ -81,31 +85,32 @@ impl SampleBase {
         if !map.contains_key(key.as_str()) {
             // Stack doesn't contain any tracks, we're done here.
             self.sample_stack.insert(id, sample_stack);
-            return;
+            return Ok(());
         }
 
-        let track_count: u8 = map.get(key.as_str()).unwrap().parse().unwrap();
-
-        for i in 0..track_count {
-            let track = Track::new(
-                map.get(format!("track_{}", i).as_str()).unwrap().clone(),
-                map.get(format!("track_{}StartPosition", i).as_str())
-                    .unwrap()
-                    .parse()
-                    .unwrap(),
-                map.get(format!("track_{}EndPosition", i).as_str())
-                    .unwrap()
-                    .parse()
-                    .unwrap(),
-                map.get(format!("track_{}NormalizedGain", i).as_str())
-                    .unwrap()
-                    .parse()
-                    .unwrap(),
-            );
-            sample_stack.tracks.push(track);
+        if let Some(track_count) = map.get(key.as_str()) {
+            let track_count: u8 = track_count.parse()?;
+            for i in 0..track_count {
+                if let (Some(track), Some(start), Some(end), Some(gain)) = (
+                    map.get(&format!("track_{}", i)),
+                    map.get(&format!("track_{}StartPosition", i)),
+                    map.get(&format!("track_{}EndPosition", i)),
+                    map.get(&format!("track_{}NormalizedGain", i)),
+                ) {
+                    let track = Track::new(
+                        track.to_string(),
+                        start.parse()?,
+                        end.parse()?,
+                        gain.parse()?,
+                    );
+                    sample_stack.tracks.push(track);
+                }
+            }
         }
 
         self.sample_stack.insert(id, sample_stack);
+
+        Ok(())
     }
 
     pub fn write_sample(
