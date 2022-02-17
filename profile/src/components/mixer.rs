@@ -9,6 +9,7 @@ use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
 use crate::components::colours::ColourMap;
+use crate::error::ParseError;
 
 pub struct Mixers {
     mixer_table: EnumMap<InputChannels, EnumMap<OutputChannels, u16>>,
@@ -25,7 +26,7 @@ impl Mixers {
         }
     }
 
-    pub fn parse_mixers(&mut self, attributes: &[OwnedAttribute]) {
+    pub fn parse_mixers(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
         for attr in attributes {
             if attr.name.local_name.ends_with("Level") {
                 let mut found = false;
@@ -34,7 +35,7 @@ impl Mixers {
                 let channel = attr.name.local_name.as_str();
                 let channel = &channel[0..channel.len() - 5];
 
-                let value: u8 = attr.value.parse().unwrap();
+                let value: u8 = attr.value.parse()?;
 
                 // Find the channel from the Prefix..
                 for volume in FullChannelList::iter() {
@@ -55,22 +56,23 @@ impl Mixers {
                 // Extract the two sides of the string..
                 let name = attr.name.local_name.as_str();
 
-                let middle_index = name.find("To").unwrap();
-                let input = &name[0..middle_index];
-                let output = &name[middle_index + 2..];
+                if let Some(middle_index) = name.find("To") {
+                    let input = &name[0..middle_index];
+                    let output = &name[middle_index + 2..];
 
-                let value: u16 = attr.value.parse().unwrap();
+                    let value: u16 = attr.value.parse()?;
 
-                // We need to find the two matching channels..
-                for input_channel in InputChannels::iter() {
-                    if input_channel.get_str("Name").unwrap() == input {
-                        // Borrow this section of the mixer table before checkout outputs..
-                        let table = &mut self.mixer_table[input_channel];
+                    // We need to find the two matching channels..
+                    for input_channel in InputChannels::iter() {
+                        if input_channel.get_str("Name").unwrap() == input {
+                            // Borrow this section of the mixer table before checkout outputs..
+                            let table = &mut self.mixer_table[input_channel];
 
-                        for output_channel in OutputChannels::iter() {
-                            if output_channel.get_str("Name").unwrap() == output {
-                                // Matched the output, store the value.
-                                table[output_channel] = value;
+                            for output_channel in OutputChannels::iter() {
+                                if output_channel.get_str("Name").unwrap() == output {
+                                    // Matched the output, store the value.
+                                    table[output_channel] = value;
+                                }
                             }
                         }
                     }
@@ -79,10 +81,12 @@ impl Mixers {
             }
 
             // Check to see if this is a colour related attribute..
-            if !self.colour_map.read_colours(attr).unwrap() {
+            if !self.colour_map.read_colours(attr)? {
                 println!("[MIXER] Unparsed Attribute: {}", attr.name);
             }
         }
+
+        Ok(())
     }
 
     pub fn write_mixers(

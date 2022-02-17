@@ -101,7 +101,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
 
                 if name.local_name == "mixerTree" {
-                    mixer.parse_mixers(&attributes);
+                    mixer.parse_mixers(&attributes).unwrap();
                     continue;
                 }
 
