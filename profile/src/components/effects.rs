@@ -7,6 +7,7 @@ use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
 use crate::components::colours::ColourMap;
+use crate::error::ParseError;
 
 pub struct Effects {
     element_name: String,
@@ -28,7 +29,7 @@ impl Effects {
         }
     }
 
-    pub fn parse_effect(&mut self, attributes: &[OwnedAttribute]) {
+    pub fn parse_effect(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
         for attr in attributes {
             if attr.name.local_name.ends_with("Name") {
                 self.name = attr.value.clone();
@@ -36,10 +37,12 @@ impl Effects {
             }
 
             // Send the rest out for colouring..
-            if !self.colour_map.read_colours(attr).unwrap() {
+            if !self.colour_map.read_colours(attr)? {
                 println!("[EFFECTS] Unparsed Attribute: {}", attr.name);
             }
         }
+
+        Ok(())
     }
 
     pub fn write_effects(

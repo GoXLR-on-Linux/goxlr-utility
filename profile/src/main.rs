@@ -145,7 +145,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             .unwrap()
                             - 1;
                     let mut effect = Effects::new(id + 1);
-                    effect.parse_effect(&attributes);
+                    effect.parse_effect(&attributes).unwrap();
                     effects.insert(id as usize, effect);
                     continue;
                 }
