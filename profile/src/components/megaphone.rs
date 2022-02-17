@@ -12,6 +12,7 @@ use xml::EventWriter;
 use crate::components::colours::ColourMap;
 use crate::components::megaphone::MegaphoneStyle::Megaphone;
 use crate::components::megaphone::Preset::{Preset1, Preset2, Preset3, Preset4, Preset5, Preset6};
+use crate::error::ParseError;
 
 /**
  * This is relatively static, main tag contains standard colour mapping, subtags contain various
@@ -32,15 +33,24 @@ impl MegaphoneEffectBase {
         }
     }
 
-    pub fn parse_megaphone_root(&mut self, attributes: &[OwnedAttribute]) {
+    pub fn parse_megaphone_root(
+        &mut self,
+        attributes: &[OwnedAttribute],
+    ) -> Result<(), ParseError> {
         for attr in attributes {
-            if !self.colour_map.read_colours(attr).unwrap() {
+            if !self.colour_map.read_colours(attr)? {
                 println!("[megaphoneEffect] Unparsed Attribute: {}", attr.name);
             }
         }
+
+        Ok(())
     }
 
-    pub fn parse_megaphone_preset(&mut self, id: u8, attributes: &[OwnedAttribute]) {
+    pub fn parse_megaphone_preset(
+        &mut self,
+        id: u8,
+        attributes: &[OwnedAttribute],
+    ) -> Result<(), ParseError> {
         let mut preset = MegaphoneEffect::new();
         for attr in attributes {
             if attr.name.local_name == "megaphoneEffectstate" {
@@ -69,39 +79,39 @@ impl MegaphoneEffectBase {
              */
 
             if attr.name.local_name == "TRANS_DIST_AMT" {
-                preset.trans_dist_amt = attr.value.parse::<c_float>().unwrap() as u8;
+                preset.trans_dist_amt = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
             if attr.name.local_name == "TRANS_HP" {
-                preset.trans_hp = attr.value.parse::<c_float>().unwrap() as u8;
+                preset.trans_hp = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
             if attr.name.local_name == "TRANS_LP" {
-                preset.trans_lp = attr.value.parse::<c_float>().unwrap() as u8;
+                preset.trans_lp = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
             if attr.name.local_name == "TRANS_PREGAIN" {
-                preset.trans_pregain = attr.value.parse::<c_float>().unwrap() as u8;
+                preset.trans_pregain = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
             if attr.name.local_name == "TRANS_POSTGAIN" {
-                preset.trans_postgain = attr.value.parse::<c_float>().unwrap() as i8;
+                preset.trans_postgain = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
             if attr.name.local_name == "TRANS_DIST_TYPE" {
-                preset.trans_dist_type = attr.value.parse::<c_float>().unwrap() as u8;
+                preset.trans_dist_type = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
             if attr.name.local_name == "TRANS_PRESENCE_GAIN" {
-                preset.trans_presence_gain = attr.value.parse::<c_float>().unwrap() as u8;
+                preset.trans_presence_gain = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
             if attr.name.local_name == "TRANS_PRESENCE_FC" {
-                preset.trans_presence_fc = attr.value.parse::<c_float>().unwrap() as u8;
+                preset.trans_presence_fc = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
             if attr.name.local_name == "TRANS_PRESENCE_BW" {
-                preset.trans_presence_bw = attr.value.parse::<c_float>().unwrap() as u8;
+                preset.trans_presence_bw = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
             if attr.name.local_name == "TRANS_BEATBOX_ENABLE" {
@@ -109,19 +119,19 @@ impl MegaphoneEffectBase {
                 continue;
             }
             if attr.name.local_name == "TRANS_FILTER_CONTROL" {
-                preset.trans_filter_control = attr.value.parse::<c_float>().unwrap() as u8;
+                preset.trans_filter_control = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
             if attr.name.local_name == "TRANS_FILTER" {
-                preset.trans_filter = attr.value.parse::<c_float>().unwrap() as u8;
+                preset.trans_filter = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
             if attr.name.local_name == "TRANS_DRIVE_POT_GAIN_COMP_MID" {
-                preset.trans_drive_pot_gain_comp_mid = attr.value.parse::<c_float>().unwrap() as u8;
+                preset.trans_drive_pot_gain_comp_mid = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
             if attr.name.local_name == "TRANS_DRIVE_POT_GAIN_COMP_MAX" {
-                preset.trans_drive_pot_gain_comp_max = attr.value.parse::<c_float>().unwrap() as u8;
+                preset.trans_drive_pot_gain_comp_max = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
             println!(
@@ -144,6 +154,8 @@ impl MegaphoneEffectBase {
         } else if id == 6 {
             self.preset_map[Preset6] = preset;
         }
+
+        Ok(())
     }
 
     pub fn write_megaphone(
