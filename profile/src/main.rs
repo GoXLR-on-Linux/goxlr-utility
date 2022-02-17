@@ -78,7 +78,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }) => {
                 if name.local_name == "ValueTreeRoot" {
                     // This also handles <AppTree, due to a single shared value.
-                    root.parse_root(&attributes);
+                    root.parse_root(&attributes).unwrap();
 
                     // This code was made for XML version 2, v1 not currently supported.
                     if root.get_version() > 2 {

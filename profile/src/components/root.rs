@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::fs::File;
 
+use crate::error::ParseError;
 use xml::attribute::OwnedAttribute;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
@@ -25,22 +26,24 @@ impl RootElement {
         }
     }
 
-    pub fn parse_root(&mut self, attributes: &[OwnedAttribute]) {
+    pub fn parse_root(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
         for attr in attributes {
             if attr.name.local_name == "version" {
-                self.version = attr.value.parse().unwrap();
+                self.version = attr.value.parse()?;
                 continue;
             }
 
             if attr.name.local_name == "loudness" {
-                self.loudness = attr.value.parse().unwrap();
+                self.loudness = attr.value.parse()?;
                 continue;
             }
 
             if attr.name.local_name == "device" {
-                self.device = attr.value.parse().unwrap();
+                self.device = attr.value.parse()?;
             }
         }
+
+        Ok(())
     }
 
     pub fn write_initial(
