@@ -156,7 +156,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             .unwrap()
                             - 1;
                     let mut scribble = Scribble::new(id + 1);
-                    scribble.parse_scribble(&attributes);
+                    scribble.parse_scribble(&attributes).unwrap();
                     scribbles.insert(id as usize, scribble);
                     continue;
                 }

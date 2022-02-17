@@ -9,6 +9,7 @@ use xml::EventWriter;
 
 use crate::components::colours::ColourMap;
 use crate::components::scribble::ScribbleStyle::{Inverted, Normal};
+use crate::error::ParseError;
 
 pub struct Scribble {
     element_name: String,
@@ -58,7 +59,7 @@ impl Scribble {
         }
     }
 
-    pub fn parse_scribble(&mut self, attributes: &[OwnedAttribute]) {
+    pub fn parse_scribble(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
         for attr in attributes {
             if attr.name.local_name.ends_with("iconFile") {
                 self.icon_file = attr.value.clone();
@@ -76,12 +77,12 @@ impl Scribble {
             }
 
             if attr.name.local_name.ends_with("alpha") {
-                self.alpha = f64::from_str(attr.value.as_str()).unwrap();
+                self.alpha = f64::from_str(attr.value.as_str())?;
                 continue;
             }
 
             if attr.name.local_name.ends_with("textSize") {
-                self.text_size = u8::from_str(attr.value.as_str()).unwrap();
+                self.text_size = u8::from_str(attr.value.as_str())?;
                 continue;
             }
 
@@ -100,10 +101,12 @@ impl Scribble {
             }
 
             // Send the rest out for colouring..
-            if !self.colour_map.read_colours(attr).unwrap() {
+            if !self.colour_map.read_colours(attr)? {
                 println!("[SCRIBBLE] Unparsed Attribute: {}", attr.name);
             }
         }
+
+        Ok(())
     }
 
     pub fn write_scribble(
