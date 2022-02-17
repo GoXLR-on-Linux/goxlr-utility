@@ -34,7 +34,7 @@ impl MegaphoneEffectBase {
 
     pub fn parse_megaphone_root(&mut self, attributes: &[OwnedAttribute]) {
         for attr in attributes {
-            if !self.colour_map.read_colours(attr) {
+            if !self.colour_map.read_colours(attr).unwrap() {
                 println!("[megaphoneEffect] Unparsed Attribute: {}", attr.name);
             }
         }

@@ -42,7 +42,7 @@ impl ReverbEncoderBase {
                 continue;
             }
 
-            if !self.colour_map.read_colours(attr) {
+            if !self.colour_map.read_colours(attr).unwrap() {
                 println!("[ReverbEncoder] Unparsed Attribute: {}", attr.name);
             }
         }

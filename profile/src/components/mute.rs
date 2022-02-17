@@ -75,7 +75,7 @@ impl MuteButton {
             }
 
             // Check to see if this is a colour related attribute..
-            if !self.colour_map.read_colours(attr) {
+            if !self.colour_map.read_colours(attr).unwrap() {
                 println!("[MUTE BUTTON] Unparsed Attribute: {}", attr.name);
             }
         }

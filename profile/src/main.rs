@@ -96,7 +96,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
 
                 if name.local_name == "browserPreviewTree" {
-                    browser.parse_browser(&attributes);
+                    browser.parse_browser(&attributes).unwrap();
                     continue;
                 }
 

@@ -59,7 +59,7 @@ impl BrowserPreviewTree {
                 continue;
             }
 
-            if !self.colour_map.read_colours(attr) {
+            if !self.colour_map.read_colours(attr)? {
                 println!("[{}] Unparsed Attribute: {}", self.element_name, attr.name);
             }
         }

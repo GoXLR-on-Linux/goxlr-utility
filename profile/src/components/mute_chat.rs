@@ -75,7 +75,7 @@ impl MuteChat {
                 continue;
             }
 
-            if !self.colour_map.read_colours(attr) {
+            if !self.colour_map.read_colours(attr).unwrap() {
                 println!("[{}] Unparsed Attribute: {}", self.element_name, attr.name);
             }
         }

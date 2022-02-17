@@ -28,7 +28,7 @@ impl SimpleElement {
 
     pub fn parse_simple(&mut self, attributes: &[OwnedAttribute]) {
         for attr in attributes {
-            if !self.colour_map.read_colours(attr) {
+            if !self.colour_map.read_colours(attr).unwrap() {
                 println!("[{}] Unparsed Attribute: {}", self.element_name, attr.name);
             }
         }

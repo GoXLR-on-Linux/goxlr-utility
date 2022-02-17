@@ -35,7 +35,7 @@ impl RobotEffectBase {
 
     pub fn parse_robot_root(&mut self, attributes: &[OwnedAttribute]) {
         for attr in attributes {
-            if !self.colour_map.read_colours(attr) {
+            if !self.colour_map.read_colours(attr).unwrap() {
                 println!("[robotEffect] Unparsed Attribute: {}", attr.name);
             }
         }

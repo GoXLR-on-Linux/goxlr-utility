@@ -41,7 +41,7 @@ impl PitchEncoderBase {
                 continue;
             }
 
-            if !self.colour_map.read_colours(attr) {
+            if !self.colour_map.read_colours(attr).unwrap() {
                 println!("[PitchEncoder] Unparsed Attribute: {}", attr.name);
             }
         }
