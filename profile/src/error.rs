@@ -9,4 +9,7 @@ pub enum ParseError {
 
     #[error("Expected enum: {0}")]
     ExpectedEnum(#[from] strum::ParseError),
+
+    #[error("IO error: {0}")]
+    IOError(#[from] std::io::Error),
 }
