@@ -217,7 +217,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
 
                 if name.local_name == "echoEncoder" {
-                    echo_encoder.parse_echo_root(&attributes);
+                    echo_encoder.parse_echo_root(&attributes).unwrap();
                     continue;
                 }
 
@@ -225,7 +225,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let id =
                         u8::from_str(name.local_name.chars().last().unwrap().to_string().as_str())
                             .unwrap();
-                    echo_encoder.parse_echo_preset(id, &attributes);
+                    echo_encoder.parse_echo_preset(id, &attributes).unwrap();
                     continue;
                 }
 
