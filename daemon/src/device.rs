@@ -1,5 +1,6 @@
+use crate::profile::ProfileAdapter;
 use anyhow::Result;
-use enumset::{enum_set, EnumSet};
+use enumset::EnumSet;
 use goxlr_ipc::{GoXLRCommand, HardwareStatus, MixerStatus};
 use goxlr_profile_loader::profile::Profile;
 use goxlr_types::{
@@ -23,53 +24,14 @@ pub struct Device<T: UsbContext> {
     volumes_before_muted: [u8; ChannelName::COUNT],
     status: MixerStatus,
     last_buttons: EnumSet<Buttons>,
-    profile: Profile,
+    profile: ProfileAdapter,
 }
 
 impl<T: UsbContext> Device<T> {
     pub fn new(mut goxlr: GoXLR<T>, hardware: HardwareStatus) -> Result<Self> {
-        let profile = Profile::load(DEFAULT_PROFILE)?;
-        let mut router = [EnumSet::empty(); BasicInputDevice::COUNT];
-        router[BasicInputDevice::Microphone as usize] = enum_set!(
-            BasicOutputDevice::Headphones
-                | BasicOutputDevice::BroadcastMix
-                | BasicOutputDevice::LineOut
-                | BasicOutputDevice::ChatMic
-                | BasicOutputDevice::Sampler
-        );
-        router[BasicInputDevice::Chat as usize] = enum_set!(
-            BasicOutputDevice::Headphones
-                | BasicOutputDevice::BroadcastMix
-                | BasicOutputDevice::LineOut
-        );
-        router[BasicInputDevice::Music as usize] = enum_set!(
-            BasicOutputDevice::Headphones
-                | BasicOutputDevice::BroadcastMix
-                | BasicOutputDevice::LineOut
-        );
-        router[BasicInputDevice::Game as usize] = enum_set!(
-            BasicOutputDevice::Headphones
-                | BasicOutputDevice::BroadcastMix
-                | BasicOutputDevice::LineOut
-        );
-        router[BasicInputDevice::Console as usize] = enum_set!(
-            BasicOutputDevice::Headphones
-                | BasicOutputDevice::BroadcastMix
-                | BasicOutputDevice::LineOut
-        );
-        router[BasicInputDevice::LineIn as usize] =
-            enum_set!(BasicOutputDevice::Headphones | BasicOutputDevice::BroadcastMix);
-        router[BasicInputDevice::System as usize] = enum_set!(
-            BasicOutputDevice::Headphones
-                | BasicOutputDevice::BroadcastMix
-                | BasicOutputDevice::LineOut
-        );
-        router[BasicInputDevice::Samples as usize] = enum_set!(
-            BasicOutputDevice::Headphones
-                | BasicOutputDevice::BroadcastMix
-                | BasicOutputDevice::LineOut
-                | BasicOutputDevice::ChatMic
-        );
+        let profile = ProfileAdapter::new(Profile::load(DEFAULT_PROFILE)?);
+
+        let router = profile.create_router();
         let status = MixerStatus {
             hardware,
             fader_a_assignment: ChannelName::Mic,

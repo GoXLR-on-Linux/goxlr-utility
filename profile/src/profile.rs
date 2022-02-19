@@ -499,4 +499,8 @@ impl Profile {
 
         Ok(())
     }
+
+    pub fn mixer(&self) -> &Mixers {
+        &self.mixer
+    }
 }

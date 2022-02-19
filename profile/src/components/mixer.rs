@@ -145,6 +145,10 @@ impl Mixers {
         writer.write(XmlWriterEvent::end_element())?;
         Ok(())
     }
+
+    pub fn mixer_table(&self) -> &EnumMap<InputChannels, EnumMap<OutputChannels, u16>> {
+        &self.mixer_table
+    }
 }
 
 #[derive(Debug, EnumIter, Enum, EnumProperty)]

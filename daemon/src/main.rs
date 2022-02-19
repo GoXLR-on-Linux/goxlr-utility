@@ -1,6 +1,7 @@
 mod communication;
 mod device;
 mod primary_worker;
+mod profile;
 mod shutdown;
 
 use crate::primary_worker::handle_changes;
