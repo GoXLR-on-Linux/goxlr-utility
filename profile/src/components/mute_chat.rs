@@ -11,12 +11,28 @@ use xml::EventWriter;
 use crate::components::colours::{ColourMap, ColourState};
 use crate::components::mute::MuteFunction;
 use crate::components::mute_chat::CoughToggle::Hold;
-use crate::error::ParseError;
+
+#[derive(thiserror::Error, Debug)]
+#[allow(clippy::enum_variant_names)]
+pub enum ParseError {
+    #[error("Expected int: {0}")]
+    ExpectedInt(#[from] std::num::ParseIntError),
+
+    #[error("Expected float: {0}")]
+    ExpectedFloat(#[from] std::num::ParseFloatError),
+
+    #[error("Expected enum: {0}")]
+    ExpectedEnum(#[from] strum::ParseError),
+
+    #[error("Invalid colours: {0}")]
+    InvalidColours(#[from] crate::components::colours::ParseError),
+}
 use std::str::FromStr;
 
 /**
  * These have no special properties, they are literally just button colours..
  */
+#[derive(Debug)]
 pub struct MuteChat {
     // Ok.
     element_name: String,
@@ -134,7 +150,7 @@ impl MuteChat {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 enum CoughToggle {
     Hold,
     Toggle,

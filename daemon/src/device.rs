@@ -1,6 +1,7 @@
 use anyhow::Result;
 use enumset::{enum_set, EnumSet};
 use goxlr_ipc::{GoXLRCommand, HardwareStatus, MixerStatus};
+use goxlr_profile_loader::profile::Profile;
 use goxlr_types::{
     ChannelName, FaderName, InputDevice as BasicInputDevice, MicrophoneType,
     OutputDevice as BasicOutputDevice,
@@ -14,6 +15,7 @@ use log::debug;
 use strum::{EnumCount, IntoEnumIterator};
 
 const MIN_VOLUME_THRESHOLD: u8 = 6;
+const DEFAULT_PROFILE: &[u8] = include_bytes!("../default_profile.xml");
 
 #[derive(Debug)]
 pub struct Device<T: UsbContext> {
@@ -21,10 +23,12 @@ pub struct Device<T: UsbContext> {
     volumes_before_muted: [u8; ChannelName::COUNT],
     status: MixerStatus,
     last_buttons: EnumSet<Buttons>,
+    profile: Profile,
 }
 
 impl<T: UsbContext> Device<T> {
     pub fn new(mut goxlr: GoXLR<T>, hardware: HardwareStatus) -> Result<Self> {
+        let profile = Profile::load(DEFAULT_PROFILE)?;
         let mut router = [EnumSet::empty(); BasicInputDevice::COUNT];
         router[BasicInputDevice::Microphone as usize] = enum_set!(
             BasicOutputDevice::Headphones
@@ -89,6 +93,7 @@ impl<T: UsbContext> Device<T> {
         goxlr.set_microphone_gain(MicrophoneType::Jack, 72)?;
 
         let mut device = Self {
+            profile,
             goxlr,
             status,
             volumes_before_muted: [255; ChannelName::COUNT],

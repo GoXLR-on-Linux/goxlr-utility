@@ -10,7 +10,22 @@ use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
 use crate::components::colours::ColourMap;
-use crate::error::ParseError;
+
+#[derive(thiserror::Error, Debug)]
+#[allow(clippy::enum_variant_names)]
+pub enum ParseError {
+    #[error("Expected int: {0}")]
+    ExpectedInt(#[from] std::num::ParseIntError),
+
+    #[error("Expected float: {0}")]
+    ExpectedFloat(#[from] std::num::ParseFloatError),
+
+    #[error("Expected enum: {0}")]
+    ExpectedEnum(#[from] strum::ParseError),
+
+    #[error("Invalid colours: {0}")]
+    InvalidColours(#[from] crate::components::colours::ParseError),
+}
 
 /**
  * This is relatively static, main tag contains standard colour mapping, subtags contain various
@@ -18,6 +33,7 @@ use crate::error::ParseError;
  * 'types' of presets (encoders and effects).
  */
 
+#[derive(Debug)]
 pub struct SampleBase {
     element_name: String,
     colour_map: ColourMap,

@@ -12,13 +12,29 @@ use xml::EventWriter;
 use crate::components::colours::ColourMap;
 use crate::components::megaphone::Preset;
 use crate::components::megaphone::Preset::{Preset1, Preset2, Preset3, Preset4, Preset5, Preset6};
-use crate::error::ParseError;
+
+#[derive(thiserror::Error, Debug)]
+#[allow(clippy::enum_variant_names)]
+pub enum ParseError {
+    #[error("Expected int: {0}")]
+    ExpectedInt(#[from] std::num::ParseIntError),
+
+    #[error("Expected float: {0}")]
+    ExpectedFloat(#[from] std::num::ParseFloatError),
+
+    #[error("Expected enum: {0}")]
+    ExpectedEnum(#[from] strum::ParseError),
+
+    #[error("Invalid colours: {0}")]
+    InvalidColours(#[from] crate::components::colours::ParseError),
+}
 
 /**
  * This is relatively static, main tag contains standard colour mapping, subtags contain various
  * presets, we'll use an EnumMap to define the 'presets' as they'll be useful for the other various
  * 'types' of presets (encoders and effects).
  */
+#[derive(Debug)]
 pub struct PitchEncoderBase {
     colour_map: ColourMap,
     preset_map: EnumMap<Preset, PitchEncoder>,

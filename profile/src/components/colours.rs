@@ -1,10 +1,22 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 
-use crate::error::ParseError;
+#[derive(thiserror::Error, Debug)]
+#[allow(clippy::enum_variant_names)]
+pub enum ParseError {
+    #[error("Expected int: {0}")]
+    ExpectedInt(#[from] std::num::ParseIntError),
+
+    #[error("Expected float: {0}")]
+    ExpectedFloat(#[from] std::num::ParseFloatError),
+
+    #[error("Expected enum: {0}")]
+    ExpectedEnum(#[from] strum::ParseError),
+}
 use strum::{Display, EnumString};
 use xml::attribute::OwnedAttribute;
 
+#[derive(Debug)]
 pub struct ColourMap {
     // The colour attribute prefix (for parsing)..
     prefix: String,
@@ -57,7 +69,7 @@ impl ColourMap {
         let mut attr_key = format!("{}offStyle", &self.prefix);
 
         if attribute.name.local_name == attr_key {
-            self.off_style = ColourOffStyle::from_str(&attribute.value)?;
+            self.off_style = ColourOffStyle::from_str(dbg!(&attribute.value))?;
             return Ok(true);
         }
 
@@ -190,6 +202,9 @@ enum ColourDisplay {
 
     #[strum(to_string = "GRADIENT_METER")]
     GradientMeter,
+
+    #[strum(to_string = "TWO COLOR")]
+    TwoColour,
 }
 
 #[derive(Debug, EnumString, PartialEq, Display)]

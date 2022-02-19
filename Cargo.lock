@@ -366,6 +366,7 @@ dependencies = [
  "anyhow",
  "enumset",
  "goxlr-ipc",
+ "goxlr-profile-loader",
  "goxlr-types",
  "goxlr-usb",
  "log",

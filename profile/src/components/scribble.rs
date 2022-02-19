@@ -9,8 +9,24 @@ use xml::EventWriter;
 
 use crate::components::colours::ColourMap;
 use crate::components::scribble::ScribbleStyle::{Inverted, Normal};
-use crate::error::ParseError;
 
+#[derive(thiserror::Error, Debug)]
+#[allow(clippy::enum_variant_names)]
+pub enum ParseError {
+    #[error("Expected int: {0}")]
+    ExpectedInt(#[from] std::num::ParseIntError),
+
+    #[error("Expected float: {0}")]
+    ExpectedFloat(#[from] std::num::ParseFloatError),
+
+    #[error("Expected enum: {0}")]
+    ExpectedEnum(#[from] strum::ParseError),
+
+    #[error("Invalid colours: {0}")]
+    InvalidColours(#[from] crate::components::colours::ParseError),
+}
+
+#[derive(Debug)]
 pub struct Scribble {
     element_name: String,
     colour_map: ColourMap,
@@ -160,7 +176,7 @@ impl Scribble {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 enum ScribbleStyle {
     Normal,
     Inverted,

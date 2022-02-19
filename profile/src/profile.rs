@@ -21,13 +21,14 @@ use crate::SampleButtons;
 use crate::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
 use enum_map::EnumMap;
 use std::fs::File;
-use std::io::BufReader;
+use std::io::{BufReader, Read};
 use std::path::Path;
 use std::process::exit;
 use std::str::FromStr;
 use xml::reader::XmlEvent as XmlReaderEvent;
 use xml::{EmitterConfig, EventReader};
 
+#[derive(Debug)]
 pub struct Profile {
     root: RootElement,
     browser: BrowserPreviewTree,
@@ -50,10 +51,14 @@ pub struct Profile {
 }
 
 impl Profile {
-    pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, ParseError> {
+    pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self, ParseError> {
         let file = File::open(path)?;
         let file = BufReader::new(file);
-        let parser = EventReader::new(file);
+        Self::load(file)
+    }
+
+    pub fn load<R: Read>(read: R) -> Result<Self, ParseError> {
+        let parser = EventReader::new(read);
 
         let mut root = RootElement::new();
         let mut browser = BrowserPreviewTree::new("browserPreviewTree".to_string());
