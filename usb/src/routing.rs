@@ -48,7 +48,7 @@ impl OutputDevice {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum InputDevice {
     MicrophoneRight,
     MicrophoneLeft,

@@ -176,7 +176,14 @@ impl<T: UsbContext> GoXLR<T> {
     }
 
     pub fn request_data(&mut self, command: Command, body: &[u8]) -> Result<Vec<u8>, rusb::Error> {
-        self.command_count += 1;
+        if command == Command::ResetCommandIndex {
+            self.command_count = 0;
+        } else {
+            if self.command_count < u16::MAX {
+                let _ = self.request_data(Command::ResetCommandIndex, &[])?;
+            }
+            self.command_count += 1;
+        }
         let command_index = self.command_count;
         let mut full_request = vec![0; 16];
         LittleEndian::write_u32(&mut full_request[0..4], command.command_id());

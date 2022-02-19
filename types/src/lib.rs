@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Formatter;
 use strum::{Display, EnumCount, EnumIter};
 
-#[derive(Copy, Clone, Debug, Display, EnumIter, EnumCount)]
+#[derive(Copy, Clone, Debug, Display, EnumIter, EnumCount, PartialEq, Eq)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ChannelName {
@@ -24,7 +24,7 @@ pub enum ChannelName {
     LineOut,
 }
 
-#[derive(Copy, Clone, Debug, Display, EnumIter, EnumCount)]
+#[derive(Copy, Clone, Debug, Display, EnumIter, EnumCount, PartialEq, Eq)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum FaderName {
@@ -34,7 +34,7 @@ pub enum FaderName {
     D,
 }
 
-#[derive(Copy, Clone, Debug, Display, EnumIter, EnumCount)]
+#[derive(Copy, Clone, Debug, Display, EnumIter, EnumCount, PartialEq, Eq)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum EncoderName {

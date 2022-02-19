@@ -1,8 +1,9 @@
 use crate::routing::InputDevice;
 use goxlr_types::{ChannelName, EncoderName, FaderName};
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Command {
+    ResetCommandIndex,
     SystemInfo(SystemInfoCommand),
     SetChannelState(ChannelName),
     SetChannelVolume(ChannelName),
@@ -23,6 +24,7 @@ pub enum Command {
 impl Command {
     pub fn command_id(&self) -> u32 {
         match self {
+            Command::ResetCommandIndex => 0,
             Command::SystemInfo(sub) => sub.id(),
             Command::SetChannelState(channel) => (0x809 << 12) | *channel as u32,
             Command::SetChannelVolume(channel) => (0x806 << 12) | *channel as u32,
@@ -42,13 +44,13 @@ impl Command {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum SystemInfoCommand {
     FirmwareVersion,
     SupportsDCPCategory,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum HardwareInfoCommand {
     FirmwareVersion = 0,
     SerialNumber = 1,
