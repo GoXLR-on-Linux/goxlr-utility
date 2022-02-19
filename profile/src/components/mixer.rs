@@ -149,6 +149,10 @@ impl Mixers {
     pub fn mixer_table(&self) -> &EnumMap<InputChannels, EnumMap<OutputChannels, u16>> {
         &self.mixer_table
     }
+
+    pub fn channel_volume(&self, channel: FullChannelList) -> u8 {
+        self.volume_table[channel]
+    }
 }
 
 #[derive(Debug, EnumIter, Enum, EnumProperty)]

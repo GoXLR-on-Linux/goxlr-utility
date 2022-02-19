@@ -49,7 +49,7 @@ impl<T: UsbContext> Device<T> {
         goxlr.set_fader(FaderName::C, profile.get_fader_assignment(FaderName::C))?;
         goxlr.set_fader(FaderName::D, profile.get_fader_assignment(FaderName::D))?;
         for channel in ChannelName::iter() {
-            goxlr.set_volume(channel, 255)?;
+            goxlr.set_volume(channel, profile.get_channel_volume(channel))?;
             goxlr.set_channel_state(channel, ChannelState::Unmuted)?;
         }
         goxlr.set_microphone_gain(MicrophoneType::Jack, 72)?;

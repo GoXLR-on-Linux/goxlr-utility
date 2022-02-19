@@ -35,6 +35,12 @@ impl ProfileAdapter {
         let fader = self.profile.fader(fader as usize);
         profile_to_standard_channel(fader.channel())
     }
+
+    pub fn get_channel_volume(&self, channel: ChannelName) -> u8 {
+        self.profile
+            .mixer()
+            .channel_volume(standard_to_profile_channel(channel))
+    }
 }
 
 fn profile_to_standard_input(value: InputChannels) -> InputDevice {
@@ -73,5 +79,21 @@ fn profile_to_standard_channel(value: FullChannelList) -> ChannelName {
         FullChannelList::Headphones => ChannelName::Headphones,
         FullChannelList::MicMonitor => ChannelName::MicMonitor,
         FullChannelList::LineOut => ChannelName::LineOut,
+    }
+}
+
+fn standard_to_profile_channel(value: ChannelName) -> FullChannelList {
+    match value {
+        ChannelName::Mic => FullChannelList::Mic,
+        ChannelName::Chat => FullChannelList::Chat,
+        ChannelName::Music => FullChannelList::Music,
+        ChannelName::Game => FullChannelList::Game,
+        ChannelName::Console => FullChannelList::Console,
+        ChannelName::LineIn => FullChannelList::LineIn,
+        ChannelName::System => FullChannelList::System,
+        ChannelName::Sample => FullChannelList::Sample,
+        ChannelName::Headphones => FullChannelList::Headphones,
+        ChannelName::MicMonitor => FullChannelList::MicMonitor,
+        ChannelName::LineOut => FullChannelList::LineOut,
     }
 }
