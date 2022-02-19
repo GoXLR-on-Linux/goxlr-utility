@@ -503,4 +503,8 @@ impl Profile {
     pub fn mixer(&self) -> &Mixers {
         &self.mixer
     }
+
+    pub fn fader(&self, fader: usize) -> &Fader {
+        &self.faders[fader]
+    }
 }

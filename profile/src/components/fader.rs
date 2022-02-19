@@ -96,4 +96,8 @@ impl Fader {
         writer.write(XmlWriterEvent::end_element())?;
         Ok(())
     }
+
+    pub fn channel(&self) -> FullChannelList {
+        self.channel
+    }
 }

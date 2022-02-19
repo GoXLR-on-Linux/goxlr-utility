@@ -199,7 +199,7 @@ pub enum OutputChannels {
 /**
  * There are a couple of volumes that aren't part of the general mixer, so this needs mapping..
  */
-#[derive(Debug, Enum, EnumIter, EnumProperty)]
+#[derive(Copy, Clone, Debug, Enum, EnumIter, EnumProperty)]
 pub enum FullChannelList {
     // Base Mixer Channels
     #[strum(props(Name = "mic", faderIndex = "0"))]

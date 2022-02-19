@@ -1,7 +1,7 @@
 use enumset::EnumSet;
-use goxlr_profile_loader::components::mixer::{InputChannels, OutputChannels};
+use goxlr_profile_loader::components::mixer::{FullChannelList, InputChannels, OutputChannels};
 use goxlr_profile_loader::profile::Profile;
-use goxlr_types::{InputDevice, OutputDevice};
+use goxlr_types::{ChannelName, FaderName, InputDevice, OutputDevice};
 use strum::EnumCount;
 
 #[derive(Debug)]
@@ -30,6 +30,11 @@ impl ProfileAdapter {
         }
         router
     }
+
+    pub fn get_fader_assignment(&self, fader: FaderName) -> ChannelName {
+        let fader = self.profile.fader(fader as usize);
+        profile_to_standard_channel(fader.channel())
+    }
 }
 
 fn profile_to_standard_input(value: InputChannels) -> InputDevice {
@@ -52,5 +57,21 @@ fn profile_to_standard_output(value: OutputChannels) -> OutputDevice {
         OutputChannels::LineOut => OutputDevice::LineOut,
         OutputChannels::ChatMic => OutputDevice::ChatMic,
         OutputChannels::Sampler => OutputDevice::Sampler,
+    }
+}
+
+fn profile_to_standard_channel(value: FullChannelList) -> ChannelName {
+    match value {
+        FullChannelList::Mic => ChannelName::Mic,
+        FullChannelList::Chat => ChannelName::Chat,
+        FullChannelList::Music => ChannelName::Music,
+        FullChannelList::Game => ChannelName::Game,
+        FullChannelList::Console => ChannelName::Console,
+        FullChannelList::LineIn => ChannelName::LineIn,
+        FullChannelList::System => ChannelName::System,
+        FullChannelList::Sample => ChannelName::Sample,
+        FullChannelList::Headphones => ChannelName::Headphones,
+        FullChannelList::MicMonitor => ChannelName::MicMonitor,
+        FullChannelList::LineOut => ChannelName::LineOut,
     }
 }

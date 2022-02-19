@@ -34,20 +34,20 @@ impl<T: UsbContext> Device<T> {
         let router = profile.create_router();
         let status = MixerStatus {
             hardware,
-            fader_a_assignment: ChannelName::Mic,
-            fader_b_assignment: ChannelName::Music,
-            fader_c_assignment: ChannelName::Chat,
-            fader_d_assignment: ChannelName::System,
+            fader_a_assignment: profile.get_fader_assignment(FaderName::A),
+            fader_b_assignment: profile.get_fader_assignment(FaderName::B),
+            fader_c_assignment: profile.get_fader_assignment(FaderName::C),
+            fader_d_assignment: profile.get_fader_assignment(FaderName::D),
             volumes: [255; ChannelName::COUNT],
             muted: [false; ChannelName::COUNT],
             mic_gains: [0; MicrophoneType::COUNT],
             mic_type: MicrophoneType::Jack,
             router,
         };
-        goxlr.set_fader(FaderName::A, ChannelName::Mic)?;
-        goxlr.set_fader(FaderName::B, ChannelName::Music)?;
-        goxlr.set_fader(FaderName::C, ChannelName::Chat)?;
-        goxlr.set_fader(FaderName::D, ChannelName::System)?;
+        goxlr.set_fader(FaderName::A, profile.get_fader_assignment(FaderName::A))?;
+        goxlr.set_fader(FaderName::B, profile.get_fader_assignment(FaderName::B))?;
+        goxlr.set_fader(FaderName::C, profile.get_fader_assignment(FaderName::C))?;
+        goxlr.set_fader(FaderName::D, profile.get_fader_assignment(FaderName::D))?;
         for channel in ChannelName::iter() {
             goxlr.set_volume(channel, 255)?;
             goxlr.set_channel_state(channel, ChannelState::Unmuted)?;
