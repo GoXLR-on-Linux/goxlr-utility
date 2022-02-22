@@ -14,7 +14,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[derive(Debug, Enum)]
-enum SampleButtons {
+pub enum SampleButtons {
     TopLeft,
     TopRight,
     BottomLeft,
