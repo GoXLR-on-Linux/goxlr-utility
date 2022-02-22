@@ -71,4 +71,12 @@ impl SimpleElement {
         writer.write(XmlWriterEvent::end_element())?;
         Ok(())
     }
+
+    pub fn element_name(&self) -> &str {
+        return &self.element_name.as_str();
+    }
+
+    pub fn colour_map(&self) -> &ColourMap {
+        &self.colour_map
+    }
 }

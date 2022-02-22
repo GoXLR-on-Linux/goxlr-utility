@@ -214,6 +214,10 @@ impl SampleBase {
         writer.write(XmlWriterEvent::end_element())?;
         Ok(())
     }
+
+    pub fn colour_map(&self) -> &ColourMap {
+        &self.colour_map
+    }
 }
 
 #[derive(Debug)]
