@@ -56,7 +56,7 @@ impl ProfileAdapter {
             for i in 0 .. colour.get_colour_count() {
                 let position = colour.position(i);
 
-                if i == 1 && colour_map.get_off_style() == Dimmed && colour.is_blank_when_dimmed() {
+                if i == 1 && colour_map.get_off_style() == &Dimmed && colour.is_blank_when_dimmed() {
                     colour_array[position .. position + 4].copy_from_slice(&[00, 00, 00, 00]);
                 } else {
                     // Update the correct 4 bytes in the map..
