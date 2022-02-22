@@ -178,10 +178,17 @@ impl ColourMap {
             attributes.insert(key, colour_display.to_string());
         }
     }
+
+    pub fn colour(&self, index: u8) -> &Colour {
+        self.colour_list.as_ref().unwrap()[index as usize].as_ref().unwrap()
+    }
+    pub fn get_off_style(&self) -> ColourOffStyle {
+        return self.get_off_style()
+    }
 }
 
 #[derive(Debug, EnumString, Display)]
-enum ColourOffStyle {
+pub enum ColourOffStyle {
     #[strum(to_string = "DIMMED")]
     Dimmed,
 
@@ -217,7 +224,7 @@ pub enum ColourState {
 }
 
 #[derive(Debug)]
-struct Colour {
+pub struct Colour {
     red: u8,
     green: u8,
     blue: u8,
