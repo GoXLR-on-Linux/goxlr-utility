@@ -119,6 +119,50 @@ impl ColourTargets {
         }
     }
 
+    fn get_start_new(&self) -> usize {
+        match self {
+            // +48 on everything except Scribble / Mute / FaderMeter / Global / Logo
+            ColourTargets::Fader1Mute => 12,
+            ColourTargets::Fader2Mute => 14,
+            ColourTargets::Fader3Mute => 16,
+            ColourTargets::Fader4Mute => 18,
+            ColourTargets::Bleep => 126,
+            ColourTargets::MicrophoneMute => 128,
+            ColourTargets::EffectSelect1 => 77,
+            ColourTargets::EffectSelect2 => 79,
+            ColourTargets::EffectSelect3 => 81,
+            ColourTargets::EffectSelect4 => 83,
+            ColourTargets::EffectSelect5 => 85,
+            ColourTargets::EffectSelect6 => 87,
+            ColourTargets::EffectFx => 124,
+            ColourTargets::EffectMegaphone => 118,
+            ColourTargets::EffectRobot => 120,
+            ColourTargets::EffectHardTune => 122,
+            ColourTargets::SamplerSelectA => 102,
+            ColourTargets::SamplerSelectB => 104,
+            ColourTargets::SamplerSelectC => 106,
+            ColourTargets::SamplerTopLeft => 110,
+            ColourTargets::SamplerTopRight => 112,
+            ColourTargets::SamplerBottomLeft => 114,
+            ColourTargets::SamplerBottomRight => 116,
+            ColourTargets::SamplerClear => 108,
+            ColourTargets::FadeMeter1 => 20,
+            ColourTargets::FadeMeter2 => 34,
+            ColourTargets::FadeMeter3 => 48,
+            ColourTargets::FadeMeter4 => 62,
+            ColourTargets::Scribble1 => 0,
+            ColourTargets::Scribble2 => 2,
+            ColourTargets::Scribble3 => 4,
+            ColourTargets::Scribble4 => 6,
+            ColourTargets::PitchEncoder => 89,
+            ColourTargets::GenderEncoder => 92,
+            ColourTargets::ReverbEncoder => 95,
+            ColourTargets::EchoEncoder => 98,
+            ColourTargets::LogoX => 8,
+            ColourTargets::Global => 10,
+        }
+    }
+
     // There are a few buttons which seem to configure as 00000000 when offStyle is set to
     // 'dimmed', this indicates whether or not that's true for a button..
     pub fn is_blank_when_dimmed(&self) -> bool {
