@@ -54,8 +54,8 @@ pub enum ColourTargets {
     EchoEncoder,
 
     // I believe this is referred to as 'Global' in the UI
-    LogoX1,
-    LogoX2,
+    LogoX,
+    Global,
 }
 
 impl ColourTargets {
@@ -111,8 +111,8 @@ impl ColourTargets {
             ColourTargets::GenderEncoder => 44,
             ColourTargets::ReverbEncoder => 47,
             ColourTargets::EchoEncoder => 50,
-            ColourTargets::LogoX1 => 8,
-            ColourTargets::LogoX2 => 10,
+            ColourTargets::LogoX => 8,
+            ColourTargets::Global => 10,
         }
     }
 
