@@ -240,4 +240,8 @@ impl Colour {
             self.red, self.green, self.blue, self.alpha
         );
     }
+
+    pub fn to_reverse_bytes(&self) -> [u8;4] {
+        return [self.alpha, self.blue, self.green, self.red];
+    }
 }
