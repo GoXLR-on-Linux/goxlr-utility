@@ -53,6 +53,7 @@ impl<T: UsbContext> Device<T> {
             goxlr.set_channel_state(channel, ChannelState::Unmuted)?;
         }
         goxlr.set_microphone_gain(MicrophoneType::Jack, 72)?;
+        goxlr.set_button_colours(profile.get_colour_map());
 
         let mut device = Self {
             profile,
