@@ -507,4 +507,64 @@ impl Profile {
     pub fn fader(&self, fader: usize) -> &Fader {
         &self.faders[fader]
     }
+
+    pub fn effects(&self, effect: usize) -> &Effects {
+        &self.effects[effect]
+    }
+
+    pub fn mute_chat(&self) -> &MuteChat {
+        &self.mute_chat
+    }
+
+    pub fn megaphone_effect(&self) -> &MegaphoneEffectBase {
+        &self.megaphone_effect
+    }
+
+    pub fn robot_effect(&self) -> &RobotEffectBase {
+        &self.robot_effect
+    }
+
+    pub fn hardtune_effect(&self) -> &HardtuneEffectBase {
+        &self.hardtune_effect
+    }
+
+    pub fn sample_button(&self, button: SamplerButtons) -> &SampleBase {
+        &self.sampler_map[button]
+    }
+
+    pub fn mute_buttons(&self, index: usize) -> &MuteButton {
+        &self.mute_buttons[index]
+    }
+
+    pub fn scribbles(&self, index: usize) -> &Scribble {
+        &self.scribbles[index]
+    }
+
+    pub fn pitch_encoder(&self) -> &PitchEncoderBase {
+        &self.pitch_encoder
+    }
+
+    pub fn echo_encoder(&self) -> &EchoEncoderBase {
+        &self.echo_encoder
+    }
+
+    pub fn gender_encoder(&self) -> &GenderEncoderBase {
+        &self.gender_encoder
+    }
+
+    pub fn reverb_encoder(&self) -> &ReverbEncoderBase {
+        &self.reverb_encoder
+    }
+
+
+    pub fn simple_element(&self, name: &str) -> Result<&SimpleElement, ()> {
+        // Should we consider ENUMing the simple elements? For nicer lookup..
+
+        for simple in &self.simple_elements {
+            if simple.element_name() == name {
+                return Ok(simple);
+            }
+        }
+        Err(())
+    }
 }
