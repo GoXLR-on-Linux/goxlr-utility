@@ -3,6 +3,11 @@ use goxlr_profile_loader::components::mixer::{FullChannelList, InputChannels, Ou
 use goxlr_profile_loader::profile::Profile;
 use goxlr_types::{ChannelName, FaderName, InputDevice, OutputDevice};
 use strum::EnumCount;
+use strum::IntoEnumIterator;
+use goxlr_profile_loader::components::colours::ColourMap;
+use goxlr_profile_loader::components::colours::ColourOffStyle::Dimmed;
+use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
+use goxlr_usb::colouring::ColourTargets;
 
 #[derive(Debug)]
 pub struct ProfileAdapter {
@@ -40,6 +45,28 @@ impl ProfileAdapter {
         self.profile
             .mixer()
             .channel_volume(standard_to_profile_channel(channel))
+    }
+
+    pub fn get_colour_map(&self) -> [u8;328] {
+        let mut colour_array = [0; 328];
+
+        for colour in ColourTargets::iter() {
+            let colour_map = get_profile_colour_map(&self.profile, colour);
+
+            for i in 0 .. colour.get_colour_count() {
+                let position = colour.position(i);
+
+                if i == 1 && colour_map.get_off_style() == Dimmed && colour.is_blank_when_dimmed() {
+                    colour_array[position .. position + 4].copy_from_slice(&[00, 00, 00, 00]);
+                } else {
+                    // Update the correct 4 bytes in the map..
+                    colour_array[position..position + 4]
+                        .copy_from_slice(&colour_map.colour(i).to_reverse_bytes());
+                }
+            }
+        }
+        dbg!(colour_array);
+        return colour_array;
     }
 }
 
@@ -95,5 +122,48 @@ fn standard_to_profile_channel(value: ChannelName) -> FullChannelList {
         ChannelName::Headphones => FullChannelList::Headphones,
         ChannelName::MicMonitor => FullChannelList::MicMonitor,
         ChannelName::LineOut => FullChannelList::LineOut,
+    }
+}
+
+fn get_profile_colour_map(profile: &Profile, colour_target: ColourTargets) -> &ColourMap {
+    match colour_target {
+        ColourTargets::Fader1Mute => &profile.mute_buttons(0).colour_map(),
+        ColourTargets::Fader2Mute => &profile.mute_buttons(1).colour_map(),
+        ColourTargets::Fader3Mute => &profile.mute_buttons(2).colour_map(),
+        ColourTargets::Fader4Mute => &profile.mute_buttons(3).colour_map(),
+        ColourTargets::Bleep => &profile.simple_element("swear").unwrap().colour_map(),
+        ColourTargets::MicrophoneMute => &profile.mute_chat().colour_map(),
+        ColourTargets::EffectSelect1 => &profile.effects(0).colour_map(),
+        ColourTargets::EffectSelect2 => &profile.effects(1).colour_map(),
+        ColourTargets::EffectSelect3 => &profile.effects(2).colour_map(),
+        ColourTargets::EffectSelect4 => &profile.effects(3).colour_map(),
+        ColourTargets::EffectSelect5 => &profile.effects(4).colour_map(),
+        ColourTargets::EffectSelect6 => &profile.effects(5).colour_map(),
+        ColourTargets::EffectFx => &profile.simple_element("fxClear").unwrap().colour_map(),
+        ColourTargets::EffectMegaphone => &profile.megaphone_effect().colour_map(),
+        ColourTargets::EffectRobot => &profile.robot_effect().colour_map(),
+        ColourTargets::EffectHardTune => &profile.hardtune_effect().colour_map(),
+        ColourTargets::SamplerSelectA => &profile.simple_element("sampleBankA").unwrap().colour_map(),
+        ColourTargets::SamplerSelectB => &profile.simple_element("sampleBankB").unwrap().colour_map(),
+        ColourTargets::SamplerSelectC => &profile.simple_element("sampleBankC").unwrap().colour_map(),
+        ColourTargets::SamplerTopLeft => &profile.sample_button(TopLeft).colour_map(),
+        ColourTargets::SamplerTopRight => &profile.sample_button(TopRight).colour_map(),
+        ColourTargets::SamplerBottomLeft => &profile.sample_button(BottomLeft).colour_map(),
+        ColourTargets::SamplerBottomRight => &profile.sample_button(BottomRight).colour_map(),
+        ColourTargets::SamplerClear => &profile.sample_button(Clear).colour_map(),
+        ColourTargets::FadeMeter1 => &profile.fader(0).colour_map(),
+        ColourTargets::FadeMeter2 => &profile.fader(1).colour_map(),
+        ColourTargets::FadeMeter3 => &profile.fader(2).colour_map(),
+        ColourTargets::FadeMeter4 => &profile.fader(3).colour_map(),
+        ColourTargets::Scribble1 => &profile.scribbles(0).colour_map(),
+        ColourTargets::Scribble2 => &profile.scribbles(0).colour_map(),
+        ColourTargets::Scribble3 => &profile.scribbles(0).colour_map(),
+        ColourTargets::Scribble4 => &profile.scribbles(0).colour_map(),
+        ColourTargets::PitchEncoder => &profile.pitch_encoder().colour_map(),
+        ColourTargets::GenderEncoder => &profile.gender_encoder().colour_map(),
+        ColourTargets::ReverbEncoder => &profile.reverb_encoder().colour_map(),
+        ColourTargets::EchoEncoder => &profile.echo_encoder().colour_map(),
+        ColourTargets::LogoX => &profile.simple_element("logoX").unwrap().colour_map(),
+        ColourTargets::Global => &profile.simple_element("globalColour").unwrap().colour_map()
     }
 }
