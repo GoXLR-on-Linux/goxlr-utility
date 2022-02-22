@@ -187,7 +187,7 @@ impl ColourMap {
     }
 }
 
-#[derive(Debug, EnumString, Display)]
+#[derive(Debug, PartialEq, EnumString, Display)]
 pub enum ColourOffStyle {
     #[strum(to_string = "DIMMED")]
     Dimmed,
