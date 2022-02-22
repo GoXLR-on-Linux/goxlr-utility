@@ -182,8 +182,8 @@ impl ColourMap {
     pub fn colour(&self, index: u8) -> &Colour {
         self.colour_list.as_ref().unwrap()[index as usize].as_ref().unwrap()
     }
-    pub fn get_off_style(&self) -> ColourOffStyle {
-        return self.get_off_style()
+    pub fn get_off_style(&self) -> &ColourOffStyle {
+        return &self.off_style
     }
 }
 
