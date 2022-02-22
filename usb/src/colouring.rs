@@ -119,7 +119,7 @@ impl ColourTargets {
         }
     }
 
-    fn get_start_new(&self) -> usize {
+    fn get_start_1_3_40(&self) -> usize {
         match self {
             // +48 on everything except Scribble / Mute / FaderMeter / Global / Logo
             ColourTargets::Fader1Mute => 12,
@@ -190,61 +190,62 @@ impl ColourTargets {
         )
     }
 
-    pub fn position(&self, colour: u8) -> usize {
+    pub fn position(&self, colour: u8, format_1_3_40: bool) -> usize {
         // For some odd reason, the Encoder dial order seems to be 1, 0, 2 as the colour definitions
         // where as all other buttons are 0, 1.. We *COULD* make this simpler by assuming that if
         // there are three colours, the order will be different, for now I'm just adding a simple
         // exception for the Encoders.
 
         // We should also error check here, make sure colour is in the range of get_colour_count..
+        let start_point = if format_1_3_40 { self.get_start_1_3_40() } else { self.get_start() };
 
         match self {
             ColourTargets::PitchEncoder => {
                 if colour == 0 {
-                    return self.get_start() * 4 + 4;
+                    return start_point * 4 + 4;
                 }
                 if colour == 1 {
-                    return self.get_start() * 4;
+                    return start_point * 4;
                 }
 
-                (self.get_start() * 4) + (colour * 4) as usize
+                (start_point * 4) + (colour * 4) as usize
             }
 
             ColourTargets::GenderEncoder => {
                 if colour == 0 {
-                    return self.get_start() * 4 + 4;
+                    return start_point * 4 + 4;
                 }
                 if colour == 1 {
-                    return self.get_start() * 4;
+                    return start_point * 4;
                 }
 
                 // Not sure how matches work, can we just fall this through to the bottom?
-                (self.get_start() * 4) + (colour * 4) as usize
+                (start_point * 4) + (colour * 4) as usize
             }
 
             ColourTargets::ReverbEncoder => {
                 if colour == 0 {
-                    return self.get_start() * 4 + 4;
+                    return start_point * 4 + 4;
                 }
                 if colour == 1 {
-                    return self.get_start() * 4;
+                    return start_point * 4;
                 }
 
-                (self.get_start() * 4) + (colour * 4) as usize
+                (start_point * 4) + (colour * 4) as usize
             }
 
             ColourTargets::EchoEncoder => {
                 if colour == 0 {
-                    return self.get_start() * 4 + 4;
+                    return start_point * 4 + 4;
                 }
                 if colour == 1 {
-                    return self.get_start() * 4;
+                    return start_point * 4;
                 }
 
-                (self.get_start() * 4) + (colour * 4) as usize
+                (start_point * 4) + (colour * 4) as usize
             }
 
-            _ => (self.get_start() * 4) + (colour * 4) as usize,
+            _ => (start_point * 4) + (colour * 4) as usize,
         }
     }
 }
