@@ -65,7 +65,7 @@ impl ProfileAdapter {
                 }
             }
         }
-        dbg!(colour_array);
+        //dbg!(colour_array);
         return colour_array;
     }
 }
