@@ -1,11 +1,11 @@
-use crate::profile::ProfileAdapter;
+use crate::profile::{ProfileAdapter, version_newer_or_equal_to};
 use anyhow::Result;
 use enumset::EnumSet;
 use goxlr_ipc::{GoXLRCommand, HardwareStatus, MixerStatus};
 use goxlr_profile_loader::profile::Profile;
 use goxlr_types::{
     ChannelName, FaderName, InputDevice as BasicInputDevice, MicrophoneType,
-    OutputDevice as BasicOutputDevice,
+    OutputDevice as BasicOutputDevice, VersionNumber
 };
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::channelstate::ChannelState;
@@ -53,7 +53,18 @@ impl<T: UsbContext> Device<T> {
             goxlr.set_channel_state(channel, ChannelState::Unmuted)?;
         }
         goxlr.set_microphone_gain(MicrophoneType::Jack, 72)?;
-        goxlr.set_button_colours(profile.get_colour_map());
+
+        // Load the colour Map..
+        let use_1_3_40_format = version_newer_or_equal_to(&status.hardware.versions.firmware, VersionNumber(1, 3, 40, 0));
+        let colour_map = profile.get_colour_map(use_1_3_40_format);
+
+        if use_1_3_40_format {
+            goxlr.set_button_colours_1_3_40(colour_map);
+        } else {
+            let mut map: [u8;328] = [0;328];
+            map.copy_from_slice(&colour_map[0..328]);
+            goxlr.set_button_colours(map);
+        }
 
         let mut device = Self {
             profile,
