@@ -163,7 +163,7 @@ impl ColourTargets {
                     return self.get_start() * 4;
                 }
 
-                self.get_start() + (colour * 4) as usize
+                (self.get_start() * 4) + (colour * 4) as usize
             }
 
             ColourTargets::GenderEncoder => {
@@ -175,7 +175,7 @@ impl ColourTargets {
                 }
 
                 // Not sure how matches work, can we just fall this through to the bottom?
-                self.get_start() + (colour * 4) as usize
+                (self.get_start() * 4) + (colour * 4) as usize
             }
 
             ColourTargets::ReverbEncoder => {
@@ -186,7 +186,7 @@ impl ColourTargets {
                     return self.get_start() * 4;
                 }
 
-                self.get_start() + (colour * 4) as usize
+                (self.get_start() * 4) + (colour * 4) as usize
             }
 
             ColourTargets::EchoEncoder => {
@@ -197,7 +197,7 @@ impl ColourTargets {
                     return self.get_start() * 4;
                 }
 
-                self.get_start() + (colour * 4) as usize
+                (self.get_start() * 4) + (colour * 4) as usize
             }
 
             _ => (self.get_start() * 4) + (colour * 4) as usize,
