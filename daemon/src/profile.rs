@@ -1,13 +1,14 @@
 use enumset::EnumSet;
 use goxlr_profile_loader::components::mixer::{FullChannelList, InputChannels, OutputChannels};
 use goxlr_profile_loader::profile::Profile;
-use goxlr_types::{ChannelName, FaderName, InputDevice, OutputDevice};
+use goxlr_types::{ChannelName, FaderName, FirmwareVersions, InputDevice, OutputDevice, VersionNumber};
 use strum::EnumCount;
 use strum::IntoEnumIterator;
 use goxlr_profile_loader::components::colours::ColourMap;
 use goxlr_profile_loader::components::colours::ColourOffStyle::Dimmed;
 use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
 use goxlr_usb::colouring::ColourTargets;
+use goxlr_usb::rusb::Version;
 
 #[derive(Debug)]
 pub struct ProfileAdapter {
@@ -47,14 +48,14 @@ impl ProfileAdapter {
             .channel_volume(standard_to_profile_channel(channel))
     }
 
-    pub fn get_colour_map(&self) -> [u8;328] {
-        let mut colour_array = [0; 328];
+    pub fn get_colour_map(&self, use_format_1_3_40: bool) -> [u8;520] {
+        let mut colour_array = [0; 520];
 
         for colour in ColourTargets::iter() {
             let colour_map = get_profile_colour_map(&self.profile, colour);
 
             for i in 0 .. colour.get_colour_count() {
-                let position = colour.position(i);
+                let position = colour.position(i, use_format_1_3_40);
 
                 if i == 1 && colour_map.get_off_style() == &Dimmed && colour.is_blank_when_dimmed() {
                     colour_array[position .. position + 4].copy_from_slice(&[00, 00, 00, 00]);
@@ -166,4 +167,29 @@ fn get_profile_colour_map(profile: &Profile, colour_target: ColourTargets) -> &C
         ColourTargets::LogoX => &profile.simple_element("logoX").unwrap().colour_map(),
         ColourTargets::Global => &profile.simple_element("globalColour").unwrap().colour_map()
     }
+}
+
+pub fn version_newer_or_equal_to(version: &VersionNumber, comparison: VersionNumber) -> bool {
+    if version.0 > comparison.0 {
+        return true;
+    } else if version.0 < comparison.0 {
+        return false;
+    }
+
+    if version.1 > comparison.1 {
+        return true;
+    } else if version.1 < comparison.1 {
+        return false;
+    }
+
+    if version.2 > comparison.2 {
+        return true;
+    } else if version.2 < comparison.2 {
+        return false;
+    }
+
+    if version.3 >= comparison.2 {
+        return true;
+    }
+    return false;
 }
