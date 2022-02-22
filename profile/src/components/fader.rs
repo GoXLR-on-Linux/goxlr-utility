@@ -100,4 +100,8 @@ impl Fader {
     pub fn channel(&self) -> FullChannelList {
         self.channel
     }
+
+    pub fn colour_map(&self) -> &ColourMap {
+        &self.colour_map
+    }
 }

@@ -82,4 +82,8 @@ impl Effects {
 
         Ok(())
     }
+
+    pub fn colour_map(&self) -> &ColourMap {
+        &self.colour_map
+    }
 }
