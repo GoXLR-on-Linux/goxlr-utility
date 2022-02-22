@@ -528,8 +528,8 @@ impl Profile {
         &self.hardtune_effect
     }
 
-    pub fn sample_button(&self, button: SamplerButtons) -> &SampleBase {
-        &self.sampler_map[button]
+    pub fn sample_button(&self, button: SampleButtons) -> &SampleBase {
+        &self.sampler_map[button].as_ref().unwrap()
     }
 
     pub fn mute_buttons(&self, index: usize) -> &MuteButton {
