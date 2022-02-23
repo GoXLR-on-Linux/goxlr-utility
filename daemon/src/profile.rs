@@ -188,7 +188,7 @@ pub fn version_newer_or_equal_to(version: &VersionNumber, comparison: VersionNum
         return false;
     }
 
-    if version.3 >= comparison.2 {
+    if version.3 >= comparison.3 {
         return true;
     }
     return false;
