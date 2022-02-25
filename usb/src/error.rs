@@ -13,7 +13,7 @@ pub enum ConnectError {
     DeviceNotClaimed,
 
     #[error("GoXLR Initialised, please reboot your computer.")]
-    DeviceNeedsReboot
+    DeviceNeedsReboot,
 }
 
 #[derive(thiserror::Error, Debug)]

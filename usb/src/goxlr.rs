@@ -13,6 +13,7 @@ use goxlr_types::{
     MicrophoneType, VersionNumber,
 };
 use log::info;
+use rusb::Error::Pipe;
 use rusb::{
     Device, DeviceDescriptor, DeviceHandle, Direction, GlobalContext, Language, Recipient,
     RequestType, UsbContext,
@@ -20,7 +21,6 @@ use rusb::{
 use std::io::{Cursor, Write};
 use std::thread::sleep;
 use std::time::Duration;
-use rusb::Error::Pipe;
 
 #[derive(Debug)]
 pub struct GoXLR<T: UsbContext> {
@@ -110,7 +110,7 @@ impl<T: UsbContext> GoXLR<T> {
             goxlr.read_control(0, 0, 0, 24)?;
 
             // Now activate audio..
-            goxlr.write_class_control(1,0x0100, 0x2900, &[0x80, 0xbb, 0x00, 0x00])?;
+            goxlr.write_class_control(1, 0x0100, 0x2900, &[0x80, 0xbb, 0x00, 0x00])?;
 
             goxlr.handle.release_interface(0);
 
