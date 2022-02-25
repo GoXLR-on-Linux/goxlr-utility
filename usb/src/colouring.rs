@@ -1,4 +1,4 @@
-use strum::{EnumIter, EnumProperty, IntoEnumIterator};
+use strum::EnumIter;
 
 /**
  * This can probably be handled a lot better, there's a lot of duplication going on here

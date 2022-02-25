@@ -420,6 +420,7 @@ dependencies = [
  "goxlr-types",
  "log",
  "rusb",
+ "strum",
  "thiserror",
 ]
 

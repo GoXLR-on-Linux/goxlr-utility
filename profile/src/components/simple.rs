@@ -73,7 +73,7 @@ impl SimpleElement {
     }
 
     pub fn element_name(&self) -> &str {
-        return &self.element_name.as_str();
+        &self.element_name
     }
 
     pub fn colour_map(&self) -> &ColourMap {

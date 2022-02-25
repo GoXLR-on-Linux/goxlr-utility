@@ -62,11 +62,11 @@ impl<T: UsbContext> Device<T> {
         let colour_map = profile.get_colour_map(use_1_3_40_format);
 
         if use_1_3_40_format {
-            goxlr.set_button_colours_1_3_40(colour_map);
+            goxlr.set_button_colours_1_3_40(colour_map)?;
         } else {
             let mut map: [u8; 328] = [0; 328];
             map.copy_from_slice(&colour_map[0..328]);
-            goxlr.set_button_colours(map);
+            goxlr.set_button_colours(map)?;
         }
 
         let mut device = Self {

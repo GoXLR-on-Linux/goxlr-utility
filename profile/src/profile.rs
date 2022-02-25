@@ -529,7 +529,7 @@ impl Profile {
     }
 
     pub fn sample_button(&self, button: SampleButtons) -> &SampleBase {
-        &self.sampler_map[button].as_ref().unwrap()
+        self.sampler_map[button].as_ref().unwrap()
     }
 
     pub fn mute_buttons(&self, index: usize) -> &MuteButton {
@@ -556,14 +556,14 @@ impl Profile {
         &self.reverb_encoder
     }
 
-    pub fn simple_element(&self, name: &str) -> Result<&SimpleElement, ()> {
+    pub fn simple_element(&self, name: &str) -> Option<&SimpleElement> {
         // Should we consider ENUMing the simple elements? For nicer lookup..
 
         for simple in &self.simple_elements {
             if simple.element_name() == name {
-                return Ok(simple);
+                return Some(simple);
             }
         }
-        Err(())
+        None
     }
 }

@@ -185,7 +185,7 @@ impl ColourMap {
             .unwrap()
     }
     pub fn get_off_style(&self) -> &ColourOffStyle {
-        return &self.off_style;
+        &self.off_style
     }
 }
 
@@ -251,6 +251,6 @@ impl Colour {
     }
 
     pub fn to_reverse_bytes(&self) -> [u8; 4] {
-        return [self.alpha, self.blue, self.green, self.red];
+        [self.alpha, self.blue, self.green, self.red]
     }
 }
