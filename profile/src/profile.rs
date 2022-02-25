@@ -556,7 +556,6 @@ impl Profile {
         &self.reverb_encoder
     }
 
-
     pub fn simple_element(&self, name: &str) -> Result<&SimpleElement, ()> {
         // Should we consider ENUMing the simple elements? For nicer lookup..
 

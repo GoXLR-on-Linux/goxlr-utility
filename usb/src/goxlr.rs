@@ -312,7 +312,7 @@ impl<T: UsbContext> GoXLR<T> {
         Ok(())
     }
 
-    pub fn set_button_colours(&mut self, data: [u8;328]) -> Result<(), rusb::Error> {
+    pub fn set_button_colours(&mut self, data: [u8; 328]) -> Result<(), rusb::Error> {
         self.request_data(Command::SetColourMap(), &data)?;
         Ok(())
     }

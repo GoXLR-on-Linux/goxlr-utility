@@ -1,14 +1,16 @@
 use enumset::EnumSet;
-use goxlr_profile_loader::components::mixer::{FullChannelList, InputChannels, OutputChannels};
-use goxlr_profile_loader::profile::Profile;
-use goxlr_types::{ChannelName, FaderName, FirmwareVersions, InputDevice, OutputDevice, VersionNumber};
-use strum::EnumCount;
-use strum::IntoEnumIterator;
 use goxlr_profile_loader::components::colours::ColourMap;
 use goxlr_profile_loader::components::colours::ColourOffStyle::Dimmed;
+use goxlr_profile_loader::components::mixer::{FullChannelList, InputChannels, OutputChannels};
+use goxlr_profile_loader::profile::Profile;
 use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
+use goxlr_types::{
+    ChannelName, FaderName, FirmwareVersions, InputDevice, OutputDevice, VersionNumber,
+};
 use goxlr_usb::colouring::ColourTargets;
 use goxlr_usb::rusb::Version;
+use strum::EnumCount;
+use strum::IntoEnumIterator;
 
 #[derive(Debug)]
 pub struct ProfileAdapter {
@@ -48,17 +50,18 @@ impl ProfileAdapter {
             .channel_volume(standard_to_profile_channel(channel))
     }
 
-    pub fn get_colour_map(&self, use_format_1_3_40: bool) -> [u8;520] {
+    pub fn get_colour_map(&self, use_format_1_3_40: bool) -> [u8; 520] {
         let mut colour_array = [0; 520];
 
         for colour in ColourTargets::iter() {
             let colour_map = get_profile_colour_map(&self.profile, colour);
 
-            for i in 0 .. colour.get_colour_count() {
+            for i in 0..colour.get_colour_count() {
                 let position = colour.position(i, use_format_1_3_40);
 
-                if i == 1 && colour_map.get_off_style() == &Dimmed && colour.is_blank_when_dimmed() {
-                    colour_array[position .. position + 4].copy_from_slice(&[00, 00, 00, 00]);
+                if i == 1 && colour_map.get_off_style() == &Dimmed && colour.is_blank_when_dimmed()
+                {
+                    colour_array[position..position + 4].copy_from_slice(&[00, 00, 00, 00]);
                 } else {
                     // Update the correct 4 bytes in the map..
                     colour_array[position..position + 4]
@@ -144,9 +147,15 @@ fn get_profile_colour_map(profile: &Profile, colour_target: ColourTargets) -> &C
         ColourTargets::EffectMegaphone => &profile.megaphone_effect().colour_map(),
         ColourTargets::EffectRobot => &profile.robot_effect().colour_map(),
         ColourTargets::EffectHardTune => &profile.hardtune_effect().colour_map(),
-        ColourTargets::SamplerSelectA => &profile.simple_element("sampleBankA").unwrap().colour_map(),
-        ColourTargets::SamplerSelectB => &profile.simple_element("sampleBankB").unwrap().colour_map(),
-        ColourTargets::SamplerSelectC => &profile.simple_element("sampleBankC").unwrap().colour_map(),
+        ColourTargets::SamplerSelectA => {
+            &profile.simple_element("sampleBankA").unwrap().colour_map()
+        }
+        ColourTargets::SamplerSelectB => {
+            &profile.simple_element("sampleBankB").unwrap().colour_map()
+        }
+        ColourTargets::SamplerSelectC => {
+            &profile.simple_element("sampleBankC").unwrap().colour_map()
+        }
         ColourTargets::SamplerTopLeft => &profile.sample_button(TopLeft).colour_map(),
         ColourTargets::SamplerTopRight => &profile.sample_button(TopRight).colour_map(),
         ColourTargets::SamplerBottomLeft => &profile.sample_button(BottomLeft).colour_map(),
@@ -165,7 +174,7 @@ fn get_profile_colour_map(profile: &Profile, colour_target: ColourTargets) -> &C
         ColourTargets::ReverbEncoder => &profile.reverb_encoder().colour_map(),
         ColourTargets::EchoEncoder => &profile.echo_encoder().colour_map(),
         ColourTargets::LogoX => &profile.simple_element("logoX").unwrap().colour_map(),
-        ColourTargets::Global => &profile.simple_element("globalColour").unwrap().colour_map()
+        ColourTargets::Global => &profile.simple_element("globalColour").unwrap().colour_map(),
     }
 }
 

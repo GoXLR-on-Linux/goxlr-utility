@@ -197,7 +197,11 @@ impl ColourTargets {
         // exception for the Encoders.
 
         // We should also error check here, make sure colour is in the range of get_colour_count..
-        let start_point = if format_1_3_40 { self.get_start_1_3_40() } else { self.get_start() };
+        let start_point = if format_1_3_40 {
+            self.get_start_1_3_40()
+        } else {
+            self.get_start()
+        };
 
         match self {
             ColourTargets::PitchEncoder => {
