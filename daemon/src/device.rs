@@ -13,10 +13,11 @@ use goxlr_usb::goxlr::GoXLR;
 use goxlr_usb::routing::{InputDevice, OutputDevice};
 use goxlr_usb::rusb::UsbContext;
 use log::debug;
+use std::io::Cursor;
 use strum::{EnumCount, IntoEnumIterator};
 
 const MIN_VOLUME_THRESHOLD: u8 = 6;
-const DEFAULT_PROFILE: &[u8] = include_bytes!("../default_profile.xml");
+const DEFAULT_PROFILE: &[u8] = include_bytes!("../profiles/Default - Vaporwave.goxlr");
 
 #[derive(Debug)]
 pub struct Device<T: UsbContext> {
@@ -29,7 +30,7 @@ pub struct Device<T: UsbContext> {
 
 impl<T: UsbContext> Device<T> {
     pub fn new(mut goxlr: GoXLR<T>, hardware: HardwareStatus) -> Result<Self> {
-        let profile = ProfileAdapter::new(Profile::load(DEFAULT_PROFILE)?);
+        let profile = ProfileAdapter::new(Profile::load(Cursor::new(DEFAULT_PROFILE))?);
 
         let router = profile.create_router();
         let status = MixerStatus {

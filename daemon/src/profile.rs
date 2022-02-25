@@ -2,7 +2,7 @@ use enumset::EnumSet;
 use goxlr_profile_loader::components::colours::ColourMap;
 use goxlr_profile_loader::components::colours::ColourOffStyle::Dimmed;
 use goxlr_profile_loader::components::mixer::{FullChannelList, InputChannels, OutputChannels};
-use goxlr_profile_loader::profile::Profile;
+use goxlr_profile_loader::profile::{Profile, ProfileSettings};
 use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
 use goxlr_types::{ChannelName, FaderName, InputDevice, OutputDevice, VersionNumber};
 use goxlr_usb::colouring::ColourTargets;
@@ -22,7 +22,7 @@ impl ProfileAdapter {
     pub fn create_router(&self) -> [EnumSet<OutputDevice>; InputDevice::COUNT] {
         let mut router = [EnumSet::empty(); InputDevice::COUNT];
 
-        for (input, potential_outputs) in self.profile.mixer().mixer_table().iter() {
+        for (input, potential_outputs) in self.profile.settings().mixer().mixer_table().iter() {
             let mut outputs = EnumSet::empty();
 
             for (channel, volume) in potential_outputs.iter() {
@@ -37,12 +37,13 @@ impl ProfileAdapter {
     }
 
     pub fn get_fader_assignment(&self, fader: FaderName) -> ChannelName {
-        let fader = self.profile.fader(fader as usize);
+        let fader = self.profile.settings().fader(fader as usize);
         profile_to_standard_channel(fader.channel())
     }
 
     pub fn get_channel_volume(&self, channel: ChannelName) -> u8 {
         self.profile
+            .settings()
             .mixer()
             .channel_volume(standard_to_profile_channel(channel))
     }
@@ -51,7 +52,7 @@ impl ProfileAdapter {
         let mut colour_array = [0; 520];
 
         for colour in ColourTargets::iter() {
-            let colour_map = get_profile_colour_map(&self.profile, colour);
+            let colour_map = get_profile_colour_map(self.profile.settings(), colour);
 
             for i in 0..colour.get_colour_count() {
                 let position = colour.position(i, use_format_1_3_40);
@@ -126,7 +127,7 @@ fn standard_to_profile_channel(value: ChannelName) -> FullChannelList {
     }
 }
 
-fn get_profile_colour_map(profile: &Profile, colour_target: ColourTargets) -> &ColourMap {
+fn get_profile_colour_map(profile: &ProfileSettings, colour_target: ColourTargets) -> &ColourMap {
     match colour_target {
         ColourTargets::Fader1Mute => profile.mute_buttons(0).colour_map(),
         ColourTargets::Fader2Mute => profile.mute_buttons(1).colour_map(),

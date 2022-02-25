@@ -21,7 +21,7 @@ use crate::SampleButtons;
 use crate::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
 use enum_map::EnumMap;
 use std::fs::File;
-use std::io::{BufReader, Read};
+use std::io::Read;
 use std::path::Path;
 use std::process::exit;
 use std::str::FromStr;
@@ -30,6 +30,23 @@ use xml::{EmitterConfig, EventReader};
 
 #[derive(Debug)]
 pub struct Profile {
+    settings: ProfileSettings,
+}
+
+impl Profile {
+    pub fn load<R: Read + std::io::Seek>(read: R) -> Result<Self, ParseError> {
+        let mut archive = zip::ZipArchive::new(read)?;
+        let settings = ProfileSettings::load(archive.by_name("profile.xml")?)?;
+        Ok(Profile { settings })
+    }
+
+    pub fn settings(&self) -> &ProfileSettings {
+        &self.settings
+    }
+}
+
+#[derive(Debug)]
+pub struct ProfileSettings {
     root: RootElement,
     browser: BrowserPreviewTree,
     mixer: Mixers,
@@ -50,13 +67,7 @@ pub struct Profile {
     gender_encoder: GenderEncoderBase,
 }
 
-impl Profile {
-    pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self, ParseError> {
-        let file = File::open(path)?;
-        let file = BufReader::new(file);
-        Self::load(file)
-    }
-
+impl ProfileSettings {
     pub fn load<R: Read>(read: R) -> Result<Self, ParseError> {
         let parser = EventReader::new(read);
 
