@@ -1,21 +1,25 @@
 use anyhow::{Context, Result};
 use log::error;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs::{create_dir_all, File};
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct SettingsHandle {
     path: PathBuf,
     settings: Arc<RwLock<Settings>>,
 }
 
 impl SettingsHandle {
-    pub async fn load(path: PathBuf) -> Result<SettingsHandle> {
-        let settings = Settings::read(&path)?;
+    pub async fn load(path: PathBuf, data_dir: &Path) -> Result<SettingsHandle> {
+        let settings = Settings::read(&path)?.unwrap_or_else(|| Settings {
+            profile_directory: data_dir.join("profiles"),
+            devices: Default::default(),
+        });
         let handle = SettingsHandle {
             path,
             settings: Arc::new(RwLock::new(settings)),
@@ -34,19 +38,46 @@ impl SettingsHandle {
             );
         }
     }
+
+    pub async fn get_profile_directory(&self) -> PathBuf {
+        let settings = self.settings.read().await;
+        settings.profile_directory.clone()
+    }
+
+    pub async fn get_device_profile_name(&self, device_serial: &str) -> Option<String> {
+        let settings = self.settings.read().await;
+        settings
+            .devices
+            .get(device_serial)
+            .map(|d| d.profile.clone())
+    }
+
+    pub async fn set_device_profile_name(&self, device_serial: &str, profile_name: &str) {
+        let mut settings = self.settings.write().await;
+        let entry = settings
+            .devices
+            .entry(device_serial.to_owned())
+            .or_insert_with(|| DeviceSettings {
+                profile: Default::default(),
+            });
+        entry.profile = profile_name.to_owned();
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Settings {}
+pub struct Settings {
+    profile_directory: PathBuf,
+    devices: HashMap<String, DeviceSettings>,
+}
 
 impl Settings {
-    pub fn read(path: &Path) -> Result<Settings> {
+    pub fn read(path: &Path) -> Result<Option<Settings>> {
         match File::open(path) {
-            Ok(reader) => serde_json::from_reader(reader).context(format!(
+            Ok(reader) => Ok(Some(serde_json::from_reader(reader).context(format!(
                 "Could not parse daemon settings file at {}",
                 path.to_string_lossy()
-            )),
-            Err(error) if error.kind() == ErrorKind::NotFound => Ok(Settings {}),
+            ))?)),
+            Err(error) if error.kind() == ErrorKind::NotFound => Ok(None),
             Err(error) => Err(error).context(format!(
                 "Could not open daemon settings file for reading at {}",
                 path.to_string_lossy()
@@ -75,4 +106,9 @@ impl Settings {
         ))?;
         Ok(())
     }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct DeviceSettings {
+    profile: String,
 }

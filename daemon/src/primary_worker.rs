@@ -31,7 +31,23 @@ pub async fn handle_changes(
     loop {
         tokio::select! {
             () = sleep(sleep_duration) => {
-                find_new_device(&mut devices, &mut ignore_list);
+                if let Some((device, descriptor)) = find_new_device(&devices, &ignore_list) {
+                let bus_number = device.bus_number();
+                let address = device.address();
+                    match load_device(device, descriptor, &settings).await {
+                        Ok(device) => {
+                            devices.insert(device.serial().to_owned(), device);
+                        }
+                        Err(e) => {
+                            error!(
+                                "Couldn't load potential GoXLR on bus {} address {}: {}",
+                                bus_number, address, e
+                            );
+                            ignore_list
+                                .insert((bus_number, address), Instant::now() + Duration::from_secs(10));
+                        }
+                    };
+                }
                 for device in devices.values_mut() {
                     if let Err(e) = device.monitor_inputs() {
                         error!("Couldn't monitor device for inputs: {}", e);
@@ -65,9 +81,9 @@ pub async fn handle_changes(
 }
 
 fn find_new_device(
-    existing_devices: &mut HashMap<String, Device<GlobalContext>>,
-    devices_to_ignore: &mut HashMap<(u8, u8), Instant>,
-) {
+    existing_devices: &HashMap<String, Device<GlobalContext>>,
+    devices_to_ignore: &HashMap<(u8, u8), Instant>,
+) -> Option<(rusb::Device<GlobalContext>, DeviceDescriptor)> {
     let now = Instant::now();
     if let Ok(devices) = rusb::devices() {
         for device in devices.iter() {
@@ -89,28 +105,18 @@ fn find_new_device(
                                 && expires > &now
                         })
                 {
-                    match load_device(device, descriptor) {
-                        Ok(device) => {
-                            existing_devices.insert(device.serial().to_owned(), device);
-                        }
-                        Err(e) => {
-                            error!(
-                                "Couldn't load potential GoXLR on bus {} address {}: {}",
-                                bus_number, address, e
-                            );
-                            devices_to_ignore
-                                .insert((bus_number, address), now + Duration::from_secs(10));
-                        }
-                    };
+                    return Some((device, descriptor));
                 }
             }
         }
     }
+    None
 }
 
-fn load_device(
+async fn load_device(
     device: rusb::Device<GlobalContext>,
     descriptor: DeviceDescriptor,
+    settings: &SettingsHandle,
 ) -> Result<Device<GlobalContext>> {
     let mut device = GoXLR::from_device(device.open()?, descriptor)?;
     let descriptor = device.usb_device_descriptor();
@@ -133,10 +139,17 @@ fn load_device(
     let (serial_number, manufactured_date) = device.get_serial_number()?;
     let hardware = HardwareStatus {
         versions: device.get_firmware_version()?,
-        serial_number,
+        serial_number: serial_number.clone(),
         manufactured_date,
         device_type,
         usb_device,
     };
-    Device::new(device, hardware)
+    let profile_directory = settings.get_profile_directory().await;
+    let profile_name = settings.get_device_profile_name(&serial_number).await;
+    let device = Device::new(device, hardware, profile_name, &profile_directory)?;
+    settings
+        .set_device_profile_name(&serial_number, device.profile().name())
+        .await;
+    settings.save().await;
+    Ok(device)
 }

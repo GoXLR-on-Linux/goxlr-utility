@@ -1,3 +1,4 @@
+use anyhow::{anyhow, Context, Result};
 use enumset::EnumSet;
 use goxlr_profile_loader::components::colours::ColourMap;
 use goxlr_profile_loader::components::colours::ColourOffStyle::Dimmed;
@@ -6,17 +7,63 @@ use goxlr_profile_loader::profile::{Profile, ProfileSettings};
 use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
 use goxlr_types::{ChannelName, FaderName, InputDevice, OutputDevice, VersionNumber};
 use goxlr_usb::colouring::ColourTargets;
+use log::error;
+use std::fs::File;
+use std::io::{Cursor, Read, Seek};
+use std::path::Path;
 use strum::EnumCount;
 use strum::IntoEnumIterator;
 
+const DEFAULT_PROFILE_NAME: &str = "Default - Vaporwave";
+const DEFAULT_PROFILE: &[u8] = include_bytes!("../profiles/Default - Vaporwave.goxlr");
+
 #[derive(Debug)]
 pub struct ProfileAdapter {
+    name: String,
     profile: Profile,
 }
 
 impl ProfileAdapter {
-    pub fn new(profile: Profile) -> Self {
-        Self { profile }
+    pub fn from_named_or_default(name: Option<String>, directory: &Path) -> Self {
+        if let Some(name) = name {
+            match ProfileAdapter::from_named(name.clone(), directory) {
+                Ok(result) => return result,
+                Err(error) => error!("Couldn't load profile {}: {}", name, error),
+            }
+        }
+
+        ProfileAdapter::default()
+    }
+
+    pub fn from_named(name: String, directory: &Path) -> Result<Self> {
+        let path = directory.join(format!("{}.goxlr", name));
+        if path.is_file() {
+            let file = File::open(path).context("Couldn't open profile for reading")?;
+            return ProfileAdapter::from_reader(name, file).context("Couldn't read profile");
+        }
+
+        if name == DEFAULT_PROFILE_NAME {
+            return Ok(ProfileAdapter::default());
+        }
+
+        Err(anyhow!("Profile {} does not exist", name))
+    }
+
+    pub fn default() -> Self {
+        ProfileAdapter::from_reader(
+            DEFAULT_PROFILE_NAME.to_string(),
+            Cursor::new(DEFAULT_PROFILE),
+        )
+        .expect("Default profile isn't available")
+    }
+
+    pub fn from_reader<R: Read + Seek>(name: String, reader: R) -> Result<Self> {
+        let profile = Profile::load(reader)?;
+        Ok(Self { name, profile })
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
     pub fn create_router(&self) -> [EnumSet<OutputDevice>; InputDevice::COUNT] {

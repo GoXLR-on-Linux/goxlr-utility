@@ -2,7 +2,6 @@ use crate::profile::{version_newer_or_equal_to, ProfileAdapter};
 use anyhow::Result;
 use enumset::EnumSet;
 use goxlr_ipc::{GoXLRCommand, HardwareStatus, MixerStatus};
-use goxlr_profile_loader::profile::Profile;
 use goxlr_types::{
     ChannelName, FaderName, InputDevice as BasicInputDevice, MicrophoneType,
     OutputDevice as BasicOutputDevice, VersionNumber,
@@ -13,11 +12,10 @@ use goxlr_usb::goxlr::GoXLR;
 use goxlr_usb::routing::{InputDevice, OutputDevice};
 use goxlr_usb::rusb::UsbContext;
 use log::debug;
-use std::io::Cursor;
+use std::path::Path;
 use strum::{EnumCount, IntoEnumIterator};
 
 const MIN_VOLUME_THRESHOLD: u8 = 6;
-const DEFAULT_PROFILE: &[u8] = include_bytes!("../profiles/Default - Vaporwave.goxlr");
 
 #[derive(Debug)]
 pub struct Device<T: UsbContext> {
@@ -29,8 +27,13 @@ pub struct Device<T: UsbContext> {
 }
 
 impl<T: UsbContext> Device<T> {
-    pub fn new(mut goxlr: GoXLR<T>, hardware: HardwareStatus) -> Result<Self> {
-        let profile = ProfileAdapter::new(Profile::load(Cursor::new(DEFAULT_PROFILE))?);
+    pub fn new(
+        mut goxlr: GoXLR<T>,
+        hardware: HardwareStatus,
+        profile_name: Option<String>,
+        profile_directory: &Path,
+    ) -> Result<Self> {
+        let profile = ProfileAdapter::from_named_or_default(profile_name, profile_directory);
 
         let router = profile.create_router();
         let status = MixerStatus {
@@ -92,6 +95,10 @@ impl<T: UsbContext> Device<T> {
 
     pub fn status(&self) -> &MixerStatus {
         &self.status
+    }
+
+    pub fn profile(&self) -> &ProfileAdapter {
+        &self.profile
     }
 
     pub fn monitor_inputs(&mut self) -> Result<()> {

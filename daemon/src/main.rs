@@ -36,7 +36,11 @@ async fn main() -> Result<()> {
     let proj_dirs = ProjectDirs::from("org", "GoXLR-on-Linux", "GoXLR-Utility")
         .context("Couldn't find project directories")?;
 
-    let settings = SettingsHandle::load(proj_dirs.config_dir().join("settings.json")).await?;
+    let settings = SettingsHandle::load(
+        proj_dirs.config_dir().join("settings.json"),
+        proj_dirs.data_dir(),
+    )
+    .await?;
     let listener = create_listener("/tmp/goxlr.socket").await?;
 
     let mut perms = fs::metadata("/tmp/goxlr.socket")?.permissions();
