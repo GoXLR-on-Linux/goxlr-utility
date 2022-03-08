@@ -11,8 +11,8 @@ use crate::microphone::apply_microphone_controls;
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use cli::Cli;
-use goxlr_ipc::Socket;
 use goxlr_ipc::{DaemonRequest, DaemonResponse, DeviceType, MixerStatus, UsbProductInformation};
+use goxlr_ipc::{GoXLRCommand, Socket};
 use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice};
 use strum::IntoEnumIterator;
 use tokio::net::UnixStream;
@@ -52,6 +52,13 @@ async fn main() -> Result<()> {
             "Multiple GoXLR devices are connected, please specify which one to control"
         ));
     };
+
+    if let Some(profile) = &cli.profile {
+        client
+            .command(&serial, GoXLRCommand::LoadProfile(profile.to_string()))
+            .await
+            .context("Couldn't load the specified profile")?;
+    }
 
     apply_fader_controls(&cli.faders, &mut client, &serial)
         .await

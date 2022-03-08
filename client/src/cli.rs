@@ -9,6 +9,10 @@ pub struct Cli {
     #[clap(long)]
     pub device: Option<String>,
 
+    #[clap(long)]
+    /// Load the specific profile from disk, by name
+    pub profile: Option<String>,
+
     #[clap(flatten, help_heading = "Fader controls")]
     pub faders: FaderControls,
 

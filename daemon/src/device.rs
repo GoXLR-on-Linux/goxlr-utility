@@ -1,4 +1,5 @@
 use crate::profile::{version_newer_or_equal_to, ProfileAdapter};
+use crate::SettingsHandle;
 use anyhow::Result;
 use enumset::EnumSet;
 use goxlr_ipc::{GoXLRCommand, HardwareStatus, MixerStatus};
@@ -28,51 +29,26 @@ pub struct Device<T: UsbContext> {
 
 impl<T: UsbContext> Device<T> {
     pub fn new(
-        mut goxlr: GoXLR<T>,
+        goxlr: GoXLR<T>,
         hardware: HardwareStatus,
         profile_name: Option<String>,
         profile_directory: &Path,
     ) -> Result<Self> {
         let profile = ProfileAdapter::from_named_or_default(profile_name, profile_directory);
 
-        let router = profile.create_router();
         let status = MixerStatus {
             hardware,
-            fader_a_assignment: profile.get_fader_assignment(FaderName::A),
-            fader_b_assignment: profile.get_fader_assignment(FaderName::B),
-            fader_c_assignment: profile.get_fader_assignment(FaderName::C),
-            fader_d_assignment: profile.get_fader_assignment(FaderName::D),
+            fader_a_assignment: ChannelName::Chat,
+            fader_b_assignment: ChannelName::Chat,
+            fader_c_assignment: ChannelName::Chat,
+            fader_d_assignment: ChannelName::Chat,
             volumes: [255; ChannelName::COUNT],
             muted: [false; ChannelName::COUNT],
             mic_gains: [0; MicrophoneType::COUNT],
             mic_type: MicrophoneType::Jack,
-            router,
+            router: Default::default(),
             profile_name: profile.name().to_owned(),
         };
-        goxlr.set_fader(FaderName::A, profile.get_fader_assignment(FaderName::A))?;
-        goxlr.set_fader(FaderName::B, profile.get_fader_assignment(FaderName::B))?;
-        goxlr.set_fader(FaderName::C, profile.get_fader_assignment(FaderName::C))?;
-        goxlr.set_fader(FaderName::D, profile.get_fader_assignment(FaderName::D))?;
-        for channel in ChannelName::iter() {
-            goxlr.set_volume(channel, profile.get_channel_volume(channel))?;
-            goxlr.set_channel_state(channel, ChannelState::Unmuted)?;
-        }
-        goxlr.set_microphone_gain(MicrophoneType::Jack, 72)?;
-
-        // Load the colour Map..
-        let use_1_3_40_format = version_newer_or_equal_to(
-            &status.hardware.versions.firmware,
-            VersionNumber(1, 3, 40, 0),
-        );
-        let colour_map = profile.get_colour_map(use_1_3_40_format);
-
-        if use_1_3_40_format {
-            goxlr.set_button_colours_1_3_40(colour_map)?;
-        } else {
-            let mut map: [u8; 328] = [0; 328];
-            map.copy_from_slice(&colour_map[0..328]);
-            goxlr.set_button_colours(map)?;
-        }
 
         let mut device = Self {
             profile,
@@ -82,10 +58,7 @@ impl<T: UsbContext> Device<T> {
             last_buttons: EnumSet::empty(),
         };
 
-        device
-            .goxlr
-            .set_button_states(device.create_button_states())?;
-        device.apply_router(&device.status.router.to_owned())?;
+        device.apply_profile()?;
 
         Ok(device)
     }
@@ -102,7 +75,7 @@ impl<T: UsbContext> Device<T> {
         &self.profile
     }
 
-    pub fn monitor_inputs(&mut self) -> Result<()> {
+    pub async fn monitor_inputs(&mut self, settings: &SettingsHandle) -> Result<()> {
         self.status.hardware.usb_device.has_kernel_driver_attached =
             self.goxlr.usb_device_has_kernel_driver_active()?;
 
@@ -110,7 +83,7 @@ impl<T: UsbContext> Device<T> {
             self.update_volumes_to(volumes);
             let released_buttons = self.last_buttons.difference(buttons);
             for button in released_buttons {
-                self.on_button_press(button)?;
+                self.on_button_press(button, settings).await?;
             }
             self.last_buttons = buttons;
         }
@@ -118,31 +91,36 @@ impl<T: UsbContext> Device<T> {
         Ok(())
     }
 
-    fn on_button_press(&mut self, button: Buttons) -> Result<()> {
+    async fn on_button_press(&mut self, button: Buttons, settings: &SettingsHandle) -> Result<()> {
         debug!("Handling button press: {:?}", button);
         match button {
             Buttons::Fader1Mute => {
-                self.toggle_fader_mute(FaderName::A)?;
+                self.toggle_fader_mute(FaderName::A, settings).await?;
             }
             Buttons::Fader2Mute => {
-                self.toggle_fader_mute(FaderName::B)?;
+                self.toggle_fader_mute(FaderName::B, settings).await?;
             }
             Buttons::Fader3Mute => {
-                self.toggle_fader_mute(FaderName::C)?;
+                self.toggle_fader_mute(FaderName::C, settings).await?;
             }
             Buttons::Fader4Mute => {
-                self.toggle_fader_mute(FaderName::D)?;
+                self.toggle_fader_mute(FaderName::D, settings).await?;
             }
             _ => {}
         }
         Ok(())
     }
 
-    fn toggle_fader_mute(&mut self, fader: FaderName) -> Result<()> {
+    async fn toggle_fader_mute(
+        &mut self,
+        fader: FaderName,
+        settings: &SettingsHandle,
+    ) -> Result<()> {
         let channel = self.status.get_fader_assignment(fader);
         let muted = self.status.get_channel_muted(channel);
 
-        self.perform_command(GoXLRCommand::SetChannelMuted(channel, !muted))?;
+        self.perform_command(GoXLRCommand::SetChannelMuted(channel, !muted), settings)
+            .await?;
 
         Ok(())
     }
@@ -162,7 +140,11 @@ impl<T: UsbContext> Device<T> {
         }
     }
 
-    pub fn perform_command(&mut self, command: GoXLRCommand) -> Result<()> {
+    pub async fn perform_command(
+        &mut self,
+        command: GoXLRCommand,
+        settings: &SettingsHandle,
+    ) -> Result<()> {
         match command {
             GoXLRCommand::AssignFader(fader, channel) => {
                 self.goxlr.set_fader(fader, channel)?;
@@ -201,6 +183,15 @@ impl<T: UsbContext> Device<T> {
                 self.goxlr.set_microphone_gain(mic_type, gain)?;
                 self.status.mic_type = mic_type;
                 self.status.mic_gains[mic_type as usize] = gain;
+            }
+            GoXLRCommand::LoadProfile(profile_name) => {
+                let profile_directory = settings.get_profile_directory().await;
+                self.profile = ProfileAdapter::from_named(profile_name, &profile_directory)?;
+                self.apply_profile()?;
+                settings
+                    .set_device_profile_name(self.serial(), self.profile.name())
+                    .await;
+                settings.save().await;
             }
         }
 
@@ -256,6 +247,72 @@ impl<T: UsbContext> Device<T> {
             self.goxlr.set_routing(left_input, left)?;
             self.goxlr.set_routing(right_input, right)?;
         }
+
+        Ok(())
+    }
+
+    fn apply_profile(&mut self) -> Result<()> {
+        self.status.profile_name = self.profile.name().to_owned();
+
+        self.status.fader_a_assignment = self.profile.get_fader_assignment(FaderName::A);
+        self.goxlr.set_fader(
+            FaderName::A,
+            self.profile.get_fader_assignment(FaderName::A),
+        )?;
+
+        self.status.fader_b_assignment = self.profile.get_fader_assignment(FaderName::B);
+        self.goxlr.set_fader(
+            FaderName::B,
+            self.profile.get_fader_assignment(FaderName::B),
+        )?;
+
+        self.status.fader_c_assignment = self.profile.get_fader_assignment(FaderName::C);
+        self.goxlr.set_fader(
+            FaderName::C,
+            self.profile.get_fader_assignment(FaderName::C),
+        )?;
+
+        self.status.fader_d_assignment = self.profile.get_fader_assignment(FaderName::D);
+        self.goxlr.set_fader(
+            FaderName::D,
+            self.profile.get_fader_assignment(FaderName::D),
+        )?;
+
+        for channel in ChannelName::iter() {
+            self.status
+                .set_channel_volume(channel, self.profile.get_channel_volume(channel));
+            self.goxlr
+                .set_volume(channel, self.profile.get_channel_volume(channel))?;
+
+            self.status.set_channel_muted(channel, false);
+            self.goxlr
+                .set_channel_state(channel, ChannelState::Unmuted)?;
+        }
+
+        self.status.mic_gains[MicrophoneType::Jack as usize] = 72;
+        self.status.mic_type = MicrophoneType::Jack;
+        self.goxlr.set_microphone_gain(MicrophoneType::Jack, 72)?;
+
+        // Load the colour Map..
+        let use_1_3_40_format = version_newer_or_equal_to(
+            &self.status.hardware.versions.firmware,
+            VersionNumber(1, 3, 40, 0),
+        );
+        let colour_map = self.profile.get_colour_map(use_1_3_40_format);
+
+        if use_1_3_40_format {
+            self.goxlr.set_button_colours_1_3_40(colour_map)?;
+        } else {
+            let mut map: [u8; 328] = [0; 328];
+            map.copy_from_slice(&colour_map[0..328]);
+            self.goxlr.set_button_colours(map)?;
+        }
+
+        self.goxlr.set_button_states(self.create_button_states())?;
+
+        let router = self.profile.create_router();
+        self.apply_router(&router)?;
+        self.status.router = router;
 
         Ok(())
     }

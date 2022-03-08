@@ -49,7 +49,7 @@ pub async fn handle_changes(
                     };
                 }
                 for device in devices.values_mut() {
-                    if let Err(e) = device.monitor_inputs() {
+                    if let Err(e) = device.monitor_inputs(&settings).await {
                         error!("Couldn't monitor device for inputs: {}", e);
                     }
                 }
@@ -72,7 +72,7 @@ pub async fn handle_changes(
                     },
                     DeviceCommand::RunDeviceCommand(serial, command, sender) => {
                         if let Some(device) = devices.get_mut(&serial) {
-                            let _ = sender.send(device.perform_command(command));
+                            let _ = sender.send(device.perform_command(command, &settings).await);
                         } else {
                             let _ = sender.send(Err(anyhow!("Device {} is not connected", serial)));
                         }
