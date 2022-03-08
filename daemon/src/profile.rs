@@ -46,7 +46,11 @@ impl ProfileAdapter {
             return Ok(ProfileAdapter::default());
         }
 
-        Err(anyhow!("Profile {} does not exist", name))
+        Err(anyhow!(
+            "Profile {} does not exist inside {}",
+            name,
+            directory.to_string_lossy()
+        ))
     }
 
     pub fn default() -> Self {
