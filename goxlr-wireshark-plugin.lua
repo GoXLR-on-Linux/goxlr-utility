@@ -18,7 +18,9 @@ local COMMAND_NAMES = {
 
 local EFFECT_KEYS = {
     [0x0073] = "BleepLevel",
+    [0x0010] = "MicGateMode", -- From what I can tell, no UI option for this.
     [0x0011] = "GateThreshold",
+    [0x0014] = "GateEnabled", -- Used during 'Mic Setup' to disable the gate
     [0x0015] = "GateAttenuation",
     [0x0016] = "GateAttack",
     [0x0017] = "GateRelease",
@@ -72,7 +74,7 @@ local EFFECT_KEYS = {
     [0x001e] = "EchoSource",
     [0x0020] = "EchoDivL",
     [0x0021] = "EchoDivR",
-	[0x002a] = "EchoFilterStyle",
+    [0x002a] = "EchoFilterStyle",
     [0x005d] = "PitchAmount",
     [0x0167] = "PitchCharacter",
     [0x0159] = "PitchStyle",
@@ -106,11 +108,29 @@ local EFFECT_KEYS = {
     [0x0157] = "RobotThreshold",
     [0x014d] = "RobotDryMix",
     [0x0000] = "RobotStyle",
+    [0x0059] = "HardtuneKeySource", -- Legacy Value? Always sent as 0, HardTune is configured via Routing now.
     [0x005a] = "HardTuneAmount",
     [0x005c] = "HardTuneRate",
     [0x005b] = "HardTuneWindow",
-	[0x005e] = "HardTuneScale",
-	[0x005f] = "HardTunePitchAmount",
+    [0x005e] = "HardTuneScale",
+    [0x005f] = "HardTunePitchAmount",
+
+    -- States
+    [0x014e] = "RobotEnabled",
+    [0x00d7] = "MegaphoneEnabled",
+    [0x00d8] = "HardtuneEnabled",
+
+    -- These are a pretty massive (but reasonable) assumption until tested, these values are only
+    -- ever changed when the FX button is hit, but are consistently on if FX are on, and off if FX
+    -- are off. Unlike the above, there's no other way to toggle them, either in the UI or other.
+    [0x00d5] = "Encoder1Enabled",
+    [0x00d6] = "Encoder2Enabled",
+    [0x0150] = "Encoder3Enabled",
+    [0x0151] = "Encoder4Enabled",
+
+    -- These are unknown attributes, they only ever occur on profile load, not when changing settings..
+    [0x0158] = "Unknown158", -- Executed with a value of 0, at the start prior to mic profile load
+    [0x014b] = "Unknown14b", -- Executed with a value of 1 after mic profile load, prior to effects
 }
 
 local MIC_PARAM_KEYS = {
