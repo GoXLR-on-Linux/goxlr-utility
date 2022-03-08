@@ -4,11 +4,13 @@ use goxlr_types::{
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::path::PathBuf;
 use strum::EnumCount;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct DaemonStatus {
     pub mixers: HashMap<String, MixerStatus>,
+    pub profile_directory: PathBuf,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -32,6 +34,7 @@ pub struct MixerStatus {
     pub router: [EnumSet<OutputDevice>; InputDevice::COUNT],
     pub mic_gains: [u16; MicrophoneType::COUNT],
     pub mic_type: MicrophoneType,
+    pub profile_name: String,
 }
 
 impl MixerStatus {

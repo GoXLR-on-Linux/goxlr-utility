@@ -70,6 +70,10 @@ async fn main() -> Result<()> {
         .context("Could not apply microphone controls")?;
 
     client.poll_status().await?;
+    println!(
+        "Profile directory: {}",
+        client.status().profile_directory.to_string_lossy()
+    );
     for mixer in client.status().mixers.values() {
         print_device(mixer);
     }
@@ -119,6 +123,7 @@ fn print_mixer_info(mixer: &MixerStatus) {
         "Mixer manufacture date: {}",
         mixer.hardware.manufactured_date
     );
+    println!("Mixer profile: {}", mixer.profile_name);
 
     for fader in FaderName::iter() {
         println!(

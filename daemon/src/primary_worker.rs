@@ -61,7 +61,10 @@ pub async fn handle_changes(
             Some(command) = rx.recv() => {
                 match command {
                     DeviceCommand::SendDaemonStatus(sender) => {
-                        let mut status = DaemonStatus::default();
+                        let mut status = DaemonStatus {
+                            profile_directory: settings.get_profile_directory().await,
+                            ..Default::default()
+                        };
                         for (serial, device) in &devices {
                             status.mixers.insert(serial.to_owned(), device.status().clone());
                         }

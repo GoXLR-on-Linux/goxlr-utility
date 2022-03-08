@@ -47,6 +47,7 @@ impl<T: UsbContext> Device<T> {
             mic_gains: [0; MicrophoneType::COUNT],
             mic_type: MicrophoneType::Jack,
             router,
+            profile_name: profile.name().to_owned(),
         };
         goxlr.set_fader(FaderName::A, profile.get_fader_assignment(FaderName::A))?;
         goxlr.set_fader(FaderName::B, profile.get_fader_assignment(FaderName::B))?;
