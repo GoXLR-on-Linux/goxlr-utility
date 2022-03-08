@@ -2,12 +2,15 @@ mod communication;
 mod device;
 mod primary_worker;
 mod profile;
+mod settings;
 mod shutdown;
 
 use crate::primary_worker::handle_changes;
+use crate::settings::SettingsHandle;
 use crate::shutdown::Shutdown;
 use anyhow::{anyhow, Context, Result};
 use communication::listen_for_connections;
+use directories::ProjectDirs;
 use goxlr_ipc::Socket;
 use goxlr_ipc::{DaemonRequest, DaemonResponse};
 use log::{info, warn, LevelFilter};
@@ -30,6 +33,10 @@ async fn main() -> Result<()> {
     )])
     .context("Could not configure the logger")?;
 
+    let proj_dirs = ProjectDirs::from("org", "GoXLR-on-Linux", "GoXLR-Utility")
+        .context("Couldn't find project directories")?;
+
+    let settings = SettingsHandle::load(proj_dirs.config_dir().join("settings.json")).await?;
     let listener = create_listener("/tmp/goxlr.socket").await?;
 
     let mut perms = fs::metadata("/tmp/goxlr.socket")?.permissions();
@@ -38,7 +45,7 @@ async fn main() -> Result<()> {
 
     let mut shutdown = Shutdown::new();
     let (usb_tx, usb_rx) = mpsc::channel(32);
-    let usb_handle = tokio::spawn(handle_changes(usb_rx, shutdown.clone()));
+    let usb_handle = tokio::spawn(handle_changes(usb_rx, shutdown.clone(), settings));
     let communications_handle =
         tokio::spawn(listen_for_connections(listener, usb_tx, shutdown.clone()));
 

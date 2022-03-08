@@ -1,5 +1,5 @@
 use crate::device::Device;
-use crate::Shutdown;
+use crate::{SettingsHandle, Shutdown};
 use anyhow::{anyhow, Result};
 use goxlr_ipc::{DaemonStatus, DeviceType, GoXLRCommand, HardwareStatus, UsbProductInformation};
 use goxlr_usb::goxlr::{GoXLR, PID_GOXLR_FULL, PID_GOXLR_MINI, VID_GOXLR};
@@ -19,7 +19,11 @@ pub enum DeviceCommand {
 pub type DeviceSender = mpsc::Sender<DeviceCommand>;
 pub type DeviceReceiver = mpsc::Receiver<DeviceCommand>;
 
-pub async fn handle_changes(mut rx: DeviceReceiver, mut shutdown: Shutdown) {
+pub async fn handle_changes(
+    mut rx: DeviceReceiver,
+    mut shutdown: Shutdown,
+    settings: SettingsHandle,
+) {
     let sleep_duration = Duration::from_millis(100);
     let mut devices = HashMap::new();
     let mut ignore_list = HashMap::new();
