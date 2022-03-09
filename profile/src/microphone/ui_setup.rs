@@ -17,6 +17,7 @@ pub enum ParseError {
  * these on Linux!
  */
 
+#[derive(Debug)]
 pub struct UiSetup {
     eq_advanced: bool,
     comp_advanced: bool,

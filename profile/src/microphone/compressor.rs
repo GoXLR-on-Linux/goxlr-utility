@@ -13,6 +13,7 @@ pub enum ParseError {
 
 }
 
+#[derive(Debug)]
 pub struct Compressor {
     threshold: i8,
     ratio: u8,
