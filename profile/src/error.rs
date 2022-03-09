@@ -66,6 +66,21 @@ pub enum ParseError {
     #[error("Invalid simple: {0}")]
     InvalidSimple(#[from] crate::components::simple::ParseError),
 
+    #[error("Invalid Equalizer: {0}")]
+    InvalidEqualizer(#[from] crate::microphone::equalizer::ParseError),
+
+    #[error("Invalid Compressor: {0}")]
+    InvalidCompressor(#[from] crate::microphone::compressor::ParseError),
+
+    #[error("Invalid Noise Gate: {0}")]
+    InvalidNoiseGate(#[from] crate::microphone::gate::ParseError),
+
+    #[error("Invalid Microphone Setup: {0}")]
+    InvalidMicSetup(#[from] crate::microphone::mic_setup::ParseError),
+
+    #[error("Invalid UI Setup: {0}")]
+    InvalidUiSetup(#[from] crate::microphone::ui_setup::ParseError),
+
     #[error("IO error: {0}")]
     IOError(#[from] std::io::Error),
 

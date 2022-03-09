@@ -4,7 +4,10 @@ use std::str::FromStr;
 use xml::attribute::OwnedAttribute;
 use xml::EventWriter;
 use xml::writer::events::StartElementBuilder;
+use xml::writer::XmlEvent as XmlWriterEvent;
 
+#[derive(thiserror::Error, Debug)]
+#[allow(clippy::enum_variant_names)]
 pub enum ParseError {
     #[error("Expected int: {0}")]
     ExpectedInt(#[from] std::num::ParseIntError),
@@ -37,17 +40,17 @@ impl MicSetup {
             }
 
             if attr.name.local_name == "DYNAMIC_MIC_GAIN" {
-                self.dynamic_mic_gain = u32::from_str(attr.value.as_str()) / 65536;
+                self.dynamic_mic_gain = (u32::from_str(attr.value.as_str())? / 65536) as u8;
                 continue;
             }
 
             if attr.name.local_name == "CONDENSER_MIC_GAIN" {
-                self.condenser_mic_gain = u32::from_str(attr.value.as_str()) / 65536;
+                self.condenser_mic_gain = (u32::from_str(attr.value.as_str())? / 65536) as u8;
                 continue;
             }
 
             if attr.name.local_name == "TRS_MIC_GAIN" {
-                self.trs_mic_gain = u32::from_str(attr.value.as_str()) / 65536;
+                self.trs_mic_gain = (u32::from_str(attr.value.as_str())? / 65536) as u8;
                 continue;
             }
         }
