@@ -6,7 +6,7 @@ use std::str::FromStr;
 use xml::{EmitterConfig, EventReader};
 use crate::error::ParseError;
 use crate::microphone::compressor::Compressor;
-use crate::microphone::configuration::MicSetup;
+use crate::microphone::mic_setup::MicSetup;
 use crate::microphone::equalizer::Equalizer;
 use crate::microphone::gate::Gate;
 use crate::microphone::ui_setup::UiSetup;
