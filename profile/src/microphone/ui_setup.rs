@@ -3,7 +3,10 @@ use std::fs::File;
 use xml::attribute::OwnedAttribute;
 use xml::EventWriter;
 use xml::writer::events::StartElementBuilder;
+use xml::writer::XmlEvent as XmlWriterEvent;
 
+#[derive(thiserror::Error, Debug)]
+#[allow(clippy::enum_variant_names)]
 pub enum ParseError {
     #[error("Expected int: {0}")]
     ExpectedInt(#[from] std::num::ParseIntError),

@@ -7,6 +7,10 @@ use xml::attribute::OwnedAttribute;
 pub enum ParseError {
     #[error("Expected int: {0}")]
     ExpectedInt(#[from] std::num::ParseIntError),
+
+    #[error("Expected float: {0}")]
+    ExpectedFloat(#[from] std::num::ParseFloatError),
+
 }
 
 pub struct Compressor {

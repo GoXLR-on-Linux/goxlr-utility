@@ -3,6 +3,8 @@ use std::os::raw::c_float;
 use std::str::FromStr;
 use xml::attribute::OwnedAttribute;
 
+#[derive(thiserror::Error, Debug)]
+#[allow(clippy::enum_variant_names)]
 pub enum ParseError {
     #[error("Expected int: {0}")]
     ExpectedInt(#[from] std::num::ParseIntError),

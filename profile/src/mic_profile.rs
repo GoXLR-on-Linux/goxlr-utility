@@ -42,9 +42,9 @@ impl MicProfileSettings {
                     if name.local_name == "dspTreeMicProfile" {
                         // Ok, this is an incredibly large tag, with many settings (30 or so), so
                         // we split it into 3 separate elements.
-                        equalizer.parse_equaliser(&attributes);
-                        compressor.parse_compressor(&attributes);
-                        gate.parse_gate(&attributes);
+                        equalizer.parse_equaliser(&attributes)?;
+                        compressor.parse_compressor(&attributes)?;
+                        gate.parse_gate(&attributes)?;
 
                         // Before we're done here, there's a single attribute that doesn't fit into
                         // any of the above categories, find it and handle it here..
@@ -59,12 +59,12 @@ impl MicProfileSettings {
                     }
 
                     if name.local_name == "setupTreeMicProfile" {
-                        mic_setup.parse_config(&attributes);
+                        mic_setup.parse_config(&attributes)?;
                         continue;
                     }
 
                     if name.local_name == "micProfileUIMicProfile" {
-                        ui_setup.parse_ui(&attributes);
+                        ui_setup.parse_ui(&attributes)?;
                         continue;
                     }
                     println!("Unhandled Tag: {}", name.local_name);
@@ -111,8 +111,8 @@ impl MicProfileSettings {
         writer.write(element)?;
         writer.write(XmlWriterEvent::end_element())?;
 
-        self.mic_setup.write_config(&mut writer);
-        self.ui_setup.write_ui(&mut writer);
+        self.mic_setup.write_config(&mut writer)?;
+        self.ui_setup.write_ui(&mut writer)?;
 
         writer.write(XmlWriterEvent::end_element())?;
 
