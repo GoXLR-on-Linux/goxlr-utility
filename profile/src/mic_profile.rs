@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
+use std::os::raw::c_float;
 use std::path::Path;
-use std::str::FromStr;
 use xml::{EmitterConfig, EventReader};
 use crate::error::ParseError;
 use crate::microphone::compressor::Compressor;
@@ -14,6 +14,7 @@ use xml::reader::XmlEvent as XmlReaderEvent;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 
+#[derive(Debug)]
 pub struct MicProfileSettings {
     equalizer: Equalizer,
     compressor: Compressor,
@@ -50,7 +51,7 @@ impl MicProfileSettings {
                         // any of the above categories, find it and handle it here..
                         for attr in &attributes {
                             if attr.name.local_name == "MIC_DEESS_AMOUNT" {
-                                deess = u8::from_str(attr.value.as_str())?;
+                                deess = attr.value.parse::<c_float>()? as u8;
                                 break;
                             }
                         }
@@ -67,6 +68,11 @@ impl MicProfileSettings {
                         ui_setup.parse_ui(&attributes)?;
                         continue;
                     }
+
+                    if name.local_name == "MicProfileTree" {
+                        continue;
+                    }
+
                     println!("Unhandled Tag: {}", name.local_name);
                 }
                 Err(e) => {
