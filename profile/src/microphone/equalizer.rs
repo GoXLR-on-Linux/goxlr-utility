@@ -15,6 +15,7 @@ pub enum ParseError {
 
 // The EQ has a crap load of values (20 total), we could consider splitting
 // them into Gain and Freq to keep stuff tidy?
+#[derive(Debug)]
 pub struct Equalizer {
     eq_31h_gain: i8,
     eq_63h_gain: i8,

@@ -13,6 +13,7 @@ pub enum ParseError {
     ExpectedInt(#[from] std::num::ParseIntError),
 }
 
+#[derive(Debug)]
 pub struct MicSetup {
     mic_type: u8,
 

@@ -12,6 +12,7 @@ pub enum ParseError {
     ExpectedFloat(#[from] std::num::ParseFloatError),
 }
 
+#[derive(Debug)]
 pub struct Gate {
     amount: u8,
     threshold: i8,
