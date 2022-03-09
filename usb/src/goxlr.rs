@@ -99,8 +99,8 @@ impl<T: UsbContext> GoXLR<T> {
 
         if result == Err(Pipe) {
             // The GoXLR is not initialised, we need to fix that..
-            goxlr.handle.release_interface(0);
-            goxlr.handle.set_auto_detach_kernel_driver(true);
+            goxlr.handle.release_interface(0)?;
+            goxlr.handle.set_auto_detach_kernel_driver(true)?;
 
             if !goxlr.handle.claim_interface(0).is_ok() {
                 return Err(ConnectError::DeviceNotClaimed);
@@ -112,7 +112,7 @@ impl<T: UsbContext> GoXLR<T> {
             // Now activate audio..
             goxlr.write_class_control(1, 0x0100, 0x2900, &[0x80, 0xbb, 0x00, 0x00])?;
 
-            goxlr.handle.release_interface(0);
+            goxlr.handle.release_interface(0)?;
 
             // We'll error here and prompt the user to reboot, until we can sort this properly.
             return Err(ConnectError::DeviceNeedsReboot);
