@@ -310,10 +310,6 @@ impl<T: UsbContext> Device<T> {
                 .set_channel_state(channel, ChannelState::Unmuted)?;
         }
 
-        self.status.mic_gains[MicrophoneType::Jack as usize] = 72;
-        self.status.mic_type = MicrophoneType::Jack;
-        self.goxlr.set_microphone_gain(MicrophoneType::Jack, 72)?;
-
         // Load the colour Map..
         let use_1_3_40_format = version_newer_or_equal_to(
             &self.status.hardware.versions.firmware,
@@ -340,6 +336,13 @@ impl<T: UsbContext> Device<T> {
 
     fn apply_mic_profile(&mut self) -> Result<()> {
         self.status.mic_profile_name = self.mic_profile.name().to_owned();
+
+        self.status.mic_gains = self.mic_profile.mic_gains();
+        self.status.mic_type = self.mic_profile.mic_type();
+        self.goxlr.set_microphone_gain(
+            self.status.mic_type,
+            self.status.mic_gains[self.status.mic_type as usize],
+        )?;
 
         Ok(())
     }

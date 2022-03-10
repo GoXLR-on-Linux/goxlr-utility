@@ -125,6 +125,7 @@ impl Settings {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(default)]
 struct DeviceSettings {
     profile: String,
     mic_profile: String,

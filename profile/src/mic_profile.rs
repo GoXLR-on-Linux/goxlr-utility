@@ -123,4 +123,8 @@ impl MicProfileSettings {
 
         Ok(())
     }
+
+    pub fn setup(&self) -> &MicSetup {
+        &self.mic_setup
+    }
 }

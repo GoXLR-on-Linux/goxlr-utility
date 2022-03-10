@@ -88,4 +88,20 @@ impl MicSetup {
         writer.write(XmlWriterEvent::end_element())?;
         Ok(())
     }
+
+    pub fn mic_type(&self) -> u8 {
+        self.mic_type
+    }
+
+    pub fn dynamic_mic_gain(&self) -> u8 {
+        self.dynamic_mic_gain
+    }
+
+    pub fn condenser_mic_gain(&self) -> u8 {
+        self.condenser_mic_gain
+    }
+
+    pub fn trs_mic_gain(&self) -> u8 {
+        self.trs_mic_gain
+    }
 }

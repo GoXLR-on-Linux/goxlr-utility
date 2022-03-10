@@ -6,7 +6,9 @@ use goxlr_profile_loader::components::mixer::{FullChannelList, InputChannels, Ou
 use goxlr_profile_loader::mic_profile::MicProfileSettings;
 use goxlr_profile_loader::profile::{Profile, ProfileSettings};
 use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
-use goxlr_types::{ChannelName, FaderName, InputDevice, OutputDevice, VersionNumber};
+use goxlr_types::{
+    ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice, VersionNumber,
+};
 use goxlr_usb::colouring::ColourTargets;
 use log::error;
 use std::fs::File;
@@ -178,6 +180,23 @@ impl MicProfileAdapter {
 
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    pub fn mic_gains(&self) -> [u16; 3] {
+        [
+            self.profile.setup().dynamic_mic_gain() as u16,
+            self.profile.setup().condenser_mic_gain() as u16,
+            self.profile.setup().trs_mic_gain() as u16,
+        ]
+    }
+
+    pub fn mic_type(&self) -> MicrophoneType {
+        match self.profile.setup().mic_type() {
+            0 => MicrophoneType::Dynamic,
+            1 => MicrophoneType::Condenser,
+            2 => MicrophoneType::Jack,
+            _ => MicrophoneType::Jack, // default
+        }
     }
 }
 
