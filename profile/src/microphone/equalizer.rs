@@ -62,7 +62,7 @@ impl Equalizer {
             eq_2k_freq: 2000.0,
             eq_4k_freq: 4000.0,
             eq_8k_freq: 8000.0,
-            eq_16k_freq: 16000.0
+            eq_16k_freq: 16000.0,
         }
     }
 
@@ -153,26 +153,71 @@ impl Equalizer {
     }
 
     pub fn write_equaliser(&self, attributes: &mut HashMap<String, String>) {
-        attributes.insert("MIC_EQ_31.5HZ_GAIN".to_string(), format!("{}", self.eq_31h_gain));
-        attributes.insert("MIC_EQ_63HZ_GAIN".to_string(), format!("{}", self.eq_63h_gain));
-        attributes.insert("MIC_EQ_125HZ_GAIN".to_string(), format!("{}", self.eq_125h_gain));
-        attributes.insert("MIC_EQ_250HZ_GAIN".to_string(), format!("{}", self.eq_250h_gain));
-        attributes.insert("MIC_EQ_500HZ_GAIN".to_string(), format!("{}", self.eq_500h_gain));
-        attributes.insert("MIC_EQ_1KHZ_GAIN".to_string(), format!("{}", self.eq_1k_gain));
-        attributes.insert("MIC_EQ_2KHZ_GAIN".to_string(), format!("{}", self.eq_2k_gain));
-        attributes.insert("MIC_EQ_4KHZ_GAIN".to_string(), format!("{}", self.eq_4k_gain));
-        attributes.insert("MIC_EQ_8KHZ_GAIN".to_string(), format!("{}", self.eq_8k_gain));
-        attributes.insert("MIC_EQ_16KHZ_GAIN".to_string(), format!("{}", self.eq_16k_gain));
+        attributes.insert(
+            "MIC_EQ_31.5HZ_GAIN".to_string(),
+            format!("{}", self.eq_31h_gain),
+        );
+        attributes.insert(
+            "MIC_EQ_63HZ_GAIN".to_string(),
+            format!("{}", self.eq_63h_gain),
+        );
+        attributes.insert(
+            "MIC_EQ_125HZ_GAIN".to_string(),
+            format!("{}", self.eq_125h_gain),
+        );
+        attributes.insert(
+            "MIC_EQ_250HZ_GAIN".to_string(),
+            format!("{}", self.eq_250h_gain),
+        );
+        attributes.insert(
+            "MIC_EQ_500HZ_GAIN".to_string(),
+            format!("{}", self.eq_500h_gain),
+        );
+        attributes.insert(
+            "MIC_EQ_1KHZ_GAIN".to_string(),
+            format!("{}", self.eq_1k_gain),
+        );
+        attributes.insert(
+            "MIC_EQ_2KHZ_GAIN".to_string(),
+            format!("{}", self.eq_2k_gain),
+        );
+        attributes.insert(
+            "MIC_EQ_4KHZ_GAIN".to_string(),
+            format!("{}", self.eq_4k_gain),
+        );
+        attributes.insert(
+            "MIC_EQ_8KHZ_GAIN".to_string(),
+            format!("{}", self.eq_8k_gain),
+        );
+        attributes.insert(
+            "MIC_EQ_16KHZ_GAIN".to_string(),
+            format!("{}", self.eq_16k_gain),
+        );
 
-        attributes.insert("MIC_EQ_31.5HZ_F".to_string(), format!("{}", self.eq_31h_freq));
+        attributes.insert(
+            "MIC_EQ_31.5HZ_F".to_string(),
+            format!("{}", self.eq_31h_freq),
+        );
         attributes.insert("MIC_EQ_63HZ_F".to_string(), format!("{}", self.eq_63h_freq));
-        attributes.insert("MIC_EQ_125HZ_F".to_string(), format!("{}", self.eq_125h_freq));
-        attributes.insert("MIC_EQ_250HZ_F".to_string(), format!("{}", self.eq_250h_freq));
-        attributes.insert("MIC_EQ_500HZ_F".to_string(), format!("{}", self.eq_500h_freq));
+        attributes.insert(
+            "MIC_EQ_125HZ_F".to_string(),
+            format!("{}", self.eq_125h_freq),
+        );
+        attributes.insert(
+            "MIC_EQ_250HZ_F".to_string(),
+            format!("{}", self.eq_250h_freq),
+        );
+        attributes.insert(
+            "MIC_EQ_500HZ_F".to_string(),
+            format!("{}", self.eq_500h_freq),
+        );
         attributes.insert("MIC_EQ_1KHZ_F".to_string(), format!("{}", self.eq_1k_freq));
         attributes.insert("MIC_EQ_2KHZ_F".to_string(), format!("{}", self.eq_2k_freq));
         attributes.insert("MIC_EQ_4KHZ_F".to_string(), format!("{}", self.eq_4k_freq));
         attributes.insert("MIC_EQ_8KHZ_F".to_string(), format!("{}", self.eq_8k_freq));
-        attributes.insert("MIC_EQ_16KHZ_F".to_string(), format!("{}", self.eq_16k_freq));
+        attributes.insert(
+            "MIC_EQ_16KHZ_F".to_string(),
+            format!("{}", self.eq_16k_freq),
+        );
     }
 }

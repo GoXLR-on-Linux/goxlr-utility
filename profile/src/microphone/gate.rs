@@ -19,7 +19,7 @@ pub struct Gate {
     attack: u8,
     release: u8,
     enabled: bool,
-    attenuation: u8
+    attenuation: u8,
 }
 
 impl Gate {
@@ -30,7 +30,7 @@ impl Gate {
             attack: 0,
             release: 0,
             enabled: false,
-            attenuation: 0
+            attenuation: 0,
         }
     }
 
@@ -75,11 +75,23 @@ impl Gate {
     }
 
     pub fn write_gate(&self, attributes: &mut HashMap<String, String>) {
-        attributes.insert("MIC_GATE_MACRO_AMOUNT".to_string(), format!("{}", self.amount));
-        attributes.insert("MIC_GATE_THRESOLD".to_string(), format!("{}", self.threshold));
+        attributes.insert(
+            "MIC_GATE_MACRO_AMOUNT".to_string(),
+            format!("{}", self.amount),
+        );
+        attributes.insert(
+            "MIC_GATE_THRESOLD".to_string(),
+            format!("{}", self.threshold),
+        );
         attributes.insert("MIC_GATE_ATTACK".to_string(), format!("{}", self.attack));
         attributes.insert("MIC_GATE_RELEASE".to_string(), format!("{}", self.release));
-        attributes.insert("MIC_GATE_ENABLE".to_string(), format!("{}", self.enabled as u8));
-        attributes.insert("MIC_GATE_ATTEN".to_string(), format!("{}", self.attenuation));
+        attributes.insert(
+            "MIC_GATE_ENABLE".to_string(),
+            format!("{}", self.enabled as u8),
+        );
+        attributes.insert(
+            "MIC_GATE_ATTEN".to_string(),
+            format!("{}", self.attenuation),
+        );
     }
 }

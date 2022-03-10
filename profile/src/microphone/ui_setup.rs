@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use std::fs::File;
 use xml::attribute::OwnedAttribute;
-use xml::EventWriter;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
+use xml::EventWriter;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -31,7 +31,7 @@ impl UiSetup {
             eq_advanced: false,
             comp_advanced: false,
             gate_advanced: false,
-            eq_fine_tune: false
+            eq_fine_tune: false,
         }
     }
 
@@ -78,13 +78,26 @@ impl UiSetup {
     }
 
     pub fn write_ui(&self, writer: &mut EventWriter<&mut File>) -> Result<(), xml::writer::Error> {
-        let mut element: StartElementBuilder = XmlWriterEvent::start_element("micProfileUIMicProfile");
+        let mut element: StartElementBuilder =
+            XmlWriterEvent::start_element("micProfileUIMicProfile");
 
         let mut attributes: HashMap<String, String> = HashMap::default();
-        attributes.insert("eqAdvanced".to_string(), format!("{}", self.eq_advanced as u8));
-        attributes.insert("compAdvanced".to_string(), format!("{}", self.comp_advanced as u8));
-        attributes.insert("gateAdvanced".to_string(), format!("{}", self.gate_advanced as u8));
-        attributes.insert("eqFineTuneEnabled".to_string(), format!("{}", self.eq_fine_tune as u8));
+        attributes.insert(
+            "eqAdvanced".to_string(),
+            format!("{}", self.eq_advanced as u8),
+        );
+        attributes.insert(
+            "compAdvanced".to_string(),
+            format!("{}", self.comp_advanced as u8),
+        );
+        attributes.insert(
+            "gateAdvanced".to_string(),
+            format!("{}", self.gate_advanced as u8),
+        );
+        attributes.insert(
+            "eqFineTuneEnabled".to_string(),
+            format!("{}", self.eq_fine_tune as u8),
+        );
 
         for (key, value) in &attributes {
             element = element.attr(key.as_str(), value.as_str());

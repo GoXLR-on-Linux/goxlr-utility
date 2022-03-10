@@ -2,9 +2,9 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::str::FromStr;
 use xml::attribute::OwnedAttribute;
-use xml::EventWriter;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
+use xml::EventWriter;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -59,14 +59,26 @@ impl MicSetup {
         Ok(())
     }
 
-    pub fn write_config(&self, writer: &mut EventWriter<&mut File>) -> Result<(), xml::writer::Error> {
+    pub fn write_config(
+        &self,
+        writer: &mut EventWriter<&mut File>,
+    ) -> Result<(), xml::writer::Error> {
         let mut element: StartElementBuilder = XmlWriterEvent::start_element("setupTreeMicProfile");
 
         let mut attributes: HashMap<String, String> = HashMap::default();
         attributes.insert("MIC_TYPE".to_string(), format!("{}", self.mic_type));
-        attributes.insert("DYNAMIC_MIC_GAIN".to_string(), format!("{}", (self.dynamic_mic_gain as u32 * 65536)));
-        attributes.insert("CONDENSER_MIC_GAIN".to_string(), format!("{}", (self.condenser_mic_gain as u32 * 65536)));
-        attributes.insert("TRS_MIC_GAIN".to_string(), format!("{}", (self.trs_mic_gain as u32 * 65536)));
+        attributes.insert(
+            "DYNAMIC_MIC_GAIN".to_string(),
+            format!("{}", (self.dynamic_mic_gain as u32 * 65536)),
+        );
+        attributes.insert(
+            "CONDENSER_MIC_GAIN".to_string(),
+            format!("{}", (self.condenser_mic_gain as u32 * 65536)),
+        );
+        attributes.insert(
+            "TRS_MIC_GAIN".to_string(),
+            format!("{}", (self.trs_mic_gain as u32 * 65536)),
+        );
 
         for (key, value) in &attributes {
             element = element.attr(key.as_str(), value.as_str());

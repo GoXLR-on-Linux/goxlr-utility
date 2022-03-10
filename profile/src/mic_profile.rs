@@ -1,18 +1,18 @@
+use crate::error::ParseError;
+use crate::microphone::compressor::Compressor;
+use crate::microphone::equalizer::Equalizer;
+use crate::microphone::gate::Gate;
+use crate::microphone::mic_setup::MicSetup;
+use crate::microphone::ui_setup::UiSetup;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 use std::os::raw::c_float;
 use std::path::Path;
-use xml::{EmitterConfig, EventReader};
-use crate::error::ParseError;
-use crate::microphone::compressor::Compressor;
-use crate::microphone::mic_setup::MicSetup;
-use crate::microphone::equalizer::Equalizer;
-use crate::microphone::gate::Gate;
-use crate::microphone::ui_setup::UiSetup;
 use xml::reader::XmlEvent as XmlReaderEvent;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
+use xml::{EmitterConfig, EventReader};
 
 #[derive(Debug)]
 pub struct MicProfileSettings {
@@ -38,8 +38,8 @@ impl MicProfileSettings {
         for e in parser {
             match e {
                 Ok(XmlReaderEvent::StartElement {
-                       name, attributes, ..
-                   }) => {
+                    name, attributes, ..
+                }) => {
                     if name.local_name == "dspTreeMicProfile" {
                         // Ok, this is an incredibly large tag, with many settings (30 or so), so
                         // we split it into 3 separate elements.
@@ -83,7 +83,6 @@ impl MicProfileSettings {
             }
         }
 
-
         Ok(Self {
             equalizer,
             compressor,
@@ -123,6 +122,5 @@ impl MicProfileSettings {
         writer.write(XmlWriterEvent::end_element())?;
 
         Ok(())
-
     }
 }

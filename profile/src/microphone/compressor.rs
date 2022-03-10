@@ -10,7 +10,6 @@ pub enum ParseError {
 
     #[error("Expected float: {0}")]
     ExpectedFloat(#[from] std::num::ParseFloatError),
-
 }
 
 #[derive(Debug)]
@@ -29,7 +28,7 @@ impl Compressor {
             ratio: 0,
             attack: 0,
             release: 0,
-            makeup_gain: 0
+            makeup_gain: 0,
         }
     }
 
@@ -65,10 +64,16 @@ impl Compressor {
     }
 
     pub fn write_compressor(&self, attributes: &mut HashMap<String, String>) {
-        attributes.insert("MIC_COMP_THRESHOLD".to_string(), format!("{}", self.threshold));
+        attributes.insert(
+            "MIC_COMP_THRESHOLD".to_string(),
+            format!("{}", self.threshold),
+        );
         attributes.insert("MIC_COMP_RATIO".to_string(), format!("{}", self.ratio));
         attributes.insert("MIC_COMP_ATTACK".to_string(), format!("{}", self.attack));
         attributes.insert("MIC_COMP_RELEASE".to_string(), format!("{}", self.release));
-        attributes.insert("MIC_COMP_MAKEUPGAIN".to_string(), format!("{}", self.makeup_gain));
+        attributes.insert(
+            "MIC_COMP_MAKEUPGAIN".to_string(),
+            format!("{}", self.makeup_gain),
+        );
     }
 }
