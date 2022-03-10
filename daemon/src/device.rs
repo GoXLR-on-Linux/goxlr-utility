@@ -1,4 +1,4 @@
-use crate::profile::{version_newer_or_equal_to, ProfileAdapter};
+use crate::profile::{version_newer_or_equal_to, MicProfileAdapter, ProfileAdapter};
 use crate::SettingsHandle;
 use anyhow::Result;
 use enumset::EnumSet;
@@ -25,6 +25,7 @@ pub struct Device<T: UsbContext> {
     status: MixerStatus,
     last_buttons: EnumSet<Buttons>,
     profile: ProfileAdapter,
+    mic_profile: MicProfileAdapter,
 }
 
 impl<T: UsbContext> Device<T> {
@@ -32,9 +33,12 @@ impl<T: UsbContext> Device<T> {
         goxlr: GoXLR<T>,
         hardware: HardwareStatus,
         profile_name: Option<String>,
+        mic_profile_name: Option<String>,
         profile_directory: &Path,
     ) -> Result<Self> {
         let profile = ProfileAdapter::from_named_or_default(profile_name, profile_directory);
+        let mic_profile =
+            MicProfileAdapter::from_named_or_default(mic_profile_name, profile_directory);
 
         let status = MixerStatus {
             hardware,
@@ -48,10 +52,12 @@ impl<T: UsbContext> Device<T> {
             mic_type: MicrophoneType::Jack,
             router: Default::default(),
             profile_name: profile.name().to_owned(),
+            mic_profile_name: mic_profile.name().to_owned(),
         };
 
         let mut device = Self {
             profile,
+            mic_profile,
             goxlr,
             status,
             volumes_before_muted: [255; ChannelName::COUNT],
@@ -59,6 +65,7 @@ impl<T: UsbContext> Device<T> {
         };
 
         device.apply_profile()?;
+        device.apply_mic_profile()?;
 
         Ok(device)
     }
@@ -73,6 +80,10 @@ impl<T: UsbContext> Device<T> {
 
     pub fn profile(&self) -> &ProfileAdapter {
         &self.profile
+    }
+
+    pub fn mic_profile(&self) -> &MicProfileAdapter {
+        &self.mic_profile
     }
 
     pub async fn monitor_inputs(&mut self, settings: &SettingsHandle) -> Result<()> {
@@ -190,6 +201,16 @@ impl<T: UsbContext> Device<T> {
                 self.apply_profile()?;
                 settings
                     .set_device_profile_name(self.serial(), self.profile.name())
+                    .await;
+                settings.save().await;
+            }
+            GoXLRCommand::LoadMicProfile(mic_profile_name) => {
+                let profile_directory = settings.get_profile_directory().await;
+                self.mic_profile =
+                    MicProfileAdapter::from_named(mic_profile_name, &profile_directory)?;
+                self.apply_mic_profile()?;
+                settings
+                    .set_device_mic_profile_name(self.serial(), self.mic_profile.name())
                     .await;
                 settings.save().await;
             }
@@ -313,6 +334,12 @@ impl<T: UsbContext> Device<T> {
         let router = self.profile.create_router();
         self.apply_router(&router)?;
         self.status.router = router;
+
+        Ok(())
+    }
+
+    fn apply_mic_profile(&mut self) -> Result<()> {
+        self.status.mic_profile_name = self.mic_profile.name().to_owned();
 
         Ok(())
     }

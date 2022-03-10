@@ -29,4 +29,5 @@ pub enum GoXLRCommand {
     SetChannelMuted(ChannelName, bool),
     SetMicrophoneGain(MicrophoneType, u16),
     LoadProfile(String),
+    LoadMicProfile(String),
 }

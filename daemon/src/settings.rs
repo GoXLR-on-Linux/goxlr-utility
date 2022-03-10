@@ -1,3 +1,4 @@
+use crate::profile::{DEFAULT_MIC_PROFILE_NAME, DEFAULT_PROFILE_NAME};
 use anyhow::{Context, Result};
 use log::error;
 use serde::{Deserialize, Serialize};
@@ -52,15 +53,30 @@ impl SettingsHandle {
             .map(|d| d.profile.clone())
     }
 
+    pub async fn get_device_mic_profile_name(&self, device_serial: &str) -> Option<String> {
+        let settings = self.settings.read().await;
+        settings
+            .devices
+            .get(device_serial)
+            .map(|d| d.mic_profile.clone())
+    }
+
     pub async fn set_device_profile_name(&self, device_serial: &str, profile_name: &str) {
         let mut settings = self.settings.write().await;
         let entry = settings
             .devices
             .entry(device_serial.to_owned())
-            .or_insert_with(|| DeviceSettings {
-                profile: Default::default(),
-            });
+            .or_insert_with(|| DeviceSettings::default());
         entry.profile = profile_name.to_owned();
+    }
+
+    pub async fn set_device_mic_profile_name(&self, device_serial: &str, mic_profile_name: &str) {
+        let mut settings = self.settings.write().await;
+        let entry = settings
+            .devices
+            .entry(device_serial.to_owned())
+            .or_insert_with(|| DeviceSettings::default());
+        entry.mic_profile = mic_profile_name.to_owned();
     }
 }
 
@@ -111,4 +127,14 @@ impl Settings {
 #[derive(Debug, Serialize, Deserialize)]
 struct DeviceSettings {
     profile: String,
+    mic_profile: String,
+}
+
+impl Default for DeviceSettings {
+    fn default() -> Self {
+        DeviceSettings {
+            profile: DEFAULT_PROFILE_NAME.to_owned(),
+            mic_profile: DEFAULT_MIC_PROFILE_NAME.to_owned(),
+        }
+    }
 }

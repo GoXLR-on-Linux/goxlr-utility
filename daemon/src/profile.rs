@@ -3,6 +3,7 @@ use enumset::EnumSet;
 use goxlr_profile_loader::components::colours::ColourMap;
 use goxlr_profile_loader::components::colours::ColourOffStyle::Dimmed;
 use goxlr_profile_loader::components::mixer::{FullChannelList, InputChannels, OutputChannels};
+use goxlr_profile_loader::mic_profile::MicProfileSettings;
 use goxlr_profile_loader::profile::{Profile, ProfileSettings};
 use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
 use goxlr_types::{ChannelName, FaderName, InputDevice, OutputDevice, VersionNumber};
@@ -14,8 +15,11 @@ use std::path::Path;
 use strum::EnumCount;
 use strum::IntoEnumIterator;
 
-const DEFAULT_PROFILE_NAME: &str = "Default - Vaporwave";
+pub const DEFAULT_PROFILE_NAME: &str = "Default - Vaporwave";
 const DEFAULT_PROFILE: &[u8] = include_bytes!("../profiles/Default - Vaporwave.goxlr");
+
+pub const DEFAULT_MIC_PROFILE_NAME: &str = "DEFAULT";
+const DEFAULT_MIC_PROFILE: &[u8] = include_bytes!("../profiles/DEFAULT.goxlrMicProfile");
 
 #[derive(Debug)]
 pub struct ProfileAdapter {
@@ -120,6 +124,60 @@ impl ProfileAdapter {
         }
 
         colour_array
+    }
+}
+
+#[derive(Debug)]
+pub struct MicProfileAdapter {
+    name: String,
+    profile: MicProfileSettings,
+}
+
+impl MicProfileAdapter {
+    pub fn from_named_or_default(name: Option<String>, directory: &Path) -> Self {
+        if let Some(name) = name {
+            match MicProfileAdapter::from_named(name.clone(), directory) {
+                Ok(result) => return result,
+                Err(error) => error!("Couldn't load mic profile {}: {}", name, error),
+            }
+        }
+
+        MicProfileAdapter::default()
+    }
+
+    pub fn from_named(name: String, directory: &Path) -> Result<Self> {
+        let path = directory.join(format!("{}.goxlrMicProfile", name));
+        if path.is_file() {
+            let file = File::open(path).context("Couldn't open mic profile for reading")?;
+            return MicProfileAdapter::from_reader(name, file).context("Couldn't read mic profile");
+        }
+
+        if name == DEFAULT_MIC_PROFILE_NAME {
+            return Ok(MicProfileAdapter::default());
+        }
+
+        Err(anyhow!(
+            "Mic profile {} does not exist inside {}",
+            name,
+            directory.to_string_lossy()
+        ))
+    }
+
+    pub fn default() -> Self {
+        MicProfileAdapter::from_reader(
+            DEFAULT_MIC_PROFILE_NAME.to_string(),
+            Cursor::new(DEFAULT_MIC_PROFILE),
+        )
+        .expect("Default mic profile isn't available")
+    }
+
+    pub fn from_reader<R: Read + Seek>(name: String, reader: R) -> Result<Self> {
+        let profile = MicProfileSettings::load(reader)?;
+        Ok(Self { name, profile })
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
     }
 }
 

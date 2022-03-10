@@ -35,6 +35,7 @@ pub struct MixerStatus {
     pub mic_gains: [u16; MicrophoneType::COUNT],
     pub mic_type: MicrophoneType,
     pub profile_name: String,
+    pub mic_profile_name: String,
 }
 
 impl MixerStatus {
