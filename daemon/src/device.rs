@@ -89,18 +89,30 @@ impl<T: UsbContext> Device<T> {
 
         if let Ok((buttons, volumes)) = self.goxlr.get_button_states() {
             self.update_volumes_to(volumes);
+
+            let pressed_buttons = buttons.difference(self.last_buttons);
+            for button in pressed_buttons {
+                self.on_button_down(button, settings).await?;
+            }
+
             let released_buttons = self.last_buttons.difference(buttons);
             for button in released_buttons {
-                self.on_button_press(button, settings).await?;
+                self.on_button_up(button, settings).await?;
             }
+
             self.last_buttons = buttons;
         }
 
         Ok(())
     }
 
-    async fn on_button_press(&mut self, button: Buttons, settings: &SettingsHandle) -> Result<()> {
-        debug!("Handling button press: {:?}", button);
+    async fn on_button_down(&mut self, button: Buttons, settings: &SettingsHandle) -> Result<()> {
+        debug!("Handling Button Down: {:?}", button);
+        Ok(())
+    }
+
+    async fn on_button_up(&mut self, button: Buttons, settings: &SettingsHandle) -> Result<()> {
+        debug!("Handling Button Release: {:?}", button);
         match button {
             Buttons::Fader1Mute => {
                 self.toggle_fader_mute(FaderName::A, settings).await?;
@@ -415,7 +427,7 @@ impl<T: UsbContext> Device<T> {
                 (EffectKey::Equalizer4KHzFrequency, eq_freq[7]),
                 (EffectKey::Equalizer8KHzFrequency, eq_freq[8]),
                 (EffectKey::Equalizer16KHzFrequency, eq_freq[9]),
-            ]);
+            ])?;
         }
 
         Ok(())
