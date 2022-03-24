@@ -127,4 +127,8 @@ impl MicProfileSettings {
     pub fn setup(&self) -> &MicSetup {
         &self.mic_setup
     }
+    pub fn gate(&self) -> &Gate { &self.gate }
+    pub fn compressor(&self) -> &Compressor { &self.compressor }
+    pub fn equalizer(&self) -> &Equalizer { &self.equalizer }
+    pub fn deess(&self) -> u8 { self.deess }
 }
