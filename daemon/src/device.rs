@@ -2,7 +2,7 @@ use crate::profile::{version_newer_or_equal_to, MicProfileAdapter, ProfileAdapte
 use crate::SettingsHandle;
 use anyhow::Result;
 use enumset::EnumSet;
-use goxlr_ipc::{GoXLRCommand, HardwareStatus, MixerStatus};
+use goxlr_ipc::{DeviceType, GoXLRCommand, HardwareStatus, MixerStatus};
 use goxlr_types::{ChannelName, EffectKey, FaderName, InputDevice as BasicInputDevice, MicrophoneParamKey, MicrophoneType, OutputDevice as BasicOutputDevice, VersionNumber};
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::channelstate::ChannelState;
@@ -391,29 +391,32 @@ impl<T: UsbContext> Device<T> {
             (EffectKey::MegaphoneEnabled, 0),
         ])?;
 
-        // self.goxlr.set_effect_values(&[
-        //     (EffectKey::Equalizer31HzValue, eq_gains[0]),
-        //     (EffectKey::Equalizer63HzValue, eq_gains[1]),
-        //     (EffectKey::Equalizer125HzValue, eq_gains[2]),
-        //     (EffectKey::Equalizer250HzValue, eq_gains[3]),
-        //     (EffectKey::Equalizer500HzValue, eq_gains[4]),
-        //     (EffectKey::Equalizer1KHzValue, eq_gains[5]),
-        //     (EffectKey::Equalizer2KHzValue, eq_gains[6]),
-        //     (EffectKey::Equalizer4KHzValue, eq_gains[7]),
-        //     (EffectKey::Equalizer8KHzValue, eq_gains[8]),
-        //     (EffectKey::Equalizer16KHzValue, eq_gains[9]),
-        //
-        //     (EffectKey::Equalizer31HzFrequency, eq_freq[0]),
-        //     (EffectKey::Equalizer63HzFrequency, eq_freq[1]),
-        //     (EffectKey::Equalizer125HzFrequency, eq_freq[2]),
-        //     (EffectKey::Equalizer250HzFrequency, eq_freq[3]),
-        //     (EffectKey::Equalizer500HzFrequency, eq_freq[4]),
-        //     (EffectKey::Equalizer1KHzFrequency, eq_freq[5]),
-        //     (EffectKey::Equalizer2KHzFrequency, eq_freq[6]),
-        //     (EffectKey::Equalizer4KHzFrequency, eq_freq[7]),
-        //     (EffectKey::Equalizer8KHzFrequency, eq_freq[8]),
-        //     (EffectKey::Equalizer16KHzFrequency, eq_freq[9]),
-        // ]);
+        // Apply EQ only on the 'Full' device
+        if self.status.hardware.device_type == DeviceType::Full {
+            self.goxlr.set_effect_values(&[
+                (EffectKey::Equalizer31HzValue, eq_gains[0]),
+                (EffectKey::Equalizer63HzValue, eq_gains[1]),
+                (EffectKey::Equalizer125HzValue, eq_gains[2]),
+                (EffectKey::Equalizer250HzValue, eq_gains[3]),
+                (EffectKey::Equalizer500HzValue, eq_gains[4]),
+                (EffectKey::Equalizer1KHzValue, eq_gains[5]),
+                (EffectKey::Equalizer2KHzValue, eq_gains[6]),
+                (EffectKey::Equalizer4KHzValue, eq_gains[7]),
+                (EffectKey::Equalizer8KHzValue, eq_gains[8]),
+                (EffectKey::Equalizer16KHzValue, eq_gains[9]),
+
+                (EffectKey::Equalizer31HzFrequency, eq_freq[0]),
+                (EffectKey::Equalizer63HzFrequency, eq_freq[1]),
+                (EffectKey::Equalizer125HzFrequency, eq_freq[2]),
+                (EffectKey::Equalizer250HzFrequency, eq_freq[3]),
+                (EffectKey::Equalizer500HzFrequency, eq_freq[4]),
+                (EffectKey::Equalizer1KHzFrequency, eq_freq[5]),
+                (EffectKey::Equalizer2KHzFrequency, eq_freq[6]),
+                (EffectKey::Equalizer4KHzFrequency, eq_freq[7]),
+                (EffectKey::Equalizer8KHzFrequency, eq_freq[8]),
+                (EffectKey::Equalizer16KHzFrequency, eq_freq[9]),
+            ]);
+        }
 
         Ok(())
     }
