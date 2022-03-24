@@ -99,7 +99,10 @@ impl<T: UsbContext> GoXLR<T> {
 
         if result == Err(Pipe) {
             // The GoXLR is not initialised, we need to fix that..
-            goxlr.handle.release_interface(0)?;
+            info!("Attempting to initialise device..");
+            if device_is_claimed {
+                goxlr.handle.release_interface(0)?;
+            }
             goxlr.handle.set_auto_detach_kernel_driver(true)?;
 
             if !goxlr.handle.claim_interface(0).is_ok() {
