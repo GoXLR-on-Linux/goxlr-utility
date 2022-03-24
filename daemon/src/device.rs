@@ -3,10 +3,7 @@ use crate::SettingsHandle;
 use anyhow::Result;
 use enumset::EnumSet;
 use goxlr_ipc::{GoXLRCommand, HardwareStatus, MixerStatus};
-use goxlr_types::{
-    ChannelName, FaderName, InputDevice as BasicInputDevice, MicrophoneType,
-    OutputDevice as BasicOutputDevice, VersionNumber,
-};
+use goxlr_types::{ChannelName, EffectKey, FaderName, InputDevice as BasicInputDevice, MicrophoneParamKey, MicrophoneType, OutputDevice as BasicOutputDevice, VersionNumber};
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::channelstate::ChannelState;
 use goxlr_usb::goxlr::GoXLR;
@@ -325,6 +322,9 @@ impl<T: UsbContext> Device<T> {
             self.goxlr.set_button_colours(map)?;
         }
 
+        // Load the microphone params..
+
+
         self.goxlr.set_button_states(self.create_button_states())?;
 
         let router = self.profile.create_router();
@@ -343,6 +343,79 @@ impl<T: UsbContext> Device<T> {
             self.status.mic_type,
             self.status.mic_gains[self.status.mic_type as usize],
         )?;
+
+        // I can't think of a cleaner way of doing this..
+        let params = self.mic_profile.mic_params();
+        self.goxlr.set_mic_param(&[
+            (MicrophoneParamKey::GateThreshold, &params[0]),
+            (MicrophoneParamKey::GateAttack, &params[1]),
+            (MicrophoneParamKey::GateRelease, &params[2]),
+            (MicrophoneParamKey::GateAttenuation, &params[3]),
+            (MicrophoneParamKey::CompressorThreshold, &params[4]),
+            (MicrophoneParamKey::CompressorRatio, &params[5]),
+            (MicrophoneParamKey::CompressorAttack, &params[6]),
+            (MicrophoneParamKey::CompressorRelease, &params[7]),
+            (MicrophoneParamKey::CompressorMakeUpGain, &params[8]),
+        ])?;
+
+        let main_effects = self.mic_profile.mic_effects();
+        let eq_gains = self.mic_profile.get_eq_gain();
+        let eq_freq = self.mic_profile.get_eq_freq();
+
+        self.goxlr.set_effect_values(&[
+            (EffectKey::Unknown158, 0),
+
+            (EffectKey::DeEsser, self.mic_profile.get_deesser()),
+            (EffectKey::CompressorThreshold, main_effects[4]),
+            (EffectKey::CompressorRatio, main_effects[5]),
+            (EffectKey::CompressorAttack, main_effects[6]),
+            (EffectKey::CompressorRelease, main_effects[7]),
+            (EffectKey::CompressorMakeUpGain, main_effects[8]),
+
+            (EffectKey::GateThreshold, main_effects[0]),
+            (EffectKey::GateAttack, main_effects[1]),
+            (EffectKey::GateRelease, main_effects[2]),
+            (EffectKey::GateEnabled, 1),
+            (EffectKey::GateAttenuation, main_effects[3]),
+            (EffectKey::Unknown14b, 1),
+            (EffectKey::BleepLevel, -10),
+            (EffectKey::GateMode, 2),
+
+
+            // Disable all the voice effects, these are enabled by default and seem
+            // to mess with the initial mic!
+            (EffectKey::Encoder1Enabled, 0),
+            (EffectKey::Encoder2Enabled, 0),
+            (EffectKey::Encoder3Enabled, 0),
+            (EffectKey::Encoder4Enabled, 0),
+            (EffectKey::RobotEnabled, 0),
+            (EffectKey::HardTuneEnabled, 0),
+            (EffectKey::MegaphoneEnabled, 0),
+        ])?;
+
+        // self.goxlr.set_effect_values(&[
+        //     (EffectKey::Equalizer31HzValue, eq_gains[0]),
+        //     (EffectKey::Equalizer63HzValue, eq_gains[1]),
+        //     (EffectKey::Equalizer125HzValue, eq_gains[2]),
+        //     (EffectKey::Equalizer250HzValue, eq_gains[3]),
+        //     (EffectKey::Equalizer500HzValue, eq_gains[4]),
+        //     (EffectKey::Equalizer1KHzValue, eq_gains[5]),
+        //     (EffectKey::Equalizer2KHzValue, eq_gains[6]),
+        //     (EffectKey::Equalizer4KHzValue, eq_gains[7]),
+        //     (EffectKey::Equalizer8KHzValue, eq_gains[8]),
+        //     (EffectKey::Equalizer16KHzValue, eq_gains[9]),
+        //
+        //     (EffectKey::Equalizer31HzFrequency, eq_freq[0]),
+        //     (EffectKey::Equalizer63HzFrequency, eq_freq[1]),
+        //     (EffectKey::Equalizer125HzFrequency, eq_freq[2]),
+        //     (EffectKey::Equalizer250HzFrequency, eq_freq[3]),
+        //     (EffectKey::Equalizer500HzFrequency, eq_freq[4]),
+        //     (EffectKey::Equalizer1KHzFrequency, eq_freq[5]),
+        //     (EffectKey::Equalizer2KHzFrequency, eq_freq[6]),
+        //     (EffectKey::Equalizer4KHzFrequency, eq_freq[7]),
+        //     (EffectKey::Equalizer8KHzFrequency, eq_freq[8]),
+        //     (EffectKey::Equalizer16KHzFrequency, eq_freq[9]),
+        // ]);
 
         Ok(())
     }

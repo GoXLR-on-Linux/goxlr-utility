@@ -6,9 +6,7 @@ use goxlr_profile_loader::components::mixer::{FullChannelList, InputChannels, Ou
 use goxlr_profile_loader::mic_profile::MicProfileSettings;
 use goxlr_profile_loader::profile::{Profile, ProfileSettings};
 use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
-use goxlr_types::{
-    ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice, VersionNumber,
-};
+use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice, VersionNumber};
 use goxlr_usb::colouring::ColourTargets;
 use log::error;
 use std::fs::File;
@@ -16,6 +14,7 @@ use std::io::{Cursor, Read, Seek};
 use std::path::Path;
 use strum::EnumCount;
 use strum::IntoEnumIterator;
+use byteorder::{ByteOrder, LittleEndian};
 
 pub const DEFAULT_PROFILE_NAME: &str = "Default - Vaporwave";
 const DEFAULT_PROFILE: &[u8] = include_bytes!("../profiles/Default - Vaporwave.goxlr");
@@ -197,6 +196,91 @@ impl MicProfileAdapter {
             2 => MicrophoneType::Jack,
             _ => MicrophoneType::Jack, // default
         }
+    }
+
+    pub fn mic_params(&self) -> [[u8; 4]; 9] {
+        let mut gate_threshold = [0; 4];
+        let mut gate_attack = [0; 4];
+        let mut gate_release = [0; 4];
+        let mut gate_attenuation = [0; 4];
+
+        LittleEndian::write_f32(&mut gate_threshold, self.profile.gate().threshold().into());
+        LittleEndian::write_f32(&mut gate_attack, self.profile.gate().attack().into());
+        LittleEndian::write_f32(&mut gate_release, self.profile.gate().release().into());
+        LittleEndian::write_f32(&mut gate_attenuation, self.profile.gate().attenuation().into());
+
+        let mut comp_threshold = [0; 4];
+        let mut comp_ratio = [0; 4];
+        let mut comp_attack = [0; 4];
+        let mut comp_release = [0; 4];
+        let mut comp_makeup = [0; 4];
+
+        LittleEndian::write_f32(&mut comp_threshold, self.profile.compressor().threshold().into());
+        LittleEndian::write_f32(&mut comp_ratio, self.profile.compressor().ratio().into());
+        LittleEndian::write_f32(&mut comp_attack, self.profile.compressor().attack().into());
+        LittleEndian::write_f32(&mut comp_release, self.profile.compressor().release().into());
+        LittleEndian::write_f32(&mut comp_makeup, self.profile.compressor().makeup().into());
+
+        [
+            gate_threshold,
+            gate_attack,
+            gate_release,
+            gate_attenuation,
+            comp_threshold,
+            comp_ratio,
+            comp_attack,
+            comp_release,
+            comp_makeup,
+        ]
+    }
+
+    pub fn mic_effects(&self) -> [i32; 9] {
+        [
+            self.profile.gate().threshold().into(),
+            self.profile.gate().attack().into(),
+            self.profile.gate().release().into(),
+            self.profile.gate().attenuation().into(),
+            self.profile.compressor().threshold().into(),
+            self.profile.compressor().ratio().into(),
+            self.profile.compressor().attack().into(),
+            self.profile.compressor().release().into(),
+            self.profile.compressor().makeup().into(),
+        ]
+    }
+
+    pub fn get_eq_gain(&self) -> [i32; 10] {
+        [
+            self.profile.equalizer().eq_31h_gain().into(),
+            self.profile.equalizer().eq_63h_gain().into(),
+            self.profile.equalizer().eq_125h_gain().into(),
+            self.profile.equalizer().eq_250h_gain().into(),
+            self.profile.equalizer().eq_500h_gain().into(),
+            self.profile.equalizer().eq_1k_gain().into(),
+            self.profile.equalizer().eq_2k_gain().into(),
+            self.profile.equalizer().eq_4k_gain().into(),
+            self.profile.equalizer().eq_8k_gain().into(),
+            self.profile.equalizer().eq_16k_gain().into(),
+        ]
+    }
+
+    pub fn get_eq_freq(&self) -> [i32; 10] {
+        // Some kind of mapping needs to occur here, so returning a default..
+        [
+            15,
+            40,
+            63,
+            87,
+            111,
+            135,
+            159,
+            183,
+            207,
+            231
+        ]
+    }
+
+    pub fn get_deesser(&self) -> i32 {
+        self.profile.deess() as i32
     }
 }
 
