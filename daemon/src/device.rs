@@ -363,21 +363,19 @@ impl<T: UsbContext> Device<T> {
         let eq_freq = self.mic_profile.get_eq_freq();
 
         self.goxlr.set_effect_values(&[
-            (EffectKey::Unknown158, 0),
-
             (EffectKey::DeEsser, self.mic_profile.get_deesser()),
+
+            (EffectKey::GateThreshold, main_effects[0]),
+            (EffectKey::GateAttack, main_effects[1]),
+            (EffectKey::GateRelease, main_effects[2]),
+            (EffectKey::GateAttenuation, main_effects[3]),
             (EffectKey::CompressorThreshold, main_effects[4]),
             (EffectKey::CompressorRatio, main_effects[5]),
             (EffectKey::CompressorAttack, main_effects[6]),
             (EffectKey::CompressorRelease, main_effects[7]),
             (EffectKey::CompressorMakeUpGain, main_effects[8]),
 
-            (EffectKey::GateThreshold, main_effects[0]),
-            (EffectKey::GateAttack, main_effects[1]),
-            (EffectKey::GateRelease, main_effects[2]),
             (EffectKey::GateEnabled, 1),
-            (EffectKey::GateAttenuation, main_effects[3]),
-            (EffectKey::Unknown14b, 1),
             (EffectKey::BleepLevel, -10),
             (EffectKey::GateMode, 2),
 
