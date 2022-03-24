@@ -101,11 +101,15 @@ pub enum InputDevice {
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum EffectKey {
+    Unknown158 = 0x0158,
     BleepLevel = 0x0073,
+    GateMode = 0x0010,
     GateThreshold = 0x0011,
+    GateEnabled = 0x0014,
     GateAttenuation = 0x0015,
     GateAttack = 0x0016,
     GateRelease = 0x0017,
+    Unknown14b = 0x014b,
     Equalizer31HzFrequency = 0x0126,
     Equalizer31HzValue = 0x0127,
     Equalizer63HzFrequency = 0x00f8,
@@ -175,6 +179,15 @@ pub enum EffectKey {
     HardTuneAmount = 0x005a,
     HardTuneRate = 0x005c,
     HardTuneWindow = 0x005b,
+
+    RobotEnabled = 0x014e,
+    MegaphoneEnabled = 0x00d7,
+    HardTuneEnabled = 0x00d8,
+
+    Encoder1Enabled = 0x00d5,
+    Encoder2Enabled = 0x00d6,
+    Encoder3Enabled = 0x0150,
+    Encoder4Enabled = 0x0151
 }
 
 #[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount)]
