@@ -220,4 +220,66 @@ impl Equalizer {
             format!("{}", self.eq_16k_freq),
         );
     }
+
+
+    pub fn eq_31h_gain(&self) -> i8 {
+        self.eq_31h_gain
+    }
+    pub fn eq_63h_gain(&self) -> i8 {
+        self.eq_63h_gain
+    }
+    pub fn eq_125h_gain(&self) -> i8 {
+        self.eq_125h_gain
+    }
+    pub fn eq_250h_gain(&self) -> i8 {
+        self.eq_250h_gain
+    }
+    pub fn eq_500h_gain(&self) -> i8 {
+        self.eq_500h_gain
+    }
+    pub fn eq_1k_gain(&self) -> i8 {
+        self.eq_1k_gain
+    }
+    pub fn eq_2k_gain(&self) -> i8 {
+        self.eq_2k_gain
+    }
+    pub fn eq_4k_gain(&self) -> i8 {
+        self.eq_4k_gain
+    }
+    pub fn eq_8k_gain(&self) -> i8 {
+        self.eq_8k_gain
+    }
+    pub fn eq_16k_gain(&self) -> i8 {
+        self.eq_16k_gain
+    }
+    pub fn eq_31h_freq(&self) -> f64 {
+        self.eq_31h_freq
+    }
+    pub fn eq_63h_freq(&self) -> f64 {
+        self.eq_63h_freq
+    }
+    pub fn eq_125h_freq(&self) -> f64 {
+        self.eq_125h_freq
+    }
+    pub fn eq_250h_freq(&self) -> f64 {
+        self.eq_250h_freq
+    }
+    pub fn eq_500h_freq(&self) -> f64 {
+        self.eq_500h_freq
+    }
+    pub fn eq_1k_freq(&self) -> f64 {
+        self.eq_1k_freq
+    }
+    pub fn eq_2k_freq(&self) -> f64 {
+        self.eq_2k_freq
+    }
+    pub fn eq_4k_freq(&self) -> f64 {
+        self.eq_4k_freq
+    }
+    pub fn eq_8k_freq(&self) -> f64 {
+        self.eq_8k_freq
+    }
+    pub fn eq_16k_freq(&self) -> f64 {
+        self.eq_16k_freq
+    }
 }
