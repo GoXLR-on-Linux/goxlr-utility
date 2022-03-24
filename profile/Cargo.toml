@@ -16,3 +16,4 @@ strum = { version = "0.23", features = ["derive"] }
 ritelinked = "0.3.2"
 
 xml-rs = "0.8"
+byteorder = "1"
