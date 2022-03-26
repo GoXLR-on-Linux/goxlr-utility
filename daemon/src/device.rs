@@ -12,6 +12,7 @@ use goxlr_usb::rusb::UsbContext;
 use log::debug;
 use std::path::Path;
 use strum::{EnumCount, IntoEnumIterator};
+use goxlr_types::ChannelName::Mic;
 
 const MIN_VOLUME_THRESHOLD: u8 = 6;
 
@@ -108,6 +109,16 @@ impl<T: UsbContext> Device<T> {
 
     async fn on_button_down(&mut self, button: Buttons, settings: &SettingsHandle) -> Result<()> {
         debug!("Handling Button Down: {:?}", button);
+
+        match button {
+            Buttons::MicrophoneMute => {
+                if !self.profile.is_cough_toggle() {
+                    self.perform_command(GoXLRCommand::SetChannelMuted(Mic, true, false), settings).await?;
+                }
+            }
+            _ => {}
+        }
+
         Ok(())
     }
 
@@ -126,6 +137,14 @@ impl<T: UsbContext> Device<T> {
             Buttons::Fader4Mute => {
                 self.toggle_fader_mute(FaderName::D, settings).await?;
             }
+            Buttons::MicrophoneMute => {
+                if self.profile.is_cough_toggle() {
+                    let muted = self.status.get_channel_muted(Mic);
+                    self.perform_command(GoXLRCommand::SetChannelMuted(Mic, !muted, true), settings).await?;
+                } else {
+                    self.perform_command(GoXLRCommand::SetChannelMuted(Mic, false, false), settings).await?;
+                }
+            }
             _ => {}
         }
         Ok(())
@@ -139,7 +158,7 @@ impl<T: UsbContext> Device<T> {
         let channel = self.status.get_fader_assignment(fader);
         let muted = self.status.get_channel_muted(channel);
 
-        self.perform_command(GoXLRCommand::SetChannelMuted(channel, !muted), settings)
+        self.perform_command(GoXLRCommand::SetChannelMuted(channel, !muted, true), settings)
             .await?;
 
         Ok(())
@@ -175,7 +194,7 @@ impl<T: UsbContext> Device<T> {
                 self.goxlr.set_volume(channel, volume)?;
                 self.status.set_channel_volume(channel, volume);
             }
-            GoXLRCommand::SetChannelMuted(channel, muted) => {
+            GoXLRCommand::SetChannelMuted(channel, muted, update_volume) => {
                 let (_, device_volumes) = self.goxlr.get_button_states()?;
                 self.update_volumes_to(device_volumes);
                 self.goxlr.set_channel_state(
@@ -187,15 +206,20 @@ impl<T: UsbContext> Device<T> {
                     },
                 )?;
                 self.status.set_channel_muted(channel, muted);
-                if muted {
-                    self.volumes_before_muted[channel as usize] =
-                        self.status.get_channel_volume(channel);
-                    self.goxlr.set_volume(channel, 0)?;
-                } else if self.status.get_channel_volume(channel) <= MIN_VOLUME_THRESHOLD {
-                    // Don't restore the old volume if the new volume is above minimum.
-                    // This seems to match the official GoXLR software behaviour.
-                    self.goxlr
-                        .set_volume(channel, self.volumes_before_muted[channel as usize])?;
+
+                // This may seem unusual, however for things like the cough button slapping the
+                // mic fader down and up for a brief tap is probably bad for the motors :p
+                if update_volume {
+                    if muted {
+                        self.volumes_before_muted[channel as usize] =
+                            self.status.get_channel_volume(channel);
+                        self.goxlr.set_volume(channel, 0)?;
+                    } else if self.status.get_channel_volume(channel) <= MIN_VOLUME_THRESHOLD {
+                        // Don't restore the old volume if the new volume is above minimum.
+                        // This seems to match the official GoXLR software behaviour.
+                        self.goxlr
+                            .set_volume(channel, self.volumes_before_muted[channel as usize])?;
+                    }
                 }
                 self.goxlr.set_button_states(self.create_button_states())?;
             }
@@ -254,6 +278,11 @@ impl<T: UsbContext> Device<T> {
         {
             result[Buttons::Fader4Mute as usize] = ButtonStates::Colour1;
         }
+
+        if self.status.get_channel_muted(Mic) {
+            result[Buttons::MicrophoneMute as usize] = ButtonStates::Colour1;
+        }
+
         result
     }
 

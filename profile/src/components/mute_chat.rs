@@ -152,6 +152,9 @@ impl MuteChat {
     pub fn colour_map(&self) -> &ColourMap {
         &self.colour_map
     }
+    pub fn is_cough_toggle(&self) -> bool {
+        self.cough_behaviour == CoughToggle::Toggle
+    }
 }
 
 #[derive(PartialEq, Debug)]

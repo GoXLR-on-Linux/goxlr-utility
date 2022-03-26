@@ -88,7 +88,7 @@ pub async fn apply_channel_states(
         client
             .command(
                 serial,
-                GoXLRCommand::SetChannelMuted(ChannelName::Mic, muted),
+                GoXLRCommand::SetChannelMuted(ChannelName::Mic, muted, true),
             )
             .await?;
     }
@@ -96,7 +96,7 @@ pub async fn apply_channel_states(
         client
             .command(
                 serial,
-                GoXLRCommand::SetChannelMuted(ChannelName::LineIn, muted),
+                GoXLRCommand::SetChannelMuted(ChannelName::LineIn, muted, true),
             )
             .await?;
     }
@@ -104,7 +104,7 @@ pub async fn apply_channel_states(
         client
             .command(
                 serial,
-                GoXLRCommand::SetChannelMuted(ChannelName::Console, muted),
+                GoXLRCommand::SetChannelMuted(ChannelName::Console, muted, true),
             )
             .await?;
     }
@@ -112,7 +112,7 @@ pub async fn apply_channel_states(
         client
             .command(
                 serial,
-                GoXLRCommand::SetChannelMuted(ChannelName::System, muted),
+                GoXLRCommand::SetChannelMuted(ChannelName::System, muted, true),
             )
             .await?;
     }
@@ -120,7 +120,7 @@ pub async fn apply_channel_states(
         client
             .command(
                 serial,
-                GoXLRCommand::SetChannelMuted(ChannelName::Game, muted),
+                GoXLRCommand::SetChannelMuted(ChannelName::Game, muted, true),
             )
             .await?;
     }
@@ -128,7 +128,7 @@ pub async fn apply_channel_states(
         client
             .command(
                 serial,
-                GoXLRCommand::SetChannelMuted(ChannelName::Chat, muted),
+                GoXLRCommand::SetChannelMuted(ChannelName::Chat, muted, true),
             )
             .await?;
     }
@@ -136,7 +136,7 @@ pub async fn apply_channel_states(
         client
             .command(
                 serial,
-                GoXLRCommand::SetChannelMuted(ChannelName::Sample, muted),
+                GoXLRCommand::SetChannelMuted(ChannelName::Sample, muted, true),
             )
             .await?;
     }
@@ -144,7 +144,7 @@ pub async fn apply_channel_states(
         client
             .command(
                 serial,
-                GoXLRCommand::SetChannelMuted(ChannelName::Music, muted),
+                GoXLRCommand::SetChannelMuted(ChannelName::Music, muted, true),
             )
             .await?;
     }
@@ -152,7 +152,7 @@ pub async fn apply_channel_states(
         client
             .command(
                 serial,
-                GoXLRCommand::SetChannelMuted(ChannelName::Headphones, muted),
+                GoXLRCommand::SetChannelMuted(ChannelName::Headphones, muted, true),
             )
             .await?;
     }
@@ -160,7 +160,7 @@ pub async fn apply_channel_states(
         client
             .command(
                 serial,
-                GoXLRCommand::SetChannelMuted(ChannelName::MicMonitor, muted),
+                GoXLRCommand::SetChannelMuted(ChannelName::MicMonitor, muted, true),
             )
             .await?;
     }
@@ -168,7 +168,7 @@ pub async fn apply_channel_states(
         client
             .command(
                 serial,
-                GoXLRCommand::SetChannelMuted(ChannelName::LineOut, muted),
+                GoXLRCommand::SetChannelMuted(ChannelName::LineOut, muted, true),
             )
             .await?;
     }

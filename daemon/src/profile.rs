@@ -126,6 +126,10 @@ impl ProfileAdapter {
 
         colour_array
     }
+
+    pub fn is_cough_toggle(&self) -> bool {
+        self.profile.settings().mute_chat().is_cough_toggle()
+    }
 }
 
 #[derive(Debug)]

@@ -26,7 +26,7 @@ pub enum DaemonResponse {
 pub enum GoXLRCommand {
     AssignFader(FaderName, ChannelName),
     SetVolume(ChannelName, u8),
-    SetChannelMuted(ChannelName, bool),
+    SetChannelMuted(ChannelName, bool, bool),
     SetMicrophoneGain(MicrophoneType, u16),
     LoadProfile(String),
     LoadMicProfile(String),
