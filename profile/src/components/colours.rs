@@ -69,7 +69,7 @@ impl ColourMap {
         let mut attr_key = format!("{}offStyle", &self.prefix);
 
         if attribute.name.local_name == attr_key {
-            self.off_style = ColourOffStyle::from_str(dbg!(&attribute.value))?;
+            self.off_style = ColourOffStyle::from_str(&attribute.value)?;
             return Ok(true);
         }
 
