@@ -214,6 +214,7 @@ impl<T: UsbContext> Device<T> {
                         self.volumes_before_muted[channel as usize] =
                             self.status.get_channel_volume(channel);
                         self.goxlr.set_volume(channel, 0)?;
+                        self.status.volumes[channel as usize] = 0;
                     } else if self.status.get_channel_volume(channel) <= MIN_VOLUME_THRESHOLD {
                         // Don't restore the old volume if the new volume is above minimum.
                         // This seems to match the official GoXLR software behaviour.
