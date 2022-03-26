@@ -364,8 +364,29 @@ impl<T: UsbContext> Device<T> {
             self.goxlr.set_button_colours(map)?;
         }
 
-        // Load the microphone params..
+        self.goxlr.set_fader_display_mode(
+            FaderName::A,
+            self.profile.is_fader_gradient(FaderName::A),
+            self.profile.is_fader_meter(FaderName::A)
+        )?;
 
+        self.goxlr.set_fader_display_mode(
+            FaderName::B,
+            self.profile.is_fader_gradient(FaderName::B),
+            self.profile.is_fader_meter(FaderName::B)
+        )?;
+
+        self.goxlr.set_fader_display_mode(
+            FaderName::C,
+            self.profile.is_fader_gradient(FaderName::C),
+            self.profile.is_fader_meter(FaderName::C)
+        )?;
+
+        self.goxlr.set_fader_display_mode(
+            FaderName::D,
+            self.profile.is_fader_gradient(FaderName::D),
+            self.profile.is_fader_meter(FaderName::D)
+        )?;
 
         self.goxlr.set_button_states(self.create_button_states())?;
 

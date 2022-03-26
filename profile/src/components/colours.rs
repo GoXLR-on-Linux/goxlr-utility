@@ -15,6 +15,7 @@ pub enum ParseError {
 }
 use strum::{Display, EnumString};
 use xml::attribute::OwnedAttribute;
+use crate::components::colours::ColourDisplay::{Gradient, GradientMeter, Meter};
 
 #[derive(Debug)]
 pub struct ColourMap {
@@ -187,6 +188,35 @@ impl ColourMap {
     pub fn get_off_style(&self) -> &ColourOffStyle {
         &self.off_style
     }
+    pub fn is_fader_gradient(&self) -> bool {
+        if self.colour_display.is_none() {
+            return false;
+        }
+
+        if self.colour_display.as_ref().unwrap() == &Gradient {
+            return true;
+        }
+
+        if self.colour_display.as_ref().unwrap() == &GradientMeter {
+            return true;
+        }
+
+        return false;
+    }
+
+    pub fn is_fader_meter(&self) -> bool {
+        if self.colour_display.is_none() {
+            return false;
+        }
+        if self.colour_display.as_ref().unwrap() == &Meter {
+            return true;
+        }
+        if self.colour_display.as_ref().unwrap() == &GradientMeter {
+            return true;
+        }
+
+        return false;
+    }
 }
 
 #[derive(Debug, PartialEq, EnumString, Display)]
@@ -201,7 +231,7 @@ pub enum ColourOffStyle {
     DimmedColour2,
 }
 
-#[derive(Debug, EnumString, Display)]
+#[derive(Debug, PartialEq, EnumString, Display)]
 enum ColourDisplay {
     #[strum(to_string = "GRADIENT")]
     Gradient,

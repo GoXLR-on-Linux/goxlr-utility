@@ -127,6 +127,14 @@ impl ProfileAdapter {
         colour_array
     }
 
+    pub fn is_fader_gradient(&self, fader: FaderName) -> bool {
+        self.profile.settings().fader(fader as usize).colour_map().is_fader_gradient()
+    }
+
+    pub fn is_fader_meter(&self, fader: FaderName) -> bool {
+        self.profile.settings().fader(fader as usize).colour_map().is_fader_meter()
+    }
+
     pub fn is_cough_toggle(&self) -> bool {
         self.profile.settings().mute_chat().is_cough_toggle()
     }
