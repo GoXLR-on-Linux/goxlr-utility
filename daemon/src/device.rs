@@ -211,15 +211,26 @@ impl<T: UsbContext> Device<T> {
                 // mic fader down and up for a brief tap is probably bad for the motors :p
                 if update_volume {
                     if muted {
+                        // Store the pre-mute volume so it can be restored later..
                         self.volumes_before_muted[channel as usize] =
                             self.status.get_channel_volume(channel);
+
+                        // Send the new channel volume to the device
                         self.goxlr.set_volume(channel, 0)?;
+
+                        // In the case where a mute is happening that's not on a slider (eg,
+                        // cough button), we need to update the new internal volume.
                         self.status.volumes[channel as usize] = 0;
+
                     } else if self.status.get_channel_volume(channel) <= MIN_VOLUME_THRESHOLD {
                         // Don't restore the old volume if the new volume is above minimum.
                         // This seems to match the official GoXLR software behaviour.
                         self.goxlr
                             .set_volume(channel, self.volumes_before_muted[channel as usize])?;
+
+                        // As above, restore the internal volume on channels that aren't on a slider.
+                        self.status.volumes[channel as usize] =
+                            self.volumes_before_muted[channel as usize];
                     }
                 }
                 self.goxlr.set_button_states(self.create_button_states())?;
