@@ -261,6 +261,7 @@ impl<T: UsbContext> Device<T> {
                         // In the case where a mute is happening that's not on a slider (eg,
                         // cough button), we need to update the new internal volume.
                         self.status.volumes[channel as usize] = 0;
+                        self.status.set_channel_volume(channel, 0);
 
                     } else if self.status.get_channel_volume(channel) <= MIN_VOLUME_THRESHOLD {
                         // Don't restore the old volume if the new volume is above minimum.
@@ -269,8 +270,7 @@ impl<T: UsbContext> Device<T> {
                             .set_volume(channel, self.volumes_before_muted[channel as usize])?;
 
                         // As above, restore the internal volume on channels that aren't on a slider.
-                        self.status.volumes[channel as usize] =
-                            self.volumes_before_muted[channel as usize];
+                        self.status.set_channel_volume(channel, self.volumes_before_muted[channel as usize]);
                     }
                 }
                 self.goxlr.set_button_states(self.create_button_states())?;
