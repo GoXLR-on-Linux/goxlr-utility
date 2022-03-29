@@ -11,6 +11,8 @@ use goxlr_usb::routing::{InputDevice, OutputDevice};
 use goxlr_usb::rusb::UsbContext;
 use log::debug;
 use std::path::Path;
+use std::time::{SystemTime, UNIX_EPOCH};
+use enum_map::EnumMap;
 use strum::{EnumCount, IntoEnumIterator};
 use goxlr_types::ChannelName::Mic;
 
@@ -22,8 +24,16 @@ pub struct Device<T: UsbContext> {
     volumes_before_muted: [u8; ChannelName::COUNT],
     status: MixerStatus,
     last_buttons: EnumSet<Buttons>,
+    button_states: EnumMap<Buttons, ButtonState>,
     profile: ProfileAdapter,
     mic_profile: MicProfileAdapter,
+}
+
+// Experimental code:
+#[derive(Debug, Default, Copy, Clone)]
+struct ButtonState {
+    press_time: u128,
+    hold_handled: bool
 }
 
 impl<T: UsbContext> Device<T> {
@@ -60,6 +70,7 @@ impl<T: UsbContext> Device<T> {
             status,
             volumes_before_muted: [255; ChannelName::COUNT],
             last_buttons: EnumSet::empty(),
+            button_states: EnumMap::default(),
         };
 
         device.apply_profile()?;
@@ -93,12 +104,36 @@ impl<T: UsbContext> Device<T> {
 
             let pressed_buttons = buttons.difference(self.last_buttons);
             for button in pressed_buttons {
+                // This is a new press, store it in the states..
+                self.button_states[button] = ButtonState {
+                    press_time: self.get_epoch_ms(),
+                    hold_handled: false
+                };
+
                 self.on_button_down(button, settings).await?;
             }
 
             let released_buttons = self.last_buttons.difference(buttons);
             for button in released_buttons {
-                self.on_button_up(button, settings).await?;
+                let button_state = self.button_states[button];
+                self.on_button_up(button, &button_state, settings).await?;
+
+                self.button_states[button] = ButtonState {
+                    press_time: 0,
+                    hold_handled: false
+                }
+            }
+
+            // Finally, iterate over our existing button states, and see if any have been
+            // pressed for more than half a second and not handled.
+            for button in buttons {
+                if !self.button_states[button].hold_handled {
+                    let now = self.get_epoch_ms();
+                    if (now - self.button_states[button].press_time) > 500 {
+                        self.on_button_hold(button, settings).await?;
+                        self.button_states[button].hold_handled = true;
+                    }
+                }
             }
 
             self.last_buttons = buttons;
@@ -122,8 +157,13 @@ impl<T: UsbContext> Device<T> {
         Ok(())
     }
 
-    async fn on_button_up(&mut self, button: Buttons, settings: &SettingsHandle) -> Result<()> {
-        debug!("Handling Button Release: {:?}", button);
+    async fn on_button_hold(&mut self, button: Buttons, settings: &SettingsHandle) -> Result<()> {
+        debug!("Handling Button Hold: {:?}", button);
+        Ok(())
+    }
+
+    async fn on_button_up(&mut self, button: Buttons, state: &ButtonState, settings: &SettingsHandle) -> Result<()> {
+        debug!("Handling Button Release: {:?}, Has Long Press Handled: {:?}", button, state.hold_handled);
         match button {
             Buttons::Fader1Mute => {
                 self.toggle_fader_mute(FaderName::A, settings).await?;
@@ -493,5 +533,10 @@ impl<T: UsbContext> Device<T> {
         }
 
         Ok(())
+    }
+
+    // Get the current time in millis..
+    fn get_epoch_ms(&self) -> u128 {
+        SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis()
     }
 }
