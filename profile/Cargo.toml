@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-enum-map = "2.0"
+enum-map = "2.1.0"
 enum-map-derive = "0.8"
 thiserror = "1.0"
 zip = "0.5"
