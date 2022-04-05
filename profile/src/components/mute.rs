@@ -135,13 +135,26 @@ impl MuteButton {
         Ok(())
     }
 
-    pub fn colour_map(&self) -> &ColourMap {
-        &self.colour_map
+    pub fn colour_map(&mut self) -> &mut ColourMap {
+        &mut self.colour_map
+    }
+
+    pub fn mute_function(&self) -> &MuteFunction {
+        &self.mute_function
+    }
+
+
+
+    pub fn set_previous_volume(&mut self, previous_volume: u8) {
+        self.previous_volume = previous_volume;
+    }
+    pub fn previous_volume(&self) -> u8 {
+        self.previous_volume
     }
 }
 
 // MuteChat
-#[derive(Debug, Enum, EnumProperty, EnumIter)]
+#[derive(Debug, Copy, Clone, Enum, EnumProperty, EnumIter, PartialEq)]
 pub enum MuteFunction {
     #[strum(props(Value = "Mute All", uiIndex = "0"))]
     All,

@@ -15,6 +15,8 @@ use std::path::Path;
 use strum::EnumCount;
 use strum::IntoEnumIterator;
 use byteorder::{ByteOrder, LittleEndian};
+use goxlr_profile_loader::components::fader::Fader;
+use goxlr_profile_loader::components::mute::MuteButton;
 
 pub const DEFAULT_PROFILE_NAME: &str = "Default - Vaporwave";
 const DEFAULT_PROFILE: &[u8] = include_bytes!("../profiles/Default - Vaporwave.goxlr");
@@ -75,7 +77,7 @@ impl ProfileAdapter {
         &self.name
     }
 
-    pub fn create_router(&self) -> [EnumSet<OutputDevice>; InputDevice::COUNT] {
+    pub fn create_router(&mut self) -> [EnumSet<OutputDevice>; InputDevice::COUNT] {
         let mut router = [EnumSet::empty(); InputDevice::COUNT];
 
         for (input, potential_outputs) in self.profile.settings().mixer().mixer_table().iter() {
@@ -92,19 +94,19 @@ impl ProfileAdapter {
         router
     }
 
-    pub fn get_fader_assignment(&self, fader: FaderName) -> ChannelName {
+    pub fn get_fader_assignment(&mut self, fader: FaderName) -> ChannelName {
         let fader = self.profile.settings().fader(fader as usize);
         profile_to_standard_channel(fader.channel())
     }
 
-    pub fn get_channel_volume(&self, channel: ChannelName) -> u8 {
+    pub fn get_channel_volume(&mut self, channel: ChannelName) -> u8 {
         self.profile
             .settings()
             .mixer()
             .channel_volume(standard_to_profile_channel(channel))
     }
 
-    pub fn get_colour_map(&self, use_format_1_3_40: bool) -> [u8; 520] {
+    pub fn get_colour_map(&mut self, use_format_1_3_40: bool) -> [u8; 520] {
         let mut colour_array = [0; 520];
 
         for colour in ColourTargets::iter() {
@@ -127,15 +129,27 @@ impl ProfileAdapter {
         colour_array
     }
 
-    pub fn is_fader_gradient(&self, fader: FaderName) -> bool {
+    pub fn get_mute_button(&mut self, fader: FaderName) -> &mut MuteButton {
+        self.profile.settings().mute_buttons(fader as usize)
+    }
+
+    pub fn get_fader(&mut self, fader: FaderName) -> &Fader {
+        self.profile.settings().fader(fader as usize)
+    }
+
+    pub fn get_fader_colour_map(&mut self, fader:FaderName) -> &ColourMap {
+        self.profile.settings().fader(fader as usize).colour_map()
+    }
+
+    pub fn is_fader_gradient(&mut self, fader: FaderName) -> bool {
         self.profile.settings().fader(fader as usize).colour_map().is_fader_gradient()
     }
 
-    pub fn is_fader_meter(&self, fader: FaderName) -> bool {
+    pub fn is_fader_meter(&mut self, fader: FaderName) -> bool {
         self.profile.settings().fader(fader as usize).colour_map().is_fader_meter()
     }
 
-    pub fn is_cough_toggle(&self) -> bool {
+    pub fn is_cough_toggle(&mut self) -> bool {
         self.profile.settings().mute_chat().is_cough_toggle()
     }
 }
@@ -351,7 +365,7 @@ fn standard_to_profile_channel(value: ChannelName) -> FullChannelList {
     }
 }
 
-fn get_profile_colour_map(profile: &ProfileSettings, colour_target: ColourTargets) -> &ColourMap {
+fn get_profile_colour_map(profile: &mut ProfileSettings, colour_target: ColourTargets) -> &ColourMap {
     match colour_target {
         ColourTargets::Fader1Mute => profile.mute_buttons(0).colour_map(),
         ColourTargets::Fader2Mute => profile.mute_buttons(1).colour_map(),

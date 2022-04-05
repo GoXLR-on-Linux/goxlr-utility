@@ -40,8 +40,8 @@ impl Profile {
         Ok(Profile { settings })
     }
 
-    pub fn settings(&self) -> &ProfileSettings {
-        &self.settings
+    pub fn settings(&mut self) -> &mut ProfileSettings {
+        &mut self.settings
     }
 }
 
@@ -543,8 +543,8 @@ impl ProfileSettings {
         self.sampler_map[button].as_ref().unwrap()
     }
 
-    pub fn mute_buttons(&self, index: usize) -> &MuteButton {
-        &self.mute_buttons[index]
+    pub fn mute_buttons(&mut self, index: usize) -> &mut MuteButton {
+        &mut self.mute_buttons[index]
     }
 
     pub fn scribbles(&self, index: usize) -> &Scribble {
