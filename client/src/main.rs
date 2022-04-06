@@ -133,6 +133,8 @@ fn print_mixer_info(mixer: &MixerStatus) {
     println!("Mixer profile: {}", mixer.profile_name);
 
     for fader in FaderName::iter() {
+        // TODO: This will always report 'Chat'..
+
         println!(
             "Fader {} assignment: {}",
             fader,

@@ -515,8 +515,8 @@ impl ProfileSettings {
         &mut self.mixer
     }
 
-    pub fn fader(&self, fader: usize) -> &Fader {
-        &self.faders[fader]
+    pub fn fader(&mut self, fader: usize) -> &mut Fader {
+        &mut self.faders[fader]
     }
 
     pub fn effects(&self, effect: usize) -> &Effects {

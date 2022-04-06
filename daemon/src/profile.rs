@@ -112,6 +112,11 @@ impl ProfileAdapter {
         profile_to_standard_channel(fader.channel())
     }
 
+    pub fn set_fader_assignment(&mut self, fader: FaderName, channel: ChannelName) {
+        let fader = self.profile.settings().fader(fader as usize);
+        fader.set_channel(standard_to_profile_channel(channel));
+    }
+
     pub fn get_channel_volume(&mut self, channel: ChannelName) -> u8 {
         self.profile
             .settings()

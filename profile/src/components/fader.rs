@@ -100,6 +100,9 @@ impl Fader {
     pub fn channel(&self) -> FullChannelList {
         self.channel
     }
+    pub fn set_channel(&mut self, channel: FullChannelList) {
+        self.channel = channel;
+    }
 
     pub fn colour_map(&self) -> &ColourMap {
         &self.colour_map

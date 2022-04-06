@@ -220,7 +220,7 @@ impl<T: UsbContext> Device<T> {
         held: bool,
     ) -> Result<()> {
         // OK, so a fader button has been pressed, we need to determine behaviour, based on the colour map..
-        let channel = self.status.get_fader_assignment(fader);
+        let channel = self.profile.get_fader_assignment(fader);
         let current_volume = self.profile.get_channel_volume(channel);
 
         let mute_config: &mut MuteButton = self.profile.get_mute_button(fader);
@@ -298,7 +298,7 @@ impl<T: UsbContext> Device<T> {
 
     fn update_volumes_to(&mut self, volumes: [u8; 4]) {
         for fader in FaderName::iter() {
-            let channel = self.status.get_fader_assignment(fader);
+            let channel = self.profile.get_fader_assignment(fader);
             let old_volume = self.profile.get_channel_volume(channel);
 
             let new_volume = volumes[fader as usize];
@@ -319,8 +319,9 @@ impl<T: UsbContext> Device<T> {
     ) -> Result<()> {
         match command {
             GoXLRCommand::AssignFader(fader, channel) => {
+                // TODO: Check behaviour when reassigning a muted / silenced channel.
                 self.goxlr.set_fader(fader, channel)?;
-                self.status.set_fader_assignment(fader, channel);
+                self.profile.set_fader_assignment(fader, channel);
 
                 let button_states = self.create_button_states();
                 self.goxlr.set_button_states(button_states)?;
@@ -434,19 +435,19 @@ impl<T: UsbContext> Device<T> {
         };
 
         // Apply the routing only if the channel name matches what we're processing..
-        if self.status.get_fader_assignment(FaderName::A) == channel_name {
+        if self.profile.get_fader_assignment(FaderName::A) == channel_name {
             self.apply_transient_fader_routing(FaderName::A, &mut router);
         }
 
-        if self.status.get_fader_assignment(FaderName::B) == channel_name {
+        if self.profile.get_fader_assignment(FaderName::B) == channel_name {
             self.apply_transient_fader_routing(FaderName::B, &mut router);
         }
 
-        if self.status.get_fader_assignment(FaderName::C) == channel_name {
+        if self.profile.get_fader_assignment(FaderName::C) == channel_name {
             self.apply_transient_fader_routing(FaderName::C, &mut router);
         }
 
-        if self.status.get_fader_assignment(FaderName::D) == channel_name {
+        if self.profile.get_fader_assignment(FaderName::D) == channel_name {
             self.apply_transient_fader_routing(FaderName::D, &mut router);
         }
     }
