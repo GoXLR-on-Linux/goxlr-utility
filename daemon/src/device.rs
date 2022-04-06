@@ -16,7 +16,6 @@ use enum_map::EnumMap;
 use strum::{EnumCount, IntoEnumIterator};
 use goxlr_profile_loader::components::colours::ColourState;
 use goxlr_profile_loader::components::mute::{MuteButton, MuteFunction};
-use goxlr_types::ChannelName::Mic;
 use goxlr_usb::channelstate::ChannelState::Muted;
 
 const MIN_VOLUME_THRESHOLD: u8 = 6;
@@ -164,16 +163,16 @@ impl<T: UsbContext> Device<T> {
         debug!("Handling Button Hold: {:?}", button);
         match button {
             Buttons::Fader1Mute => {
-                self.handle_fader_mute(FaderName::A, true, settings).await?;
+                self.handle_fader_mute(FaderName::A, true).await?;
             }
             Buttons::Fader2Mute => {
-                self.handle_fader_mute(FaderName::B, true, settings).await?;
+                self.handle_fader_mute(FaderName::B, true).await?;
             }
             Buttons::Fader3Mute => {
-                self.handle_fader_mute(FaderName::C, true, settings).await?;
+                self.handle_fader_mute(FaderName::C, true).await?;
             }
             Buttons::Fader4Mute => {
-                self.handle_fader_mute(FaderName::D, true, settings).await?;
+                self.handle_fader_mute(FaderName::D, true).await?;
             }
             _ => {}
         }
@@ -185,22 +184,22 @@ impl<T: UsbContext> Device<T> {
         match button {
             Buttons::Fader1Mute => {
                 if !state.hold_handled {
-                    self.handle_fader_mute(FaderName::A, false, settings).await?;
+                    self.handle_fader_mute(FaderName::A, false).await?;
                 }
             }
             Buttons::Fader2Mute => {
                 if !state.hold_handled {
-                    self.handle_fader_mute(FaderName::B, false, settings).await?;
+                    self.handle_fader_mute(FaderName::B, false).await?;
                 }
             }
             Buttons::Fader3Mute => {
                 if !state.hold_handled {
-                    self.handle_fader_mute(FaderName::C, false, settings).await?;
+                    self.handle_fader_mute(FaderName::C, false).await?;
                 }
             }
             Buttons::Fader4Mute => {
                 if !state.hold_handled {
-                    self.handle_fader_mute(FaderName::D, false, settings).await?;
+                    self.handle_fader_mute(FaderName::D, false).await?;
                 }
             }
             _ => {}
@@ -208,47 +207,41 @@ impl<T: UsbContext> Device<T> {
         Ok(())
     }
 
-    async fn toggle_fader_mute(
-        &mut self,
-        fader: FaderName,
-        settings: &SettingsHandle,
-    ) -> Result<()> {
-        let channel = self.status.get_fader_assignment(fader);
-        let muted = self.status.get_channel_muted(channel);
-
-        self.perform_command(GoXLRCommand::SetChannelMuted(channel, !muted, true), settings)
-            .await?;
-
-        Ok(())
-    }
-
     async fn handle_fader_mute(
         &mut self,
         fader: FaderName,
         held: bool,
-        settings: &SettingsHandle,
     ) -> Result<()> {
         // OK, so a fader button has been pressed, we need to determine behaviour, based on the colour map..
-        let mut mute_config: &mut MuteButton = self.profile.get_mute_button(fader);
-        let mut colour_map = mute_config.colour_map();
+        let mute_config: &mut MuteButton = self.profile.get_mute_button(fader);
+        let colour_map = mute_config.colour_map();
 
         // We should be safe to straight unwrap these, state and blink are always present.
         let muted_to_x = colour_map.state().as_ref().unwrap() == &ColourState::On;
         let muted_to_all = colour_map.blink().as_ref().unwrap() == &ColourState::On;
-        let mut mute_function = mute_config.mute_function().clone();
-
-        // Temporary, override the 'mute to x' behaviour, set to all.
-        mute_function = MuteFunction::All;
+        let mute_function = mute_config.mute_function().clone();
 
         let channel = self.status.get_fader_assignment(fader);
 
-        // Ok, lets do some testing..
+        // Map the channel to BasicInputDevice in case we need it later..
+        let basic_input = match channel {
+            ChannelName::Mic => Some(BasicInputDevice::Microphone),
+            ChannelName::LineIn => Some(BasicInputDevice::LineIn),
+            ChannelName::Console => Some(BasicInputDevice::Console),
+            ChannelName::System => Some(BasicInputDevice::System),
+            ChannelName::Game => Some(BasicInputDevice::Game),
+            ChannelName::Chat => Some(BasicInputDevice::Chat),
+            ChannelName::Sample => Some(BasicInputDevice::Samples),
+            ChannelName::Music => Some(BasicInputDevice::Music),
+            _ => None,
+        };
+
+        // Should we be muting this fader to all channels?
         if held || (!muted_to_x && mute_function == MuteFunction::All) {
             if held && muted_to_all {
-                // Do nothing.
+                // Holding the button when it's already muted to all does nothing.
                 return Ok(());
             }
-
 
             mute_config.set_previous_volume(self.status.get_channel_volume(channel));
 
@@ -264,31 +257,36 @@ impl<T: UsbContext> Device<T> {
             return Ok(());
         }
 
+        // Button has been pressed, and we're already in some kind of muted state..
         if !held && muted_to_x {
+            // Disable the lighting regardless of action
+            mute_config.colour_map().set_state(Some(ColourState::Off));
+            mute_config.colour_map().set_blink(Some(ColourState::Off));
+
             if muted_to_all || mute_function == MuteFunction::All {
                 self.goxlr.set_volume(channel, mute_config.previous_volume())?;
                 self.goxlr.set_channel_state(channel, ChannelState::Unmuted)?;
-
-                // Channel is unmuted
-                mute_config.colour_map().set_state(Some(ColourState::Off));
-                mute_config.colour_map().set_blink(Some(ColourState::Off));
-
-                self.update_button_states()?;
-                return Ok(());
             } else {
-                // Perform a transient routing table update, re-enable channel.
+                if basic_input.is_some() {
+                    self.apply_routing(basic_input.unwrap());
+                }
             }
+
+            self.update_button_states()?;
+            return Ok(());
         }
 
         if !held && !muted_to_x && mute_function != MuteFunction::All {
             // Mute channel to X via transient routing table update
+            mute_config.colour_map().set_state(Some(ColourState::On));
+            if basic_input.is_some() {
+                self.apply_routing(basic_input.unwrap());
+            }
         }
 
         self.update_button_states()?;
         Ok(())
     }
-
-
 
     fn update_volumes_to(&mut self, volumes: [u8; 4]) {
         for fader in FaderName::iter() {
@@ -412,8 +410,8 @@ impl<T: UsbContext> Device<T> {
 
     fn get_fader_mute_button_state(&mut self, fader: FaderName) -> ButtonStates {
         // Need to grab the state from the profile..
-        let mut mute_config: &mut MuteButton = self.profile.get_mute_button(fader);
-        let mut colour_map = mute_config.colour_map();
+        let mute_config: &mut MuteButton = self.profile.get_mute_button(fader);
+        let colour_map = mute_config.colour_map();
 
         if colour_map.blink().as_ref().unwrap() == &ColourState::On {
             return ButtonStates::Flashing;
@@ -426,26 +424,91 @@ impl<T: UsbContext> Device<T> {
         return ButtonStates::DimmedColour1;
     }
 
-    fn apply_router(
-        &mut self,
-        router: &[EnumSet<BasicOutputDevice>; BasicInputDevice::COUNT],
-    ) -> Result<()> {
-        for simple_input in BasicInputDevice::iter() {
-            let outputs = &router[simple_input as usize];
-            let (left_input, right_input) = InputDevice::from_basic(&simple_input);
-            let mut left = [0; 22];
-            let mut right = [0; 22];
+    // This applies routing for a single input channel..
+    fn apply_channel_routing(&mut self, input: BasicInputDevice, router: EnumMap<BasicOutputDevice, bool>) -> Result<()> {
+        let (left_input, right_input) = InputDevice::from_basic(&input);
+        let mut left = [0; 22];
+        let mut right = [0; 22];
 
-            for simple_output in outputs.iter() {
-                let (left_output, right_output) = OutputDevice::from_basic(&simple_output);
-                // 0x20 is 100% volume. This is adjustable. 100% isn't the maximum, either! :D
+        for output in BasicOutputDevice::iter() {
+            if router[output] {
+                let (left_output, right_output) = OutputDevice::from_basic(&output);
+
                 left[left_output.position()] = 0x20;
                 right[right_output.position()] = 0x20;
             }
-
-            self.goxlr.set_routing(left_input, left)?;
-            self.goxlr.set_routing(right_input, right)?;
         }
+        self.goxlr.set_routing(left_input, left)?;
+        self.goxlr.set_routing(right_input, right)?;
+
+        Ok(())
+    }
+
+    fn apply_transient_routing(&mut self, input: BasicInputDevice, mut router: EnumMap<BasicOutputDevice, bool>) {
+        // Not all channels are routable, so map the inputs to channels before checking..
+        let channel_name = match input {
+            BasicInputDevice::Microphone => ChannelName::Mic,
+            BasicInputDevice::Chat => ChannelName::Chat,
+            BasicInputDevice::Music => ChannelName::Music,
+            BasicInputDevice::Game => ChannelName::Game,
+            BasicInputDevice::Console => ChannelName::Console,
+            BasicInputDevice::LineIn => ChannelName::LineIn,
+            BasicInputDevice::System => ChannelName::System,
+            BasicInputDevice::Samples => ChannelName::Sample
+        };
+
+        // Apply the routing only if the channel name matches what we're processing..
+        if self.status.get_fader_assignment(FaderName::A) == channel_name {
+            self.apply_transient_fader_routing(FaderName::A, &mut router);
+        }
+
+        if self.status.get_fader_assignment(FaderName::B) == channel_name {
+            self.apply_transient_fader_routing(FaderName::B, &mut router);
+        }
+
+        if self.status.get_fader_assignment(FaderName::C) == channel_name {
+            self.apply_transient_fader_routing(FaderName::C, &mut router);
+        }
+
+        if self.status.get_fader_assignment(FaderName::D) == channel_name {
+            self.apply_transient_fader_routing(FaderName::D, &mut router);
+        }
+    }
+
+    fn apply_transient_fader_routing(&mut self, fader: FaderName, router: &mut EnumMap<BasicOutputDevice, bool>) {
+        // We need to check the state of this, so pull the relevant parts..
+        let mute_config: &mut MuteButton = self.profile.get_mute_button(fader);
+        let colour_map = mute_config.colour_map();
+
+        let muted_to_x = colour_map.state().as_ref().unwrap() == &ColourState::On;
+        let muted_to_all = colour_map.blink().as_ref().unwrap() == &ColourState::On;
+        let mute_function = mute_config.mute_function().clone();
+
+        if !muted_to_x || muted_to_all || mute_function == MuteFunction::All  {
+            // Nothing to do in this situation, either not muted or muted to all.
+            return;
+        }
+
+        // We're in a 'Mute to X' scenario, so update the relevant part of the router..
+        match mute_function {
+            MuteFunction::All => {}
+            MuteFunction::ToStream => router[BasicOutputDevice::BroadcastMix] = false,
+            MuteFunction::ToVoiceChat => router[BasicOutputDevice::ChatMic] = false,
+            MuteFunction::ToPhones => router[BasicOutputDevice::Headphones] = false,
+            MuteFunction::ToLineOut => router[BasicOutputDevice::LineOut] = false
+        }
+    }
+
+
+    fn apply_routing(&mut self, input: BasicInputDevice) -> Result<()> {
+        // Load the routing for this channel from the profile..
+        let router = self.profile.get_router(input);
+        self.apply_transient_routing(input, router);
+
+        debug!("Applying Routing to {:?}:", input);
+        debug!("{:?}", router);
+
+        self.apply_channel_routing(input, router)?;
 
         Ok(())
     }
@@ -531,8 +594,13 @@ impl<T: UsbContext> Device<T> {
         self.goxlr.set_button_states(button_states)?;
 
         let router = self.profile.create_router();
-        self.apply_router(&router)?;
         self.status.router = router;
+
+        // For profile load, we should configure all the input channels from the profile,
+        // this is split so we can do tweaks in places where needed.
+        for input in BasicInputDevice::iter() {
+            self.apply_routing(input)?;
+        }
 
         Ok(())
     }

@@ -15,6 +15,7 @@ use std::path::Path;
 use strum::EnumCount;
 use strum::IntoEnumIterator;
 use byteorder::{ByteOrder, LittleEndian};
+use enum_map::EnumMap;
 use goxlr_profile_loader::components::fader::Fader;
 use goxlr_profile_loader::components::mute::MuteButton;
 
@@ -94,6 +95,18 @@ impl ProfileAdapter {
         router
     }
 
+    pub fn get_router(&mut self, output: InputDevice) -> EnumMap<OutputDevice, bool> {
+        let mut map: EnumMap<OutputDevice, bool> = EnumMap::default();
+
+        // Get the mixer table
+        let mixer = &self.profile.settings().mixer().mixer_table()[standard_input_to_profile(output)];
+        for (channel, volume) in mixer.iter() {
+            map[profile_to_standard_output(channel)] = *volume > 0;
+        }
+
+        return map;
+    }
+
     pub fn get_fader_assignment(&mut self, fader: FaderName) -> ChannelName {
         let fader = self.profile.settings().fader(fader as usize);
         profile_to_standard_channel(fader.channel())
@@ -135,10 +148,6 @@ impl ProfileAdapter {
 
     pub fn get_fader(&mut self, fader: FaderName) -> &Fader {
         self.profile.settings().fader(fader as usize)
-    }
-
-    pub fn get_fader_colour_map(&mut self, fader:FaderName) -> &ColourMap {
-        self.profile.settings().fader(fader as usize).colour_map()
     }
 
     pub fn is_fader_gradient(&mut self, fader: FaderName) -> bool {
@@ -323,6 +332,19 @@ fn profile_to_standard_input(value: InputChannels) -> InputDevice {
     }
 }
 
+fn standard_input_to_profile(value: InputDevice) -> InputChannels {
+    match value {
+        InputDevice::Microphone => InputChannels::Mic,
+        InputDevice::Chat => InputChannels::Chat,
+        InputDevice::Music => InputChannels::Music,
+        InputDevice::Game => InputChannels::Game,
+        InputDevice::Console => InputChannels::Console,
+        InputDevice::LineIn => InputChannels::LineIn,
+        InputDevice::System => InputChannels::System,
+        InputDevice::Samples => InputChannels::Sample,
+    }
+}
+
 fn profile_to_standard_output(value: OutputChannels) -> OutputDevice {
     match value {
         OutputChannels::Headphones => OutputDevice::Headphones,
@@ -332,6 +354,20 @@ fn profile_to_standard_output(value: OutputChannels) -> OutputDevice {
         OutputChannels::Sampler => OutputDevice::Sampler,
     }
 }
+
+// Commented to prevent warning, will probably be needed later!
+// fn standard_output_to_profile(value: OutputDevice) -> OutputChannels {
+//     match value {
+//         OutputDevice::Headphones => OutputChannels::Headphones,
+//         OutputDevice::BroadcastMix => OutputChannels::Broadcast,
+//         OutputDevice::LineOut => OutputChannels::LineOut,
+//         OutputDevice::ChatMic => OutputChannels::ChatMic,
+//         OutputDevice::Sampler => OutputChannels::Sampler,
+//     }
+// }
+
+
+
 
 fn profile_to_standard_channel(value: FullChannelList) -> ChannelName {
     match value {

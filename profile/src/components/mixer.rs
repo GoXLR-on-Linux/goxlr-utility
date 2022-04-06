@@ -155,7 +155,7 @@ impl Mixers {
     }
 }
 
-#[derive(Debug, EnumIter, Enum, EnumProperty)]
+#[derive(Debug, EnumIter, Enum, EnumProperty, Clone, Copy)]
 pub enum InputChannels {
     #[strum(props(Name = "mic"))]
     Mic,
