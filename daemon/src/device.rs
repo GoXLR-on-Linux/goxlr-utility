@@ -502,11 +502,11 @@ impl<T: UsbContext> Device<T> {
 
         if mute_function == MuteFunction::All || muted_to_all {
             // This channel should be fully muted
-            self.goxlr.set_channel_state(channel, Muted);
+            self.goxlr.set_channel_state(channel, Muted)?;
         }
 
         // This channel isn't supposed to be muted (The Router will handle anything else).
-        self.goxlr.set_channel_state(channel, Unmuted);
+        self.goxlr.set_channel_state(channel, Unmuted)?;
         Ok(())
     }
 
@@ -543,10 +543,10 @@ impl<T: UsbContext> Device<T> {
         }
 
         // Set the current mute states..
-        self.apply_mute_from_profile(FaderName::A);
-        self.apply_mute_from_profile(FaderName::B);
-        self.apply_mute_from_profile(FaderName::C);
-        self.apply_mute_from_profile(FaderName::D);
+        self.apply_mute_from_profile(FaderName::A)?;
+        self.apply_mute_from_profile(FaderName::B)?;
+        self.apply_mute_from_profile(FaderName::C)?;
+        self.apply_mute_from_profile(FaderName::D)?;
 
         // Load the colour Map..
         let use_1_3_40_format = version_newer_or_equal_to(
