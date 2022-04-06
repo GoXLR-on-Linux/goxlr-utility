@@ -153,6 +153,10 @@ impl Mixers {
     pub fn channel_volume(&self, channel: FullChannelList) -> u8 {
         self.volume_table[channel]
     }
+
+    pub fn set_channel_volume(&mut self, channel: FullChannelList, volume: u8) {
+        self.volume_table[channel] = volume;
+    }
 }
 
 #[derive(Debug, EnumIter, Enum, EnumProperty, Clone, Copy)]

@@ -119,6 +119,10 @@ impl ProfileAdapter {
             .channel_volume(standard_to_profile_channel(channel))
     }
 
+    pub fn set_channel_volume(&mut self, channel: ChannelName, volume: u8) {
+        self.profile.settings().mixer().set_channel_volume(standard_to_profile_channel(channel), volume);
+    }
+
     pub fn get_colour_map(&mut self, use_format_1_3_40: bool) -> [u8; 520] {
         let mut colour_array = [0; 520];
 

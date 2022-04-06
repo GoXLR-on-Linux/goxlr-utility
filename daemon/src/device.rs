@@ -86,6 +86,13 @@ impl<T: UsbContext> Device<T> {
     }
 
     pub fn status(&self) -> &MixerStatus {
+        /*
+        TODO: Dynamically Generate
+        For each call to this, we should look into dynamically generating the MixerStatus from
+        the profile. As more code moves to make it authoritative the values in the existing status
+        may not be updated.
+         */
+
         &self.status
     }
 
@@ -213,6 +220,9 @@ impl<T: UsbContext> Device<T> {
         held: bool,
     ) -> Result<()> {
         // OK, so a fader button has been pressed, we need to determine behaviour, based on the colour map..
+        let channel = self.status.get_fader_assignment(fader);
+        let current_volume = self.profile.get_channel_volume(channel);
+
         let mute_config: &mut MuteButton = self.profile.get_mute_button(fader);
         let colour_map = mute_config.colour_map();
 
@@ -220,8 +230,6 @@ impl<T: UsbContext> Device<T> {
         let muted_to_x = colour_map.state().as_ref().unwrap() == &ColourState::On;
         let muted_to_all = colour_map.blink().as_ref().unwrap() == &ColourState::On;
         let mute_function = mute_config.mute_function().clone();
-
-        let channel = self.status.get_fader_assignment(fader);
 
         // Map the channel to BasicInputDevice in case we need it later..
         let basic_input = match channel {
@@ -243,7 +251,7 @@ impl<T: UsbContext> Device<T> {
                 return Ok(());
             }
 
-            mute_config.set_previous_volume(self.status.get_channel_volume(channel));
+            mute_config.set_previous_volume(current_volume);
 
             self.goxlr.set_volume(channel, 0)?;
             self.goxlr.set_channel_state(channel, Muted)?;
@@ -268,7 +276,7 @@ impl<T: UsbContext> Device<T> {
                 self.goxlr.set_channel_state(channel, ChannelState::Unmuted)?;
             } else {
                 if basic_input.is_some() {
-                    self.apply_routing(basic_input.unwrap());
+                    self.apply_routing(basic_input.unwrap())?;
                 }
             }
 
@@ -280,7 +288,7 @@ impl<T: UsbContext> Device<T> {
             // Mute channel to X via transient routing table update
             mute_config.colour_map().set_state(Some(ColourState::On));
             if basic_input.is_some() {
-                self.apply_routing(basic_input.unwrap());
+                self.apply_routing(basic_input.unwrap())?;
             }
         }
 
@@ -291,14 +299,15 @@ impl<T: UsbContext> Device<T> {
     fn update_volumes_to(&mut self, volumes: [u8; 4]) {
         for fader in FaderName::iter() {
             let channel = self.status.get_fader_assignment(fader);
-            let old_volume = self.status.get_channel_volume(channel);
+            let old_volume = self.profile.get_channel_volume(channel);
+
             let new_volume = volumes[fader as usize];
             if new_volume != old_volume {
                 debug!(
                     "Updating {} volume from {} to {} as a human moved the fader",
                     channel, old_volume, new_volume
                 );
-                self.status.set_channel_volume(channel, new_volume);
+                self.profile.set_channel_volume(channel, new_volume);
             }
         }
     }
@@ -317,48 +326,15 @@ impl<T: UsbContext> Device<T> {
                 self.goxlr.set_button_states(button_states)?;
             }
             GoXLRCommand::SetVolume(channel, volume) => {
+                self.profile.set_channel_volume(channel, volume);
                 self.goxlr.set_volume(channel, volume)?;
-                self.status.set_channel_volume(channel, volume);
             }
             GoXLRCommand::SetChannelMuted(channel, muted, update_volume) => {
                 let (_, device_volumes) = self.goxlr.get_button_states()?;
                 self.update_volumes_to(device_volumes);
-                self.goxlr.set_channel_state(
-                    channel,
-                    if muted {
-                        ChannelState::Muted
-                    } else {
-                        ChannelState::Unmuted
-                    },
-                )?;
-                self.status.set_channel_muted(channel, muted);
 
-                // This may seem unusual, however for things like the cough button slapping the
-                // mic fader down and up for a brief tap is probably bad for the motors :p
-                if update_volume {
-                    if muted {
-                        // Store the pre-mute volume so it can be restored later..
-                        self.volumes_before_muted[channel as usize] =
-                            self.status.get_channel_volume(channel);
+                // TODO: Reimplement.
 
-                        // Send the new channel volume to the device
-                        self.goxlr.set_volume(channel, 0)?;
-
-                        // In the case where a mute is happening that's not on a slider (eg,
-                        // cough button), we need to update the new internal volume.
-                        self.status.volumes[channel as usize] = 0;
-                        self.status.set_channel_volume(channel, 0);
-
-                    } else if self.status.get_channel_volume(channel) <= MIN_VOLUME_THRESHOLD {
-                        // Don't restore the old volume if the new volume is above minimum.
-                        // This seems to match the official GoXLR software behaviour.
-                        self.goxlr
-                            .set_volume(channel, self.volumes_before_muted[channel as usize])?;
-
-                        // As above, restore the internal volume on channels that aren't on a slider.
-                        self.status.set_channel_volume(channel, self.volumes_before_muted[channel as usize]);
-                    }
-                }
                 let button_states = self.create_button_states();
                 self.goxlr.set_button_states(button_states)?;
             }
@@ -541,14 +517,10 @@ impl<T: UsbContext> Device<T> {
         )?;
 
         for channel in ChannelName::iter() {
-            self.status
-                .set_channel_volume(channel, self.profile.get_channel_volume(channel));
-            self.goxlr
-                .set_volume(channel, self.profile.get_channel_volume(channel))?;
-
+            // TODO: Correctly set initial mute state.
+            self.goxlr.set_volume(channel, self.profile.get_channel_volume(channel))?;
+            self.goxlr.set_channel_state(channel, ChannelState::Unmuted)?;
             self.status.set_channel_muted(channel, false);
-            self.goxlr
-                .set_channel_state(channel, ChannelState::Unmuted)?;
         }
 
         // Load the colour Map..

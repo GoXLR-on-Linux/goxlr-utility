@@ -141,6 +141,7 @@ fn print_mixer_info(mixer: &MixerStatus) {
     }
 
     for channel in ChannelName::iter() {
+        // TODO: This will report 0 for all channels currently!
         let pct = (mixer.get_channel_volume(channel) as f32 / 255.0) * 100.0;
         if mixer.get_channel_muted(channel) {
             println!("{} volume: {:.0}% (Muted)", channel, pct);

@@ -511,8 +511,8 @@ impl ProfileSettings {
         Ok(())
     }
 
-    pub fn mixer(&self) -> &Mixers {
-        &self.mixer
+    pub fn mixer(&mut self) -> &mut Mixers {
+        &mut self.mixer
     }
 
     pub fn fader(&self, fader: usize) -> &Fader {

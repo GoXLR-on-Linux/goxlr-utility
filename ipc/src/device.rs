@@ -57,14 +57,6 @@ impl MixerStatus {
         }
     }
 
-    pub fn get_channel_volume(&self, channel: ChannelName) -> u8 {
-        self.volumes[channel as usize]
-    }
-
-    pub fn set_channel_volume(&mut self, channel: ChannelName, volume: u8) {
-        self.volumes[channel as usize] = volume;
-    }
-
     pub fn get_channel_muted(&self, channel: ChannelName) -> bool {
         self.muted[channel as usize]
     }
