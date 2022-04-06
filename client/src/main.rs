@@ -153,6 +153,8 @@ fn print_mixer_info(mixer: &MixerStatus) {
     }
 
     for microphone in MicrophoneType::iter() {
+        // TODO: This also broken!
+
         if mixer.mic_type == microphone {
             println!(
                 "{} mic gain: {} dB (ACTIVE)",

@@ -225,7 +225,7 @@ impl MicProfileAdapter {
         &self.name
     }
 
-    pub fn mic_gains(&self) -> [u16; 3] {
+    pub fn mic_gains(&mut self) -> [u16; 3] {
         [
             self.profile.setup().dynamic_mic_gain() as u16,
             self.profile.setup().condenser_mic_gain() as u16,
@@ -233,12 +233,24 @@ impl MicProfileAdapter {
         ]
     }
 
-    pub fn mic_type(&self) -> MicrophoneType {
+    pub fn mic_type(&mut self) -> MicrophoneType {
         match self.profile.setup().mic_type() {
             0 => MicrophoneType::Dynamic,
             1 => MicrophoneType::Condenser,
             2 => MicrophoneType::Jack,
             _ => MicrophoneType::Jack, // default
+        }
+    }
+
+    pub fn set_mic_type(&mut self, mic_type: MicrophoneType) {
+        self.profile.setup().set_mic_type(mic_type as u8);
+    }
+
+    pub fn set_mic_gain(&mut self, mic_type: MicrophoneType, gain: u8) {
+        match mic_type {
+            MicrophoneType::Dynamic => self.profile.setup().set_dynamic_mic_gain(gain),
+            MicrophoneType::Condenser => self.profile.setup().set_condenser_mic_gain(gain),
+            MicrophoneType::Jack => self.profile.setup().set_trs_mic_gain(gain)
         }
     }
 

@@ -104,4 +104,18 @@ impl MicSetup {
     pub fn trs_mic_gain(&self) -> u8 {
         self.trs_mic_gain
     }
+
+    pub fn set_mic_type(&mut self, mic_type: u8) {
+        self.mic_type = mic_type;
+    }
+
+    pub fn set_dynamic_mic_gain(&mut self, dynamic_mic_gain: u8) {
+        self.dynamic_mic_gain = dynamic_mic_gain;
+    }
+    pub fn set_condenser_mic_gain(&mut self, condenser_mic_gain: u8) {
+        self.condenser_mic_gain = condenser_mic_gain;
+    }
+    pub fn set_trs_mic_gain(&mut self, trs_mic_gain: u8) {
+        self.trs_mic_gain = trs_mic_gain;
+    }
 }

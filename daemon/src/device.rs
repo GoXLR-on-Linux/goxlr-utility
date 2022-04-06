@@ -340,9 +340,9 @@ impl<T: UsbContext> Device<T> {
                 self.goxlr.set_button_states(button_states)?;
             }
             GoXLRCommand::SetMicrophoneGain(mic_type, gain) => {
-                self.goxlr.set_microphone_gain(mic_type, gain)?;
-                self.status.mic_type = mic_type;
-                self.status.mic_gains[mic_type as usize] = gain;
+                self.goxlr.set_microphone_gain(mic_type, gain.into())?;
+                self.mic_profile.set_mic_type(mic_type);
+                self.mic_profile.set_mic_gain(mic_type, gain);
             }
             GoXLRCommand::LoadProfile(profile_name) => {
                 let profile_directory = settings.get_profile_directory().await;
@@ -581,11 +581,9 @@ impl<T: UsbContext> Device<T> {
     fn apply_mic_profile(&mut self) -> Result<()> {
         self.status.mic_profile_name = self.mic_profile.name().to_owned();
 
-        self.status.mic_gains = self.mic_profile.mic_gains();
-        self.status.mic_type = self.mic_profile.mic_type();
         self.goxlr.set_microphone_gain(
-            self.status.mic_type,
-            self.status.mic_gains[self.status.mic_type as usize],
+            self.mic_profile.mic_type(),
+            self.mic_profile.mic_gains()[self.mic_profile.mic_type() as usize],
         )?;
 
         // I can't think of a cleaner way of doing this..
