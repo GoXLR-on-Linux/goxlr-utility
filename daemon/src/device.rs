@@ -16,7 +16,7 @@ use enum_map::EnumMap;
 use strum::{EnumCount, IntoEnumIterator};
 use goxlr_profile_loader::components::colours::ColourState;
 use goxlr_profile_loader::components::mute::{MuteButton, MuteFunction};
-use goxlr_usb::channelstate::ChannelState::Muted;
+use goxlr_usb::channelstate::ChannelState::{Muted, Unmuted};
 
 const MIN_VOLUME_THRESHOLD: u8 = 6;
 
@@ -386,7 +386,7 @@ impl<T: UsbContext> Device<T> {
     }
 
     fn get_fader_mute_button_state(&mut self, fader: FaderName) -> ButtonStates {
-        // Need to grab the state from the profile..
+        // Need to grab the state from the profile (TODO: this code is applicable for more buttons..)
         let mute_config: &mut MuteButton = self.profile.get_mute_button(fader);
         let colour_map = mute_config.colour_map();
 
@@ -490,6 +490,26 @@ impl<T: UsbContext> Device<T> {
         Ok(())
     }
 
+    fn apply_mute_from_profile(&mut self, fader: FaderName) -> Result<()> {
+        // Basically stripped down behaviour from handle_fader_mute which simply applies stuff.
+        let channel = self.profile.get_fader_assignment(fader);
+
+        let mute_config: &mut MuteButton = self.profile.get_mute_button(fader);
+        let colour_map = mute_config.colour_map();
+
+        let muted_to_all = colour_map.blink().as_ref().unwrap() == &ColourState::On;
+        let mute_function = mute_config.mute_function().clone();
+
+        if mute_function == MuteFunction::All || muted_to_all {
+            // This channel should be fully muted
+            self.goxlr.set_channel_state(channel, Muted);
+        }
+
+        // This channel isn't supposed to be muted (The Router will handle anything else).
+        self.goxlr.set_channel_state(channel, Unmuted);
+        Ok(())
+    }
+
     fn apply_profile(&mut self) -> Result<()> {
         self.status.profile_name = self.profile.name().to_owned();
 
@@ -517,12 +537,16 @@ impl<T: UsbContext> Device<T> {
             self.profile.get_fader_assignment(FaderName::D),
         )?;
 
+        // Set the Channel Volumes
         for channel in ChannelName::iter() {
-            // TODO: Correctly set initial mute state.
             self.goxlr.set_volume(channel, self.profile.get_channel_volume(channel))?;
-            self.goxlr.set_channel_state(channel, ChannelState::Unmuted)?;
-            self.status.set_channel_muted(channel, false);
         }
+
+        // Set the current mute states..
+        self.apply_mute_from_profile(FaderName::A);
+        self.apply_mute_from_profile(FaderName::B);
+        self.apply_mute_from_profile(FaderName::C);
+        self.apply_mute_from_profile(FaderName::D);
 
         // Load the colour Map..
         let use_1_3_40_format = version_newer_or_equal_to(
