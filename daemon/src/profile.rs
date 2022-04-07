@@ -74,6 +74,14 @@ impl ProfileAdapter {
         Ok(Self { name, profile })
     }
 
+    pub fn to_named(&self, name: String, directory: &Path) -> Result<()> {
+        let path = directory.join(format!("{}.goxlr", name));
+        if path.is_file() {
+            self.profile.save(path)?;
+        }
+        Ok(())
+    }
+
     pub fn name(&self) -> &str {
         &self.name
     }
