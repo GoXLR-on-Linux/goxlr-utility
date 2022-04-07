@@ -429,21 +429,10 @@ impl<T: UsbContext> Device<T> {
             BasicInputDevice::Samples => ChannelName::Sample
         };
 
-        // Apply the routing only if the channel name matches what we're processing..
-        if self.profile.get_fader_assignment(FaderName::A) == channel_name {
-            self.apply_transient_fader_routing(FaderName::A, &mut router);
-        }
-
-        if self.profile.get_fader_assignment(FaderName::B) == channel_name {
-            self.apply_transient_fader_routing(FaderName::B, &mut router);
-        }
-
-        if self.profile.get_fader_assignment(FaderName::C) == channel_name {
-            self.apply_transient_fader_routing(FaderName::C, &mut router);
-        }
-
-        if self.profile.get_fader_assignment(FaderName::D) == channel_name {
-            self.apply_transient_fader_routing(FaderName::D, &mut router);
+        for fader in FaderName::iter() {
+            if self.profile.get_fader_assignment(fader) == channel_name {
+                self.apply_transient_fader_routing(fader, &mut router);
+            }
         }
     }
 
