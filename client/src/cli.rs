@@ -19,9 +19,6 @@ pub struct Cli {
     #[clap(flatten, help_heading = "Channel volumes")]
     pub channel_volumes: ChannelVolumes,
 
-    #[clap(flatten, help_heading = "Channel states")]
-    pub channel_states: ChannelStates,
-
     #[clap(flatten, help_heading = "Microphone controls")]
     pub microphone_controls: MicrophoneControls,
 }
@@ -90,53 +87,6 @@ pub struct ChannelVolumes {
     /// Set Line-Out volume (0-255)
     #[clap(long)]
     pub line_out_volume: Option<u8>,
-}
-
-#[derive(Debug, Args)]
-pub struct ChannelStates {
-    /// Set Mic muted status (true/false)
-    #[clap(long)]
-    pub mic_muted: Option<bool>,
-
-    /// Set Line-In muted status (true/false)
-    #[clap(long)]
-    pub line_in_muted: Option<bool>,
-
-    /// Set Console muted status (true/false)
-    #[clap(long)]
-    pub console_muted: Option<bool>,
-
-    /// Set System muted status (true/false)
-    #[clap(long)]
-    pub system_muted: Option<bool>,
-
-    /// Set Game muted status (true/false)
-    #[clap(long)]
-    pub game_muted: Option<bool>,
-
-    /// Set Chat muted status (true/false)
-    #[clap(long)]
-    pub chat_muted: Option<bool>,
-
-    /// Set Sample muted status (true/false)
-    #[clap(long)]
-    pub sample_muted: Option<bool>,
-
-    /// Set Music muted status (true/false)
-    #[clap(long)]
-    pub music_muted: Option<bool>,
-
-    /// Set Headphones muted status (true/false)
-    #[clap(long)]
-    pub headphones_muted: Option<bool>,
-
-    /// Set Mic-Monitor muted status (true/false)
-    #[clap(long)]
-    pub mic_monitor_muted: Option<bool>,
-
-    /// Set Line-Out muted status (true/false)
-    #[clap(long)]
-    pub line_out_muted: Option<bool>,
 }
 
 #[derive(Debug, Args)]

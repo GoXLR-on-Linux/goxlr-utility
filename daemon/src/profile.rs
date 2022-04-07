@@ -166,14 +166,6 @@ impl ProfileAdapter {
         self.profile.settings().mute_button(fader as usize)
     }
 
-    pub fn get_fader(&mut self, fader: FaderName) -> &Fader {
-        self.profile.settings().fader(fader as usize)
-    }
-
-    pub fn get_fader_by_id(&mut self, fader: u8) -> &Fader {
-        self.profile.settings().fader(fader as usize)
-    }
-
     pub fn get_mute_chat(&mut self) -> &mut MuteChat {
         self.profile.settings().mute_chat()
     }
@@ -261,7 +253,7 @@ impl MicProfileAdapter {
         self.profile.setup().set_mic_type(mic_type as u8);
     }
 
-    pub fn set_mic_gain(&mut self, mic_type: MicrophoneType, gain: u8) {
+    pub fn set_mic_gain(&mut self, mic_type: MicrophoneType, gain: u16) {
         match mic_type {
             MicrophoneType::Dynamic => self.profile.setup().set_dynamic_mic_gain(gain),
             MicrophoneType::Condenser => self.profile.setup().set_condenser_mic_gain(gain),

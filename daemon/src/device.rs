@@ -23,7 +23,6 @@ const MIN_VOLUME_THRESHOLD: u8 = 6;
 #[derive(Debug)]
 pub struct Device<T: UsbContext> {
     goxlr: GoXLR<T>,
-    volumes_before_muted: [u8; ChannelName::COUNT],
     status: MixerStatus,
     last_buttons: EnumSet<Buttons>,
     button_states: EnumMap<Buttons, ButtonState>,
@@ -57,7 +56,6 @@ impl<T: UsbContext> Device<T> {
             fader_c_assignment: ChannelName::Chat,
             fader_d_assignment: ChannelName::Chat,
             volumes: [255; ChannelName::COUNT],
-            muted: [false; ChannelName::COUNT],
             mic_gains: [0; MicrophoneType::COUNT],
             mic_type: MicrophoneType::Jack,
             router: Default::default(),
@@ -70,7 +68,6 @@ impl<T: UsbContext> Device<T> {
             mic_profile,
             goxlr,
             status,
-            volumes_before_muted: [255; ChannelName::COUNT],
             last_buttons: EnumSet::empty(),
             button_states: EnumMap::default(),
         };
@@ -86,13 +83,6 @@ impl<T: UsbContext> Device<T> {
     }
 
     pub fn status(&self) -> &MixerStatus {
-        /*
-        TODO: Dynamically Generate
-        For each call to this, we should look into dynamically generating the MixerStatus from
-        the profile. As more code moves to make it authoritative the values in the existing status
-        may not be updated.
-         */
-
         &self.status
     }
 
@@ -462,14 +452,6 @@ impl<T: UsbContext> Device<T> {
             GoXLRCommand::SetVolume(channel, volume) => {
                 self.profile.set_channel_volume(channel, volume);
                 self.goxlr.set_volume(channel, volume)?;
-            }
-            GoXLRCommand::SetChannelMuted(channel, muted, update_volume) => {
-                let (_, device_volumes) = self.goxlr.get_button_states()?;
-                self.update_volumes_to(device_volumes);
-
-                // TODO: Reimplement.
-
-                self.update_button_states()?;
             }
             GoXLRCommand::SetMicrophoneGain(mic_type, gain) => {
                 self.goxlr.set_microphone_gain(mic_type, gain.into())?;

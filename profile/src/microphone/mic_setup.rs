@@ -18,9 +18,9 @@ pub struct MicSetup {
     mic_type: u8,
 
     // These are super weird, in the config they're stored as dB * 65536!
-    dynamic_mic_gain: u8,
-    condenser_mic_gain: u8,
-    trs_mic_gain: u8,
+    dynamic_mic_gain: u16,
+    condenser_mic_gain: u16,
+    trs_mic_gain: u16,
 }
 
 impl MicSetup {
@@ -41,17 +41,17 @@ impl MicSetup {
             }
 
             if attr.name.local_name == "DYNAMIC_MIC_GAIN" {
-                self.dynamic_mic_gain = (u32::from_str(attr.value.as_str())? / 65536) as u8;
+                self.dynamic_mic_gain = (u32::from_str(attr.value.as_str())? / 65536) as u16;
                 continue;
             }
 
             if attr.name.local_name == "CONDENSER_MIC_GAIN" {
-                self.condenser_mic_gain = (u32::from_str(attr.value.as_str())? / 65536) as u8;
+                self.condenser_mic_gain = (u32::from_str(attr.value.as_str())? / 65536) as u16;
                 continue;
             }
 
             if attr.name.local_name == "TRS_MIC_GAIN" {
-                self.trs_mic_gain = (u32::from_str(attr.value.as_str())? / 65536) as u8;
+                self.trs_mic_gain = (u32::from_str(attr.value.as_str())? / 65536) as u16;
                 continue;
             }
         }
@@ -93,15 +93,15 @@ impl MicSetup {
         self.mic_type
     }
 
-    pub fn dynamic_mic_gain(&self) -> u8 {
+    pub fn dynamic_mic_gain(&self) -> u16 {
         self.dynamic_mic_gain
     }
 
-    pub fn condenser_mic_gain(&self) -> u8 {
+    pub fn condenser_mic_gain(&self) -> u16 {
         self.condenser_mic_gain
     }
 
-    pub fn trs_mic_gain(&self) -> u8 {
+    pub fn trs_mic_gain(&self) -> u16 {
         self.trs_mic_gain
     }
 
@@ -109,13 +109,13 @@ impl MicSetup {
         self.mic_type = mic_type;
     }
 
-    pub fn set_dynamic_mic_gain(&mut self, dynamic_mic_gain: u8) {
+    pub fn set_dynamic_mic_gain(&mut self, dynamic_mic_gain: u16) {
         self.dynamic_mic_gain = dynamic_mic_gain;
     }
-    pub fn set_condenser_mic_gain(&mut self, condenser_mic_gain: u8) {
+    pub fn set_condenser_mic_gain(&mut self, condenser_mic_gain: u16) {
         self.condenser_mic_gain = condenser_mic_gain;
     }
-    pub fn set_trs_mic_gain(&mut self, trs_mic_gain: u8) {
+    pub fn set_trs_mic_gain(&mut self, trs_mic_gain: u16) {
         self.trs_mic_gain = trs_mic_gain;
     }
 }
