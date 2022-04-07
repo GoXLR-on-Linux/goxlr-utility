@@ -53,11 +53,30 @@ async fn main() -> Result<()> {
         ));
     };
 
-    if let Some(profile) = &cli.profile {
+    if let Some(profile) = &cli.profile.load_profile {
         client
             .command(&serial, GoXLRCommand::LoadProfile(profile.to_string()))
             .await
             .context("Couldn't load the specified profile")?;
+    }
+
+    if let Some(profile) = &cli.profile.load_mic_profile {
+        client.
+            command(&serial, GoXLRCommand::LoadMicProfile(profile.to_string()))
+            .await
+            .context("Couldn't load Mic Profile")?;
+    }
+
+    if cli.profile.save_profile {
+        client.command(&serial, GoXLRCommand::SaveProfile())
+            .await
+            .context("Unable to save GoXLR Profile")?;
+    }
+
+    if cli.profile.save_mic_profile {
+        client.command(&serial, GoXLRCommand::SaveMicProfile())
+            .await
+            .context("Unable to save Microphone Profile")?;
     }
 
     apply_fader_controls(&cli.faders, &mut client, &serial)

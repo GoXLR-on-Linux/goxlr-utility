@@ -27,6 +27,9 @@ pub enum GoXLRCommand {
     AssignFader(FaderName, ChannelName),
     SetVolume(ChannelName, u8),
     SetMicrophoneGain(MicrophoneType, u16),
+    ListProfiles(),
     LoadProfile(String),
     LoadMicProfile(String),
+    SaveProfile(),
+    SaveMicProfile()
 }

@@ -468,6 +468,9 @@ impl<T: UsbContext> Device<T> {
                 self.status.mic_type = mic_type;
                 self.status.mic_gains[mic_type as usize] = gain;
             }
+            GoXLRCommand::ListProfiles() => {
+                // Need to send a response.. No idea how that works yet :D
+            }
             GoXLRCommand::LoadProfile(profile_name) => {
                 let profile_directory = settings.get_profile_directory().await;
                 self.profile = ProfileAdapter::from_named(profile_name, &profile_directory)?;
@@ -486,6 +489,12 @@ impl<T: UsbContext> Device<T> {
                     .set_device_mic_profile_name(self.serial(), self.mic_profile.name())
                     .await;
                 settings.save().await;
+            }
+            GoXLRCommand::SaveProfile() => {
+
+            }
+            GoXLRCommand::SaveMicProfile() => {
+
             }
         }
 

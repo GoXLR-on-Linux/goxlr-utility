@@ -11,7 +11,10 @@ pub struct Cli {
 
     #[clap(long)]
     /// Load the specific profile from disk, by name
-    pub profile: Option<String>,
+    pub test: Option<String>,
+
+    #[clap(flatten, help_heading = "Profile Management")]
+    pub profile: Profile,
 
     #[clap(flatten, help_heading = "Fader controls")]
     pub faders: FaderControls,
@@ -21,6 +24,33 @@ pub struct Cli {
 
     #[clap(flatten, help_heading = "Microphone controls")]
     pub microphone_controls: MicrophoneControls,
+}
+
+#[derive(Debug, Args)]
+pub struct Profile {
+    /// List all profiles available for loading
+    #[clap(long, display_order=1)]
+    pub list_profiles: bool,
+
+    /// List all microphone profiles available for loading
+    #[clap(long, display_order=2)]
+    pub list_mic_profiles: bool,
+
+    /// Load a GoXLR Profile
+    #[clap(long, name="PROFILE", display_order=3)]
+    pub load_profile: Option<String>,
+
+    /// Load a GoXLR Microphone Profile
+    #[clap(long, name="MIC_PROFILE", display_order=4)]
+    pub load_mic_profile: Option<String>,
+
+    /// Saves the current configuration to disk
+    #[clap(long, display_order=5)]
+    pub save_profile: bool,
+
+    /// Save the currently configured microphone profile to disk
+    #[clap(long, display_order=6)]
+    pub save_mic_profile: bool,
 }
 
 #[derive(Debug, Args)]
