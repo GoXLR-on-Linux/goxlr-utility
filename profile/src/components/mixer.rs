@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fs::File;
+use std::io::Write;
 
 use enum_map::{Enum, EnumMap};
 use strum::{EnumIter, EnumProperty, IntoEnumIterator};
@@ -105,9 +106,9 @@ impl Mixers {
         Ok(())
     }
 
-    pub fn write_mixers(
+    pub fn write_mixers<W: Write>(
         &self,
-        writer: &mut EventWriter<&mut File>,
+        writer: &mut EventWriter<&mut W>,
     ) -> Result<(), xml::writer::Error> {
         let mut element: StartElementBuilder = XmlWriterEvent::start_element("mixerTree");
 

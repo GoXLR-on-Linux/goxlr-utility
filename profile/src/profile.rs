@@ -16,17 +16,18 @@ use crate::components::root::RootElement;
 use crate::components::sample::SampleBase;
 use crate::components::scribble::Scribble;
 use crate::components::simple::SimpleElement;
-use crate::error::ParseError;
+use crate::error::{ParseError, SaveError};
 use crate::SampleButtons;
 use crate::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
 use enum_map::EnumMap;
 use std::fs::File;
-use std::io::Read;
+use std::io::{Read, Write};
 use std::path::Path;
 use std::process::exit;
 use std::str::FromStr;
 use xml::reader::XmlEvent as XmlReaderEvent;
 use xml::{EmitterConfig, EventReader};
+use zip::write::FileOptions;
 
 #[derive(Debug)]
 pub struct Profile {
@@ -456,11 +457,16 @@ impl ProfileSettings {
     }
 
     pub fn write<P: AsRef<Path>>(&self, path: P) -> Result<(), xml::writer::Error> {
+        let out_file = File::create(path)?;
+        return self.write_to(out_file);
+    }
+
+    pub fn write_to<W: Write>(&self, mut sink: W) -> Result<(), xml::writer::Error> {
         // Create the file, and the writer..
-        let mut out_file = File::create(path)?;
+
         let mut writer = EmitterConfig::new()
             .perform_indent(true)
-            .create_writer(&mut out_file);
+            .create_writer(&mut sink);
 
         // Write the initial root tag..
         self.root.write_initial(&mut writer)?;

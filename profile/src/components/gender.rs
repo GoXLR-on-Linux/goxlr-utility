@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fs::File;
+use std::io::Write;
 use std::os::raw::c_float;
 
 use enum_map::{Enum, EnumMap};
@@ -117,9 +118,9 @@ impl GenderEncoderBase {
         Ok(())
     }
 
-    pub fn write_gender(
+    pub fn write_gender<W: Write>(
         &self,
-        writer: &mut EventWriter<&mut File>,
+        writer: &mut EventWriter<&mut W>,
     ) -> Result<(), xml::writer::Error> {
         let mut element: StartElementBuilder = XmlWriterEvent::start_element("genderEncoder");
 

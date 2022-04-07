@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fs::File;
+use std::io::Write;
 
 use strum::{EnumProperty, IntoEnumIterator};
 use xml::attribute::OwnedAttribute;
@@ -73,9 +74,9 @@ impl Fader {
         Ok(())
     }
 
-    pub fn write_fader(
+    pub fn write_fader<W: Write>(
         &self,
-        writer: &mut EventWriter<&mut File>,
+        writer: &mut EventWriter<&mut W>,
     ) -> Result<(), xml::writer::Error> {
         let mut element: StartElementBuilder =
             XmlWriterEvent::start_element(self.element_name.as_str());

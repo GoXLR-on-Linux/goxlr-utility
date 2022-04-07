@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fs::File;
+use std::io::Write;
 
 use enum_map_derive::Enum;
 use strum::{EnumIter, EnumProperty, IntoEnumIterator};
@@ -100,9 +101,9 @@ impl MuteButton {
         Ok(())
     }
 
-    pub fn write_button(
+    pub fn write_button<W: Write>(
         &self,
-        writer: &mut EventWriter<&mut File>,
+        writer: &mut EventWriter<&mut W>,
     ) -> Result<(), xml::writer::Error> {
         let mut element: StartElementBuilder =
             XmlWriterEvent::start_element(self.element_name.as_str());
