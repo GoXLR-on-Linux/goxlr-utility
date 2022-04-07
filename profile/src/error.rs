@@ -1,5 +1,3 @@
-use std::ffi::OsStr;
-
 #[derive(thiserror::Error, Debug)]
 pub enum ParseError {
     #[error("Expected int: {0}")]

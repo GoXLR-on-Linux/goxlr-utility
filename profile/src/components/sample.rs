@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::fs::File;
 use std::io::Write;
 
 use enum_map::Enum;

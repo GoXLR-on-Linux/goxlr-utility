@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::fs::File;
 use std::io::Write;
 use std::os::raw::c_float;
 use std::str::FromStr;

@@ -1,11 +1,10 @@
 use std::collections::HashMap;
-use std::fs::File;
 use std::io::Write;
 
 use xml::attribute::OwnedAttribute;
+use xml::EventWriter;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
-use xml::EventWriter;
 
 use crate::components::colours::ColourMap;
 
