@@ -22,6 +22,8 @@ The `<muteChat>` tag of the profile defines general behaviour, but uses the `cou
 `muteChatstate` to define whether it's in use or not, it still however uses the `blink` attribute for 'Mute to All'
 behaviour.
 
+Mute to X behaviour is available for both Hold and Toggle, with toggle providing additional 'mute to all' behaviour.
+
 *Implementation Thoughts*: Consideration needs to be given over the 'ordering' of the mic mute if it's also assigned to
 a fader. Both the fader and cough button need to be checked to determine if the channel should be muted (so ensure that
 unmuting the fader doesn't unmute the mic if the cough button is in toggle and 'On' mode), same applies to the Mute To X
@@ -62,3 +64,9 @@ that isn't attached to a fader, just mute the channel, don't adjust the volume (
 state for all channels). A microphone fader needs a couple of additional checks to keep the cough button and fader button
 separate.
 
+## Fader Assignment
+When assigning faders a couple of steps occur, if a fader is muted in any way and is assigned off the faders, the channel
+is unmuted and restored immediately after the switch.
+
+In addition, the GoXLR software prevents the same fader being assigned to multiple channels, in the event a fader is 
+changed with a fader that's already present, the two switch.

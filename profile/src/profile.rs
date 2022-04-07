@@ -515,9 +515,30 @@ impl ProfileSettings {
         &mut self.mixer
     }
 
+    pub fn faders(&mut self) -> &mut Vec<Fader> {
+        &mut self.faders
+    }
+
     pub fn fader(&mut self, fader: usize) -> &mut Fader {
         &mut self.faders[fader]
     }
+
+    pub fn mute_buttons(&mut self) -> &mut Vec<MuteButton> {
+        &mut self.mute_buttons
+    }
+
+    pub fn mute_button(&mut self, index: usize) -> &mut MuteButton {
+        &mut self.mute_buttons[index]
+    }
+
+    pub fn scribbles(&mut self) -> &mut Vec<Scribble> {
+        &mut self.scribbles
+    }
+
+    pub fn scribble(&self, index: usize) -> &Scribble {
+        &self.scribbles[index]
+    }
+
 
     pub fn effects(&self, effect: usize) -> &Effects {
         &self.effects[effect]
@@ -543,13 +564,8 @@ impl ProfileSettings {
         self.sampler_map[button].as_ref().unwrap()
     }
 
-    pub fn mute_buttons(&mut self, index: usize) -> &mut MuteButton {
-        &mut self.mute_buttons[index]
-    }
 
-    pub fn scribbles(&self, index: usize) -> &Scribble {
-        &self.scribbles[index]
-    }
+
 
     pub fn pitch_encoder(&self) -> &PitchEncoderBase {
         &self.pitch_encoder
@@ -577,4 +593,6 @@ impl ProfileSettings {
         }
         None
     }
+
+
 }

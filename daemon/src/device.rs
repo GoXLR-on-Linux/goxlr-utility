@@ -319,12 +319,7 @@ impl<T: UsbContext> Device<T> {
     ) -> Result<()> {
         match command {
             GoXLRCommand::AssignFader(fader, channel) => {
-                // TODO: Check behaviour when reassigning a muted / silenced channel.
-                self.goxlr.set_fader(fader, channel)?;
-                self.profile.set_fader_assignment(fader, channel);
-
-                let button_states = self.create_button_states();
-                self.goxlr.set_button_states(button_states)?;
+                self.set_fader(fader, channel).await?;
             }
             GoXLRCommand::SetVolume(channel, volume) => {
                 self.profile.set_channel_volume(channel, volume);
@@ -510,43 +505,74 @@ impl<T: UsbContext> Device<T> {
         Ok(())
     }
 
+    async fn set_fader(&mut self, fader: FaderName, new_channel: ChannelName) -> Result<()> {
+        // A couple of things need to happen when a fader change occurs depending on scenario..
+        if new_channel == self.profile.get_fader_assignment(fader) {
+            // We don't need to do anything at all in theory, set the fader anyway..
+            self.goxlr.set_fader(fader, new_channel)?;
+            return Ok(());
+        }
+
+        // Firstly, get the state and settings of the fader..
+        let exiting_channel = self.profile.get_fader_assignment(fader);
+
+        // Go over the faders, see if the new channel is already bound..
+        let mut fader_switch: Option<FaderName> = None;
+        for fader_name in FaderName::iter() {
+            if fader_name != fader && self.profile.get_fader_assignment(fader_name) == new_channel {
+                fader_switch = Some(fader_name);
+            }
+        }
+
+        if fader_switch.is_none() {
+            // Not bound to an existing fader so going away, per-windows behaviour, if this channel
+            // is muted, we need to unmute and restore volume.
+            let mute_config: &mut MuteButton = self.profile.get_mute_button(fader);
+            let colour_map = mute_config.colour_map();
+
+            let muted_to_x = colour_map.state().as_ref().unwrap() == &ColourState::On;
+
+            if muted_to_x {
+                // Simulate a mute button tap, this should restore everything..
+                self.handle_fader_mute(fader, false).await?;
+            }
+
+            // Now set the new fader..
+            self.profile.set_fader_assignment(fader, new_channel);
+            self.goxlr.set_fader(fader, new_channel)?;
+
+            return Ok(());
+        }
+
+        // So we need to switch the faders and mute settings, but nothing else actually changes,
+        // we'll simply switch the faders and mute buttons in the config, then apply to the
+        // GoXLR.
+        self.profile.switch_fader_assignment(fader, fader_switch.unwrap());
+
+        // Now switch the faders on the GoXLR..
+        self.goxlr.set_fader(fader, new_channel)?;
+        self.goxlr.set_fader(fader_switch.unwrap(), exiting_channel)?;
+
+        // Finally update the button colours..
+        let button_states = self.create_button_states();
+        self.goxlr.set_button_states(button_states)?;
+
+        Ok(())
+    }
+
     fn apply_profile(&mut self) -> Result<()> {
         self.status.profile_name = self.profile.name().to_owned();
 
-        self.status.fader_a_assignment = self.profile.get_fader_assignment(FaderName::A);
-        self.goxlr.set_fader(
-            FaderName::A,
-            self.profile.get_fader_assignment(FaderName::A),
-        )?;
-
-        self.status.fader_b_assignment = self.profile.get_fader_assignment(FaderName::B);
-        self.goxlr.set_fader(
-            FaderName::B,
-            self.profile.get_fader_assignment(FaderName::B),
-        )?;
-
-        self.status.fader_c_assignment = self.profile.get_fader_assignment(FaderName::C);
-        self.goxlr.set_fader(
-            FaderName::C,
-            self.profile.get_fader_assignment(FaderName::C),
-        )?;
-
-        self.status.fader_d_assignment = self.profile.get_fader_assignment(FaderName::D);
-        self.goxlr.set_fader(
-            FaderName::D,
-            self.profile.get_fader_assignment(FaderName::D),
-        )?;
-
-        // Set the Channel Volumes
+        // Set volumes first, applying mute may modify stuff..
         for channel in ChannelName::iter() {
             self.goxlr.set_volume(channel, self.profile.get_channel_volume(channel))?;
         }
 
-        // Set the current mute states..
-        self.apply_mute_from_profile(FaderName::A)?;
-        self.apply_mute_from_profile(FaderName::B)?;
-        self.apply_mute_from_profile(FaderName::C)?;
-        self.apply_mute_from_profile(FaderName::D)?;
+        // Prepare the faders, and configure channel mute states
+        for fader in FaderName::iter() {
+            self.goxlr.set_fader(fader, self.profile.get_fader_assignment(fader))?;
+            self.apply_mute_from_profile(fader)?;
+        }
 
         // Load the colour Map..
         let use_1_3_40_format = version_newer_or_equal_to(
@@ -563,29 +589,13 @@ impl<T: UsbContext> Device<T> {
             self.goxlr.set_button_colours(map)?;
         }
 
-        self.goxlr.set_fader_display_mode(
-            FaderName::A,
-            self.profile.is_fader_gradient(FaderName::A),
-            self.profile.is_fader_meter(FaderName::A)
-        )?;
-
-        self.goxlr.set_fader_display_mode(
-            FaderName::B,
-            self.profile.is_fader_gradient(FaderName::B),
-            self.profile.is_fader_meter(FaderName::B)
-        )?;
-
-        self.goxlr.set_fader_display_mode(
-            FaderName::C,
-            self.profile.is_fader_gradient(FaderName::C),
-            self.profile.is_fader_meter(FaderName::C)
-        )?;
-
-        self.goxlr.set_fader_display_mode(
-            FaderName::D,
-            self.profile.is_fader_gradient(FaderName::D),
-            self.profile.is_fader_meter(FaderName::D)
-        )?;
+        for fader in FaderName::iter() {
+            self.goxlr.set_fader_display_mode(
+                fader,
+                self.profile.is_fader_gradient(fader),
+                self.profile.is_fader_meter(fader)
+            )?;
+        }
 
         let button_states = self.create_button_states();
         self.goxlr.set_button_states(button_states)?;

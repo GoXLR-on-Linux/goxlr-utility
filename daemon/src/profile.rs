@@ -117,6 +117,12 @@ impl ProfileAdapter {
         fader.set_channel(standard_to_profile_channel(channel));
     }
 
+    pub fn switch_fader_assignment(&mut self, fader_one: FaderName, fader_two: FaderName) {
+        // TODO: Scribble?
+        self.profile.settings().faders().swap(fader_one as usize, fader_two as usize);
+        self.profile.settings().mute_buttons().swap(fader_one as usize, fader_two as usize);
+    }
+
     pub fn get_channel_volume(&mut self, channel: ChannelName) -> u8 {
         self.profile
             .settings()
@@ -152,7 +158,7 @@ impl ProfileAdapter {
     }
 
     pub fn get_mute_button(&mut self, fader: FaderName) -> &mut MuteButton {
-        self.profile.settings().mute_buttons(fader as usize)
+        self.profile.settings().mute_button(fader as usize)
     }
 
     pub fn get_fader(&mut self, fader: FaderName) -> &Fader {
@@ -424,10 +430,10 @@ fn standard_to_profile_channel(value: ChannelName) -> FullChannelList {
 
 fn get_profile_colour_map(profile: &mut ProfileSettings, colour_target: ColourTargets) -> &ColourMap {
     match colour_target {
-        ColourTargets::Fader1Mute => profile.mute_buttons(0).colour_map(),
-        ColourTargets::Fader2Mute => profile.mute_buttons(1).colour_map(),
-        ColourTargets::Fader3Mute => profile.mute_buttons(2).colour_map(),
-        ColourTargets::Fader4Mute => profile.mute_buttons(3).colour_map(),
+        ColourTargets::Fader1Mute => profile.mute_button(0).colour_map(),
+        ColourTargets::Fader2Mute => profile.mute_button(1).colour_map(),
+        ColourTargets::Fader3Mute => profile.mute_button(2).colour_map(),
+        ColourTargets::Fader4Mute => profile.mute_button(3).colour_map(),
         ColourTargets::Bleep => profile.simple_element("swear").unwrap().colour_map(),
         ColourTargets::MicrophoneMute => profile.mute_chat().colour_map(),
         ColourTargets::EffectSelect1 => profile.effects(0).colour_map(),
@@ -458,10 +464,10 @@ fn get_profile_colour_map(profile: &mut ProfileSettings, colour_target: ColourTa
         ColourTargets::FadeMeter2 => profile.fader(1).colour_map(),
         ColourTargets::FadeMeter3 => profile.fader(2).colour_map(),
         ColourTargets::FadeMeter4 => profile.fader(3).colour_map(),
-        ColourTargets::Scribble1 => profile.scribbles(0).colour_map(),
-        ColourTargets::Scribble2 => profile.scribbles(1).colour_map(),
-        ColourTargets::Scribble3 => profile.scribbles(2).colour_map(),
-        ColourTargets::Scribble4 => profile.scribbles(3).colour_map(),
+        ColourTargets::Scribble1 => profile.scribble(0).colour_map(),
+        ColourTargets::Scribble2 => profile.scribble(1).colour_map(),
+        ColourTargets::Scribble3 => profile.scribble(2).colour_map(),
+        ColourTargets::Scribble4 => profile.scribble(3).colour_map(),
         ColourTargets::PitchEncoder => profile.pitch_encoder().colour_map(),
         ColourTargets::GenderEncoder => profile.gender_encoder().colour_map(),
         ColourTargets::ReverbEncoder => profile.reverb_encoder().colour_map(),
