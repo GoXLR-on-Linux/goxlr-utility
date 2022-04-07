@@ -47,8 +47,21 @@ impl MixerStatus {
         }
     }
 
+    pub fn set_fader_assignment(&mut self, fader: FaderName, channel: ChannelName) {
+        match fader {
+            FaderName::A => self.fader_a_assignment = channel,
+            FaderName::B => self.fader_b_assignment = channel,
+            FaderName::C => self.fader_c_assignment = channel,
+            FaderName::D => self.fader_d_assignment = channel,
+        }
+    }
+
     pub fn get_channel_volume(&self, channel: ChannelName) -> u8 {
         return self.volumes[channel as usize];
+    }
+
+    pub fn set_channel_volume(&mut self, channel: ChannelName, volume: u8) {
+        self.volumes[channel as usize] = volume;
     }
 }
 

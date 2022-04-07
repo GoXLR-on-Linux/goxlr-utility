@@ -16,7 +16,6 @@ use strum::EnumCount;
 use strum::IntoEnumIterator;
 use byteorder::{ByteOrder, LittleEndian};
 use enum_map::EnumMap;
-use goxlr_profile_loader::components::fader::Fader;
 use goxlr_profile_loader::components::mute::MuteButton;
 use goxlr_profile_loader::components::mute_chat::MuteChat;
 

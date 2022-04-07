@@ -18,8 +18,6 @@ use goxlr_profile_loader::components::colours::ColourState;
 use goxlr_profile_loader::components::mute::{MuteButton, MuteFunction};
 use goxlr_usb::channelstate::ChannelState::{Muted, Unmuted};
 
-const MIN_VOLUME_THRESHOLD: u8 = 6;
-
 #[derive(Debug)]
 pub struct Device<T: UsbContext> {
     goxlr: GoXLR<T>,
@@ -261,6 +259,9 @@ impl<T: UsbContext> Device<T> {
                 mute_config.colour_map().set_blink(Some(ColourState::On));
             }
 
+            self.profile.set_channel_volume(channel, 0);
+            self.status.set_channel_volume(channel, 0);
+
             return Ok(());
         }
 
@@ -271,7 +272,11 @@ impl<T: UsbContext> Device<T> {
             mute_config.colour_map().set_blink(Some(ColourState::Off));
 
             if muted_to_all || mute_function == MuteFunction::All {
+                let previous_volume = mute_config.previous_volume();
+
                 self.goxlr.set_volume(channel, mute_config.previous_volume())?;
+                self.profile.set_channel_volume(channel, previous_volume);
+                self.status.set_channel_volume(channel, previous_volume);
 
                 if channel != ChannelName::Mic || (channel == ChannelName::Mic && !self.mic_muted_by_cough()) {
                     self.goxlr.set_channel_state(channel, ChannelState::Unmuted)?;
@@ -451,12 +456,17 @@ impl<T: UsbContext> Device<T> {
             }
             GoXLRCommand::SetVolume(channel, volume) => {
                 self.profile.set_channel_volume(channel, volume);
+                self.status.set_channel_volume(channel, volume);
                 self.goxlr.set_volume(channel, volume)?;
             }
             GoXLRCommand::SetMicrophoneGain(mic_type, gain) => {
                 self.goxlr.set_microphone_gain(mic_type, gain.into())?;
                 self.mic_profile.set_mic_type(mic_type);
                 self.mic_profile.set_mic_gain(mic_type, gain);
+
+                // Sync with Status..
+                self.status.mic_type = mic_type;
+                self.status.mic_gains[mic_type as usize] = gain;
             }
             GoXLRCommand::LoadProfile(profile_name) => {
                 let profile_directory = settings.get_profile_directory().await;
@@ -676,6 +686,7 @@ impl<T: UsbContext> Device<T> {
             }
 
             self.goxlr.set_fader(fader, new_channel)?;
+            self.status.set_fader_assignment(fader, new_channel);
             return Ok(());
         }
 
@@ -712,6 +723,8 @@ impl<T: UsbContext> Device<T> {
             self.profile.set_fader_assignment(fader, new_channel);
             self.goxlr.set_fader(fader, new_channel)?;
 
+            self.status.set_fader_assignment(fader, new_channel);
+
             return Ok(());
         }
 
@@ -733,6 +746,10 @@ impl<T: UsbContext> Device<T> {
         self.goxlr.set_fader(fader, new_channel)?;
         self.goxlr.set_fader(fader_to_switch.unwrap(), existing_channel)?;
 
+        // Sync MixerStatus..
+        self.status.set_fader_assignment(fader, new_channel);
+        self.status.set_fader_assignment(fader_to_switch.unwrap(), existing_channel);
+
         // Finally update the button colours..
         self.update_button_states()?;
 
@@ -744,12 +761,15 @@ impl<T: UsbContext> Device<T> {
 
         // Set volumes first, applying mute may modify stuff..
         for channel in ChannelName::iter() {
-            self.goxlr.set_volume(channel, self.profile.get_channel_volume(channel))?;
+            let channel_volume = self.profile.get_channel_volume(channel);
+            self.goxlr.set_volume(channel, channel_volume)?;
+            self.status.set_channel_volume(channel, channel_volume);
         }
 
         // Prepare the faders, and configure channel mute states
         for fader in FaderName::iter() {
             self.goxlr.set_fader(fader, self.profile.get_fader_assignment(fader))?;
+            self.status.set_fader_assignment(fader, self.profile.get_fader_assignment(fader));
             self.apply_mute_from_profile(fader)?;
         }
 
@@ -799,6 +819,10 @@ impl<T: UsbContext> Device<T> {
             self.mic_profile.mic_type(),
             self.mic_profile.mic_gains()[self.mic_profile.mic_type() as usize],
         )?;
+
+        // Sync with Status..
+        self.status.mic_gains = self.mic_profile.mic_gains();
+        self.status.mic_type = self.mic_profile.mic_type();
 
         // I can't think of a cleaner way of doing this..
         let params = self.mic_profile.mic_params();
