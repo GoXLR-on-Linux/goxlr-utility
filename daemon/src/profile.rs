@@ -18,6 +18,7 @@ use byteorder::{ByteOrder, LittleEndian};
 use enum_map::EnumMap;
 use goxlr_profile_loader::components::fader::Fader;
 use goxlr_profile_loader::components::mute::MuteButton;
+use goxlr_profile_loader::components::mute_chat::MuteChat;
 
 pub const DEFAULT_PROFILE_NAME: &str = "Default - Vaporwave";
 const DEFAULT_PROFILE: &[u8] = include_bytes!("../profiles/Default - Vaporwave.goxlr");
@@ -161,8 +162,20 @@ impl ProfileAdapter {
         self.profile.settings().mute_button(fader as usize)
     }
 
+    pub fn get_mute_button_by_id(&mut self, fader: u8) -> &mut MuteButton {
+        self.profile.settings().mute_button(fader as usize)
+    }
+
     pub fn get_fader(&mut self, fader: FaderName) -> &Fader {
         self.profile.settings().fader(fader as usize)
+    }
+
+    pub fn get_fader_by_id(&mut self, fader: u8) -> &Fader {
+        self.profile.settings().fader(fader as usize)
+    }
+
+    pub fn get_mute_chat(&mut self) -> &mut MuteChat {
+        self.profile.settings().mute_chat()
     }
 
     pub fn is_fader_gradient(&mut self, fader: FaderName) -> bool {
@@ -171,10 +184,6 @@ impl ProfileAdapter {
 
     pub fn is_fader_meter(&mut self, fader: FaderName) -> bool {
         self.profile.settings().fader(fader as usize).colour_map().is_fader_meter()
-    }
-
-    pub fn is_cough_toggle(&mut self) -> bool {
-        self.profile.settings().mute_chat().is_cough_toggle()
     }
 }
 

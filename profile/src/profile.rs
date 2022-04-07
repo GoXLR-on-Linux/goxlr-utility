@@ -544,8 +544,8 @@ impl ProfileSettings {
         &self.effects[effect]
     }
 
-    pub fn mute_chat(&self) -> &MuteChat {
-        &self.mute_chat
+    pub fn mute_chat(&mut self) -> &mut MuteChat {
+        &mut self.mute_chat
     }
 
     pub fn megaphone_effect(&self) -> &MegaphoneEffectBase {
