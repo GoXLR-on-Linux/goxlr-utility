@@ -87,3 +87,15 @@ pub enum ParseError {
     #[error("Profile zip error: {0}")]
     ZipError(#[from] zip::result::ZipError),
 }
+
+#[derive(thiserror::Error, Debug)]
+pub enum SaveError {
+    #[error("XML Writing Error {0}")]
+    XMLError(#[from] xml::writer::Error),
+
+    #[error("IO error: {0}")]
+    IOError(#[from] std::io::Error),
+
+    #[error("Profile zip error: {0}")]
+    ZipError(#[from] zip::result::ZipError),
+}

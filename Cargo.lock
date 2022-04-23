@@ -232,9 +232,9 @@ dependencies = [
 
 [[package]]
 name = "enum-map"
-version = "2.0.1"
+version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4daa8ce58bdc96f86eb90b4b8eab8f1e051da02f8c564389ae2b8ce38932f758"
+checksum = "0348b2a57c82f98b9dbd8098b1abb2416f221823d3e50cbe24eaebdd16896826"
 dependencies = [
  "enum-map-derive",
 ]
@@ -432,7 +432,9 @@ name = "goxlr-daemon"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "byteorder",
  "directories",
+ "enum-map",
  "enumset",
  "goxlr-ipc",
  "goxlr-profile-loader",
@@ -464,6 +466,7 @@ dependencies = [
 name = "goxlr-profile-loader"
 version = "0.1.0"
 dependencies = [
+ "byteorder",
  "enum-map",
  "enum-map-derive",
  "ritelinked",
@@ -478,6 +481,7 @@ name = "goxlr-types"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "enum-map",
  "enumset",
  "serde",
  "strum",
@@ -488,6 +492,7 @@ name = "goxlr-usb"
 version = "0.1.0"
 dependencies = [
  "byteorder",
+ "enum-map",
  "enumset",
  "goxlr-types",
  "log",

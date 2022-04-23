@@ -15,6 +15,9 @@ use std::path::Path;
 use strum::EnumCount;
 use strum::IntoEnumIterator;
 use byteorder::{ByteOrder, LittleEndian};
+use enum_map::EnumMap;
+use goxlr_profile_loader::components::mute::MuteButton;
+use goxlr_profile_loader::components::mute_chat::MuteChat;
 
 pub const DEFAULT_PROFILE_NAME: &str = "Default - Vaporwave";
 const DEFAULT_PROFILE: &[u8] = include_bytes!("../profiles/Default - Vaporwave.goxlr");
@@ -71,11 +74,19 @@ impl ProfileAdapter {
         Ok(Self { name, profile })
     }
 
+    pub fn to_named(&self, name: String, directory: &Path) -> Result<()> {
+        let path = directory.join(format!("{}.goxlr", name));
+        if path.is_file() {
+            self.profile.save(path)?;
+        }
+        Ok(())
+    }
+
     pub fn name(&self) -> &str {
         &self.name
     }
 
-    pub fn create_router(&self) -> [EnumSet<OutputDevice>; InputDevice::COUNT] {
+    pub fn create_router(&mut self) -> [EnumSet<OutputDevice>; InputDevice::COUNT] {
         let mut router = [EnumSet::empty(); InputDevice::COUNT];
 
         for (input, potential_outputs) in self.profile.settings().mixer().mixer_table().iter() {
@@ -92,19 +103,46 @@ impl ProfileAdapter {
         router
     }
 
-    pub fn get_fader_assignment(&self, fader: FaderName) -> ChannelName {
+    pub fn get_router(&mut self, output: InputDevice) -> EnumMap<OutputDevice, bool> {
+        let mut map: EnumMap<OutputDevice, bool> = EnumMap::default();
+
+        // Get the mixer table
+        let mixer = &self.profile.settings().mixer().mixer_table()[standard_input_to_profile(output)];
+        for (channel, volume) in mixer.iter() {
+            map[profile_to_standard_output(channel)] = *volume > 0;
+        }
+
+        return map;
+    }
+
+    pub fn get_fader_assignment(&mut self, fader: FaderName) -> ChannelName {
         let fader = self.profile.settings().fader(fader as usize);
         profile_to_standard_channel(fader.channel())
     }
 
-    pub fn get_channel_volume(&self, channel: ChannelName) -> u8 {
+    pub fn set_fader_assignment(&mut self, fader: FaderName, channel: ChannelName) {
+        let fader = self.profile.settings().fader(fader as usize);
+        fader.set_channel(standard_to_profile_channel(channel));
+    }
+
+    pub fn switch_fader_assignment(&mut self, fader_one: FaderName, fader_two: FaderName) {
+        // TODO: Scribble?
+        self.profile.settings().faders().swap(fader_one as usize, fader_two as usize);
+        self.profile.settings().mute_buttons().swap(fader_one as usize, fader_two as usize);
+    }
+
+    pub fn get_channel_volume(&mut self, channel: ChannelName) -> u8 {
         self.profile
             .settings()
             .mixer()
             .channel_volume(standard_to_profile_channel(channel))
     }
 
-    pub fn get_colour_map(&self, use_format_1_3_40: bool) -> [u8; 520] {
+    pub fn set_channel_volume(&mut self, channel: ChannelName, volume: u8) {
+        self.profile.settings().mixer().set_channel_volume(standard_to_profile_channel(channel), volume);
+    }
+
+    pub fn get_colour_map(&mut self, use_format_1_3_40: bool) -> [u8; 520] {
         let mut colour_array = [0; 520];
 
         for colour in ColourTargets::iter() {
@@ -127,16 +165,24 @@ impl ProfileAdapter {
         colour_array
     }
 
-    pub fn is_fader_gradient(&self, fader: FaderName) -> bool {
+    pub fn get_mute_button(&mut self, fader: FaderName) -> &mut MuteButton {
+        self.profile.settings().mute_button(fader as usize)
+    }
+
+    pub fn get_mute_button_by_id(&mut self, fader: u8) -> &mut MuteButton {
+        self.profile.settings().mute_button(fader as usize)
+    }
+
+    pub fn get_mute_chat(&mut self) -> &mut MuteChat {
+        self.profile.settings().mute_chat()
+    }
+
+    pub fn is_fader_gradient(&mut self, fader: FaderName) -> bool {
         self.profile.settings().fader(fader as usize).colour_map().is_fader_gradient()
     }
 
-    pub fn is_fader_meter(&self, fader: FaderName) -> bool {
+    pub fn is_fader_meter(&mut self, fader: FaderName) -> bool {
         self.profile.settings().fader(fader as usize).colour_map().is_fader_meter()
-    }
-
-    pub fn is_cough_toggle(&self) -> bool {
-        self.profile.settings().mute_chat().is_cough_toggle()
     }
 }
 
@@ -193,7 +239,7 @@ impl MicProfileAdapter {
         &self.name
     }
 
-    pub fn mic_gains(&self) -> [u16; 3] {
+    pub fn mic_gains(&mut self) -> [u16; 3] {
         [
             self.profile.setup().dynamic_mic_gain() as u16,
             self.profile.setup().condenser_mic_gain() as u16,
@@ -201,12 +247,24 @@ impl MicProfileAdapter {
         ]
     }
 
-    pub fn mic_type(&self) -> MicrophoneType {
+    pub fn mic_type(&mut self) -> MicrophoneType {
         match self.profile.setup().mic_type() {
             0 => MicrophoneType::Dynamic,
             1 => MicrophoneType::Condenser,
             2 => MicrophoneType::Jack,
             _ => MicrophoneType::Jack, // default
+        }
+    }
+
+    pub fn set_mic_type(&mut self, mic_type: MicrophoneType) {
+        self.profile.setup().set_mic_type(mic_type as u8);
+    }
+
+    pub fn set_mic_gain(&mut self, mic_type: MicrophoneType, gain: u16) {
+        match mic_type {
+            MicrophoneType::Dynamic => self.profile.setup().set_dynamic_mic_gain(gain),
+            MicrophoneType::Condenser => self.profile.setup().set_condenser_mic_gain(gain),
+            MicrophoneType::Jack => self.profile.setup().set_trs_mic_gain(gain)
         }
     }
 
@@ -309,6 +367,19 @@ fn profile_to_standard_input(value: InputChannels) -> InputDevice {
     }
 }
 
+fn standard_input_to_profile(value: InputDevice) -> InputChannels {
+    match value {
+        InputDevice::Microphone => InputChannels::Mic,
+        InputDevice::Chat => InputChannels::Chat,
+        InputDevice::Music => InputChannels::Music,
+        InputDevice::Game => InputChannels::Game,
+        InputDevice::Console => InputChannels::Console,
+        InputDevice::LineIn => InputChannels::LineIn,
+        InputDevice::System => InputChannels::System,
+        InputDevice::Samples => InputChannels::Sample,
+    }
+}
+
 fn profile_to_standard_output(value: OutputChannels) -> OutputDevice {
     match value {
         OutputChannels::Headphones => OutputDevice::Headphones,
@@ -318,6 +389,20 @@ fn profile_to_standard_output(value: OutputChannels) -> OutputDevice {
         OutputChannels::Sampler => OutputDevice::Sampler,
     }
 }
+
+// Commented to prevent warning, will probably be needed later!
+// fn standard_output_to_profile(value: OutputDevice) -> OutputChannels {
+//     match value {
+//         OutputDevice::Headphones => OutputChannels::Headphones,
+//         OutputDevice::BroadcastMix => OutputChannels::Broadcast,
+//         OutputDevice::LineOut => OutputChannels::LineOut,
+//         OutputDevice::ChatMic => OutputChannels::ChatMic,
+//         OutputDevice::Sampler => OutputChannels::Sampler,
+//     }
+// }
+
+
+
 
 fn profile_to_standard_channel(value: FullChannelList) -> ChannelName {
     match value {
@@ -351,12 +436,12 @@ fn standard_to_profile_channel(value: ChannelName) -> FullChannelList {
     }
 }
 
-fn get_profile_colour_map(profile: &ProfileSettings, colour_target: ColourTargets) -> &ColourMap {
+fn get_profile_colour_map(profile: &mut ProfileSettings, colour_target: ColourTargets) -> &ColourMap {
     match colour_target {
-        ColourTargets::Fader1Mute => profile.mute_buttons(0).colour_map(),
-        ColourTargets::Fader2Mute => profile.mute_buttons(1).colour_map(),
-        ColourTargets::Fader3Mute => profile.mute_buttons(2).colour_map(),
-        ColourTargets::Fader4Mute => profile.mute_buttons(3).colour_map(),
+        ColourTargets::Fader1Mute => profile.mute_button(0).colour_map(),
+        ColourTargets::Fader2Mute => profile.mute_button(1).colour_map(),
+        ColourTargets::Fader3Mute => profile.mute_button(2).colour_map(),
+        ColourTargets::Fader4Mute => profile.mute_button(3).colour_map(),
         ColourTargets::Bleep => profile.simple_element("swear").unwrap().colour_map(),
         ColourTargets::MicrophoneMute => profile.mute_chat().colour_map(),
         ColourTargets::EffectSelect1 => profile.effects(0).colour_map(),
@@ -387,10 +472,10 @@ fn get_profile_colour_map(profile: &ProfileSettings, colour_target: ColourTarget
         ColourTargets::FadeMeter2 => profile.fader(1).colour_map(),
         ColourTargets::FadeMeter3 => profile.fader(2).colour_map(),
         ColourTargets::FadeMeter4 => profile.fader(3).colour_map(),
-        ColourTargets::Scribble1 => profile.scribbles(0).colour_map(),
-        ColourTargets::Scribble2 => profile.scribbles(1).colour_map(),
-        ColourTargets::Scribble3 => profile.scribbles(2).colour_map(),
-        ColourTargets::Scribble4 => profile.scribbles(3).colour_map(),
+        ColourTargets::Scribble1 => profile.scribble(0).colour_map(),
+        ColourTargets::Scribble2 => profile.scribble(1).colour_map(),
+        ColourTargets::Scribble3 => profile.scribble(2).colour_map(),
+        ColourTargets::Scribble4 => profile.scribble(3).colour_map(),
         ColourTargets::PitchEncoder => profile.pitch_encoder().colour_map(),
         ColourTargets::GenderEncoder => profile.gender_encoder().colour_map(),
         ColourTargets::ReverbEncoder => profile.reverb_encoder().colour_map(),

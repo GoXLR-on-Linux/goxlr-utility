@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::fs::File;
+use std::io::Write;
 
 use xml::attribute::OwnedAttribute;
 use xml::writer::events::StartElementBuilder;
@@ -62,9 +62,9 @@ impl RootElement {
         Ok(())
     }
 
-    pub fn write_initial(
+    pub fn write_initial<W: Write>(
         &self,
-        writer: &mut EventWriter<&mut File>,
+        writer: &mut EventWriter<&mut W>,
     ) -> Result<(), xml::writer::Error> {
         let mut element: StartElementBuilder = XmlWriterEvent::start_element("ValueTreeRoot");
 
@@ -84,9 +84,9 @@ impl RootElement {
         Ok(())
     }
 
-    pub fn write_final(
+    pub fn write_final<W: Write>(
         &self,
-        writer: &mut EventWriter<&mut File>,
+        writer: &mut EventWriter<&mut W>,
     ) -> Result<(), xml::writer::Error> {
         // The AppTree element seems to just be a tag containing the device id..
         let mut element: StartElementBuilder = XmlWriterEvent::start_element("AppTree");

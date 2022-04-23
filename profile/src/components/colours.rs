@@ -217,6 +217,22 @@ impl ColourMap {
 
         return false;
     }
+
+
+    pub fn state(&self) -> &Option<ColourState> {
+        &self.state
+    }
+    pub fn blink(&self) -> &Option<ColourState> {
+        &self.blink
+    }
+
+
+    pub fn set_state(&mut self, state: Option<ColourState>) {
+        self.state = state;
+    }
+    pub fn set_blink(&mut self, blink: Option<ColourState>) {
+        self.blink = blink;
+    }
 }
 
 #[derive(Debug, PartialEq, EnumString, Display)]

@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::fs::File;
+use std::io::Write;
 
 use enum_map_derive::Enum;
 use strum::{EnumIter, EnumProperty, IntoEnumIterator};
@@ -100,9 +100,9 @@ impl MuteButton {
         Ok(())
     }
 
-    pub fn write_button(
+    pub fn write_button<W: Write>(
         &self,
-        writer: &mut EventWriter<&mut File>,
+        writer: &mut EventWriter<&mut W>,
     ) -> Result<(), xml::writer::Error> {
         let mut element: StartElementBuilder =
             XmlWriterEvent::start_element(self.element_name.as_str());
@@ -135,13 +135,26 @@ impl MuteButton {
         Ok(())
     }
 
-    pub fn colour_map(&self) -> &ColourMap {
-        &self.colour_map
+    pub fn colour_map(&mut self) -> &mut ColourMap {
+        &mut self.colour_map
+    }
+
+    pub fn mute_function(&self) -> &MuteFunction {
+        &self.mute_function
+    }
+
+
+
+    pub fn set_previous_volume(&mut self, previous_volume: u8) {
+        self.previous_volume = previous_volume;
+    }
+    pub fn previous_volume(&self) -> u8 {
+        self.previous_volume
     }
 }
 
 // MuteChat
-#[derive(Debug, Enum, EnumProperty, EnumIter)]
+#[derive(Debug, Copy, Clone, Enum, EnumProperty, EnumIter, PartialEq)]
 pub enum MuteFunction {
     #[strum(props(Value = "Mute All", uiIndex = "0"))]
     All,

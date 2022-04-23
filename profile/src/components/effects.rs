@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::fs::File;
+use std::io::Write;
 
 use xml::attribute::OwnedAttribute;
 use xml::writer::events::StartElementBuilder;
@@ -61,9 +61,9 @@ impl Effects {
         Ok(())
     }
 
-    pub fn write_effects(
+    pub fn write_effects<W: Write>(
         &self,
-        writer: &mut EventWriter<&mut File>,
+        writer: &mut EventWriter<&mut W>,
     ) -> Result<(), xml::writer::Error> {
         let mut element: StartElementBuilder =
             XmlWriterEvent::start_element(self.element_name.as_str());

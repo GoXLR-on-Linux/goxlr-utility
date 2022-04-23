@@ -1,3 +1,15 @@
+use std::env;
+use std::fs::{create_dir, File, read_dir, remove_dir_all};
+use std::io::{BufReader, Read, Write};
+use std::path::Path;
+use std::process::exit;
+use std::str::FromStr;
+
+use enum_map::EnumMap;
+use xml::{EmitterConfig, EventReader};
+use xml::reader::XmlEvent as XmlReaderEvent;
+use zip::write::FileOptions;
+
 use crate::components::browser::BrowserPreviewTree;
 use crate::components::context::Context;
 use crate::components::echo::EchoEncoderBase;
@@ -16,17 +28,9 @@ use crate::components::root::RootElement;
 use crate::components::sample::SampleBase;
 use crate::components::scribble::Scribble;
 use crate::components::simple::SimpleElement;
-use crate::error::ParseError;
+use crate::error::{ParseError, SaveError};
 use crate::SampleButtons;
 use crate::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
-use enum_map::EnumMap;
-use std::fs::File;
-use std::io::Read;
-use std::path::Path;
-use std::process::exit;
-use std::str::FromStr;
-use xml::reader::XmlEvent as XmlReaderEvent;
-use xml::{EmitterConfig, EventReader};
 
 #[derive(Debug)]
 pub struct Profile {
@@ -40,8 +44,54 @@ impl Profile {
         Ok(Profile { settings })
     }
 
-    pub fn settings(&self) -> &ProfileSettings {
-        &self.settings
+    /**
+     * I have no idea what I'm doing, I couldn't find an easy way to just modify the archive,
+     * so instead extract it, edit it and try to piece it all back together again!
+     */
+    pub fn save(&self, path: impl AsRef<Path>) -> Result<(), SaveError> {
+        dbg!("Saving file: {}", &path.as_ref());
+
+        // Create a temporary directory, and extract the contents of the zip..
+        let temporary_directory = env::temp_dir().join("goxlr-profile");
+        if temporary_directory.exists() {
+            remove_dir_all(temporary_directory.clone())?;
+        }
+
+        create_dir(temporary_directory.clone())?;
+
+        // Open the original archive..
+        let mut archive = zip::ZipArchive::new(BufReader::new(File::open(path.as_ref())?))?;
+        archive.extract(temporary_directory.clone())?;
+
+        // Replace the profile.xml file in the profile dir..
+        let profile_file = temporary_directory.clone().join("profile.xml");
+        self.settings.write(profile_file)?;
+
+        // Ok, now we need to package it all back up..
+        let file = File::create(path.as_ref())?;
+        let mut archive = zip::ZipWriter::new(file);
+
+        let files = read_dir(temporary_directory.clone())?;
+        for file in files {
+            let file_path = file.as_ref().unwrap().path();
+            let file_name = file.as_ref().unwrap().file_name().into_string().unwrap().clone();
+
+            archive.start_file(file_name, FileOptions::default())?;
+            let mut f = File::open(file_path)?;
+
+            let mut buffer: Vec<u8> = Vec::new();
+            f.read_to_end(&mut buffer)?;
+            archive.write_all(&*buffer)?;
+            buffer.clear();
+        }
+        archive.finish()?;
+
+        remove_dir_all(temporary_directory.clone())?;
+        Ok(())
+    }
+
+    pub fn settings(&mut self) -> &mut ProfileSettings {
+        &mut self.settings
     }
 }
 
@@ -456,11 +506,17 @@ impl ProfileSettings {
     }
 
     pub fn write<P: AsRef<Path>>(&self, path: P) -> Result<(), xml::writer::Error> {
+        let out_file = File::create(path)?;
+        return self.write_to(out_file);
+    }
+
+    pub fn write_to<W: Write>(&self, mut sink: W) -> Result<(), xml::writer::Error> {
         // Create the file, and the writer..
-        let mut out_file = File::create(path)?;
+
         let mut writer = EmitterConfig::new()
             .perform_indent(true)
-            .create_writer(&mut out_file);
+            .write_document_declaration(true)
+            .create_writer(&mut sink);
 
         // Write the initial root tag..
         self.root.write_initial(&mut writer)?;
@@ -511,20 +567,41 @@ impl ProfileSettings {
         Ok(())
     }
 
-    pub fn mixer(&self) -> &Mixers {
-        &self.mixer
+    pub fn mixer(&mut self) -> &mut Mixers {
+        &mut self.mixer
     }
 
-    pub fn fader(&self, fader: usize) -> &Fader {
-        &self.faders[fader]
+    pub fn faders(&mut self) -> &mut Vec<Fader> {
+        &mut self.faders
     }
+
+    pub fn fader(&mut self, fader: usize) -> &mut Fader {
+        &mut self.faders[fader]
+    }
+
+    pub fn mute_buttons(&mut self) -> &mut Vec<MuteButton> {
+        &mut self.mute_buttons
+    }
+
+    pub fn mute_button(&mut self, index: usize) -> &mut MuteButton {
+        &mut self.mute_buttons[index]
+    }
+
+    pub fn scribbles(&mut self) -> &mut Vec<Scribble> {
+        &mut self.scribbles
+    }
+
+    pub fn scribble(&self, index: usize) -> &Scribble {
+        &self.scribbles[index]
+    }
+
 
     pub fn effects(&self, effect: usize) -> &Effects {
         &self.effects[effect]
     }
 
-    pub fn mute_chat(&self) -> &MuteChat {
-        &self.mute_chat
+    pub fn mute_chat(&mut self) -> &mut MuteChat {
+        &mut self.mute_chat
     }
 
     pub fn megaphone_effect(&self) -> &MegaphoneEffectBase {
@@ -543,13 +620,8 @@ impl ProfileSettings {
         self.sampler_map[button].as_ref().unwrap()
     }
 
-    pub fn mute_buttons(&self, index: usize) -> &MuteButton {
-        &self.mute_buttons[index]
-    }
 
-    pub fn scribbles(&self, index: usize) -> &Scribble {
-        &self.scribbles[index]
-    }
+
 
     pub fn pitch_encoder(&self) -> &PitchEncoderBase {
         &self.pitch_encoder
@@ -577,4 +649,6 @@ impl ProfileSettings {
         }
         None
     }
+
+
 }

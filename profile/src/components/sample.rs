@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::fs::File;
+use std::io::Write;
 
 use enum_map::Enum;
 use ritelinked::LinkedHashMap;
@@ -129,9 +129,9 @@ impl SampleBase {
         Ok(())
     }
 
-    pub fn write_sample(
+    pub fn write_sample<W: Write>(
         &self,
-        writer: &mut EventWriter<&mut File>,
+        writer: &mut EventWriter<&mut W>,
     ) -> Result<(), xml::writer::Error> {
         let mut element: StartElementBuilder =
             XmlWriterEvent::start_element(self.element_name.as_str());

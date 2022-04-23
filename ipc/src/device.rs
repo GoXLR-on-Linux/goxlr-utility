@@ -30,7 +30,6 @@ pub struct MixerStatus {
     pub fader_c_assignment: ChannelName,
     pub fader_d_assignment: ChannelName,
     pub volumes: [u8; ChannelName::COUNT],
-    pub muted: [bool; ChannelName::COUNT],
     pub router: [EnumSet<OutputDevice>; InputDevice::COUNT],
     pub mic_gains: [u16; MicrophoneType::COUNT],
     pub mic_type: MicrophoneType,
@@ -58,19 +57,11 @@ impl MixerStatus {
     }
 
     pub fn get_channel_volume(&self, channel: ChannelName) -> u8 {
-        self.volumes[channel as usize]
+        return self.volumes[channel as usize];
     }
 
     pub fn set_channel_volume(&mut self, channel: ChannelName, volume: u8) {
         self.volumes[channel as usize] = volume;
-    }
-
-    pub fn get_channel_muted(&self, channel: ChannelName) -> bool {
-        self.muted[channel as usize]
-    }
-
-    pub fn set_channel_muted(&mut self, channel: ChannelName, muted: bool) {
-        self.muted[channel as usize] = muted;
     }
 }
 

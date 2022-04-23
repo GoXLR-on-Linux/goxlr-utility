@@ -6,6 +6,7 @@ use enumset::EnumSetType;
 use serde::{Deserialize, Serialize};
 use std::fmt::Formatter;
 use strum::{Display, EnumCount, EnumIter};
+use enum_map::Enum;
 
 #[derive(Copy, Clone, Debug, Display, EnumIter, EnumCount, PartialEq, Eq)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
@@ -68,7 +69,7 @@ impl std::fmt::Debug for VersionNumber {
     }
 }
 
-#[derive(Debug, Display, EnumIter, EnumCount)]
+#[derive(Debug, Display, Enum, EnumIter, EnumCount)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "enumset", derive(EnumSetType))]
@@ -81,7 +82,7 @@ pub enum OutputDevice {
     Sampler,
 }
 
-#[derive(Debug, Display, EnumIter, EnumCount)]
+#[derive(Debug, Display, Enum, EnumIter, EnumCount)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "enumset", derive(EnumSetType))]

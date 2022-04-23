@@ -1,10 +1,10 @@
 use std::collections::HashMap;
-use std::fs::File;
+use std::io::Write;
 
 use xml::attribute::OwnedAttribute;
+use xml::EventWriter;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
-use xml::EventWriter;
 
 use crate::components::colours::ColourMap;
 
@@ -83,9 +83,9 @@ impl BrowserPreviewTree {
         Ok(())
     }
 
-    pub fn write_browser(
+    pub fn write_browser<W: Write>(
         &self,
-        writer: &mut EventWriter<&mut File>,
+        writer: &mut EventWriter<&mut W>,
     ) -> Result<(), xml::writer::Error> {
         let mut element: StartElementBuilder =
             XmlWriterEvent::start_element(self.element_name.as_str());

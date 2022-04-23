@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::fs::File;
+use std::io::Write;
 
 use enum_map::Enum;
 use strum::EnumProperty;
@@ -100,9 +100,9 @@ impl MuteChat {
         Ok(())
     }
 
-    pub fn write_mute_chat(
+    pub fn write_mute_chat<W: Write>(
         &self,
-        writer: &mut EventWriter<&mut File>,
+        writer: &mut EventWriter<&mut W>,
     ) -> Result<(), xml::writer::Error> {
         let mut element: StartElementBuilder =
             XmlWriterEvent::start_element(self.element_name.as_str());
@@ -155,10 +155,40 @@ impl MuteChat {
     pub fn is_cough_toggle(&self) -> bool {
         self.cough_behaviour == CoughToggle::Toggle
     }
+
+    pub fn mic_fader_id(&self) -> u8 {
+        self.mic_fader_id
+    }
+    pub fn blink(&self) -> &ColourState {
+        &self.blink
+    }
+    pub fn cough_behaviour(&self) -> &CoughToggle {
+        &self.cough_behaviour
+    }
+    pub fn cough_mute_source(&self) -> MuteFunction {
+        self.cough_mute_source
+    }
+    pub fn cough_button_on(&self) -> bool {
+        self.cough_button_on
+    }
+
+    pub fn set_blink(&mut self, blink: ColourState) {
+        self.blink = blink;
+    }
+    pub fn set_cough_mute_source(&mut self, cough_mute_source: MuteFunction) {
+        self.cough_mute_source = cough_mute_source;
+    }
+    pub fn set_cough_button_on(&mut self, cough_button_on: bool) {
+        self.cough_button_on = cough_button_on;
+    }
+
+    pub fn set_mic_fader_id(&mut self, mic_fader_id: u8) {
+        self.mic_fader_id = mic_fader_id;
+    }
 }
 
 #[derive(PartialEq, Debug)]
-enum CoughToggle {
+pub enum CoughToggle {
     Hold,
     Toggle,
 }

@@ -4,7 +4,7 @@ mod client;
 mod faders;
 mod microphone;
 
-use crate::channels::{apply_channel_states, apply_channel_volumes};
+use crate::channels::apply_channel_volumes;
 use crate::client::Client;
 use crate::faders::apply_fader_controls;
 use crate::microphone::apply_microphone_controls;
@@ -53,11 +53,30 @@ async fn main() -> Result<()> {
         ));
     };
 
-    if let Some(profile) = &cli.profile {
+    if let Some(profile) = &cli.profile.load_profile {
         client
             .command(&serial, GoXLRCommand::LoadProfile(profile.to_string()))
             .await
             .context("Couldn't load the specified profile")?;
+    }
+
+    if let Some(profile) = &cli.profile.load_mic_profile {
+        client.
+            command(&serial, GoXLRCommand::LoadMicProfile(profile.to_string()))
+            .await
+            .context("Couldn't load Mic Profile")?;
+    }
+
+    if cli.profile.save_profile {
+        client.command(&serial, GoXLRCommand::SaveProfile())
+            .await
+            .context("Unable to save GoXLR Profile")?;
+    }
+
+    if cli.profile.save_mic_profile {
+        client.command(&serial, GoXLRCommand::SaveMicProfile())
+            .await
+            .context("Unable to save Microphone Profile")?;
     }
 
     apply_fader_controls(&cli.faders, &mut client, &serial)
@@ -67,10 +86,6 @@ async fn main() -> Result<()> {
     apply_channel_volumes(&cli.channel_volumes, &mut client, &serial)
         .await
         .context("Could not apply channel volumes")?;
-
-    apply_channel_states(&cli.channel_states, &mut client, &serial)
-        .await
-        .context("Could not apply channel states")?;
 
     apply_microphone_controls(&cli.microphone_controls, &mut client, &serial)
         .await
@@ -133,6 +148,8 @@ fn print_mixer_info(mixer: &MixerStatus) {
     println!("Mixer profile: {}", mixer.profile_name);
 
     for fader in FaderName::iter() {
+        // TODO: This will always report 'Chat'..
+
         println!(
             "Fader {} assignment: {}",
             fader,
@@ -141,15 +158,14 @@ fn print_mixer_info(mixer: &MixerStatus) {
     }
 
     for channel in ChannelName::iter() {
+        // TODO: This will report 0 for all channels currently!
         let pct = (mixer.get_channel_volume(channel) as f32 / 255.0) * 100.0;
-        if mixer.get_channel_muted(channel) {
-            println!("{} volume: {:.0}% (Muted)", channel, pct);
-        } else {
-            println!("{} volume: {:.0}%", channel, pct);
-        }
+        println!("{} volume: {:.0}%", channel, pct);
     }
 
     for microphone in MicrophoneType::iter() {
+        // TODO: This also broken!
+
         if mixer.mic_type == microphone {
             println!(
                 "{} mic gain: {} dB (ACTIVE)",

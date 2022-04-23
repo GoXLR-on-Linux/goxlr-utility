@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::fs::File;
+use std::io::Write;
 
 use enum_map::{Enum, EnumMap};
 use strum::{EnumIter, EnumProperty, IntoEnumIterator};
@@ -105,9 +105,9 @@ impl Mixers {
         Ok(())
     }
 
-    pub fn write_mixers(
+    pub fn write_mixers<W: Write>(
         &self,
-        writer: &mut EventWriter<&mut File>,
+        writer: &mut EventWriter<&mut W>,
     ) -> Result<(), xml::writer::Error> {
         let mut element: StartElementBuilder = XmlWriterEvent::start_element("mixerTree");
 
@@ -153,9 +153,13 @@ impl Mixers {
     pub fn channel_volume(&self, channel: FullChannelList) -> u8 {
         self.volume_table[channel]
     }
+
+    pub fn set_channel_volume(&mut self, channel: FullChannelList, volume: u8) {
+        self.volume_table[channel] = volume;
+    }
 }
 
-#[derive(Debug, EnumIter, Enum, EnumProperty)]
+#[derive(Debug, EnumIter, Enum, EnumProperty, Clone, Copy)]
 pub enum InputChannels {
     #[strum(props(Name = "mic"))]
     Mic,
