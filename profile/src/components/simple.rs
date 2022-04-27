@@ -7,7 +7,7 @@ use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
 use enum_map::Enum;
-use strum::{Display, EnumIter, EnumProperty, EnumString, IntoEnumIterator};
+use strum::{Display, EnumIter, EnumString};
 
 use crate::components::colours::ColourMap;
 
