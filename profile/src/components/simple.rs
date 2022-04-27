@@ -6,6 +6,9 @@ use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
+use enum_map::Enum;
+use strum::{Display, EnumIter, EnumProperty, EnumString, IntoEnumIterator};
+
 use crate::components::colours::ColourMap;
 
 #[derive(thiserror::Error, Debug)]
@@ -76,7 +79,31 @@ impl SimpleElement {
         &self.element_name
     }
 
-    pub fn colour_map(&self) -> &ColourMap {
-        &self.colour_map
+    pub fn colour_map(&mut self) -> &mut ColourMap {
+        &mut self.colour_map
     }
+}
+
+#[derive(Debug, Display, EnumString, EnumIter, Enum, Clone, Copy)]
+pub enum SimpleElements {
+    #[strum(to_string = "sampleBankA")]
+    SampleBankA,
+
+    #[strum(to_string = "sampleBankB")]
+    SampleBankB,
+
+    #[strum(to_string = "sampleBankC")]
+    SampleBankC,
+
+    #[strum(to_string = "fxClear")]
+    FxClear,
+
+    #[strum(to_string = "swear")]
+    Swear,
+
+    #[strum(to_string = "globalColour")]
+    GlobalColour,
+
+    #[strum(to_string = "logoX")]
+    LogoX,
 }

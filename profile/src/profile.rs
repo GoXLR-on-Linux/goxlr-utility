@@ -9,6 +9,7 @@ use enum_map::EnumMap;
 use xml::{EmitterConfig, EventReader};
 use xml::reader::XmlEvent as XmlReaderEvent;
 use zip::write::FileOptions;
+use strum::IntoEnumIterator;
 
 use crate::components::browser::BrowserPreviewTree;
 use crate::components::context::Context;
@@ -27,7 +28,7 @@ use crate::components::robot::RobotEffectBase;
 use crate::components::root::RootElement;
 use crate::components::sample::SampleBase;
 use crate::components::scribble::Scribble;
-use crate::components::simple::SimpleElement;
+use crate::components::simple::{SimpleElement, SimpleElements};
 use crate::error::{ParseError, SaveError};
 use crate::SampleButtons;
 use crate::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
@@ -107,7 +108,7 @@ pub struct ProfileSettings {
     effects: Vec<Effects>,
     scribbles: Vec<Scribble>,
     sampler_map: EnumMap<SampleButtons, Option<SampleBase>>,
-    simple_elements: Vec<SimpleElement>,
+    simple_elements: EnumMap<SimpleElements, Option<SimpleElement>>,
     megaphone_effect: MegaphoneEffectBase,
     robot_effect: RobotEffectBase,
     hardtune_effect: HardtuneEffectBase,
@@ -142,7 +143,8 @@ impl ProfileSettings {
         let mut scribbles: Vec<Scribble> = Vec::new();
         scribbles.reserve_exact(4);
 
-        let mut simple_elements: Vec<SimpleElement> = Vec::new();
+        let mut simple_elements: EnumMap<SimpleElements, Option<SimpleElement>> = Default::default();
+
 
         let mut megaphone_effect = MegaphoneEffectBase::new("megaphoneEffect".to_string());
         let mut robot_effect = RobotEffectBase::new("robotEffect".to_string());
@@ -451,7 +453,8 @@ impl ProfileSettings {
                         // In this case, the tag name, and attribute prefixes are the same..
                         let mut simple_element = SimpleElement::new(name.local_name.clone());
                         simple_element.parse_simple(&attributes)?;
-                        simple_elements.push(simple_element);
+                        simple_elements[SimpleElements::from_str(&name.local_name)?] = Some(simple_element);
+
                         continue;
                     }
 
@@ -557,8 +560,8 @@ impl ProfileSettings {
             }
         }
 
-        for simple_element in &self.simple_elements {
-            simple_element.write_simple(&mut writer)?;
+        for simple_element in SimpleElements::iter() {
+            self.simple_elements[simple_element].as_ref().unwrap().write_simple(&mut writer)?;
         }
 
         // Finalise the XML..
@@ -620,9 +623,6 @@ impl ProfileSettings {
         self.sampler_map[button].as_ref().unwrap()
     }
 
-
-
-
     pub fn pitch_encoder(&self) -> &PitchEncoderBase {
         &self.pitch_encoder
     }
@@ -639,16 +639,12 @@ impl ProfileSettings {
         &self.reverb_encoder
     }
 
-    pub fn simple_element(&self, name: &str) -> Option<&SimpleElement> {
-        // Should we consider ENUMing the simple elements? For nicer lookup..
-
-        for simple in &self.simple_elements {
-            if simple.element_name() == name {
-                return Some(simple);
-            }
+    pub fn simple_element2(&mut self, name: SimpleElements) -> &mut SimpleElement {
+        if self.simple_elements[name].is_some() {
+            return self.simple_elements[name].as_mut().unwrap();
         }
-        None
+
+        // If for whatever reason, this is missing, we'll use the global colour.
+        return self.simple_elements[SimpleElements::GlobalColour].as_mut().unwrap();
     }
-
-
 }
