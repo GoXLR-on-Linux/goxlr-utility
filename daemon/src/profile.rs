@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Context, Result};
 use enumset::EnumSet;
-use goxlr_profile_loader::components::colours::ColourMap;
+use goxlr_profile_loader::components::colours::{ColourMap, ColourOffStyle, ColourState};
 use goxlr_profile_loader::components::colours::ColourOffStyle::Dimmed;
 use goxlr_profile_loader::components::mixer::{FullChannelList, InputChannels, OutputChannels};
 use goxlr_profile_loader::mic_profile::MicProfileSettings;
@@ -16,9 +16,8 @@ use strum::EnumCount;
 use strum::IntoEnumIterator;
 use byteorder::{ByteOrder, LittleEndian};
 use enum_map::EnumMap;
-use goxlr_profile_loader::components::mute::MuteButton;
-use goxlr_profile_loader::components::mute_chat::MuteChat;
-use goxlr_usb::buttonstate::Buttons;
+use goxlr_profile_loader::components::mute::{MuteButton, MuteFunction};
+use goxlr_usb::buttonstate::{Buttons, ButtonStates};
 
 pub const DEFAULT_PROFILE_NAME: &str = "Default - Vaporwave";
 const DEFAULT_PROFILE: &[u8] = include_bytes!("../profiles/Default - Vaporwave.goxlr");
@@ -122,8 +121,10 @@ impl ProfileAdapter {
     }
 
     pub fn set_fader_assignment(&mut self, fader: FaderName, channel: ChannelName) {
-        let fader = self.profile.settings().fader(fader as usize);
-        fader.set_channel(standard_to_profile_channel(channel));
+        self.profile
+            .settings()
+            .fader(fader as usize)
+            .set_channel(standard_to_profile_channel(channel));
     }
 
     pub fn switch_fader_assignment(&mut self, fader_one: FaderName, fader_two: FaderName) {
@@ -140,7 +141,10 @@ impl ProfileAdapter {
     }
 
     pub fn set_channel_volume(&mut self, channel: ChannelName, volume: u8) {
-        self.profile.settings().mixer().set_channel_volume(standard_to_profile_channel(channel), volume);
+        self.profile
+            .settings()
+            .mixer()
+            .set_channel_volume(standard_to_profile_channel(channel), volume);
     }
 
     pub fn get_colour_map(&mut self, use_format_1_3_40: bool) -> [u8; 520] {
@@ -166,20 +170,105 @@ impl ProfileAdapter {
         colour_array
     }
 
-    pub fn get_button_colour_map(&mut self, button: Buttons) -> &ColourMap {
+    fn get_button_colour_map(&mut self, button: Buttons) -> &ColourMap {
         get_colour_map_from_button(self.profile.settings(), button)
     }
 
-    pub fn get_mute_button(&mut self, fader: FaderName) -> &mut MuteButton {
+    /** Regular Mute button handlers */
+    fn get_mute_button(&mut self, fader: FaderName) -> &mut MuteButton {
         self.profile.settings().mute_button(fader as usize)
     }
 
-    pub fn get_mute_button_by_id(&mut self, fader: u8) -> &mut MuteButton {
-        self.profile.settings().mute_button(fader as usize)
+    pub fn get_mute_button_state(&mut self, fader: FaderName) -> (bool, bool, MuteFunction) {
+        let mute_config = self.get_mute_button(fader);
+        let colour_map = mute_config.colour_map();
+
+        // We should be safe to straight unwrap these, state and blink are always present.
+        let muted_to_x = colour_map.state().as_ref().unwrap() == &ColourState::On;
+        let muted_to_all = colour_map.blink().as_ref().unwrap() == &ColourState::On;
+        let mute_function = mute_config.mute_function().clone();
+
+        return (muted_to_x, muted_to_all, mute_function);
     }
 
-    pub fn get_mute_chat(&mut self) -> &mut MuteChat {
-        self.profile.settings().mute_chat()
+    pub fn get_mute_button_previous_volume(&mut self, fader: FaderName) -> u8 {
+        self.get_mute_button(fader).previous_volume()
+    }
+
+    pub fn set_mute_button_previous_volume(&mut self, fader: FaderName, volume: u8) {
+        self.get_mute_button(fader).set_previous_volume(volume);
+    }
+
+    pub fn set_mute_button_on(&mut self, fader: FaderName, on: bool) {
+        self.get_mute_button(fader).colour_map().set_state_on(on);
+    }
+
+    pub fn set_mute_button_blink(&mut self, fader: FaderName, on: bool) {
+        self.get_mute_button(fader).colour_map().set_blink_on(on);
+    }
+
+
+    /** 'Cough' / Mute Chat Button handlers.. */
+    pub fn get_mute_chat_button_state(&mut self) -> (bool, bool, bool, MuteFunction) {
+        let mute_config = self.profile.settings().mute_chat();
+
+        // Identical behaviour, different variable locations..
+        let mute_toggle = mute_config.is_cough_toggle();
+        let muted_to_x = mute_config.cough_button_on();
+        let muted_to_all = mute_config.blink() == &ColourState::On;
+        let mute_function = mute_config.cough_mute_source().clone();
+
+        return (mute_toggle, muted_to_x, muted_to_all, mute_function);
+    }
+
+    pub fn set_mute_chat_button_on(&mut self, on: bool) {
+        self.profile.settings().mute_chat().set_cough_button_on(on);
+    }
+
+    pub fn set_mute_chat_button_blink(&mut self, on: bool) {
+        self.profile.settings().mute_chat().set_blink_on(on);
+    }
+
+    pub fn get_mute_chat_button_blink(&mut self) -> bool {
+        self.profile.settings().mute_chat().get_blink_on()
+    }
+
+    pub fn get_mute_chat_button_on(&mut self) -> bool {
+        self.profile.settings().mute_chat().get_cough_button_on()
+    }
+
+    pub fn get_mute_chat_button_colour_state(&mut self) -> ButtonStates {
+        if self.get_mute_chat_button_blink() {
+            return ButtonStates::Flashing;
+        }
+
+        if self.get_mute_chat_button_on() {
+            return ButtonStates::Colour1;
+        }
+
+        return match self.profile.settings().mute_chat().colour_map().get_off_style() {
+            ColourOffStyle::Dimmed => ButtonStates::DimmedColour1,
+            ColourOffStyle::Colour2 => ButtonStates::Colour2,
+            ColourOffStyle::DimmedColour2 => ButtonStates::DimmedColour2
+        }
+    }
+
+    /** Fader Stuff */
+    pub fn get_mic_fader_id(&mut self) -> u8 {
+        self.profile.settings().mute_chat().mic_fader_id()
+    }
+
+    pub fn set_mic_fader_id(&mut self, id: u8) {
+        self.profile.settings().mute_chat().set_mic_fader_id(id);
+    }
+
+    pub fn fader_from_id(&self, fader: u8) -> FaderName {
+        return match fader {
+            0 => FaderName::A,
+            1 => FaderName::B,
+            2 => FaderName::C,
+            _ => FaderName::D
+        }
     }
 
     pub fn is_fader_gradient(&mut self, fader: FaderName) -> bool {
@@ -188,6 +277,30 @@ impl ProfileAdapter {
 
     pub fn is_fader_meter(&mut self, fader: FaderName) -> bool {
         self.profile.settings().fader(fader as usize).colour_map().is_fader_meter()
+    }
+
+    /** Generic Stuff **/
+    pub fn get_button_colour_state(&mut self, button: Buttons) -> ButtonStates {
+        let colour_map = self.get_button_colour_map(button);
+
+        if let Some(blink) = colour_map.blink() {
+            if blink == &ColourState::On {
+                return ButtonStates::Flashing;
+            }
+        }
+
+        if let Some(state) = colour_map.state() {
+            if state == &ColourState::On {
+                return ButtonStates::Colour1;
+            }
+        }
+
+        // Button is turned off, so go return the 'Off Style'
+        return match colour_map.get_off_style() {
+            ColourOffStyle::Dimmed => ButtonStates::DimmedColour1,
+            ColourOffStyle::Colour2 => ButtonStates::Colour2,
+            ColourOffStyle::DimmedColour2 => ButtonStates::DimmedColour2
+        }
     }
 }
 

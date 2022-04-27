@@ -230,8 +230,24 @@ impl ColourMap {
     pub fn set_state(&mut self, state: Option<ColourState>) {
         self.state = state;
     }
+    pub fn set_state_on(&mut self, on: bool) {
+        if on {
+            self.state = Some(ColourState::On);
+        } else {
+            self.state = Some(ColourState::Off);
+        }
+    }
+
     pub fn set_blink(&mut self, blink: Option<ColourState>) {
         self.blink = blink;
+    }
+
+    pub fn set_blink_on(&mut self, on: bool) {
+        if on {
+            self.blink = Some(ColourState::On);
+        } else {
+            self.blink = Some(ColourState::Off);
+        }
     }
 }
 

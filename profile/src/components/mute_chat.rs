@@ -175,11 +175,25 @@ impl MuteChat {
     pub fn set_blink(&mut self, blink: ColourState) {
         self.blink = blink;
     }
+    pub fn set_blink_on(&mut self, blink: bool) {
+        if blink {
+            self.blink = ColourState::On;
+        } else {
+            self.blink = ColourState::Off;
+        }
+    }
+    pub fn get_blink_on(&self) -> bool {
+        return self.blink == ColourState::On;
+    }
+
     pub fn set_cough_mute_source(&mut self, cough_mute_source: MuteFunction) {
         self.cough_mute_source = cough_mute_source;
     }
     pub fn set_cough_button_on(&mut self, cough_button_on: bool) {
         self.cough_button_on = cough_button_on;
+    }
+    pub fn get_cough_button_on(&self) -> bool {
+        self.cough_button_on
     }
 
     pub fn set_mic_fader_id(&mut self, mic_fader_id: u8) {
