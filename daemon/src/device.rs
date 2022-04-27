@@ -144,6 +144,9 @@ impl<T: UsbContext> Device<T> {
         match button {
             Buttons::MicrophoneMute => {
                 self.handle_cough_mute(true, false, false, false).await?;
+            },
+            Buttons::Bleep => {
+                self.handle_swear_button(true).await?;
             }
             _ => {}
         }
@@ -204,6 +207,9 @@ impl<T: UsbContext> Device<T> {
                     true,
                     false,
                     state.hold_handled).await?;
+            },
+            Buttons::Bleep => {
+                self.handle_swear_button(false).await?;
             }
             _ => {}
         }
@@ -389,6 +395,12 @@ impl<T: UsbContext> Device<T> {
             return Ok(())
         }
 
+        Ok(())
+    }
+
+    async fn handle_swear_button(&mut self, press: bool) -> Result<()> {
+        // Pretty simple, turn the light on when pressed, off when released..
+        self.profile.set_swear_button_on(press);
         Ok(())
     }
 

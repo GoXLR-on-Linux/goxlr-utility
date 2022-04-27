@@ -17,6 +17,7 @@ use strum::IntoEnumIterator;
 use byteorder::{ByteOrder, LittleEndian};
 use enum_map::EnumMap;
 use goxlr_profile_loader::components::mute::{MuteButton, MuteFunction};
+use goxlr_profile_loader::components::simple::SimpleElements;
 use goxlr_usb::buttonstate::{Buttons, ButtonStates};
 
 pub const DEFAULT_PROFILE_NAME: &str = "Default - Vaporwave";
@@ -277,6 +278,16 @@ impl ProfileAdapter {
 
     pub fn is_fader_meter(&mut self, fader: FaderName) -> bool {
         self.profile.settings().fader(fader as usize).colour_map().is_fader_meter()
+    }
+
+    /** Bleep Button **/
+    pub fn set_swear_button_on(&mut self, on: bool) {
+        // Get the colour map for the bleep button..
+        self.profile.
+            settings()
+            .simple_element(SimpleElements::Swear)
+            .colour_map()
+            .set_state_on(on);
     }
 
     /** Generic Stuff **/
@@ -593,7 +604,7 @@ fn get_profile_colour_map(profile: &mut ProfileSettings, colour_target: ColourTa
         ColourTargets::Fader2Mute => profile.mute_button(1).colour_map(),
         ColourTargets::Fader3Mute => profile.mute_button(2).colour_map(),
         ColourTargets::Fader4Mute => profile.mute_button(3).colour_map(),
-        ColourTargets::Bleep => profile.simple_element("swear").unwrap().colour_map(),
+        ColourTargets::Bleep => profile.simple_element(SimpleElements::Swear).colour_map(),
         ColourTargets::MicrophoneMute => profile.mute_chat().colour_map(),
         ColourTargets::EffectSelect1 => profile.effects(0).colour_map(),
         ColourTargets::EffectSelect2 => profile.effects(1).colour_map(),
@@ -601,18 +612,18 @@ fn get_profile_colour_map(profile: &mut ProfileSettings, colour_target: ColourTa
         ColourTargets::EffectSelect4 => profile.effects(3).colour_map(),
         ColourTargets::EffectSelect5 => profile.effects(4).colour_map(),
         ColourTargets::EffectSelect6 => profile.effects(5).colour_map(),
-        ColourTargets::EffectFx => profile.simple_element("fxClear").unwrap().colour_map(),
+        ColourTargets::EffectFx => profile.simple_element(SimpleElements::FxClear).colour_map(),
         ColourTargets::EffectMegaphone => profile.megaphone_effect().colour_map(),
         ColourTargets::EffectRobot => profile.robot_effect().colour_map(),
         ColourTargets::EffectHardTune => profile.hardtune_effect().colour_map(),
         ColourTargets::SamplerSelectA => {
-            profile.simple_element("sampleBankA").unwrap().colour_map()
+            profile.simple_element(SimpleElements::SampleBankA).colour_map()
         }
         ColourTargets::SamplerSelectB => {
-            profile.simple_element("sampleBankB").unwrap().colour_map()
+            profile.simple_element(SimpleElements::SampleBankB).colour_map()
         }
         ColourTargets::SamplerSelectC => {
-            profile.simple_element("sampleBankC").unwrap().colour_map()
+            profile.simple_element(SimpleElements::SampleBankC).colour_map()
         }
         ColourTargets::SamplerTopLeft => profile.sample_button(TopLeft).colour_map(),
         ColourTargets::SamplerTopRight => profile.sample_button(TopRight).colour_map(),
@@ -631,8 +642,8 @@ fn get_profile_colour_map(profile: &mut ProfileSettings, colour_target: ColourTa
         ColourTargets::GenderEncoder => profile.gender_encoder().colour_map(),
         ColourTargets::ReverbEncoder => profile.reverb_encoder().colour_map(),
         ColourTargets::EchoEncoder => profile.echo_encoder().colour_map(),
-        ColourTargets::LogoX => profile.simple_element("logoX").unwrap().colour_map(),
-        ColourTargets::Global => profile.simple_element("globalColour").unwrap().colour_map(),
+        ColourTargets::LogoX => profile.simple_element(SimpleElements::LogoX).colour_map(),
+        ColourTargets::Global => profile.simple_element(SimpleElements::GlobalColour).colour_map(),
     }
 }
 
