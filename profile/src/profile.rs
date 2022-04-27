@@ -639,7 +639,7 @@ impl ProfileSettings {
         &self.reverb_encoder
     }
 
-    pub fn simple_element2(&mut self, name: SimpleElements) -> &mut SimpleElement {
+    pub fn simple_element(&mut self, name: SimpleElements) -> &mut SimpleElement {
         if self.simple_elements[name].is_some() {
             return self.simple_elements[name].as_mut().unwrap();
         }
