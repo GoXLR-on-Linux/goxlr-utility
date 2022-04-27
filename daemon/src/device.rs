@@ -14,7 +14,7 @@ use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 use enum_map::EnumMap;
 use strum::{EnumCount, IntoEnumIterator};
-use goxlr_profile_loader::components::colours::ColourState;
+use goxlr_profile_loader::components::colours::{ColourOffStyle, ColourState};
 use goxlr_profile_loader::components::mute::{MuteButton, MuteFunction};
 use goxlr_usb::channelstate::ChannelState::{Muted, Unmuted};
 
@@ -516,29 +516,36 @@ impl<T: UsbContext> Device<T> {
     fn create_button_states(&mut self) -> [ButtonStates; 24] {
         let mut result = [ButtonStates::DimmedColour1; 24];
 
-        result[Buttons::Fader1Mute as usize] = self.get_fader_mute_button_state(FaderName::A);
-        result[Buttons::Fader2Mute as usize] = self.get_fader_mute_button_state(FaderName::B);
-        result[Buttons::Fader3Mute as usize] = self.get_fader_mute_button_state(FaderName::C);
-        result[Buttons::Fader4Mute as usize] = self.get_fader_mute_button_state(FaderName::D);
+        for button in Buttons::iter() {
+            result[button as usize] = self.get_button_state(button);
+        }
 
+        // Replace the Cough Button button data with correct data.
         result[Buttons::MicrophoneMute as usize] = self.get_cough_button_state();
         result
     }
 
-    fn get_fader_mute_button_state(&mut self, fader: FaderName) -> ButtonStates {
-        // TODO: Potentially abstract this out, most buttons behave the same.
-        let mute_config = self.profile.get_mute_button(fader);
-        let colour_map = mute_config.colour_map();
+    fn get_button_state(&mut self, button: Buttons) -> ButtonStates {
+        let colour_map = self.profile.get_button_colour_map(button);
 
-        if colour_map.blink().as_ref().unwrap() == &ColourState::On {
-            return ButtonStates::Flashing;
+        if let Some(blink) = colour_map.blink() {
+            if blink == &ColourState::On {
+                return ButtonStates::Flashing;
+            }
         }
 
-        if colour_map.state().as_ref().unwrap() == &ColourState::On {
-            return ButtonStates::Colour1;
+        if let Some(state) = colour_map.state() {
+            if state == &ColourState::On {
+                return ButtonStates::Colour1;
+            }
         }
 
-        return ButtonStates::DimmedColour1;
+        // Button is turned off, so go return the 'Off Style'
+        return match colour_map.get_off_style() {
+            ColourOffStyle::Dimmed => ButtonStates::DimmedColour1,
+            ColourOffStyle::Colour2 => ButtonStates::Colour2,
+            ColourOffStyle::DimmedColour2 => ButtonStates::DimmedColour2
+        }
     }
 
     // Slightly obnoxious, the variables for this come from the MuteChat object, not the ColourMap!

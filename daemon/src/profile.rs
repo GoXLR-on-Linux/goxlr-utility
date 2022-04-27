@@ -18,6 +18,7 @@ use byteorder::{ByteOrder, LittleEndian};
 use enum_map::EnumMap;
 use goxlr_profile_loader::components::mute::MuteButton;
 use goxlr_profile_loader::components::mute_chat::MuteChat;
+use goxlr_usb::buttonstate::Buttons;
 
 pub const DEFAULT_PROFILE_NAME: &str = "Default - Vaporwave";
 const DEFAULT_PROFILE: &[u8] = include_bytes!("../profiles/Default - Vaporwave.goxlr");
@@ -163,6 +164,10 @@ impl ProfileAdapter {
         }
 
         colour_array
+    }
+
+    pub fn get_button_colour_map(&mut self, button: Buttons) -> &ColourMap {
+        get_colour_map_from_button(self.profile.settings(), button)
     }
 
     pub fn get_mute_button(&mut self, fader: FaderName) -> &mut MuteButton {
@@ -433,6 +438,39 @@ fn standard_to_profile_channel(value: ChannelName) -> FullChannelList {
         ChannelName::Headphones => FullChannelList::Headphones,
         ChannelName::MicMonitor => FullChannelList::MicMonitor,
         ChannelName::LineOut => FullChannelList::LineOut,
+    }
+}
+
+fn get_colour_map_from_button(profile: &mut ProfileSettings, button: Buttons) -> &ColourMap {
+    get_profile_colour_map(profile, map_button_to_colour_target(button))
+}
+
+fn map_button_to_colour_target(button: Buttons) -> ColourTargets {
+    match button {
+        Buttons::Fader1Mute => ColourTargets::Fader1Mute,
+        Buttons::Fader2Mute => ColourTargets::Fader2Mute,
+        Buttons::Fader3Mute => ColourTargets::Fader3Mute,
+        Buttons::Fader4Mute => ColourTargets::Fader4Mute,
+        Buttons::Bleep => ColourTargets::Bleep,
+        Buttons::MicrophoneMute => ColourTargets::MicrophoneMute,
+        Buttons::EffectSelect1 => ColourTargets::EffectSelect1,
+        Buttons::EffectSelect2 => ColourTargets::EffectSelect2,
+        Buttons::EffectSelect3 => ColourTargets::EffectSelect3,
+        Buttons::EffectSelect4 => ColourTargets::EffectSelect4,
+        Buttons::EffectSelect5 => ColourTargets::EffectSelect5,
+        Buttons::EffectSelect6 => ColourTargets::EffectSelect6,
+        Buttons::EffectFx => ColourTargets::EffectFx,
+        Buttons::EffectMegaphone => ColourTargets::EffectMegaphone,
+        Buttons::EffectRobot => ColourTargets::EffectRobot,
+        Buttons::EffectHardTune => ColourTargets::EffectHardTune,
+        Buttons::SamplerSelectA => ColourTargets::SamplerSelectA,
+        Buttons::SamplerSelectB => ColourTargets::SamplerSelectB,
+        Buttons::SamplerSelectC => ColourTargets::SamplerSelectC,
+        Buttons::SamplerTopLeft => ColourTargets::SamplerTopLeft,
+        Buttons::SamplerTopRight => ColourTargets::SamplerTopRight,
+        Buttons::SamplerBottomLeft => ColourTargets::SamplerBottomLeft,
+        Buttons::SamplerBottomRight => ColourTargets::SamplerBottomRight,
+        Buttons::SamplerClear => ColourTargets::SamplerClear,
     }
 }
 

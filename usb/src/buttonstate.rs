@@ -1,5 +1,6 @@
 use enumset::EnumSetType;
 use enum_map::Enum;
+use strum::EnumIter;
 
 #[derive(Debug, Copy, Clone)]
 pub enum ButtonStates {
@@ -10,7 +11,7 @@ pub enum ButtonStates {
     Flashing = 0x03,
 }
 
-#[derive(EnumSetType, Enum, Debug)]
+#[derive(EnumSetType, Enum, EnumIter, Debug)]
 pub enum Buttons {
     // These are all the buttons from the GoXLR Mini.
     Fader1Mute = 4,
