@@ -594,8 +594,6 @@ impl<T: UsbContext> Device<T> {
         // Load the routing for this channel from the profile..
         let mut router = self.profile.get_router(input);
         self.apply_transient_routing(input, &mut router);
-        dbg!("{}", router);
-
         debug!("Applying Routing to {:?}:", input);
         debug!("{:?}", router);
 
@@ -835,6 +833,12 @@ impl<T: UsbContext> Device<T> {
             (EffectKey::GateEnabled, 1),
             (EffectKey::BleepLevel, -10),
             (EffectKey::GateMode, 2),
+
+            // We don't use this effect key under Linux (mostly due to there being other ways
+            // to mute a channel), so we'll set this to 0 just in case someone is coming from
+            // windows where it *IS* used during mic muting.
+            (EffectKey::DisableMic, 0),
+
 
 
             // Disable all the voice effects, these are enabled by default and seem
