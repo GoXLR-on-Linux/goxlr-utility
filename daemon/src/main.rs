@@ -59,6 +59,8 @@ async fn main() -> Result<()> {
     info!("Shutting down daemon");
     let _ = join!(usb_handle, communications_handle);
 
+    info!("Removing Socket");
+    fs::remove_file("/tmp/goxlr.socket")?;
     Ok(())
 }
 
