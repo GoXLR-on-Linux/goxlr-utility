@@ -151,14 +151,14 @@ fn print_mixer_info(mixer: &MixerStatus) {
         // TODO: This will always report 'Chat'..
 
         println!(
-            "Fader {} assignment: {}",
+            "Fader {} assignment: {}, Mute Behaviour: {}",
             fader,
-            mixer.get_fader_assignment(fader)
+            mixer.get_fader_assignment(fader).channel,
+            mixer.get_fader_assignment(fader).mute_type
         )
     }
 
     for channel in ChannelName::iter() {
-        // TODO: This will report 0 for all channels currently!
         let pct = (mixer.get_channel_volume(channel) as f32 / 255.0) * 100.0;
         println!("{} volume: {:.0}%", channel, pct);
     }

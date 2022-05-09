@@ -2,8 +2,8 @@ use crate::profile::{version_newer_or_equal_to, MicProfileAdapter, ProfileAdapte
 use crate::SettingsHandle;
 use anyhow::Result;
 use enumset::EnumSet;
-use goxlr_ipc::{DeviceType, GoXLRCommand, HardwareStatus, MixerStatus};
-use goxlr_types::{ChannelName, EffectKey, FaderName, InputDevice as BasicInputDevice, MicrophoneParamKey, MicrophoneType, OutputDevice as BasicOutputDevice, VersionNumber};
+use goxlr_ipc::{DeviceType, FaderStatus, GoXLRCommand, HardwareStatus, MixerStatus};
+use goxlr_types::{ChannelName, EffectKey, FaderName, InputDevice as BasicInputDevice, MicrophoneParamKey, MicrophoneType, OutputDevice as BasicOutputDevice, VersionNumber, MuteFunction as BasicMuteFunction };
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::channelstate::ChannelState;
 use goxlr_usb::goxlr::GoXLR;
@@ -48,10 +48,10 @@ impl<T: UsbContext> Device<T> {
 
         let status = MixerStatus {
             hardware,
-            fader_a_assignment: ChannelName::Chat,
-            fader_b_assignment: ChannelName::Chat,
-            fader_c_assignment: ChannelName::Chat,
-            fader_d_assignment: ChannelName::Chat,
+            fader_a_assignment: FaderStatus { channel: ChannelName::Chat, mute_type: BasicMuteFunction::All },
+            fader_b_assignment: FaderStatus { channel: ChannelName::Chat, mute_type: BasicMuteFunction::All },
+            fader_c_assignment: FaderStatus { channel: ChannelName::Chat, mute_type: BasicMuteFunction::All },
+            fader_d_assignment: FaderStatus { channel: ChannelName::Chat, mute_type: BasicMuteFunction::All },
             volumes: [255; ChannelName::COUNT],
             mic_gains: [0; MicrophoneType::COUNT],
             mic_type: MicrophoneType::Jack,
@@ -643,8 +643,12 @@ impl<T: UsbContext> Device<T> {
                 self.profile.set_mic_fader_id(fader as u8);
             }
 
+
             self.goxlr.set_fader(fader, new_channel)?;
-            self.status.set_fader_assignment(fader, new_channel);
+
+            let fader_state = self.get_fader_state(fader);
+            self.status.set_fader_assignment(fader, fader_state);
+
             return Ok(());
         }
 
@@ -676,16 +680,22 @@ impl<T: UsbContext> Device<T> {
 
             // Now set the new fader..
             self.profile.set_fader_assignment(fader, new_channel);
-            self.status.set_fader_assignment(fader, new_channel);
+
+            let fader_state = self.get_fader_state(fader);
+            self.status.set_fader_assignment(fader, fader_state);
+
             self.goxlr.set_fader(fader, new_channel)?;
 
             return Ok(());
         }
 
+        // This will always be set here..
+        let fader_to_switch = fader_to_switch.unwrap();
+
         // So we need to switch the faders and mute settings, but nothing else actually changes,
         // we'll simply switch the faders and mute buttons in the config, then apply to the
         // GoXLR.
-        self.profile.switch_fader_assignment(fader, fader_to_switch.unwrap());
+        self.profile.switch_fader_assignment(fader, fader_to_switch);
 
         // Are either of the moves being done by the mic channel?
         if new_channel == ChannelName::Mic {
@@ -693,21 +703,35 @@ impl<T: UsbContext> Device<T> {
         }
 
         if existing_channel == ChannelName::Mic {
-            self.profile.set_mic_fader_id(fader_to_switch.unwrap() as u8);
+            self.profile.set_mic_fader_id(fader_to_switch as u8);
         }
+
+
 
         // Now switch the faders on the GoXLR..
         self.goxlr.set_fader(fader, new_channel)?;
-        self.goxlr.set_fader(fader_to_switch.unwrap(), existing_channel)?;
+        self.goxlr.set_fader(fader_to_switch, existing_channel)?;
+
+
 
         // Sync MixerStatus..
-        self.status.set_fader_assignment(fader, new_channel);
-        self.status.set_fader_assignment(fader_to_switch.unwrap(), existing_channel);
+        let fader_state = self.get_fader_state(fader);
+        self.status.set_fader_assignment(fader, fader_state);
+
+        let fader_state = self.get_fader_state(fader_to_switch);
+        self.status.set_fader_assignment(fader_to_switch, fader_state);
 
         // Finally update the button colours..
         self.update_button_states()?;
 
         Ok(())
+    }
+
+    fn get_fader_state(&mut self, fader: FaderName) -> FaderStatus {
+        FaderStatus {
+            channel: self.profile.get_fader_assignment(fader),
+            mute_type: self.profile.get_mute_button_behaviour(fader)
+        }
     }
 
     fn apply_profile(&mut self) -> Result<()> {
@@ -723,7 +747,9 @@ impl<T: UsbContext> Device<T> {
         // Prepare the faders, and configure channel mute states
         for fader in FaderName::iter() {
             self.goxlr.set_fader(fader, self.profile.get_fader_assignment(fader))?;
-            self.status.set_fader_assignment(fader, self.profile.get_fader_assignment(fader));
+
+            let fader_state = self.get_fader_state(fader);
+            self.status.set_fader_assignment(fader, fader_state);
             self.apply_mute_from_profile(fader)?;
         }
 

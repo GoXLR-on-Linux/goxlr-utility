@@ -1,7 +1,5 @@
 use enumset::EnumSet;
-use goxlr_types::{
-    ChannelName, FaderName, FirmwareVersions, InputDevice, MicrophoneType, OutputDevice,
-};
+use goxlr_types::{ChannelName, FaderName, FirmwareVersions, InputDevice, MicrophoneType, MuteFunction, OutputDevice};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -23,12 +21,18 @@ pub struct HardwareStatus {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FaderStatus {
+    pub channel: ChannelName,
+    pub mute_type: MuteFunction
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MixerStatus {
     pub hardware: HardwareStatus,
-    pub fader_a_assignment: ChannelName,
-    pub fader_b_assignment: ChannelName,
-    pub fader_c_assignment: ChannelName,
-    pub fader_d_assignment: ChannelName,
+    pub fader_a_assignment: FaderStatus,
+    pub fader_b_assignment: FaderStatus,
+    pub fader_c_assignment: FaderStatus,
+    pub fader_d_assignment: FaderStatus,
     pub volumes: [u8; ChannelName::COUNT],
     pub router: [EnumSet<OutputDevice>; InputDevice::COUNT],
     pub mic_gains: [u16; MicrophoneType::COUNT],
@@ -38,21 +42,21 @@ pub struct MixerStatus {
 }
 
 impl MixerStatus {
-    pub fn get_fader_assignment(&self, fader: FaderName) -> ChannelName {
+    pub fn get_fader_assignment(&self, fader: FaderName) -> &FaderStatus {
         match fader {
-            FaderName::A => self.fader_a_assignment,
-            FaderName::B => self.fader_b_assignment,
-            FaderName::C => self.fader_c_assignment,
-            FaderName::D => self.fader_d_assignment,
+            FaderName::A => &self.fader_a_assignment,
+            FaderName::B => &self.fader_b_assignment,
+            FaderName::C => &self.fader_c_assignment,
+            FaderName::D => &self.fader_d_assignment,
         }
     }
 
-    pub fn set_fader_assignment(&mut self, fader: FaderName, channel: ChannelName) {
+    pub fn set_fader_assignment(&mut self, fader: FaderName, status: FaderStatus) {
         match fader {
-            FaderName::A => self.fader_a_assignment = channel,
-            FaderName::B => self.fader_b_assignment = channel,
-            FaderName::C => self.fader_c_assignment = channel,
-            FaderName::D => self.fader_d_assignment = channel,
+            FaderName::A => self.fader_a_assignment = status,
+            FaderName::B => self.fader_b_assignment = status,
+            FaderName::C => self.fader_c_assignment = status,
+            FaderName::D => self.fader_d_assignment = status,
         }
     }
 

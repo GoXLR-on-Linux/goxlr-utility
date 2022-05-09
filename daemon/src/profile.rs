@@ -6,7 +6,7 @@ use goxlr_profile_loader::components::mixer::{FullChannelList, InputChannels, Ou
 use goxlr_profile_loader::mic_profile::MicProfileSettings;
 use goxlr_profile_loader::profile::{Profile, ProfileSettings};
 use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
-use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice, VersionNumber};
+use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice, VersionNumber, MuteFunction as BasicMuteFunction };
 use goxlr_usb::colouring::ColourTargets;
 use log::error;
 use std::fs::File;
@@ -178,6 +178,18 @@ impl ProfileAdapter {
     /** Regular Mute button handlers */
     fn get_mute_button(&mut self, fader: FaderName) -> &mut MuteButton {
         self.profile.settings().mute_button(fader as usize)
+    }
+
+    pub fn get_mute_button_behaviour(&mut self, fader: FaderName) -> BasicMuteFunction {
+        let mute_config = self.get_mute_button(fader);
+
+        return match mute_config.mute_function() {
+            MuteFunction::All => BasicMuteFunction::All,
+            MuteFunction::ToStream => BasicMuteFunction::ToStream,
+            MuteFunction::ToVoiceChat => BasicMuteFunction::ToVoiceChat,
+            MuteFunction::ToPhones => BasicMuteFunction::ToPhones,
+            MuteFunction::ToLineOut => BasicMuteFunction::ToLineOut
+        };
     }
 
     pub fn get_mute_button_state(&mut self, fader: FaderName) -> (bool, bool, MuteFunction) {

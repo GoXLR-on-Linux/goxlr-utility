@@ -229,6 +229,18 @@ pub enum MicrophoneParamKey {
 
 }
 
+// MuteChat
+#[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum MuteFunction {
+    All,
+    ToStream,
+    ToVoiceChat,
+    ToPhones,
+    ToLineOut,
+}
+
 #[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
