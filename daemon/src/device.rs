@@ -66,36 +66,18 @@ impl<T: UsbContext> Device<T> {
     }
 
     pub fn status(&self) -> MixerStatus {
-        // So the question here, can I make this dynamically?
-        let fader_a_assignment = self.get_fader_state(FaderName::A);
-        let fader_b_assignment = self.get_fader_state(FaderName::B);
-        let fader_c_assignment = self.get_fader_state(FaderName::C);
-        let fader_d_assignment = self.get_fader_state(FaderName::D);
-
-        let mut volumes = [255; ChannelName::COUNT];
-        for channel in ChannelName::iter() {
-            volumes[channel as usize] = self.profile().get_channel_volume(channel);
-        }
-
-        let mic_type = self.mic_profile.mic_type();
-        let mic_gains = self.mic_profile.mic_gains();
-        let router = self.profile().create_router();
-        let profile_name = self.profile.name().to_owned();
-        let mic_profile_name = self.mic_profile.name().to_owned();
-        let hardware = self.hardware.clone();
-
         MixerStatus {
-            hardware,
-            fader_a_assignment,
-            fader_b_assignment,
-            fader_c_assignment,
-            fader_d_assignment,
-            volumes,
-            router,
-            mic_gains,
-            mic_type,
-            profile_name,
-            mic_profile_name
+            hardware: self.hardware.clone(),
+            fader_a_assignment: self.get_fader_state(FaderName::A),
+            fader_b_assignment: self.get_fader_state(FaderName::B),
+            fader_c_assignment: self.get_fader_state(FaderName::C),
+            fader_d_assignment: self.get_fader_state(FaderName::D),
+            volumes: self.profile.get_volumes(),
+            router: self.profile.create_router(),
+            mic_gains: self.mic_profile.mic_gains(),
+            mic_type: self.mic_profile.mic_type(),
+            profile_name: self.profile.name().to_owned(),
+            mic_profile_name: self.mic_profile.name().to_owned()
         }
     }
 

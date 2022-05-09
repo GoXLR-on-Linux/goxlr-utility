@@ -141,6 +141,15 @@ impl ProfileAdapter {
             .channel_volume(standard_to_profile_channel(channel))
     }
 
+    pub fn get_volumes(&self) -> [u8; ChannelName::COUNT] {
+        let mut volumes = [255; ChannelName::COUNT];
+        for channel in ChannelName::iter() {
+            volumes[channel as usize] = self.get_channel_volume(channel);
+        }
+
+        return volumes;
+    }
+
     pub fn set_channel_volume(&mut self, channel: ChannelName, volume: u8) {
         self.profile
             .settings_mut()
