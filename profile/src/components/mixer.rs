@@ -150,6 +150,10 @@ impl Mixers {
         &self.mixer_table
     }
 
+    pub fn mixer_table_mut(&mut self) -> &mut EnumMap<InputChannels, EnumMap<OutputChannels, u16>> {
+        &mut self.mixer_table
+    }
+
     pub fn channel_volume(&self, channel: FullChannelList) -> u8 {
         self.volume_table[channel]
     }

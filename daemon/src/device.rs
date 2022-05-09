@@ -454,6 +454,13 @@ impl<T: UsbContext> Device<T> {
                 self.mic_profile.set_mic_type(mic_type);
                 self.mic_profile.set_mic_gain(mic_type, gain);
             }
+            GoXLRCommand::SetRouter(input, output, enabled) => {
+                debug!("Setting Routing: {:?} {:?} {}", input, output, enabled);
+                self.profile.set_routing(input, output, enabled);
+
+                // Apply the change..
+                self.apply_routing(input)?;
+            }
             GoXLRCommand::ListProfiles() => {
                 // Need to send a response.. No idea how that works yet :D
             }

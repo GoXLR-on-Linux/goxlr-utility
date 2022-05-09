@@ -5,7 +5,7 @@ mod device;
 mod socket;
 
 pub use device::*;
-use goxlr_types::{ChannelName, FaderName, MicrophoneType};
+use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice};
 pub use socket::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -27,6 +27,7 @@ pub enum GoXLRCommand {
     AssignFader(FaderName, ChannelName),
     SetVolume(ChannelName, u8),
     SetMicrophoneGain(MicrophoneType, u16),
+    SetRouter(InputDevice, OutputDevice, bool),
     ListProfiles(),
     LoadProfile(String),
     LoadMicProfile(String),

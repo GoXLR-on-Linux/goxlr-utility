@@ -104,16 +104,30 @@ impl ProfileAdapter {
         router
     }
 
-    pub fn get_router(&self, output: InputDevice) -> EnumMap<OutputDevice, bool> {
+    pub fn get_router(&self, input: InputDevice) -> EnumMap<OutputDevice, bool> {
         let mut map: EnumMap<OutputDevice, bool> = EnumMap::default();
 
         // Get the mixer table
-        let mixer = &self.profile.settings().mixer().mixer_table()[standard_input_to_profile(output)];
+        let mixer = &self.profile.settings().mixer().mixer_table()[standard_input_to_profile(input)];
         for (channel, volume) in mixer.iter() {
             map[profile_to_standard_output(channel)] = *volume > 0;
         }
 
         return map;
+    }
+
+    pub fn set_routing(&mut self, input: InputDevice, output: OutputDevice, enabled: bool) {
+        let input = standard_input_to_profile(input);
+        let output = standard_output_to_profile(output);
+
+        let mut value = 8192;
+        if !enabled {
+            value = 0;
+        }
+
+        let table = self.profile.settings_mut().mixer_mut().mixer_table_mut();
+        table[input][output] = value;
+
     }
 
     pub fn get_fader_assignment(&self, fader: FaderName) -> ChannelName {
@@ -597,19 +611,15 @@ fn profile_to_standard_output(value: OutputChannels) -> OutputDevice {
     }
 }
 
-// Commented to prevent warning, will probably be needed later!
-// fn standard_output_to_profile(value: OutputDevice) -> OutputChannels {
-//     match value {
-//         OutputDevice::Headphones => OutputChannels::Headphones,
-//         OutputDevice::BroadcastMix => OutputChannels::Broadcast,
-//         OutputDevice::LineOut => OutputChannels::LineOut,
-//         OutputDevice::ChatMic => OutputChannels::ChatMic,
-//         OutputDevice::Sampler => OutputChannels::Sampler,
-//     }
-// }
-
-
-
+fn standard_output_to_profile(value: OutputDevice) -> OutputChannels {
+    match value {
+        OutputDevice::Headphones => OutputChannels::Headphones,
+        OutputDevice::BroadcastMix => OutputChannels::Broadcast,
+        OutputDevice::LineOut => OutputChannels::LineOut,
+        OutputDevice::ChatMic => OutputChannels::ChatMic,
+        OutputDevice::Sampler => OutputChannels::Sampler,
+    }
+}
 
 fn profile_to_standard_channel(value: FullChannelList) -> ChannelName {
     match value {

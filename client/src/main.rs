@@ -16,6 +16,7 @@ use goxlr_ipc::{GoXLRCommand, Socket};
 use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice};
 use strum::IntoEnumIterator;
 use tokio::net::UnixStream;
+use crate::cli::RouterCommands;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -91,6 +92,16 @@ async fn main() -> Result<()> {
         .await
         .context("Could not apply microphone controls")?;
 
+    match &cli.router {
+        RouterCommands::Router { input, output, enabled } => {
+            client.command(&serial, GoXLRCommand::SetRouter(
+                *input,
+                *output,
+                *enabled
+            )).await?;
+        }
+    }
+
     client.poll_status().await?;
     println!(
         "Profile directory: {}",
@@ -148,8 +159,6 @@ fn print_mixer_info(mixer: &MixerStatus) {
     println!("Mixer profile: {}", mixer.profile_name);
 
     for fader in FaderName::iter() {
-        // TODO: This will always report 'Chat'..
-
         println!(
             "Fader {} assignment: {}, Mute Behaviour: {}",
             fader,
@@ -164,8 +173,6 @@ fn print_mixer_info(mixer: &MixerStatus) {
     }
 
     for microphone in MicrophoneType::iter() {
-        // TODO: This also broken!
-
         if mixer.mic_type == microphone {
             println!(
                 "{} mic gain: {} dB (ACTIVE)",

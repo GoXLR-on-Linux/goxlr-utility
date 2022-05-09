@@ -1,5 +1,7 @@
-use clap::{Args, Parser};
-use goxlr_types::ChannelName;
+use clap::{Args, Parser, Subcommand};
+use goxlr_types::{ChannelName, InputDevice, OutputDevice};
+
+// TODO: Likely going to shuffle this to use subcommands rather than parameters..
 
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]
@@ -8,10 +10,6 @@ pub struct Cli {
     /// This field is optional if you have exactly one GoXLR, but required if you have more.
     #[clap(long)]
     pub device: Option<String>,
-
-    #[clap(long)]
-    /// Load the specific profile from disk, by name
-    pub test: Option<String>,
 
     #[clap(flatten, help_heading = "Profile Management")]
     pub profile: Profile,
@@ -24,6 +22,10 @@ pub struct Cli {
 
     #[clap(flatten, help_heading = "Microphone controls")]
     pub microphone_controls: MicrophoneControls,
+
+    #[clap(subcommand)]
+    pub router: RouterCommands
+
 }
 
 #[derive(Debug, Args)]
@@ -136,3 +138,22 @@ pub struct MicrophoneControls {
     #[clap(long)]
     pub jack_gain: Option<u16>,
 }
+
+#[derive(Subcommand, Debug)]
+pub enum RouterCommands {
+    /// Manipulate the GoXLR Router
+    Router {
+        /// The input device
+        #[clap(arg_enum)]
+        input: InputDevice,
+
+        /// The output device
+        #[clap(arg_enum)]
+        output: OutputDevice,
+
+        /// Is routing enabled between these two devices? [true | false]
+        #[clap(parse(try_from_str))]
+        enabled: bool
+    },
+}
+
