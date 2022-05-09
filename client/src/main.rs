@@ -93,12 +93,17 @@ async fn main() -> Result<()> {
         .context("Could not apply microphone controls")?;
 
     match &cli.router {
-        RouterCommands::Router { input, output, enabled } => {
-            client.command(&serial, GoXLRCommand::SetRouter(
-                *input,
-                *output,
-                *enabled
-            )).await?;
+        None => {}
+        Some(_) => {
+            match &cli.router.unwrap() {
+                RouterCommands::Router { input, output, enabled } => {
+                    client.command(&serial, GoXLRCommand::SetRouter(
+                        *input,
+                        *output,
+                        *enabled
+                    )).await?;
+                }
+            }
         }
     }
 

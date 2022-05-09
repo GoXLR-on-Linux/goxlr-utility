@@ -24,7 +24,7 @@ pub struct Cli {
     pub microphone_controls: MicrophoneControls,
 
     #[clap(subcommand)]
-    pub router: RouterCommands
+    pub router: Option<RouterCommands>
 
 }
 
