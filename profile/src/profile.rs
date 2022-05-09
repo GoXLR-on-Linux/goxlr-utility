@@ -91,8 +91,12 @@ impl Profile {
         Ok(())
     }
 
-    pub fn settings(&mut self) -> &mut ProfileSettings {
+    pub fn settings_mut(&mut self) -> &mut ProfileSettings {
         &mut self.settings
+    }
+
+    pub fn settings(&self) -> &ProfileSettings {
+        &self.settings
     }
 }
 
@@ -570,24 +574,36 @@ impl ProfileSettings {
         Ok(())
     }
 
-    pub fn mixer(&mut self) -> &mut Mixers {
+    pub fn mixer_mut(&mut self) -> &mut Mixers {
         &mut self.mixer
+    }
+
+    pub fn mixer(&self) -> &Mixers {
+        &self.mixer
     }
 
     pub fn faders(&mut self) -> &mut Vec<Fader> {
         &mut self.faders
     }
 
-    pub fn fader(&mut self, fader: usize) -> &mut Fader {
+    pub fn fader_mut(&mut self, fader: usize) -> &mut Fader {
         &mut self.faders[fader]
+    }
+
+    pub fn fader(&self, fader: usize) -> &Fader {
+        &self.faders[fader]
     }
 
     pub fn mute_buttons(&mut self) -> &mut Vec<MuteButton> {
         &mut self.mute_buttons
     }
 
-    pub fn mute_button(&mut self, index: usize) -> &mut MuteButton {
+    pub fn mute_button_mut(&mut self, index: usize) -> &mut MuteButton {
         &mut self.mute_buttons[index]
+    }
+
+    pub fn mute_button(&self, index: usize) -> &MuteButton {
+        &self.mute_buttons[index]
     }
 
     pub fn scribbles(&mut self) -> &mut Vec<Scribble> {
@@ -603,8 +619,12 @@ impl ProfileSettings {
         &self.effects[effect]
     }
 
-    pub fn mute_chat(&mut self) -> &mut MuteChat {
+    pub fn mute_chat_mut(&mut self) -> &mut MuteChat {
         &mut self.mute_chat
+    }
+
+    pub fn mute_chat(&self) -> &MuteChat {
+        &self.mute_chat
     }
 
     pub fn megaphone_effect(&self) -> &MegaphoneEffectBase {
@@ -639,12 +659,21 @@ impl ProfileSettings {
         &self.reverb_encoder
     }
 
-    pub fn simple_element(&mut self, name: SimpleElements) -> &mut SimpleElement {
+    pub fn simple_element_mut(&mut self, name: SimpleElements) -> &mut SimpleElement {
         if self.simple_elements[name].is_some() {
             return self.simple_elements[name].as_mut().unwrap();
         }
 
         // If for whatever reason, this is missing, we'll use the global colour.
         return self.simple_elements[SimpleElements::GlobalColour].as_mut().unwrap();
+    }
+
+    pub fn simple_element(&self, name: SimpleElements) -> &SimpleElement {
+        if self.simple_elements[name].is_some() {
+            return self.simple_elements[name].as_ref().unwrap();
+        }
+
+        // If for whatever reason, this is missing, we'll use the global colour.
+        return self.simple_elements[SimpleElements::GlobalColour].as_ref().unwrap();
     }
 }

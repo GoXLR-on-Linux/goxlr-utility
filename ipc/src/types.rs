@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Serialize, EnumIter, Deserialize)]
 #[cfg_attr(feature = "clap", derive(clap::ArgEnum))]
 pub enum ChannelName {
     Mic,

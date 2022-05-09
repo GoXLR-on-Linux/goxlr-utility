@@ -87,7 +87,7 @@ impl ProfileAdapter {
         &self.name
     }
 
-    pub fn create_router(&mut self) -> [EnumSet<OutputDevice>; InputDevice::COUNT] {
+    pub fn create_router(&self) -> [EnumSet<OutputDevice>; InputDevice::COUNT] {
         let mut router = [EnumSet::empty(); InputDevice::COUNT];
 
         for (input, potential_outputs) in self.profile.settings().mixer().mixer_table().iter() {
@@ -104,7 +104,7 @@ impl ProfileAdapter {
         router
     }
 
-    pub fn get_router(&mut self, output: InputDevice) -> EnumMap<OutputDevice, bool> {
+    pub fn get_router(&self, output: InputDevice) -> EnumMap<OutputDevice, bool> {
         let mut map: EnumMap<OutputDevice, bool> = EnumMap::default();
 
         // Get the mixer table
@@ -116,25 +116,25 @@ impl ProfileAdapter {
         return map;
     }
 
-    pub fn get_fader_assignment(&mut self, fader: FaderName) -> ChannelName {
+    pub fn get_fader_assignment(&self, fader: FaderName) -> ChannelName {
         let fader = self.profile.settings().fader(fader as usize);
         profile_to_standard_channel(fader.channel())
     }
 
     pub fn set_fader_assignment(&mut self, fader: FaderName, channel: ChannelName) {
         self.profile
-            .settings()
-            .fader(fader as usize)
+            .settings_mut()
+            .fader_mut(fader as usize)
             .set_channel(standard_to_profile_channel(channel));
     }
 
     pub fn switch_fader_assignment(&mut self, fader_one: FaderName, fader_two: FaderName) {
         // TODO: Scribble?
-        self.profile.settings().faders().swap(fader_one as usize, fader_two as usize);
-        self.profile.settings().mute_buttons().swap(fader_one as usize, fader_two as usize);
+        self.profile.settings_mut().faders().swap(fader_one as usize, fader_two as usize);
+        self.profile.settings_mut().mute_buttons().swap(fader_one as usize, fader_two as usize);
     }
 
-    pub fn get_channel_volume(&mut self, channel: ChannelName) -> u8 {
+    pub fn get_channel_volume(&self, channel: ChannelName) -> u8 {
         self.profile
             .settings()
             .mixer()
@@ -143,12 +143,12 @@ impl ProfileAdapter {
 
     pub fn set_channel_volume(&mut self, channel: ChannelName, volume: u8) {
         self.profile
-            .settings()
-            .mixer()
+            .settings_mut()
+            .mixer_mut()
             .set_channel_volume(standard_to_profile_channel(channel), volume);
     }
 
-    pub fn get_colour_map(&mut self, use_format_1_3_40: bool) -> [u8; 520] {
+    pub fn get_colour_map(&self, use_format_1_3_40: bool) -> [u8; 520] {
         let mut colour_array = [0; 520];
 
         for colour in ColourTargets::iter() {
@@ -171,16 +171,20 @@ impl ProfileAdapter {
         colour_array
     }
 
-    fn get_button_colour_map(&mut self, button: Buttons) -> &ColourMap {
+    fn get_button_colour_map(&self, button: Buttons) -> &ColourMap {
         get_colour_map_from_button(self.profile.settings(), button)
     }
 
     /** Regular Mute button handlers */
-    fn get_mute_button(&mut self, fader: FaderName) -> &mut MuteButton {
+    fn get_mute_button(&self, fader: FaderName) -> &MuteButton {
         self.profile.settings().mute_button(fader as usize)
     }
 
-    pub fn get_mute_button_behaviour(&mut self, fader: FaderName) -> BasicMuteFunction {
+    fn get_mute_button_mut(&mut self, fader: FaderName) -> &mut MuteButton {
+        self.profile.settings_mut().mute_button_mut(fader as usize)
+    }
+
+    pub fn get_mute_button_behaviour(&self, fader: FaderName) -> BasicMuteFunction {
         let mute_config = self.get_mute_button(fader);
 
         return match mute_config.mute_function() {
@@ -192,7 +196,7 @@ impl ProfileAdapter {
         };
     }
 
-    pub fn get_mute_button_state(&mut self, fader: FaderName) -> (bool, bool, MuteFunction) {
+    pub fn get_mute_button_state(&self, fader: FaderName) -> (bool, bool, MuteFunction) {
         let mute_config = self.get_mute_button(fader);
         let colour_map = mute_config.colour_map();
 
@@ -204,25 +208,25 @@ impl ProfileAdapter {
         return (muted_to_x, muted_to_all, mute_function);
     }
 
-    pub fn get_mute_button_previous_volume(&mut self, fader: FaderName) -> u8 {
+    pub fn get_mute_button_previous_volume(&self, fader: FaderName) -> u8 {
         self.get_mute_button(fader).previous_volume()
     }
 
     pub fn set_mute_button_previous_volume(&mut self, fader: FaderName, volume: u8) {
-        self.get_mute_button(fader).set_previous_volume(volume);
+        self.get_mute_button_mut(fader).set_previous_volume(volume);
     }
 
     pub fn set_mute_button_on(&mut self, fader: FaderName, on: bool) {
-        self.get_mute_button(fader).colour_map().set_state_on(on);
+        self.get_mute_button_mut(fader).colour_map_mut().set_state_on(on);
     }
 
     pub fn set_mute_button_blink(&mut self, fader: FaderName, on: bool) {
-        self.get_mute_button(fader).colour_map().set_blink_on(on);
+        self.get_mute_button_mut(fader).colour_map_mut().set_blink_on(on);
     }
 
 
     /** 'Cough' / Mute Chat Button handlers.. */
-    pub fn get_mute_chat_button_state(&mut self) -> (bool, bool, bool, MuteFunction) {
+    pub fn get_mute_chat_button_state(&self) -> (bool, bool, bool, MuteFunction) {
         let mute_config = self.profile.settings().mute_chat();
 
         // Identical behaviour, different variable locations..
@@ -235,22 +239,22 @@ impl ProfileAdapter {
     }
 
     pub fn set_mute_chat_button_on(&mut self, on: bool) {
-        self.profile.settings().mute_chat().set_cough_button_on(on);
+        self.profile.settings_mut().mute_chat_mut().set_cough_button_on(on);
     }
 
     pub fn set_mute_chat_button_blink(&mut self, on: bool) {
-        self.profile.settings().mute_chat().set_blink_on(on);
+        self.profile.settings_mut().mute_chat_mut().set_blink_on(on);
     }
 
-    pub fn get_mute_chat_button_blink(&mut self) -> bool {
+    pub fn get_mute_chat_button_blink(&self) -> bool {
         self.profile.settings().mute_chat().get_blink_on()
     }
 
-    pub fn get_mute_chat_button_on(&mut self) -> bool {
+    pub fn get_mute_chat_button_on(&self) -> bool {
         self.profile.settings().mute_chat().get_cough_button_on()
     }
 
-    pub fn get_mute_chat_button_colour_state(&mut self) -> ButtonStates {
+    pub fn get_mute_chat_button_colour_state(&self) -> ButtonStates {
         if self.get_mute_chat_button_blink() {
             return ButtonStates::Flashing;
         }
@@ -267,12 +271,12 @@ impl ProfileAdapter {
     }
 
     /** Fader Stuff */
-    pub fn get_mic_fader_id(&mut self) -> u8 {
+    pub fn get_mic_fader_id(&self) -> u8 {
         self.profile.settings().mute_chat().mic_fader_id()
     }
 
     pub fn set_mic_fader_id(&mut self, id: u8) {
-        self.profile.settings().mute_chat().set_mic_fader_id(id);
+        self.profile.settings_mut().mute_chat_mut().set_mic_fader_id(id);
     }
 
     pub fn fader_from_id(&self, fader: u8) -> FaderName {
@@ -284,11 +288,11 @@ impl ProfileAdapter {
         }
     }
 
-    pub fn is_fader_gradient(&mut self, fader: FaderName) -> bool {
+    pub fn is_fader_gradient(&self, fader: FaderName) -> bool {
         self.profile.settings().fader(fader as usize).colour_map().is_fader_gradient()
     }
 
-    pub fn is_fader_meter(&mut self, fader: FaderName) -> bool {
+    pub fn is_fader_meter(&self, fader: FaderName) -> bool {
         self.profile.settings().fader(fader as usize).colour_map().is_fader_meter()
     }
 
@@ -296,14 +300,14 @@ impl ProfileAdapter {
     pub fn set_swear_button_on(&mut self, on: bool) {
         // Get the colour map for the bleep button..
         self.profile.
-            settings()
-            .simple_element(SimpleElements::Swear)
-            .colour_map()
+            settings_mut()
+            .simple_element_mut(SimpleElements::Swear)
+            .colour_map_mut()
             .set_state_on(on);
     }
 
     /** Generic Stuff **/
-    pub fn get_button_colour_state(&mut self, button: Buttons) -> ButtonStates {
+    pub fn get_button_colour_state(&self, button: Buttons) -> ButtonStates {
         let colour_map = self.get_button_colour_map(button);
 
         if let Some(blink) = colour_map.blink() {
@@ -380,7 +384,7 @@ impl MicProfileAdapter {
         &self.name
     }
 
-    pub fn mic_gains(&mut self) -> [u16; 3] {
+    pub fn mic_gains(&self) -> [u16; 3] {
         [
             self.profile.setup().dynamic_mic_gain() as u16,
             self.profile.setup().condenser_mic_gain() as u16,
@@ -388,7 +392,7 @@ impl MicProfileAdapter {
         ]
     }
 
-    pub fn mic_type(&mut self) -> MicrophoneType {
+    pub fn mic_type(&self) -> MicrophoneType {
         match self.profile.setup().mic_type() {
             0 => MicrophoneType::Dynamic,
             1 => MicrophoneType::Condenser,
@@ -398,14 +402,14 @@ impl MicProfileAdapter {
     }
 
     pub fn set_mic_type(&mut self, mic_type: MicrophoneType) {
-        self.profile.setup().set_mic_type(mic_type as u8);
+        self.profile.setup_mut().set_mic_type(mic_type as u8);
     }
 
     pub fn set_mic_gain(&mut self, mic_type: MicrophoneType, gain: u16) {
         match mic_type {
-            MicrophoneType::Dynamic => self.profile.setup().set_dynamic_mic_gain(gain),
-            MicrophoneType::Condenser => self.profile.setup().set_condenser_mic_gain(gain),
-            MicrophoneType::Jack => self.profile.setup().set_trs_mic_gain(gain)
+            MicrophoneType::Dynamic => self.profile.setup_mut().set_dynamic_mic_gain(gain),
+            MicrophoneType::Condenser => self.profile.setup_mut().set_condenser_mic_gain(gain),
+            MicrophoneType::Jack => self.profile.setup_mut().set_trs_mic_gain(gain)
         }
     }
 
@@ -630,7 +634,7 @@ fn standard_to_profile_channel(value: ChannelName) -> FullChannelList {
     }
 }
 
-fn get_colour_map_from_button(profile: &mut ProfileSettings, button: Buttons) -> &ColourMap {
+fn get_colour_map_from_button(profile: &ProfileSettings, button: Buttons) -> &ColourMap {
     get_profile_colour_map(profile, map_button_to_colour_target(button))
 }
 
@@ -663,7 +667,7 @@ fn map_button_to_colour_target(button: Buttons) -> ColourTargets {
     }
 }
 
-fn get_profile_colour_map(profile: &mut ProfileSettings, colour_target: ColourTargets) -> &ColourMap {
+fn get_profile_colour_map(profile: &ProfileSettings, colour_target: ColourTargets) -> &ColourMap {
     match colour_target {
         ColourTargets::Fader1Mute => profile.mute_button(0).colour_map(),
         ColourTargets::Fader2Mute => profile.mute_button(1).colour_map(),

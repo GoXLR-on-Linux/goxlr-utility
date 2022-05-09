@@ -135,8 +135,12 @@ impl MuteButton {
         Ok(())
     }
 
-    pub fn colour_map(&mut self) -> &mut ColourMap {
+    pub fn colour_map_mut(&mut self) -> &mut ColourMap {
         &mut self.colour_map
+    }
+
+    pub fn colour_map(&self) -> &ColourMap {
+        &self.colour_map
     }
 
     pub fn mute_function(&self) -> &MuteFunction {

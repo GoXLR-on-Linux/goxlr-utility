@@ -129,9 +129,13 @@ impl MicProfileSettings {
         Ok(())
     }
 
-    pub fn setup(&mut self) -> &mut MicSetup {
+    pub fn setup_mut(&mut self) -> &mut MicSetup {
         &mut self.mic_setup
     }
+    pub fn setup(&self) -> &MicSetup {
+        &self.mic_setup
+    }
+
     pub fn gate(&self) -> &Gate { &self.gate }
     pub fn compressor(&self) -> &Compressor { &self.compressor }
     pub fn equalizer(&self) -> &Equalizer { &self.equalizer }
