@@ -5,7 +5,7 @@ use goxlr_ipc::{DaemonStatus, DeviceType, GoXLRCommand, HardwareStatus, UsbProdu
 use goxlr_usb::goxlr::{GoXLR, PID_GOXLR_FULL, PID_GOXLR_MINI, VID_GOXLR};
 use goxlr_usb::rusb::{DeviceDescriptor, GlobalContext};
 use goxlr_usb::{goxlr, rusb};
-use log::{error, info};
+use log::{error, info, debug};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use tokio::sync::{mpsc, oneshot};
@@ -24,6 +24,9 @@ pub async fn handle_changes(
     mut shutdown: Shutdown,
     settings: SettingsHandle,
 ) {
+    let detect_count = 10;
+    let mut loop_count = 10;
+
     let sleep_duration = Duration::from_millis(100);
     let mut devices = HashMap::new();
     let mut ignore_list = HashMap::new();
@@ -31,23 +34,27 @@ pub async fn handle_changes(
     loop {
         tokio::select! {
             () = sleep(sleep_duration) => {
-                if let Some((device, descriptor)) = find_new_device(&devices, &ignore_list) {
-                let bus_number = device.bus_number();
-                let address = device.address();
-                    match load_device(device, descriptor, &settings).await {
-                        Ok(device) => {
-                            devices.insert(device.serial().to_owned(), device);
-                        }
-                        Err(e) => {
-                            error!(
-                                "Couldn't load potential GoXLR on bus {} address {}: {}",
-                                bus_number, address, e
-                            );
-                            ignore_list
-                                .insert((bus_number, address), Instant::now() + Duration::from_secs(10));
-                        }
-                    };
+                if loop_count == detect_count {
+                    if let Some((device, descriptor)) = find_new_device(&devices, &ignore_list) {
+                    let bus_number = device.bus_number();
+                    let address = device.address();
+                        match load_device(device, descriptor, &settings).await {
+                            Ok(device) => {
+                                devices.insert(device.serial().to_owned(), device);
+                            }
+                            Err(e) => {
+                                error!(
+                                    "Couldn't load potential GoXLR on bus {} address {}: {}",
+                                    bus_number, address, e
+                                );
+                                ignore_list
+                                    .insert((bus_number, address), Instant::now() + Duration::from_secs(10));
+                            }
+                        };
+                    }
+                    loop_count = -1;
                 }
+                loop_count += 1;
                 for device in devices.values_mut() {
                     if let Err(e) = device.monitor_inputs(&settings).await {
                         error!("Couldn't monitor device for inputs: {}", e);
