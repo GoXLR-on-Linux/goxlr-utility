@@ -404,16 +404,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "goxlr-cli"
-version = "0.1.0"
-dependencies = [
- "clap",
- "goxlr-types",
- "goxlr-usb",
- "simplelog",
-]
-
-[[package]]
 name = "goxlr-client"
 version = "0.1.0"
 dependencies = [
@@ -446,6 +436,13 @@ dependencies = [
  "simplelog",
  "strum",
  "tokio",
+]
+
+[[package]]
+name = "goxlr-initialiser"
+version = "0.1.0"
+dependencies = [
+ "rusb",
 ]
 
 [[package]]
