@@ -490,8 +490,8 @@ impl<T: UsbContext> Device<T> {
                 let profile_directory = settings.get_profile_directory().await;
                 let profile_name = settings.get_device_profile_name(self.serial()).await;
 
-                if profile_name.is_some() {
-                    self.profile.to_named(profile_name.unwrap(), &profile_directory)?;
+                if let Some(profile_name) = profile_name {
+                    self.profile.to_named(profile_name, &profile_directory)?;
                 }
 
             }
@@ -521,12 +521,6 @@ impl<T: UsbContext> Device<T> {
         result
     }
 
-
-
-    // Slightly obnoxious, the variables for this come from the MuteChat object, not the ColourMap!
-
-
-
     // This applies routing for a single input channel..
     fn apply_channel_routing(&mut self, input: BasicInputDevice, router: EnumMap<BasicOutputDevice, bool>) -> Result<()> {
         let (left_input, right_input) = InputDevice::from_basic(&input);
@@ -547,7 +541,7 @@ impl<T: UsbContext> Device<T> {
         Ok(())
     }
 
-    fn apply_transient_routing(&mut self, input: BasicInputDevice, mut router: EnumMap<BasicOutputDevice, bool>) {
+    fn apply_transient_routing(&mut self, input: BasicInputDevice, router: &mut EnumMap<BasicOutputDevice, bool>) {
         // Not all channels are routable, so map the inputs to channels before checking..
         let channel_name = match input {
             BasicInputDevice::Microphone => ChannelName::Mic,
@@ -562,10 +556,10 @@ impl<T: UsbContext> Device<T> {
 
         for fader in FaderName::iter() {
             if self.profile.get_fader_assignment(fader) == channel_name {
-                self.apply_transient_fader_routing(fader, &mut router);
+                self.apply_transient_fader_routing(fader, router);
             }
         }
-        self.apply_transient_cough_routing(&mut router);
+        self.apply_transient_cough_routing(router);
     }
 
     fn apply_transient_fader_routing(&mut self, fader: FaderName, router: &mut EnumMap<BasicOutputDevice, bool>) {
@@ -598,8 +592,9 @@ impl<T: UsbContext> Device<T> {
 
     fn apply_routing(&mut self, input: BasicInputDevice) -> Result<()> {
         // Load the routing for this channel from the profile..
-        let router = self.profile.get_router(input);
-        self.apply_transient_routing(input, router);
+        let mut router = self.profile.get_router(input);
+        self.apply_transient_routing(input, &mut router);
+        dbg!("{}", router);
 
         debug!("Applying Routing to {:?}:", input);
         debug!("{:?}", router);
