@@ -13,7 +13,7 @@ use log::debug;
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 use enum_map::EnumMap;
-use strum::{EnumCount, IntoEnumIterator};
+use strum::{IntoEnumIterator};
 use goxlr_profile_loader::components::mute::{MuteFunction};
 use goxlr_usb::channelstate::ChannelState::{Muted, Unmuted};
 
