@@ -782,6 +782,12 @@ impl<T: UsbContext> Device<T> {
 
         // I can't think of a cleaner way of doing this..
         let params = self.mic_profile.mic_params();
+
+        // The EQ from the mini is seemingly always sent regardless of the device in use, the
+        // full device will replace it via Effects later.
+        let eq_gains = self.mic_profile.get_eq_gain_mini();
+        let eq_freqs = self.mic_profile.get_eq_freq_mini();
+
         self.goxlr.set_mic_param(&[
             (MicrophoneParamKey::GateThreshold, &params[0]),
             (MicrophoneParamKey::GateAttack, &params[1]),
@@ -792,6 +798,21 @@ impl<T: UsbContext> Device<T> {
             (MicrophoneParamKey::CompressorAttack, &params[6]),
             (MicrophoneParamKey::CompressorRelease, &params[7]),
             (MicrophoneParamKey::CompressorMakeUpGain, &params[8]),
+
+            (MicrophoneParamKey::Equalizer90HzFrequency, &eq_freqs[0]),
+            (MicrophoneParamKey::Equalizer250HzFrequency, &eq_freqs[1]),
+            (MicrophoneParamKey::Equalizer500HzFrequency, &eq_freqs[2]),
+            (MicrophoneParamKey::Equalizer1KHzFrequency, &eq_freqs[3]),
+            (MicrophoneParamKey::Equalizer3KHzFrequency, &eq_freqs[4]),
+            (MicrophoneParamKey::Equalizer8KHzFrequency, &eq_freqs[5]),
+
+            (MicrophoneParamKey::Equalizer90HzGain, &eq_gains[0]),
+            (MicrophoneParamKey::Equalizer250HzGain, &eq_gains[1]),
+            (MicrophoneParamKey::Equalizer500HzGain, &eq_gains[2]),
+            (MicrophoneParamKey::Equalizer1KHzGain, &eq_gains[3]),
+            (MicrophoneParamKey::Equalizer3KHzGain, &eq_gains[4]),
+            (MicrophoneParamKey::Equalizer8KHzGain, &eq_gains[5]),
+
         ])?;
 
         let main_effects = self.mic_profile.mic_effects();
@@ -830,16 +851,16 @@ impl<T: UsbContext> Device<T> {
         // Apply EQ only on the 'Full' device
         if self.status.hardware.device_type == DeviceType::Full {
             self.goxlr.set_effect_values(&[
-                (EffectKey::Equalizer31HzValue, eq_gains[0]),
-                (EffectKey::Equalizer63HzValue, eq_gains[1]),
-                (EffectKey::Equalizer125HzValue, eq_gains[2]),
-                (EffectKey::Equalizer250HzValue, eq_gains[3]),
-                (EffectKey::Equalizer500HzValue, eq_gains[4]),
-                (EffectKey::Equalizer1KHzValue, eq_gains[5]),
-                (EffectKey::Equalizer2KHzValue, eq_gains[6]),
-                (EffectKey::Equalizer4KHzValue, eq_gains[7]),
-                (EffectKey::Equalizer8KHzValue, eq_gains[8]),
-                (EffectKey::Equalizer16KHzValue, eq_gains[9]),
+                (EffectKey::Equalizer31HzGain, eq_gains[0]),
+                (EffectKey::Equalizer63HzGain, eq_gains[1]),
+                (EffectKey::Equalizer125HzGain, eq_gains[2]),
+                (EffectKey::Equalizer250HzGain, eq_gains[3]),
+                (EffectKey::Equalizer500HzGain, eq_gains[4]),
+                (EffectKey::Equalizer1KHzGain, eq_gains[5]),
+                (EffectKey::Equalizer2KHzGain, eq_gains[6]),
+                (EffectKey::Equalizer4KHzGain, eq_gains[7]),
+                (EffectKey::Equalizer8KHzGain, eq_gains[8]),
+                (EffectKey::Equalizer16KHzGain, eq_gains[9]),
 
                 (EffectKey::Equalizer31HzFrequency, eq_freq[0]),
                 (EffectKey::Equalizer63HzFrequency, eq_freq[1]),

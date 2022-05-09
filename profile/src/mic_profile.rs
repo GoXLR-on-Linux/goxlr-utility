@@ -13,10 +13,12 @@ use xml::reader::XmlEvent as XmlReaderEvent;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::{EmitterConfig, EventReader};
+use crate::microphone::equalizer_mini::EqualizerMini;
 
 #[derive(Debug)]
 pub struct MicProfileSettings {
     equalizer: Equalizer,
+    equalizer_mini: EqualizerMini,
     compressor: Compressor,
     gate: Gate,
     deess: u8,
@@ -29,6 +31,7 @@ impl MicProfileSettings {
         let parser = EventReader::new(read);
 
         let mut equalizer = Equalizer::new();
+        let mut equalizer_mini = EqualizerMini::new();
         let mut compressor = Compressor::new();
         let mut gate = Gate::new();
         let mut deess = 0;
@@ -44,6 +47,7 @@ impl MicProfileSettings {
                         // Ok, this is an incredibly large tag, with many settings (30 or so), so
                         // we split it into 3 separate elements.
                         equalizer.parse_equaliser(&attributes)?;
+                        equalizer_mini.parse_equaliser(&attributes)?;
                         compressor.parse_compressor(&attributes)?;
                         gate.parse_gate(&attributes)?;
 
@@ -85,6 +89,7 @@ impl MicProfileSettings {
 
         Ok(Self {
             equalizer,
+            equalizer_mini,
             compressor,
             gate,
             deess,
@@ -130,5 +135,6 @@ impl MicProfileSettings {
     pub fn gate(&self) -> &Gate { &self.gate }
     pub fn compressor(&self) -> &Compressor { &self.compressor }
     pub fn equalizer(&self) -> &Equalizer { &self.equalizer }
+    pub fn equalizer_mini(&self) -> &EqualizerMini { &self.equalizer_mini }
     pub fn deess(&self) -> u8 { self.deess }
 }

@@ -69,6 +69,9 @@ pub enum ParseError {
     #[error("Invalid Equalizer: {0}")]
     InvalidEqualizer(#[from] crate::microphone::equalizer::ParseError),
 
+    #[error("Invalid Mini Equalizer: {0}")]
+    InvalidMiniEqualizer(#[from] crate::microphone::equalizer_mini::ParseError),
+
     #[error("Invalid Compressor: {0}")]
     InvalidCompressor(#[from] crate::microphone::compressor::ParseError),
 

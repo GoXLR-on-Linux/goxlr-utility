@@ -478,6 +478,59 @@ impl MicProfileAdapter {
         ]
     }
 
+    pub fn get_eq_gain_mini(&self) -> [[u8; 4]; 6] {
+
+        let mut eq_90_gain = [0; 4];
+        let mut eq_250_gain = [0; 4];
+        let mut eq_500_gain = [0; 4];
+        let mut eq_1k_gain = [0; 4];
+        let mut eq_3k_gain = [0; 4];
+        let mut eq_8k_gain = [0; 4];
+
+
+
+        LittleEndian::write_f32(&mut eq_90_gain, self.profile.equalizer_mini().eq_90h_gain().into());
+        LittleEndian::write_f32(&mut eq_250_gain, self.profile.equalizer_mini().eq_250h_gain().into());
+        LittleEndian::write_f32(&mut eq_500_gain, self.profile.equalizer_mini().eq_500h_gain().into());
+        LittleEndian::write_f32(&mut eq_1k_gain, self.profile.equalizer_mini().eq_1k_gain().into());
+        LittleEndian::write_f32(&mut eq_3k_gain, self.profile.equalizer_mini().eq_3k_gain().into());
+        LittleEndian::write_f32(&mut eq_8k_gain, self.profile.equalizer_mini().eq_8k_gain().into());
+
+        [
+            eq_90_gain,
+            eq_250_gain,
+            eq_500_gain,
+            eq_1k_gain,
+            eq_3k_gain,
+            eq_8k_gain
+        ]
+    }
+
+    pub fn get_eq_freq_mini(&self) -> [[u8; 4]; 6] {
+        let mut eq_90_freq = [0; 4];
+        let mut eq_250_freq = [0; 4];
+        let mut eq_500_freq = [0; 4];
+        let mut eq_1k_freq = [0; 4];
+        let mut eq_3k_freq = [0; 4];
+        let mut eq_8k_freq = [0; 4];
+
+        LittleEndian::write_f32(&mut eq_90_freq, self.profile.equalizer_mini().eq_90h_freq().into());
+        LittleEndian::write_f32(&mut eq_250_freq, self.profile.equalizer_mini().eq_250h_freq().into());
+        LittleEndian::write_f32(&mut eq_500_freq, self.profile.equalizer_mini().eq_500h_freq().into());
+        LittleEndian::write_f32(&mut eq_1k_freq, self.profile.equalizer_mini().eq_1k_freq().into());
+        LittleEndian::write_f32(&mut eq_3k_freq, self.profile.equalizer_mini().eq_3k_freq().into());
+        LittleEndian::write_f32(&mut eq_8k_freq, self.profile.equalizer_mini().eq_8k_freq().into());
+
+        [
+            eq_90_freq,
+            eq_250_freq,
+            eq_500_freq,
+            eq_1k_freq,
+            eq_3k_freq,
+            eq_8k_freq
+        ]
+    }
+
     pub fn get_deesser(&self) -> i32 {
         self.profile.deess() as i32
     }
