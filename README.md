@@ -16,7 +16,9 @@ You may need to unplug and replug the GoXLR afterwards, to allow the new permiss
 ## Building from source
 ### Prerequisites
 - Install [Rust](https://rustup.rs/)
-- Install libusb (ie `apt install libusb-dev`)
+- Install libusb
+  - Debian/Ubuntu: `apt install libusb-dev`
+  - Arch/Manjaro: `pacman -S libusb`
 - Have a GoXLR :)
 
 ### Building
