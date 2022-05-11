@@ -1,12 +1,12 @@
 use anyhow::{anyhow, Context, Result};
 use enumset::EnumSet;
-use goxlr_profile_loader::components::colours::{ColourMap, ColourOffStyle, ColourState};
+use goxlr_profile_loader::components::colours::{ColourDisplay, ColourMap, ColourOffStyle, ColourState};
 use goxlr_profile_loader::components::colours::ColourOffStyle::Dimmed;
 use goxlr_profile_loader::components::mixer::{FullChannelList, InputChannels, OutputChannels};
 use goxlr_profile_loader::mic_profile::MicProfileSettings;
 use goxlr_profile_loader::profile::{Profile, ProfileSettings};
 use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
-use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice, VersionNumber, MuteFunction as BasicMuteFunction };
+use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice, VersionNumber, MuteFunction as BasicMuteFunction, ColourDisplay as BasicColourDisplay };
 use goxlr_usb::colouring::ColourTargets;
 use log::error;
 use std::fs::File;
@@ -153,6 +153,11 @@ impl ProfileAdapter {
         self.profile.settings_mut().mute_buttons().swap(fader_one as usize, fader_two as usize);
     }
 
+    pub fn set_fader_display(&mut self, fader: FaderName, display: BasicColourDisplay) {
+        let colours = self.profile.settings_mut().fader_mut(fader as usize).colour_map_mut();
+        colours.set_fader_display(standard_to_profile_fader_display(display));
+    }
+
     pub fn get_channel_volume(&self, channel: ChannelName) -> u8 {
         self.profile
             .settings()
@@ -214,14 +219,12 @@ impl ProfileAdapter {
 
     pub fn get_mute_button_behaviour(&self, fader: FaderName) -> BasicMuteFunction {
         let mute_config = self.get_mute_button(fader);
+        return profile_to_standard_mute_function(*mute_config.mute_function());
+    }
 
-        return match mute_config.mute_function() {
-            MuteFunction::All => BasicMuteFunction::All,
-            MuteFunction::ToStream => BasicMuteFunction::ToStream,
-            MuteFunction::ToVoiceChat => BasicMuteFunction::ToVoiceChat,
-            MuteFunction::ToPhones => BasicMuteFunction::ToPhones,
-            MuteFunction::ToLineOut => BasicMuteFunction::ToLineOut
-        };
+    pub fn set_mute_button_behaviour(&mut self, fader: FaderName, behaviour: BasicMuteFunction) {
+        let mute_config = self.get_mute_button_mut(fader);
+        mute_config.set_mute_function(standard_to_profile_mute_function(behaviour));
     }
 
     pub fn get_mute_button_state(&self, fader: FaderName) -> (bool, bool, MuteFunction) {
@@ -623,6 +626,44 @@ fn standard_output_to_profile(value: OutputDevice) -> OutputChannels {
         OutputDevice::LineOut => OutputChannels::LineOut,
         OutputDevice::ChatMic => OutputChannels::ChatMic,
         OutputDevice::Sampler => OutputChannels::Sampler,
+    }
+}
+
+fn profile_to_standard_mute_function(value: MuteFunction) -> BasicMuteFunction {
+    match value {
+        MuteFunction::All => BasicMuteFunction::All,
+        MuteFunction::ToStream => BasicMuteFunction::ToStream,
+        MuteFunction::ToVoiceChat => BasicMuteFunction::ToVoiceChat,
+        MuteFunction::ToPhones => BasicMuteFunction::ToPhones,
+        MuteFunction::ToLineOut => BasicMuteFunction::ToLineOut
+    }
+}
+
+fn standard_to_profile_mute_function(value: BasicMuteFunction) -> MuteFunction {
+    match value {
+        BasicMuteFunction::All => MuteFunction::All,
+        BasicMuteFunction::ToStream => MuteFunction::ToStream,
+        BasicMuteFunction::ToVoiceChat => MuteFunction::ToVoiceChat,
+        BasicMuteFunction::ToPhones => MuteFunction::ToPhones,
+        BasicMuteFunction::ToLineOut => MuteFunction::ToLineOut
+    }
+}
+
+fn standard_to_profile_fader_display(value: BasicColourDisplay) -> ColourDisplay {
+    match value {
+        BasicColourDisplay::TwoColour => ColourDisplay::TwoColour,
+        BasicColourDisplay::Gradient => ColourDisplay::Gradient,
+        BasicColourDisplay::Meter => ColourDisplay::Meter,
+        BasicColourDisplay::GradientMeter => ColourDisplay::GradientMeter
+    }
+}
+
+fn profile_to_standard_fader_display(value: ColourDisplay) -> BasicColourDisplay {
+    match value {
+        ColourDisplay::TwoColour => BasicColourDisplay::TwoColour,
+        ColourDisplay::Gradient => BasicColourDisplay::Gradient,
+        ColourDisplay::Meter => BasicColourDisplay::Meter,
+        ColourDisplay::GradientMeter => BasicColourDisplay::Gradient
     }
 }
 

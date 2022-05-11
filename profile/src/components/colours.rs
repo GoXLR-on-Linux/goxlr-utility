@@ -218,6 +218,9 @@ impl ColourMap {
         return false;
     }
 
+    pub fn set_fader_display(&mut self, display: ColourDisplay) {
+        self.colour_display = Some(display);
+    }
 
     pub fn state(&self) -> &Option<ColourState> {
         &self.state
@@ -264,7 +267,7 @@ pub enum ColourOffStyle {
 }
 
 #[derive(Debug, PartialEq, EnumString, Display)]
-enum ColourDisplay {
+pub enum ColourDisplay {
     #[strum(to_string = "GRADIENT")]
     Gradient,
 

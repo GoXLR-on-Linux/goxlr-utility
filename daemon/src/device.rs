@@ -296,6 +296,16 @@ impl<T: UsbContext> Device<T> {
         Ok(())
     }
 
+    async fn unmute_if_muted(&mut self, fader: FaderName) -> Result<()> {
+        let (muted_to_x, muted_to_all, _mute_function) = self.profile.get_mute_button_state(fader);
+
+        if muted_to_x || muted_to_all {
+            self.handle_fader_mute(fader, false).await?;
+        }
+
+        Ok(())
+    }
+
     // This one's a little obnoxious because it's heavily settings dependent, so will contain a
     // large volume of comments working through states, feel free to remove them later :)
     async fn handle_cough_mute(&mut self, press: bool, release: bool, held: bool, held_called: bool) -> Result<()> {
@@ -442,8 +452,22 @@ impl<T: UsbContext> Device<T> {
         settings: &SettingsHandle,
     ) -> Result<()> {
         match command {
-            GoXLRCommand::AssignFader(fader, channel) => {
+            GoXLRCommand::SetFader(fader, channel) => {
                 self.set_fader(fader, channel).await?;
+            }
+            GoXLRCommand::SetFaderMuteFunction(fader, behaviour) => {
+                if self.profile.get_mute_button_behaviour(fader) == behaviour {
+                    // Settings are the same..
+                    return Ok(());
+                }
+
+                // Unmute the channel to prevent weirdness, then set new behaviour
+                self.unmute_if_muted(fader).await?;
+                self.profile.set_mute_button_behaviour(fader, behaviour);
+            }
+            GoXLRCommand::SetFaderDisplay(fader, display) => {
+                self.profile.set_fader_display(fader, display);
+                self.set_fader_display_from_profile(fader);
             }
             GoXLRCommand::SetVolume(channel, volume) => {
                 self.profile.set_channel_volume(channel, volume);
@@ -464,22 +488,15 @@ impl<T: UsbContext> Device<T> {
             GoXLRCommand::ListProfiles() => {
                 // Need to send a response.. No idea how that works yet :D
             }
+            GoXLRCommand::ImportProfile(path) => {
+
+            }
             GoXLRCommand::LoadProfile(profile_name) => {
                 let profile_directory = settings.get_profile_directory().await;
                 self.profile = ProfileAdapter::from_named(profile_name, &profile_directory)?;
                 self.apply_profile()?;
                 settings
                     .set_device_profile_name(self.serial(), self.profile.name())
-                    .await;
-                settings.save().await;
-            }
-            GoXLRCommand::LoadMicProfile(mic_profile_name) => {
-                let profile_directory = settings.get_profile_directory().await;
-                self.mic_profile =
-                    MicProfileAdapter::from_named(mic_profile_name, &profile_directory)?;
-                self.apply_mic_profile()?;
-                settings
-                    .set_device_mic_profile_name(self.serial(), self.mic_profile.name())
                     .await;
                 settings.save().await;
             }
@@ -490,7 +507,22 @@ impl<T: UsbContext> Device<T> {
                 if let Some(profile_name) = profile_name {
                     self.profile.to_named(profile_name, &profile_directory)?;
                 }
+            }
+            GoXLRCommand::ListMicProfiles() => {
 
+            }
+            GoXLRCommand::ImportMicProfile(path) => {
+
+            }
+            GoXLRCommand::LoadMicProfile(mic_profile_name) => {
+                let profile_directory = settings.get_profile_directory().await;
+                self.mic_profile =
+                    MicProfileAdapter::from_named(mic_profile_name, &profile_directory)?;
+                self.apply_mic_profile()?;
+                settings
+                    .set_device_mic_profile_name(self.serial(), self.mic_profile.name())
+                    .await;
+                settings.save().await;
             }
             GoXLRCommand::SaveMicProfile() => {
 
@@ -707,11 +739,22 @@ impl<T: UsbContext> Device<T> {
         Ok(())
     }
 
+
+
     fn get_fader_state(&self, fader: FaderName) -> FaderStatus {
         FaderStatus {
             channel: self.profile().get_fader_assignment(fader),
             mute_type: self.profile().get_mute_button_behaviour(fader)
         }
+    }
+
+    fn set_fader_display_from_profile(&mut self, fader: FaderName) -> Result<()> {
+        self.goxlr.set_fader_display_mode(
+            fader,
+            self.profile.is_fader_gradient(fader),
+            self.profile.is_fader_meter(fader)
+        )?;
+        Ok(())
     }
 
     fn apply_profile(&mut self) -> Result<()> {
@@ -745,11 +788,7 @@ impl<T: UsbContext> Device<T> {
         }
 
         for fader in FaderName::iter() {
-            self.goxlr.set_fader_display_mode(
-                fader,
-                self.profile.is_fader_gradient(fader),
-                self.profile.is_fader_meter(fader)
-            )?;
+            self.set_fader_display_from_profile(fader);
         }
 
         self.update_button_states()?;

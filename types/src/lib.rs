@@ -229,6 +229,16 @@ pub enum MicrophoneParamKey {
 
 }
 
+#[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(clap::ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum ColourDisplay {
+    TwoColour,
+    Gradient,
+    Meter,
+    GradientMeter,
+}
+
 // MuteChat
 #[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]

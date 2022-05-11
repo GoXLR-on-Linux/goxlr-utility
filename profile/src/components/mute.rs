@@ -147,7 +147,9 @@ impl MuteButton {
         &self.mute_function
     }
 
-
+    pub fn set_mute_function(&mut self, mute_function: MuteFunction) {
+        self.mute_function = mute_function;
+    }
 
     pub fn set_previous_volume(&mut self, previous_volume: u8) {
         self.previous_volume = previous_volume;
