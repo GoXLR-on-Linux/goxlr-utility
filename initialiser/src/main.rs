@@ -1,6 +1,4 @@
-use std::process::Command;
 use std::time::Duration;
-use rusb::{DeviceHandle, Direction, GlobalContext, Recipient, RequestType};
 use rusb::Direction::{In, Out};
 use rusb::Error::Pipe;
 use rusb::Recipient::Interface;

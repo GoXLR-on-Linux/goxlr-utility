@@ -5,7 +5,7 @@ use goxlr_ipc::{DaemonStatus, DeviceType, GoXLRCommand, HardwareStatus, UsbProdu
 use goxlr_usb::goxlr::{GoXLR, PID_GOXLR_FULL, PID_GOXLR_MINI, VID_GOXLR};
 use goxlr_usb::rusb::{DeviceDescriptor, GlobalContext};
 use goxlr_usb::{goxlr, rusb};
-use log::{error, info, debug};
+use log::{error, info};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use tokio::sync::{mpsc, oneshot};

@@ -16,7 +16,7 @@ use goxlr_ipc::{GoXLRCommand, Socket};
 use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice};
 use strum::IntoEnumIterator;
 use tokio::net::UnixStream;
-use crate::cli::RouterCommands;
+use crate::cli::{FaderCommands, SubCommands};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -92,28 +92,84 @@ async fn main() -> Result<()> {
         .await
         .context("Could not apply microphone controls")?;
 
-    match &cli.router {
+    // These will be moved around later :)
+    match &cli.subcommands {
         None => {}
         Some(_) => {
-            match &cli.router.unwrap() {
-                RouterCommands::Router { input, output, enabled } => {
-                    client.command(&serial, GoXLRCommand::SetRouter(
-                        *input,
-                        *output,
-                        *enabled
-                    )).await?;
+            match &cli.subcommands.unwrap() {
+                SubCommands::Status {} => {
+                    client.poll_status().await?;
+                    println!(
+                        "Profile directory: {}",
+                        client.status().profile_directory.to_string_lossy()
+                    );
+                    for mixer in client.status().mixers.values() {
+                        print_device(mixer);
+                    }
+                }
+                SubCommands::Faders { fader } => {
+                    match fader {
+                        None => {}
+                        Some(_) => {
+                            match fader.as_ref().unwrap() {
+                                FaderCommands::Channel { fader, channel } => {
+                                    if let Some(value) = channel {
+                                        client.command(&serial, GoXLRCommand::SetFader(
+                                            *fader,
+                                            *value
+                                        )).await?;
+                                    } else {
+                                        println!("Channel Getter Not Implemented");
+                                    }
+
+                                }
+                                FaderCommands::MuteBehaviour { fader, mute_behaviour } => {
+                                    if let Some(value) = mute_behaviour {
+                                        client.command(&serial, GoXLRCommand::SetFaderMuteFunction(
+                                            *fader,
+                                            *value
+                                        )).await?;
+                                    } else {
+                                        println!("Mute behaviour Getter not Implemented");
+                                    }
+                                }
+                                FaderCommands::Display { fader, display } => {
+                                    if let Some(value) = display {
+                                        client.command(&serial, GoXLRCommand::SetFaderDisplay(
+                                            *fader,
+                                            *value
+                                        )).await?;
+                                    } else {
+                                        println!("Display Getter Not Implemented");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                SubCommands::Router { input, output, enabled } => {
+                    if let Some(value) = enabled {
+                        client.command(&serial, GoXLRCommand::SetRouter(
+                            *input,
+                            *output,
+                            *value
+                        )).await?;
+                    } else {
+                        println!("Router Getter Not Implemented Yet");
+                    }
+                }
+                SubCommands::Volume { channel, volume } => {
+                    if let Some(value) = volume {
+                        client.command(&serial, GoXLRCommand::SetVolume(
+                            *channel,
+                            *value
+                        )).await?;
+                    } else {
+                        println!("Volume Getter Not Implemented Yet");
+                    }
                 }
             }
         }
-    }
-
-    client.poll_status().await?;
-    println!(
-        "Profile directory: {}",
-        client.status().profile_directory.to_string_lossy()
-    );
-    for mixer in client.status().mixers.values() {
-        print_device(mixer);
     }
 
     Ok(())

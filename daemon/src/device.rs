@@ -467,7 +467,7 @@ impl<T: UsbContext> Device<T> {
             }
             GoXLRCommand::SetFaderDisplay(fader, display) => {
                 self.profile.set_fader_display(fader, display);
-                self.set_fader_display_from_profile(fader);
+                self.set_fader_display_from_profile(fader)?;
             }
             GoXLRCommand::SetVolume(channel, volume) => {
                 self.profile.set_channel_volume(channel, volume);
@@ -788,7 +788,7 @@ impl<T: UsbContext> Device<T> {
         }
 
         for fader in FaderName::iter() {
-            self.set_fader_display_from_profile(fader);
+            self.set_fader_display_from_profile(fader)?;
         }
 
         self.update_button_states()?;

@@ -11,22 +11,22 @@ pub async fn apply_fader_controls(
 ) -> Result<()> {
     if let Some(channel) = fader_controls.fader_a {
         client
-            .command(serial, GoXLRCommand::AssignFader(FaderName::A, channel))
+            .command(serial, GoXLRCommand::SetFader(FaderName::A, channel))
             .await?;
     }
     if let Some(channel) = fader_controls.fader_b {
         client
-            .command(serial, GoXLRCommand::AssignFader(FaderName::B, channel))
+            .command(serial, GoXLRCommand::SetFader(FaderName::B, channel))
             .await?;
     }
     if let Some(channel) = fader_controls.fader_c {
         client
-            .command(serial, GoXLRCommand::AssignFader(FaderName::C, channel))
+            .command(serial, GoXLRCommand::SetFader(FaderName::C, channel))
             .await?;
     }
     if let Some(channel) = fader_controls.fader_d {
         client
-            .command(serial, GoXLRCommand::AssignFader(FaderName::D, channel))
+            .command(serial, GoXLRCommand::SetFader(FaderName::D, channel))
             .await?;
     }
     Ok(())

@@ -1,10 +1,11 @@
-use clap::{Args, Parser, Subcommand};
-use goxlr_types::{ChannelName, InputDevice, OutputDevice};
+use clap::{AppSettings, Args, Parser, Subcommand};
+use goxlr_types::{ChannelName, ColourDisplay, FaderName, InputDevice, MuteFunction, OutputDevice};
 
 // TODO: Likely going to shuffle this to use subcommands rather than parameters..
 
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]
+#[clap(global_setting = AppSettings::ArgRequiredElseHelp)]
 pub struct Cli {
     /// The specific device's serial number to execute commands on.
     /// This field is optional if you have exactly one GoXLR, but required if you have more.
@@ -24,8 +25,7 @@ pub struct Cli {
     pub microphone_controls: MicrophoneControls,
 
     #[clap(subcommand)]
-    pub router: Option<RouterCommands>
-
+    pub subcommands: Option<SubCommands>,
 }
 
 #[derive(Debug, Args)]
@@ -140,8 +140,18 @@ pub struct MicrophoneControls {
 }
 
 #[derive(Subcommand, Debug)]
-pub enum RouterCommands {
-    /// Manipulate the GoXLR Router
+#[clap(setting = AppSettings::DeriveDisplayOrder)]
+pub enum SubCommands {
+    /// Print the GoXLR Status
+    Status{},
+
+    /// Commands to manipulate the GoXLR Faders
+    Faders {
+        #[clap(subcommand)]
+        fader: Option<FaderCommands>
+    },
+
+    /// Commands to manipulate the GoXLR Router
     Router {
         /// The input device
         #[clap(arg_enum)]
@@ -153,7 +163,54 @@ pub enum RouterCommands {
 
         /// Is routing enabled between these two devices? [true | false]
         #[clap(parse(try_from_str))]
-        enabled: bool
+        enabled: Option<bool>
     },
+
+    /// Adjust Channel Volumes
+    Volume {
+
+        /// The Channel To Change
+        #[clap(arg_enum)]
+        channel: ChannelName,
+
+        /// The new Volume
+        volume: Option<u8>
+    }
 }
 
+#[derive(Subcommand, Debug)]
+#[clap(setting = AppSettings::DeriveDisplayOrder)]
+pub enum FaderCommands {
+    /// Assign a new Channel to a Fader
+    Channel {
+        /// The Fader to Change
+        #[clap(arg_enum)]
+        fader: FaderName,
+
+        /// The New Channel Name
+        #[clap(arg_enum)]
+        channel: Option<ChannelName>,
+    },
+
+    /// Change the behaviour of a Fader Mute Button
+    MuteBehaviour {
+        /// The Fader to Change
+        #[clap(arg_enum)]
+        fader: FaderName,
+
+        /// Where a single press will mute (Hold will always Mute to All)
+        #[clap(arg_enum)]
+        mute_behaviour: Option<MuteFunction>
+    },
+
+    /// Set the appearance of Slider Lighting
+    Display {
+        /// The Fader to Change
+        #[clap(arg_enum)]
+        fader: FaderName,
+
+        /// The new display method
+        #[clap(arg_enum)]
+        display: Option<ColourDisplay>
+    }
+}
