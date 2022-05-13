@@ -12,6 +12,9 @@ pub struct Cli {
     #[clap(long)]
     pub device: Option<String>,
 
+    #[clap(long)]
+    pub status: bool,
+
     #[clap(flatten, help_heading = "Profile Management")]
     pub profile: Profile,
 
@@ -142,9 +145,6 @@ pub struct MicrophoneControls {
 #[derive(Subcommand, Debug)]
 #[clap(setting = AppSettings::DeriveDisplayOrder)]
 pub enum SubCommands {
-    /// Print the GoXLR Status
-    Status{},
-
     /// Commands to manipulate the GoXLR Faders
     Faders {
         #[clap(subcommand)]

@@ -97,16 +97,6 @@ async fn main() -> Result<()> {
         None => {}
         Some(_) => {
             match &cli.subcommands.unwrap() {
-                SubCommands::Status {} => {
-                    client.poll_status().await?;
-                    println!(
-                        "Profile directory: {}",
-                        client.status().profile_directory.to_string_lossy()
-                    );
-                    for mixer in client.status().mixers.values() {
-                        print_device(mixer);
-                    }
-                }
                 SubCommands::Faders { fader } => {
                     match fader {
                         None => {}
@@ -169,6 +159,17 @@ async fn main() -> Result<()> {
                     }
                 }
             }
+        }
+    }
+
+    if cli.status {
+        client.poll_status().await?;
+        println!(
+            "Profile directory: {}",
+            client.status().profile_directory.to_string_lossy()
+        );
+        for mixer in client.status().mixers.values() {
+            print_device(mixer);
         }
     }
 
