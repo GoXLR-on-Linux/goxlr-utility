@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use clap::{AppSettings, Args, Parser, Subcommand};
 use goxlr_types::{ChannelName, ColourDisplay, FaderName, InputDevice, MuteFunction, OutputDevice};
 
@@ -175,15 +176,29 @@ pub enum SubCommands {
 
     /// Adjust Channel Volumes
     Volume {
-
         /// The Channel To Change
         #[clap(arg_enum)]
         channel: ChannelName,
 
-        /// The new Volume
-        volume: Option<u8>
+        /// The new volume as a percentage [0 - 100]
+        #[clap(parse(try_from_str=parse_volume))]
+        volume_percent: Option<u8>
     }
 }
+
+fn parse_volume(s: &str) -> Result<u8, String> {
+    let value = u8::from_str(s);
+    if value.is_err() {
+        return Err(String::from("Value must be between 0 and 100"));
+    }
+
+    let value = value.unwrap();
+    if value > 100 {
+        return Err(String::from("Value must be lower than 100"));
+    }
+    Ok(value)
+}
+
 
 #[derive(Subcommand, Debug)]
 #[clap(setting = AppSettings::DeriveDisplayOrder)]

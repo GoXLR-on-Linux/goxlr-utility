@@ -4,6 +4,7 @@ mod client;
 mod faders;
 mod microphone;
 
+use std::str::FromStr;
 use crate::channels::apply_channel_volumes;
 use crate::client::Client;
 use crate::faders::apply_fader_controls;
@@ -181,11 +182,15 @@ async fn main() -> Result<()> {
                         println!("Router Getter Not Implemented Yet");
                     }
                 }
-                SubCommands::Volume { channel, volume } => {
-                    if let Some(value) = volume {
+                SubCommands::Volume { channel, volume_percent } => {
+                    if let Some(value) = volume_percent {
+                        // Convert the percentage to a 'correct' value..
+                        let percent = 255 as f32 / 100 as f32;
+                        let value = (percent * *value as f32) as u8;
+
                         client.command(&serial, GoXLRCommand::SetVolume(
                             *channel,
-                            *value
+                            value
                         )).await?;
                     } else {
                         println!("Volume Getter Not Implemented Yet");
@@ -208,6 +213,7 @@ async fn main() -> Result<()> {
 
     Ok(())
 }
+
 
 fn print_device(device: &MixerStatus) {
     println!(
