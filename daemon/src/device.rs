@@ -469,6 +469,20 @@ impl<T: UsbContext> Device<T> {
                 self.profile.set_fader_display(fader, display);
                 self.set_fader_display_from_profile(fader)?;
             }
+            GoXLRCommand::SetFaderColours(fader, top, bottom) => {
+                // Need to get the fader colour map, and set values..
+                self.profile.set_fader_colours(fader, top, bottom)?;
+                self.load_colour_map()?;
+            }
+            GoXLRCommand::SetAllFaderColours(top, bottom) => {
+                // I considered this as part of SetFaderColours, but spamming a new colour map
+                // for every fader change seemed excessive, this allows us to set them all before
+                // reloading.
+                for fader in FaderName::iter() {
+                    self.profile.set_fader_colours(fader, top.to_owned(), bottom.to_owned())?;
+                }
+                self.load_colour_map()?;
+            }
             GoXLRCommand::SetVolume(channel, volume) => {
                 self.profile.set_channel_volume(channel, volume);
                 self.goxlr.set_volume(channel, volume)?;
@@ -757,21 +771,7 @@ impl<T: UsbContext> Device<T> {
         Ok(())
     }
 
-    fn apply_profile(&mut self) -> Result<()> {
-        // Set volumes first, applying mute may modify stuff..
-        for channel in ChannelName::iter() {
-            let channel_volume = self.profile.get_channel_volume(channel);
-            self.goxlr.set_volume(channel, channel_volume)?;
-        }
-
-        // Prepare the faders, and configure channel mute states
-        for fader in FaderName::iter() {
-            self.goxlr.set_fader(fader, self.profile.get_fader_assignment(fader))?;
-            self.apply_mute_from_profile(fader)?;
-        }
-
-        self.apply_cough_from_profile()?;
-
+    fn load_colour_map(&mut self) -> Result<()> {
         // Load the colour Map..
         let use_1_3_40_format = version_newer_or_equal_to(
             &self.hardware.versions.firmware,
@@ -786,6 +786,25 @@ impl<T: UsbContext> Device<T> {
             map.copy_from_slice(&colour_map[0..328]);
             self.goxlr.set_button_colours(map)?;
         }
+
+        Ok(())
+    }
+
+    fn apply_profile(&mut self) -> Result<()> {
+        // Set volumes first, applying mute may modify stuff..
+        for channel in ChannelName::iter() {
+            let channel_volume = self.profile.get_channel_volume(channel);
+            self.goxlr.set_volume(channel, channel_volume)?;
+        }
+
+        // Prepare the faders, and configure channel mute states
+        for fader in FaderName::iter() {
+            self.goxlr.set_fader(fader, self.profile.get_fader_assignment(fader))?;
+            self.apply_mute_from_profile(fader)?;
+        }
+
+        self.apply_cough_from_profile()?;
+        self.load_colour_map()?;
 
         for fader in FaderName::iter() {
             self.set_fader_display_from_profile(fader)?;

@@ -27,6 +27,8 @@ pub enum GoXLRCommand {
     SetFader(FaderName, ChannelName),
     SetFaderMuteFunction(FaderName, MuteFunction),
     SetFaderDisplay(FaderName, ColourDisplay),
+    SetFaderColours(FaderName, String, String),
+    SetAllFaderColours(String, String),
 
     SetVolume(ChannelName, u8),
     SetMicrophoneGain(MicrophoneType, u16),
