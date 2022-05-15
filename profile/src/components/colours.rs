@@ -252,6 +252,18 @@ impl ColourMap {
             self.blink = Some(ColourState::Off);
         }
     }
+
+    pub fn set_colour(&mut self, index: usize, input: Colour) {
+        if let Some(colour) = &mut self.colour_list {
+            colour[index] = Some(input);
+        } else {
+            // Apparently the colour list isn't defined, it should be, but whatever..
+            let mut default = Vec::new();
+            default.resize_with(3, || None);
+            default[index] = Some(input);
+            self.colour_list = Some(default);
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, EnumString, Display)]
@@ -300,11 +312,24 @@ pub struct Colour {
 
 impl Colour {
     pub fn new(rgba: &str) -> Result<Self, ParseError> {
+        // I'm pretty sure now that this is actually wrong, I'll need to do more profile tests to
+        // confirm, but I'm relatively sure the config format is ARGB and not RGBA, but because
+        // the ordering is correct despite naming being wrong, it works.
         Ok(Self {
             red: u8::from_str_radix(&rgba[0..2], 16)?,
             green: u8::from_str_radix(&rgba[2..4], 16)?,
             blue: u8::from_str_radix(&rgba[4..6], 16)?,
             alpha: u8::from_str_radix(&rgba[6..8], 16)?,
+        })
+    }
+
+    // Until I test and fix the above issue, this methods creates based on an RGBA.
+    pub fn fromrgb(rgb: &str) -> Result<Self, ParseError> {
+        Ok(Self {
+            red: u8::from_str_radix("00", 16)?,
+            green: u8::from_str_radix(&rgb[0..2], 16)?,
+            blue: u8::from_str_radix(&rgb[2..4], 16)?,
+            alpha: u8::from_str_radix(&rgb[4..6], 16)?,
         })
     }
 
