@@ -12,6 +12,7 @@ pub struct Cli {
     #[clap(long)]
     pub device: Option<String>,
 
+    /// Display the device information after any subcommands have been executed.
     #[clap(long)]
     pub status: bool,
 
@@ -145,10 +146,16 @@ pub struct MicrophoneControls {
 #[derive(Subcommand, Debug)]
 #[clap(setting = AppSettings::DeriveDisplayOrder)]
 pub enum SubCommands {
-    /// Commands to manipulate the GoXLR Faders
+    /// Commands to manipulate the individual GoXLR Faders
     Faders {
         #[clap(subcommand)]
         fader: Option<FaderCommands>
+    },
+
+    /// Commands to manipulate all GoXLR faders at once
+    FadersAll {
+        #[clap(subcommand)]
+        command: Option<AllFaderCommands>
     },
 
     /// Commands to manipulate the GoXLR Router
@@ -212,5 +219,37 @@ pub enum FaderCommands {
         /// The new display method
         #[clap(arg_enum)]
         display: Option<ColourDisplay>
+    },
+
+    Colour {
+        /// The Fader name to Change
+        #[clap(arg_enum)]
+        fader: FaderName,
+
+        /// Top colour in hex format [RRGGBBAA]
+        top: String,
+
+        /// Bottom colour in hex format [RRGGBBAA]
+        bottom: String
     }
+}
+
+#[derive(Subcommand, Debug)]
+#[clap(setting = AppSettings::DeriveDisplayOrder)]
+pub enum AllFaderCommands {
+    /// Set the appearance of Slider Lighting
+    Display {
+        /// The new display method
+        #[clap(arg_enum)]
+        display: ColourDisplay
+    },
+
+    /// Set the colour of all GoXLR Faders
+    Colour {
+        /// Top colour in hex format [RRGGBBAA]
+        top: String,
+
+        /// Bottom colour in hex format [RRGGBBAA]
+        bottom: String
+    },
 }
