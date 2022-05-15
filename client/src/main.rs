@@ -16,7 +16,7 @@ use goxlr_ipc::{GoXLRCommand, Socket};
 use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice};
 use strum::IntoEnumIterator;
 use tokio::net::UnixStream;
-use crate::cli::{FaderCommands, SubCommands};
+use crate::cli::{AllFaderCommands, FaderCommands, SubCommands};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -131,6 +131,39 @@ async fn main() -> Result<()> {
                                         )).await?;
                                     } else {
                                         println!("Display Getter Not Implemented");
+                                    }
+                                }
+                                FaderCommands::Colour {fader, top, bottom} => {
+                                    // TODO: Error check this, should be RGBA
+                                    client.command(&serial, GoXLRCommand::SetFaderColours(
+                                        *fader,
+                                        top.to_string(),
+                                        bottom.to_string()
+                                    )).await?;
+                                }
+                            }
+                        }
+                    }
+                }
+                SubCommands::FadersAll { command } => {
+                    match command {
+                        None => {}
+                        Some(_) => {
+                            match command.as_ref().unwrap() {
+                                AllFaderCommands::Colour { top, bottom } => {
+                                    client.command(&serial, GoXLRCommand::SetAllFaderColours(
+                                        top.to_string(),
+                                        bottom.to_string()
+                                    )).await?;
+                                },
+                                AllFaderCommands::Display {display} => {
+                                    // This doesn't need a 'special' command for mass apply, as the display
+                                    // is set directly for each fader.
+                                    for fader in FaderName::iter() {
+                                        client.command(&serial, GoXLRCommand::SetFaderDisplay(
+                                            fader,
+                                            *display
+                                        )).await?;
                                     }
                                 }
                             }
