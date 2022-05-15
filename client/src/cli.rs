@@ -226,10 +226,10 @@ pub enum FaderCommands {
         #[clap(arg_enum)]
         fader: FaderName,
 
-        /// Top colour in hex format [RRGGBBAA]
+        /// Top colour in hex format [RRGGBB]
         top: String,
 
-        /// Bottom colour in hex format [RRGGBBAA]
+        /// Bottom colour in hex format [RRGGBB]
         bottom: String
     }
 }
