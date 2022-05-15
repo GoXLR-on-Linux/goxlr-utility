@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Context, Result};
 use enumset::EnumSet;
-use goxlr_profile_loader::components::colours::{ColourDisplay, ColourMap, ColourOffStyle, ColourState};
+use goxlr_profile_loader::components::colours::{Colour, ColourDisplay, ColourMap, ColourOffStyle, ColourState};
 use goxlr_profile_loader::components::colours::ColourOffStyle::Dimmed;
 use goxlr_profile_loader::components::mixer::{FullChannelList, InputChannels, OutputChannels};
 use goxlr_profile_loader::mic_profile::MicProfileSettings;
@@ -156,6 +156,18 @@ impl ProfileAdapter {
     pub fn set_fader_display(&mut self, fader: FaderName, display: BasicColourDisplay) {
         let colours = self.profile.settings_mut().fader_mut(fader as usize).colour_map_mut();
         colours.set_fader_display(standard_to_profile_fader_display(display));
+    }
+
+    // We have a return type here, as there's string parsing involved..
+    pub fn set_fader_colours(&mut self, fader: FaderName, top: String, bottom: String) -> Result<()> {
+        let colours = self.profile.settings_mut().fader_mut(fader as usize).colour_map_mut();
+        if top.len() != 6 || bottom.len() != 6 {
+            return Err(anyhow!("Expected Length: 6 (RRGGBB), Top: {}, Bottom: {}", top.len(), bottom.len()));
+        }
+
+        colours.set_colour(0, Colour::fromrgb(top.as_str())?);
+        colours.set_colour(1, Colour::fromrgb(bottom.as_str())?);
+        Ok(())
     }
 
     pub fn get_channel_volume(&self, channel: ChannelName) -> u8 {
