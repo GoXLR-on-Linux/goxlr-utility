@@ -185,8 +185,7 @@ async fn main() -> Result<()> {
                 SubCommands::Volume { channel, volume_percent } => {
                     if let Some(value) = volume_percent {
                         // Convert the percentage to a 'correct' value..
-                        let percent = 255 as f32 / 100 as f32;
-                        let value = (percent * *value as f32) as u8;
+                        let value = (25.5 * *value as f32) as u8;
 
                         client.command(&serial, GoXLRCommand::SetVolume(
                             *channel,
