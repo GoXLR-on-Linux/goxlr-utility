@@ -2,7 +2,7 @@
 
 This program is designed to prepare a freshly powered on GoXLR for use. It's intended to be run as
 early in the boot process as possible, and will iterate over all GoXLR devices, check their state, and if 
-needed, activate and enable it's features. This is especially useful for the GoXLR Mini device, which loses
+needed, activate and enable its features. This is especially useful for the GoXLR Mini device, which loses
 power on reboot.
 
 This application will (if necessary) temporarily detach the kernel module and thus the GoXLRs sound components,

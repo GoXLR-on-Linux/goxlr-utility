@@ -54,8 +54,7 @@ In my testing, there should never be a situation where `state=0` and `blink=1`.
 
 #### Volume Sliding / Channel Muting
 From my testing, the volume slider on the GoXLR full will only ever 'descend' in a 'Mute to All' state. This state can 
-be provided as part of `MuteFunction::All` for `state=1 && blink=0`, or occur when `state=1 && blink=1`, however, outside
-of the faders, muting a channel doesn't appear to be a direct GoXLR feature (either via the UI, or button presses) but is
+be provided as part of `MuteFunction::All` for `state=1 && blink=0`, or occur when `state=1 && blink=1`, however, outside the faders, muting a channel doesn't appear to be a direct GoXLR feature (either via the UI, or button presses) but is
 something we support via the CLI, and the volume change seems to be purely an asthetic feature of the full sized GoXLR.
 
 *Implementation Thoughts*: A check should be performed, in the case of the GoXLR Mini we should never change the volumes

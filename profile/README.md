@@ -5,7 +5,7 @@ This code attempts to parse a GoXLR profile.xml into a rust structure, with the 
 xml-rs was chosen, due to the somewhat interesting way that the GoXLR names attributes, as it allows for pulling attributes as Strings, allowing for more reusable code.
 Serde was considered, but it can't write XML attributes, nor can it easily handle 'dynamically' named attributes without introducing custom walkers over the XML.
 
-Currently, all known XML is parsing, and writing correctly, and the resulting files can packed into a .goxlr file, and
+Currently, all known XML is parsing, and writing correctly, and the resulting files can be packed into a .goxlr file, and
 successfully loaded into the Application on Windows.
 
 A Java tool is currently available at https://github.com/FrostyCoolSlug/goxlr-profile-xml-validator which uses XmlUnit 
