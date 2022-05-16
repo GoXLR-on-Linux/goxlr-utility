@@ -4,7 +4,6 @@ mod client;
 mod faders;
 mod microphone;
 
-use std::str::FromStr;
 use crate::channels::apply_channel_volumes;
 use crate::client::Client;
 use crate::faders::apply_fader_controls;
