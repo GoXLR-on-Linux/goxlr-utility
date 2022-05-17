@@ -42,13 +42,28 @@ For an up-to-date list of command line arguments, try `goxlr-client --help`!
 
 ```
 goxlr-client 0.1.0
+Nathan Adams <dinnerbone@dinnerbone.com>, Craig McLure <craig@mclure.net>, Lars Mühlbauer
+<lm41@dismail.de>
+Allows control of a TC-Helicon GoXLR or GoXLR Mini, by interacting with a running daemon.
 
 USAGE:
-    goxlr-client [OPTIONS]
+    goxlr-client [OPTIONS] [SUBCOMMAND]
 
 OPTIONS:
-    -h, --help       Print help information
-    -V, --version    Print version information
+        --device <DEVICE>    The specific device's serial number to execute commands on. This field
+                             is optional if you have exactly one GoXLR, but required if you have
+                             more
+        --status             Display the device information after any subcommands have been executed
+    -h, --help               Print help information
+    -V, --version            Print version information
+
+Profile Management:
+        --list-profiles                     List all profiles available for loading
+        --list-mic-profiles                 List all microphone profiles available for loading
+        --load-profile <PROFILE>            Load a GoXLR Profile
+        --load-mic-profile <MIC_PROFILE>    Load a GoXLR Microphone Profile
+        --save-profile                      Saves the current configuration to disk
+        --save-mic-profile                  Save the currently configured microphone profile to disk
 
 Fader controls:
         --fader-a <FADER_A>    Assign fader A [possible values: mic, line-in, console, system, game,
@@ -61,28 +76,36 @@ Fader controls:
                                chat, sample, music, headphones, mic-monitor, line-out]
 
 Channel volumes:
-        --chat-volume <CHAT_VOLUME>                  Set Chat volume (0-255)
-        --console-volume <CONSOLE_VOLUME>            Set Console volume (0-255)
-        --game-volume <GAME_VOLUME>                  Set Game volume (0-255)
-        --headphones-volume <HEADPHONES_VOLUME>      Set Headphones volume (0-255)
-        --line-in-volume <LINE_IN_VOLUME>            Set Line-In volume (0-255)
-        --line-out-volume <LINE_OUT_VOLUME>          Set Line-Out volume (0-255)
-        --mic-monitor-volume <MIC_MONITOR_VOLUME>    Set Mic-Monitor volume (0-255)
         --mic-volume <MIC_VOLUME>                    Set Mic volume (0-255)
-        --music-volume <MUSIC_VOLUME>                Set Music volume (0-255)
-        --sample-volume <SAMPLE_VOLUME>              Set Sample volume (0-255)
+        --line-in-volume <LINE_IN_VOLUME>            Set Line-In volume (0-255)
+        --console-volume <CONSOLE_VOLUME>            Set Console volume (0-255)
         --system-volume <SYSTEM_VOLUME>              Set System volume (0-255)
+        --game-volume <GAME_VOLUME>                  Set Game volume (0-255)
+        --chat-volume <CHAT_VOLUME>                  Set Chat volume (0-255)
+        --sample-volume <SAMPLE_VOLUME>              Set Sample volume (0-255)
+        --music-volume <MUSIC_VOLUME>                Set Music volume (0-255)
+        --headphones-volume <HEADPHONES_VOLUME>      Set Headphones volume (0-255)
+        --mic-monitor-volume <MIC_MONITOR_VOLUME>    Set Mic-Monitor volume (0-255)
+        --line-out-volume <LINE_OUT_VOLUME>          Set Line-Out volume (0-255)
 
-Channel states:
-        --chat-muted <CHAT_MUTED>                  Set Chat muted status (true/false)
-        --console-muted <CONSOLE_MUTED>            Set Console muted status (true/false)
-        --game-muted <GAME_MUTED>                  Set Game muted status (true/false)
-        --headphones-muted <HEADPHONES_MUTED>      Set Headphones muted status (true/false)
-        --line-in-muted <LINE_IN_MUTED>            Set Line-In muted status (true/false)
-        --line-out-muted <LINE_OUT_MUTED>          Set Line-Out muted status (true/false)
-        --mic-monitor-muted <MIC_MONITOR_MUTED>    Set Mic-Monitor muted status (true/false)
-        --mic-muted <MIC_MUTED>                    Set Mic muted status (true/false)
-        --music-muted <MUSIC_MUTED>                Set Music muted status (true/false)
-        --sample-muted <SAMPLE_MUTED>              Set Sample muted status (true/false)
-        --system-muted <SYSTEM_MUTED>              Set System muted status (true/false)
+Microphone controls:
+        --dynamic-gain <DYNAMIC_GAIN>
+            Set the gain of the plugged in dynamic (XLR) microphone. Value is in decibels and
+            recommended to be lower than 72dB
+
+        --condenser-gain <CONDENSER_GAIN>
+            Set the gain of the plugged in condenser (XLR with phantom power) microphone. Value is
+            in decibels and recommended to be lower than 72dB
+
+        --jack-gain <JACK_GAIN>
+            Set the gain of the plugged in jack (3.5mm) microphone. Value is in decibels and
+            recommended to be lower than 72dB
+
+SUBCOMMANDS:
+    faders        Commands to manipulate the individual GoXLR Faders
+    faders-all    Commands to manipulate all GoXLR faders at once
+    router        Commands to manipulate the GoXLR Router
+    volume        Adjust Channel Volumes
+    help          Print this message or the help of the given subcommand(s)
+
 ```
