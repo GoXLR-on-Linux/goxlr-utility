@@ -226,6 +226,10 @@ impl HardtuneEffectBase {
     pub fn get_preset(&self, preset: Preset) -> &HardtuneEffect {
         &self.preset_map[preset]
     }
+
+    pub fn get_preset_mut(&mut self, preset: Preset) -> &mut HardtuneEffect {
+        &mut self.preset_map[preset]
+    }
 }
 
 #[derive(Debug, Default)]
@@ -260,6 +264,10 @@ impl HardtuneEffect {
 
     pub fn state(&self) -> bool {
         self.state
+    }
+
+    pub fn set_state(&mut self, state: bool) {
+        self.state = state;
     }
 }
 

@@ -440,6 +440,39 @@ impl ProfileAdapter {
         self.profile.settings_mut().effects_mut(preset).colour_map_mut().set_state_on(true);
     }
 
+    pub fn toggle_megaphone(&mut self) {
+        let current = self.profile.settings().context().selected_effects();
+
+        let new_state = !self.profile.settings().megaphone_effect().get_preset(current).state();
+
+        self.profile.settings_mut().megaphone_effect_mut().get_preset_mut(current).set_state(new_state);
+        self.profile.settings_mut().megaphone_effect_mut().colour_map_mut().set_state_on(new_state);
+    }
+
+    pub fn toggle_robot(&mut self) {
+        let current = self.profile.settings().context().selected_effects();
+
+        let new_state = !self.profile.settings().robot_effect().get_preset(current).state();
+
+        self.profile.settings_mut().robot_effect_mut().get_preset_mut(current).set_state(new_state);
+        self.profile.settings_mut().robot_effect_mut().colour_map_mut().set_state_on(new_state);
+    }
+
+    pub fn toggle_hardtune(&mut self) {
+        let current = self.profile.settings().context().selected_effects();
+
+        let new_state = !self.profile.settings().hardtune_effect().get_preset(current).state();
+
+        self.profile.settings_mut().hardtune_effect_mut().get_preset_mut(current).set_state(new_state);
+        self.profile.settings_mut().hardtune_effect_mut().colour_map_mut().set_state_on(new_state);
+    }
+
+    pub fn toggle_effects(&mut self) {
+        let state = !self.profile.settings().simple_element(SimpleElements::FxClear).colour_map().get_state();
+        self.profile.settings_mut().simple_element_mut(SimpleElements::FxClear).colour_map_mut().set_state_on(state);
+    }
+
+
     /** Generic Stuff **/
     pub fn get_button_colour_state(&self, button: Buttons) -> ButtonStates {
         let colour_map = self.get_button_colour_map(button);

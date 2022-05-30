@@ -271,6 +271,10 @@ impl RobotEffectBase {
     pub fn get_preset(&self, preset: Preset) -> &RobotEffect {
         &self.preset_map[preset]
     }
+
+    pub fn get_preset_mut(&mut self, preset: Preset) -> &mut RobotEffect {
+        &mut self.preset_map[preset]
+    }
 }
 
 #[derive(Debug, Default)]
@@ -321,6 +325,10 @@ impl RobotEffect {
 
     pub fn state(&self) -> bool {
         self.state
+    }
+
+    pub fn set_state(&mut self, state: bool) {
+        self.state = state;
     }
 }
 

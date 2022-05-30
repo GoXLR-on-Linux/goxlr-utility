@@ -227,6 +227,21 @@ impl<T: UsbContext> Device<T> {
             Buttons::EffectSelect6 => {
                 self.load_effect_bank(EffectBankPresets::Preset6).await?;
             }
+
+            // The following 3 are simple, but will need more work once effects are
+            // actually applied!
+            Buttons::EffectMegaphone => {
+                self.toggle_megaphone().await?;
+            },
+            Buttons::EffectRobot => {
+                self.toggle_robot().await?;
+            }
+            Buttons::EffectHardTune => {
+                self.toggle_hardtune().await?;
+            }
+            Buttons::EffectFx => {
+                self.toggle_effects().await?;
+            }
             _ => {}
         }
         self.update_button_states()?;
@@ -439,6 +454,26 @@ impl<T: UsbContext> Device<T> {
 
     async fn load_effect_bank(&mut self, preset: EffectBankPresets) -> Result<()> {
         self.profile.load_effect_bank(preset);
+        Ok(())
+    }
+
+    async fn toggle_megaphone(&mut self) -> Result<()> {
+        self.profile.toggle_megaphone();
+        Ok(())
+    }
+
+    async fn toggle_robot(&mut self) -> Result<()> {
+        self.profile.toggle_robot();
+        Ok(())
+    }
+
+    async fn toggle_hardtune(&mut self) -> Result<()> {
+        self.profile.toggle_hardtune();
+        Ok(())
+    }
+
+    async fn toggle_effects(&mut self) -> Result<()> {
+        self.profile.toggle_effects();
         Ok(())
     }
 

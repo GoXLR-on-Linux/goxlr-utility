@@ -289,6 +289,11 @@ impl MegaphoneEffectBase {
     pub fn get_preset(&self, preset: Preset) -> &MegaphoneEffect {
         &self.preset_map[preset]
     }
+
+    pub fn get_preset_mut(&mut self, preset: Preset) -> &mut MegaphoneEffect {
+        &mut self.preset_map[preset]
+    }
+
 }
 
 /**
@@ -346,6 +351,10 @@ impl MegaphoneEffect {
 
     pub fn state(&self) -> bool {
         self.state
+    }
+
+    pub fn set_state(&mut self, state: bool) {
+        self.state = state;
     }
 }
 
