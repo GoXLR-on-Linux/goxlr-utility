@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["ParseError",""],["SimpleElements",""]],"struct":[["SimpleElement","These have no special properties, they are literally just button colours.."],["SimpleElementsIter",""]]});

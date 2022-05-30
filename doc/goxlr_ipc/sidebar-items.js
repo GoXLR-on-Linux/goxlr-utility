@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["DaemonRequest",""],["DaemonResponse",""],["DeviceType",""],["GoXLRCommand",""]],"struct":[["DaemonStatus",""],["FaderStatus",""],["HardwareStatus",""],["MixerStatus",""],["Socket",""],["UsbProductInformation",""]]});

@@ -1,0 +1,1 @@
+window.ALL_CRATES = ["goxlr_client","goxlr_daemon","goxlr_initialiser","goxlr_ipc","goxlr_profile_loader","goxlr_types","goxlr_usb"];
