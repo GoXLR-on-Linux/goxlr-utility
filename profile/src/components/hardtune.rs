@@ -218,10 +218,18 @@ impl HardtuneEffectBase {
     pub fn colour_map(&self) -> &ColourMap {
         &self.colour_map
     }
+
+    pub fn colour_map_mut(&mut self) -> &mut ColourMap {
+        &mut self.colour_map
+    }
+
+    pub fn get_preset(&self, preset: Preset) -> &HardtuneEffect {
+        &self.preset_map[preset]
+    }
 }
 
 #[derive(Debug, Default)]
-struct HardtuneEffect {
+pub struct HardtuneEffect {
     // State here determines if the hardtune is on or off when this preset is loaded.
     state: bool,
 
@@ -248,6 +256,10 @@ impl HardtuneEffect {
             pitch_amt: 0,
             source: None,
         }
+    }
+
+    pub fn state(&self) -> bool {
+        self.state
     }
 }
 

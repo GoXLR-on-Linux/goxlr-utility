@@ -281,6 +281,14 @@ impl MegaphoneEffectBase {
     pub fn colour_map(&self) -> &ColourMap {
         &self.colour_map
     }
+
+    pub fn colour_map_mut(&mut self) -> &mut ColourMap {
+        &mut self.colour_map
+    }
+
+    pub fn get_preset(&self, preset: Preset) -> &MegaphoneEffect {
+        &self.preset_map[preset]
+    }
 }
 
 /**
@@ -292,7 +300,7 @@ impl MegaphoneEffectBase {
  *
  */
 #[derive(Debug, Default)]
-struct MegaphoneEffect {
+pub struct MegaphoneEffect {
     // State here determines if the megaphone is on or off when this preset is loaded.
     state: bool,
 
@@ -333,6 +341,11 @@ impl MegaphoneEffect {
             trans_drive_pot_gain_comp_mid: 0,
             trans_drive_pot_gain_comp_max: 0,
         }
+    }
+
+
+    pub fn state(&self) -> bool {
+        self.state
     }
 }
 

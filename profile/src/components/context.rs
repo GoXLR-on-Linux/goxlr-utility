@@ -131,4 +131,11 @@ impl Context {
         writer.write(XmlWriterEvent::end_element())?;
         Ok(())
     }
+
+    pub fn set_selected_effects(&mut self, selected_effects: Preset) {
+        self.selected_effects = selected_effects;
+    }
+    pub fn selected_effects(&self) -> Preset {
+        self.selected_effects
+    }
 }

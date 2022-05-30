@@ -20,6 +20,7 @@ use goxlr_profile_loader::components::megaphone::Preset;
 use goxlr_profile_loader::components::mute::{MuteButton, MuteFunction};
 use goxlr_profile_loader::components::mute_chat::MuteChat;
 use goxlr_profile_loader::components::simple::SimpleElements;
+use goxlr_types::EffectBankPresets::Preset2;
 use goxlr_usb::buttonstate::{Buttons, ButtonStates};
 
 pub const DEFAULT_PROFILE_NAME: &str = "Default - Vaporwave";
@@ -416,8 +417,27 @@ impl ProfileAdapter {
 
     /** Effects Bank Behaviours **/
     pub fn load_effect_bank(&mut self, preset: EffectBankPresets) {
-        // Ok, first thing we need to do is set the prefix in the profile..
+        let preset = standard_to_profile_preset(preset);
+        let current = self.profile.settings().context().selected_effects();
 
+        // Ok, first thing we need to do is set the prefix in the profile..
+        self.profile.settings_mut().context_mut().set_selected_effects(preset);
+
+        // Disable the 'On' state of the existing button..
+        self.profile.settings_mut().effects_mut(current).colour_map_mut().set_state_on(false);
+
+        // Now we need to go through all the buttons, and set their new colour state..
+        let state = self.profile.settings_mut().robot_effect().get_preset(preset).state();
+        self.profile.settings_mut().robot_effect_mut().colour_map_mut().set_state_on(state);
+
+        let state = self.profile.settings_mut().megaphone_effect().get_preset(preset).state();
+        self.profile.settings_mut().megaphone_effect_mut().colour_map_mut().set_state_on(state);
+
+        let state = self.profile.settings_mut().hardtune_effect().get_preset(preset).state();
+        self.profile.settings_mut().hardtune_effect_mut().colour_map_mut().set_state_on(state);
+
+        // Set the new button 'On'
+        self.profile.settings_mut().effects_mut(preset).colour_map_mut().set_state_on(true);
     }
 
     /** Generic Stuff **/
@@ -787,6 +807,28 @@ fn standard_to_profile_channel(value: ChannelName) -> FullChannelList {
         ChannelName::Headphones => FullChannelList::Headphones,
         ChannelName::MicMonitor => FullChannelList::MicMonitor,
         ChannelName::LineOut => FullChannelList::LineOut,
+    }
+}
+
+fn profile_to_standard_preset(value: Preset) -> EffectBankPresets {
+    match value {
+        Preset::Preset1 => EffectBankPresets::Preset1,
+        Preset::Preset2 => EffectBankPresets::Preset2,
+        Preset::Preset3 => EffectBankPresets::Preset3,
+        Preset::Preset4 => EffectBankPresets::Preset4,
+        Preset::Preset5 => EffectBankPresets::Preset5,
+        Preset::Preset6 => EffectBankPresets::Preset6
+    }
+}
+
+fn standard_to_profile_preset(value: EffectBankPresets) -> Preset {
+    match value {
+        EffectBankPresets::Preset1 => Preset::Preset1,
+        EffectBankPresets::Preset2 => Preset::Preset2,
+        EffectBankPresets::Preset3 => Preset::Preset3,
+        EffectBankPresets::Preset4 => Preset::Preset4,
+        EffectBankPresets::Preset5 => Preset::Preset5,
+        EffectBankPresets::Preset6 => Preset::Preset6
     }
 }
 

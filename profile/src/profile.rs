@@ -626,6 +626,10 @@ impl ProfileSettings {
         &self.effects[effect].as_ref().unwrap()
     }
 
+    pub fn effects_mut(&mut self, effect: Preset) -> &mut Effects {
+        self.effects[effect].as_mut().unwrap()
+    }
+
     pub fn mute_chat_mut(&mut self) -> &mut MuteChat {
         &mut self.mute_chat
     }
@@ -638,12 +642,24 @@ impl ProfileSettings {
         &self.megaphone_effect
     }
 
+    pub fn megaphone_effect_mut(&mut self) -> &mut MegaphoneEffectBase {
+        &mut self.megaphone_effect
+    }
+
     pub fn robot_effect(&self) -> &RobotEffectBase {
         &self.robot_effect
     }
 
+    pub fn robot_effect_mut(&mut self) -> &mut RobotEffectBase {
+        &mut self.robot_effect
+    }
+
     pub fn hardtune_effect(&self) -> &HardtuneEffectBase {
         &self.hardtune_effect
+    }
+
+    pub fn hardtune_effect_mut(&mut self) -> &mut HardtuneEffectBase {
+        &mut self.hardtune_effect
     }
 
     pub fn sample_button(&self, button: SampleButtons) -> &SampleBase {
@@ -682,5 +698,14 @@ impl ProfileSettings {
 
         // If for whatever reason, this is missing, we'll use the global colour.
         return self.simple_elements[SimpleElements::GlobalColour].as_ref().unwrap();
+    }
+
+
+    pub fn context(&self) -> &Context {
+        &self.context
+    }
+
+    pub fn context_mut(&mut self) -> &mut Context {
+        &mut self.context
     }
 }

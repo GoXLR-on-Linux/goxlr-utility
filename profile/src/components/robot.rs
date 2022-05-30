@@ -263,10 +263,18 @@ impl RobotEffectBase {
     pub fn colour_map(&self) -> &ColourMap {
         &self.colour_map
     }
+
+    pub fn colour_map_mut(&mut self) -> &mut ColourMap {
+        &mut self.colour_map
+    }
+
+    pub fn get_preset(&self, preset: Preset) -> &RobotEffect {
+        &self.preset_map[preset]
+    }
 }
 
 #[derive(Debug, Default)]
-struct RobotEffect {
+pub struct RobotEffect {
     // State here determines if the robot effect is on or off when this preset is loaded.
     state: bool,
 
@@ -309,6 +317,10 @@ impl RobotEffect {
             vocoder_high_gain: 0,
             vocoder_high_bw: 0,
         }
+    }
+
+    pub fn state(&self) -> bool {
+        self.state
     }
 }
 

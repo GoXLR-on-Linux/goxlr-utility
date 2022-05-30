@@ -3,7 +3,7 @@ use crate::SettingsHandle;
 use anyhow::Result;
 use enumset::EnumSet;
 use goxlr_ipc::{DeviceType, FaderStatus, GoXLRCommand, HardwareStatus, MixerStatus};
-use goxlr_types::{ChannelName, EffectKey, FaderName, InputDevice as BasicInputDevice, MicrophoneParamKey, OutputDevice as BasicOutputDevice, VersionNumber };
+use goxlr_types::{ChannelName, EffectBankPresets, EffectKey, FaderName, InputDevice as BasicInputDevice, MicrophoneParamKey, OutputDevice as BasicOutputDevice, VersionNumber};
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::channelstate::ChannelState;
 use goxlr_usb::goxlr::GoXLR;
@@ -208,6 +208,24 @@ impl<T: UsbContext> Device<T> {
             },
             Buttons::Bleep => {
                 self.handle_swear_button(false).await?;
+            }
+            Buttons::EffectSelect1 => {
+                self.load_effect_bank(EffectBankPresets::Preset1).await?;
+            }
+            Buttons::EffectSelect2 => {
+                self.load_effect_bank(EffectBankPresets::Preset2).await?;
+            }
+            Buttons::EffectSelect3 => {
+                self.load_effect_bank(EffectBankPresets::Preset3).await?;
+            }
+            Buttons::EffectSelect4 => {
+                self.load_effect_bank(EffectBankPresets::Preset4).await?;
+            }
+            Buttons::EffectSelect5 => {
+                self.load_effect_bank(EffectBankPresets::Preset5).await?;
+            }
+            Buttons::EffectSelect6 => {
+                self.load_effect_bank(EffectBankPresets::Preset6).await?;
             }
             _ => {}
         }
@@ -416,6 +434,11 @@ impl<T: UsbContext> Device<T> {
     async fn handle_swear_button(&mut self, press: bool) -> Result<()> {
         // Pretty simple, turn the light on when pressed, off when released..
         self.profile.set_swear_button_on(press);
+        Ok(())
+    }
+
+    async fn load_effect_bank(&mut self, preset: EffectBankPresets) -> Result<()> {
+        self.profile.load_effect_bank(preset);
         Ok(())
     }
 
