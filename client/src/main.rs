@@ -16,7 +16,7 @@ use goxlr_ipc::{GoXLRCommand, Socket};
 use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice};
 use strum::IntoEnumIterator;
 use tokio::net::UnixStream;
-use crate::cli::{AllFaderCommands, FaderCommands, SubCommands};
+use crate::cli::{AllFaderCommands, CoughCommands, FaderCommands, SubCommands};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -141,6 +141,20 @@ async fn main() -> Result<()> {
                                         bottom.to_string()
                                     )).await?;
                                 }
+                                FaderCommands::ButtonColour {fader, colour_one, off_style, colour_two} => {
+                                    let mut colour_send = None;
+                                    if let Some(value) = colour_two {
+                                        colour_send = Some(value.to_string());
+                                    }
+
+                                    // We might end up moving colour setting to elsewhere, for now we'll do it here..
+                                    client.command(&serial, GoXLRCommand::SetFaderButtonColours(
+                                        *fader,
+                                        colour_one.to_string(),
+                                        *off_style,
+                                        colour_send,
+                                    )).await?;
+                                }
                             }
                         }
                     }
@@ -165,6 +179,19 @@ async fn main() -> Result<()> {
                                             *display
                                         )).await?;
                                     }
+                                },
+                                AllFaderCommands::ButtonColour {colour_one, off_style, colour_two} => {
+                                    let mut colour_send = None;
+                                    if let Some(value) = colour_two {
+                                        colour_send = Some(value.to_string());
+                                    }
+
+                                    // We might end up moving colour setting to elsewhere, for now we'll do it here..
+                                    client.command(&serial, GoXLRCommand::SetAllFaderButtonColours(
+                                        colour_one.to_string(),
+                                        *off_style,
+                                        colour_send,
+                                    )).await?;
                                 }
                             }
                         }
@@ -192,6 +219,38 @@ async fn main() -> Result<()> {
                         )).await?;
                     } else {
                         println!("Volume Getter Not Implemented Yet");
+                    }
+                }
+                SubCommands::Cough { command } => {
+                    match Some(command) {
+                        None => {}
+                        Some(_) => {
+                            match command.as_ref().unwrap() {
+                                CoughCommands::MuteBehaviour { mute_behaviour } => {
+                                    if let Some(value) = mute_behaviour {
+                                        client.command(&serial, GoXLRCommand::SetCoughMuteFunction(
+                                            *value
+                                        )).await?;
+                                    } else {
+                                        println!("Mute behaviour Getter not Implemented");
+                                    }
+                                }
+                                CoughCommands::Colour { colour_one, off_style, colour_two } => {
+                                    // Might be a cleaner way to do this?
+                                    let mut colour_send = None;
+                                    if let Some(value) = colour_two {
+                                        colour_send = Some(value.to_string());
+                                    }
+
+                                    // We might end up moving colour setting to elsewhere, for now we'll do it here..
+                                    client.command(&serial, GoXLRCommand::SetCoughColourConfiguration(
+                                        colour_one.to_string(),
+                                        *off_style,
+                                        colour_send,
+                                    )).await?;
+                                }
+                            }
+                        }
                     }
                 }
             }

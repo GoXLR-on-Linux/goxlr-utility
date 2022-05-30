@@ -1,6 +1,6 @@
 use std::str::FromStr;
 use clap::{AppSettings, Args, Parser, Subcommand};
-use goxlr_types::{ChannelName, ColourDisplay, FaderName, InputDevice, MuteFunction, OutputDevice};
+use goxlr_types::{ChannelName, ColourDisplay, ColourOffStyle, FaderName, InputDevice, MuteFunction, OutputDevice};
 
 // TODO: Likely going to shuffle this to use subcommands rather than parameters..
 
@@ -147,6 +147,17 @@ pub struct MicrophoneControls {
 #[derive(Subcommand, Debug)]
 #[clap(setting = AppSettings::DeriveDisplayOrder)]
 pub enum SubCommands {
+    /// Adjust Channel Volumes
+    Volume {
+        /// The Channel To Change
+        #[clap(arg_enum)]
+        channel: ChannelName,
+
+        /// The new volume as a percentage [0 - 100]
+        #[clap(parse(try_from_str=parse_volume))]
+        volume_percent: Option<u8>
+    },
+
     /// Commands to manipulate the individual GoXLR Faders
     Faders {
         #[clap(subcommand)]
@@ -157,6 +168,12 @@ pub enum SubCommands {
     FadersAll {
         #[clap(subcommand)]
         command: Option<AllFaderCommands>
+    },
+
+    /// Commands for configuring the cough button
+    Cough {
+        #[clap(subcommand)]
+        command: Option<CoughCommands>
     },
 
     /// Commands to manipulate the GoXLR Router
@@ -173,17 +190,6 @@ pub enum SubCommands {
         #[clap(parse(try_from_str))]
         enabled: Option<bool>
     },
-
-    /// Adjust Channel Volumes
-    Volume {
-        /// The Channel To Change
-        #[clap(arg_enum)]
-        channel: ChannelName,
-
-        /// The new volume as a percentage [0 - 100]
-        #[clap(parse(try_from_str=parse_volume))]
-        volume_percent: Option<u8>
-    }
 }
 
 fn parse_volume(s: &str) -> Result<u8, String> {
@@ -236,6 +242,7 @@ pub enum FaderCommands {
         display: Option<ColourDisplay>
     },
 
+    /// Sets the Top and Bottom colours of a fader
     Colour {
         /// The Fader name to Change
         #[clap(arg_enum)]
@@ -246,6 +253,45 @@ pub enum FaderCommands {
 
         /// Bottom colour in hex format [RRGGBB]
         bottom: String
+    },
+
+    ButtonColour {
+        /// The Fader to Change
+        #[clap(arg_enum)]
+        fader: FaderName,
+
+        /// The primary button colour [RRGGBB]
+        colour_one: String,
+
+        /// How the button should be presented when 'off'
+        #[clap(arg_enum)]
+        off_style: ColourOffStyle,
+
+        /// The secondary button colour [RRGGBB]
+        colour_two: Option<String>,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+#[clap(setting = AppSettings::DeriveDisplayOrder)]
+pub enum CoughCommands {
+    /// Change the behaviour of a Fader Mute Button
+    MuteBehaviour {
+        /// Where a single press will mute (Hold will always Mute to All)
+        #[clap(arg_enum)]
+        mute_behaviour: Option<MuteFunction>
+    },
+
+    Colour {
+        /// The primary button colour [RRGGBB]
+        colour_one: String,
+
+        /// How the button should be presented when 'off'
+        #[clap(arg_enum)]
+        off_style: ColourOffStyle,
+
+        /// The secondary button colour [RRGGBB]
+        colour_two: Option<String>,
     }
 }
 
@@ -261,10 +307,23 @@ pub enum AllFaderCommands {
 
     /// Set the colour of all GoXLR Faders
     Colour {
-        /// Top colour in hex format [RRGGBBAA]
+        /// Top colour in hex format [RRGGBB]
         top: String,
 
-        /// Bottom colour in hex format [RRGGBBAA]
+        /// Bottom colour in hex format [RRGGBB]
         bottom: String
     },
+
+    /// Set the colours of all the fader buttons
+    ButtonColour {
+        /// The primary button colour [RRGGBB]
+        colour_one: String,
+
+        /// How the button should be presented when 'off'
+        #[clap(arg_enum)]
+        off_style: ColourOffStyle,
+
+        /// The secondary button colour [RRGGBB]
+        colour_two: Option<String>,
+    }
 }

@@ -152,6 +152,9 @@ impl MuteChat {
     pub fn colour_map(&self) -> &ColourMap {
         &self.colour_map
     }
+    pub fn colour_map_mut(&mut self) -> &mut ColourMap {
+        &mut self.colour_map
+    }
     pub fn is_cough_toggle(&self) -> bool {
         self.cough_behaviour == CoughToggle::Toggle
     }
@@ -165,8 +168,8 @@ impl MuteChat {
     pub fn cough_behaviour(&self) -> &CoughToggle {
         &self.cough_behaviour
     }
-    pub fn cough_mute_source(&self) -> MuteFunction {
-        self.cough_mute_source
+    pub fn cough_mute_source(&self) -> &MuteFunction {
+        &self.cough_mute_source
     }
     pub fn cough_button_on(&self) -> bool {
         self.cough_button_on

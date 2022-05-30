@@ -306,6 +306,16 @@ impl<T: UsbContext> Device<T> {
         Ok(())
     }
 
+    async fn unmute_chat_if_muted(&mut self) -> Result<()> {
+        let (_mute_toggle, muted_to_x, muted_to_all, _mute_function) = self.profile.get_mute_chat_button_state();
+
+        if muted_to_x || muted_to_all {
+            self.handle_cough_mute(true, false, false, false).await?;
+        }
+
+        Ok(())
+    }
+
     // This one's a little obnoxious because it's heavily settings dependent, so will contain a
     // large volume of comments working through states, feel free to remove them later :)
     async fn handle_cough_mute(&mut self, press: bool, release: bool, held: bool, held_called: bool) -> Result<()> {
@@ -473,7 +483,14 @@ impl<T: UsbContext> Device<T> {
                 // Need to get the fader colour map, and set values..
                 self.profile.set_fader_colours(fader, top, bottom)?;
                 self.load_colour_map()?;
-            }
+            },
+            GoXLRCommand::SetFaderButtonColours(fader, one, style, two) => {
+                self.profile.set_mute_button_off_style(fader, style);
+                self.profile.set_mute_button_colours(fader, one, two)?;
+
+                self.load_colour_map()?;
+                self.update_button_states()?;
+            },
             GoXLRCommand::SetAllFaderColours(top, bottom) => {
                 // I considered this as part of SetFaderColours, but spamming a new colour map
                 // for every fader change seemed excessive, this allows us to set them all before
@@ -483,10 +500,36 @@ impl<T: UsbContext> Device<T> {
                 }
                 self.load_colour_map()?;
             }
+            GoXLRCommand::SetAllFaderButtonColours(one, style, two) => {
+                for fader in FaderName::iter() {
+                    self.profile.set_mute_button_off_style(fader, style);
+                    self.profile.set_mute_button_colours(fader,one.to_owned(), two.to_owned())?;
+                }
+                self.load_colour_map()?;
+                self.update_button_states()?;
+            }
             GoXLRCommand::SetVolume(channel, volume) => {
                 self.profile.set_channel_volume(channel, volume);
                 self.goxlr.set_volume(channel, volume)?;
             }
+
+            GoXLRCommand::SetCoughMuteFunction(mute_function) => {
+                if self.profile.get_chat_mute_button_behaviour() == mute_function {
+                    // Settings are the same..
+                    return Ok(());
+                }
+
+                // Unmute the channel to prevent weirdness, then set new behaviour
+                self.unmute_chat_if_muted().await?;
+                self.profile.set_chat_mute_button_behaviour(mute_function);
+            }
+            GoXLRCommand::SetCoughColourConfiguration(colour_one, off_style, colour_two) => {
+                self.profile.set_mute_chat_off_style(off_style);
+                self.profile.set_mute_chat_colours(colour_one, colour_two)?;
+                self.load_colour_map()?;
+                self.update_button_states()?;
+            }
+
             GoXLRCommand::SetMicrophoneGain(mic_type, gain) => {
                 self.goxlr.set_microphone_gain(mic_type, gain.into())?;
                 self.mic_profile.set_mic_type(mic_type);

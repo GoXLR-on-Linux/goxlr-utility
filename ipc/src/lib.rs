@@ -5,7 +5,7 @@ mod device;
 mod socket;
 
 pub use device::*;
-use goxlr_types::{ChannelName, ColourDisplay, FaderName, InputDevice, MicrophoneType, MuteFunction, OutputDevice};
+use goxlr_types::{ChannelName, ColourDisplay, ColourOffStyle, FaderName, InputDevice, MicrophoneType, MuteFunction, OutputDevice};
 pub use socket::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -28,11 +28,18 @@ pub enum GoXLRCommand {
     SetFaderMuteFunction(FaderName, MuteFunction),
     SetFaderDisplay(FaderName, ColourDisplay),
     SetFaderColours(FaderName, String, String),
+    SetFaderButtonColours(FaderName, String, ColourOffStyle, Option<String>),
     SetAllFaderColours(String, String),
+    SetAllFaderButtonColours(String, ColourOffStyle, Option<String>),
+
 
     SetVolume(ChannelName, u8),
     SetMicrophoneGain(MicrophoneType, u16),
     SetRouter(InputDevice, OutputDevice, bool),
+
+    // Cough Button
+    SetCoughMuteFunction(MuteFunction),
+    SetCoughColourConfiguration(String, ColourOffStyle, Option<String>),
 
     // Profile Handling..
     ListProfiles(),

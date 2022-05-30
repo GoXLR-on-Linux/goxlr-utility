@@ -239,6 +239,15 @@ pub enum ColourDisplay {
     GradientMeter,
 }
 
+#[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(clap::ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum ColourOffStyle {
+    Dimmed,
+    Colour2,
+    DimmedColour2,
+}
+
 // MuteChat
 #[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]

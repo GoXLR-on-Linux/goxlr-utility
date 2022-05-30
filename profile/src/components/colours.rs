@@ -264,6 +264,9 @@ impl ColourMap {
             self.colour_list = Some(default);
         }
     }
+    pub fn set_off_style(&mut self, off_style: ColourOffStyle) {
+        self.off_style = off_style;
+    }
 }
 
 #[derive(Debug, PartialEq, EnumString, Display)]

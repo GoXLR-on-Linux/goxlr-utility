@@ -6,7 +6,7 @@ use goxlr_profile_loader::components::mixer::{FullChannelList, InputChannels, Ou
 use goxlr_profile_loader::mic_profile::MicProfileSettings;
 use goxlr_profile_loader::profile::{Profile, ProfileSettings};
 use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
-use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice, VersionNumber, MuteFunction as BasicMuteFunction, ColourDisplay as BasicColourDisplay };
+use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice, VersionNumber, MuteFunction as BasicMuteFunction, ColourDisplay as BasicColourDisplay, ColourOffStyle as BasicColourOffStyle };
 use goxlr_usb::colouring::ColourTargets;
 use log::error;
 use std::fs::File;
@@ -17,6 +17,7 @@ use strum::IntoEnumIterator;
 use byteorder::{ByteOrder, LittleEndian};
 use enum_map::EnumMap;
 use goxlr_profile_loader::components::mute::{MuteButton, MuteFunction};
+use goxlr_profile_loader::components::mute_chat::MuteChat;
 use goxlr_profile_loader::components::simple::SimpleElements;
 use goxlr_usb::buttonstate::{Buttons, ButtonStates};
 
@@ -267,8 +268,48 @@ impl ProfileAdapter {
         self.get_mute_button_mut(fader).colour_map_mut().set_blink_on(on);
     }
 
+    pub fn set_mute_button_off_style(&mut self, fader: FaderName, off_style: BasicColourOffStyle) {
+        self.get_mute_button_mut(fader).colour_map_mut().set_off_style(
+            standard_to_profile_colour_off_style(off_style)
+        );
+    }
+
+    // TODO: This should (and hopefully will) be *FAR* more generic!
+    pub fn set_mute_button_colours(&mut self, fader: FaderName, colour_one: String, colour_two: Option<String>) -> Result<()> {
+        let colours = self.get_mute_button_mut(fader).colour_map_mut();
+        if colour_one.len() != 6 {
+            return Err(anyhow!("Expected Length: 6 (RRGGBB), Colour One: {}", colour_one.len()));
+        }
+
+        if let Some(two) = colour_two {
+            if two.len() != 6 {
+                return Err(anyhow!("Expected Length: 6 (RRGGBB), Colour Two: {}", two.len()));
+            }
+            colours.set_colour(1, Colour::fromrgb(two.as_str())?);
+        }
+        colours.set_colour(0, Colour::fromrgb(colour_one.as_str())?);
+        Ok(())
+    }
 
     /** 'Cough' / Mute Chat Button handlers.. */
+    pub fn get_chat_mute_button(&self) -> &MuteChat {
+        self.profile.settings().mute_chat()
+    }
+
+    pub fn get_chat_mute_button_mut(&mut self) -> &mut MuteChat {
+        self.profile.settings_mut().mute_chat_mut()
+    }
+
+    pub fn get_chat_mute_button_behaviour(&self) -> BasicMuteFunction {
+        let mute_config = self.get_chat_mute_button();
+        return profile_to_standard_mute_function(*mute_config.cough_mute_source());
+    }
+
+    pub fn set_chat_mute_button_behaviour(&mut self, behaviour: BasicMuteFunction) {
+        let mute_config = self.get_chat_mute_button_mut();
+        mute_config.set_cough_mute_source(standard_to_profile_mute_function(behaviour));
+    }
+
     pub fn get_mute_chat_button_state(&self) -> (bool, bool, bool, MuteFunction) {
         let mute_config = self.profile.settings().mute_chat();
 
@@ -311,6 +352,29 @@ impl ProfileAdapter {
             ColourOffStyle::Colour2 => ButtonStates::Colour2,
             ColourOffStyle::DimmedColour2 => ButtonStates::DimmedColour2
         }
+    }
+
+    pub fn set_mute_chat_off_style(&mut self, off_style: BasicColourOffStyle) {
+        self.profile.settings_mut().mute_chat_mut().colour_map_mut().set_off_style(
+            standard_to_profile_colour_off_style(off_style)
+        );
+    }
+
+    // TODO: This should (and hopefully will) be *FAR* more generic!
+    pub fn set_mute_chat_colours(&mut self, colour_one: String, colour_two: Option<String>) -> Result<()> {
+        let colours = self.profile.settings_mut().mute_chat_mut().colour_map_mut();
+        if colour_one.len() != 6 {
+            return Err(anyhow!("Expected Length: 6 (RRGGBB), Colour One: {}", colour_one.len()));
+        }
+
+        if let Some(two) = colour_two {
+            if two.len() != 6 {
+                return Err(anyhow!("Expected Length: 6 (RRGGBB), Colour Two: {}", two.len()));
+            }
+            colours.set_colour(1, Colour::fromrgb(two.as_str())?);
+        }
+        colours.set_colour(0, Colour::fromrgb(colour_one.as_str())?);
+        Ok(())
     }
 
     /** Fader Stuff */
@@ -676,6 +740,14 @@ fn profile_to_standard_fader_display(value: ColourDisplay) -> BasicColourDisplay
         ColourDisplay::Gradient => BasicColourDisplay::Gradient,
         ColourDisplay::Meter => BasicColourDisplay::Meter,
         ColourDisplay::GradientMeter => BasicColourDisplay::Gradient
+    }
+}
+
+fn standard_to_profile_colour_off_style(value: BasicColourOffStyle) -> ColourOffStyle {
+    match value {
+        BasicColourOffStyle::Dimmed => ColourOffStyle::Dimmed,
+        BasicColourOffStyle::Colour2 => ColourOffStyle::Colour2,
+        BasicColourOffStyle::DimmedColour2 => ColourOffStyle::DimmedColour2
     }
 }
 
