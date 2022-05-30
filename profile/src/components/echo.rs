@@ -233,10 +233,22 @@ impl EchoEncoderBase {
     pub fn colour_map(&self) -> &ColourMap {
         &self.colour_map
     }
+
+    pub fn colour_map_mut(&mut self) -> &mut ColourMap {
+        &mut self.colour_map
+    }
+
+    pub fn get_preset(&self, preset: Preset) -> &EchoEncoder {
+        &self.preset_map[preset]
+    }
+
+    pub fn get_preset_mut(&mut self, preset: Preset) -> &mut EchoEncoder {
+        &mut self.preset_map[preset]
+    }
 }
 
 #[derive(Debug, Default)]
-struct EchoEncoder {
+pub struct EchoEncoder {
     knob_position: i8,
     style: EchoStyle,
     source: u8,
@@ -271,6 +283,14 @@ impl EchoEncoder {
             time_right: 0,
             tempo: 0,
         }
+    }
+
+    pub fn knob_position(&self) -> i8 {
+        self.knob_position
+    }
+
+    pub fn set_knob_position(&mut self, knob_position: i8) {
+        self.knob_position = knob_position;
     }
 }
 

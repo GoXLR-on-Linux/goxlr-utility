@@ -93,8 +93,9 @@ impl<T: UsbContext> Device<T> {
         self.hardware.usb_device.has_kernel_driver_attached =
             self.goxlr.usb_device_has_kernel_driver_active()?;
 
-        if let Ok((buttons, volumes)) = self.goxlr.get_button_states() {
+        if let Ok((buttons, volumes, encoders)) = self.goxlr.get_button_states() {
             self.update_volumes_to(volumes);
+            self.update_encoders_to(encoders);
 
             let pressed_buttons = buttons.difference(self.last_buttons);
             for button in pressed_buttons {
@@ -514,6 +515,44 @@ impl<T: UsbContext> Device<T> {
         }
     }
 
+    fn update_encoders_to(&mut self, encoders: [i8; 4]) {
+        if encoders[0] != self.profile.get_pitch_value() {
+            debug!(
+                "Updating PITCH value from {} to {} as human moved the dial",
+                self.profile.get_pitch_value(),
+                encoders[0]
+            );
+            self.profile.set_pitch_value(encoders[0]);
+        }
+
+        if encoders[1] != self.profile.get_gender_value() {
+            debug!(
+                "Updating GENDER value from {} to {} as human moved the dial",
+                self.profile.get_gender_value(),
+                encoders[1]
+            );
+            self.profile.set_gender_value(encoders[1]);
+        }
+
+        if encoders[2] != self.profile.get_reverb_value() {
+            debug!(
+                "Updating REVERB value from {} to {} as human moved the dial",
+                self.profile.get_reverb_value(),
+                encoders[2]
+            );
+            self.profile.set_reverb_value(encoders[2]);
+        }
+
+        if encoders[3] != self.profile.get_echo_value() {
+            debug!(
+                "Updating ECHO value from {} to {} as human moved the dial",
+                self.profile.get_echo_value(),
+                encoders[3]
+            );
+            self.profile.set_echo_value(encoders[3]);
+        }
+    }
+
     pub async fn perform_command(
         &mut self,
         command: GoXLRCommand,
@@ -854,8 +893,6 @@ impl<T: UsbContext> Device<T> {
         Ok(())
     }
 
-
-
     fn get_fader_state(&self, fader: FaderName) -> FaderStatus {
         FaderStatus {
             channel: self.profile().get_fader_assignment(fader),
@@ -988,8 +1025,6 @@ impl<T: UsbContext> Device<T> {
             // to mute a channel), so we'll set this to 0 just in case someone is coming from
             // windows where it *IS* used during mic muting.
             (EffectKey::DisableMic, 0),
-
-
 
             // Disable all the voice effects, these are enabled by default and seem
             // to mess with the initial mic!

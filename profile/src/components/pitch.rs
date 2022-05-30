@@ -188,10 +188,22 @@ impl PitchEncoderBase {
     pub fn colour_map(&self) -> &ColourMap {
         &self.colour_map
     }
+
+    pub fn colour_map_mut(&mut self) -> &mut ColourMap {
+        &mut self.colour_map
+    }
+
+    pub fn get_preset(&self, preset: Preset) -> &PitchEncoder {
+        &self.preset_map[preset]
+    }
+
+    pub fn get_preset_mut(&mut self, preset: Preset) -> &mut PitchEncoder {
+        &mut self.preset_map[preset]
+    }
 }
 
 #[derive(Debug, Default)]
-struct PitchEncoder {
+pub struct PitchEncoder {
     knob_position: i8,
     style: PitchStyle,
     range: u8,
@@ -208,6 +220,15 @@ impl PitchEncoder {
             threshold: 0,
             inst_ratio: None,
         }
+    }
+
+
+    pub fn knob_position(&self) -> i8 {
+        self.knob_position
+    }
+
+    pub fn set_knob_position(&mut self, knob_position: i8) {
+        self.knob_position = knob_position;
     }
 }
 

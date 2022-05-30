@@ -168,10 +168,22 @@ impl GenderEncoderBase {
     pub fn colour_map(&self) -> &ColourMap {
         &self.colour_map
     }
+
+    pub fn colour_map_mut(&mut self) -> &mut ColourMap {
+        &mut self.colour_map
+    }
+
+    pub fn get_preset(&self, preset: Preset) -> &GenderEncoder {
+        &self.preset_map[preset]
+    }
+
+    pub fn get_preset_mut(&mut self, preset: Preset) -> &mut GenderEncoder {
+        &mut self.preset_map[preset]
+    }
 }
 
 #[derive(Debug, Default)]
-struct GenderEncoder {
+pub struct GenderEncoder {
     knob_position: i8,
     style: GenderStyle,
     range: u8,
@@ -184,6 +196,14 @@ impl GenderEncoder {
             style: GenderStyle::Narrow,
             range: 0,
         }
+    }
+
+    pub fn knob_position(&self) -> i8 {
+        self.knob_position
+    }
+
+    pub fn set_knob_position(&mut self, knob_position: i8) {
+        self.knob_position = knob_position;
     }
 }
 

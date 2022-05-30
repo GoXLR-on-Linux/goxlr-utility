@@ -670,16 +670,32 @@ impl ProfileSettings {
         &self.pitch_encoder
     }
 
+    pub fn pitch_encoder_mut(&mut self) -> &mut PitchEncoderBase {
+        &mut self.pitch_encoder
+    }
+
     pub fn echo_encoder(&self) -> &EchoEncoderBase {
         &self.echo_encoder
+    }
+
+    pub fn echo_encoder_mut(&mut self) -> &mut EchoEncoderBase {
+        &mut self.echo_encoder
     }
 
     pub fn gender_encoder(&self) -> &GenderEncoderBase {
         &self.gender_encoder
     }
 
+    pub fn gender_encoder_mut(&mut self) -> &mut GenderEncoderBase {
+        &mut self.gender_encoder
+    }
+
     pub fn reverb_encoder(&self) -> &ReverbEncoderBase {
         &self.reverb_encoder
+    }
+
+    pub fn reverb_encoder_mut(&mut self) -> &mut ReverbEncoderBase {
+        &mut self.reverb_encoder
     }
 
     pub fn simple_element_mut(&mut self, name: SimpleElements) -> &mut SimpleElement {

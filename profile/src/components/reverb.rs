@@ -239,10 +239,22 @@ impl ReverbEncoderBase {
     pub fn colour_map(&self) -> &ColourMap {
         &self.colour_map
     }
+
+    pub fn colour_map_mut(&mut self) -> &mut ColourMap {
+        &mut self.colour_map
+    }
+
+    pub fn get_preset(&self, preset: Preset) -> &ReverbEncoder {
+        &self.preset_map[preset]
+    }
+
+    pub fn get_preset_mut(&mut self, preset: Preset) -> &mut ReverbEncoder {
+        &mut self.preset_map[preset]
+    }
 }
 
 #[derive(Debug, Default)]
-struct ReverbEncoder {
+pub struct ReverbEncoder {
     knob_position: i8,
     style: ReverbStyle,
     reverb_type: u8, // I have no idea what this maps too..
@@ -277,6 +289,14 @@ impl ReverbEncoder {
             tail_level: 0,
             dry_level: 0,
         }
+    }
+
+    pub fn knob_position(&self) -> i8 {
+        self.knob_position
+    }
+
+    pub fn set_knob_position(&mut self, knob_position: i8) {
+        self.knob_position = knob_position;
     }
 }
 

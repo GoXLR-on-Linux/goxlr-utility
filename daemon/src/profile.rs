@@ -472,6 +472,46 @@ impl ProfileAdapter {
         self.profile.settings_mut().simple_element_mut(SimpleElements::FxClear).colour_map_mut().set_state_on(state);
     }
 
+    pub fn get_pitch_value(&self) -> i8 {
+        let current = self.profile.settings().context().selected_effects();
+        self.profile.settings().pitch_encoder().get_preset(current).knob_position()
+    }
+
+    pub fn set_pitch_value(&mut self, value: i8) {
+        let current = self.profile.settings().context().selected_effects();
+        self.profile.settings_mut().pitch_encoder_mut().get_preset_mut(current).set_knob_position(value)
+    }
+
+    pub fn get_gender_value(&self) -> i8 {
+        let current = self.profile.settings().context().selected_effects();
+        self.profile.settings().gender_encoder().get_preset(current).knob_position()
+    }
+
+    pub fn set_gender_value(&mut self, value: i8) {
+        let current = self.profile.settings().context().selected_effects();
+        self.profile.settings_mut().gender_encoder_mut().get_preset_mut(current).set_knob_position(value)
+    }
+
+    pub fn get_reverb_value(&self) -> i8 {
+        let current = self.profile.settings().context().selected_effects();
+        self.profile.settings().reverb_encoder().get_preset(current).knob_position()
+    }
+
+    pub fn set_reverb_value(&mut self, value: i8) {
+        let current = self.profile.settings().context().selected_effects();
+        self.profile.settings_mut().reverb_encoder_mut().get_preset_mut(current).set_knob_position(value)
+    }
+
+    pub fn get_echo_value(&self) -> i8 {
+        let current = self.profile.settings().context().selected_effects();
+        self.profile.settings().echo_encoder().get_preset(current).knob_position()
+    }
+
+    pub fn set_echo_value(&mut self, value: i8) {
+        let current = self.profile.settings().context().selected_effects();
+        self.profile.settings_mut().echo_encoder_mut().get_preset_mut(current).set_knob_position(value)
+    }
+
 
     /** Generic Stuff **/
     pub fn get_button_colour_state(&self, button: Buttons) -> ButtonStates {

@@ -456,19 +456,23 @@ impl<T: UsbContext> GoXLR<T> {
         Ok(())
     }
 
-    pub fn get_button_states(&mut self) -> Result<(EnumSet<Buttons>, [u8; 4]), rusb::Error> {
+    pub fn get_button_states(&mut self) -> Result<(EnumSet<Buttons>, [u8; 4], [i8; 4]), rusb::Error> {
         let result = self.request_data(Command::GetButtonStates, &[])?;
         let mut pressed = EnumSet::empty();
         let mut mixers = [0; 4];
+        let mut encoders = [0; 4];
         let button_states = LittleEndian::read_u32(&result[0..4]);
+
         mixers[0] = result[8];
         mixers[1] = result[9];
         mixers[2] = result[10];
         mixers[3] = result[11];
-        let _pitch = result[4];
-        let _gender = result[5];
-        let _reverb = result[6];
-        let _echo = result[7];
+
+        // These can technically be negative, cast straight to i8
+        encoders[0] = result[4] as i8;  // Pitch
+        encoders[1] = result[5] as i8;  // Gender
+        encoders[2] = result[6] as i8;  // Reverb
+        encoders[3] = result[7] as i8;  // Echo
 
         for button in EnumSet::<Buttons>::all() {
             if button_states & (1 << button as u8) != 0 {
@@ -476,7 +480,7 @@ impl<T: UsbContext> GoXLR<T> {
             }
         }
 
-        Ok((pressed, mixers))
+        Ok((pressed, mixers, encoders))
     }
 
     pub fn await_interrupt(&mut self, duration: Duration) -> bool {
