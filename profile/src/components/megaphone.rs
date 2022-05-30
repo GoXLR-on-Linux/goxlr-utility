@@ -364,29 +364,30 @@ impl Default for MegaphoneStyle {
 }
 
 // TODO: Move this.
-#[derive(Debug, EnumIter, Enum, EnumProperty)]
+// In addition, 'contextTitle' refers to how this is represented in the <selectedContext tag
+#[derive(Debug, EnumIter, Enum, EnumProperty, Copy, Clone)]
 pub enum Preset {
-    #[strum(props(tagSuffix = "preset1"))]
+    #[strum(props(tagSuffix = "preset1", contextTitle = "effects1"))]
     #[strum(to_string = "PRESET_1")]
     Preset1,
 
-    #[strum(props(tagSuffix = "preset2"))]
+    #[strum(props(tagSuffix = "preset2", contextTitle = "effects2"))]
     #[strum(to_string = "PRESET_2")]
     Preset2,
 
-    #[strum(props(tagSuffix = "preset3"))]
+    #[strum(props(tagSuffix = "preset3", contextTitle = "effects3"))]
     #[strum(to_string = "PRESET_3")]
     Preset3,
 
-    #[strum(props(tagSuffix = "preset4"))]
+    #[strum(props(tagSuffix = "preset4", contextTitle = "effects4"))]
     #[strum(to_string = "PRESET_4")]
     Preset4,
 
-    #[strum(props(tagSuffix = "preset5"))]
+    #[strum(props(tagSuffix = "preset5", contextTitle = "effects5"))]
     #[strum(to_string = "PRESET_5")]
     Preset5,
 
-    #[strum(props(tagSuffix = "preset6"))]
+    #[strum(props(tagSuffix = "preset6", contextTitle = "effects6"))]
     #[strum(to_string = "PRESET_6")]
     Preset6,
 }
