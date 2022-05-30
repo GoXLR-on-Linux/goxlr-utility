@@ -6,7 +6,10 @@ use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
+use strum::EnumProperty;
+
 use crate::components::colours::ColourMap;
+use crate::components::megaphone::Preset;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -34,10 +37,10 @@ pub struct Effects {
 }
 
 impl Effects {
-    pub fn new(id: u8) -> Self {
-        let element_name = format!("effects{}", id);
-        let colour_map = format!("effects{}", id);
-        let default_name = format!("Effects Group {}", id);
+    pub fn new(preset: Preset) -> Self {
+        let element_name = preset.get_str("contextTitle").unwrap().to_string();
+        let colour_map = preset.get_str("contextTitle").unwrap().to_string();
+        let default_name = format!("Effects Group {}", preset.get_str("contextTitle").unwrap());
         Self {
             element_name,
             colour_map: ColourMap::new(colour_map),

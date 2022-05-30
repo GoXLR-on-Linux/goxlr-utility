@@ -282,3 +282,15 @@ impl MicrophoneType {
         matches!(self, MicrophoneType::Condenser)
     }
 }
+
+#[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum EffectBankPresets {
+    Preset1,
+    Preset2,
+    Preset3,
+    Preset4,
+    Preset5,
+    Preset6
+}

@@ -6,7 +6,7 @@ use goxlr_profile_loader::components::mixer::{FullChannelList, InputChannels, Ou
 use goxlr_profile_loader::mic_profile::MicProfileSettings;
 use goxlr_profile_loader::profile::{Profile, ProfileSettings};
 use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
-use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice, VersionNumber, MuteFunction as BasicMuteFunction, ColourDisplay as BasicColourDisplay, ColourOffStyle as BasicColourOffStyle };
+use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice, VersionNumber, MuteFunction as BasicMuteFunction, ColourDisplay as BasicColourDisplay, ColourOffStyle as BasicColourOffStyle, EffectBankPresets};
 use goxlr_usb::colouring::ColourTargets;
 use log::error;
 use std::fs::File;
@@ -16,6 +16,7 @@ use strum::EnumCount;
 use strum::IntoEnumIterator;
 use byteorder::{ByteOrder, LittleEndian};
 use enum_map::EnumMap;
+use goxlr_profile_loader::components::megaphone::Preset;
 use goxlr_profile_loader::components::mute::{MuteButton, MuteFunction};
 use goxlr_profile_loader::components::mute_chat::MuteChat;
 use goxlr_profile_loader::components::simple::SimpleElements;
@@ -411,6 +412,12 @@ impl ProfileAdapter {
             .simple_element_mut(SimpleElements::Swear)
             .colour_map_mut()
             .set_state_on(on);
+    }
+
+    /** Effects Bank Behaviours **/
+    pub fn load_effect_bank(&mut self, preset: EffectBankPresets) {
+        // Ok, first thing we need to do is set the prefix in the profile..
+
     }
 
     /** Generic Stuff **/
@@ -824,12 +831,12 @@ fn get_profile_colour_map(profile: &ProfileSettings, colour_target: ColourTarget
         ColourTargets::Fader4Mute => profile.mute_button(3).colour_map(),
         ColourTargets::Bleep => profile.simple_element(SimpleElements::Swear).colour_map(),
         ColourTargets::MicrophoneMute => profile.mute_chat().colour_map(),
-        ColourTargets::EffectSelect1 => profile.effects(0).colour_map(),
-        ColourTargets::EffectSelect2 => profile.effects(1).colour_map(),
-        ColourTargets::EffectSelect3 => profile.effects(2).colour_map(),
-        ColourTargets::EffectSelect4 => profile.effects(3).colour_map(),
-        ColourTargets::EffectSelect5 => profile.effects(4).colour_map(),
-        ColourTargets::EffectSelect6 => profile.effects(5).colour_map(),
+        ColourTargets::EffectSelect1 => profile.effects(Preset::Preset1).colour_map(),
+        ColourTargets::EffectSelect2 => profile.effects(Preset::Preset2).colour_map(),
+        ColourTargets::EffectSelect3 => profile.effects(Preset::Preset3).colour_map(),
+        ColourTargets::EffectSelect4 => profile.effects(Preset::Preset4).colour_map(),
+        ColourTargets::EffectSelect5 => profile.effects(Preset::Preset5).colour_map(),
+        ColourTargets::EffectSelect6 => profile.effects(Preset::Preset6).colour_map(),
         ColourTargets::EffectFx => profile.simple_element(SimpleElements::FxClear).colour_map(),
         ColourTargets::EffectMegaphone => profile.megaphone_effect().colour_map(),
         ColourTargets::EffectRobot => profile.robot_effect().colour_map(),

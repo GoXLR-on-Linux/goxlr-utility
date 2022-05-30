@@ -10,6 +10,7 @@ use xml::{EmitterConfig, EventReader};
 use xml::reader::XmlEvent as XmlReaderEvent;
 use zip::write::FileOptions;
 use strum::IntoEnumIterator;
+use strum::EnumProperty;
 
 use crate::components::browser::BrowserPreviewTree;
 use crate::components::context::Context;
@@ -18,7 +19,7 @@ use crate::components::effects::Effects;
 use crate::components::fader::Fader;
 use crate::components::gender::GenderEncoderBase;
 use crate::components::hardtune::HardtuneEffectBase;
-use crate::components::megaphone::MegaphoneEffectBase;
+use crate::components::megaphone::{MegaphoneEffectBase, Preset};
 use crate::components::mixer::Mixers;
 use crate::components::mute::MuteButton;
 use crate::components::mute_chat::MuteChat;
@@ -109,7 +110,7 @@ pub struct ProfileSettings {
     mute_chat: MuteChat,
     mute_buttons: Vec<MuteButton>,
     faders: Vec<Fader>,
-    effects: Vec<Effects>,
+    effects: EnumMap<Preset, Option<Effects>>,
     scribbles: Vec<Scribble>,
     sampler_map: EnumMap<SampleButtons, Option<SampleBase>>,
     simple_elements: EnumMap<SimpleElements, Option<SimpleElement>>,
@@ -141,8 +142,9 @@ impl ProfileSettings {
         let mut faders: Vec<Fader> = Vec::new();
         faders.reserve_exact(4);
 
-        let mut effects: Vec<Effects> = Vec::new();
-        effects.reserve_exact(6);
+        // let mut effects: Vec<Effects> = Vec::new();
+        // effects.reserve_exact(6);
+        let mut effects: EnumMap<Preset, Option<Effects>> = EnumMap::default();
 
         let mut scribbles: Vec<Scribble> = Vec::new();
         scribbles.reserve_exact(4);
@@ -240,16 +242,19 @@ impl ProfileSettings {
                     }
 
                     if name.local_name.starts_with("effects") {
-                        if let Some(id) = name
-                            .local_name
-                            .chars()
-                            .last()
-                            .map(|s| u8::from_str(&s.to_string()))
-                            .transpose()?
-                        {
-                            let mut effect = Effects::new(id);
-                            effect.parse_effect(&attributes)?;
-                            effects.insert(id as usize - 1, effect);
+                        let mut found = false;
+
+                        // Version 2, now with more enum, search for the prefix..
+                        for preset in Preset::iter() {
+                            if preset.get_str("contextTitle").unwrap() == name.local_name {
+                                let mut effect = Effects::new(preset.clone());
+                                effect.parse_effect(&attributes)?;
+                                effects[preset] = Some(effect);
+                                found = true;
+                                break;
+                            }
+                        }
+                        if found {
                             continue;
                         }
                     }
@@ -541,8 +546,10 @@ impl ProfileSettings {
             fader.write_fader(&mut writer)?;
         }
 
-        for effect in self.effects.iter() {
-            effect.write_effects(&mut writer)?;
+        for (_key, value) in &self.effects {
+            if let Some(value) = value {
+                value.write_effects(&mut writer)?;
+            }
         }
 
         for scribble in self.scribbles.iter() {
@@ -615,8 +622,8 @@ impl ProfileSettings {
     }
 
 
-    pub fn effects(&self, effect: usize) -> &Effects {
-        &self.effects[effect]
+    pub fn effects(&self, effect: Preset) -> &Effects {
+        &self.effects[effect].as_ref().unwrap()
     }
 
     pub fn mute_chat_mut(&mut self) -> &mut MuteChat {
