@@ -17,14 +17,14 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Build-docs
-      run: cargo doc
+      run: cargo doc --no-deps
     - name: Setup node
       uses: actions/setup-node@v1
     - name: Upload to GitHub
       uses: LasyIsLazy/github-upload-action@v0.1.0
       with:
         access-token: ${{ secrets.ACCESS_TOKEN }}
-        file-path: target/doc/*
+        file-path: target/doc/
         owner: goxlr-on-linux
         repo: GoXLR-Utility
         remote-dir: main/docs/
