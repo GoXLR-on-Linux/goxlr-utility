@@ -19,8 +19,8 @@ use enum_map::EnumMap;
 use goxlr_profile_loader::components::megaphone::Preset;
 use goxlr_profile_loader::components::mute::{MuteButton, MuteFunction};
 use goxlr_profile_loader::components::mute_chat::MuteChat;
+use goxlr_profile_loader::components::pitch::PitchStyle;
 use goxlr_profile_loader::components::simple::SimpleElements;
-use goxlr_types::EffectBankPresets::Preset2;
 use goxlr_usb::buttonstate::{Buttons, ButtonStates};
 
 pub const DEFAULT_PROFILE_NAME: &str = "Default - Vaporwave";
@@ -510,6 +510,15 @@ impl ProfileAdapter {
     pub fn set_echo_value(&mut self, value: i8) {
         let current = self.profile.settings().context().selected_effects();
         self.profile.settings_mut().echo_encoder_mut().get_preset_mut(current).set_knob_position(value)
+    }
+
+    pub fn is_hardtune_enabled(&self) -> bool {
+        self.profile.settings().hardtune_effect().colour_map().get_state()
+    }
+
+    pub fn is_pitch_narrow(&self) -> bool {
+        let current = self.profile.settings().context().selected_effects();
+        self.profile.settings().pitch_encoder().get_preset(current).style() == &PitchStyle::Narrow
     }
 
 

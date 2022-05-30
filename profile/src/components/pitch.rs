@@ -230,10 +230,14 @@ impl PitchEncoder {
     pub fn set_knob_position(&mut self, knob_position: i8) {
         self.knob_position = knob_position;
     }
+
+    pub fn style(&self) -> &PitchStyle {
+        &self.style
+    }
 }
 
-#[derive(Debug, EnumIter, Enum, EnumProperty)]
-enum PitchStyle {
+#[derive(Debug, PartialEq, EnumIter, Enum, EnumProperty)]
+pub enum PitchStyle {
     #[strum(props(uiIndex = "0"))]
     Narrow,
 

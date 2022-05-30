@@ -342,6 +342,16 @@ impl<T: UsbContext> GoXLR<T> {
         Ok(())
     }
 
+    pub fn set_encoder_mode(
+        &mut self,
+        encoder: EncoderName,
+        mode: u8,
+        resolution: u8
+    ) -> Result<(), rusb::Error> {
+        self.request_data(Command::SetEncoderMode(encoder), &[mode, resolution])?;
+        Ok(())
+    }
+
     pub fn set_channel_state(
         &mut self,
         channel: ChannelName,

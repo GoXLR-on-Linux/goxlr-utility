@@ -3,7 +3,7 @@ use crate::SettingsHandle;
 use anyhow::Result;
 use enumset::EnumSet;
 use goxlr_ipc::{DeviceType, FaderStatus, GoXLRCommand, HardwareStatus, MixerStatus};
-use goxlr_types::{ChannelName, EffectBankPresets, EffectKey, FaderName, InputDevice as BasicInputDevice, MicrophoneParamKey, OutputDevice as BasicOutputDevice, VersionNumber};
+use goxlr_types::{ChannelName, EffectBankPresets, EffectKey, EncoderName, FaderName, InputDevice as BasicInputDevice, MicrophoneParamKey, OutputDevice as BasicOutputDevice, VersionNumber};
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::channelstate::ChannelState;
 use goxlr_usb::goxlr::GoXLR;
@@ -455,6 +455,8 @@ impl<T: UsbContext> Device<T> {
 
     async fn load_effect_bank(&mut self, preset: EffectBankPresets) -> Result<()> {
         self.profile.load_effect_bank(preset);
+        self.load_effects()?;
+        self.set_pitch_mode()?;
         Ok(())
     }
 
@@ -470,6 +472,7 @@ impl<T: UsbContext> Device<T> {
 
     async fn toggle_hardtune(&mut self) -> Result<()> {
         self.profile.toggle_hardtune();
+        self.set_pitch_mode()?;
         Ok(())
     }
 
@@ -517,6 +520,9 @@ impl<T: UsbContext> Device<T> {
 
     fn update_encoders_to(&mut self, encoders: [i8; 4]) {
         if encoders[0] != self.profile.get_pitch_value() {
+            // TODO: Frustratingly, depending on whether Hardtune is enabled or not, we may need to
+            // 'calculate' the value in get_pitch_value.
+
             debug!(
                 "Updating PITCH value from {} to {} as human moved the dial",
                 self.profile.get_pitch_value(),
@@ -1062,6 +1068,46 @@ impl<T: UsbContext> Device<T> {
                 (EffectKey::Equalizer8KHzFrequency, eq_freq[8]),
                 (EffectKey::Equalizer16KHzFrequency, eq_freq[9]),
             ])?;
+
+            self.load_effects()?;
+        }
+
+
+        self.set_pitch_mode()?;
+        Ok(())
+    }
+
+    fn load_effects(&mut self) -> Result<()> {
+        // For now, we'll simply set the knob positions, more to come!
+        let mut value = self.profile.get_pitch_value();
+        self.goxlr.set_encoder_value(EncoderName::Pitch, value as u8)?;
+
+        value = self.profile.get_echo_value();
+        self.goxlr.set_encoder_value(EncoderName::Echo, value as u8)?;
+
+        value = self.profile.get_gender_value();
+        self.goxlr.set_encoder_value(EncoderName::Gender, value as u8)?;
+
+        value = self.profile.get_reverb_value();
+        self.goxlr.set_encoder_value(EncoderName::Reverb, value as u8)?;
+
+        Ok(())
+    }
+
+    fn set_pitch_mode(&mut self) -> Result<()> {
+        if self.hardware.device_type != DeviceType::Full {
+            // Not a Full GoXLR, nothing to do.
+            return Ok(())
+        }
+
+        if self.profile.is_hardtune_enabled() {
+            if self.profile.is_pitch_narrow() {
+                self.goxlr.set_encoder_mode(EncoderName::Pitch, 03, 01)?;
+            } else {
+                self.goxlr.set_encoder_mode(EncoderName::Pitch, 03, 02)?;
+            }
+        } else {
+            self.goxlr.set_encoder_mode(EncoderName::Pitch, 01, 04)?;
         }
 
         Ok(())
