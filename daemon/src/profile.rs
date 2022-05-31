@@ -83,7 +83,7 @@ impl ProfileAdapter {
         Ok(Self { name, profile })
     }
 
-    pub fn to_named(&self, name: String, directory: &Path, overwrite: bool) -> Result<()> {
+    pub fn to_named(&mut self, name: String, directory: &Path, overwrite: bool) -> Result<()> {
         let path = directory.join(format!("{}.goxlr", name));
         if !directory.exists() {
             return Err(anyhow!("Profile Directory does not exist"));
@@ -94,6 +94,13 @@ impl ProfileAdapter {
         }
 
         self.profile.save(path)?;
+
+        // Keep our names in sync (in case it was changed)
+        if name != self.name() {
+            dbg!("Changing Profile Name: {} -> {}", self.name(), name.clone());
+            self.name = name;
+        }
+
         Ok(())
     }
 

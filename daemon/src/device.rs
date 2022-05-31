@@ -685,7 +685,15 @@ impl<T: UsbContext> Device<T> {
             }
             GoXLRCommand::SaveProfileAs(profile_name) => {
                 let profile_directory = settings.get_profile_directory().await;
-                self.profile.to_named(profile_name, &profile_directory, false)?;
+                self.profile.to_named(profile_name.clone(), &profile_directory, false)?;
+
+                // Save the new name in the settings
+                settings.set_device_profile_name(
+                    self.serial(),
+                    profile_name.as_str()
+                ).await;
+
+                settings.save().await;
             }
             GoXLRCommand::LoadMicProfile(mic_profile_name) => {
                 let profile_directory = settings.get_profile_directory().await;
