@@ -1,10 +1,9 @@
 # Roadmap
 
 #### Full GoXLR mini support:
- - bleep button
+GoXLR Mini support is now complete, and all functions have been implemented.
 
 #### Full GoXLR support:
- - all of the above
  - sampler
  - effects
  - scribbles
