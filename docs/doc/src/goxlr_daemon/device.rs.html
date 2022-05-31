@@ -1039,21 +1039,146 @@
 <span id="1037">1037</span>
 <span id="1038">1038</span>
 <span id="1039">1039</span>
+<span id="1040">1040</span>
+<span id="1041">1041</span>
+<span id="1042">1042</span>
+<span id="1043">1043</span>
+<span id="1044">1044</span>
+<span id="1045">1045</span>
+<span id="1046">1046</span>
+<span id="1047">1047</span>
+<span id="1048">1048</span>
+<span id="1049">1049</span>
+<span id="1050">1050</span>
+<span id="1051">1051</span>
+<span id="1052">1052</span>
+<span id="1053">1053</span>
+<span id="1054">1054</span>
+<span id="1055">1055</span>
+<span id="1056">1056</span>
+<span id="1057">1057</span>
+<span id="1058">1058</span>
+<span id="1059">1059</span>
+<span id="1060">1060</span>
+<span id="1061">1061</span>
+<span id="1062">1062</span>
+<span id="1063">1063</span>
+<span id="1064">1064</span>
+<span id="1065">1065</span>
+<span id="1066">1066</span>
+<span id="1067">1067</span>
+<span id="1068">1068</span>
+<span id="1069">1069</span>
+<span id="1070">1070</span>
+<span id="1071">1071</span>
+<span id="1072">1072</span>
+<span id="1073">1073</span>
+<span id="1074">1074</span>
+<span id="1075">1075</span>
+<span id="1076">1076</span>
+<span id="1077">1077</span>
+<span id="1078">1078</span>
+<span id="1079">1079</span>
+<span id="1080">1080</span>
+<span id="1081">1081</span>
+<span id="1082">1082</span>
+<span id="1083">1083</span>
+<span id="1084">1084</span>
+<span id="1085">1085</span>
+<span id="1086">1086</span>
+<span id="1087">1087</span>
+<span id="1088">1088</span>
+<span id="1089">1089</span>
+<span id="1090">1090</span>
+<span id="1091">1091</span>
+<span id="1092">1092</span>
+<span id="1093">1093</span>
+<span id="1094">1094</span>
+<span id="1095">1095</span>
+<span id="1096">1096</span>
+<span id="1097">1097</span>
+<span id="1098">1098</span>
+<span id="1099">1099</span>
+<span id="1100">1100</span>
+<span id="1101">1101</span>
+<span id="1102">1102</span>
+<span id="1103">1103</span>
+<span id="1104">1104</span>
+<span id="1105">1105</span>
+<span id="1106">1106</span>
+<span id="1107">1107</span>
+<span id="1108">1108</span>
+<span id="1109">1109</span>
+<span id="1110">1110</span>
+<span id="1111">1111</span>
+<span id="1112">1112</span>
+<span id="1113">1113</span>
+<span id="1114">1114</span>
+<span id="1115">1115</span>
+<span id="1116">1116</span>
+<span id="1117">1117</span>
+<span id="1118">1118</span>
+<span id="1119">1119</span>
+<span id="1120">1120</span>
+<span id="1121">1121</span>
+<span id="1122">1122</span>
+<span id="1123">1123</span>
+<span id="1124">1124</span>
+<span id="1125">1125</span>
+<span id="1126">1126</span>
+<span id="1127">1127</span>
+<span id="1128">1128</span>
+<span id="1129">1129</span>
+<span id="1130">1130</span>
+<span id="1131">1131</span>
+<span id="1132">1132</span>
+<span id="1133">1133</span>
+<span id="1134">1134</span>
+<span id="1135">1135</span>
+<span id="1136">1136</span>
+<span id="1137">1137</span>
+<span id="1138">1138</span>
+<span id="1139">1139</span>
+<span id="1140">1140</span>
+<span id="1141">1141</span>
+<span id="1142">1142</span>
+<span id="1143">1143</span>
+<span id="1144">1144</span>
+<span id="1145">1145</span>
+<span id="1146">1146</span>
+<span id="1147">1147</span>
+<span id="1148">1148</span>
+<span id="1149">1149</span>
+<span id="1150">1150</span>
+<span id="1151">1151</span>
+<span id="1152">1152</span>
+<span id="1153">1153</span>
+<span id="1154">1154</span>
+<span id="1155">1155</span>
+<span id="1156">1156</span>
+<span id="1157">1157</span>
+<span id="1158">1158</span>
+<span id="1159">1159</span>
+<span id="1160">1160</span>
+<span id="1161">1161</span>
+<span id="1162">1162</span>
+<span id="1163">1163</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::profile</span>::{<span class="ident">version_newer_or_equal_to</span>, <span class="ident">MicProfileAdapter</span>, <span class="ident">ProfileAdapter</span>};
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::SettingsHandle</span>;
-<span class="kw">use</span> <span class="ident">anyhow::Result</span>;
+<span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="prelude-ty">Result</span>};
 <span class="kw">use</span> <span class="ident">enumset::EnumSet</span>;
 <span class="kw">use</span> <span class="ident">goxlr_ipc</span>::{<span class="ident">DeviceType</span>, <span class="ident">FaderStatus</span>, <span class="ident">GoXLRCommand</span>, <span class="ident">HardwareStatus</span>, <span class="ident">MixerStatus</span>};
-<span class="kw">use</span> <span class="ident">goxlr_types</span>::{<span class="ident">ChannelName</span>, <span class="ident">EffectBankPresets</span>, <span class="ident">EffectKey</span>, <span class="ident">FaderName</span>, <span class="ident">InputDevice</span> <span class="kw">as</span> <span class="ident">BasicInputDevice</span>, <span class="ident">MicrophoneParamKey</span>, <span class="ident">OutputDevice</span> <span class="kw">as</span> <span class="ident">BasicOutputDevice</span>, <span class="ident">VersionNumber</span>};
+<span class="kw">use</span> <span class="ident">goxlr_types</span>::{<span class="ident">ChannelName</span>, <span class="ident">EffectBankPresets</span>, <span class="ident">EffectKey</span>, <span class="ident">EncoderName</span>, <span class="ident">FaderName</span>, <span class="ident">InputDevice</span> <span class="kw">as</span> <span class="ident">BasicInputDevice</span>, <span class="ident">MicrophoneParamKey</span>, <span class="ident">OutputDevice</span> <span class="kw">as</span> <span class="ident">BasicOutputDevice</span>, <span class="ident">VersionNumber</span>};
 <span class="kw">use</span> <span class="ident">goxlr_usb::buttonstate</span>::{<span class="ident">ButtonStates</span>, <span class="ident">Buttons</span>};
 <span class="kw">use</span> <span class="ident">goxlr_usb::channelstate::ChannelState</span>;
 <span class="kw">use</span> <span class="ident">goxlr_usb::goxlr::GoXLR</span>;
 <span class="kw">use</span> <span class="ident">goxlr_usb::routing</span>::{<span class="ident">InputDevice</span>, <span class="ident">OutputDevice</span>};
 <span class="kw">use</span> <span class="ident">goxlr_usb::rusb::UsbContext</span>;
-<span class="kw">use</span> <span class="ident">log::debug</span>;
+<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">info</span>};
 <span class="kw">use</span> <span class="ident">std::path::Path</span>;
 <span class="kw">use</span> <span class="ident">std::time</span>::{<span class="ident">SystemTime</span>, <span class="ident">UNIX_EPOCH</span>};
 <span class="kw">use</span> <span class="ident">enum_map::EnumMap</span>;
+<span class="kw">use</span> <span class="ident">futures::executor::block_on</span>;
 <span class="kw">use</span> <span class="ident">strum</span>::{<span class="ident">IntoEnumIterator</span>};
 <span class="kw">use</span> <span class="ident">goxlr_profile_loader::components::mute</span>::{<span class="ident">MuteFunction</span>};
 <span class="kw">use</span> <span class="ident">goxlr_usb::channelstate::ChannelState</span>::{<span class="ident">Muted</span>, <span class="ident">Unmuted</span>};
@@ -1082,10 +1207,14 @@
         <span class="ident">profile_name</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
         <span class="ident">mic_profile_name</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
         <span class="ident">profile_directory</span>: <span class="kw-2">&amp;</span><span class="ident">Path</span>,
+        <span class="ident">mic_profile_directory</span>: <span class="kw-2">&amp;</span><span class="ident">Path</span>,
+        <span class="ident">settings_handle</span>: <span class="kw-2">&amp;</span><span class="ident">SettingsHandle</span>
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+        <span class="macro">info!</span>(<span class="string">&quot;Loading Profile: {}&quot;</span>, <span class="ident">profile_name</span>.<span class="ident">clone</span>().<span class="ident">unwrap_or</span>(<span class="string">&quot;Not Defined&quot;</span>.<span class="ident">to_string</span>()));
+        <span class="macro">info!</span>(<span class="string">&quot;Loading Mic Profile: {}&quot;</span>, <span class="ident">mic_profile_name</span>.<span class="ident">clone</span>().<span class="ident">unwrap_or</span>(<span class="string">&quot;Not Defined&quot;</span>.<span class="ident">to_string</span>()));
         <span class="kw">let</span> <span class="ident">profile</span> <span class="op">=</span> <span class="ident">ProfileAdapter::from_named_or_default</span>(<span class="ident">profile_name</span>, <span class="ident">profile_directory</span>);
         <span class="kw">let</span> <span class="ident">mic_profile</span> <span class="op">=</span>
-            <span class="ident">MicProfileAdapter::from_named_or_default</span>(<span class="ident">mic_profile_name</span>, <span class="ident">profile_directory</span>);
+            <span class="ident">MicProfileAdapter::from_named_or_default</span>(<span class="ident">mic_profile_name</span>, <span class="ident">mic_profile_directory</span>);
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">device</span> <span class="op">=</span> <span class="self">Self</span> {
             <span class="ident">profile</span>,
@@ -1096,8 +1225,8 @@
             <span class="ident">button_states</span>: <span class="ident">EnumMap::default</span>(),
         };
 
-        <span class="ident">device</span>.<span class="ident">apply_profile</span>()<span class="question-mark">?</span>;
-        <span class="ident">device</span>.<span class="ident">apply_mic_profile</span>()<span class="question-mark">?</span>;
+        <span class="ident">device</span>.<span class="ident">apply_profile</span>(<span class="ident">settings_handle</span>)<span class="question-mark">?</span>;
+        <span class="ident">block_on</span>(<span class="ident">device</span>.<span class="ident">apply_mic_profile</span>(<span class="ident">settings_handle</span>))<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="ident">device</span>)
     }
@@ -1134,8 +1263,9 @@
         <span class="self">self</span>.<span class="ident">hardware</span>.<span class="ident">usb_device</span>.<span class="ident">has_kernel_driver_attached</span> <span class="op">=</span>
             <span class="self">self</span>.<span class="ident">goxlr</span>.<span class="ident">usb_device_has_kernel_driver_active</span>()<span class="question-mark">?</span>;
 
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>((<span class="ident">buttons</span>, <span class="ident">volumes</span>)) <span class="op">=</span> <span class="self">self</span>.<span class="ident">goxlr</span>.<span class="ident">get_button_states</span>() {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>((<span class="ident">buttons</span>, <span class="ident">volumes</span>, <span class="ident">encoders</span>)) <span class="op">=</span> <span class="self">self</span>.<span class="ident">goxlr</span>.<span class="ident">get_button_states</span>() {
             <span class="self">self</span>.<span class="ident">update_volumes_to</span>(<span class="ident">volumes</span>);
+            <span class="self">self</span>.<span class="ident">update_encoders_to</span>(<span class="ident">encoders</span>);
 
             <span class="kw">let</span> <span class="ident">pressed_buttons</span> <span class="op">=</span> <span class="ident">buttons</span>.<span class="ident">difference</span>(<span class="self">self</span>.<span class="ident">last_buttons</span>);
             <span class="kw">for</span> <span class="ident">button</span> <span class="kw">in</span> <span class="ident">pressed_buttons</span> {
@@ -1495,6 +1625,8 @@
 
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">load_effect_bank</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">preset</span>: <span class="ident">EffectBankPresets</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">profile</span>.<span class="ident">load_effect_bank</span>(<span class="ident">preset</span>);
+        <span class="self">self</span>.<span class="ident">load_effects</span>()<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">set_pitch_mode</span>()<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 
@@ -1510,6 +1642,7 @@
 
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">toggle_hardtune</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">profile</span>.<span class="ident">toggle_hardtune</span>();
+        <span class="self">self</span>.<span class="ident">set_pitch_mode</span>()<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 
@@ -1552,6 +1685,47 @@
                 );
                 <span class="self">self</span>.<span class="ident">profile</span>.<span class="ident">set_channel_volume</span>(<span class="ident">channel</span>, <span class="ident">new_volume</span>);
             }
+        }
+    }
+
+    <span class="kw">fn</span> <span class="ident">update_encoders_to</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">encoders</span>: [<span class="ident">i8</span>; <span class="number">4</span>]) {
+        <span class="kw">if</span> <span class="ident">encoders</span>[<span class="number">0</span>] <span class="op">!</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">profile</span>.<span class="ident">get_pitch_value</span>() {
+            <span class="comment">// TODO: Frustratingly, depending on whether Hardtune is enabled or not, we may need to</span>
+            <span class="comment">// &#39;calculate&#39; the value in get_pitch_value.</span>
+
+            <span class="macro">debug!</span>(
+                <span class="string">&quot;Updating PITCH value from {} to {} as human moved the dial&quot;</span>,
+                <span class="self">self</span>.<span class="ident">profile</span>.<span class="ident">get_pitch_value</span>(),
+                <span class="ident">encoders</span>[<span class="number">0</span>]
+            );
+            <span class="self">self</span>.<span class="ident">profile</span>.<span class="ident">set_pitch_value</span>(<span class="ident">encoders</span>[<span class="number">0</span>]);
+        }
+
+        <span class="kw">if</span> <span class="ident">encoders</span>[<span class="number">1</span>] <span class="op">!</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">profile</span>.<span class="ident">get_gender_value</span>() {
+            <span class="macro">debug!</span>(
+                <span class="string">&quot;Updating GENDER value from {} to {} as human moved the dial&quot;</span>,
+                <span class="self">self</span>.<span class="ident">profile</span>.<span class="ident">get_gender_value</span>(),
+                <span class="ident">encoders</span>[<span class="number">1</span>]
+            );
+            <span class="self">self</span>.<span class="ident">profile</span>.<span class="ident">set_gender_value</span>(<span class="ident">encoders</span>[<span class="number">1</span>]);
+        }
+
+        <span class="kw">if</span> <span class="ident">encoders</span>[<span class="number">2</span>] <span class="op">!</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">profile</span>.<span class="ident">get_reverb_value</span>() {
+            <span class="macro">debug!</span>(
+                <span class="string">&quot;Updating REVERB value from {} to {} as human moved the dial&quot;</span>,
+                <span class="self">self</span>.<span class="ident">profile</span>.<span class="ident">get_reverb_value</span>(),
+                <span class="ident">encoders</span>[<span class="number">2</span>]
+            );
+            <span class="self">self</span>.<span class="ident">profile</span>.<span class="ident">set_reverb_value</span>(<span class="ident">encoders</span>[<span class="number">2</span>]);
+        }
+
+        <span class="kw">if</span> <span class="ident">encoders</span>[<span class="number">3</span>] <span class="op">!</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">profile</span>.<span class="ident">get_echo_value</span>() {
+            <span class="macro">debug!</span>(
+                <span class="string">&quot;Updating ECHO value from {} to {} as human moved the dial&quot;</span>,
+                <span class="self">self</span>.<span class="ident">profile</span>.<span class="ident">get_echo_value</span>(),
+                <span class="ident">encoders</span>[<span class="number">3</span>]
+            );
+            <span class="self">self</span>.<span class="ident">profile</span>.<span class="ident">set_echo_value</span>(<span class="ident">encoders</span>[<span class="number">3</span>]);
         }
     }
 
@@ -1628,6 +1802,25 @@
                 <span class="self">self</span>.<span class="ident">load_colour_map</span>()<span class="question-mark">?</span>;
                 <span class="self">self</span>.<span class="ident">update_button_states</span>()<span class="question-mark">?</span>;
             }
+            <span class="ident">GoXLRCommand::SetSwearButtonVolume</span>(<span class="ident">volume</span>) =&gt; {
+                <span class="kw">if</span> <span class="ident">volume</span> <span class="op">&lt;</span> <span class="op">-</span><span class="number">37</span> <span class="op">|</span><span class="op">|</span> <span class="ident">volume</span> <span class="op">&gt;</span> <span class="number">0</span> {
+                    <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;Mute volume must be between -37 and 0&quot;</span>));
+                }
+                <span class="ident">settings</span>
+                    .<span class="ident">set_device_bleep_volume</span>(<span class="self">self</span>.<span class="ident">serial</span>(), <span class="ident">volume</span>)
+                    .<span class="kw">await</span>;
+                <span class="ident">settings</span>.<span class="ident">save</span>().<span class="kw">await</span>;
+
+                <span class="self">self</span>.<span class="ident">goxlr</span>.<span class="ident">set_effect_values</span>(<span class="kw-2">&amp;</span>[
+                    (<span class="ident">EffectKey::BleepLevel</span>, <span class="ident">volume</span> <span class="kw">as</span> <span class="ident">i32</span>),
+                ])<span class="question-mark">?</span>;
+            }
+            <span class="ident">GoXLRCommand::SetSwearButtonColourConfiguration</span>(<span class="ident">colour_one</span>, <span class="ident">off_style</span>, <span class="ident">colour_two</span>) =&gt; {
+                <span class="self">self</span>.<span class="ident">profile</span>.<span class="ident">set_swear_off_style</span>(<span class="ident">off_style</span>);
+                <span class="self">self</span>.<span class="ident">profile</span>.<span class="ident">set_swear_colours</span>(<span class="ident">colour_one</span>, <span class="ident">colour_two</span>)<span class="question-mark">?</span>;
+                <span class="self">self</span>.<span class="ident">load_colour_map</span>()<span class="question-mark">?</span>;
+                <span class="self">self</span>.<span class="ident">update_button_states</span>()<span class="question-mark">?</span>;
+            }
 
             <span class="ident">GoXLRCommand::SetMicrophoneGain</span>(<span class="ident">mic_type</span>, <span class="ident">gain</span>) =&gt; {
                 <span class="self">self</span>.<span class="ident">goxlr</span>.<span class="ident">set_microphone_gain</span>(<span class="ident">mic_type</span>, <span class="ident">gain</span>.<span class="ident">into</span>())<span class="question-mark">?</span>;
@@ -1641,16 +1834,10 @@
                 <span class="comment">// Apply the change..</span>
                 <span class="self">self</span>.<span class="ident">apply_routing</span>(<span class="ident">input</span>)<span class="question-mark">?</span>;
             }
-            <span class="ident">GoXLRCommand::ListProfiles</span>() =&gt; {
-                <span class="comment">// Need to send a response.. No idea how that works yet :D</span>
-            }
-            <span class="ident">GoXLRCommand::ImportProfile</span>(<span class="ident">path</span>) =&gt; {
-
-            }
             <span class="ident">GoXLRCommand::LoadProfile</span>(<span class="ident">profile_name</span>) =&gt; {
                 <span class="kw">let</span> <span class="ident">profile_directory</span> <span class="op">=</span> <span class="ident">settings</span>.<span class="ident">get_profile_directory</span>().<span class="kw">await</span>;
                 <span class="self">self</span>.<span class="ident">profile</span> <span class="op">=</span> <span class="ident">ProfileAdapter::from_named</span>(<span class="ident">profile_name</span>, <span class="kw-2">&amp;</span><span class="ident">profile_directory</span>)<span class="question-mark">?</span>;
-                <span class="self">self</span>.<span class="ident">apply_profile</span>()<span class="question-mark">?</span>;
+                <span class="self">self</span>.<span class="ident">apply_profile</span>(<span class="ident">settings</span>)<span class="question-mark">?</span>;
                 <span class="ident">settings</span>
                     .<span class="ident">set_device_profile_name</span>(<span class="self">self</span>.<span class="ident">serial</span>(), <span class="self">self</span>.<span class="ident">profile</span>.<span class="ident">name</span>())
                     .<span class="kw">await</span>;
@@ -1661,27 +1848,50 @@
                 <span class="kw">let</span> <span class="ident">profile_name</span> <span class="op">=</span> <span class="ident">settings</span>.<span class="ident">get_device_profile_name</span>(<span class="self">self</span>.<span class="ident">serial</span>()).<span class="kw">await</span>;
 
                 <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">profile_name</span>) <span class="op">=</span> <span class="ident">profile_name</span> {
-                    <span class="self">self</span>.<span class="ident">profile</span>.<span class="ident">to_named</span>(<span class="ident">profile_name</span>, <span class="kw-2">&amp;</span><span class="ident">profile_directory</span>)<span class="question-mark">?</span>;
+                    <span class="self">self</span>.<span class="ident">profile</span>.<span class="ident">write_profile</span>(<span class="ident">profile_name</span>, <span class="kw-2">&amp;</span><span class="ident">profile_directory</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
                 }
             }
-            <span class="ident">GoXLRCommand::ListMicProfiles</span>() =&gt; {
+            <span class="ident">GoXLRCommand::SaveProfileAs</span>(<span class="ident">profile_name</span>) =&gt; {
+                <span class="kw">let</span> <span class="ident">profile_directory</span> <span class="op">=</span> <span class="ident">settings</span>.<span class="ident">get_profile_directory</span>().<span class="kw">await</span>;
+                <span class="self">self</span>.<span class="ident">profile</span>.<span class="ident">write_profile</span>(<span class="ident">profile_name</span>.<span class="ident">clone</span>(), <span class="kw-2">&amp;</span><span class="ident">profile_directory</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
 
-            }
-            <span class="ident">GoXLRCommand::ImportMicProfile</span>(<span class="ident">path</span>) =&gt; {
+                <span class="comment">// Save the new name in the settings</span>
+                <span class="ident">settings</span>.<span class="ident">set_device_profile_name</span>(
+                    <span class="self">self</span>.<span class="ident">serial</span>(),
+                    <span class="ident">profile_name</span>.<span class="ident">as_str</span>()
+                ).<span class="kw">await</span>;
 
+                <span class="ident">settings</span>.<span class="ident">save</span>().<span class="kw">await</span>;
             }
             <span class="ident">GoXLRCommand::LoadMicProfile</span>(<span class="ident">mic_profile_name</span>) =&gt; {
-                <span class="kw">let</span> <span class="ident">profile_directory</span> <span class="op">=</span> <span class="ident">settings</span>.<span class="ident">get_profile_directory</span>().<span class="kw">await</span>;
+                <span class="kw">let</span> <span class="ident">mic_profile_directory</span> <span class="op">=</span> <span class="ident">settings</span>.<span class="ident">get_mic_profile_directory</span>().<span class="kw">await</span>;
                 <span class="self">self</span>.<span class="ident">mic_profile</span> <span class="op">=</span>
-                    <span class="ident">MicProfileAdapter::from_named</span>(<span class="ident">mic_profile_name</span>, <span class="kw-2">&amp;</span><span class="ident">profile_directory</span>)<span class="question-mark">?</span>;
-                <span class="self">self</span>.<span class="ident">apply_mic_profile</span>()<span class="question-mark">?</span>;
+                    <span class="ident">MicProfileAdapter::from_named</span>(<span class="ident">mic_profile_name</span>, <span class="kw-2">&amp;</span><span class="ident">mic_profile_directory</span>)<span class="question-mark">?</span>;
+                <span class="self">self</span>.<span class="ident">apply_mic_profile</span>(<span class="ident">settings</span>).<span class="kw">await</span><span class="question-mark">?</span>;
                 <span class="ident">settings</span>
                     .<span class="ident">set_device_mic_profile_name</span>(<span class="self">self</span>.<span class="ident">serial</span>(), <span class="self">self</span>.<span class="ident">mic_profile</span>.<span class="ident">name</span>())
                     .<span class="kw">await</span>;
                 <span class="ident">settings</span>.<span class="ident">save</span>().<span class="kw">await</span>;
             }
             <span class="ident">GoXLRCommand::SaveMicProfile</span>() =&gt; {
+                <span class="kw">let</span> <span class="ident">mic_profile_directory</span> <span class="op">=</span> <span class="ident">settings</span>.<span class="ident">get_mic_profile_directory</span>().<span class="kw">await</span>;
+                <span class="kw">let</span> <span class="ident">mic_profile_name</span> <span class="op">=</span> <span class="ident">settings</span>.<span class="ident">get_device_mic_profile_name</span>(<span class="self">self</span>.<span class="ident">serial</span>()).<span class="kw">await</span>;
 
+                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">profile_name</span>) <span class="op">=</span> <span class="ident">mic_profile_name</span> {
+                    <span class="self">self</span>.<span class="ident">mic_profile</span>.<span class="ident">write_profile</span>(<span class="ident">profile_name</span>, <span class="kw-2">&amp;</span><span class="ident">mic_profile_directory</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
+                }
+            }
+            <span class="ident">GoXLRCommand::SaveMicProfileAs</span>(<span class="ident">profile_name</span>) =&gt; {
+                <span class="kw">let</span> <span class="ident">profile_directory</span> <span class="op">=</span> <span class="ident">settings</span>.<span class="ident">get_mic_profile_directory</span>().<span class="kw">await</span>;
+                <span class="self">self</span>.<span class="ident">mic_profile</span>.<span class="ident">write_profile</span>(<span class="ident">profile_name</span>.<span class="ident">clone</span>(), <span class="kw-2">&amp;</span><span class="ident">profile_directory</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
+
+                <span class="comment">// Save the new name in the settings</span>
+                <span class="ident">settings</span>.<span class="ident">set_device_mic_profile_name</span>(
+                    <span class="self">self</span>.<span class="ident">serial</span>(),
+                    <span class="ident">profile_name</span>.<span class="ident">as_str</span>()
+                ).<span class="kw">await</span>;
+
+                <span class="ident">settings</span>.<span class="ident">save</span>().<span class="kw">await</span>;
             }
         }
 
@@ -1895,8 +2105,6 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-
-
     <span class="kw">fn</span> <span class="ident">get_fader_state</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">fader</span>: <span class="ident">FaderName</span>) -&gt; <span class="ident">FaderStatus</span> {
         <span class="ident">FaderStatus</span> {
             <span class="ident">channel</span>: <span class="self">self</span>.<span class="ident">profile</span>().<span class="ident">get_fader_assignment</span>(<span class="ident">fader</span>),
@@ -1932,7 +2140,7 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn</span> <span class="ident">apply_profile</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">apply_profile</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">_settings</span>: <span class="kw-2">&amp;</span><span class="ident">SettingsHandle</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="comment">// Set volumes first, applying mute may modify stuff..</span>
         <span class="kw">for</span> <span class="ident">channel</span> <span class="kw">in</span> <span class="ident">ChannelName::iter</span>() {
             <span class="kw">let</span> <span class="ident">channel_volume</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">profile</span>.<span class="ident">get_channel_volume</span>(<span class="ident">channel</span>);
@@ -1963,7 +2171,7 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn</span> <span class="ident">apply_mic_profile</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">apply_mic_profile</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">settings</span>: <span class="kw-2">&amp;</span><span class="ident">SettingsHandle</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">goxlr</span>.<span class="ident">set_microphone_gain</span>(
             <span class="self">self</span>.<span class="ident">mic_profile</span>.<span class="ident">mic_type</span>(),
             <span class="self">self</span>.<span class="ident">mic_profile</span>.<span class="ident">mic_gains</span>()[<span class="self">self</span>.<span class="ident">mic_profile</span>.<span class="ident">mic_type</span>() <span class="kw">as</span> <span class="ident">usize</span>],
@@ -2022,15 +2230,15 @@
             (<span class="ident">EffectKey::CompressorMakeUpGain</span>, <span class="ident">main_effects</span>[<span class="number">8</span>]),
 
             (<span class="ident">EffectKey::GateEnabled</span>, <span class="number">1</span>),
-            (<span class="ident">EffectKey::BleepLevel</span>, <span class="op">-</span><span class="number">10</span>),
+            (<span class="ident">EffectKey::BleepLevel</span>,
+             <span class="ident">settings</span>.<span class="ident">get_device_bleep_volume</span>(<span class="self">self</span>.<span class="ident">serial</span>()).<span class="kw">await</span>.<span class="ident">unwrap_or</span>(<span class="op">-</span><span class="number">20</span>) <span class="kw">as</span> <span class="ident">i32</span>
+            ),
             (<span class="ident">EffectKey::GateMode</span>, <span class="number">2</span>),
 
             <span class="comment">// We don&#39;t use this effect key under Linux (mostly due to there being other ways</span>
             <span class="comment">// to mute a channel), so we&#39;ll set this to 0 just in case someone is coming from</span>
             <span class="comment">// windows where it *IS* used during mic muting.</span>
             (<span class="ident">EffectKey::DisableMic</span>, <span class="number">0</span>),
-
-
 
             <span class="comment">// Disable all the voice effects, these are enabled by default and seem</span>
             <span class="comment">// to mess with the initial mic!</span>
@@ -2068,6 +2276,46 @@
                 (<span class="ident">EffectKey::Equalizer8KHzFrequency</span>, <span class="ident">eq_freq</span>[<span class="number">8</span>]),
                 (<span class="ident">EffectKey::Equalizer16KHzFrequency</span>, <span class="ident">eq_freq</span>[<span class="number">9</span>]),
             ])<span class="question-mark">?</span>;
+
+            <span class="self">self</span>.<span class="ident">load_effects</span>()<span class="question-mark">?</span>;
+        }
+
+
+        <span class="self">self</span>.<span class="ident">set_pitch_mode</span>()<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="kw">fn</span> <span class="ident">load_effects</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="comment">// For now, we&#39;ll simply set the knob positions, more to come!</span>
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">value</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">profile</span>.<span class="ident">get_pitch_value</span>();
+        <span class="self">self</span>.<span class="ident">goxlr</span>.<span class="ident">set_encoder_value</span>(<span class="ident">EncoderName::Pitch</span>, <span class="ident">value</span> <span class="kw">as</span> <span class="ident">u8</span>)<span class="question-mark">?</span>;
+
+        <span class="ident">value</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">profile</span>.<span class="ident">get_echo_value</span>();
+        <span class="self">self</span>.<span class="ident">goxlr</span>.<span class="ident">set_encoder_value</span>(<span class="ident">EncoderName::Echo</span>, <span class="ident">value</span> <span class="kw">as</span> <span class="ident">u8</span>)<span class="question-mark">?</span>;
+
+        <span class="ident">value</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">profile</span>.<span class="ident">get_gender_value</span>();
+        <span class="self">self</span>.<span class="ident">goxlr</span>.<span class="ident">set_encoder_value</span>(<span class="ident">EncoderName::Gender</span>, <span class="ident">value</span> <span class="kw">as</span> <span class="ident">u8</span>)<span class="question-mark">?</span>;
+
+        <span class="ident">value</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">profile</span>.<span class="ident">get_reverb_value</span>();
+        <span class="self">self</span>.<span class="ident">goxlr</span>.<span class="ident">set_encoder_value</span>(<span class="ident">EncoderName::Reverb</span>, <span class="ident">value</span> <span class="kw">as</span> <span class="ident">u8</span>)<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="kw">fn</span> <span class="ident">set_pitch_mode</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">hardware</span>.<span class="ident">device_type</span> <span class="op">!</span><span class="op">=</span> <span class="ident">DeviceType::Full</span> {
+            <span class="comment">// Not a Full GoXLR, nothing to do.</span>
+            <span class="kw">return</span> <span class="prelude-val">Ok</span>(())
+        }
+
+        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">profile</span>.<span class="ident">is_hardtune_enabled</span>() {
+            <span class="kw">if</span> <span class="self">self</span>.<span class="ident">profile</span>.<span class="ident">is_pitch_narrow</span>() {
+                <span class="self">self</span>.<span class="ident">goxlr</span>.<span class="ident">set_encoder_mode</span>(<span class="ident">EncoderName::Pitch</span>, <span class="number">03</span>, <span class="number">01</span>)<span class="question-mark">?</span>;
+            } <span class="kw">else</span> {
+                <span class="self">self</span>.<span class="ident">goxlr</span>.<span class="ident">set_encoder_mode</span>(<span class="ident">EncoderName::Pitch</span>, <span class="number">03</span>, <span class="number">02</span>)<span class="question-mark">?</span>;
+            }
+        } <span class="kw">else</span> {
+            <span class="self">self</span>.<span class="ident">goxlr</span>.<span class="ident">set_encoder_mode</span>(<span class="ident">EncoderName::Pitch</span>, <span class="number">01</span>, <span class="number">04</span>)<span class="question-mark">?</span>;
         }
 
         <span class="prelude-val">Ok</span>(())

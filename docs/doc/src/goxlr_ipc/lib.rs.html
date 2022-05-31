@@ -54,6 +54,8 @@
 <span id="52">52</span>
 <span id="53">53</span>
 <span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">SinkExt</span>, <span class="ident">StreamExt</span>, <span class="ident">TryStreamExt</span>};
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 
@@ -97,16 +99,18 @@
     <span class="ident">SetCoughMuteFunction</span>(<span class="ident">MuteFunction</span>),
     <span class="ident">SetCoughColourConfiguration</span>(<span class="ident">String</span>, <span class="ident">ColourOffStyle</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>),
 
+    <span class="comment">// Bleep Button</span>
+    <span class="ident">SetSwearButtonVolume</span>(<span class="ident">i8</span>),
+    <span class="ident">SetSwearButtonColourConfiguration</span>(<span class="ident">String</span>, <span class="ident">ColourOffStyle</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>),
+
     <span class="comment">// Profile Handling..</span>
-    <span class="ident">ListProfiles</span>(),
-    <span class="ident">ImportProfile</span>(<span class="ident">String</span>),
     <span class="ident">LoadProfile</span>(<span class="ident">String</span>),
     <span class="ident">SaveProfile</span>(),
+    <span class="ident">SaveProfileAs</span>(<span class="ident">String</span>),
 
-    <span class="ident">ListMicProfiles</span>(),
-    <span class="ident">ImportMicProfile</span>(<span class="ident">String</span>),
     <span class="ident">LoadMicProfile</span>(<span class="ident">String</span>),
-    <span class="ident">SaveMicProfile</span>()
+    <span class="ident">SaveMicProfile</span>(),
+    <span class="ident">SaveMicProfileAs</span>(<span class="ident">String</span>),
 }
 </code></pre></div>
 </section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="goxlr_ipc" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.59.0 (9d1b2106e 2022-02-23)" ></div>

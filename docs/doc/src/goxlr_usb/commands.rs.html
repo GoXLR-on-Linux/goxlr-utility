@@ -66,6 +66,8 @@
 <span id="64">64</span>
 <span id="65">65</span>
 <span id="66">66</span>
+<span id="67">67</span>
+<span id="68">68</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::routing::InputDevice</span>;
 <span class="kw">use</span> <span class="ident">goxlr_types</span>::{<span class="ident">ChannelName</span>, <span class="ident">EncoderName</span>, <span class="ident">FaderName</span>};
 
@@ -76,6 +78,7 @@
     <span class="ident">SetChannelState</span>(<span class="ident">ChannelName</span>),
     <span class="ident">SetChannelVolume</span>(<span class="ident">ChannelName</span>),
     <span class="ident">SetEncoderValue</span>(<span class="ident">EncoderName</span>),
+    <span class="ident">SetEncoderMode</span>(<span class="ident">EncoderName</span>),
     <span class="ident">SetFader</span>(<span class="ident">FaderName</span>),
     <span class="ident">SetRouting</span>(<span class="ident">InputDevice</span>),
     <span class="ident">SetButtonStates</span>(),
@@ -97,6 +100,7 @@
             <span class="ident">Command::SetChannelState</span>(<span class="ident">channel</span>) =&gt; (<span class="number">0x809</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">12</span>) <span class="op">|</span> <span class="kw-2">*</span><span class="ident">channel</span> <span class="kw">as</span> <span class="ident">u32</span>,
             <span class="ident">Command::SetChannelVolume</span>(<span class="ident">channel</span>) =&gt; (<span class="number">0x806</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">12</span>) <span class="op">|</span> <span class="kw-2">*</span><span class="ident">channel</span> <span class="kw">as</span> <span class="ident">u32</span>,
             <span class="ident">Command::SetEncoderValue</span>(<span class="ident">encoder</span>) =&gt; (<span class="number">0x80a</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">12</span>) <span class="op">|</span> <span class="kw-2">*</span><span class="ident">encoder</span> <span class="kw">as</span> <span class="ident">u32</span>,
+            <span class="ident">Command::SetEncoderMode</span>(<span class="ident">encoder</span>) =&gt; (<span class="number">0x811</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">12</span>) <span class="op">|</span> <span class="kw-2">*</span><span class="ident">encoder</span> <span class="kw">as</span> <span class="ident">u32</span>,
             <span class="ident">Command::SetFader</span>(<span class="ident">fader</span>) =&gt; (<span class="number">0x805</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">12</span>) <span class="op">|</span> <span class="kw-2">*</span><span class="ident">fader</span> <span class="kw">as</span> <span class="ident">u32</span>,
             <span class="ident">Command::SetRouting</span>(<span class="ident">input_device</span>) =&gt; (<span class="number">0x804</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">12</span>) <span class="op">|</span> <span class="ident">input_device</span>.<span class="ident">id</span>() <span class="kw">as</span> <span class="ident">u32</span>,
             <span class="ident">Command::SetColourMap</span>() =&gt; (<span class="number">0x803</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">12</span>),

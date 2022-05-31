@@ -377,6 +377,59 @@
 <span id="375">375</span>
 <span id="376">376</span>
 <span id="377">377</span>
+<span id="378">378</span>
+<span id="379">379</span>
+<span id="380">380</span>
+<span id="381">381</span>
+<span id="382">382</span>
+<span id="383">383</span>
+<span id="384">384</span>
+<span id="385">385</span>
+<span id="386">386</span>
+<span id="387">387</span>
+<span id="388">388</span>
+<span id="389">389</span>
+<span id="390">390</span>
+<span id="391">391</span>
+<span id="392">392</span>
+<span id="393">393</span>
+<span id="394">394</span>
+<span id="395">395</span>
+<span id="396">396</span>
+<span id="397">397</span>
+<span id="398">398</span>
+<span id="399">399</span>
+<span id="400">400</span>
+<span id="401">401</span>
+<span id="402">402</span>
+<span id="403">403</span>
+<span id="404">404</span>
+<span id="405">405</span>
+<span id="406">406</span>
+<span id="407">407</span>
+<span id="408">408</span>
+<span id="409">409</span>
+<span id="410">410</span>
+<span id="411">411</span>
+<span id="412">412</span>
+<span id="413">413</span>
+<span id="414">414</span>
+<span id="415">415</span>
+<span id="416">416</span>
+<span id="417">417</span>
+<span id="418">418</span>
+<span id="419">419</span>
+<span id="420">420</span>
+<span id="421">421</span>
+<span id="422">422</span>
+<span id="423">423</span>
+<span id="424">424</span>
+<span id="425">425</span>
+<span id="426">426</span>
+<span id="427">427</span>
+<span id="428">428</span>
+<span id="429">429</span>
+<span id="430">430</span>
 </pre><pre class="rust"><code><span class="kw">mod</span> <span class="ident">channels</span>;
 <span class="kw">mod</span> <span class="ident">cli</span>;
 <span class="kw">mod</span> <span class="ident">client</span>;
@@ -395,7 +448,7 @@
 <span class="kw">use</span> <span class="ident">goxlr_types</span>::{<span class="ident">ChannelName</span>, <span class="ident">FaderName</span>, <span class="ident">InputDevice</span>, <span class="ident">MicrophoneType</span>, <span class="ident">OutputDevice</span>};
 <span class="kw">use</span> <span class="ident">strum::IntoEnumIterator</span>;
 <span class="kw">use</span> <span class="ident">tokio::net::UnixStream</span>;
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::cli</span>::{<span class="ident">AllFaderCommands</span>, <span class="ident">CoughCommands</span>, <span class="ident">FaderCommands</span>, <span class="ident">SubCommands</span>};
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::cli</span>::{<span class="ident">AllFaderCommands</span>, <span class="ident">BleepCommands</span>, <span class="ident">CoughCommands</span>, <span class="ident">FaderCommands</span>, <span class="ident">SubCommands</span>};
 
 <span class="attribute">#[<span class="ident">tokio::main</span>]</span>
 <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">main</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
@@ -453,11 +506,25 @@
             .<span class="ident">context</span>(<span class="string">&quot;Unable to save GoXLR Profile&quot;</span>)<span class="question-mark">?</span>;
     }
 
+    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">profile</span>) <span class="op">=</span> <span class="ident">cli</span>.<span class="ident">profile</span>.<span class="ident">save_profile_as</span> {
+        <span class="ident">client</span>.<span class="ident">command</span>(<span class="kw-2">&amp;</span><span class="ident">serial</span>, <span class="ident">GoXLRCommand::SaveProfileAs</span>(<span class="ident">profile</span>))
+            .<span class="kw">await</span>
+            .<span class="ident">context</span>(<span class="string">&quot;Unable to save Profile&quot;</span>)<span class="question-mark">?</span>;
+    }
+
     <span class="kw">if</span> <span class="ident">cli</span>.<span class="ident">profile</span>.<span class="ident">save_mic_profile</span> {
         <span class="ident">client</span>.<span class="ident">command</span>(<span class="kw-2">&amp;</span><span class="ident">serial</span>, <span class="ident">GoXLRCommand::SaveMicProfile</span>())
             .<span class="kw">await</span>
             .<span class="ident">context</span>(<span class="string">&quot;Unable to save Microphone Profile&quot;</span>)<span class="question-mark">?</span>;
     }
+
+    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">profile</span>) <span class="op">=</span> <span class="ident">cli</span>.<span class="ident">profile</span>.<span class="ident">save_mic_profile_as</span> {
+        <span class="ident">client</span>.<span class="ident">command</span>(<span class="kw-2">&amp;</span><span class="ident">serial</span>, <span class="ident">GoXLRCommand::SaveMicProfileAs</span>(<span class="ident">profile</span>))
+            .<span class="kw">await</span>
+            .<span class="ident">context</span>(<span class="string">&quot;Unable to save Mic Profile&quot;</span>)<span class="question-mark">?</span>;
+    }
+
+
 
     <span class="ident">apply_fader_controls</span>(<span class="kw-2">&amp;</span><span class="ident">cli</span>.<span class="ident">faders</span>, <span class="kw-2">&amp;mut</span> <span class="ident">client</span>, <span class="kw-2">&amp;</span><span class="ident">serial</span>)
         .<span class="kw">await</span>
@@ -632,6 +699,37 @@
                         }
                     }
                 }
+                <span class="ident">SubCommands::Bleep</span> { <span class="ident">command</span> } =&gt; {
+                    <span class="kw">match</span> <span class="prelude-val">Some</span>(<span class="ident">command</span>) {
+                        <span class="prelude-val">None</span> =&gt; {}
+                        <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; {
+                            <span class="kw">match</span> <span class="ident">command</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>() {
+                                <span class="ident">BleepCommands::Volume</span> { <span class="ident">volume_percent</span> } =&gt; {
+                                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">value</span>) <span class="op">=</span> <span class="ident">volume_percent</span> {
+                                        <span class="comment">// Ok, this is a value between -37 and 0, with 0 being loudest :D</span>
+                                        <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> (<span class="number">37</span> <span class="op">*</span> <span class="kw-2">*</span><span class="ident">value</span> <span class="kw">as</span> <span class="ident">u16</span>) <span class="op">/</span> <span class="number">100</span>;
+                                        <span class="ident">client</span>.<span class="ident">command</span>(<span class="kw-2">&amp;</span><span class="ident">serial</span>, <span class="ident">GoXLRCommand::SetSwearButtonVolume</span>(
+                                            (<span class="ident">value</span> <span class="kw">as</span> <span class="ident">i8</span> <span class="op">-</span> <span class="number">37</span>) <span class="kw">as</span> <span class="ident">i8</span>,
+                                        )).<span class="kw">await</span><span class="question-mark">?</span>;
+                                    }
+                                }
+                                <span class="ident">BleepCommands::Colour</span> { <span class="ident">colour_one</span>, <span class="ident">off_style</span>, <span class="ident">colour_two</span> } =&gt; {
+                                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">colour_send</span> <span class="op">=</span> <span class="prelude-val">None</span>;
+                                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">value</span>) <span class="op">=</span> <span class="ident">colour_two</span> {
+                                        <span class="ident">colour_send</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">value</span>.<span class="ident">to_string</span>());
+                                    }
+
+                                    <span class="comment">// We might end up moving colour setting to elsewhere, for now we&#39;ll do it here..</span>
+                                    <span class="ident">client</span>.<span class="ident">command</span>(<span class="kw-2">&amp;</span><span class="ident">serial</span>, <span class="ident">GoXLRCommand::SetSwearButtonColourConfiguration</span>(
+                                        <span class="ident">colour_one</span>.<span class="ident">to_string</span>(),
+                                        <span class="kw-2">*</span><span class="ident">off_style</span>,
+                                        <span class="ident">colour_send</span>,
+                                    )).<span class="kw">await</span><span class="question-mark">?</span>;
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -641,6 +739,14 @@
         <span class="macro">println!</span>(
             <span class="string">&quot;Profile directory: {}&quot;</span>,
             <span class="ident">client</span>.<span class="ident">status</span>().<span class="ident">profile_directory</span>.<span class="ident">to_string_lossy</span>()
+        );
+        <span class="macro">println!</span>(
+            <span class="string">&quot;Mic Profile directory: {}&quot;</span>,
+            <span class="ident">client</span>.<span class="ident">status</span>().<span class="ident">mic_profile_directory</span>.<span class="ident">to_string_lossy</span>()
+        );
+        <span class="macro">println!</span>(
+            <span class="string">&quot;Samples directory: {}&quot;</span>,
+            <span class="ident">client</span>.<span class="ident">status</span>().<span class="ident">samples_directory</span>.<span class="ident">to_string_lossy</span>()
         );
         <span class="kw">for</span> <span class="ident">mixer</span> <span class="kw">in</span> <span class="ident">client</span>.<span class="ident">status</span>().<span class="ident">mixers</span>.<span class="ident">values</span>() {
             <span class="ident">print_device</span>(<span class="ident">mixer</span>);

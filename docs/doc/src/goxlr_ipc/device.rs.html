@@ -94,6 +94,8 @@
 <span id="92">92</span>
 <span id="93">93</span>
 <span id="94">94</span>
+<span id="95">95</span>
+<span id="96">96</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">enumset::EnumSet</span>;
 <span class="kw">use</span> <span class="ident">goxlr_types</span>::{<span class="ident">ChannelName</span>, <span class="ident">FaderName</span>, <span class="ident">FirmwareVersions</span>, <span class="ident">InputDevice</span>, <span class="ident">MicrophoneType</span>, <span class="ident">MuteFunction</span>, <span class="ident">OutputDevice</span>};
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
@@ -105,6 +107,8 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">DaemonStatus</span> {
     <span class="kw">pub</span> <span class="ident">mixers</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">MixerStatus</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">profile_directory</span>: <span class="ident">PathBuf</span>,
+    <span class="kw">pub</span> <span class="ident">mic_profile_directory</span>: <span class="ident">PathBuf</span>,
+    <span class="kw">pub</span> <span class="ident">samples_directory</span>: <span class="ident">PathBuf</span>,
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>

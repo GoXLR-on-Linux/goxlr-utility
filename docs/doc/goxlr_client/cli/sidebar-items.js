@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["AllFaderCommands",""],["CoughCommands",""],["FaderCommands",""],["SubCommands",""]],"fn":[["parse_volume",""]],"struct":[["ChannelVolumes",""],["Cli",""],["FaderControls",""],["MicrophoneControls",""],["Profile",""]]});
+initSidebarItems({"enum":[["AllFaderCommands",""],["BleepCommands",""],["CoughCommands",""],["FaderCommands",""],["SubCommands",""]],"fn":[["parse_volume",""]],"struct":[["ChannelVolumes",""],["Cli",""],["FaderControls",""],["MicrophoneControls",""],["Profile",""]]});

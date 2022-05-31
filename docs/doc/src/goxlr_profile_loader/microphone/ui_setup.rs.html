@@ -111,7 +111,7 @@
 <span id="109">109</span>
 <span id="110">110</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::collections::HashMap</span>;
-<span class="kw">use</span> <span class="ident">std::fs::File</span>;
+<span class="kw">use</span> <span class="ident">std::io::Write</span>;
 <span class="kw">use</span> <span class="ident">xml::attribute::OwnedAttribute</span>;
 <span class="kw">use</span> <span class="ident">xml::writer::events::StartElementBuilder</span>;
 <span class="kw">use</span> <span class="ident">xml::writer::XmlEvent</span> <span class="kw">as</span> <span class="ident">XmlWriterEvent</span>;
@@ -189,7 +189,7 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write_ui</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">writer</span>: <span class="kw-2">&amp;mut</span> <span class="ident">EventWriter</span><span class="op">&lt;</span><span class="kw-2">&amp;mut</span> <span class="ident">File</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">xml::writer::Error</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write_ui</span><span class="op">&lt;</span><span class="ident">W</span>: <span class="ident">Write</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">writer</span>: <span class="kw-2">&amp;mut</span> <span class="ident">EventWriter</span><span class="op">&lt;</span><span class="kw-2">&amp;mut</span> <span class="ident">W</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">xml::writer::Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">element</span>: <span class="ident">StartElementBuilder</span> <span class="op">=</span>
             <span class="ident">XmlWriterEvent::start_element</span>(<span class="string">&quot;micProfileUIMicProfile&quot;</span>);
 
