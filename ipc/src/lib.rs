@@ -46,13 +46,9 @@ pub enum GoXLRCommand {
     SetSwearButtonColourConfiguration(String, ColourOffStyle, Option<String>),
 
     // Profile Handling..
-    ListProfiles(),
-    ImportProfile(String),
     LoadProfile(String),
     SaveProfile(),
 
-    ListMicProfiles(),
-    ImportMicProfile(String),
     LoadMicProfile(String),
     SaveMicProfile()
 }
