@@ -9,6 +9,8 @@ use strum::EnumCount;
 pub struct DaemonStatus {
     pub mixers: HashMap<String, MixerStatus>,
     pub profile_directory: PathBuf,
+    pub mic_profile_directory: PathBuf,
+    pub samples_directory: PathBuf,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

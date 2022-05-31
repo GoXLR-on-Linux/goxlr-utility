@@ -70,6 +70,8 @@ pub async fn handle_changes(
                     DeviceCommand::SendDaemonStatus(sender) => {
                         let mut status = DaemonStatus {
                             profile_directory: settings.get_profile_directory().await,
+                            mic_profile_directory: settings.get_mic_profile_directory().await,
+                            samples_directory: settings.get_samples_directory().await,
                             ..Default::default()
                         };
                         for (serial, device) in &devices {

@@ -62,6 +62,17 @@ impl SettingsHandle {
         settings.profile_directory.clone().unwrap()
     }
 
+    pub async fn get_mic_profile_directory(&self) -> PathBuf {
+        let settings = self.settings.read().await;
+        settings.mic_profile_directory.clone().unwrap()
+    }
+
+    pub async fn get_samples_directory(&self) -> PathBuf {
+        let settings = self.settings.read().await;
+        settings.samples_directory.clone().unwrap()
+    }
+
+
     pub async fn get_device_profile_name(&self, device_serial: &str) -> Option<String> {
         let settings = self.settings.read().await;
         settings
