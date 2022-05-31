@@ -300,6 +300,14 @@ async fn main() -> Result<()> {
             "Profile directory: {}",
             client.status().profile_directory.to_string_lossy()
         );
+        println!(
+            "Mic Profile directory: {}",
+            client.status().mic_profile_directory.to_string_lossy()
+        );
+        println!(
+            "Samples directory: {}",
+            client.status().samples_directory.to_string_lossy()
+        );
         for mixer in client.status().mixers.values() {
             print_device(mixer);
         }

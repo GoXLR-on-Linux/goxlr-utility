@@ -25,8 +25,8 @@ impl SettingsHandle {
         });
 
         // Set these values if they're missing from the configuration
-        if settings.mic_profile_directory.is_none() {
-            settings.mic_profile_directory = Some(data_dir.join("profiles"));
+        if settings.profile_directory.is_none() {
+            settings.profile_directory = Some(data_dir.join("profiles"));
         }
 
         if settings.mic_profile_directory.is_none() {
