@@ -9,7 +9,7 @@ use goxlr_usb::channelstate::ChannelState;
 use goxlr_usb::goxlr::GoXLR;
 use goxlr_usb::routing::{InputDevice, OutputDevice};
 use goxlr_usb::rusb::UsbContext;
-use log::debug;
+use log::{debug, info};
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 use enum_map::EnumMap;
@@ -44,6 +44,7 @@ impl<T: UsbContext> Device<T> {
         profile_directory: &Path,
         settings_handle: &SettingsHandle
     ) -> Result<Self> {
+        info!("Loading Profile: {}", profile_name.clone().unwrap_or("Not Defined".to_string()));
         let profile = ProfileAdapter::from_named_or_default(profile_name, profile_directory);
         let mic_profile =
             MicProfileAdapter::from_named_or_default(mic_profile_name, profile_directory);
