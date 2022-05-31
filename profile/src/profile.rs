@@ -1,6 +1,5 @@
-use std::env;
-use std::fs::{create_dir, File, read_dir, remove_dir_all};
-use std::io::{BufReader, Read, Write};
+use std::fs::File;
+use std::io::{Read, Write};
 use std::path::Path;
 use std::process::exit;
 use std::str::FromStr;
