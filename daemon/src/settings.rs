@@ -1,6 +1,6 @@
 use crate::profile::{DEFAULT_MIC_PROFILE_NAME, DEFAULT_PROFILE_NAME};
 use anyhow::{Context, Result};
-use log::error;
+use log::{error, warn};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::{create_dir_all, File};
@@ -17,10 +17,27 @@ pub struct SettingsHandle {
 
 impl SettingsHandle {
     pub async fn load(path: PathBuf, data_dir: &Path) -> Result<SettingsHandle> {
-        let settings = Settings::read(&path)?.unwrap_or_else(|| Settings {
-            profile_directory: data_dir.join("profiles"),
+        let mut settings = Settings::read(&path)?.unwrap_or_else(|| Settings {
+            profile_directory: Some(data_dir.join("profiles")),
+            mic_profile_directory: Some(data_dir.join("mic-profiles")),
+            samples_directory: Some(data_dir.join("samples")),
             devices: Default::default(),
         });
+
+        // Set these values if they're missing from the configuration
+        if settings.mic_profile_directory.is_none() {
+            settings.mic_profile_directory = Some(data_dir.join("profiles"));
+        }
+
+        if settings.mic_profile_directory.is_none() {
+            settings.mic_profile_directory = Some(data_dir.join("mic-profiles"));
+        }
+
+        if settings.samples_directory.is_none() {
+            settings.samples_directory = Some(data_dir.join("samples"));
+        }
+
+
         let handle = SettingsHandle {
             path,
             settings: Arc::new(RwLock::new(settings)),
@@ -42,7 +59,7 @@ impl SettingsHandle {
 
     pub async fn get_profile_directory(&self) -> PathBuf {
         let settings = self.settings.read().await;
-        settings.profile_directory.clone()
+        settings.profile_directory.clone().unwrap()
     }
 
     pub async fn get_device_profile_name(&self, device_serial: &str) -> Option<String> {
@@ -99,7 +116,9 @@ impl SettingsHandle {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Settings {
-    profile_directory: PathBuf,
+    profile_directory: Option<PathBuf>,
+    mic_profile_directory: Option<PathBuf>,
+    samples_directory: Option<PathBuf>,
     devices: HashMap<String, DeviceSettings>,
 }
 
