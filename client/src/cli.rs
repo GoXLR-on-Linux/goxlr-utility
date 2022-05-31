@@ -60,8 +60,12 @@ pub struct Profile {
     pub save_profile_as: Option<String>,
 
     /// Save the currently configured microphone profile to disk
-    #[clap(long, display_order=6)]
+    #[clap(long, display_order=7)]
     pub save_mic_profile: bool,
+
+    /// Saves the current microphone configuration as a new file..
+    #[clap(long, display_order=8)]
+    pub save_mic_profile_as: Option<String>,
 }
 
 #[derive(Debug, Args)]

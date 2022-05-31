@@ -86,6 +86,14 @@ async fn main() -> Result<()> {
             .context("Unable to save Microphone Profile")?;
     }
 
+    if let Some(profile) = cli.profile.save_mic_profile_as {
+        client.command(&serial, GoXLRCommand::SaveMicProfileAs(profile))
+            .await
+            .context("Unable to save Mic Profile")?;
+    }
+
+
+
     apply_fader_controls(&cli.faders, &mut client, &serial)
         .await
         .context("Could not apply fader settings")?;

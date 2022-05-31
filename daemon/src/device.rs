@@ -42,12 +42,14 @@ impl<T: UsbContext> Device<T> {
         profile_name: Option<String>,
         mic_profile_name: Option<String>,
         profile_directory: &Path,
+        mic_profile_directory: &Path,
         settings_handle: &SettingsHandle
     ) -> Result<Self> {
         info!("Loading Profile: {}", profile_name.clone().unwrap_or("Not Defined".to_string()));
+        info!("Loading Mic Profile: {}", mic_profile_name.clone().unwrap_or("Not Defined".to_string()));
         let profile = ProfileAdapter::from_named_or_default(profile_name, profile_directory);
         let mic_profile =
-            MicProfileAdapter::from_named_or_default(mic_profile_name, profile_directory);
+            MicProfileAdapter::from_named_or_default(mic_profile_name, mic_profile_directory);
 
         let mut device = Self {
             profile,

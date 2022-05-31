@@ -159,12 +159,14 @@ async fn load_device(
     let profile_directory = settings.get_profile_directory().await;
     let profile_name = settings.get_device_profile_name(&serial_number).await;
     let mic_profile_name = settings.get_device_mic_profile_name(&serial_number).await;
+    let mic_profile_directory = settings.get_mic_profile_directory().await;
     let device = Device::new(
         device,
         hardware,
         profile_name,
         mic_profile_name,
         &profile_directory,
+        &mic_profile_directory,
         settings,
     )?;
     settings
