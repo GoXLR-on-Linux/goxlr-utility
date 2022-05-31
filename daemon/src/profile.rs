@@ -639,6 +639,33 @@ impl MicProfileAdapter {
         Ok(Self { name, profile })
     }
 
+    pub fn write_profile(&mut self, name: String, directory: &Path, overwrite: bool) -> Result<()> {
+        let path = directory.join(format!("{}.goxlrMicProfile", name));
+        if !directory.exists() {
+            // Attempt to create the profile directory..
+            if let Err(e) = create_dir_all(directory) {
+                return Err(e).context(format!(
+                    "Could not create mic profile directory at {}",
+                    directory.to_string_lossy()
+                ))?;
+            }
+        }
+
+        if !overwrite && path.is_file() {
+            return Err(anyhow!("Profile exists, will not overwrite"));
+        }
+
+        self.profile.save(path)?;
+
+        // Keep our names in sync (in case it was changed)
+        if name != self.name() {
+            dbg!("Changing Profile Name: {} -> {}", self.name(), name.clone());
+            self.name = name;
+        }
+
+        Ok(())
+    }
+
     pub fn name(&self) -> &str {
         &self.name
     }

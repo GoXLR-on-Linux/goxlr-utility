@@ -1,4 +1,4 @@
-use crate::error::ParseError;
+use crate::error::{ParseError, SaveError};
 use crate::microphone::compressor::Compressor;
 use crate::microphone::equalizer::Equalizer;
 use crate::microphone::gate::Gate;
@@ -6,7 +6,7 @@ use crate::microphone::mic_setup::MicSetup;
 use crate::microphone::ui_setup::UiSetup;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::Read;
+use std::io::{Read, Write};
 use std::os::raw::c_float;
 use std::path::Path;
 use xml::reader::XmlEvent as XmlReaderEvent;
@@ -98,18 +98,29 @@ impl MicProfileSettings {
         })
     }
 
-    pub fn write<P: AsRef<Path>>(&self, path: P) -> Result<(), xml::writer::Error> {
+    pub fn save(&self, path: impl AsRef<Path>) -> Result<(), SaveError> {
+        dbg!("Saving File: {}", &path.as_ref());
+
+        let out_file = File::create(path)?;
+        self.write_to(out_file)?;
+
+        Ok(())
+    }
+
+    pub fn write_to<W: Write>(&self, mut sink: W) -> Result<(), xml::writer::Error> {
         // Create the file, and the writer..
-        let mut out_file = File::create(path)?;
         let mut writer = EmitterConfig::new()
             .perform_indent(true)
-            .create_writer(&mut out_file);
+            .create_writer(&mut sink);
 
         writer.write(XmlWriterEvent::start_element("MicProfileTree"))?;
 
         // First, we need to write the EQ, Compressor and Gate..
         let mut attributes: HashMap<String, String> = HashMap::default();
+
+        // The mini and main can both have configs in the same file.
         self.equalizer.write_equaliser(&mut attributes);
+        self.equalizer_mini.write_equaliser(&mut attributes);
         self.compressor.write_compressor(&mut attributes);
         self.gate.write_gate(&mut attributes);
         attributes.insert("MIC_DEESS_AMOUNT".to_string(), format!("{}", self.deess));

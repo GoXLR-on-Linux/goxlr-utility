@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::fs::File;
+use std::io::Write;
 use xml::attribute::OwnedAttribute;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
@@ -77,7 +77,7 @@ impl UiSetup {
         Ok(())
     }
 
-    pub fn write_ui(&self, writer: &mut EventWriter<&mut File>) -> Result<(), xml::writer::Error> {
+    pub fn write_ui<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<(), xml::writer::Error> {
         let mut element: StartElementBuilder =
             XmlWriterEvent::start_element("micProfileUIMicProfile");
 

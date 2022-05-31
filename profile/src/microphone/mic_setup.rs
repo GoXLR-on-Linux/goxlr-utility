@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::fs::File;
+use std::io::Write;
 use std::str::FromStr;
 use xml::attribute::OwnedAttribute;
 use xml::writer::events::StartElementBuilder;
@@ -59,9 +59,9 @@ impl MicSetup {
         Ok(())
     }
 
-    pub fn write_config(
+    pub fn write_config<W: Write>(
         &self,
-        writer: &mut EventWriter<&mut File>,
+        writer: &mut EventWriter<&mut W>,
     ) -> Result<(), xml::writer::Error> {
         let mut element: StartElementBuilder = XmlWriterEvent::start_element("setupTreeMicProfile");
 
