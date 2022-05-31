@@ -10,7 +10,7 @@ use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDev
 use goxlr_usb::colouring::ColourTargets;
 use log::error;
 use std::fs::{create_dir_all, File};
-use std::io::{Cursor, ErrorKind, Read, Seek};
+use std::io::{Cursor, Read, Seek};
 use std::path::Path;
 use strum::EnumCount;
 use strum::IntoEnumIterator;
@@ -83,7 +83,7 @@ impl ProfileAdapter {
         Ok(Self { name, profile })
     }
 
-    pub fn to_named(&mut self, name: String, directory: &Path, overwrite: bool) -> Result<()> {
+    pub fn write_profile(&mut self, name: String, directory: &Path, overwrite: bool) -> Result<()> {
         let path = directory.join(format!("{}.goxlr", name));
         if !directory.exists() {
             // Attempt to create the profile directory..
