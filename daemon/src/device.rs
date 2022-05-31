@@ -13,6 +13,7 @@ use log::debug;
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 use enum_map::EnumMap;
+use futures::executor::block_on;
 use strum::{IntoEnumIterator};
 use goxlr_profile_loader::components::mute::{MuteFunction};
 use goxlr_usb::channelstate::ChannelState::{Muted, Unmuted};
@@ -57,7 +58,7 @@ impl<T: UsbContext> Device<T> {
         };
 
         device.apply_profile(settings_handle)?;
-        device.apply_mic_profile(settings_handle);
+        block_on(device.apply_mic_profile(settings_handle))?;
 
         Ok(device)
     }
@@ -665,12 +666,6 @@ impl<T: UsbContext> Device<T> {
                 // Apply the change..
                 self.apply_routing(input)?;
             }
-            GoXLRCommand::ListProfiles() => {
-                // Need to send a response.. No idea how that works yet :D
-            }
-            GoXLRCommand::ImportProfile(path) => {
-
-            }
             GoXLRCommand::LoadProfile(profile_name) => {
                 let profile_directory = settings.get_profile_directory().await;
                 self.profile = ProfileAdapter::from_named(profile_name, &profile_directory)?;
@@ -687,12 +682,6 @@ impl<T: UsbContext> Device<T> {
                 if let Some(profile_name) = profile_name {
                     self.profile.to_named(profile_name, &profile_directory)?;
                 }
-            }
-            GoXLRCommand::ListMicProfiles() => {
-
-            }
-            GoXLRCommand::ImportMicProfile(path) => {
-
             }
             GoXLRCommand::LoadMicProfile(mic_profile_name) => {
                 let profile_directory = settings.get_profile_directory().await;
@@ -954,7 +943,7 @@ impl<T: UsbContext> Device<T> {
         Ok(())
     }
 
-    fn apply_profile(&mut self, settings: &SettingsHandle) -> Result<()> {
+    fn apply_profile(&mut self, _settings: &SettingsHandle) -> Result<()> {
         // Set volumes first, applying mute may modify stuff..
         for channel in ChannelName::iter() {
             let channel_volume = self.profile.get_channel_volume(channel);

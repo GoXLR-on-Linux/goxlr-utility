@@ -26,3 +26,4 @@ serde_json = { version = "1.0" }
 directories = "4.0"
 byteorder = "1"
 enum-map = "2.1.0"
+futures = "0.3.21"
