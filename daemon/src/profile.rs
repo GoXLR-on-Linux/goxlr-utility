@@ -9,8 +9,8 @@ use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLef
 use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice, VersionNumber, MuteFunction as BasicMuteFunction, ColourDisplay as BasicColourDisplay, ColourOffStyle as BasicColourOffStyle, EffectBankPresets};
 use goxlr_usb::colouring::ColourTargets;
 use log::error;
-use std::fs::File;
-use std::io::{Cursor, Read, Seek};
+use std::fs::{create_dir_all, File};
+use std::io::{Cursor, ErrorKind, Read, Seek};
 use std::path::Path;
 use strum::EnumCount;
 use strum::IntoEnumIterator;
@@ -86,7 +86,13 @@ impl ProfileAdapter {
     pub fn to_named(&mut self, name: String, directory: &Path, overwrite: bool) -> Result<()> {
         let path = directory.join(format!("{}.goxlr", name));
         if !directory.exists() {
-            return Err(anyhow!("Profile Directory does not exist"));
+            // Attempt to create the profile directory..
+            if let Err(e) = create_dir_all(directory) {
+                return Err(e).context(format!(
+                    "Could not create profile directory at {}",
+                    directory.to_string_lossy()
+                ))?;
+            }
         }
 
         if !overwrite && path.is_file() {
