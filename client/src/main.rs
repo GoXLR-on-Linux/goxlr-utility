@@ -74,6 +74,12 @@ async fn main() -> Result<()> {
             .context("Unable to save GoXLR Profile")?;
     }
 
+    if let Some(profile) = cli.profile.save_profile_as {
+        client.command(&serial, GoXLRCommand::SaveProfileAs(profile))
+            .await
+            .context("Unable to save Profile")?;
+    }
+
     if cli.profile.save_mic_profile {
         client.command(&serial, GoXLRCommand::SaveMicProfile())
             .await
