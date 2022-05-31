@@ -163,6 +163,7 @@ async fn load_device(
         profile_name,
         mic_profile_name,
         &profile_directory,
+        settings,
     )?;
     settings
         .set_device_profile_name(&serial_number, device.profile().name())

@@ -521,6 +521,30 @@ impl ProfileAdapter {
         self.profile.settings().pitch_encoder().get_preset(current).style() == &PitchStyle::Narrow
     }
 
+    /** Bleep Button **/
+    pub fn set_swear_off_style(&mut self, off_style: BasicColourOffStyle) {
+        self.profile.settings_mut().simple_element_mut(SimpleElements::Swear).colour_map_mut().set_off_style(
+            standard_to_profile_colour_off_style(off_style)
+        );
+    }
+
+    // TODO: This should (and hopefully will) be *FAR* more generic!
+    pub fn set_swear_colours(&mut self, colour_one: String, colour_two: Option<String>) -> Result<()> {
+        let colours = self.profile.settings_mut().simple_element_mut(SimpleElements::Swear).colour_map_mut();
+        if colour_one.len() != 6 {
+            return Err(anyhow!("Expected Length: 6 (RRGGBB), Colour One: {}", colour_one.len()));
+        }
+
+        if let Some(two) = colour_two {
+            if two.len() != 6 {
+                return Err(anyhow!("Expected Length: 6 (RRGGBB), Colour Two: {}", two.len()));
+            }
+            colours.set_colour(1, Colour::fromrgb(two.as_str())?);
+        }
+        colours.set_colour(0, Colour::fromrgb(colour_one.as_str())?);
+        Ok(())
+    }
+
 
     /** Generic Stuff **/
     pub fn get_button_colour_state(&self, button: Buttons) -> ButtonStates {

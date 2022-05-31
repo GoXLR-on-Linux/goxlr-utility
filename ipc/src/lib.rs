@@ -41,6 +41,10 @@ pub enum GoXLRCommand {
     SetCoughMuteFunction(MuteFunction),
     SetCoughColourConfiguration(String, ColourOffStyle, Option<String>),
 
+    // Bleep Button
+    SetSwearButtonVolume(i8),
+    SetSwearButtonColourConfiguration(String, ColourOffStyle, Option<String>),
+
     // Profile Handling..
     ListProfiles(),
     ImportProfile(String),

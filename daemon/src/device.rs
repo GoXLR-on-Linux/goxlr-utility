@@ -1,6 +1,6 @@
 use crate::profile::{version_newer_or_equal_to, MicProfileAdapter, ProfileAdapter};
 use crate::SettingsHandle;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use enumset::EnumSet;
 use goxlr_ipc::{DeviceType, FaderStatus, GoXLRCommand, HardwareStatus, MixerStatus};
 use goxlr_types::{ChannelName, EffectBankPresets, EffectKey, EncoderName, FaderName, InputDevice as BasicInputDevice, MicrophoneParamKey, OutputDevice as BasicOutputDevice, VersionNumber};
@@ -41,6 +41,7 @@ impl<T: UsbContext> Device<T> {
         profile_name: Option<String>,
         mic_profile_name: Option<String>,
         profile_directory: &Path,
+        settings_handle: &SettingsHandle
     ) -> Result<Self> {
         let profile = ProfileAdapter::from_named_or_default(profile_name, profile_directory);
         let mic_profile =
@@ -55,8 +56,8 @@ impl<T: UsbContext> Device<T> {
             button_states: EnumMap::default(),
         };
 
-        device.apply_profile()?;
-        device.apply_mic_profile()?;
+        device.apply_profile(settings_handle)?;
+        device.apply_mic_profile(settings_handle);
 
         Ok(device)
     }
@@ -632,6 +633,25 @@ impl<T: UsbContext> Device<T> {
                 self.load_colour_map()?;
                 self.update_button_states()?;
             }
+            GoXLRCommand::SetSwearButtonVolume(volume) => {
+                if volume < -37 || volume > 0 {
+                    return Err(anyhow!("Mute volume must be between -37 and 0"));
+                }
+                settings
+                    .set_device_bleep_volume(self.serial(), volume)
+                    .await;
+                settings.save().await;
+
+                self.goxlr.set_effect_values(&[
+                    (EffectKey::BleepLevel, volume as i32),
+                ])?;
+            }
+            GoXLRCommand::SetSwearButtonColourConfiguration(colour_one, off_style, colour_two) => {
+                self.profile.set_swear_off_style(off_style);
+                self.profile.set_swear_colours(colour_one, colour_two);
+                self.load_colour_map()?;
+                self.update_button_states()?;
+            }
 
             GoXLRCommand::SetMicrophoneGain(mic_type, gain) => {
                 self.goxlr.set_microphone_gain(mic_type, gain.into())?;
@@ -654,7 +674,7 @@ impl<T: UsbContext> Device<T> {
             GoXLRCommand::LoadProfile(profile_name) => {
                 let profile_directory = settings.get_profile_directory().await;
                 self.profile = ProfileAdapter::from_named(profile_name, &profile_directory)?;
-                self.apply_profile()?;
+                self.apply_profile(settings)?;
                 settings
                     .set_device_profile_name(self.serial(), self.profile.name())
                     .await;
@@ -678,7 +698,7 @@ impl<T: UsbContext> Device<T> {
                 let profile_directory = settings.get_profile_directory().await;
                 self.mic_profile =
                     MicProfileAdapter::from_named(mic_profile_name, &profile_directory)?;
-                self.apply_mic_profile()?;
+                self.apply_mic_profile(settings).await?;
                 settings
                     .set_device_mic_profile_name(self.serial(), self.mic_profile.name())
                     .await;
@@ -934,7 +954,7 @@ impl<T: UsbContext> Device<T> {
         Ok(())
     }
 
-    fn apply_profile(&mut self) -> Result<()> {
+    fn apply_profile(&mut self, settings: &SettingsHandle) -> Result<()> {
         // Set volumes first, applying mute may modify stuff..
         for channel in ChannelName::iter() {
             let channel_volume = self.profile.get_channel_volume(channel);
@@ -965,7 +985,7 @@ impl<T: UsbContext> Device<T> {
         Ok(())
     }
 
-    fn apply_mic_profile(&mut self) -> Result<()> {
+    async fn apply_mic_profile(&mut self, settings: &SettingsHandle) -> Result<()> {
         self.goxlr.set_microphone_gain(
             self.mic_profile.mic_type(),
             self.mic_profile.mic_gains()[self.mic_profile.mic_type() as usize],
@@ -1024,7 +1044,9 @@ impl<T: UsbContext> Device<T> {
             (EffectKey::CompressorMakeUpGain, main_effects[8]),
 
             (EffectKey::GateEnabled, 1),
-            (EffectKey::BleepLevel, -10),
+            (EffectKey::BleepLevel,
+             settings.get_device_bleep_volume(self.serial()).await.unwrap_or(-20) as i32
+            ),
             (EffectKey::GateMode, 2),
 
             // We don't use this effect key under Linux (mostly due to there being other ways

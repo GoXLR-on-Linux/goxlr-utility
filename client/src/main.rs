@@ -16,7 +16,7 @@ use goxlr_ipc::{GoXLRCommand, Socket};
 use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice};
 use strum::IntoEnumIterator;
 use tokio::net::UnixStream;
-use crate::cli::{AllFaderCommands, CoughCommands, FaderCommands, SubCommands};
+use crate::cli::{AllFaderCommands, BleepCommands, CoughCommands, FaderCommands, SubCommands};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -244,6 +244,37 @@ async fn main() -> Result<()> {
 
                                     // We might end up moving colour setting to elsewhere, for now we'll do it here..
                                     client.command(&serial, GoXLRCommand::SetCoughColourConfiguration(
+                                        colour_one.to_string(),
+                                        *off_style,
+                                        colour_send,
+                                    )).await?;
+                                }
+                            }
+                        }
+                    }
+                }
+                SubCommands::Bleep { command } => {
+                    match Some(command) {
+                        None => {}
+                        Some(_) => {
+                            match command.as_ref().unwrap() {
+                                BleepCommands::Volume { volume_percent } => {
+                                    if let Some(value) = volume_percent {
+                                        // Ok, this is a value between -37 and 0, with 0 being loudest :D
+                                        let value = (37 * *value as u16) / 100;
+                                        client.command(&serial, GoXLRCommand::SetSwearButtonVolume(
+                                            (value as i8 - 37) as i8,
+                                        )).await?;
+                                    }
+                                }
+                                BleepCommands::Colour { colour_one, off_style, colour_two } => {
+                                    let mut colour_send = None;
+                                    if let Some(value) = colour_two {
+                                        colour_send = Some(value.to_string());
+                                    }
+
+                                    // We might end up moving colour setting to elsewhere, for now we'll do it here..
+                                    client.command(&serial, GoXLRCommand::SetSwearButtonColourConfiguration(
                                         colour_one.to_string(),
                                         *off_style,
                                         colour_send,

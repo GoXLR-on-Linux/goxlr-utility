@@ -176,6 +176,12 @@ pub enum SubCommands {
         command: Option<CoughCommands>
     },
 
+    /// Configure the Bleep Button
+    Bleep {
+        #[clap(subcommand)]
+        command: Option<BleepCommands>
+    },
+
     /// Commands to manipulate the GoXLR Router
     Router {
         /// The input device
@@ -280,6 +286,29 @@ pub enum CoughCommands {
         /// Where a single press will mute (Hold will always Mute to All)
         #[clap(arg_enum)]
         mute_behaviour: Option<MuteFunction>
+    },
+
+    Colour {
+        /// The primary button colour [RRGGBB]
+        colour_one: String,
+
+        /// How the button should be presented when 'off'
+        #[clap(arg_enum)]
+        off_style: ColourOffStyle,
+
+        /// The secondary button colour [RRGGBB]
+        colour_two: Option<String>,
+    }
+}
+
+#[derive(Subcommand, Debug)]
+#[clap(setting = AppSettings::DeriveDisplayOrder)]
+pub enum BleepCommands {
+    /// Change the behaviour of the Swear Button
+    Volume {
+        /// Set Bleep Button Volume
+        #[clap(parse(try_from_str=parse_volume))]
+        volume_percent: Option<u8>
     },
 
     Colour {
