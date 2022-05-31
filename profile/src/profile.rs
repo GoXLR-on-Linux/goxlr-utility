@@ -37,68 +37,70 @@ use crate::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
 #[derive(Debug)]
 pub struct Profile {
     settings: ProfileSettings,
+    scribbles: [Vec<u8>; 4],
 }
 
 impl Profile {
     pub fn load<R: Read + std::io::Seek>(read: R) -> Result<Self, ParseError> {
         let mut archive = zip::ZipArchive::new(read)?;
-        let settings = ProfileSettings::load(archive.by_name("profile.xml")?)?;
-        Ok(Profile { settings })
-    }
 
-    /**
-     * I have no idea what I'm doing, I couldn't find an easy way to just modify the archive,
-     * so instead extract it, edit it and try to piece it all back together again!
-     */
-    pub fn save(&self, path: impl AsRef<Path>) -> Result<(), SaveError> {
-        dbg!("Saving file: {}", &path.as_ref());
+        let mut scribbles: [Vec<u8>; 4] = Default::default();
 
-        // Create a temporary directory, and extract the contents of the zip..
-        let temporary_directory = env::temp_dir().join("goxlr-profile");
-        if temporary_directory.exists() {
-            remove_dir_all(temporary_directory.clone())?;
+        // Load the scribbles if they exist, store them in memory for later fuckery.
+        for i in 0 .. 4 {
+            let filename = format!("scribble{}.png", i + 1);
+            if let Ok(mut file) = archive.by_name(filename.as_str()) {
+                scribbles[i] = vec![0; file.size() as usize];
+                file.read(&mut scribbles[i])?;
+            }
         }
 
-        create_dir(temporary_directory.clone())?;
+        let settings = ProfileSettings::load(archive.by_name("profile.xml")?)?;
+        Ok(Profile { settings, scribbles })
+    }
 
-        // Open the original archive..
-        let mut archive = zip::ZipArchive::new(BufReader::new(File::open(path.as_ref())?))?;
-        archive.extract(temporary_directory.clone())?;
+    // Ok, this is better.
+    pub fn save(&self, path: impl AsRef<Path>, overwrite: bool) -> Result<(), SaveError> {
+        dbg!("Saving File: {}", &path.as_ref());
 
-        // Replace the profile.xml file in the profile dir..
-        let profile_file = temporary_directory.clone().join("profile.xml");
-        self.settings.write(profile_file)?;
+        // Used in 'Save Profile As' where the new file would overwrite an existing profile.
+        if path.as_ref().exists() && !overwrite {
+            return Err(SaveError::NoOverwrite());
+        }
 
-        // Ok, now we need to package it all back up..
-        let file = File::create(path.as_ref())?;
-        let mut archive = zip::ZipWriter::new(file);
+        // Create a new ZipFile at the requested location
+        let mut archive = zip::ZipWriter::new(File::create(path.as_ref())?);
 
-        let files = read_dir(temporary_directory.clone())?;
-        for file in files {
-            let file_path = file.as_ref().unwrap().path();
-            let file_name = file.as_ref().unwrap().file_name().into_string().unwrap().clone();
+        // Store the profile..
+        archive.start_file("profile.xml", FileOptions::default())?;
+        self.settings.write_to(&mut archive)?;
 
-            archive.start_file(file_name, FileOptions::default())?;
-            let mut f = File::open(file_path)?;
-
-            let mut buffer: Vec<u8> = Vec::new();
-            f.read_to_end(&mut buffer)?;
-            archive.write_all(&*buffer)?;
-            buffer.clear();
+        // Write the scribbles..
+        for i in 0 .. 4 {
+            // Only write if there's actually data stored..
+            if !self.scribbles[i].is_empty() {
+                let filename = format!("scribble{}.png", i + 1);
+                archive.start_file(filename, FileOptions::default())?;
+                archive.write_all(&self.scribbles[i])?;
+            }
         }
         archive.finish()?;
 
-        remove_dir_all(temporary_directory.clone())?;
         Ok(())
+    }
+
+    pub fn settings(&self) -> &ProfileSettings {
+        &self.settings
     }
 
     pub fn settings_mut(&mut self) -> &mut ProfileSettings {
         &mut self.settings
     }
 
-    pub fn settings(&self) -> &ProfileSettings {
-        &self.settings
+    pub fn get_scribble(&self, id: usize) -> &Vec<u8> {
+        &self.scribbles[id]
     }
+
 }
 
 #[derive(Debug)]

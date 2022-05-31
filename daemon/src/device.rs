@@ -648,7 +648,7 @@ impl<T: UsbContext> Device<T> {
             }
             GoXLRCommand::SetSwearButtonColourConfiguration(colour_one, off_style, colour_two) => {
                 self.profile.set_swear_off_style(off_style);
-                self.profile.set_swear_colours(colour_one, colour_two);
+                self.profile.set_swear_colours(colour_one, colour_two)?;
                 self.load_colour_map()?;
                 self.update_button_states()?;
             }
