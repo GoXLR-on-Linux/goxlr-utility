@@ -59,13 +59,8 @@ impl Profile {
     }
 
     // Ok, this is better.
-    pub fn save(&self, path: impl AsRef<Path>, overwrite: bool) -> Result<(), SaveError> {
+    pub fn save(&self, path: impl AsRef<Path>) -> Result<(), SaveError> {
         dbg!("Saving File: {}", &path.as_ref());
-
-        // Used in 'Save Profile As' where the new file would overwrite an existing profile.
-        if path.as_ref().exists() && !overwrite {
-            return Err(SaveError::NoOverwrite());
-        }
 
         // Create a new ZipFile at the requested location
         let mut archive = zip::ZipWriter::new(File::create(path.as_ref())?);
