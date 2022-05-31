@@ -48,7 +48,9 @@ pub enum GoXLRCommand {
     // Profile Handling..
     LoadProfile(String),
     SaveProfile(),
+    SaveProfileAs(String),
 
     LoadMicProfile(String),
-    SaveMicProfile()
+    SaveMicProfile(),
+    SaveMicProfileAs(String),
 }

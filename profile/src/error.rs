@@ -101,7 +101,4 @@ pub enum SaveError {
 
     #[error("Profile zip error: {0}")]
     ZipError(#[from] zip::result::ZipError),
-
-    #[error("Cannot overwrite profile")]
-    NoOverwrite()
 }
