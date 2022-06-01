@@ -412,6 +412,7 @@ dependencies = [
  "clap_complete",
  "goxlr-ipc",
  "goxlr-types",
+ "serde_json",
  "simplelog",
  "strum",
  "tokio",

@@ -306,17 +306,19 @@ async fn main() -> Result<()> {
         client.poll_status().await?;
         println!(
             "Profile directory: {}",
-            client.status().profile_directory.to_string_lossy()
+            client.status().paths.profile_directory.to_string_lossy()
         );
         println!(
             "Mic Profile directory: {}",
-            client.status().mic_profile_directory.to_string_lossy()
+            client.status().paths.mic_profile_directory.to_string_lossy()
         );
         println!(
             "Samples directory: {}",
-            client.status().samples_directory.to_string_lossy()
+            client.status().paths.samples_directory.to_string_lossy()
         );
         for mixer in client.status().mixers.values() {
+            println!("{}", serde_json::to_string(mixer)?);
+
             print_device(mixer);
         }
     }
@@ -373,8 +375,8 @@ fn print_mixer_info(mixer: &MixerStatus) {
         println!(
             "Fader {} assignment: {}, Mute Behaviour: {}",
             fader,
-            mixer.get_fader_assignment(fader).channel,
-            mixer.get_fader_assignment(fader).mute_type
+            mixer.get_fader_status(fader).channel,
+            mixer.get_fader_status(fader).mute_type
         )
     }
 
@@ -384,15 +386,15 @@ fn print_mixer_info(mixer: &MixerStatus) {
     }
 
     for microphone in MicrophoneType::iter() {
-        if mixer.mic_type == microphone {
+        if mixer.mic_status.mic_type == microphone {
             println!(
                 "{} mic gain: {} dB (ACTIVE)",
-                microphone, mixer.mic_gains[microphone as usize]
+                microphone, mixer.mic_status.mic_gains[microphone as usize]
             );
         } else {
             println!(
                 "{} mic gain: {} dB (Inactive)",
-                microphone, mixer.mic_gains[microphone as usize]
+                microphone, mixer.mic_status.mic_gains[microphone as usize]
             );
         }
     }

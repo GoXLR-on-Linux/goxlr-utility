@@ -2,7 +2,7 @@ use crate::profile::{version_newer_or_equal_to, MicProfileAdapter, ProfileAdapte
 use crate::SettingsHandle;
 use anyhow::{anyhow, Result};
 use enumset::EnumSet;
-use goxlr_ipc::{DeviceType, FaderStatus, GoXLRCommand, HardwareStatus, MixerStatus};
+use goxlr_ipc::{Compressor, DeviceType, Equaliser, EqualiserMini, FaderStatus, GoXLRCommand, HardwareStatus, MicSettings, MixerStatus, NoiseGate};
 use goxlr_types::{ChannelName, EffectBankPresets, EffectKey, EncoderName, FaderName, InputDevice as BasicInputDevice, MicrophoneParamKey, OutputDevice as BasicOutputDevice, VersionNumber};
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::channelstate::ChannelState;
@@ -71,16 +71,26 @@ impl<T: UsbContext> Device<T> {
     }
 
     pub fn status(&self) -> MixerStatus {
+        let mut fader_map = [Default::default(); 4];
+        fader_map[FaderName::A as usize] = self.get_fader_state(FaderName::A);
+        fader_map[FaderName::B as usize] = self.get_fader_state(FaderName::B);
+        fader_map[FaderName::C as usize] = self.get_fader_state(FaderName::C);
+        fader_map[FaderName::D as usize] = self.get_fader_state(FaderName::D);
+
         MixerStatus {
             hardware: self.hardware.clone(),
-            fader_a_assignment: self.get_fader_state(FaderName::A),
-            fader_b_assignment: self.get_fader_state(FaderName::B),
-            fader_c_assignment: self.get_fader_state(FaderName::C),
-            fader_d_assignment: self.get_fader_state(FaderName::D),
+            fader_status: fader_map,
             volumes: self.profile.get_volumes(),
             router: self.profile.create_router(),
-            mic_gains: self.mic_profile.mic_gains(),
-            mic_type: self.mic_profile.mic_type(),
+            router_table: self.profile.create_router_table(),
+            mic_status: MicSettings {
+                mic_type: self.mic_profile.mic_type(),
+                mic_gains: self.mic_profile.mic_gains(),
+                noise_gate: NoiseGate {},
+                equaliser: Equaliser {},
+                equaliser_mini: EqualiserMini {},
+                compressor: Compressor {}
+            },
             profile_name: self.profile.name().to_owned(),
             mic_profile_name: self.mic_profile.name().to_owned()
         }

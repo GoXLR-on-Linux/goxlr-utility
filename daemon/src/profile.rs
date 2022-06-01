@@ -131,6 +131,23 @@ impl ProfileAdapter {
         router
     }
 
+    // This is similar to above, but provides a slightly 'nicer' true / false for lookups, which
+    // maps slightly better when converting to something like JSON, this may fully replace the above
+    // but for now will sit along side
+    pub fn create_router_table(&self) -> [[bool; OutputDevice::COUNT]; InputDevice::COUNT] {
+        let mut router = [[false; OutputDevice::COUNT]; InputDevice::COUNT];
+
+        for (input, potential_outputs) in self.profile.settings().mixer().mixer_table().iter() {
+            for (channel, volume) in potential_outputs.iter() {
+                if *volume > 0 {
+                    router[profile_to_standard_input(input) as usize]
+                        [profile_to_standard_output(channel) as usize] = true;
+                }
+            }
+        }
+        router
+    }
+
     pub fn get_router(&self, input: InputDevice) -> EnumMap<OutputDevice, bool> {
         let mut map: EnumMap<OutputDevice, bool> = EnumMap::default();
 

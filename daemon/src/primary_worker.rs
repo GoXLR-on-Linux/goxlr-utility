@@ -1,7 +1,7 @@
 use crate::device::Device;
 use crate::{SettingsHandle, Shutdown};
 use anyhow::{anyhow, Result};
-use goxlr_ipc::{DaemonStatus, DeviceType, GoXLRCommand, HardwareStatus, UsbProductInformation};
+use goxlr_ipc::{DaemonStatus, DeviceType, GoXLRCommand, HardwareStatus, Paths, UsbProductInformation};
 use goxlr_usb::goxlr::{GoXLR, PID_GOXLR_FULL, PID_GOXLR_MINI, VID_GOXLR};
 use goxlr_usb::rusb::{DeviceDescriptor, GlobalContext};
 use goxlr_usb::{goxlr, rusb};
@@ -69,9 +69,11 @@ pub async fn handle_changes(
                 match command {
                     DeviceCommand::SendDaemonStatus(sender) => {
                         let mut status = DaemonStatus {
-                            profile_directory: settings.get_profile_directory().await,
-                            mic_profile_directory: settings.get_mic_profile_directory().await,
-                            samples_directory: settings.get_samples_directory().await,
+                            paths: Paths {
+                                profile_directory: settings.get_profile_directory().await,
+                                mic_profile_directory: settings.get_mic_profile_directory().await,
+                                samples_directory: settings.get_samples_directory().await,
+                            },
                             ..Default::default()
                         };
                         for (serial, device) in &devices {
