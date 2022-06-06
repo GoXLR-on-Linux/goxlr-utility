@@ -16,7 +16,7 @@ use goxlr_ipc::{GoXLRCommand, Socket};
 use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice};
 use strum::IntoEnumIterator;
 use tokio::net::UnixStream;
-use crate::cli::{AllFaderCommands, BleepCommands, CoughCommands, FaderCommands, SubCommands};
+use crate::cli::{AllFaderCommands, BleepCommands, CoughCommands, FaderCommands, ProfileAction, ProfileType, SubCommands};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -293,6 +293,59 @@ async fn main() -> Result<()> {
                                         *off_style,
                                         colour_send,
                                     )).await?;
+                                }
+                            }
+                        }
+                    }
+                }
+                SubCommands::Profiles { command } => {
+                    match command {
+                        None => {}
+                        Some(_) => {
+                            match command.as_ref().unwrap() {
+                                ProfileType::Device { command } => {
+                                    match command {
+                                        ProfileAction::Load { profile_name } => {
+                                            client.command(
+                                                &serial,
+                                                GoXLRCommand::LoadProfile(profile_name.to_string())
+                                            ).await.context("Unable to Load Profile")?;
+                                        }
+                                        ProfileAction::Save {} => {
+                                            client.command(
+                                                &serial,
+                                                GoXLRCommand::SaveProfile()
+                                            ).await.context("Unable to Save Profile")?;
+                                        }
+                                        ProfileAction::SaveAs { profile_name } => {
+                                            client.command(
+                                                &serial,
+                                                GoXLRCommand::SaveProfileAs(profile_name.to_string())
+                                            ).await.context("Unable to Save Profile")?;
+                                        }
+                                    }
+                                }
+                                ProfileType::Microphone { command } => {
+                                    match command {
+                                        ProfileAction::Load { profile_name } => {
+                                            client.command(
+                                                &serial,
+                                                GoXLRCommand::LoadMicProfile(profile_name.to_string())
+                                            ).await.context("Unable to Load Microphone Profile")?;
+                                        }
+                                        ProfileAction::Save {} => {
+                                            client.command(
+                                                &serial,
+                                                GoXLRCommand::SaveMicProfile()
+                                            ).await.context("Unable to Save Microphone Profile")?;
+                                        }
+                                        ProfileAction::SaveAs { profile_name } => {
+                                            client.command(
+                                                &serial,
+                                                GoXLRCommand::SaveMicProfileAs(profile_name.to_string())
+                                            ).await.context("Unable to Save Microphone Profile")?;
+                                        }
+                                    }
                                 }
                             }
                         }

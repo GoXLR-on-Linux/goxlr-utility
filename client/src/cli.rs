@@ -159,6 +159,12 @@ pub struct MicrophoneControls {
 #[derive(Subcommand, Debug)]
 #[clap(setting = AppSettings::DeriveDisplayOrder)]
 pub enum SubCommands {
+    /// Profile Settings
+    Profiles {
+        #[clap(subcommand)]
+        command: Option<ProfileType>,
+    },
+
     /// Adjust Channel Volumes
     Volume {
         /// The Channel To Change
@@ -223,6 +229,40 @@ fn parse_volume(s: &str) -> Result<u8, String> {
     Ok(value)
 }
 
+#[derive(Subcommand, Debug)]
+#[clap(setting = AppSettings::DeriveDisplayOrder)]
+pub enum ProfileType {
+    /// General Device Profile
+    Device {
+        #[clap(subcommand)]
+        command: ProfileAction
+    },
+
+    /// Microphone Profile
+    Microphone {
+        #[clap(subcommand)]
+        command: ProfileAction
+    }
+}
+
+#[derive(Subcommand, Debug)]
+#[clap(setting = AppSettings::DeriveDisplayOrder)]
+pub enum ProfileAction {
+    /// Load a profile by name
+    Load {
+        /// The profile name to load
+        profile_name: String,
+    },
+
+    /// Save the currently running profile
+    Save {},
+
+    /// Save the currently running profile with a new name
+    SaveAs {
+        /// The new Profile Name
+        profile_name: String,
+    }
+}
 
 #[derive(Subcommand, Debug)]
 #[clap(setting = AppSettings::DeriveDisplayOrder)]
