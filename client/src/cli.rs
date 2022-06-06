@@ -17,6 +17,10 @@ pub struct Cli {
     #[clap(long)]
     pub status: bool,
 
+    /// Display device information as JSON after command..
+    #[clap(long)]
+    pub status_json: bool,
+
     #[clap(flatten, help_heading = "Profile Management")]
     pub profile: Profile,
 

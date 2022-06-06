@@ -302,6 +302,11 @@ async fn main() -> Result<()> {
         }
     }
 
+    if cli.status_json {
+        client.poll_status().await?;
+        println!("{}", serde_json::to_string_pretty(client.status())?);
+    }
+
     if cli.status {
         client.poll_status().await?;
         println!(
@@ -317,8 +322,6 @@ async fn main() -> Result<()> {
             client.status().paths.samples_directory.to_string_lossy()
         );
         for mixer in client.status().mixers.values() {
-            println!("{}", serde_json::to_string(mixer)?);
-
             print_device(mixer);
         }
     }
