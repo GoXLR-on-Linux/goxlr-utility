@@ -1,12 +1,8 @@
-mod channels;
 mod cli;
 mod client;
-mod faders;
 mod microphone;
 
-use crate::channels::apply_channel_volumes;
 use crate::client::Client;
-use crate::faders::apply_fader_controls;
 use crate::microphone::apply_microphone_controls;
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
@@ -53,54 +49,6 @@ async fn main() -> Result<()> {
             "Multiple GoXLR devices are connected, please specify which one to control"
         ));
     };
-
-    if let Some(profile) = &cli.profile.load_profile {
-        client
-            .command(&serial, GoXLRCommand::LoadProfile(profile.to_string()))
-            .await
-            .context("Couldn't load the specified profile")?;
-    }
-
-    if let Some(profile) = &cli.profile.load_mic_profile {
-        client.
-            command(&serial, GoXLRCommand::LoadMicProfile(profile.to_string()))
-            .await
-            .context("Couldn't load Mic Profile")?;
-    }
-
-    if cli.profile.save_profile {
-        client.command(&serial, GoXLRCommand::SaveProfile())
-            .await
-            .context("Unable to save GoXLR Profile")?;
-    }
-
-    if let Some(profile) = cli.profile.save_profile_as {
-        client.command(&serial, GoXLRCommand::SaveProfileAs(profile))
-            .await
-            .context("Unable to save Profile")?;
-    }
-
-    if cli.profile.save_mic_profile {
-        client.command(&serial, GoXLRCommand::SaveMicProfile())
-            .await
-            .context("Unable to save Microphone Profile")?;
-    }
-
-    if let Some(profile) = cli.profile.save_mic_profile_as {
-        client.command(&serial, GoXLRCommand::SaveMicProfileAs(profile))
-            .await
-            .context("Unable to save Mic Profile")?;
-    }
-
-
-
-    apply_fader_controls(&cli.faders, &mut client, &serial)
-        .await
-        .context("Could not apply fader settings")?;
-
-    apply_channel_volumes(&cli.channel_volumes, &mut client, &serial)
-        .await
-        .context("Could not apply channel volumes")?;
 
     apply_microphone_controls(&cli.microphone_controls, &mut client, &serial)
         .await
