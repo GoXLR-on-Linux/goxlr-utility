@@ -66,31 +66,90 @@ pub struct MicSettings {
     pub mic_type: MicrophoneType,
     pub mic_gains: [u16; MicrophoneType::COUNT],
 
-    pub noise_gate: NoiseGate,
     pub equaliser: Equaliser,
     pub equaliser_mini: EqualiserMini,
+    pub noise_gate: NoiseGate,
     pub compressor: Compressor,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NoiseGate {
-
+pub struct Equaliser {
+    pub gain: EqualiserGain,
+    pub frequency: EqualiserFrequency,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Equaliser {
+pub struct EqualiserGain {
+    pub eq_31h_gain: i8,
+    pub eq_63h_gain: i8,
+    pub eq_125h_gain: i8,
+    pub eq_250h_gain: i8,
+    pub eq_500h_gain: i8,
+    pub eq_1k_gain: i8,
+    pub eq_2k_gain: i8,
+    pub eq_4k_gain: i8,
+    pub eq_8k_gain: i8,
+    pub eq_16k_gain: i8,
+}
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EqualiserFrequency {
+    pub eq_31h_freq: f64,
+    pub eq_63h_freq: f64,
+    pub eq_125h_freq: f64,
+    pub eq_250h_freq: f64,
+    pub eq_500h_freq: f64,
+    pub eq_1k_freq: f64,
+    pub eq_2k_freq: f64,
+    pub eq_4k_freq: f64,
+    pub eq_8k_freq: f64,
+    pub eq_16k_freq: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EqualiserMini {
+    pub gain: EqualiserMiniGain,
+    pub frequency: EqualiserMiniFrequency,
+}
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EqualiserMiniGain {
+    pub eq_90h_gain: i8,
+    pub eq_250h_gain: i8,
+    pub eq_500h_gain: i8,
+    pub eq_1k_gain: i8,
+    pub eq_3k_gain: i8,
+    pub eq_8k_gain: i8,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EqualiserMiniFrequency {
+    pub eq_90h_freq: f32,
+    pub eq_250h_freq: f32,
+    pub eq_500h_freq: f32,
+    pub eq_1k_freq: f32,
+    pub eq_3k_freq: f32,
+    pub eq_8k_freq: f32
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NoiseGate {
+    pub threshold: i8,
+    pub attack: u8,
+    pub release: u8,
+    pub enabled: bool,
+    pub attenuation: i8,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Compressor {
-
+    pub threshold: i8,
+    pub ratio: u8,
+    pub attack: u8,
+    pub release: u8,
+    pub makeup_gain: u8,
 }
+
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Paths {
@@ -98,8 +157,6 @@ pub struct Paths {
     pub mic_profile_directory: PathBuf,
     pub samples_directory: PathBuf,
 }
-
-
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UsbProductInformation {

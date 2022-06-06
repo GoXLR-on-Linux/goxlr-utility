@@ -86,10 +86,10 @@ impl<T: UsbContext> Device<T> {
             mic_status: MicSettings {
                 mic_type: self.mic_profile.mic_type(),
                 mic_gains: self.mic_profile.mic_gains(),
-                noise_gate: NoiseGate {},
-                equaliser: Equaliser {},
-                equaliser_mini: EqualiserMini {},
-                compressor: Compressor {}
+                noise_gate: self.mic_profile.noise_gate_ipc(),
+                equaliser: self.mic_profile.equalizer_ipc(),
+                equaliser_mini: self.mic_profile.equalizer_mini_ipc(),
+                compressor: self.mic_profile.compressor_ipc()
             },
             profile_name: self.profile.name().to_owned(),
             mic_profile_name: self.mic_profile.name().to_owned()

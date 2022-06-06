@@ -294,3 +294,48 @@ pub enum EffectBankPresets {
     Preset5,
     Preset6
 }
+
+#[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum GateKeys {
+    GateThreshold,
+    GateAttack,
+    GateRelease,
+    GateAttenuation,
+}
+
+#[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum CompressorKeys {
+    CompressorThreshold,
+    CompressorRatio,
+    CompressorAttack,
+    CompressorRelease,
+    CompressorMakeUpGain,
+}
+
+#[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum MiniEqGains {
+    Equalizer90HzGain,
+    Equalizer250HzGain,
+    Equalizer500HzGain,
+    Equalizer1KHzGain,
+    Equalizer3KHzGain,
+    Equalizer8KHzGain,
+}
+
+#[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum MiniEqFrequencies {
+    Equalizer90HzFrequency,
+    Equalizer250HzFrequency,
+    Equalizer500HzFrequency,
+    Equalizer1KHzFrequency,
+    Equalizer3KHzFrequency,
+    Equalizer8KHzFrequency,
+}

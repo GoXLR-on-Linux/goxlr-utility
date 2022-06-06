@@ -16,6 +16,7 @@ use strum::EnumCount;
 use strum::IntoEnumIterator;
 use byteorder::{ByteOrder, LittleEndian};
 use enum_map::EnumMap;
+use goxlr_ipc::{Compressor, Equaliser, EqualiserFrequency, EqualiserGain, EqualiserMini, EqualiserMiniFrequency, EqualiserMiniGain, NoiseGate};
 use goxlr_profile_loader::components::megaphone::Preset;
 use goxlr_profile_loader::components::mute::{MuteButton, MuteFunction};
 use goxlr_profile_loader::components::mute_chat::MuteChat;
@@ -701,6 +702,76 @@ impl MicProfileAdapter {
             1 => MicrophoneType::Condenser,
             2 => MicrophoneType::Jack,
             _ => MicrophoneType::Jack, // default
+        }
+    }
+
+    pub fn noise_gate_ipc(&self) -> NoiseGate {
+        NoiseGate {
+            threshold: self.profile.gate().threshold(),
+            attack: self.profile.gate().attack(),
+            release: self.profile.gate().release(),
+            enabled: self.profile.gate().enabled(),
+            attenuation: self.profile.gate().attenuation()
+        }
+    }
+
+    pub fn compressor_ipc(&self) -> Compressor {
+        Compressor {
+            threshold: self.profile.compressor().threshold(),
+            ratio: self.profile.compressor().ratio(),
+            attack: self.profile.compressor().attack(),
+            release: self.profile.compressor().release(),
+            makeup_gain: self.profile.compressor().makeup()
+        }
+    }
+
+    pub fn equalizer_ipc(&self) -> Equaliser {
+        Equaliser {
+            gain: EqualiserGain {
+                eq_31h_gain: self.profile.equalizer().eq_31h_gain(),
+                eq_63h_gain: self.profile.equalizer().eq_63h_gain(),
+                eq_125h_gain: self.profile.equalizer().eq_125h_gain(),
+                eq_250h_gain: self.profile.equalizer().eq_250h_gain(),
+                eq_500h_gain: self.profile.equalizer().eq_500h_gain(),
+                eq_1k_gain: self.profile.equalizer().eq_1k_gain(),
+                eq_2k_gain: self.profile.equalizer().eq_2k_gain(),
+                eq_4k_gain: self.profile.equalizer().eq_4k_gain(),
+                eq_8k_gain: self.profile.equalizer().eq_8k_gain(),
+                eq_16k_gain: self.profile.equalizer().eq_16k_gain(),
+            },
+            frequency: EqualiserFrequency {
+                eq_31h_freq: self.profile.equalizer().eq_31h_freq(),
+                eq_63h_freq: self.profile.equalizer().eq_63h_freq(),
+                eq_125h_freq: self.profile.equalizer().eq_125h_freq(),
+                eq_250h_freq: self.profile.equalizer().eq_250h_freq(),
+                eq_500h_freq: self.profile.equalizer().eq_500h_freq(),
+                eq_1k_freq: self.profile.equalizer().eq_1k_freq(),
+                eq_2k_freq: self.profile.equalizer().eq_2k_freq(),
+                eq_4k_freq: self.profile.equalizer().eq_4k_freq(),
+                eq_8k_freq: self.profile.equalizer().eq_8k_freq(),
+                eq_16k_freq: self.profile.equalizer().eq_16k_freq()
+            }
+        }
+    }
+
+    pub fn equalizer_mini_ipc(&self) -> EqualiserMini {
+        EqualiserMini {
+            gain: EqualiserMiniGain {
+                eq_90h_gain: self.profile.equalizer_mini().eq_90h_gain(),
+                eq_250h_gain: self.profile.equalizer_mini().eq_250h_gain(),
+                eq_500h_gain: self.profile.equalizer_mini().eq_500h_gain(),
+                eq_1k_gain: self.profile.equalizer_mini().eq_1k_gain(),
+                eq_3k_gain: self.profile.equalizer_mini().eq_3k_gain(),
+                eq_8k_gain: self.profile.equalizer_mini().eq_8k_gain()
+            },
+            frequency: EqualiserMiniFrequency {
+                eq_90h_freq: self.profile.equalizer_mini().eq_90h_freq(),
+                eq_250h_freq: self.profile.equalizer_mini().eq_250h_freq(),
+                eq_500h_freq: self.profile.equalizer_mini().eq_500h_freq(),
+                eq_1k_freq: self.profile.equalizer_mini().eq_1k_freq(),
+                eq_3k_freq: self.profile.equalizer_mini().eq_3k_freq(),
+                eq_8k_freq: self.profile.equalizer_mini().eq_8k_freq()
+            }
         }
     }
 
