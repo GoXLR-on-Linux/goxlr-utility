@@ -234,9 +234,19 @@ impl PitchEncoder {
     pub fn style(&self) -> &PitchStyle {
         &self.style
     }
+
+    pub fn range(&self) -> u8 {
+        self.range
+    }
+    pub fn threshold(&self) -> i8 {
+        self.threshold
+    }
+    pub fn inst_ratio(&self) -> Option<u8> {
+        self.inst_ratio
+    }
 }
 
-#[derive(Debug, PartialEq, EnumIter, Enum, EnumProperty)]
+#[derive(Debug, PartialEq, EnumIter, Enum, EnumProperty, Copy, Clone)]
 pub enum PitchStyle {
     #[strum(props(uiIndex = "0"))]
     Narrow,

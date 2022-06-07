@@ -18,11 +18,17 @@ use strum::IntoEnumIterator;
 use byteorder::{ByteOrder, LittleEndian};
 use enum_map::EnumMap;
 use futures::executor::block_on;
+use serde::de::IntoDeserializer;
 use goxlr_ipc::{Compressor, Equaliser, EqualiserFrequency, EqualiserGain, EqualiserMini, EqualiserMiniFrequency, EqualiserMiniGain, NoiseGate};
-use goxlr_profile_loader::components::megaphone::Preset;
+use goxlr_profile_loader::components::echo::EchoEncoder;
+use goxlr_profile_loader::components::gender::GenderEncoder;
+use goxlr_profile_loader::components::hardtune::HardtuneEffect;
+use goxlr_profile_loader::components::megaphone::{MegaphoneEffect, Preset};
 use goxlr_profile_loader::components::mute::{MuteButton, MuteFunction};
 use goxlr_profile_loader::components::mute_chat::MuteChat;
-use goxlr_profile_loader::components::pitch::PitchStyle;
+use goxlr_profile_loader::components::pitch::{PitchEncoder, PitchEncoderBase, PitchStyle};
+use goxlr_profile_loader::components::reverb::ReverbEncoder;
+use goxlr_profile_loader::components::robot::RobotEffect;
 use goxlr_profile_loader::components::simple::SimpleElements;
 use goxlr_usb::buttonstate::{Buttons, ButtonStates};
 use crate::SettingsHandle;
@@ -522,6 +528,11 @@ impl ProfileAdapter {
         self.profile.settings_mut().pitch_encoder_mut().get_preset_mut(current).set_knob_position(value)
     }
 
+    pub fn get_active_pitch_profile(&self) -> &PitchEncoder {
+        let current = self.profile.settings().context().selected_effects();
+        self.profile.settings().pitch_encoder().get_preset(current)
+    }
+
     pub fn get_gender_value(&self) -> i8 {
         let current = self.profile.settings().context().selected_effects();
         self.profile.settings().gender_encoder().get_preset(current).knob_position()
@@ -530,6 +541,11 @@ impl ProfileAdapter {
     pub fn set_gender_value(&mut self, value: i8) {
         let current = self.profile.settings().context().selected_effects();
         self.profile.settings_mut().gender_encoder_mut().get_preset_mut(current).set_knob_position(value)
+    }
+
+    pub fn get_active_gender_profile(&self) -> &GenderEncoder {
+        let current = self.profile.settings().context().selected_effects();
+        self.profile.settings().gender_encoder().get_preset(current)
     }
 
     pub fn get_reverb_value(&self) -> i8 {
@@ -542,6 +558,11 @@ impl ProfileAdapter {
         self.profile.settings_mut().reverb_encoder_mut().get_preset_mut(current).set_knob_position(value)
     }
 
+    pub fn get_active_reverb_profile(&self) -> &ReverbEncoder {
+        let current = self.profile.settings().context().selected_effects();
+        self.profile.settings().reverb_encoder().get_preset(current)
+    }
+
     pub fn get_echo_value(&self) -> i8 {
         let current = self.profile.settings().context().selected_effects();
         self.profile.settings().echo_encoder().get_preset(current).knob_position()
@@ -552,7 +573,27 @@ impl ProfileAdapter {
         self.profile.settings_mut().echo_encoder_mut().get_preset_mut(current).set_knob_position(value)
     }
 
-    pub fn is_hardtune_enabled(&self) -> bool {
+    pub fn get_active_echo_profile(&self) -> &EchoEncoder {
+        let current = self.profile.settings().context().selected_effects();
+        self.profile.settings().echo_encoder().get_preset(current)
+    }
+
+    pub fn get_active_megaphone_profile(&self) -> &MegaphoneEffect {
+        let current = self.profile.settings().context().selected_effects();
+        self.profile.settings().megaphone_effect().get_preset(current)
+    }
+
+    pub fn get_active_robot_profile(&self) -> &RobotEffect {
+        let current = self.profile.settings().context().selected_effects();
+        self.profile.settings().robot_effect().get_preset(current)
+    }
+
+    pub fn get_active_hardtune_profile(&self) -> &HardtuneEffect {
+        let current = self.profile.settings().context().selected_effects();
+        self.profile.settings().hardtune_effect().get_preset(current)
+    }
+
+    pub fn is_hardtune_pitch_enabled(&self) -> bool {
         self.profile.settings().hardtune_effect().colour_map().get_state()
     }
 
@@ -560,6 +601,33 @@ impl ProfileAdapter {
         let current = self.profile.settings().context().selected_effects();
         self.profile.settings().pitch_encoder().get_preset(current).style() == &PitchStyle::Narrow
     }
+
+    pub fn is_fx_enabled(&self) -> bool {
+        self.profile.settings().simple_element(SimpleElements::FxClear).colour_map().get_state()
+    }
+
+    pub fn is_megaphone_enabled(&self) -> bool {
+        if !self.is_fx_enabled() {
+            return false;
+        }
+        self.profile.settings().megaphone_effect().colour_map().get_state()
+    }
+
+    pub fn is_robot_enabled(&self) -> bool {
+        if !self.is_fx_enabled() {
+            return false;
+        }
+        self.profile.settings().robot_effect().colour_map().get_state()
+    }
+
+    pub fn is_hardtune_enabled(&self) -> bool {
+        if !self.is_fx_enabled() {
+            return false;
+        }
+        self.profile.settings().hardtune_effect().colour_map().get_state()
+    }
+
+
 
     /** Bleep Button **/
     pub fn set_swear_off_style(&mut self, off_style: BasicColourOffStyle) {
@@ -840,7 +908,12 @@ impl MicProfileAdapter {
     }
 
     /// This is going to require a CRAPLOAD of work to sort..
-    pub fn get_effect_value(&self, effect: EffectKey, serial: &str, settings: &SettingsHandle) -> i32 {
+    pub fn get_effect_value(&self,
+                            effect: EffectKey,
+                            serial: &str,
+                            settings: &SettingsHandle,
+                            main_profile: &ProfileAdapter
+    ) -> i32 {
         match effect {
             EffectKey::DisableMic => 0,
             EffectKey::BleepLevel => block_on(settings.get_device_bleep_volume(serial)).unwrap_or(-20).into(),
@@ -874,62 +947,97 @@ impl MicProfileAdapter {
             EffectKey::Equalizer4KHzGain => self.profile.equalizer().eq_4k_gain().into(),
             EffectKey::Equalizer8KHzGain => self.profile.equalizer().eq_8k_gain().into(),
             EffectKey::Equalizer16KHzGain => self.profile.equalizer().eq_16k_gain().into(),
+
             EffectKey::CompressorThreshold => self.profile.compressor().threshold().into(),
             EffectKey::CompressorRatio => self.profile.compressor().ratio().into(),
             EffectKey::CompressorAttack => self.profile.compressor().attack().into(),
             EffectKey::CompressorRelease => self.profile.compressor().release().into(),
             EffectKey::CompressorMakeUpGain => self.profile.compressor().makeup().into(),
+
             EffectKey::DeEsser => self.get_deesser(),
-            EffectKey::ReverbAmount => 0,
-            EffectKey::ReverbDecay => 0,
-            EffectKey::ReverbEarlyLevel => 0,
-            EffectKey::ReverbPredelay => 0,
-            EffectKey::ReverbLoColor => 0,
-            EffectKey::ReverbHiColor => 0,
-            EffectKey::ReverbHiFactor => 0,
-            EffectKey::ReverbDiffuse => 0,
-            EffectKey::ReverbModSpeed => 0,
-            EffectKey::ReverbModDepth => 0,
-            EffectKey::ReverbStyle => 0,
-            EffectKey::EchoAmount => 0,
-            EffectKey::EchoFeedback => 0,
-            EffectKey::EchoTempo => 0,
-            EffectKey::EchoDelayL => 0,
-            EffectKey::EchoDelayR => 0,
-            EffectKey::EchoFeedbackL => 0,
-            EffectKey::EchoXFBLtoR => 0,
-            EffectKey::EchoFeedbackR => 0,
-            EffectKey::EchoXFBRtoL => 0,
-            EffectKey::PitchAmount => 0,
-            EffectKey::PitchCharacter => 0,
-            EffectKey::PitchStyle => 0,
-            EffectKey::GenderAmount => 0,
-            EffectKey::MegaphoneAmount => 0,
-            EffectKey::MegaphonePostGain => 0,
-            EffectKey::RobotLowGain => 0,
-            EffectKey::RobotLowFreq => 0,
-            EffectKey::RobotLowWidth => 0,
-            EffectKey::RobotMidGain => 0,
-            EffectKey::RobotMidFreq => 0,
-            EffectKey::RobotMidWidth => 0,
-            EffectKey::RobotHiGain => 0,
-            EffectKey::RobotHiFreq => 0,
-            EffectKey::RobotHiWidth => 0,
-            EffectKey::RobotWaveform => 0,
-            EffectKey::RobotPulseWidth => 0,
-            EffectKey::RobotThreshold => 0,
-            EffectKey::RobotDryMix => 0,
-            EffectKey::RobotStyle => 0,
-            EffectKey::HardTuneAmount => 0,
-            EffectKey::HardTuneRate => 0,
-            EffectKey::HardTuneWindow => 0,
-            EffectKey::RobotEnabled => 0,
-            EffectKey::MegaphoneEnabled => 0,
-            EffectKey::HardTuneEnabled => 0,
-            EffectKey::Encoder1Enabled => 0,
-            EffectKey::Encoder2Enabled => 0,
-            EffectKey::Encoder3Enabled => 0,
-            EffectKey::Encoder4Enabled => 0,
+
+            EffectKey::ReverbAmount => main_profile.get_active_reverb_profile().knob_position().into(),
+            EffectKey::ReverbDecay => main_profile.get_active_reverb_profile().decay().into(),
+            EffectKey::ReverbEarlyLevel => main_profile.get_active_reverb_profile().early_level().into(),
+            EffectKey::ReverbTailLevel => 0, // Always 0 from the Windows UI
+            EffectKey::ReverbPredelay => main_profile.get_active_reverb_profile().predelay().into(),
+            EffectKey::ReverbLoColor => main_profile.get_active_reverb_profile().locolor().into(),
+            EffectKey::ReverbHiColor => main_profile.get_active_reverb_profile().hicolor().into(),
+            EffectKey::ReverbHiFactor => main_profile.get_active_reverb_profile().hifactor().into(),
+            EffectKey::ReverbDiffuse => main_profile.get_active_reverb_profile().diffuse().into(),
+            EffectKey::ReverbModSpeed => main_profile.get_active_reverb_profile().mod_speed().into(),
+            EffectKey::ReverbModDepth => main_profile.get_active_reverb_profile().mod_depth().into(),
+            EffectKey::ReverbStyle => *main_profile.get_active_reverb_profile().style() as i32,
+
+            EffectKey::EchoAmount => main_profile.get_active_echo_profile().knob_position().into(),
+            EffectKey::EchoFeedback => main_profile.get_active_echo_profile().feedback_control().into(),
+            EffectKey::EchoTempo => main_profile.get_active_echo_profile().tempo().into(),
+            EffectKey::EchoDelayL => main_profile.get_active_echo_profile().time_left().into(),
+            EffectKey::EchoDelayR => main_profile.get_active_echo_profile().time_right().into(),
+            EffectKey::EchoFeedbackL => main_profile.get_active_echo_profile().feedback_left().into(),
+            EffectKey::EchoXFBLtoR => main_profile.get_active_echo_profile().xfb_l_to_r().into(),
+            EffectKey::EchoFeedbackR => main_profile.get_active_echo_profile().feedback_right().into(),
+            EffectKey::EchoXFBRtoL => main_profile.get_active_echo_profile().xfb_r_to_l().into(),
+            EffectKey::EchoSource => main_profile.get_active_echo_profile().source() as i32,
+            EffectKey::EchoDivL => main_profile.get_active_echo_profile().div_l().into(),
+            EffectKey::EchoDivR => main_profile.get_active_echo_profile().div_r().into(),
+            EffectKey::EchoFilterStyle => main_profile.get_active_echo_profile().filter_style().into(),
+
+            // TODO: Verify PitchCharacter key and how it works..
+            EffectKey::PitchAmount => main_profile.get_active_pitch_profile().knob_position().into(),
+            EffectKey::PitchStyle => *main_profile.get_active_pitch_profile().style() as i32,
+            EffectKey::PitchCharacter => 0, // TODO: Might have different flags depending on Style?
+
+            // TODO: Gender Style is Missing?
+            EffectKey::GenderAmount => main_profile.get_active_gender_profile().knob_position().into(),
+
+            EffectKey::MegaphoneAmount => main_profile.get_active_megaphone_profile().trans_dist_amt().into(),
+            EffectKey::MegaphonePostGain => main_profile.get_active_megaphone_profile().trans_postgain().into(),
+            EffectKey::MegaphoneStyle => *main_profile.get_active_megaphone_profile().style() as i32,
+            EffectKey::MegaphoneHP => main_profile.get_active_megaphone_profile().trans_hp().into(),
+            EffectKey::MegaphoneLP => main_profile.get_active_megaphone_profile().trans_lp().into(),
+            EffectKey::MegaphonePreGain => main_profile.get_active_megaphone_profile().trans_pregain().into(),
+            EffectKey::MegaphoneDistType => main_profile.get_active_megaphone_profile().trans_dist_type().into(),
+            EffectKey::MegaphonePresenceGain => main_profile.get_active_megaphone_profile().trans_presence_gain().into(),
+            EffectKey::MegaphonePresenceFC => main_profile.get_active_megaphone_profile().trans_presence_fc().into(),
+            EffectKey::MegaphonePresenceBW => main_profile.get_active_megaphone_profile().trans_presence_bw().into(),
+            EffectKey::MegaphoneBeatboxEnable => main_profile.get_active_megaphone_profile().trans_beatbox_enabled().into(),
+            EffectKey::MegaphoneFilterControl => main_profile.get_active_megaphone_profile().trans_filter_control().into(),
+            EffectKey::MegaphoneFilter => main_profile.get_active_megaphone_profile().trans_filter().into(),
+            EffectKey::MegaphoneDrivePotGainCompMid => main_profile.get_active_megaphone_profile().trans_drive_pot_gain_comp_mid().into(),
+            EffectKey::MegaphoneDrivePotGainCompMax => main_profile.get_active_megaphone_profile().trans_drive_pot_gain_comp_max().into(),
+
+            EffectKey::HardTuneAmount => main_profile.get_active_hardtune_profile().amount().into(),
+            EffectKey::HardTuneKeySource => main_profile.get_active_hardtune_profile().get_source() as i32,
+            EffectKey::HardTuneScale => main_profile.get_active_hardtune_profile().scale().into(),
+            EffectKey::HardTunePitchAmount => main_profile.get_active_hardtune_profile().pitch_amt().into(),
+            EffectKey::HardTuneRate => main_profile.get_active_hardtune_profile().rate().into(),
+            EffectKey::HardTuneWindow => main_profile.get_active_hardtune_profile().window().into(),
+
+            EffectKey::RobotLowGain => main_profile.get_active_robot_profile().vocoder_low_gain().into(),
+            EffectKey::RobotLowFreq => main_profile.get_active_robot_profile().vocoder_low_freq().into(),
+            EffectKey::RobotLowWidth => main_profile.get_active_robot_profile().vocoder_low_bw().into(),
+            EffectKey::RobotMidGain => main_profile.get_active_robot_profile().vocoder_mid_gain().into(),
+            EffectKey::RobotMidFreq => main_profile.get_active_robot_profile().vocoder_mid_freq().into(),
+            EffectKey::RobotMidWidth => main_profile.get_active_robot_profile().vocoder_mid_bw().into(),
+            EffectKey::RobotHiGain => main_profile.get_active_robot_profile().vocoder_high_gain().into(),
+            EffectKey::RobotHiFreq => main_profile.get_active_robot_profile().vocoder_high_freq().into(),
+            EffectKey::RobotHiWidth => main_profile.get_active_robot_profile().vocoder_high_bw().into(),
+            EffectKey::RobotWaveform => main_profile.get_active_robot_profile().synthosc_waveform().into(),
+            EffectKey::RobotPulseWidth => main_profile.get_active_robot_profile().synthosc_pulse_width().into(),
+            EffectKey::RobotThreshold => main_profile.get_active_robot_profile().vocoder_gate_threshold().into(),
+            EffectKey::RobotDryMix => main_profile.get_active_robot_profile().dry_mix().into(),
+            EffectKey::RobotStyle => *main_profile.get_active_robot_profile().style() as i32,
+
+            EffectKey::RobotEnabled => main_profile.is_robot_enabled().into(),
+            EffectKey::MegaphoneEnabled => main_profile.is_megaphone_enabled().into(),
+            EffectKey::HardTuneEnabled => main_profile.is_hardtune_enabled().into(),
+
+            // Encoders are always enabled when FX is enabled..
+            EffectKey::Encoder1Enabled => main_profile.is_fx_enabled().into(),
+            EffectKey::Encoder2Enabled => main_profile.is_fx_enabled().into(),
+            EffectKey::Encoder3Enabled => main_profile.is_fx_enabled().into(),
+            EffectKey::Encoder4Enabled => main_profile.is_fx_enabled().into(),
         }
     }
 

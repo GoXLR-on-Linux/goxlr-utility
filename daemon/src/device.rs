@@ -1031,7 +1031,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
     fn apply_effects(&mut self, params: HashSet<EffectKey>) -> Result<()> {
         let mut vec = Vec::new();
         for effect in params {
-            vec.push((effect, self.mic_profile.get_effect_value(effect, self.serial(), self.settings)));
+            vec.push((effect, self.mic_profile.get_effect_value(effect, self.serial(), self.settings, self.profile())));
         }
         self.goxlr.set_effect_values(vec.as_slice())?;
         Ok(())
@@ -1090,7 +1090,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
             return Ok(())
         }
 
-        if self.profile.is_hardtune_enabled() {
+        if self.profile.is_hardtune_pitch_enabled() {
             if self.profile.is_pitch_narrow() {
                 self.goxlr.set_encoder_mode(EncoderName::Pitch, 03, 01)?;
             } else {

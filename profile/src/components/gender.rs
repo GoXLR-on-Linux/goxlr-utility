@@ -205,10 +205,17 @@ impl GenderEncoder {
     pub fn set_knob_position(&mut self, knob_position: i8) {
         self.knob_position = knob_position;
     }
+
+    pub fn style(&self) -> &GenderStyle {
+        &self.style
+    }
+    pub fn range(&self) -> u8 {
+        self.range
+    }
 }
 
 #[derive(Debug, EnumIter, Enum, EnumProperty)]
-enum GenderStyle {
+pub enum GenderStyle {
     #[strum(props(uiIndex = "0"))]
     Narrow,
 

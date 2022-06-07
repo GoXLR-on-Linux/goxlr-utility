@@ -330,10 +330,53 @@ impl RobotEffect {
     pub fn set_state(&mut self, state: bool) {
         self.state = state;
     }
+
+    pub fn style(&self) -> &RobotStyle {
+        &self.style
+    }
+    pub fn synthosc_pulse_width(&self) -> u8 {
+        self.synthosc_pulse_width
+    }
+    pub fn synthosc_waveform(&self) -> u8 {
+        self.synthosc_waveform
+    }
+    pub fn vocoder_gate_threshold(&self) -> i8 {
+        self.vocoder_gate_threshold
+    }
+    pub fn dry_mix(&self) -> i8 {
+        self.dry_mix
+    }
+    pub fn vocoder_low_freq(&self) -> u8 {
+        self.vocoder_low_freq
+    }
+    pub fn vocoder_low_gain(&self) -> i8 {
+        self.vocoder_low_gain
+    }
+    pub fn vocoder_low_bw(&self) -> u8 {
+        self.vocoder_low_bw
+    }
+    pub fn vocoder_mid_freq(&self) -> u8 {
+        self.vocoder_mid_freq
+    }
+    pub fn vocoder_mid_gain(&self) -> i8 {
+        self.vocoder_mid_gain
+    }
+    pub fn vocoder_mid_bw(&self) -> u8 {
+        self.vocoder_mid_bw
+    }
+    pub fn vocoder_high_freq(&self) -> u8 {
+        self.vocoder_high_freq
+    }
+    pub fn vocoder_high_gain(&self) -> i8 {
+        self.vocoder_high_gain
+    }
+    pub fn vocoder_high_bw(&self) -> u8 {
+        self.vocoder_high_bw
+    }
 }
 
-#[derive(Debug, EnumIter, EnumProperty)]
-enum RobotStyle {
+#[derive(Debug, EnumIter, EnumProperty, Copy, Clone)]
+pub enum RobotStyle {
     #[strum(props(uiIndex = "0"))]
     Robot1,
 

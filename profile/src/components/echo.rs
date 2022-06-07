@@ -292,10 +292,50 @@ impl EchoEncoder {
     pub fn set_knob_position(&mut self, knob_position: i8) {
         self.knob_position = knob_position;
     }
+
+    pub fn style(&self) -> &EchoStyle {
+        &self.style
+    }
+    pub fn source(&self) -> u8 {
+        self.source
+    }
+    pub fn div_l(&self) -> u8 {
+        self.div_l
+    }
+    pub fn div_r(&self) -> u8 {
+        self.div_r
+    }
+    pub fn feedback_left(&self) -> u8 {
+        self.feedback_left
+    }
+    pub fn feedback_right(&self) -> u8 {
+        self.feedback_right
+    }
+    pub fn feedback_control(&self) -> u8 {
+        self.feedback_control
+    }
+    pub fn xfb_l_to_r(&self) -> u8 {
+        self.xfb_l_to_r
+    }
+    pub fn xfb_r_to_l(&self) -> u8 {
+        self.xfb_r_to_l
+    }
+    pub fn filter_style(&self) -> u8 {
+        self.filter_style
+    }
+    pub fn time_left(&self) -> u16 {
+        self.time_left
+    }
+    pub fn time_right(&self) -> u16 {
+        self.time_right
+    }
+    pub fn tempo(&self) -> u16 {
+        self.tempo
+    }
 }
 
 #[derive(Debug, EnumIter, Enum, EnumProperty)]
-enum EchoStyle {
+pub enum EchoStyle {
     #[strum(props(uiIndex = "0"))]
     #[strum(to_string = "QUARTER")]
     Quarter,

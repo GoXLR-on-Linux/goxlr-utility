@@ -348,7 +348,6 @@ impl MegaphoneEffect {
         }
     }
 
-
     pub fn state(&self) -> bool {
         self.state
     }
@@ -356,10 +355,57 @@ impl MegaphoneEffect {
     pub fn set_state(&mut self, state: bool) {
         self.state = state;
     }
+
+
+    pub fn style(&self) -> &MegaphoneStyle {
+        &self.style
+    }
+    pub fn trans_dist_amt(&self) -> u8 {
+        self.trans_dist_amt
+    }
+    pub fn trans_hp(&self) -> u8 {
+        self.trans_hp
+    }
+    pub fn trans_lp(&self) -> u8 {
+        self.trans_lp
+    }
+    pub fn trans_pregain(&self) -> u8 {
+        self.trans_pregain
+    }
+    pub fn trans_postgain(&self) -> i8 {
+        self.trans_postgain
+    }
+    pub fn trans_dist_type(&self) -> u8 {
+        self.trans_dist_type
+    }
+    pub fn trans_presence_gain(&self) -> u8 {
+        self.trans_presence_gain
+    }
+    pub fn trans_presence_fc(&self) -> u8 {
+        self.trans_presence_fc
+    }
+    pub fn trans_presence_bw(&self) -> u8 {
+        self.trans_presence_bw
+    }
+    pub fn trans_beatbox_enabled(&self) -> bool {
+        self.trans_beatbox_enabled
+    }
+    pub fn trans_filter_control(&self) -> u8 {
+        self.trans_filter_control
+    }
+    pub fn trans_filter(&self) -> u8 {
+        self.trans_filter
+    }
+    pub fn trans_drive_pot_gain_comp_mid(&self) -> u8 {
+        self.trans_drive_pot_gain_comp_mid
+    }
+    pub fn trans_drive_pot_gain_comp_max(&self) -> u8 {
+        self.trans_drive_pot_gain_comp_max
+    }
 }
 
-#[derive(Debug, EnumIter, EnumProperty)]
-enum MegaphoneStyle {
+#[derive(Debug, EnumIter, EnumProperty, Copy, Clone)]
+pub enum MegaphoneStyle {
     #[strum(props(uiIndex = "0"))]
     Megaphone,
 

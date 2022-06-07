@@ -298,10 +298,51 @@ impl ReverbEncoder {
     pub fn set_knob_position(&mut self, knob_position: i8) {
         self.knob_position = knob_position;
     }
+
+
+    pub fn style(&self) -> &ReverbStyle {
+        &self.style
+    }
+    pub fn reverb_type(&self) -> u8 {
+        self.reverb_type
+    }
+    pub fn decay(&self) -> u16 {
+        self.decay
+    }
+    pub fn predelay(&self) -> u8 {
+        self.predelay
+    }
+    pub fn diffuse(&self) -> i8 {
+        self.diffuse
+    }
+    pub fn locolor(&self) -> i8 {
+        self.locolor
+    }
+    pub fn hicolor(&self) -> i8 {
+        self.hicolor
+    }
+    pub fn hifactor(&self) -> i8 {
+        self.hifactor
+    }
+    pub fn mod_speed(&self) -> i8 {
+        self.mod_speed
+    }
+    pub fn mod_depth(&self) -> i8 {
+        self.mod_depth
+    }
+    pub fn early_level(&self) -> i8 {
+        self.early_level
+    }
+    pub fn tail_level(&self) -> i8 {
+        self.tail_level
+    }
+    pub fn dry_level(&self) -> i8 {
+        self.dry_level
+    }
 }
 
-#[derive(Debug, EnumIter, Enum, EnumProperty)]
-enum ReverbStyle {
+#[derive(Debug, EnumIter, Enum, EnumProperty, Copy, Clone)]
+pub enum ReverbStyle {
     #[strum(props(uiIndex = "0"))]
     Library,
 

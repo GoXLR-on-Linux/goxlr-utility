@@ -269,10 +269,43 @@ impl HardtuneEffect {
     pub fn set_state(&mut self, state: bool) {
         self.state = state;
     }
+
+
+    pub fn style(&self) -> &HardtuneStyle {
+        &self.style
+    }
+    pub fn keysource(&self) -> u8 {
+        self.keysource
+    }
+    pub fn amount(&self) -> u8 {
+        self.amount
+    }
+    pub fn window(&self) -> u8 {
+        self.window
+    }
+    pub fn rate(&self) -> u8 {
+        self.rate
+    }
+    pub fn scale(&self) -> u8 {
+        self.scale
+    }
+    pub fn pitch_amt(&self) -> u8 {
+        self.pitch_amt
+    }
+    pub fn source(&self) -> &Option<HardtuneSource> {
+        &self.source
+    }
+
+    pub fn get_source(&self) -> HardtuneSource {
+        if let Some(source) = self.source {
+            return source;
+        }
+        HardtuneSource::All
+    }
 }
 
 #[derive(Debug, EnumIter, EnumProperty)]
-enum HardtuneStyle {
+pub enum HardtuneStyle {
     #[strum(props(uiIndex = "0"))]
     Normal,
 
@@ -289,8 +322,8 @@ impl Default for HardtuneStyle {
     }
 }
 
-#[derive(Debug, Display, EnumString)]
-enum HardtuneSource {
+#[derive(Debug, Display, EnumString, Copy, Clone)]
+pub enum HardtuneSource {
     #[strum(to_string = "ALL")]
     All,
 
