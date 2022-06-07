@@ -166,7 +166,7 @@ pub enum EffectKey {
     EchoFilterStyle = 0x002a,
     PitchAmount = 0x005d,
     PitchCharacter = 0x0167,
-    PitchStyle = 0x0159,
+    PitchThreshold = 0x0159,
     GenderAmount = 0x0060,
     MegaphoneAmount = 0x003c,
     MegaphonePostGain = 0x0040,

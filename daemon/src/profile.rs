@@ -985,8 +985,8 @@ impl MicProfileAdapter {
 
             // TODO: Verify PitchCharacter key and how it works..
             EffectKey::PitchAmount => main_profile.get_active_pitch_profile().knob_position().into(),
-            EffectKey::PitchStyle => *main_profile.get_active_pitch_profile().style() as i32,
-            EffectKey::PitchCharacter => 0, // TODO: Might have different flags depending on Style?
+            EffectKey::PitchThreshold => main_profile.get_active_pitch_profile().threshold().into(),
+            EffectKey::PitchCharacter => main_profile.get_active_pitch_profile().inst_ratio_value().into(), // TODO: Might have different flags depending on Style?
 
             // TODO: Gender Style is Missing?
             EffectKey::GenderAmount => main_profile.get_active_gender_profile().amount().into(),
@@ -1173,7 +1173,7 @@ impl MicProfileAdapter {
     pub fn get_pitch_keyset(&self) -> HashSet<EffectKey> {
         let mut set = HashSet::new();
         set.insert(EffectKey::PitchAmount);
-        set.insert(EffectKey::PitchStyle);
+        set.insert(EffectKey::PitchThreshold);
         set.insert(EffectKey::PitchCharacter);
 
         set

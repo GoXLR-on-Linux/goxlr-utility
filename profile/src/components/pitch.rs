@@ -244,6 +244,12 @@ impl PitchEncoder {
     pub fn inst_ratio(&self) -> Option<u8> {
         self.inst_ratio
     }
+    pub fn inst_ratio_value(&self) -> u8 {
+        if let Some(value) = self.inst_ratio {
+            return value;
+        }
+        return 0;
+    }
 }
 
 #[derive(Debug, PartialEq, EnumIter, Enum, EnumProperty, Copy, Clone)]
