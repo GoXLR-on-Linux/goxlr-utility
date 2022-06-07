@@ -956,7 +956,7 @@ impl MicProfileAdapter {
 
             EffectKey::DeEsser => self.get_deesser(),
 
-            EffectKey::ReverbAmount => main_profile.get_active_reverb_profile().knob_position().into(),
+            EffectKey::ReverbAmount => main_profile.get_active_reverb_profile().amount().into(),
             EffectKey::ReverbDecay => main_profile.get_active_reverb_profile().decay().into(),
             EffectKey::ReverbEarlyLevel => main_profile.get_active_reverb_profile().early_level().into(),
             EffectKey::ReverbTailLevel => 0, // Always 0 from the Windows UI
@@ -969,7 +969,7 @@ impl MicProfileAdapter {
             EffectKey::ReverbModDepth => main_profile.get_active_reverb_profile().mod_depth().into(),
             EffectKey::ReverbStyle => *main_profile.get_active_reverb_profile().style() as i32,
 
-            EffectKey::EchoAmount => main_profile.get_active_echo_profile().knob_position().into(),
+            EffectKey::EchoAmount => main_profile.get_active_echo_profile().amount().into(),
             EffectKey::EchoFeedback => main_profile.get_active_echo_profile().feedback_control().into(),
             EffectKey::EchoTempo => main_profile.get_active_echo_profile().tempo().into(),
             EffectKey::EchoDelayL => main_profile.get_active_echo_profile().time_left().into(),
@@ -989,7 +989,7 @@ impl MicProfileAdapter {
             EffectKey::PitchCharacter => 0, // TODO: Might have different flags depending on Style?
 
             // TODO: Gender Style is Missing?
-            EffectKey::GenderAmount => main_profile.get_active_gender_profile().knob_position().into(),
+            EffectKey::GenderAmount => main_profile.get_active_gender_profile().amount().into(),
 
             EffectKey::MegaphoneAmount => main_profile.get_active_megaphone_profile().trans_dist_amt().into(),
             EffectKey::MegaphonePostGain => main_profile.get_active_megaphone_profile().trans_postgain().into(),

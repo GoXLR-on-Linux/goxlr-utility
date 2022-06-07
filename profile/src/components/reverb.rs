@@ -291,6 +291,10 @@ impl ReverbEncoder {
         }
     }
 
+    pub fn amount(&self) -> i8 {
+        ((36 * self.knob_position as i32) / 24 - 36) as i8
+    }
+
     pub fn knob_position(&self) -> i8 {
         self.knob_position
     }
