@@ -983,12 +983,10 @@ impl MicProfileAdapter {
             EffectKey::EchoDivR => main_profile.get_active_echo_profile().div_r().into(),
             EffectKey::EchoFilterStyle => main_profile.get_active_echo_profile().filter_style().into(),
 
-            // TODO: Verify PitchCharacter key and how it works..
             EffectKey::PitchAmount => main_profile.get_active_pitch_profile().knob_position().into(),
             EffectKey::PitchThreshold => main_profile.get_active_pitch_profile().threshold().into(),
-            EffectKey::PitchCharacter => main_profile.get_active_pitch_profile().inst_ratio_value().into(), // TODO: Might have different flags depending on Style?
+            EffectKey::PitchCharacter => main_profile.get_active_pitch_profile().inst_ratio_value().into(),
 
-            // TODO: Gender Style is Missing?
             EffectKey::GenderAmount => main_profile.get_active_gender_profile().amount().into(),
 
             EffectKey::MegaphoneAmount => main_profile.get_active_megaphone_profile().trans_dist_amt().into(),
