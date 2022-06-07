@@ -112,7 +112,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
 
         if let Ok((buttons, volumes, encoders)) = self.goxlr.get_button_states() {
             self.update_volumes_to(volumes);
-            self.update_encoders_to(encoders);
+            self.update_encoders_to(encoders)?;
 
             let pressed_buttons = buttons.difference(self.last_buttons);
             for button in pressed_buttons {
@@ -474,27 +474,56 @@ impl<'a, T: UsbContext> Device<'a, T> {
         self.profile.load_effect_bank(preset);
         self.load_effects()?;
         self.set_pitch_mode()?;
+
+        // Configure the various parts..
+        let mut keyset = HashSet::new();
+        keyset.extend(self.mic_profile.get_reverb_keyset());
+        keyset.extend(self.mic_profile.get_echo_keyset());
+        keyset.extend(self.mic_profile.get_pitch_keyset());
+        keyset.extend(self.mic_profile.get_gender_keyset());
+        keyset.extend(self.mic_profile.get_megaphone_keyset());
+        keyset.extend(self.mic_profile.get_robot_keyset());
+        keyset.extend(self.mic_profile.get_hardtune_keyset());
+
+        self.apply_effects(keyset)?;
+
         Ok(())
     }
 
     async fn toggle_megaphone(&mut self) -> Result<()> {
         self.profile.toggle_megaphone();
+        self.apply_effects(HashSet::from([EffectKey::MegaphoneEnabled]))?;
         Ok(())
     }
 
     async fn toggle_robot(&mut self) -> Result<()> {
         self.profile.toggle_robot();
+        self.apply_effects(HashSet::from([EffectKey::RobotEnabled]))?;
         Ok(())
     }
 
     async fn toggle_hardtune(&mut self) -> Result<()> {
         self.profile.toggle_hardtune();
+        self.apply_effects(HashSet::from([EffectKey::HardTuneEnabled]))?;
         self.set_pitch_mode()?;
         Ok(())
     }
 
     async fn toggle_effects(&mut self) -> Result<()> {
         self.profile.toggle_effects();
+
+        // When this changes, we need to update all the 'Enabled' keys..
+        let mut key_updates = HashSet::new();
+        key_updates.insert(EffectKey::Encoder1Enabled);
+        key_updates.insert(EffectKey::Encoder2Enabled);
+        key_updates.insert(EffectKey::Encoder3Enabled);
+        key_updates.insert(EffectKey::Encoder4Enabled);
+
+        key_updates.insert(EffectKey::MegaphoneEnabled);
+        key_updates.insert(EffectKey::HardTuneEnabled);
+        key_updates.insert(EffectKey::RobotEnabled);
+        self.apply_effects(key_updates)?;
+
         Ok(())
     }
 
@@ -535,7 +564,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
         }
     }
 
-    fn update_encoders_to(&mut self, encoders: [i8; 4]) {
+    fn update_encoders_to(&mut self, encoders: [i8; 4]) -> Result<()> {
         if encoders[0] != self.profile.get_pitch_value() {
             // TODO: Frustratingly, depending on whether Hardtune is enabled or not, we may need to
             // 'calculate' the value in get_pitch_value.
@@ -546,6 +575,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 encoders[0]
             );
             self.profile.set_pitch_value(encoders[0]);
+            self.apply_effects(HashSet::from([EffectKey::PitchAmount]))?;
         }
 
         if encoders[1] != self.profile.get_gender_value() {
@@ -555,6 +585,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 encoders[1]
             );
             self.profile.set_gender_value(encoders[1]);
+            self.apply_effects(HashSet::from([EffectKey::GenderAmount]))?;
         }
 
         if encoders[2] != self.profile.get_reverb_value() {
@@ -564,6 +595,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 encoders[2]
             );
             self.profile.set_reverb_value(encoders[2]);
+            self.apply_effects(HashSet::from([EffectKey::ReverbAmount]))?;
         }
 
         if encoders[3] != self.profile.get_echo_value() {
@@ -573,7 +605,10 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 encoders[3]
             );
             self.profile.set_echo_value(encoders[3]);
+            self.apply_effects(HashSet::from([EffectKey::EchoAmount]))?;
         }
+
+        Ok(())
     }
 
     pub async fn perform_command(
@@ -1032,6 +1067,11 @@ impl<'a, T: UsbContext> Device<'a, T> {
         let mut vec = Vec::new();
         for effect in params {
             vec.push((effect, self.mic_profile.get_effect_value(effect, self.serial(), self.settings, self.profile())));
+        }
+
+        for effect in &vec {
+            let (key, value) = effect;
+            debug!("Setting {:?} to {}", key, value);
         }
         self.goxlr.set_effect_values(vec.as_slice())?;
         Ok(())

@@ -1008,7 +1008,7 @@ impl MicProfileAdapter {
             EffectKey::MegaphoneDrivePotGainCompMax => main_profile.get_active_megaphone_profile().trans_drive_pot_gain_comp_max().into(),
 
             EffectKey::HardTuneAmount => main_profile.get_active_hardtune_profile().amount().into(),
-            EffectKey::HardTuneKeySource => main_profile.get_active_hardtune_profile().get_source() as i32,
+            EffectKey::HardTuneKeySource => 0,  // Always 0, HardTune is handled through routing
             EffectKey::HardTuneScale => main_profile.get_active_hardtune_profile().scale().into(),
             EffectKey::HardTunePitchAmount => main_profile.get_active_hardtune_profile().pitch_amt().into(),
             EffectKey::HardTuneRate => main_profile.get_active_hardtune_profile().rate().into(),
@@ -1062,7 +1062,6 @@ impl MicProfileAdapter {
     fn gain_value(&self, value: u16) -> [u8; 4] {
         let mut return_value = [0;4];
         LittleEndian::write_u16(&mut return_value[2..], value);
-        dbg!("{}", return_value);
         return return_value;
     }
 
@@ -1098,30 +1097,150 @@ impl MicProfileAdapter {
 
     pub fn get_full_keys(&self) -> HashSet<EffectKey> {
         let mut keys = HashSet::new();
-        keys.insert(EffectKey::Equalizer31HzGain);
-        keys.insert(EffectKey::Equalizer63HzGain);
-        keys.insert(EffectKey::Equalizer125HzGain);
-        keys.insert(EffectKey::Equalizer250HzGain);
-        keys.insert(EffectKey::Equalizer500HzGain);
-        keys.insert(EffectKey::Equalizer1KHzGain);
-        keys.insert(EffectKey::Equalizer2KHzGain);
-        keys.insert(EffectKey::Equalizer4KHzGain);
-        keys.insert(EffectKey::Equalizer8KHzGain);
-        keys.insert(EffectKey::Equalizer16KHzGain);
+        // keys.insert(EffectKey::Equalizer31HzGain);
+        // keys.insert(EffectKey::Equalizer63HzGain);
+        // keys.insert(EffectKey::Equalizer125HzGain);
+        // keys.insert(EffectKey::Equalizer250HzGain);
+        // keys.insert(EffectKey::Equalizer500HzGain);
+        // keys.insert(EffectKey::Equalizer1KHzGain);
+        // keys.insert(EffectKey::Equalizer2KHzGain);
+        // keys.insert(EffectKey::Equalizer4KHzGain);
+        // keys.insert(EffectKey::Equalizer8KHzGain);
+        // keys.insert(EffectKey::Equalizer16KHzGain);
+        //
+        // keys.insert(EffectKey::Equalizer31HzFrequency);
+        // keys.insert(EffectKey::Equalizer63HzFrequency);
+        // keys.insert(EffectKey::Equalizer125HzFrequency);
+        // keys.insert(EffectKey::Equalizer250HzFrequency);
+        // keys.insert(EffectKey::Equalizer500HzFrequency);
+        // keys.insert(EffectKey::Equalizer1KHzFrequency);
+        // keys.insert(EffectKey::Equalizer2KHzFrequency);
+        // keys.insert(EffectKey::Equalizer4KHzFrequency);
+        // keys.insert(EffectKey::Equalizer8KHzFrequency);
+        // keys.insert(EffectKey::Equalizer16KHzFrequency);
 
-        keys.insert(EffectKey::Equalizer31HzFrequency);
-        keys.insert(EffectKey::Equalizer63HzFrequency);
-        keys.insert(EffectKey::Equalizer125HzFrequency);
-        keys.insert(EffectKey::Equalizer250HzFrequency);
-        keys.insert(EffectKey::Equalizer500HzFrequency);
-        keys.insert(EffectKey::Equalizer1KHzFrequency);
-        keys.insert(EffectKey::Equalizer2KHzFrequency);
-        keys.insert(EffectKey::Equalizer4KHzFrequency);
-        keys.insert(EffectKey::Equalizer8KHzFrequency);
-        keys.insert(EffectKey::Equalizer16KHzFrequency);
+
+        // Lets go mental, return everything that's not common..
+        let common_effects = self.get_common_keys();
+
+        for effect in EffectKey::iter() {
+            if !common_effects.contains(&effect) {
+                keys.insert(effect);
+            }
+        }
 
         return keys;
     }
+
+    // These are specific Group Key sets, useful for applying a specific effect at once.
+    pub fn get_reverb_keyset(&self) -> HashSet<EffectKey> {
+        let mut set = HashSet::new();
+        set.insert(EffectKey::ReverbAmount);
+        set.insert(EffectKey::ReverbDecay);
+        set.insert(EffectKey::ReverbEarlyLevel);
+        set.insert(EffectKey::ReverbTailLevel);
+        set.insert(EffectKey::ReverbPredelay);
+        set.insert(EffectKey::ReverbLoColor);
+        set.insert(EffectKey::ReverbHiColor);
+        set.insert(EffectKey::ReverbHiFactor);
+        set.insert(EffectKey::ReverbDiffuse);
+        set.insert(EffectKey::ReverbModSpeed);
+        set.insert(EffectKey::ReverbModDepth);
+        set.insert(EffectKey::ReverbStyle);
+
+        set
+    }
+
+    pub fn get_echo_keyset(&self) -> HashSet<EffectKey> {
+        let mut set = HashSet::new();
+        set.insert(EffectKey::EchoAmount);
+        set.insert(EffectKey::EchoFeedback);
+        set.insert(EffectKey::EchoTempo);
+        set.insert(EffectKey::EchoDelayL);
+        set.insert(EffectKey::EchoDelayR);
+        set.insert(EffectKey::EchoFeedbackL);
+        set.insert(EffectKey::EchoFeedbackR);
+        set.insert(EffectKey::EchoXFBLtoR);
+        set.insert(EffectKey::EchoXFBRtoL);
+        set.insert(EffectKey::EchoSource);
+        set.insert(EffectKey::EchoDivL);
+        set.insert(EffectKey::EchoDivR);
+        set.insert(EffectKey::EchoFilterStyle);
+
+        set
+    }
+
+    pub fn get_pitch_keyset(&self) -> HashSet<EffectKey> {
+        let mut set = HashSet::new();
+        set.insert(EffectKey::PitchAmount);
+        set.insert(EffectKey::PitchStyle);
+        set.insert(EffectKey::PitchCharacter);
+
+        set
+    }
+
+    pub fn get_gender_keyset(&self) -> HashSet<EffectKey> {
+        let mut set = HashSet::new();
+        set.insert(EffectKey::GenderAmount);
+
+        set
+    }
+
+    pub fn get_megaphone_keyset(&self) -> HashSet<EffectKey> {
+        let mut set = HashSet::new();
+        set.insert(EffectKey::MegaphoneAmount);
+        set.insert(EffectKey::MegaphonePostGain);
+        set.insert(EffectKey::MegaphoneStyle);
+        set.insert(EffectKey::MegaphoneHP);
+        set.insert(EffectKey::MegaphoneLP);
+        set.insert(EffectKey::MegaphonePreGain);
+        set.insert(EffectKey::MegaphoneDistType);
+        set.insert(EffectKey::MegaphonePresenceGain);
+        set.insert(EffectKey::MegaphonePresenceFC);
+        set.insert(EffectKey::MegaphonePresenceBW);
+        set.insert(EffectKey::MegaphoneBeatboxEnable);
+        set.insert(EffectKey::MegaphoneFilterControl);
+        set.insert(EffectKey::MegaphoneFilter);
+        set.insert(EffectKey::MegaphoneDrivePotGainCompMid);
+        set.insert(EffectKey::MegaphoneDrivePotGainCompMax);
+
+        set
+    }
+
+    pub fn get_robot_keyset(&self) -> HashSet<EffectKey> {
+        let mut set = HashSet::new();
+        set.insert(EffectKey::RobotLowGain);
+        set.insert(EffectKey::RobotLowFreq);
+        set.insert(EffectKey::RobotLowWidth);
+        set.insert(EffectKey::RobotMidGain);
+        set.insert(EffectKey::RobotMidFreq);
+        set.insert(EffectKey::RobotMidWidth);
+        set.insert(EffectKey::RobotHiGain);
+        set.insert(EffectKey::RobotHiFreq);
+        set.insert(EffectKey::RobotHiWidth);
+        set.insert(EffectKey::RobotWaveform);
+        set.insert(EffectKey::RobotPulseWidth);
+        set.insert(EffectKey::RobotThreshold);
+        set.insert(EffectKey::RobotDryMix);
+        set.insert(EffectKey::RobotStyle);
+
+        set
+    }
+
+    pub fn get_hardtune_keyset(&self) -> HashSet<EffectKey> {
+        let mut set = HashSet::new();
+        set.insert(EffectKey::HardTuneAmount);
+        set.insert(EffectKey::HardTuneKeySource);
+        set.insert(EffectKey::HardTuneScale);
+        set.insert(EffectKey::HardTunePitchAmount);
+        set.insert(EffectKey::HardTuneRate);
+        set.insert(EffectKey::HardTuneWindow);
+
+        set
+    }
+
+
+
 
     pub fn get_deesser(&self) -> i32 {
         self.profile.deess() as i32
