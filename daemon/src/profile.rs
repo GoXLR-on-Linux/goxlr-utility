@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use anyhow::{anyhow, Context, Result};
 use enumset::EnumSet;
 use goxlr_profile_loader::components::colours::{Colour, ColourDisplay, ColourMap, ColourOffStyle, ColourState};
@@ -6,7 +7,7 @@ use goxlr_profile_loader::components::mixer::{FullChannelList, InputChannels, Ou
 use goxlr_profile_loader::mic_profile::MicProfileSettings;
 use goxlr_profile_loader::profile::{Profile, ProfileSettings};
 use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
-use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice, VersionNumber, MuteFunction as BasicMuteFunction, ColourDisplay as BasicColourDisplay, ColourOffStyle as BasicColourOffStyle, EffectBankPresets};
+use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice, VersionNumber, MuteFunction as BasicMuteFunction, ColourDisplay as BasicColourDisplay, ColourOffStyle as BasicColourOffStyle, EffectBankPresets, MicrophoneParamKey, EffectKey};
 use goxlr_usb::colouring::ColourTargets;
 use log::error;
 use std::fs::{create_dir_all, File};
@@ -16,6 +17,7 @@ use strum::EnumCount;
 use strum::IntoEnumIterator;
 use byteorder::{ByteOrder, LittleEndian};
 use enum_map::EnumMap;
+use futures::executor::block_on;
 use goxlr_ipc::{Compressor, Equaliser, EqualiserFrequency, EqualiserGain, EqualiserMini, EqualiserMiniFrequency, EqualiserMiniGain, NoiseGate};
 use goxlr_profile_loader::components::megaphone::Preset;
 use goxlr_profile_loader::components::mute::{MuteButton, MuteFunction};
@@ -23,6 +25,7 @@ use goxlr_profile_loader::components::mute_chat::MuteChat;
 use goxlr_profile_loader::components::pitch::PitchStyle;
 use goxlr_profile_loader::components::simple::SimpleElements;
 use goxlr_usb::buttonstate::{Buttons, ButtonStates};
+use crate::SettingsHandle;
 
 pub const DEFAULT_PROFILE_NAME: &str = "Default - Vaporwave";
 const DEFAULT_PROFILE: &[u8] = include_bytes!("../profiles/Default - Vaporwave.goxlr");
@@ -787,138 +790,229 @@ impl MicProfileAdapter {
         }
     }
 
-    pub fn mic_params(&self) -> [[u8; 4]; 9] {
-        let mut gate_threshold = [0; 4];
-        let mut gate_attack = [0; 4];
-        let mut gate_release = [0; 4];
-        let mut gate_attenuation = [0; 4];
-
-        LittleEndian::write_f32(&mut gate_threshold, self.profile.gate().threshold().into());
-        LittleEndian::write_f32(&mut gate_attack, self.profile.gate().attack().into());
-        LittleEndian::write_f32(&mut gate_release, self.profile.gate().release().into());
-        LittleEndian::write_f32(&mut gate_attenuation, self.profile.gate().attenuation().into());
-
-        let mut comp_threshold = [0; 4];
-        let mut comp_ratio = [0; 4];
-        let mut comp_attack = [0; 4];
-        let mut comp_release = [0; 4];
-        let mut comp_makeup = [0; 4];
-
-        LittleEndian::write_f32(&mut comp_threshold, self.profile.compressor().threshold().into());
-        LittleEndian::write_f32(&mut comp_ratio, self.profile.compressor().ratio().into());
-        LittleEndian::write_f32(&mut comp_attack, self.profile.compressor().attack().into());
-        LittleEndian::write_f32(&mut comp_release, self.profile.compressor().release().into());
-        LittleEndian::write_f32(&mut comp_makeup, self.profile.compressor().makeup().into());
-
-        [
-            gate_threshold,
-            gate_attack,
-            gate_release,
-            gate_attenuation,
-            comp_threshold,
-            comp_ratio,
-            comp_attack,
-            comp_release,
-            comp_makeup,
-        ]
+    /// The uber method, fetches the relevant setting from the profile and returns it..
+    pub fn get_param_value(&self, param: MicrophoneParamKey, serial: &str, settings: &SettingsHandle) -> [u8; 4] {
+        match param {
+            MicrophoneParamKey::MicType => {
+                let microphone_type: MicrophoneType = self.mic_type();
+                match microphone_type.has_phantom_power() {
+                    true => [0x01 as u8, 0, 0, 0],
+                    false => [0, 0, 0, 0],
+                }
+            },
+            MicrophoneParamKey::DynamicGain => self.gain_value(self.mic_gains()[MicrophoneType::Dynamic as usize]),
+            MicrophoneParamKey::CondenserGain => self.gain_value(self.mic_gains()[MicrophoneType::Condenser as usize]),
+            MicrophoneParamKey::JackGain => self.gain_value(self.mic_gains()[MicrophoneType::Jack as usize]),
+            MicrophoneParamKey::GateThreshold => self.i8_to_f32(self.profile.gate().threshold()),
+            MicrophoneParamKey::GateAttack => self.u8_to_f32(self.profile.gate().attack()),
+            MicrophoneParamKey::GateRelease => self.u8_to_f32(self.profile.gate().release()),
+            MicrophoneParamKey::GateAttenuation => self.i8_to_f32(self.profile.gate().attenuation()),
+            MicrophoneParamKey::CompressorThreshold => self.i8_to_f32(self.profile.compressor().threshold()),
+            MicrophoneParamKey::CompressorRatio => self.u8_to_f32(self.profile.compressor().ratio()),
+            MicrophoneParamKey::CompressorAttack => self.u8_to_f32(self.profile.compressor().ratio()),
+            MicrophoneParamKey::CompressorRelease => self.u8_to_f32(self.profile.compressor().release()),
+            MicrophoneParamKey::CompressorMakeUpGain => self.u8_to_f32(self.profile.compressor().makeup()),
+            MicrophoneParamKey::BleepLevel => {
+                // Hopefully we can eventually move this to the profile, it's a little obnoxious right now!
+                let bleep_value = block_on(settings.get_device_bleep_volume(serial)).unwrap_or(-20);
+                self.calculate_bleep(bleep_value)
+            },
+            MicrophoneParamKey::Equalizer90HzFrequency => self.f32_to_f32(self.profile.equalizer_mini().eq_90h_freq()),
+            MicrophoneParamKey::Equalizer90HzGain => self.i8_to_f32(self.profile.equalizer_mini().eq_90h_gain()),
+            MicrophoneParamKey::Equalizer250HzFrequency => self.f32_to_f32(self.profile.equalizer_mini().eq_250h_freq()),
+            MicrophoneParamKey::Equalizer250HzGain => self.i8_to_f32(self.profile.equalizer_mini().eq_250h_gain()),
+            MicrophoneParamKey::Equalizer500HzFrequency => self.f32_to_f32(self.profile.equalizer_mini().eq_500h_freq()),
+            MicrophoneParamKey::Equalizer500HzGain => self.i8_to_f32(self.profile.equalizer_mini().eq_500h_gain()),
+            MicrophoneParamKey::Equalizer1KHzFrequency => self.f32_to_f32(self.profile.equalizer_mini().eq_1k_freq()),
+            MicrophoneParamKey::Equalizer1KHzGain => self.i8_to_f32(self.profile.equalizer_mini().eq_1k_gain()),
+            MicrophoneParamKey::Equalizer3KHzFrequency => self.f32_to_f32(self.profile.equalizer_mini().eq_3k_freq()),
+            MicrophoneParamKey::Equalizer3KHzGain => self.i8_to_f32(self.profile.equalizer_mini().eq_3k_gain()),
+            MicrophoneParamKey::Equalizer8KHzFrequency => self.f32_to_f32(self.profile.equalizer_mini().eq_8k_freq()),
+            MicrophoneParamKey::Equalizer8KHzGain => self.i8_to_f32(self.profile.equalizer_mini().eq_8k_gain()),
+        }
     }
 
-    pub fn mic_effects(&self) -> [i32; 9] {
-        [
-            self.profile.gate().threshold().into(),
-            self.profile.gate().attack().into(),
-            self.profile.gate().release().into(),
-            self.profile.gate().attenuation().into(),
-            self.profile.compressor().threshold().into(),
-            self.profile.compressor().ratio().into(),
-            self.profile.compressor().attack().into(),
-            self.profile.compressor().release().into(),
-            self.profile.compressor().makeup().into(),
-        ]
+    fn calculate_bleep(&self, value: i8) -> [u8;4] {
+        // TODO: Confirm the output here..
+        let mut return_value = [0;4];
+        LittleEndian::write_f32(&mut return_value, value as f32 * 65536.0);
+        return return_value;
     }
 
-    pub fn get_eq_gain(&self) -> [i32; 10] {
-        [
-            self.profile.equalizer().eq_31h_gain().into(),
-            self.profile.equalizer().eq_63h_gain().into(),
-            self.profile.equalizer().eq_125h_gain().into(),
-            self.profile.equalizer().eq_250h_gain().into(),
-            self.profile.equalizer().eq_500h_gain().into(),
-            self.profile.equalizer().eq_1k_gain().into(),
-            self.profile.equalizer().eq_2k_gain().into(),
-            self.profile.equalizer().eq_4k_gain().into(),
-            self.profile.equalizer().eq_8k_gain().into(),
-            self.profile.equalizer().eq_16k_gain().into(),
-        ]
+    /// This is going to require a CRAPLOAD of work to sort..
+    pub fn get_effect_value(&self, effect: EffectKey, serial: &str, settings: &SettingsHandle) -> i32 {
+        match effect {
+            EffectKey::DisableMic => 0,
+            EffectKey::BleepLevel => block_on(settings.get_device_bleep_volume(serial)).unwrap_or(-20).into(),
+            EffectKey::GateMode => 2,   // Not a profile setting, hard coded in Windows
+            EffectKey::GateEnabled => 1,    // Used for 'Mic Testing' in the UI
+            EffectKey::GateThreshold => self.profile.gate().threshold().into(),
+            EffectKey::GateAttenuation => self.profile.gate().attenuation().into(),
+            EffectKey::GateAttack => self.profile.gate().attack().into(),
+            EffectKey::GateRelease => self.profile.gate().release().into(),
+            EffectKey::Unknown14b => 0,
+
+            // For Frequencies, we need to accurately reverse the profile -> value settings, until
+            // then, we'll hard code them.
+            EffectKey::Equalizer31HzFrequency => 15,
+            EffectKey::Equalizer63HzFrequency => 40,
+            EffectKey::Equalizer125HzFrequency => 63,
+            EffectKey::Equalizer250HzFrequency => 87,
+            EffectKey::Equalizer500HzFrequency => 111,
+            EffectKey::Equalizer1KHzFrequency => 135,
+            EffectKey::Equalizer2KHzFrequency => 159,
+            EffectKey::Equalizer4KHzFrequency => 183,
+            EffectKey::Equalizer8KHzFrequency => 207,
+            EffectKey::Equalizer16KHzFrequency => 231,
+            EffectKey::Equalizer31HzGain => self.profile.equalizer().eq_31h_gain().into(),
+            EffectKey::Equalizer63HzGain => self.profile.equalizer().eq_63h_gain().into(),
+            EffectKey::Equalizer125HzGain => self.profile.equalizer().eq_125h_gain().into(),
+            EffectKey::Equalizer250HzGain => self.profile.equalizer().eq_250h_gain().into(),
+            EffectKey::Equalizer500HzGain => self.profile.equalizer().eq_500h_gain().into(),
+            EffectKey::Equalizer1KHzGain => self.profile.equalizer().eq_1k_gain().into(),
+            EffectKey::Equalizer2KHzGain => self.profile.equalizer().eq_2k_gain().into(),
+            EffectKey::Equalizer4KHzGain => self.profile.equalizer().eq_4k_gain().into(),
+            EffectKey::Equalizer8KHzGain => self.profile.equalizer().eq_8k_gain().into(),
+            EffectKey::Equalizer16KHzGain => self.profile.equalizer().eq_16k_gain().into(),
+            EffectKey::CompressorThreshold => self.profile.compressor().threshold().into(),
+            EffectKey::CompressorRatio => self.profile.compressor().ratio().into(),
+            EffectKey::CompressorAttack => self.profile.compressor().attack().into(),
+            EffectKey::CompressorRelease => self.profile.compressor().release().into(),
+            EffectKey::CompressorMakeUpGain => self.profile.compressor().makeup().into(),
+            EffectKey::DeEsser => self.get_deesser(),
+            EffectKey::ReverbAmount => 0,
+            EffectKey::ReverbDecay => 0,
+            EffectKey::ReverbEarlyLevel => 0,
+            EffectKey::ReverbPredelay => 0,
+            EffectKey::ReverbLoColor => 0,
+            EffectKey::ReverbHiColor => 0,
+            EffectKey::ReverbHiFactor => 0,
+            EffectKey::ReverbDiffuse => 0,
+            EffectKey::ReverbModSpeed => 0,
+            EffectKey::ReverbModDepth => 0,
+            EffectKey::ReverbStyle => 0,
+            EffectKey::EchoAmount => 0,
+            EffectKey::EchoFeedback => 0,
+            EffectKey::EchoTempo => 0,
+            EffectKey::EchoDelayL => 0,
+            EffectKey::EchoDelayR => 0,
+            EffectKey::EchoFeedbackL => 0,
+            EffectKey::EchoXFBLtoR => 0,
+            EffectKey::EchoFeedbackR => 0,
+            EffectKey::EchoXFBRtoL => 0,
+            EffectKey::PitchAmount => 0,
+            EffectKey::PitchCharacter => 0,
+            EffectKey::PitchStyle => 0,
+            EffectKey::GenderAmount => 0,
+            EffectKey::MegaphoneAmount => 0,
+            EffectKey::MegaphonePostGain => 0,
+            EffectKey::RobotLowGain => 0,
+            EffectKey::RobotLowFreq => 0,
+            EffectKey::RobotLowWidth => 0,
+            EffectKey::RobotMidGain => 0,
+            EffectKey::RobotMidFreq => 0,
+            EffectKey::RobotMidWidth => 0,
+            EffectKey::RobotHiGain => 0,
+            EffectKey::RobotHiFreq => 0,
+            EffectKey::RobotHiWidth => 0,
+            EffectKey::RobotWaveform => 0,
+            EffectKey::RobotPulseWidth => 0,
+            EffectKey::RobotThreshold => 0,
+            EffectKey::RobotDryMix => 0,
+            EffectKey::RobotStyle => 0,
+            EffectKey::HardTuneAmount => 0,
+            EffectKey::HardTuneRate => 0,
+            EffectKey::HardTuneWindow => 0,
+            EffectKey::RobotEnabled => 0,
+            EffectKey::MegaphoneEnabled => 0,
+            EffectKey::HardTuneEnabled => 0,
+            EffectKey::Encoder1Enabled => 0,
+            EffectKey::Encoder2Enabled => 0,
+            EffectKey::Encoder3Enabled => 0,
+            EffectKey::Encoder4Enabled => 0,
+        }
     }
 
-    pub fn get_eq_freq(&self) -> [i32; 10] {
-        // Some kind of mapping needs to occur here, so returning a default..
-        [
-            15,
-            40,
-            63,
-            87,
-            111,
-            135,
-            159,
-            183,
-            207,
-            231
-        ]
+    fn u8_to_f32(&self, value: u8) -> [u8; 4] {
+        let mut return_value = [0;4];
+        LittleEndian::write_f32(&mut return_value, value.into());
+        return return_value;
     }
 
-    pub fn get_eq_gain_mini(&self) -> [[u8; 4]; 6] {
-
-        let mut eq_90_gain = [0; 4];
-        let mut eq_250_gain = [0; 4];
-        let mut eq_500_gain = [0; 4];
-        let mut eq_1k_gain = [0; 4];
-        let mut eq_3k_gain = [0; 4];
-        let mut eq_8k_gain = [0; 4];
-
-
-
-        LittleEndian::write_f32(&mut eq_90_gain, self.profile.equalizer_mini().eq_90h_gain().into());
-        LittleEndian::write_f32(&mut eq_250_gain, self.profile.equalizer_mini().eq_250h_gain().into());
-        LittleEndian::write_f32(&mut eq_500_gain, self.profile.equalizer_mini().eq_500h_gain().into());
-        LittleEndian::write_f32(&mut eq_1k_gain, self.profile.equalizer_mini().eq_1k_gain().into());
-        LittleEndian::write_f32(&mut eq_3k_gain, self.profile.equalizer_mini().eq_3k_gain().into());
-        LittleEndian::write_f32(&mut eq_8k_gain, self.profile.equalizer_mini().eq_8k_gain().into());
-
-        [
-            eq_90_gain,
-            eq_250_gain,
-            eq_500_gain,
-            eq_1k_gain,
-            eq_3k_gain,
-            eq_8k_gain
-        ]
+    fn i8_to_f32(&self, value: i8) -> [u8; 4] {
+        let mut return_value = [0;4];
+        LittleEndian::write_f32(&mut return_value, value.into());
+        return return_value;
     }
 
-    pub fn get_eq_freq_mini(&self) -> [[u8; 4]; 6] {
-        let mut eq_90_freq = [0; 4];
-        let mut eq_250_freq = [0; 4];
-        let mut eq_500_freq = [0; 4];
-        let mut eq_1k_freq = [0; 4];
-        let mut eq_3k_freq = [0; 4];
-        let mut eq_8k_freq = [0; 4];
+    fn f32_to_f32(&self, value: f32) -> [u8; 4] {
+        let mut return_value = [0;4];
+        LittleEndian::write_f32(&mut return_value, value.into());
+        return return_value;
+    }
 
-        LittleEndian::write_f32(&mut eq_90_freq, self.profile.equalizer_mini().eq_90h_freq().into());
-        LittleEndian::write_f32(&mut eq_250_freq, self.profile.equalizer_mini().eq_250h_freq().into());
-        LittleEndian::write_f32(&mut eq_500_freq, self.profile.equalizer_mini().eq_500h_freq().into());
-        LittleEndian::write_f32(&mut eq_1k_freq, self.profile.equalizer_mini().eq_1k_freq().into());
-        LittleEndian::write_f32(&mut eq_3k_freq, self.profile.equalizer_mini().eq_3k_freq().into());
-        LittleEndian::write_f32(&mut eq_8k_freq, self.profile.equalizer_mini().eq_8k_freq().into());
+    fn gain_value(&self, value: u16) -> [u8; 4] {
+        let mut return_value = [0;4];
+        LittleEndian::write_u16(&mut return_value[2..], value);
+        dbg!("{}", return_value);
+        return return_value;
+    }
 
-        [
-            eq_90_freq,
-            eq_250_freq,
-            eq_500_freq,
-            eq_1k_freq,
-            eq_3k_freq,
-            eq_8k_freq
-        ]
+    pub fn get_common_keys(&self) -> HashSet<EffectKey> {
+        let mut keys = HashSet::new();
+        keys.insert(EffectKey::DeEsser);
+        keys.insert(EffectKey::GateThreshold);
+        keys.insert(EffectKey::GateAttack);
+        keys.insert(EffectKey::GateRelease);
+        keys.insert(EffectKey::GateAttenuation);
+        keys.insert(EffectKey::CompressorThreshold);
+        keys.insert(EffectKey::CompressorRatio);
+        keys.insert(EffectKey::CompressorAttack);
+        keys.insert(EffectKey::CompressorRelease);
+        keys.insert(EffectKey::CompressorMakeUpGain);
+        keys.insert(EffectKey::GateEnabled);
+        keys.insert(EffectKey::BleepLevel);
+        keys.insert(EffectKey::GateMode);
+        keys.insert(EffectKey::DisableMic);
+
+        // TODO: Are these common?
+        keys.insert(EffectKey::Encoder1Enabled);
+        keys.insert(EffectKey::Encoder2Enabled);
+        keys.insert(EffectKey::Encoder3Enabled);
+        keys.insert(EffectKey::Encoder4Enabled);
+
+        keys.insert(EffectKey::RobotEnabled);
+        keys.insert(EffectKey::HardTuneEnabled);
+        keys.insert(EffectKey::MegaphoneEnabled);
+
+        return keys;
+    }
+
+    pub fn get_full_keys(&self) -> HashSet<EffectKey> {
+        let mut keys = HashSet::new();
+        keys.insert(EffectKey::Equalizer31HzGain);
+        keys.insert(EffectKey::Equalizer63HzGain);
+        keys.insert(EffectKey::Equalizer125HzGain);
+        keys.insert(EffectKey::Equalizer250HzGain);
+        keys.insert(EffectKey::Equalizer500HzGain);
+        keys.insert(EffectKey::Equalizer1KHzGain);
+        keys.insert(EffectKey::Equalizer2KHzGain);
+        keys.insert(EffectKey::Equalizer4KHzGain);
+        keys.insert(EffectKey::Equalizer8KHzGain);
+        keys.insert(EffectKey::Equalizer16KHzGain);
+
+        keys.insert(EffectKey::Equalizer31HzFrequency);
+        keys.insert(EffectKey::Equalizer63HzFrequency);
+        keys.insert(EffectKey::Equalizer125HzFrequency);
+        keys.insert(EffectKey::Equalizer250HzFrequency);
+        keys.insert(EffectKey::Equalizer500HzFrequency);
+        keys.insert(EffectKey::Equalizer1KHzFrequency);
+        keys.insert(EffectKey::Equalizer2KHzFrequency);
+        keys.insert(EffectKey::Equalizer4KHzFrequency);
+        keys.insert(EffectKey::Equalizer8KHzFrequency);
+        keys.insert(EffectKey::Equalizer16KHzFrequency);
+
+        return keys;
     }
 
     pub fn get_deesser(&self) -> i32 {

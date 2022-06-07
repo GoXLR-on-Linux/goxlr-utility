@@ -424,11 +424,11 @@ impl<T: UsbContext> GoXLR<T> {
             (
                 MicrophoneParamKey::MicType,
                 match microphone_type.has_phantom_power() {
-                    true => &[0x01, 0x00, 0x00, 0x00],
-                    false => &[0x00, 0x00, 0x00, 0x00],
+                    true => [0x01, 0x00, 0x00, 0x00],
+                    false => [0x00, 0x00, 0x00, 0x00],
                 },
             ),
-            (microphone_type.get_gain_param(), &gain_value),
+            (microphone_type.get_gain_param(), gain_value),
         ])?;
         Ok(())
     }
@@ -453,13 +453,13 @@ impl<T: UsbContext> GoXLR<T> {
 
     pub fn set_mic_param(
         &mut self,
-        params: &[(MicrophoneParamKey, &[u8; 4])],
+        params: &[(MicrophoneParamKey, [u8; 4])]
     ) -> Result<(), CommandError> {
         let mut data = Vec::with_capacity(params.len() * 8);
         let mut cursor = Cursor::new(&mut data);
         for (key, value) in params {
             cursor.write_u32::<LittleEndian>(*key as u32)?;
-            cursor.write_all(*value)?;
+            cursor.write_all(value)?;
         }
         self.request_data(Command::SetMicrophoneParameters, &data)?;
 

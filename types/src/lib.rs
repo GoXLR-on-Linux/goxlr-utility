@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Formatter;
 use strum::{Display, EnumCount, EnumIter};
 use enum_map::Enum;
+use derivative::Derivative;
 
 #[derive(Copy, Clone, Debug, Display, EnumIter, EnumCount, PartialEq, Eq)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
@@ -98,7 +99,8 @@ pub enum InputDevice {
     Samples,
 }
 
-#[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount)]
+#[derive(Debug, Eq, Copy, Clone, Display, EnumIter, EnumCount, Derivative)]
+#[derivative(PartialEq, Hash)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum EffectKey {
@@ -191,7 +193,9 @@ pub enum EffectKey {
     Encoder4Enabled = 0x0151
 }
 
-#[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount)]
+// Eq and Derivative allow for these to be added to a HashSet (the values make EnumSet unusable)
+#[derive(Debug, Copy, Clone, Eq, Display, EnumIter, EnumCount, Derivative)]
+#[derivative(PartialEq, Hash)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum MicrophoneParamKey {
@@ -226,7 +230,6 @@ pub enum MicrophoneParamKey {
     Equalizer3KHzGain = 0x50004,
     Equalizer8KHzFrequency = 0x50006,
     Equalizer8KHzGain = 0x50007,
-
 }
 
 #[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq)]
@@ -295,9 +298,12 @@ pub enum EffectBankPresets {
     Preset6
 }
 
-#[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+
+/*
+ * The following Enums aren't technically passed via IPC, but they're instead used as 'assists'
+ * to help map more refined keys to their respective Effect / MicParam keys.
+ */
+
 pub enum GateKeys {
     GateThreshold,
     GateAttack,
@@ -305,9 +311,26 @@ pub enum GateKeys {
     GateAttenuation,
 }
 
-#[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+impl GateKeys {
+    pub fn to_effect_key(&self) -> EffectKey {
+        match self {
+            GateKeys::GateThreshold => EffectKey::GateThreshold,
+            GateKeys::GateAttack => EffectKey::GateAttack,
+            GateKeys::GateRelease => EffectKey::GateRelease,
+            GateKeys::GateAttenuation => EffectKey::GateAttenuation
+        }
+    }
+
+    pub fn to_mic_param(&self) -> MicrophoneParamKey {
+        match self {
+            GateKeys::GateThreshold => MicrophoneParamKey::GateThreshold,
+            GateKeys::GateAttack => MicrophoneParamKey::GateAttack,
+            GateKeys::GateRelease => MicrophoneParamKey::GateRelease,
+            GateKeys::GateAttenuation => MicrophoneParamKey::GateAttenuation
+        }
+    }
+}
+
 pub enum CompressorKeys {
     CompressorThreshold,
     CompressorRatio,
@@ -316,9 +339,28 @@ pub enum CompressorKeys {
     CompressorMakeUpGain,
 }
 
-#[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+impl CompressorKeys {
+    pub fn to_effect_key(&self) -> EffectKey {
+        match self {
+            CompressorKeys::CompressorThreshold => EffectKey::CompressorThreshold,
+            CompressorKeys::CompressorRatio => EffectKey::CompressorRatio,
+            CompressorKeys::CompressorAttack => EffectKey::CompressorAttack,
+            CompressorKeys::CompressorRelease => EffectKey::CompressorRatio,
+            CompressorKeys::CompressorMakeUpGain => EffectKey::CompressorMakeUpGain
+        }
+    }
+
+    pub fn to_mic_param(&self) -> MicrophoneParamKey {
+        match self {
+            CompressorKeys::CompressorThreshold => MicrophoneParamKey::CompressorThreshold,
+            CompressorKeys::CompressorRatio => MicrophoneParamKey::CompressorRatio,
+            CompressorKeys::CompressorAttack => MicrophoneParamKey::CompressorAttack,
+            CompressorKeys::CompressorRelease => MicrophoneParamKey::CompressorRelease,
+            CompressorKeys::CompressorMakeUpGain => MicrophoneParamKey::CompressorMakeUpGain
+        }
+    }
+}
+
 pub enum MiniEqGains {
     Equalizer90HzGain,
     Equalizer250HzGain,
@@ -328,9 +370,19 @@ pub enum MiniEqGains {
     Equalizer8KHzGain,
 }
 
-#[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+impl MiniEqGains {
+    pub fn to_mic_param(&self) -> MicrophoneParamKey {
+        match self {
+            MiniEqGains::Equalizer90HzGain => MicrophoneParamKey::Equalizer90HzGain,
+            MiniEqGains::Equalizer250HzGain => MicrophoneParamKey::Equalizer250HzGain,
+            MiniEqGains::Equalizer500HzGain => MicrophoneParamKey::Equalizer500HzGain,
+            MiniEqGains::Equalizer1KHzGain => MicrophoneParamKey::Equalizer1KHzGain,
+            MiniEqGains::Equalizer3KHzGain => MicrophoneParamKey::Equalizer3KHzGain,
+            MiniEqGains::Equalizer8KHzGain => MicrophoneParamKey::Equalizer8KHzGain,
+        }
+    }
+}
+
 pub enum MiniEqFrequencies {
     Equalizer90HzFrequency,
     Equalizer250HzFrequency,
@@ -338,4 +390,77 @@ pub enum MiniEqFrequencies {
     Equalizer1KHzFrequency,
     Equalizer3KHzFrequency,
     Equalizer8KHzFrequency,
+}
+
+impl MiniEqFrequencies {
+    pub fn to_mic_param(&self) -> MicrophoneParamKey {
+        match self {
+            MiniEqFrequencies::Equalizer90HzFrequency => MicrophoneParamKey::Equalizer90HzFrequency,
+            MiniEqFrequencies::Equalizer250HzFrequency => MicrophoneParamKey::Equalizer250HzFrequency,
+            MiniEqFrequencies::Equalizer500HzFrequency => MicrophoneParamKey::Equalizer500HzFrequency,
+            MiniEqFrequencies::Equalizer1KHzFrequency => MicrophoneParamKey::Equalizer1KHzFrequency,
+            MiniEqFrequencies::Equalizer3KHzFrequency => MicrophoneParamKey::Equalizer3KHzFrequency,
+            MiniEqFrequencies::Equalizer8KHzFrequency => MicrophoneParamKey::Equalizer8KHzFrequency
+        }
+    }
+}
+
+pub enum EqGains {
+    Equalizer31HzGain,
+    Equalizer63HzGain,
+    Equalizer125HzGain,
+    Equalizer250HzGain,
+    Equalizer500HzGain,
+    Equalizer1KHzGain,
+    Equalizer2KHzGain,
+    Equalizer4KHzGain,
+    Equalizer8KHzGain,
+    Equalizer16KHzGain,
+}
+
+impl EqGains {
+    pub fn to_effect_key(&self) -> EffectKey {
+        match self {
+            EqGains::Equalizer31HzGain => EffectKey::Equalizer31HzGain,
+            EqGains::Equalizer63HzGain => EffectKey::Equalizer63HzGain,
+            EqGains::Equalizer125HzGain => EffectKey::Equalizer125HzGain,
+            EqGains::Equalizer250HzGain => EffectKey::Equalizer250HzGain,
+            EqGains::Equalizer500HzGain => EffectKey::Equalizer500HzGain,
+            EqGains::Equalizer1KHzGain => EffectKey::Equalizer1KHzGain,
+            EqGains::Equalizer2KHzGain => EffectKey::Equalizer2KHzGain,
+            EqGains::Equalizer4KHzGain => EffectKey::Equalizer4KHzGain,
+            EqGains::Equalizer8KHzGain => EffectKey::Equalizer8KHzGain,
+            EqGains::Equalizer16KHzGain => EffectKey::Equalizer16KHzGain,
+        }
+    }
+}
+
+pub enum EqFrequencies {
+    Equalizer31HzFrequency,
+    Equalizer63HzFrequency,
+    Equalizer125HzFrequency,
+    Equalizer250HzFrequency,
+    Equalizer500HzFrequency,
+    Equalizer1KHzFrequency,
+    Equalizer2KHzFrequency,
+    Equalizer4KHzFrequency,
+    Equalizer8KHzFrequency,
+    Equalizer16KHzFrequency,
+}
+
+impl EqFrequencies {
+    pub fn to_effect_key(&self) -> EffectKey {
+        match self {
+            EqFrequencies::Equalizer31HzFrequency => EffectKey::Equalizer31HzFrequency,
+            EqFrequencies::Equalizer63HzFrequency => EffectKey::Equalizer63HzFrequency,
+            EqFrequencies::Equalizer125HzFrequency => EffectKey::Equalizer125HzFrequency,
+            EqFrequencies::Equalizer250HzFrequency => EffectKey::Equalizer250HzFrequency,
+            EqFrequencies::Equalizer500HzFrequency => EffectKey::Equalizer500HzFrequency,
+            EqFrequencies::Equalizer1KHzFrequency => EffectKey::Equalizer1KHzFrequency,
+            EqFrequencies::Equalizer2KHzFrequency => EffectKey::Equalizer2KHzFrequency,
+            EqFrequencies::Equalizer4KHzFrequency => EffectKey::Equalizer4KHzFrequency,
+            EqFrequencies::Equalizer8KHzFrequency => EffectKey::Equalizer8KHzFrequency,
+            EqFrequencies::Equalizer16KHzFrequency => EffectKey::Equalizer16KHzFrequency,
+        }
+    }
 }

@@ -1,6 +1,6 @@
 use crate::profile::{DEFAULT_MIC_PROFILE_NAME, DEFAULT_PROFILE_NAME};
 use anyhow::{Context, Result};
-use log::{error, warn};
+use log::{error};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::{create_dir_all, File};

@@ -32,7 +32,6 @@ pub enum GoXLRCommand {
     SetAllFaderColours(String, String),
     SetAllFaderButtonColours(String, ColourOffStyle, Option<String>),
 
-
     SetVolume(ChannelName, u8),
     SetMicrophoneGain(MicrophoneType, u16),
     SetRouter(InputDevice, OutputDevice, bool),

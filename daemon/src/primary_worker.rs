@@ -56,7 +56,7 @@ pub async fn handle_changes(
                 }
                 loop_count += 1;
                 for device in devices.values_mut() {
-                    if let Err(e) = device.monitor_inputs(&settings).await {
+                    if let Err(e) = device.monitor_inputs().await {
                         error!("Couldn't monitor device for inputs: {}", e);
                     }
                 }
@@ -83,7 +83,7 @@ pub async fn handle_changes(
                     },
                     DeviceCommand::RunDeviceCommand(serial, command, sender) => {
                         if let Some(device) = devices.get_mut(&serial) {
-                            let _ = sender.send(device.perform_command(command, &settings).await);
+                            let _ = sender.send(device.perform_command(command).await);
                         } else {
                             let _ = sender.send(Err(anyhow!("Device {} is not connected", serial)));
                         }
@@ -131,7 +131,7 @@ async fn load_device(
     device: rusb::Device<GlobalContext>,
     descriptor: DeviceDescriptor,
     settings: &SettingsHandle,
-) -> Result<Device<GlobalContext>> {
+) -> Result<Device<'_, GlobalContext>> {
     let mut device = GoXLR::from_device(device.open()?, descriptor)?;
     let descriptor = device.usb_device_descriptor();
     let device_type = match descriptor.product_id() {

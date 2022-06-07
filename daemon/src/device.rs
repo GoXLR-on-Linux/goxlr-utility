@@ -1,8 +1,9 @@
+use std::collections::HashSet;
 use crate::profile::{version_newer_or_equal_to, MicProfileAdapter, ProfileAdapter};
 use crate::SettingsHandle;
 use anyhow::{anyhow, Result};
 use enumset::EnumSet;
-use goxlr_ipc::{Compressor, DeviceType, Equaliser, EqualiserMini, FaderStatus, GoXLRCommand, HardwareStatus, MicSettings, MixerStatus, NoiseGate};
+use goxlr_ipc::{DeviceType, FaderStatus, GoXLRCommand, HardwareStatus, MicSettings, MixerStatus};
 use goxlr_types::{ChannelName, EffectBankPresets, EffectKey, EncoderName, FaderName, InputDevice as BasicInputDevice, MicrophoneParamKey, OutputDevice as BasicOutputDevice, VersionNumber};
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::channelstate::ChannelState;
@@ -13,19 +14,20 @@ use log::{debug, info};
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 use enum_map::EnumMap;
-use futures::executor::block_on;
 use strum::{IntoEnumIterator};
 use goxlr_profile_loader::components::mute::{MuteFunction};
+use goxlr_types::MicrophoneType::{Condenser, Dynamic, Jack};
 use goxlr_usb::channelstate::ChannelState::{Muted, Unmuted};
 
 #[derive(Debug)]
-pub struct Device<T: UsbContext> {
+pub struct Device<'a, T: UsbContext> {
     goxlr: GoXLR<T>,
     hardware: HardwareStatus,
     last_buttons: EnumSet<Buttons>,
     button_states: EnumMap<Buttons, ButtonState>,
     profile: ProfileAdapter,
     mic_profile: MicProfileAdapter,
+    settings: &'a SettingsHandle,
 }
 
 // Experimental code:
@@ -35,7 +37,7 @@ struct ButtonState {
     hold_handled: bool
 }
 
-impl<T: UsbContext> Device<T> {
+impl<'a, T: UsbContext> Device<'a, T> {
     pub fn new(
         goxlr: GoXLR<T>,
         hardware: HardwareStatus,
@@ -43,7 +45,7 @@ impl<T: UsbContext> Device<T> {
         mic_profile_name: Option<String>,
         profile_directory: &Path,
         mic_profile_directory: &Path,
-        settings_handle: &SettingsHandle
+        settings_handle: &'a SettingsHandle
     ) -> Result<Self> {
         info!("Loading Profile: {}", profile_name.clone().unwrap_or("Not Defined".to_string()));
         info!("Loading Mic Profile: {}", mic_profile_name.clone().unwrap_or("Not Defined".to_string()));
@@ -58,10 +60,11 @@ impl<T: UsbContext> Device<T> {
             hardware,
             last_buttons: EnumSet::empty(),
             button_states: EnumMap::default(),
+            settings: settings_handle,
         };
 
-        device.apply_profile(settings_handle)?;
-        block_on(device.apply_mic_profile(settings_handle))?;
+        device.apply_profile()?;
+        device.apply_mic_profile()?;
 
         Ok(device)
     }
@@ -104,7 +107,7 @@ impl<T: UsbContext> Device<T> {
         &self.mic_profile
     }
 
-    pub async fn monitor_inputs(&mut self, settings: &SettingsHandle) -> Result<()> {
+    pub async fn monitor_inputs(&mut self) -> Result<()> {
         self.hardware.usb_device.has_kernel_driver_attached =
             self.goxlr.usb_device_has_kernel_driver_active()?;
 
@@ -120,13 +123,13 @@ impl<T: UsbContext> Device<T> {
                     hold_handled: false
                 };
 
-                self.on_button_down(button, settings).await?;
+                self.on_button_down(button).await?;
             }
 
             let released_buttons = self.last_buttons.difference(buttons);
             for button in released_buttons {
                 let button_state = self.button_states[button];
-                self.on_button_up(button, &button_state, settings).await?;
+                self.on_button_up(button, &button_state).await?;
 
                 self.button_states[button] = ButtonState {
                     press_time: 0,
@@ -140,7 +143,7 @@ impl<T: UsbContext> Device<T> {
                 if !self.button_states[button].hold_handled {
                     let now = self.get_epoch_ms();
                     if (now - self.button_states[button].press_time) > 500 {
-                        self.on_button_hold(button, settings).await?;
+                        self.on_button_hold(button).await?;
                         self.button_states[button].hold_handled = true;
                     }
                 }
@@ -152,7 +155,7 @@ impl<T: UsbContext> Device<T> {
         Ok(())
     }
 
-    async fn on_button_down(&mut self, button: Buttons, _settings: &SettingsHandle) -> Result<()> {
+    async fn on_button_down(&mut self, button: Buttons) -> Result<()> {
         debug!("Handling Button Down: {:?}", button);
 
         match button {
@@ -168,7 +171,7 @@ impl<T: UsbContext> Device<T> {
         Ok(())
     }
 
-    async fn on_button_hold(&mut self, button: Buttons, _settings: &SettingsHandle) -> Result<()> {
+    async fn on_button_hold(&mut self, button: Buttons) -> Result<()> {
         debug!("Handling Button Hold: {:?}", button);
         match button {
             Buttons::Fader1Mute => {
@@ -192,7 +195,7 @@ impl<T: UsbContext> Device<T> {
         Ok(())
     }
 
-    async fn on_button_up(&mut self, button: Buttons, state: &ButtonState, _settings: &SettingsHandle) -> Result<()> {
+    async fn on_button_up(&mut self, button: Buttons, state: &ButtonState) -> Result<()> {
         debug!("Handling Button Release: {:?}, Has Long Press Handled: {:?}", button, state.hold_handled);
         match button {
             Buttons::Fader1Mute => {
@@ -577,7 +580,6 @@ impl<T: UsbContext> Device<T> {
     pub async fn perform_command(
         &mut self,
         command: GoXLRCommand,
-        settings: &SettingsHandle,
     ) -> Result<()> {
         match command {
             GoXLRCommand::SetFader(fader, channel) => {
@@ -648,13 +650,13 @@ impl<T: UsbContext> Device<T> {
                 self.update_button_states()?;
             }
             GoXLRCommand::SetSwearButtonVolume(volume) => {
-                if volume < -37 || volume > 0 {
-                    return Err(anyhow!("Mute volume must be between -37 and 0"));
+                if volume < -34 || volume > 0 {
+                    return Err(anyhow!("Mute volume must be between -34 and 0"));
                 }
-                settings
+                self.settings
                     .set_device_bleep_volume(self.serial(), volume)
                     .await;
-                settings.save().await;
+                self.settings.save().await;
 
                 self.goxlr.set_effect_values(&[
                     (EffectKey::BleepLevel, volume as i32),
@@ -680,63 +682,63 @@ impl<T: UsbContext> Device<T> {
                 self.apply_routing(input)?;
             }
             GoXLRCommand::LoadProfile(profile_name) => {
-                let profile_directory = settings.get_profile_directory().await;
+                let profile_directory = self.settings.get_profile_directory().await;
                 self.profile = ProfileAdapter::from_named(profile_name, &profile_directory)?;
-                self.apply_profile(settings)?;
-                settings
+                self.apply_profile()?;
+                self.settings
                     .set_device_profile_name(self.serial(), self.profile.name())
                     .await;
-                settings.save().await;
+                self.settings.save().await;
             }
             GoXLRCommand::SaveProfile() => {
-                let profile_directory = settings.get_profile_directory().await;
-                let profile_name = settings.get_device_profile_name(self.serial()).await;
+                let profile_directory = self.settings.get_profile_directory().await;
+                let profile_name = self.settings.get_device_profile_name(self.serial()).await;
 
                 if let Some(profile_name) = profile_name {
                     self.profile.write_profile(profile_name, &profile_directory, true)?;
                 }
             }
             GoXLRCommand::SaveProfileAs(profile_name) => {
-                let profile_directory = settings.get_profile_directory().await;
+                let profile_directory = self.settings.get_profile_directory().await;
                 self.profile.write_profile(profile_name.clone(), &profile_directory, false)?;
 
                 // Save the new name in the settings
-                settings.set_device_profile_name(
+                self.settings.set_device_profile_name(
                     self.serial(),
                     profile_name.as_str()
                 ).await;
 
-                settings.save().await;
+                self.settings.save().await;
             }
             GoXLRCommand::LoadMicProfile(mic_profile_name) => {
-                let mic_profile_directory = settings.get_mic_profile_directory().await;
+                let mic_profile_directory = self.settings.get_mic_profile_directory().await;
                 self.mic_profile =
                     MicProfileAdapter::from_named(mic_profile_name, &mic_profile_directory)?;
-                self.apply_mic_profile(settings).await?;
-                settings
+                self.apply_mic_profile()?;
+                self.settings
                     .set_device_mic_profile_name(self.serial(), self.mic_profile.name())
                     .await;
-                settings.save().await;
+                self.settings.save().await;
             }
             GoXLRCommand::SaveMicProfile() => {
-                let mic_profile_directory = settings.get_mic_profile_directory().await;
-                let mic_profile_name = settings.get_device_mic_profile_name(self.serial()).await;
+                let mic_profile_directory = self.settings.get_mic_profile_directory().await;
+                let mic_profile_name = self.settings.get_device_mic_profile_name(self.serial()).await;
 
                 if let Some(profile_name) = mic_profile_name {
                     self.mic_profile.write_profile(profile_name, &mic_profile_directory, true)?;
                 }
             }
             GoXLRCommand::SaveMicProfileAs(profile_name) => {
-                let profile_directory = settings.get_mic_profile_directory().await;
+                let profile_directory = self.settings.get_mic_profile_directory().await;
                 self.mic_profile.write_profile(profile_name.clone(), &profile_directory, false)?;
 
                 // Save the new name in the settings
-                settings.set_device_mic_profile_name(
+                self.settings.set_device_mic_profile_name(
                     self.serial(),
                     profile_name.as_str()
                 ).await;
 
-                settings.save().await;
+                self.settings.save().await;
             }
         }
 
@@ -985,7 +987,7 @@ impl<T: UsbContext> Device<T> {
         Ok(())
     }
 
-    fn apply_profile(&mut self, _settings: &SettingsHandle) -> Result<()> {
+    fn apply_profile(&mut self) -> Result<()> {
         // Set volumes first, applying mute may modify stuff..
         for channel in ChannelName::iter() {
             let channel_volume = self.profile.get_channel_volume(channel);
@@ -1016,117 +1018,54 @@ impl<T: UsbContext> Device<T> {
         Ok(())
     }
 
-    async fn apply_mic_profile(&mut self, settings: &SettingsHandle) -> Result<()> {
-        self.goxlr.set_microphone_gain(
-            self.mic_profile.mic_type(),
-            self.mic_profile.mic_gains()[self.mic_profile.mic_type() as usize],
-        )?;
+    /// Applies a Set of Microphone Parameters based on input, designed this way
+    /// so that commands and other abstract entities can apply a subset of params
+    fn apply_mic_params(&mut self, params: HashSet<MicrophoneParamKey>) -> Result<()> {
+        let mut vec = Vec::new();
+        let mic_type = self.mic_profile.mic_type();
+        for param in params {
+            vec.push((param, self.mic_profile.get_param_value(param, self.serial(), self.settings)));
+        }
+        self.goxlr.set_mic_param(vec.as_slice())?;
+        Ok(())
+    }
 
-        // I can't think of a cleaner way of doing this..
-        let params = self.mic_profile.mic_params();
+    fn apply_effects(&mut self, params: HashSet<EffectKey>) -> Result<()> {
+        let mut vec = Vec::new();
+        for effect in params {
+            vec.push((effect, self.mic_profile.get_effect_value(effect, self.serial(), self.settings)));
+        }
+        self.goxlr.set_effect_values(vec.as_slice())?;
+        Ok(())
+    }
 
-        // The EQ from the mini is seemingly always sent regardless of the device in use, the
-        // full device will replace it via Effects later.
-        let eq_gains = self.mic_profile.get_eq_gain_mini();
-        let eq_freqs = self.mic_profile.get_eq_freq_mini();
-
-        self.goxlr.set_mic_param(&[
-            (MicrophoneParamKey::GateThreshold, &params[0]),
-            (MicrophoneParamKey::GateAttack, &params[1]),
-            (MicrophoneParamKey::GateRelease, &params[2]),
-            (MicrophoneParamKey::GateAttenuation, &params[3]),
-            (MicrophoneParamKey::CompressorThreshold, &params[4]),
-            (MicrophoneParamKey::CompressorRatio, &params[5]),
-            (MicrophoneParamKey::CompressorAttack, &params[6]),
-            (MicrophoneParamKey::CompressorRelease, &params[7]),
-            (MicrophoneParamKey::CompressorMakeUpGain, &params[8]),
-
-            (MicrophoneParamKey::Equalizer90HzFrequency, &eq_freqs[0]),
-            (MicrophoneParamKey::Equalizer250HzFrequency, &eq_freqs[1]),
-            (MicrophoneParamKey::Equalizer500HzFrequency, &eq_freqs[2]),
-            (MicrophoneParamKey::Equalizer1KHzFrequency, &eq_freqs[3]),
-            (MicrophoneParamKey::Equalizer3KHzFrequency, &eq_freqs[4]),
-            (MicrophoneParamKey::Equalizer8KHzFrequency, &eq_freqs[5]),
-
-            (MicrophoneParamKey::Equalizer90HzGain, &eq_gains[0]),
-            (MicrophoneParamKey::Equalizer250HzGain, &eq_gains[1]),
-            (MicrophoneParamKey::Equalizer500HzGain, &eq_gains[2]),
-            (MicrophoneParamKey::Equalizer1KHzGain, &eq_gains[3]),
-            (MicrophoneParamKey::Equalizer3KHzGain, &eq_gains[4]),
-            (MicrophoneParamKey::Equalizer8KHzGain, &eq_gains[5]),
-
-        ])?;
-
-        let main_effects = self.mic_profile.mic_effects();
-        let eq_gains = self.mic_profile.get_eq_gain();
-        let eq_freq = self.mic_profile.get_eq_freq();
-
-        self.goxlr.set_effect_values(&[
-            (EffectKey::DeEsser, self.mic_profile.get_deesser()),
-
-            (EffectKey::GateThreshold, main_effects[0]),
-            (EffectKey::GateAttack, main_effects[1]),
-            (EffectKey::GateRelease, main_effects[2]),
-            (EffectKey::GateAttenuation, main_effects[3]),
-            (EffectKey::CompressorThreshold, main_effects[4]),
-            (EffectKey::CompressorRatio, main_effects[5]),
-            (EffectKey::CompressorAttack, main_effects[6]),
-            (EffectKey::CompressorRelease, main_effects[7]),
-            (EffectKey::CompressorMakeUpGain, main_effects[8]),
-
-            (EffectKey::GateEnabled, 1),
-            (EffectKey::BleepLevel,
-             settings.get_device_bleep_volume(self.serial()).await.unwrap_or(-20) as i32
-            ),
-            (EffectKey::GateMode, 2),
-
-            // We don't use this effect key under Linux (mostly due to there being other ways
-            // to mute a channel), so we'll set this to 0 just in case someone is coming from
-            // windows where it *IS* used during mic muting.
-            (EffectKey::DisableMic, 0),
-
-            // Disable all the voice effects, these are enabled by default and seem
-            // to mess with the initial mic!
-            (EffectKey::Encoder1Enabled, 0),
-            (EffectKey::Encoder2Enabled, 0),
-            (EffectKey::Encoder3Enabled, 0),
-            (EffectKey::Encoder4Enabled, 0),
-            (EffectKey::RobotEnabled, 0),
-            (EffectKey::HardTuneEnabled, 0),
-            (EffectKey::MegaphoneEnabled, 0),
-        ])?;
-
-        // Apply EQ only on the 'Full' device
-        if self.hardware.device_type == DeviceType::Full {
-            self.goxlr.set_effect_values(&[
-                (EffectKey::Equalizer31HzGain, eq_gains[0]),
-                (EffectKey::Equalizer63HzGain, eq_gains[1]),
-                (EffectKey::Equalizer125HzGain, eq_gains[2]),
-                (EffectKey::Equalizer250HzGain, eq_gains[3]),
-                (EffectKey::Equalizer500HzGain, eq_gains[4]),
-                (EffectKey::Equalizer1KHzGain, eq_gains[5]),
-                (EffectKey::Equalizer2KHzGain, eq_gains[6]),
-                (EffectKey::Equalizer4KHzGain, eq_gains[7]),
-                (EffectKey::Equalizer8KHzGain, eq_gains[8]),
-                (EffectKey::Equalizer16KHzGain, eq_gains[9]),
-
-                (EffectKey::Equalizer31HzFrequency, eq_freq[0]),
-                (EffectKey::Equalizer63HzFrequency, eq_freq[1]),
-                (EffectKey::Equalizer125HzFrequency, eq_freq[2]),
-                (EffectKey::Equalizer250HzFrequency, eq_freq[3]),
-                (EffectKey::Equalizer500HzFrequency, eq_freq[4]),
-                (EffectKey::Equalizer1KHzFrequency, eq_freq[5]),
-                (EffectKey::Equalizer2KHzFrequency, eq_freq[6]),
-                (EffectKey::Equalizer4KHzFrequency, eq_freq[7]),
-                (EffectKey::Equalizer8KHzFrequency, eq_freq[8]),
-                (EffectKey::Equalizer16KHzFrequency, eq_freq[9]),
-            ])?;
-
-            self.load_effects()?;
+    fn apply_mic_profile(&mut self) -> Result<()> {
+        let mut keys = HashSet::new();
+        for param in MicrophoneParamKey::iter() {
+            keys.insert(param);
         }
 
+        // Remove all gain settings, and re-add the relevant one.
+        keys.remove(&MicrophoneParamKey::DynamicGain);
+        keys.remove(&MicrophoneParamKey::CondenserGain);
+        keys.remove(&MicrophoneParamKey::JackGain);
+        keys.insert(self.mic_profile.mic_type().get_gain_param());
 
-        self.set_pitch_mode()?;
+        self.apply_mic_params(keys)?;
+
+        let mut keys = HashSet::new();
+        keys.extend(self.mic_profile.get_common_keys());
+
+        if self.hardware.device_type == DeviceType::Full {
+            keys.extend(self.mic_profile.get_full_keys());
+        }
+
+        self.apply_effects(keys)?;
+
+        if self.hardware.device_type == DeviceType::Full {
+            self.load_effects()?;
+            self.set_pitch_mode()?;
+        }
         Ok(())
     }
 
