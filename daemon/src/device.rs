@@ -16,7 +16,6 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use enum_map::EnumMap;
 use strum::{IntoEnumIterator};
 use goxlr_profile_loader::components::mute::{MuteFunction};
-use goxlr_types::MicrophoneType::{Condenser, Dynamic, Jack};
 use goxlr_usb::channelstate::ChannelState::{Muted, Unmuted};
 
 #[derive(Debug)]
@@ -1022,7 +1021,6 @@ impl<'a, T: UsbContext> Device<'a, T> {
     /// so that commands and other abstract entities can apply a subset of params
     fn apply_mic_params(&mut self, params: HashSet<MicrophoneParamKey>) -> Result<()> {
         let mut vec = Vec::new();
-        let mic_type = self.mic_profile.mic_type();
         for param in params {
             vec.push((param, self.mic_profile.get_param_value(param, self.serial(), self.settings)));
         }
