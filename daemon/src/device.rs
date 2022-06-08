@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use crate::profile::{version_newer_or_equal_to, MicProfileAdapter, ProfileAdapter};
+use crate::profile::{version_newer_or_equal_to, MicProfileAdapter, ProfileAdapter, SampleBank};
 use crate::SettingsHandle;
 use anyhow::{anyhow, Result};
 use enumset::EnumSet;
@@ -10,10 +10,12 @@ use goxlr_usb::channelstate::ChannelState;
 use goxlr_usb::goxlr::GoXLR;
 use goxlr_usb::routing::{InputDevice, OutputDevice};
 use goxlr_usb::rusb::UsbContext;
-use log::{debug, info};
+use log::{debug, error, info, warn};
 use std::path::Path;
+use std::process::{Command, Stdio};
 use std::time::{SystemTime, UNIX_EPOCH};
 use enum_map::EnumMap;
+use futures::executor::block_on;
 use strum::{IntoEnumIterator};
 use goxlr_profile_loader::components::mute::{MuteFunction};
 use goxlr_usb::channelstate::ChannelState::{Muted, Unmuted};
@@ -64,6 +66,8 @@ impl<'a, T: UsbContext> Device<'a, T> {
 
         device.apply_profile()?;
         device.apply_mic_profile()?;
+
+        device.get_sample_device();
 
         Ok(device)
     }
@@ -259,6 +263,14 @@ impl<'a, T: UsbContext> Device<'a, T> {
             }
             Buttons::EffectFx => {
                 self.toggle_effects().await?;
+            }
+
+            // This is mostly experimental..
+            Buttons::SamplerBottomLeft => {
+                if self.profile.get_active_sample_bank() == &SampleBank::C {
+                    debug!("Playing.. ");
+                    self.play_audio_sample("40minutes.wav".to_string());
+                }
             }
             _ => {}
         }
@@ -1141,6 +1153,66 @@ impl<'a, T: UsbContext> Device<'a, T> {
         }
 
         Ok(())
+    }
+
+    // EXPERIMENTAL, JUST TESTING :)
+    fn get_sample_device(&self) -> Option<String> {
+        // This will probably change at some point to let an external script
+        // handle it, just to better support cross platform behaviour..
+
+        // Linux:
+        // pactl list short sinks | grep goxlr_sample | awk '{print $2}'
+
+        let output = Command::new("/usr/bin/pactl")
+            .arg("list")
+            .arg("short")
+            .arg("sinks")
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .output()
+            .unwrap();
+
+        if !output.status.success() {
+            error!("Failed to List Sinks: ");
+            error!("{}", String::from_utf8(output.stderr).unwrap());
+            return None
+        }
+
+        let output = String::from_utf8(output.stdout).unwrap();
+        let lines = output.lines();
+        for line in lines {
+            let sections = line.split_whitespace();
+            let device = sections.skip(1).next().unwrap();
+            if device.contains("goxlr_sample") {
+                return Some(device.to_string());
+            }
+        }
+        warn!("Could not find GoXLR Sampler Channel");
+        None
+    }
+
+    fn play_audio_sample(&self, filename: String) {
+        // Plays the specific file, again, should be sent to external script..
+
+        // Linux
+        // paplay -d <device> <file>
+
+        // This should probably be cached somewhere..
+        let device = self.get_sample_device();
+        let file_path = format!("{}/{}", block_on(self.settings.get_samples_directory()).to_string_lossy(), filename);
+
+        if let Some(device_name) = device {
+            // We send this through bash, because in my testing there can be ENV variables
+            // that affect the behaviour..
+            let exec = format!("/usr/bin/paplay -d {} {}", device_name, file_path);
+
+            // For now though, we're just going to fire and forget, eventually we'll occasionally
+            // need something monitoring, and managing, this.
+            let _command = Command::new("/bin/bash")
+                .arg("-c")
+                .arg(exec)
+                .spawn();
+        }
     }
 
     // Get the current time in millis..

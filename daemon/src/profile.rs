@@ -653,6 +653,18 @@ impl ProfileAdapter {
         Ok(())
     }
 
+    /** Sampler Related **/
+    pub fn get_active_sample_bank(&self) -> &SampleBank {
+        if self.profile.settings().simple_element(SimpleElements::SampleBankA).colour_map().get_state() {
+            return &SampleBank::A;
+        }
+
+        if self.profile.settings().simple_element(SimpleElements::SampleBankB).colour_map().get_state() {
+            return &SampleBank::B;
+        }
+
+        return &SampleBank::C;
+    }
 
     /** Generic Stuff **/
     pub fn get_button_colour_state(&self, button: Buttons) -> ButtonStates {
@@ -1471,6 +1483,12 @@ fn get_profile_colour_map(profile: &ProfileSettings, colour_target: ColourTarget
         ColourTargets::LogoX => profile.simple_element(SimpleElements::LogoX).colour_map(),
         ColourTargets::Global => profile.simple_element(SimpleElements::GlobalColour).colour_map(),
     }
+}
+
+// TODO: This should be elsewhere!
+#[derive(Debug, PartialEq)]
+pub enum SampleBank {
+    A, B, C
 }
 
 #[allow(clippy::comparison_chain)]
