@@ -1,10 +1,10 @@
 use std::collections::HashSet;
-use crate::profile::{version_newer_or_equal_to, MicProfileAdapter, ProfileAdapter, SampleBank};
+use crate::profile::{version_newer_or_equal_to, MicProfileAdapter, ProfileAdapter};
 use crate::SettingsHandle;
 use anyhow::{anyhow, Result};
 use enumset::EnumSet;
 use goxlr_ipc::{DeviceType, FaderStatus, GoXLRCommand, HardwareStatus, MicSettings, MixerStatus};
-use goxlr_types::{ChannelName, EffectBankPresets, EffectKey, EncoderName, FaderName, InputDevice as BasicInputDevice, MicrophoneParamKey, OutputDevice as BasicOutputDevice, VersionNumber};
+use goxlr_types::{ChannelName, EffectBankPresets, EffectKey, EncoderName, FaderName, InputDevice as BasicInputDevice, MicrophoneParamKey, OutputDevice as BasicOutputDevice, SampleBank, VersionNumber};
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::channelstate::ChannelState;
 use goxlr_usb::goxlr::GoXLR;
@@ -265,6 +265,20 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 self.toggle_effects().await?;
             }
 
+            Buttons::SamplerSelectA => {
+                self.load_sample_bank(SampleBank::A).await?;
+                self.load_colour_map()?;
+            }
+            Buttons::SamplerSelectB => {
+                self.load_sample_bank(SampleBank::B).await?;
+                self.load_colour_map()?;
+            }
+            Buttons::SamplerSelectC => {
+                self.load_sample_bank(SampleBank::C).await?;
+                self.load_colour_map()?;
+            }
+
+
             // This is mostly experimental..
             Buttons::SamplerBottomLeft => {
                 if self.profile.get_active_sample_bank() == &SampleBank::C {
@@ -479,6 +493,12 @@ impl<'a, T: UsbContext> Device<'a, T> {
     async fn handle_swear_button(&mut self, press: bool) -> Result<()> {
         // Pretty simple, turn the light on when pressed, off when released..
         self.profile.set_swear_button_on(press);
+        Ok(())
+    }
+
+    async fn load_sample_bank(&mut self, bank: SampleBank) -> Result<()> {
+        self.profile.load_sample_bank(bank);
+
         Ok(())
     }
 

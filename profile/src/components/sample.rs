@@ -221,10 +221,13 @@ impl SampleBase {
         &self.colour_map
     }
 
+    pub fn get_stack(&self, bank: SampleBank) -> &SampleStack {
+        self.sample_stack.get(&bank).unwrap()
+    }
 }
 
 #[derive(Debug)]
-struct SampleStack {
+pub struct SampleStack {
     tracks: Vec<Track>,
     playback_mode: Option<PlaybackMode>,
     play_order: Option<PlayOrder>,
@@ -237,6 +240,10 @@ impl SampleStack {
             playback_mode: None,
             play_order: None,
         }
+    }
+
+    pub fn get_sample_count(&self) -> usize {
+        return self.tracks.len();
     }
 }
 

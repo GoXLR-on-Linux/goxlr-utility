@@ -144,7 +144,11 @@ impl Context {
     pub fn selected_effects(&self) -> Preset {
         self.selected_effects
     }
-    pub fn selected_bank(&self) -> SampleBank {
+
+    pub fn selected_sample(&self) -> SampleBank {
         self.selected_sample
+    }
+    pub fn set_selected_sample(&mut self, selected_sample: SampleBank) {
+        self.selected_sample = selected_sample;
     }
 }

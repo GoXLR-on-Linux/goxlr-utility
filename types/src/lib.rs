@@ -319,6 +319,10 @@ pub enum EffectBankPresets {
     Preset6
 }
 
+#[derive(Debug, Copy, Clone, Display, PartialEq)]
+pub enum SampleBank {
+    A, B, C
+}
 
 /*
  * The following Enums aren't technically passed via IPC, but they're instead used as 'assists'

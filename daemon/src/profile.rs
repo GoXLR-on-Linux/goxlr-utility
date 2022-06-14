@@ -28,7 +28,9 @@ use goxlr_profile_loader::components::mute_chat::MuteChat;
 use goxlr_profile_loader::components::pitch::{PitchEncoder, PitchStyle};
 use goxlr_profile_loader::components::reverb::ReverbEncoder;
 use goxlr_profile_loader::components::robot::RobotEffect;
+use goxlr_profile_loader::components::sample::SampleBank;
 use goxlr_profile_loader::components::simple::SimpleElements;
+use goxlr_profile_loader::SampleButtons;
 use goxlr_usb::buttonstate::{Buttons, ButtonStates};
 use crate::SettingsHandle;
 
@@ -250,18 +252,53 @@ impl ProfileAdapter {
             for i in 0..colour.get_colour_count() {
                 let position = colour.position(i, use_format_1_3_40);
 
-                if i == 1 && colour_map.get_off_style() == &Dimmed && colour.is_blank_when_dimmed()
-                {
-                    colour_array[position..position + 4].copy_from_slice(&[00, 00, 00, 00]);
-                } else {
-                    // Update the correct 4 bytes in the map..
-                    colour_array[position..position + 4]
-                        .copy_from_slice(&colour_map.colour(i).to_reverse_bytes());
+                // Ok, previously this was based on 'is_blank_when_dimmed', but turns out I misinterpreted
+                // what was going on there, if a sample button has no samples assigned to it, it'll go
+                // dark, so we need to check for that here.
+                match colour {
+                    ColourTargets::SamplerBottomLeft |
+                    ColourTargets::SamplerBottomRight |
+                    ColourTargets::SamplerTopLeft |
+                    ColourTargets::SamplerTopRight => {
+                        if i == 0 {
+                            colour_array[position..position + 4].copy_from_slice(&self.get_sampler_lighting(colour));
+                        } else {
+                            colour_array[position..position + 4]
+                                .copy_from_slice(&colour_map.colour(i).to_reverse_bytes());
+                        }
+                    }
+                    _ => {
+                        // Update the correct 4 bytes in the map..
+                        colour_array[position..position + 4]
+                            .copy_from_slice(&colour_map.colour(i).to_reverse_bytes());
+                    }
                 }
             }
         }
 
         colour_array
+    }
+
+    fn get_sampler_lighting(&self, target: ColourTargets) -> [u8; 4] {
+        return match target {
+            ColourTargets::SamplerBottomLeft => self.get_colour_array(target, SampleButtons::BottomLeft),
+            ColourTargets::SamplerBottomRight => self.get_colour_array(target, SampleButtons::BottomRight),
+            ColourTargets::SamplerTopLeft => self.get_colour_array(target, SampleButtons::TopLeft),
+            ColourTargets::SamplerTopRight => self.get_colour_array(target, SampleButtons::TopRight),
+
+            // Honestly, we should never reach this, return nothing.
+            _ => [00, 00, 00, 00]
+        };
+    }
+
+    fn get_colour_array(&self, target: ColourTargets, button: SampleButtons) -> [u8;4] {
+        if self.current_sample_bank_has_samples(button) {
+            return get_profile_colour_map(self.profile.settings(), target)
+                .colour(0)
+                .to_reverse_bytes();
+        } else {
+            [00, 00, 00, 00]
+        }
     }
 
     fn get_button_colour_map(&self, button: Buttons) -> &ColourMap {
@@ -675,16 +712,50 @@ impl ProfileAdapter {
     }
 
     /** Sampler Related **/
-    pub fn get_active_sample_bank(&self) -> &SampleBank {
+    pub fn load_sample_bank(&mut self, bank: goxlr_types::SampleBank) {
+        let bank = standard_to_profile_sample_bank(bank);
+        let current = self.profile.settings().context().selected_sample();
+
+        // Set the new context..
+        self.profile.settings_mut().context_mut().set_selected_sample(bank);
+
+        // Disable the 'on' state of the existing bank..
+        self.profile.settings_mut()
+            .simple_element_mut(sample_bank_to_simple_element(current))
+            .colour_map_mut()
+            .set_state_on(false);
+
+        // TODO: When loading a bank, we should check for the existance of samples
+        // If they're missing, remove them from the stack.
+
+        // Set the 'on' state for the new bank..
+        self.profile.settings_mut()
+            .simple_element_mut(sample_bank_to_simple_element(bank))
+            .colour_map_mut()
+            .set_state_on(true);
+    }
+
+    pub fn get_active_sample_bank(&self) -> &goxlr_types::SampleBank {
         if self.profile.settings().simple_element(SimpleElements::SampleBankA).colour_map().get_state() {
-            return &SampleBank::A;
+            return &goxlr_types::SampleBank::A;
         }
 
         if self.profile.settings().simple_element(SimpleElements::SampleBankB).colour_map().get_state() {
-            return &SampleBank::B;
+            return &goxlr_types::SampleBank::B;
         }
 
-        return &SampleBank::C;
+        return &goxlr_types::SampleBank::C;
+    }
+
+    pub fn current_sample_bank_has_samples(&self, button: SampleButtons) -> bool {
+        let bank = self.profile.settings().context().selected_sample();
+        let stack = self.profile.settings().sample_button(button).get_stack(bank);
+
+
+        if stack.get_sample_count() == 0 {
+            return false;
+        }
+        return true;
     }
 
     /** Generic Stuff **/
@@ -948,7 +1019,13 @@ impl MicProfileAdapter {
                             main_profile: &ProfileAdapter
     ) -> i32 {
         match effect {
-            EffectKey::DisableMic => 0,
+            EffectKey::DisableMic => {
+                // TODO: Actually use this..
+                // Originally I favoured just muting the mic channel, but discovered during testing
+                // of the effects that the mic is still read even when the channel is muted, so we
+                // need to correctly send this when the mic gets muted / unmuted.
+                0
+            },
             EffectKey::BleepLevel => block_on(settings.get_device_bleep_volume(serial)).unwrap_or(-20).into(),
             EffectKey::GateMode => 2,   // Not a profile setting, hard coded in Windows
             EffectKey::GateEnabled => 1,    // Used for 'Mic Testing' in the UI
@@ -1128,28 +1205,6 @@ impl MicProfileAdapter {
 
     pub fn get_full_keys(&self) -> HashSet<EffectKey> {
         let mut keys = HashSet::new();
-        // keys.insert(EffectKey::Equalizer31HzGain);
-        // keys.insert(EffectKey::Equalizer63HzGain);
-        // keys.insert(EffectKey::Equalizer125HzGain);
-        // keys.insert(EffectKey::Equalizer250HzGain);
-        // keys.insert(EffectKey::Equalizer500HzGain);
-        // keys.insert(EffectKey::Equalizer1KHzGain);
-        // keys.insert(EffectKey::Equalizer2KHzGain);
-        // keys.insert(EffectKey::Equalizer4KHzGain);
-        // keys.insert(EffectKey::Equalizer8KHzGain);
-        // keys.insert(EffectKey::Equalizer16KHzGain);
-        //
-        // keys.insert(EffectKey::Equalizer31HzFrequency);
-        // keys.insert(EffectKey::Equalizer63HzFrequency);
-        // keys.insert(EffectKey::Equalizer125HzFrequency);
-        // keys.insert(EffectKey::Equalizer250HzFrequency);
-        // keys.insert(EffectKey::Equalizer500HzFrequency);
-        // keys.insert(EffectKey::Equalizer1KHzFrequency);
-        // keys.insert(EffectKey::Equalizer2KHzFrequency);
-        // keys.insert(EffectKey::Equalizer4KHzFrequency);
-        // keys.insert(EffectKey::Equalizer8KHzFrequency);
-        // keys.insert(EffectKey::Equalizer16KHzFrequency);
-
 
         // Lets go mental, return everything that's not common..
         let common_effects = self.get_common_keys();
@@ -1269,9 +1324,6 @@ impl MicProfileAdapter {
 
         set
     }
-
-
-
 
     pub fn get_deesser(&self) -> i32 {
         self.profile.deess() as i32
@@ -1402,6 +1454,30 @@ fn standard_to_profile_channel(value: ChannelName) -> FullChannelList {
     }
 }
 
+fn profile_to_standard_sample_bank(bank: SampleBank) -> goxlr_types::SampleBank {
+    match bank {
+        SampleBank::A => goxlr_types::SampleBank::A,
+        SampleBank::B => goxlr_types::SampleBank::B,
+        SampleBank::C => goxlr_types::SampleBank::C
+    }
+}
+
+fn standard_to_profile_sample_bank(bank: goxlr_types::SampleBank) -> SampleBank {
+    match bank {
+        goxlr_types::SampleBank::A => SampleBank::A,
+        goxlr_types::SampleBank::B => SampleBank::B,
+        goxlr_types::SampleBank::C => SampleBank::C
+    }
+}
+
+fn sample_bank_to_simple_element(bank: SampleBank) -> SimpleElements {
+    match bank {
+        SampleBank::A => SimpleElements::SampleBankA,
+        SampleBank::B => SimpleElements::SampleBankB,
+        SampleBank::C => SimpleElements::SampleBankC
+    }
+}
+
 fn profile_to_standard_preset(value: Preset) -> EffectBankPresets {
     match value {
         Preset::Preset1 => EffectBankPresets::Preset1,
@@ -1504,12 +1580,6 @@ fn get_profile_colour_map(profile: &ProfileSettings, colour_target: ColourTarget
         ColourTargets::LogoX => profile.simple_element(SimpleElements::LogoX).colour_map(),
         ColourTargets::Global => profile.simple_element(SimpleElements::GlobalColour).colour_map(),
     }
-}
-
-// TODO: This should be elsewhere!
-#[derive(Debug, PartialEq)]
-pub enum SampleBank {
-    A, B, C
 }
 
 #[allow(clippy::comparison_chain)]
