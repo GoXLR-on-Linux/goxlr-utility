@@ -322,7 +322,7 @@ impl Default for HardtuneStyle {
     }
 }
 
-#[derive(Debug, Display, EnumString, Copy, Clone)]
+#[derive(Debug, Display, EnumString, PartialEq, Copy, Clone)]
 pub enum HardtuneSource {
     #[strum(to_string = "ALL")]
     All,

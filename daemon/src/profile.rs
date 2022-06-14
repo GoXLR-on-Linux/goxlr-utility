@@ -18,15 +18,14 @@ use strum::IntoEnumIterator;
 use byteorder::{ByteOrder, LittleEndian};
 use enum_map::EnumMap;
 use futures::executor::block_on;
-use serde::de::IntoDeserializer;
 use goxlr_ipc::{Compressor, Equaliser, EqualiserFrequency, EqualiserGain, EqualiserMini, EqualiserMiniFrequency, EqualiserMiniGain, NoiseGate};
 use goxlr_profile_loader::components::echo::EchoEncoder;
 use goxlr_profile_loader::components::gender::GenderEncoder;
-use goxlr_profile_loader::components::hardtune::HardtuneEffect;
+use goxlr_profile_loader::components::hardtune::{HardtuneEffect, HardtuneSource};
 use goxlr_profile_loader::components::megaphone::{MegaphoneEffect, Preset};
 use goxlr_profile_loader::components::mute::{MuteButton, MuteFunction};
 use goxlr_profile_loader::components::mute_chat::MuteChat;
-use goxlr_profile_loader::components::pitch::{PitchEncoder, PitchEncoderBase, PitchStyle};
+use goxlr_profile_loader::components::pitch::{PitchEncoder, PitchStyle};
 use goxlr_profile_loader::components::reverb::ReverbEncoder;
 use goxlr_profile_loader::components::robot::RobotEffect;
 use goxlr_profile_loader::components::simple::SimpleElements;
@@ -591,6 +590,28 @@ impl ProfileAdapter {
     pub fn get_active_hardtune_profile(&self) -> &HardtuneEffect {
         let current = self.profile.settings().context().selected_effects();
         self.profile.settings().hardtune_effect().get_preset(current)
+    }
+
+    pub fn is_active_hardtune_source_all(&self) -> bool {
+        if let Some(source) = self.get_active_hardtune_profile().source() {
+            return source == &HardtuneSource::All;
+        }
+
+        // If it's not set, assume default behaviour of 'All'
+        return true;
+    }
+
+    pub fn get_active_hardtune_source(&self) -> InputDevice {
+        let source = self.get_active_hardtune_profile().source();
+        return match source.unwrap() {
+            HardtuneSource::Music => InputDevice::Music,
+            HardtuneSource::Game => InputDevice::Game,
+            HardtuneSource::LineIn => InputDevice::LineIn,
+
+            // This should never really be called when Source is All, return a default.
+            HardtuneSource::All => InputDevice::Music,
+        }
+
     }
 
     pub fn is_hardtune_pitch_enabled(&self) -> bool {

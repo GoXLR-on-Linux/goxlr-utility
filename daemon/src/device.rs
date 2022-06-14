@@ -823,6 +823,25 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 right[right_output.position()] = 0x20;
             }
         }
+
+        // We need to handle hardtune configuration here as well..
+        let hardtune_position = OutputDevice::HardTune.position();
+        if self.profile.is_active_hardtune_source_all() {
+            match input {
+                BasicInputDevice::Music | BasicInputDevice::Game | BasicInputDevice::LineIn | BasicInputDevice::System  => {
+                    left[hardtune_position] = 0x04;
+                    right[hardtune_position] = 0x04;
+                }
+                _ => {}
+            }
+        } else {
+            // We need to match only against a specific target..
+            if input == self.profile.get_active_hardtune_source() {
+                left[hardtune_position] = 0x10;
+                right[hardtune_position] = 0x10;
+            }
+        }
+
         self.goxlr.set_routing(left_input, left)?;
         self.goxlr.set_routing(right_input, right)?;
 
