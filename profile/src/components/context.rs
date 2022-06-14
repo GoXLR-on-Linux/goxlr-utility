@@ -11,6 +11,7 @@ use strum::EnumProperty;
 
 use crate::components::colours::ColourMap;
 use crate::components::megaphone::Preset;
+use crate::components::sample::SampleBank;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -39,7 +40,7 @@ pub struct Context {
 
     selected: u8,
     selected_id: Option<u8>,
-    selected_sample: String, // These two should probably map to enums somewhere, matched up against
+    selected_sample: SampleBank, // These two should probably map to enums somewhere, matched up against
     selected_effects: Preset, // the relevant sections of the tags (for quickly pulling presets)
 }
 
@@ -52,7 +53,7 @@ impl Context {
 
             selected: 0,
             selected_id: None,
-            selected_sample: "".to_string(),
+            selected_sample: SampleBank::A,
             selected_effects: Preset::Preset1,
         }
     }
@@ -72,7 +73,12 @@ impl Context {
             }
 
             if attr.name.local_name == "selectedSampleStack" {
-                self.selected_sample = attr.value.clone();
+                let value = attr.value.clone();
+                for bank in SampleBank::iter() {
+                    if bank.get_str("contextTitle").unwrap() == value {
+                        self.selected_sample = bank;
+                    }
+                }
                 continue;
             }
 
@@ -114,7 +120,7 @@ impl Context {
 
         attributes.insert(
             "selectedSampleStack".to_string(),
-            self.selected_sample.clone(),
+            self.selected_sample.get_str("contextTitle").unwrap().to_string(),
         );
         attributes.insert(
             "selectedEffectBank".to_string(),
@@ -137,5 +143,8 @@ impl Context {
     }
     pub fn selected_effects(&self) -> Preset {
         self.selected_effects
+    }
+    pub fn selected_bank(&self) -> SampleBank {
+        self.selected_sample
     }
 }

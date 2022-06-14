@@ -1,9 +1,11 @@
 use std::collections::HashMap;
+use std::str::FromStr;
 use std::io::Write;
+
 
 use enum_map::Enum;
 use ritelinked::LinkedHashMap;
-use strum::EnumProperty;
+use strum::{EnumProperty, EnumString, Display, EnumIter};
 use xml::attribute::OwnedAttribute;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
@@ -38,7 +40,7 @@ pub struct SampleBase {
     element_name: String,
     colour_map: ColourMap,
     state: String, // Seems to be "Empty" most of the time..
-    sample_stack: HashMap<char, SampleStack>,
+    sample_stack: HashMap<SampleBank, SampleStack>,
 }
 
 impl SampleBase {
@@ -100,7 +102,7 @@ impl SampleBase {
 
         if !map.contains_key(key.as_str()) {
             // Stack doesn't contain any tracks, we're done here.
-            self.sample_stack.insert(id, sample_stack);
+            self.sample_stack.insert(SampleBank::from_str(id.to_string().as_str())?, sample_stack);
             return Ok(());
         }
 
@@ -124,7 +126,7 @@ impl SampleBase {
             }
         }
 
-        self.sample_stack.insert(id, sample_stack);
+        self.sample_stack.insert(SampleBank::from_str(id.to_string().as_str())?, sample_stack);
 
         Ok(())
     }
@@ -152,7 +154,7 @@ impl SampleBase {
 
         // Now onto the damn stacks..
         for (key, value) in &self.sample_stack {
-            let sub_element_name = format!("sampleStack{}", key);
+            let sub_element_name = format!("sampleStack{}", key.to_string());
 
             let mut sub_element = XmlWriterEvent::start_element(sub_element_name.as_str());
 
@@ -218,6 +220,7 @@ impl SampleBase {
     pub fn colour_map(&self) -> &ColourMap {
         &self.colour_map
     }
+
 }
 
 #[derive(Debug)]
@@ -278,4 +281,14 @@ enum PlayOrder {
     Sequential,
     #[strum(props(index = "1"))]
     Random,
+}
+
+#[derive(Debug, Copy, Clone, Display, Enum, EnumString, EnumProperty, EnumIter, PartialEq, Eq, Hash)]
+pub enum SampleBank {
+    #[strum(props(contextTitle = "sampleStackA"))]
+    A,
+    #[strum(props(contextTitle = "sampleStackB"))]
+    B,
+    #[strum(props(contextTitle = "sampleStackC"))]
+    C
 }
