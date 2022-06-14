@@ -582,6 +582,8 @@ impl<'a, T: UsbContext> Device<'a, T> {
         let mut pitch_value = encoders[0];
         if self.profile.is_hardtune_pitch_enabled() {
             pitch_value = pitch_value * 12;
+        } else if self.profile.is_pitch_narrow() {
+            pitch_value = pitch_value / 2;
         }
 
         if pitch_value != self.profile.get_pitch_value() {
