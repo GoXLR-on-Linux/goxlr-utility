@@ -1186,6 +1186,9 @@ impl<'a, T: UsbContext> Device<'a, T> {
             if device.contains("goxlr_sample") {
                 return Some(device.to_string());
             }
+            if device.contains("GoXLR_0_8_9") {
+                return Some(device.to_string());
+            }
         }
         warn!("Could not find GoXLR Sampler Channel");
         None
@@ -1202,16 +1205,13 @@ impl<'a, T: UsbContext> Device<'a, T> {
         let file_path = format!("{}/{}", block_on(self.settings.get_samples_directory()).to_string_lossy(), filename);
 
         if let Some(device_name) = device {
-            // We send this through bash, because in my testing there can be ENV variables
-            // that affect the behaviour..
-            let exec = format!("/usr/bin/paplay -d {} {}", device_name, file_path);
-
-            // For now though, we're just going to fire and forget, eventually we'll occasionally
-            // need something monitoring, and managing, this.
-            let _command = Command::new("/bin/bash")
-                .arg("-c")
-                .arg(exec)
+            // Execute paplay to play audio
+            let _command = Command::new("/usr/bin/paplay")
+                .arg("-d")
+                .arg(device_name)
+                .arg(file_path)
                 .spawn();
+
         }
     }
 
