@@ -577,16 +577,22 @@ impl<'a, T: UsbContext> Device<'a, T> {
     }
 
     fn update_encoders_to(&mut self, encoders: [i8; 4]) -> Result<()> {
-        if encoders[0] != self.profile.get_pitch_value() {
-            // TODO: Frustratingly, depending on whether Hardtune is enabled or not, we may need to
-            // 'calculate' the value in get_pitch_value.
+        // Ok, this is funky, due to the way pitch works, the encoder 'value' doesn't match
+        // the profile value if hardtune is enabled, so we'll pre-emptively calculate pitch here..
+        let mut pitch_value = encoders[0];
+        if self.profile.is_hardtune_pitch_enabled() {
+            pitch_value = pitch_value * 12;
+        }
 
+        if pitch_value != self.profile.get_pitch_value() {
             debug!(
                 "Updating PITCH value from {} to {} as human moved the dial",
                 self.profile.get_pitch_value(),
-                encoders[0]
+                pitch_value
             );
-            self.profile.set_pitch_value(encoders[0]);
+
+            // Ok, if hard tune is enabled, multiply this value by 12..
+            self.profile.set_pitch_value(pitch_value);
             self.apply_effects(HashSet::from([EffectKey::PitchAmount]))?;
         }
 
