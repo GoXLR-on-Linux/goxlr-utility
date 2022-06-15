@@ -245,6 +245,10 @@ impl SampleStack {
     pub fn get_sample_count(&self) -> usize {
         return self.tracks.len();
     }
+
+    pub fn get_first_sample_file(&self) -> String {
+        self.tracks[0].track.to_string()
+    }
 }
 
 #[derive(Debug)]

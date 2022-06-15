@@ -758,6 +758,13 @@ impl ProfileAdapter {
         return true;
     }
 
+    pub fn get_sample_file(&self, button: SampleButtons) -> String {
+        let bank = self.profile.settings().context().selected_sample();
+        let stack = self.profile.settings().sample_button(button).get_stack(bank);
+
+        stack.get_first_sample_file()
+    }
+
     /** Generic Stuff **/
     pub fn get_button_colour_state(&self, button: Buttons) -> ButtonStates {
         let colour_map = self.get_button_colour_map(button);

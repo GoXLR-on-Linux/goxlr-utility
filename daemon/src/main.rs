@@ -4,6 +4,7 @@ mod primary_worker;
 mod profile;
 mod settings;
 mod shutdown;
+mod audio;
 
 use crate::primary_worker::handle_changes;
 use crate::settings::SettingsHandle;

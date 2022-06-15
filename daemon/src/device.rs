@@ -18,7 +18,9 @@ use enum_map::EnumMap;
 use futures::executor::block_on;
 use strum::{IntoEnumIterator};
 use goxlr_profile_loader::components::mute::{MuteFunction};
+use goxlr_profile_loader::SampleButtons;
 use goxlr_usb::channelstate::ChannelState::{Muted, Unmuted};
+use crate::audio::AudioHandler;
 
 #[derive(Debug)]
 pub struct Device<'a, T: UsbContext> {
@@ -28,6 +30,7 @@ pub struct Device<'a, T: UsbContext> {
     button_states: EnumMap<Buttons, ButtonState>,
     profile: ProfileAdapter,
     mic_profile: MicProfileAdapter,
+    audio_handler: Option<AudioHandler>,
     settings: &'a SettingsHandle,
 }
 
@@ -54,6 +57,12 @@ impl<'a, T: UsbContext> Device<'a, T> {
         let mic_profile =
             MicProfileAdapter::from_named_or_default(mic_profile_name, mic_profile_directory);
 
+
+        let mut audio_handler = None;
+        if let Ok(audio) = AudioHandler::new() {
+            audio_handler = Some(audio);
+        }
+
         let mut device = Self {
             profile,
             mic_profile,
@@ -61,13 +70,12 @@ impl<'a, T: UsbContext> Device<'a, T> {
             hardware,
             last_buttons: EnumSet::empty(),
             button_states: EnumMap::default(),
+            audio_handler,
             settings: settings_handle,
         };
 
         device.apply_profile()?;
         device.apply_mic_profile()?;
-
-        device.get_sample_device();
 
         Ok(device)
     }
@@ -278,13 +286,17 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 self.load_colour_map()?;
             }
 
-
-            // This is mostly experimental..
             Buttons::SamplerBottomLeft => {
-                if self.profile.get_active_sample_bank() == &SampleBank::C {
-                    debug!("Playing.. ");
-                    self.play_audio_sample("40minutes.wav".to_string());
-                }
+                self.handle_sample_button(SampleButtons::BottomLeft).await?;
+            }
+            Buttons::SamplerBottomRight => {
+                self.handle_sample_button(SampleButtons::BottomRight).await?;
+            }
+            Buttons::SamplerTopLeft => {
+                self.handle_sample_button(SampleButtons::TopLeft).await?;
+            }
+            Buttons::SamplerTopRight => {
+                self.handle_sample_button(SampleButtons::TopRight).await?;
             }
             _ => {}
         }
@@ -498,6 +510,37 @@ impl<'a, T: UsbContext> Device<'a, T> {
 
     async fn load_sample_bank(&mut self, bank: SampleBank) -> Result<()> {
         self.profile.load_sample_bank(bank);
+
+        Ok(())
+    }
+
+    // This currently only gets called on release, this will change.
+    async fn handle_sample_button(&self, button: SampleButtons) -> Result<()> {
+        if self.audio_handler.is_none() {
+            return Err(anyhow!("Not handling button, audio handler not configured."));
+        }
+
+        if !self.profile.current_sample_bank_has_samples(button) {
+            // On release, so do nothing really..
+            return Ok(())
+        }
+
+        let sample = self.profile.get_sample_file(button);
+        let mut sample_path = self.settings.get_samples_directory().await;
+
+        if sample.starts_with("Recording_") {
+            sample_path = sample_path.join("Recorded");
+        }
+
+        sample_path = sample_path.join(sample);
+
+        if !sample_path.exists() {
+            return Err(anyhow!("Sample File does not exist!"));
+        }
+
+        debug!("Attempting to play: {}", sample_path.to_string_lossy());
+        let audio_handler = self.audio_handler.as_ref().unwrap();
+        audio_handler.play_and_forget(sample_path.to_str().unwrap().to_string());
 
         Ok(())
     }
@@ -1200,66 +1243,6 @@ impl<'a, T: UsbContext> Device<'a, T> {
         }
 
         Ok(())
-    }
-
-    // EXPERIMENTAL, JUST TESTING :)
-    fn get_sample_device(&self) -> Option<String> {
-        // This will probably change at some point to let an external script
-        // handle it, just to better support cross platform behaviour..
-
-        // Linux:
-        // pactl list short sinks | grep goxlr_sample | awk '{print $2}'
-
-        let output = Command::new("/usr/bin/pactl")
-            .arg("list")
-            .arg("short")
-            .arg("sinks")
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .output()
-            .unwrap();
-
-        if !output.status.success() {
-            error!("Failed to List Sinks: ");
-            error!("{}", String::from_utf8(output.stderr).unwrap());
-            return None
-        }
-
-        let output = String::from_utf8(output.stdout).unwrap();
-        let lines = output.lines();
-        for line in lines {
-            let sections = line.split_whitespace();
-            let device = sections.skip(1).next().unwrap();
-            if device.contains("goxlr_sample") {
-                return Some(device.to_string());
-            }
-            if device.contains("GoXLR_0_8_9") {
-                return Some(device.to_string());
-            }
-        }
-        warn!("Could not find GoXLR Sampler Channel");
-        None
-    }
-
-    fn play_audio_sample(&self, filename: String) {
-        // Plays the specific file, again, should be sent to external script..
-
-        // Linux
-        // paplay -d <device> <file>
-
-        // This should probably be cached somewhere..
-        let device = self.get_sample_device();
-        let file_path = format!("{}/{}", block_on(self.settings.get_samples_directory()).to_string_lossy(), filename);
-
-        if let Some(device_name) = device {
-            // Execute paplay to play audio
-            let _command = Command::new("/usr/bin/paplay")
-                .arg("-d")
-                .arg(device_name)
-                .arg(file_path)
-                .spawn();
-
-        }
     }
 
     // Get the current time in millis..
