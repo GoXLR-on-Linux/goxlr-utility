@@ -735,18 +735,6 @@ impl ProfileAdapter {
             .set_state_on(true);
     }
 
-    pub fn get_active_sample_bank(&self) -> &goxlr_types::SampleBank {
-        if self.profile.settings().simple_element(SimpleElements::SampleBankA).colour_map().get_state() {
-            return &goxlr_types::SampleBank::A;
-        }
-
-        if self.profile.settings().simple_element(SimpleElements::SampleBankB).colour_map().get_state() {
-            return &goxlr_types::SampleBank::B;
-        }
-
-        return &goxlr_types::SampleBank::C;
-    }
-
     pub fn current_sample_bank_has_samples(&self, button: SampleButtons) -> bool {
         let bank = self.profile.settings().context().selected_sample();
         let stack = self.profile.settings().sample_button(button).get_stack(bank);
@@ -763,6 +751,14 @@ impl ProfileAdapter {
         let stack = self.profile.settings().sample_button(button).get_stack(bank);
 
         stack.get_first_sample_file()
+    }
+
+    pub fn is_sample_active(&self, button: SampleButtons) -> bool {
+        self.profile.settings().sample_button(button).colour_map().get_state()
+    }
+
+    pub fn set_sample_button_state(&mut self, button: SampleButtons, state: bool) {
+        self.profile.settings_mut().sample_button_mut(button).colour_map_mut().set_state_on(state);
     }
 
     /** Generic Stuff **/

@@ -122,6 +122,12 @@ impl<'a, T: UsbContext> Device<'a, T> {
         self.hardware.usb_device.has_kernel_driver_attached =
             self.goxlr.usb_device_has_kernel_driver_active()?;
 
+        // Let the audio handle handle stuff..
+        if let Some(audio_handler) = &mut self.audio_handler {
+            audio_handler.check_playing();
+            self.sync_sample_lighting().await?;
+        }
+
         if let Ok((buttons, volumes, encoders)) = self.goxlr.get_button_states() {
             self.update_volumes_to(volumes);
             self.update_encoders_to(encoders)?;
@@ -515,7 +521,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
     }
 
     // This currently only gets called on release, this will change.
-    async fn handle_sample_button(&self, button: SampleButtons) -> Result<()> {
+    async fn handle_sample_button(&mut self, button: SampleButtons) -> Result<()> {
         if self.audio_handler.is_none() {
             return Err(anyhow!("Not handling button, audio handler not configured."));
         }
@@ -539,8 +545,33 @@ impl<'a, T: UsbContext> Device<'a, T> {
         }
 
         debug!("Attempting to play: {}", sample_path.to_string_lossy());
-        let audio_handler = self.audio_handler.as_ref().unwrap();
-        audio_handler.play_and_forget(sample_path.to_str().unwrap().to_string());
+        let audio_handler = self.audio_handler.as_mut().unwrap();
+        audio_handler.play_for_button(button, sample_path.to_str().unwrap().to_string())?;
+        self.profile.set_sample_button_state(button, true);
+
+        Ok(())
+    }
+
+    async fn sync_sample_lighting(&mut self) -> Result<()> {
+        if self.audio_handler.is_none() {
+            // No audio handler, no point.
+            return Ok(());
+        }
+
+        let mut changed = false;
+
+        for button in SampleButtons::iter() {
+            let playing = self.audio_handler.as_ref().unwrap().is_sample_playing(button);
+
+            if self.profile.is_sample_active(button) && !playing {
+                self.profile.set_sample_button_state(button, false);
+                changed = true;
+            }
+        }
+
+        if changed {
+            self.update_button_states()?;
+        }
 
         Ok(())
     }

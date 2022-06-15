@@ -221,6 +221,10 @@ impl SampleBase {
         &self.colour_map
     }
 
+    pub fn colour_map_mut(&mut self) -> &mut ColourMap {
+        &mut self.colour_map
+    }
+
     pub fn get_stack(&self, bank: SampleBank) -> &SampleStack {
         self.sample_stack.get(&bank).unwrap()
     }

@@ -662,6 +662,10 @@ impl ProfileSettings {
         self.sampler_map[button].as_ref().unwrap()
     }
 
+    pub fn sample_button_mut(&mut self, button: SampleButtons) -> &mut SampleBase {
+        self.sampler_map[button].as_mut().unwrap()
+    }
+
     pub fn pitch_encoder(&self) -> &PitchEncoderBase {
         &self.pitch_encoder
     }

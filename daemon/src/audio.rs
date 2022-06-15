@@ -1,14 +1,18 @@
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::{Child, Command, Stdio};
 use anyhow::{anyhow, Context, Result};
 use directories::ProjectDirs;
-use log::{debug, error, info, warn};
+use log::{debug, error, warn};
+use goxlr_profile_loader::SampleButtons;
 
 #[derive(Debug)]
 pub struct AudioHandler {
     script_path: PathBuf,
     output_device: String,
     input_device: Option<String>,
+
+    active_streams: HashMap<SampleButtons, Child>
 }
 
 impl AudioHandler {
@@ -86,18 +90,50 @@ impl AudioHandler {
         Ok(Self {
             script_path,
             output_device,
-            input_device
+            input_device,
+
+            active_streams: HashMap::new()
         })
     }
 
-    // This will go away eventually, we should always keep track of stuff :p
-    pub fn play_and_forget(&self, file: String) {
-        // Simply spawn the script and ignore the result..
-        let _command = Command::new(self.get_script())
+    pub fn check_playing(&mut self) {
+        let map = &mut self.active_streams;
+        let mut to_remove = Vec::new();
+
+        for (key, value) in &mut *map {
+            match value.try_wait() {
+                Ok(Some(status)) => {
+                    debug!("PID {} has terminated: {}", value.id(), status);
+                    to_remove.push(*key);
+                }
+                Ok(None) => {
+                    // Process hasn't terminated yet..
+                }
+                Err(e) => {
+                    error!("Error checking wait {}", e)
+                }
+            }
+        }
+
+        for key in to_remove.iter() {
+            map.remove(key);
+        }
+    }
+
+    pub fn is_sample_playing(&self, button: SampleButtons) -> bool {
+        self.active_streams.contains_key(&button)
+    }
+
+    pub fn play_for_button(&mut self, button: SampleButtons, file: String) -> Result<()> {
+        let command = Command::new(self.get_script())
             .arg("play-file")
             .arg(&self.output_device)
             .arg(file)
-            .spawn();
+            .spawn()
+            .expect("Unable to run script");
+
+        self.active_streams.insert(button, command);
+        Ok(())
     }
 
     fn get_script(&self) -> &str {
