@@ -17,7 +17,7 @@ function pulse_get_output() {
   fi
 
   # Couldn't find the device.
-  >&2 echo "Unable to Find Device";
+  >&2 echo "Unable to Find GoXLR Sample output Device";
   exit 1;
 }
 
@@ -37,7 +37,7 @@ function pulse_get_input() {
   fi
 
 
-  >&2 echo "Pulse Get Input Not Implemented";
+  >&2 echo "Unable to locate GoXLR Sampler input Device";
   exit 1;
 }
 
