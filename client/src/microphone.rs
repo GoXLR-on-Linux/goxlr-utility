@@ -1,6 +1,6 @@
 use crate::cli::MicrophoneControls;
-use crate::Client;
 use anyhow::Result;
+use goxlr_ipc::client::Client;
 use goxlr_ipc::GoXLRCommand;
 use goxlr_types::MicrophoneType;
 

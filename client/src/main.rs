@@ -1,8 +1,6 @@
 mod cli;
-mod client;
 mod microphone;
 
-use crate::client::Client;
 use crate::microphone::apply_microphone_controls;
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
@@ -12,6 +10,7 @@ use goxlr_ipc::{GoXLRCommand, Socket};
 use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice};
 use strum::IntoEnumIterator;
 use tokio::net::UnixStream;
+use goxlr_ipc::client::Client;
 use crate::cli::{AllFaderCommands, BleepCommands, CoughCommands, FaderCommands, ProfileAction, ProfileType, SubCommands};
 
 #[tokio::main]

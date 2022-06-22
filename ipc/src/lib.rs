@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 
 mod device;
 mod socket;
+pub mod client;
 
 pub use device::*;
 use goxlr_types::{ChannelName, ColourDisplay, ColourOffStyle, FaderName, InputDevice, MicrophoneType, MuteFunction, OutputDevice};

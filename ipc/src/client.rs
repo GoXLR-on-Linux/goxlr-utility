@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Context, Result};
-use goxlr_ipc::{DaemonRequest, DaemonResponse, DaemonStatus, GoXLRCommand, Socket};
+use crate::{DaemonRequest, DaemonResponse, DaemonStatus, GoXLRCommand, Socket};
+//use goxlr_ipc::{DaemonRequest, DaemonResponse, DaemonStatus, GoXLRCommand, Socket};
 
 #[derive(Debug)]
 pub struct Client {
