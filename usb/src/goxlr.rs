@@ -245,8 +245,10 @@ impl<T: UsbContext> GoXLR<T> {
         self.write_control(2, 0, 0, &full_request)?;
 
         // TODO: A retry mechanism
-        sleep(Duration::from_millis(50));
-        self.await_interrupt(Duration::from_secs(2));
+        sleep(Duration::from_millis(10));
+
+        // Interrupt reading doesnt work, because we can't claim the interface.
+        //self.await_interrupt(Duration::from_secs(2));
 
         let mut response_header = self.read_control(3, 0, 0, 1040)?;
         let response = response_header.split_off(16);
@@ -502,9 +504,16 @@ impl<T: UsbContext> GoXLR<T> {
 
     pub fn await_interrupt(&mut self, duration: Duration) -> bool {
         let mut buffer = [0u8; 6];
+        let message = self.handle.read_interrupt(0x81, &mut buffer, duration);
+        if message.is_err() {
+            println!("Error Reading Interrupt..");
+        }
+
         matches!(
-            self.handle.read_interrupt(0x81, &mut buffer, duration),
+            //self.handle.read_interrupt(0x81, &mut buffer, duration),
+            message,
             Ok(_)
         )
+
     }
 }
