@@ -20,6 +20,7 @@ use rusb::{
 };
 use std::io::{Cursor, Write};
 use std::thread::sleep;
+use std::{thread, time};
 use std::time::Duration;
 
 #[derive(Debug)]
@@ -116,6 +117,12 @@ impl<T: UsbContext> GoXLR<T> {
             goxlr.write_class_control(1, 0x0100, 0x2900, &[0x80, 0xbb, 0x00, 0x00])?;
 
             goxlr.handle.release_interface(0)?;
+
+            // Reset the device, so ALSA can pick it up again..
+            goxlr.handle.reset()?;
+
+            // Sleep for a second for things to reinitialise..
+            //thread::sleep(time::Duration::from_secs(2));
 
             // We'll error here and prompt the user to reboot, until we can sort this properly.
             return Err(ConnectError::DeviceNeedsReboot);
@@ -238,7 +245,7 @@ impl<T: UsbContext> GoXLR<T> {
         self.write_control(2, 0, 0, &full_request)?;
 
         // TODO: A retry mechanism
-        sleep(Duration::from_millis(10));
+        sleep(Duration::from_millis(50));
         self.await_interrupt(Duration::from_secs(2));
 
         let mut response_header = self.read_control(3, 0, 0, 1040)?;
