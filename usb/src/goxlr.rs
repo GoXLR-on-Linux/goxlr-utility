@@ -110,9 +110,6 @@ impl<T: UsbContext> GoXLR<T> {
                 return Err(ConnectError::DeviceNotClaimed);
             }
 
-            // Firstly, activate the command pipe..
-            goxlr.read_control(0, 0, 0, 24)?;
-
             // Now activate audio..
             goxlr.write_class_control(1, 0x0100, 0x2900, &[0x80, 0xbb, 0x00, 0x00])?;
 
@@ -128,6 +125,8 @@ impl<T: UsbContext> GoXLR<T> {
             return Err(ConnectError::DeviceNeedsReboot);
         }
 
+        // Force command pipe activation in all cases.
+        goxlr.read_control(0, 0, 0, 24)?;
         goxlr.read_control(3, 0, 0, 1040)?;
         Ok(goxlr)
     }
