@@ -48,7 +48,7 @@ pub async fn handle_changes(
                                     bus_number, address, e
                                 );
                                 ignore_list
-                                    .insert((bus_number, address), Instant::now() + Duration::from_secs(3));
+                                    .insert((bus_number, address), Instant::now() + Duration::from_secs(10));
                             }
                         };
                     }
