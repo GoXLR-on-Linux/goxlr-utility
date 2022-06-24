@@ -272,15 +272,15 @@ impl<T: UsbContext> GoXLR<T> {
         }
         let mut response = vec![];
 
-        for i in 0 .. 3 {
+        for i in 0 .. 20 {
             let response_value = self.read_control(3, 0, 0, 1040);
             if response_value == Err(Pipe) {
                 if i < 2 {
-                    debug!("Response not arrived yet for {:?}, sleeping and retrying (Attempt {} of 3)", command, i + 1);
+                    debug!("Response not arrived yet for {:?}, sleeping and retrying (Attempt {} of 20)", command, i + 1);
                     sleep(sleep_time);
                     continue;
                 } else {
-                    debug!("Failed to receive response (Attempt 3 of 3), possible Dead GoXLR?");
+                    debug!("Failed to receive response (Attempt 20 of 20), possible Dead GoXLR?");
                     return Err(response_value.err().unwrap());
                 }
             }
