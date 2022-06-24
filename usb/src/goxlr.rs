@@ -34,6 +34,9 @@ pub struct GoXLR<T: UsbContext> {
     device_is_claimed: bool,
 }
 
+// Todo: Be nicer about this..
+pub const SUPER_DEBUG: bool = false;
+
 pub const VID_GOXLR: u16 = 0x1220;
 pub const PID_GOXLR_MINI: u16 = 0x8fe4;
 pub const PID_GOXLR_FULL: u16 = 0x8fe0;
@@ -245,21 +248,58 @@ impl<T: UsbContext> GoXLR<T> {
         LittleEndian::write_u16(&mut full_request[6..8], command_index);
         full_request.extend(body);
 
+        if SUPER_DEBUG {
+            debug!("Sending Request.. for {:?}", command);
+        }
         self.write_control(2, 0, 0, &full_request)?;
 
-        // TODO: A retry mechanism
-        sleep(Duration::from_millis(10));
+
+
+        // The full fat GoXLR can handle requests incredibly quickly..
+        let mut sleep_time = Duration::from_millis(3);
+        if self.device_descriptor.product_id() == PID_GOXLR_MINI {
+
+            // The mini, however, cannot.
+            sleep_time = Duration::from_millis(10);
+        }
+        sleep(sleep_time);
 
         // Interrupt reading doesnt work, because we can't claim the interface.
         //self.await_interrupt(Duration::from_secs(2));
 
-        let mut response_header = self.read_control(3, 0, 0, 1040)?;
-        let response = response_header.split_off(16);
-        let response_length = LittleEndian::read_u16(&response_header[4..6]);
-        let response_command_index = LittleEndian::read_u16(&response_header[6..8]);
+        if SUPER_DEBUG {
+            debug!("Reading Response..");
+        }
+        let mut response = vec![];
 
-        debug_assert!(response.len() == response_length as usize);
-        debug_assert!(response_command_index == command_index);
+        for i in 0 .. 3 {
+            let response_value = self.read_control(3, 0, 0, 1040);
+            if response_value == Err(Pipe) {
+                if i < 2 {
+                    debug!("Response not arrived yet for {:?}, sleeping and retrying (Attempt {} of 3)", command, i + 1);
+                    sleep(sleep_time);
+                    continue;
+                } else {
+                    debug!("Failed to receive response (Attempt 3 of 3), possible Dead GoXLR?");
+                    return Err(response_value.err().unwrap());
+                }
+            }
+            if response_value.is_err() {
+                let err = response_value.err().unwrap();
+                debug!("Error Occured during packet read: {}", err);
+                return Err(err);
+            }
+
+            let mut response_header = response_value.unwrap();
+            response = response_header.split_off(16);
+            let response_length = LittleEndian::read_u16(&response_header[4..6]);
+            let response_command_index = LittleEndian::read_u16(&response_header[6..8]);
+
+            debug_assert!(response.len() == response_length as usize);
+            debug_assert!(response_command_index == command_index);
+
+            break;
+        }
 
         Ok(response)
     }

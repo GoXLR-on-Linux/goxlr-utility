@@ -27,3 +27,12 @@ directories = "4.0"
 byteorder = "1"
 enum-map = "2.1.0"
 futures = "0.3.21"
+
+# Enable debugging symbols, and disable optimisation..
+[profile.dev]
+opt-level = 0
+debug = true
+
+[profile.release]
+opt-level = 3
+debug = false
