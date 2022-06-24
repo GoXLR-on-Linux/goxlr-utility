@@ -22,6 +22,7 @@ use std::io::{Cursor, Write};
 use std::thread::sleep;
 use std::{thread, time};
 use std::time::Duration;
+use crate::error::ConnectError::DeviceNeedsReboot;
 
 #[derive(Debug)]
 pub struct GoXLR<T: UsbContext> {
@@ -110,19 +111,20 @@ impl<T: UsbContext> GoXLR<T> {
                 return Err(ConnectError::DeviceNotClaimed);
             }
 
-            // Firstly, activate the command pipe..
-            goxlr.read_control(0, 0, 0, 24)?;
-
-            // Now activate audio..
+            // Firstly, activate the audio..
             goxlr.write_class_control(1, 0x0100, 0x2900, &[0x80, 0xbb, 0x00, 0x00])?;
 
+            // Release and reset, so the ALSA picks the device back up..
+            info!("Resetting device..");
             goxlr.handle.release_interface(0)?;
-
-            // Reset the device, so ALSA can pick it up again..
             goxlr.handle.reset()?;
 
-            // Sleep for a second for things to reinitialise..
-            //thread::sleep(time::Duration::from_secs(2));
+            // Sleep for a second to allow the device to reset..
+            //thread::sleep(time::Duration::from_secs(1));
+
+            info!("Attempting to activate Vendor interface..");
+            // Try activating the vendor interface now..
+            goxlr.read_control(0, 0, 0, 24)?;
 
             // We'll error here and prompt the user to reboot, until we can sort this properly.
             return Err(ConnectError::DeviceNeedsReboot);
