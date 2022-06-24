@@ -1211,7 +1211,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
         debug!("Updating button states..");
         self.update_button_states()?;
 
-        debug("Applying Routing..");
+        debug!("Applying Routing..");
         // For profile load, we should configure all the input channels from the profile,
         // this is split so we can do tweaks in places where needed.
         for input in BasicInputDevice::iter() {
