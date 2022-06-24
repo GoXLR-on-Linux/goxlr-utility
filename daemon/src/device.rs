@@ -140,13 +140,19 @@ impl<'a, T: UsbContext> Device<'a, T> {
                     hold_handled: false
                 };
 
-                self.on_button_down(button).await?;
+                if let Err(error) = self.on_button_down(button).await {
+                    error!("{}", error);
+                }
             }
 
             let released_buttons = self.last_buttons.difference(buttons);
             for button in released_buttons {
                 let button_state = self.button_states[button];
-                self.on_button_up(button, &button_state).await?;
+
+                // Output errors, but don't throw them up the stack!
+                if let Err(error) = self.on_button_up(button, &button_state).await {
+                    error!("{}", error);
+                }
 
                 self.button_states[button] = ButtonState {
                     press_time: 0,
@@ -160,7 +166,9 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 if !self.button_states[button].hold_handled {
                     let now = self.get_epoch_ms();
                     if (now - self.button_states[button].press_time) > 500 {
-                        self.on_button_hold(button).await?;
+                        if let Err(error) = self.on_button_hold(button).await {
+                            error!("{}", error);
+                        }
                         self.button_states[button].hold_handled = true;
                     }
                 }
