@@ -98,6 +98,9 @@ impl<T: UsbContext> GoXLR<T> {
         // Resets the state of the device (unconfirmed - Might just be the command id counter)
         let result = goxlr.write_control(1, 0, 0, &[]);
 
+        // Activate the vendor pipe regardless..
+        goxlr.read_control(0, 0, 0, 24)?;
+
         if result == Err(Pipe) {
             // The GoXLR is not initialised, we need to fix that..
             info!("Attempting to initialise device..");
@@ -126,7 +129,6 @@ impl<T: UsbContext> GoXLR<T> {
         }
 
         // Force command pipe activation in all cases.
-        goxlr.read_control(0, 0, 0, 24)?;
         goxlr.read_control(3, 0, 0, 1040)?;
         Ok(goxlr)
     }
