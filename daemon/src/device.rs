@@ -1146,21 +1146,27 @@ impl<'a, T: UsbContext> Device<'a, T> {
     fn load_colour_map(&mut self) -> Result<()> {
         // The new colour format occurred on different firmware versions depending on device,
         // so do the check here.
-        let use_1_3_40_format: bool = match self.hardware.device_type {
-            DeviceType::Unknown => true,
-            DeviceType::Full => {
-                version_newer_or_equal_to(
-                    &self.hardware.versions.firmware,
-                    VersionNumber(1, 3, 40, 0),
-                )
-            }
-            DeviceType::Mini => {
-                version_newer_or_equal_to(
-                    &self.hardware.versions.firmware,
-                    VersionNumber(1, 1, 8, 0),
-                )
-            }
-        };
+
+        // let use_1_3_40_format: bool = match self.hardware.device_type {
+        //     DeviceType::Unknown => true,
+        //     DeviceType::Full => {
+        //         version_newer_or_equal_to(
+        //             &self.hardware.versions.firmware,
+        //             VersionNumber(1, 3, 40, 0),
+        //         )
+        //     }
+        //     DeviceType::Mini => {
+        //         version_newer_or_equal_to(
+        //             &self.hardware.versions.firmware,
+        //             VersionNumber(1, 1, 8, 0),
+        //         )
+        //     }
+        // };
+
+        let use_1_3_40_format = version_newer_or_equal_to(
+            &self.hardware.versions.firmware,
+            VersionNumber(1, 3, 40, 0),
+        );
 
         let colour_map = self.profile.get_colour_map(use_1_3_40_format);
 
