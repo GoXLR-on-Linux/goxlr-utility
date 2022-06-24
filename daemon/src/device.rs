@@ -1177,26 +1177,41 @@ impl<'a, T: UsbContext> Device<'a, T> {
 
     fn apply_profile(&mut self) -> Result<()> {
         // Set volumes first, applying mute may modify stuff..
+        debug!("Applying Profile..");
+        debug!("Setting Channel Volumes..");
         for channel in ChannelName::iter() {
             let channel_volume = self.profile.get_channel_volume(channel);
+            debug!("Setting volume for {} to {}", channel, channel_volume);
             self.goxlr.set_volume(channel, channel_volume)?;
+
         }
 
+        debug!("Setting Faders..");
         // Prepare the faders, and configure channel mute states
         for fader in FaderName::iter() {
+            debug!("Setting Fader {} to {:?}", fader, self.profile.get_fader_assignment(fader));
             self.goxlr.set_fader(fader, self.profile.get_fader_assignment(fader))?;
+
+            debug!("Applying Mute Profile for {}", fader);
             self.apply_mute_from_profile(fader)?;
         }
 
+        debug!("Applying Cough button settings..");
         self.apply_cough_from_profile()?;
+
+        debug!("Loading Colour Map..");
         self.load_colour_map()?;
 
+        debug!("Setting Fader display modes..");
         for fader in FaderName::iter() {
+            debug!("Setting display for {}", fader);
             self.set_fader_display_from_profile(fader)?;
         }
 
+        debug!("Updating button states..");
         self.update_button_states()?;
 
+        debug("Applying Routing..");
         // For profile load, we should configure all the input channels from the profile,
         // this is split so we can do tweaks in places where needed.
         for input in BasicInputDevice::iter() {

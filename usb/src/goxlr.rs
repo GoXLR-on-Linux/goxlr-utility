@@ -12,7 +12,7 @@ use goxlr_types::{
     ChannelName, EffectKey, EncoderName, FaderName, FirmwareVersions, MicrophoneParamKey,
     MicrophoneType, VersionNumber,
 };
-use log::info;
+use log::{debug, info};
 use rusb::Error::Pipe;
 use rusb::{
     Device, DeviceDescriptor, DeviceHandle, Direction, GlobalContext, Language, Recipient,
@@ -98,6 +98,7 @@ impl<T: UsbContext> GoXLR<T> {
         // Resets the state of the device (unconfirmed - Might just be the command id counter)
         let result = goxlr.write_control(1, 0, 0, &[]);
 
+        debug!("Activating Vendor Interface..");
         // Activate the vendor pipe regardless..
         goxlr.read_control(0, 0, 0, 24)?;
 
@@ -129,6 +130,7 @@ impl<T: UsbContext> GoXLR<T> {
         }
 
         // Force command pipe activation in all cases.
+        debug!("Handling initial request");
         goxlr.read_control(3, 0, 0, 1040)?;
         Ok(goxlr)
     }
