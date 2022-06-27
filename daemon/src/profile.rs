@@ -1169,12 +1169,21 @@ impl MicProfileAdapter {
         LittleEndian::write_f32(&mut return_value, value.into());
         return return_value;
     }
+    
+    /*
+    fn freq_value(&self, value: f32) -> i32 {
+        let value: f32 = (24.0 * (value / 20).log2()).round()
+        return value as i32;
+    }
+    */
 
     fn gain_value(&self, value: u16) -> [u8; 4] {
         let mut return_value = [0;4];
         LittleEndian::write_u16(&mut return_value[2..], value);
         return return_value;
     }
+    
+    
 
     pub fn get_common_keys(&self) -> HashSet<EffectKey> {
         let mut keys = HashSet::new();
