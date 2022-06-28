@@ -195,4 +195,41 @@ impl EqualizerMini {
     pub fn eq_8k_freq(&self) -> f32 {
         self.eq_8k_freq
     }
+
+    pub fn set_eq_90h_gain(&mut self, eq_90h_gain: i8) {
+        self.eq_90h_gain = eq_90h_gain;
+    }
+    pub fn set_eq_250h_gain(&mut self, eq_250h_gain: i8) {
+        self.eq_250h_gain = eq_250h_gain;
+    }
+    pub fn set_eq_500h_gain(&mut self, eq_500h_gain: i8) {
+        self.eq_500h_gain = eq_500h_gain;
+    }
+    pub fn set_eq_1k_gain(&mut self, eq_1k_gain: i8) {
+        self.eq_1k_gain = eq_1k_gain;
+    }
+    pub fn set_eq_3k_gain(&mut self, eq_3k_gain: i8) {
+        self.eq_3k_gain = eq_3k_gain;
+    }
+    pub fn set_eq_8k_gain(&mut self, eq_8k_gain: i8) {
+        self.eq_8k_gain = eq_8k_gain;
+    }
+    pub fn set_eq_90h_freq(&mut self, eq_90h_freq: f32) {
+        self.eq_90h_freq = eq_90h_freq;
+    }
+    pub fn set_eq_250h_freq(&mut self, eq_250h_freq: f32) {
+        self.eq_250h_freq = eq_250h_freq;
+    }
+    pub fn set_eq_500h_freq(&mut self, eq_500h_freq: f32) {
+        self.eq_500h_freq = eq_500h_freq;
+    }
+    pub fn set_eq_1k_freq(&mut self, eq_1k_freq: f32) {
+        self.eq_1k_freq = eq_1k_freq;
+    }
+    pub fn set_eq_3k_freq(&mut self, eq_3k_freq: f32) {
+        self.eq_3k_freq = eq_3k_freq;
+    }
+    pub fn set_eq_8k_freq(&mut self, eq_8k_freq: f32) {
+        self.eq_8k_freq = eq_8k_freq;
+    }
 }

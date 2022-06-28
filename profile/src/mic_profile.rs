@@ -150,6 +150,13 @@ impl MicProfileSettings {
     pub fn gate(&self) -> &Gate { &self.gate }
     pub fn compressor(&self) -> &Compressor { &self.compressor }
     pub fn equalizer(&self) -> &Equalizer { &self.equalizer }
+    pub fn equalizer_mut(&mut self) -> &mut Equalizer {
+        &mut self.equalizer
+    }
+
     pub fn equalizer_mini(&self) -> &EqualizerMini { &self.equalizer_mini }
+    pub fn equalizer_mini_mut(&mut self) -> &mut EqualizerMini {
+        &mut self.equalizer_mini
+    }
     pub fn deess(&self) -> u8 { self.deess }
 }

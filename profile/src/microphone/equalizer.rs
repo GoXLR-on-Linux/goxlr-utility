@@ -314,6 +314,67 @@ impl Equalizer {
         self.freq_value(self.eq_16k_freq)
     }
 
+    pub fn set_eq_31h_gain(&mut self, eq_31h_gain: i8) {
+        self.eq_31h_gain = eq_31h_gain;
+    }
+    pub fn set_eq_63h_gain(&mut self, eq_63h_gain: i8) {
+        self.eq_63h_gain = eq_63h_gain;
+    }
+    pub fn set_eq_125h_gain(&mut self, eq_125h_gain: i8) {
+        self.eq_125h_gain = eq_125h_gain;
+    }
+    pub fn set_eq_250h_gain(&mut self, eq_250h_gain: i8) {
+        self.eq_250h_gain = eq_250h_gain;
+    }
+    pub fn set_eq_500h_gain(&mut self, eq_500h_gain: i8) {
+        self.eq_500h_gain = eq_500h_gain;
+    }
+    pub fn set_eq_1k_gain(&mut self, eq_1k_gain: i8) {
+        self.eq_1k_gain = eq_1k_gain;
+    }
+    pub fn set_eq_2k_gain(&mut self, eq_2k_gain: i8) {
+        self.eq_2k_gain = eq_2k_gain;
+    }
+    pub fn set_eq_4k_gain(&mut self, eq_4k_gain: i8) {
+        self.eq_4k_gain = eq_4k_gain;
+    }
+    pub fn set_eq_8k_gain(&mut self, eq_8k_gain: i8) {
+        self.eq_8k_gain = eq_8k_gain;
+    }
+    pub fn set_eq_16k_gain(&mut self, eq_16k_gain: i8) {
+        self.eq_16k_gain = eq_16k_gain;
+    }
+    pub fn set_eq_31h_freq(&mut self, eq_31h_freq: f64) {
+        self.eq_31h_freq = eq_31h_freq;
+    }
+    pub fn set_eq_63h_freq(&mut self, eq_63h_freq: f64) {
+        self.eq_63h_freq = eq_63h_freq;
+    }
+    pub fn set_eq_125h_freq(&mut self, eq_125h_freq: f64) {
+        self.eq_125h_freq = eq_125h_freq;
+    }
+    pub fn set_eq_250h_freq(&mut self, eq_250h_freq: f64) {
+        self.eq_250h_freq = eq_250h_freq;
+    }
+    pub fn set_eq_500h_freq(&mut self, eq_500h_freq: f64) {
+        self.eq_500h_freq = eq_500h_freq;
+    }
+    pub fn set_eq_1k_freq(&mut self, eq_1k_freq: f64) {
+        self.eq_1k_freq = eq_1k_freq;
+    }
+    pub fn set_eq_2k_freq(&mut self, eq_2k_freq: f64) {
+        self.eq_2k_freq = eq_2k_freq;
+    }
+    pub fn set_eq_4k_freq(&mut self, eq_4k_freq: f64) {
+        self.eq_4k_freq = eq_4k_freq;
+    }
+    pub fn set_eq_8k_freq(&mut self, eq_8k_freq: f64) {
+        self.eq_8k_freq = eq_8k_freq;
+    }
+    pub fn set_eq_16k_freq(&mut self, eq_16k_freq: f64) {
+        self.eq_16k_freq = eq_16k_freq;
+    }
+
     fn freq_value(&self, freq: f64) -> i32 {
         let value: f32 = ((24.0 * (freq / 20.0).log2()) as f32).round();
         return value as i32;
