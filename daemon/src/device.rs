@@ -10,12 +10,10 @@ use goxlr_usb::channelstate::ChannelState;
 use goxlr_usb::goxlr::GoXLR;
 use goxlr_usb::routing::{InputDevice, OutputDevice};
 use goxlr_usb::rusb::UsbContext;
-use log::{debug, error, info, warn};
+use log::{debug, error, info};
 use std::path::Path;
-use std::process::{Command, Stdio};
 use std::time::{SystemTime, UNIX_EPOCH};
 use enum_map::EnumMap;
-use futures::executor::block_on;
 use strum::{IntoEnumIterator};
 use goxlr_profile_loader::components::mute::{MuteFunction};
 use goxlr_profile_loader::SampleButtons;
@@ -837,6 +835,8 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 // Apply the change..
                 self.apply_routing(input)?;
             }
+
+            // Equaliser
             GoXLRCommand::SetEqMiniGain(gain, value) => {
                 if value < -9 || value > 9 {
                     return Err(anyhow!("Gain volume should be between -9 and 9 dB"));
@@ -866,6 +866,76 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 let param = self.mic_profile.set_eq_freq(freq, value)?;
                 self.apply_effects(HashSet::from([param]))?;
             }
+            GoXLRCommand::SetGateThreshold(value) => {
+                if value > 0 || value < -59 {
+                    return Err(anyhow!("Threshold should be between 0 and -59dB"));
+                }
+                self.mic_profile.set_gate_threshold(value);
+                self.apply_mic_params(HashSet::from([MicrophoneParamKey::GateThreshold]))?;
+                self.apply_effects(HashSet::from([EffectKey::GateThreshold]))?;
+            }
+
+            // Noise Gate
+            GoXLRCommand::SetGateAttenuation(percentage) => {
+                if percentage > 100 {
+                    return Err(anyhow!("Attentuation should be a percentage"));
+                }
+                self.mic_profile.set_gate_attenuation(percentage);
+                self.apply_mic_params(HashSet::from([MicrophoneParamKey::GateAttenuation]))?;
+                self.apply_effects(HashSet::from([EffectKey::GateAttenuation]))?;
+            }
+            GoXLRCommand::SetGateAttack(attack_time) => {
+                self.mic_profile.set_gate_attack(attack_time);
+                self.apply_mic_params(HashSet::from([MicrophoneParamKey::GateAttack]))?;
+                self.apply_effects(HashSet::from([EffectKey::GateAttack]))?;
+            }
+            GoXLRCommand::SetGateRelease(release_time) => {
+                self.mic_profile.set_gate_release(release_time);
+                self.apply_mic_params(HashSet::from([MicrophoneParamKey::GateRelease]))?;
+                self.apply_effects(HashSet::from([EffectKey::GateRelease]))?;
+            }
+            GoXLRCommand::SetGateActive(active) => {
+                self.mic_profile.set_gate_active(active);
+
+                // GateEnabled appears to only be an effect key.
+                self.apply_effects(HashSet::from([EffectKey::GateEnabled]))?;
+            }
+
+            // Compressor
+            GoXLRCommand::SetCompressorThreshold(value) => {
+                if value > 0 || value < -24 {
+                    return Err(anyhow!("Compressor Threshold must be between 0 and -24 dB"));
+                }
+                self.mic_profile.set_compressor_threshold(value);
+                self.apply_mic_params(HashSet::from([MicrophoneParamKey::CompressorMakeUpGain]))?;
+                self.apply_effects(HashSet::from([EffectKey::CompressorMakeUpGain]))?;
+
+            }
+            GoXLRCommand::SetCompressorRatio(ratio) => {
+                self.mic_profile.set_compressor_ratio(ratio);
+                self.apply_mic_params(HashSet::from([MicrophoneParamKey::CompressorRatio]))?;
+                self.apply_effects(HashSet::from([EffectKey::CompressorRatio]))?;
+            }
+            GoXLRCommand::SetCompressorAttack(value) => {
+                self.mic_profile.set_compressor_attack(value);
+                self.apply_mic_params(HashSet::from([MicrophoneParamKey::CompressorAttack]))?;
+                self.apply_effects(HashSet::from([EffectKey::CompressorAttack]))?;
+            }
+            GoXLRCommand::SetCompressorReleaseTime(value) => {
+                self.mic_profile.set_compressor_release(value);
+                self.apply_mic_params(HashSet::from([MicrophoneParamKey::CompressorRelease]))?;
+                self.apply_effects(HashSet::from([EffectKey::CompressorRelease]))?;
+            }
+            GoXLRCommand::SetCompressorMakupGain(value) => {
+                if value > 24 {
+                    return Err(anyhow!("Makeup Gain should be between 0 and 24dB"));
+                }
+                self.mic_profile.set_compressor_makeup(value);
+                self.apply_mic_params(HashSet::from([MicrophoneParamKey::CompressorMakeUpGain]))?;
+                self.apply_effects(HashSet::from([EffectKey::CompressorMakeUpGain]))?;
+            }
+
+            // Profiles
             GoXLRCommand::LoadProfile(profile_name) => {
                 let profile_directory = self.settings.get_profile_directory().await;
                 self.profile = ProfileAdapter::from_named(profile_name, &profile_directory)?;

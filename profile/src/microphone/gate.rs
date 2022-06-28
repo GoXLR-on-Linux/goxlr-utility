@@ -19,7 +19,7 @@ pub struct Gate {
     attack: u8,
     release: u8,
     enabled: bool,
-    attenuation: i8,
+    attenuation: u8,
 }
 
 impl Gate {
@@ -65,10 +65,9 @@ impl Gate {
                 continue;
             }
 
-            // This is stored as a percentage between 0 and -61..
+            // Read and handle as a percentage.
             if attr.name.local_name == "MIC_GATE_ATTEN" {
-                let read_value = attr.value.parse::<c_float>()? as i8;
-                self.attenuation = ((-61 as f32 / 100 as f32) * read_value as f32) as i8;
+                self.attenuation = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
         }
@@ -93,7 +92,8 @@ impl Gate {
         );
         attributes.insert(
             "MIC_GATE_ATTEN".to_string(),
-            format!("{}", ((self.attenuation as f32 / -61 as f32) * 100 as f32) as u8),
+            //format!("{}", ((self.attenuation as f32 / -61 as f32) * 100 as f32) as u8),
+            format!("{}", self.attenuation)
         );
     }
 
@@ -102,5 +102,25 @@ impl Gate {
     pub fn threshold(&self) -> i8 { self.threshold }
     pub fn attack(&self) -> u8 { self.attack }
     pub fn release(&self) -> u8 { self.release }
-    pub fn attenuation(&self) -> i8 { self.attenuation }
+    pub fn attenuation(&self) -> u8 { self.attenuation }
+
+
+    pub fn set_amount(&mut self, amount: u8) {
+        self.amount = amount;
+    }
+    pub fn set_threshold(&mut self, threshold: i8) {
+        self.threshold = threshold;
+    }
+    pub fn set_attack(&mut self, attack: u8) {
+        self.attack = attack;
+    }
+    pub fn set_release(&mut self, release: u8) {
+        self.release = release;
+    }
+    pub fn set_enabled(&mut self, enabled: bool) {
+        self.enabled = enabled;
+    }
+    pub fn set_attenuation(&mut self, attenuation: u8) {
+        self.attenuation = attenuation;
+    }
 }

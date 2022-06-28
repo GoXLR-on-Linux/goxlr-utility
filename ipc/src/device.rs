@@ -1,5 +1,5 @@
 use enumset::EnumSet;
-use goxlr_types::{ChannelName, FaderName, FirmwareVersions, InputDevice, MicrophoneType, MuteFunction, OutputDevice};
+use goxlr_types::{ChannelName, CompressorAttackTime, FaderName, FirmwareVersions, GateTimes, InputDevice, MicrophoneType, MuteFunction, OutputDevice, CompressorRatio, CompressorReleaseTime};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -135,18 +135,18 @@ pub struct EqualiserMiniFrequency {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NoiseGate {
     pub threshold: i8,
-    pub attack: u8,
-    pub release: u8,
+    pub attack: GateTimes,
+    pub release: GateTimes,
     pub enabled: bool,
-    pub attenuation: i8,
+    pub attenuation: u8,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Compressor {
     pub threshold: i8,
-    pub ratio: u8,
-    pub attack: u8,
-    pub release: u8,
+    pub ratio: CompressorRatio,
+    pub attack: CompressorAttackTime,
+    pub release: CompressorReleaseTime,
     pub makeup_gain: u8,
 }
 

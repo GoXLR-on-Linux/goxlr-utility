@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use anyhow::{anyhow, Context, Result};
 use directories::ProjectDirs;
-use log::{debug, error, warn};
+use log::{debug, error};
 use goxlr_profile_loader::SampleButtons;
 
 #[derive(Debug)]

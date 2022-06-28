@@ -82,4 +82,21 @@ impl Compressor {
     pub fn attack(&self) -> u8 { self.attack }
     pub fn release(&self) -> u8 { self.release }
     pub fn makeup(&self) -> u8 { self.makeup_gain }
+
+
+    pub fn set_threshold(&mut self, threshold: i8) {
+        self.threshold = threshold;
+    }
+    pub fn set_ratio(&mut self, ratio: u8) {
+        self.ratio = ratio;
+    }
+    pub fn set_attack(&mut self, attack: u8) {
+        self.attack = attack;
+    }
+    pub fn set_release(&mut self, release: u8) {
+        self.release = release;
+    }
+    pub fn set_makeup_gain(&mut self, makeup_gain: u8) {
+        self.makeup_gain = makeup_gain;
+    }
 }

@@ -20,7 +20,6 @@ use rusb::{
 };
 use std::io::{Cursor, Write};
 use std::thread::sleep;
-use std::{thread, time};
 use std::time::Duration;
 
 #[derive(Debug)]

@@ -324,65 +324,6 @@ pub enum SampleBank {
     A, B, C
 }
 
-
-
-pub enum GateKeys {
-    GateThreshold,
-    GateAttack,
-    GateRelease,
-    GateAttenuation,
-}
-
-impl GateKeys {
-    pub fn to_effect_key(&self) -> EffectKey {
-        match self {
-            GateKeys::GateThreshold => EffectKey::GateThreshold,
-            GateKeys::GateAttack => EffectKey::GateAttack,
-            GateKeys::GateRelease => EffectKey::GateRelease,
-            GateKeys::GateAttenuation => EffectKey::GateAttenuation
-        }
-    }
-
-    pub fn to_mic_param(&self) -> MicrophoneParamKey {
-        match self {
-            GateKeys::GateThreshold => MicrophoneParamKey::GateThreshold,
-            GateKeys::GateAttack => MicrophoneParamKey::GateAttack,
-            GateKeys::GateRelease => MicrophoneParamKey::GateRelease,
-            GateKeys::GateAttenuation => MicrophoneParamKey::GateAttenuation
-        }
-    }
-}
-
-pub enum CompressorKeys {
-    CompressorThreshold,
-    CompressorRatio,
-    CompressorAttack,
-    CompressorRelease,
-    CompressorMakeUpGain,
-}
-
-impl CompressorKeys {
-    pub fn to_effect_key(&self) -> EffectKey {
-        match self {
-            CompressorKeys::CompressorThreshold => EffectKey::CompressorThreshold,
-            CompressorKeys::CompressorRatio => EffectKey::CompressorRatio,
-            CompressorKeys::CompressorAttack => EffectKey::CompressorAttack,
-            CompressorKeys::CompressorRelease => EffectKey::CompressorRatio,
-            CompressorKeys::CompressorMakeUpGain => EffectKey::CompressorMakeUpGain
-        }
-    }
-
-    pub fn to_mic_param(&self) -> MicrophoneParamKey {
-        match self {
-            CompressorKeys::CompressorThreshold => MicrophoneParamKey::CompressorThreshold,
-            CompressorKeys::CompressorRatio => MicrophoneParamKey::CompressorRatio,
-            CompressorKeys::CompressorAttack => MicrophoneParamKey::CompressorAttack,
-            CompressorKeys::CompressorRelease => MicrophoneParamKey::CompressorRelease,
-            CompressorKeys::CompressorMakeUpGain => MicrophoneParamKey::CompressorMakeUpGain
-        }
-    }
-}
-
 #[derive(Debug, Copy, Clone, Display, PartialEq)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -395,19 +336,6 @@ pub enum MiniEqGains {
     Equalizer8KHzGain,
 }
 
-impl MiniEqGains {
-    pub fn to_mic_param(&self) -> MicrophoneParamKey {
-        match self {
-            MiniEqGains::Equalizer90HzGain => MicrophoneParamKey::Equalizer90HzGain,
-            MiniEqGains::Equalizer250HzGain => MicrophoneParamKey::Equalizer250HzGain,
-            MiniEqGains::Equalizer500HzGain => MicrophoneParamKey::Equalizer500HzGain,
-            MiniEqGains::Equalizer1KHzGain => MicrophoneParamKey::Equalizer1KHzGain,
-            MiniEqGains::Equalizer3KHzGain => MicrophoneParamKey::Equalizer3KHzGain,
-            MiniEqGains::Equalizer8KHzGain => MicrophoneParamKey::Equalizer8KHzGain,
-        }
-    }
-}
-
 #[derive(Debug, Copy, Clone, Display, PartialEq)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -418,19 +346,6 @@ pub enum MiniEqFrequencies {
     Equalizer1KHzFrequency,
     Equalizer3KHzFrequency,
     Equalizer8KHzFrequency,
-}
-
-impl MiniEqFrequencies {
-    pub fn to_mic_param(&self) -> MicrophoneParamKey {
-        match self {
-            MiniEqFrequencies::Equalizer90HzFrequency => MicrophoneParamKey::Equalizer90HzFrequency,
-            MiniEqFrequencies::Equalizer250HzFrequency => MicrophoneParamKey::Equalizer250HzFrequency,
-            MiniEqFrequencies::Equalizer500HzFrequency => MicrophoneParamKey::Equalizer500HzFrequency,
-            MiniEqFrequencies::Equalizer1KHzFrequency => MicrophoneParamKey::Equalizer1KHzFrequency,
-            MiniEqFrequencies::Equalizer3KHzFrequency => MicrophoneParamKey::Equalizer3KHzFrequency,
-            MiniEqFrequencies::Equalizer8KHzFrequency => MicrophoneParamKey::Equalizer8KHzFrequency
-        }
-    }
 }
 
 #[derive(Debug, Copy, Clone, Display, PartialEq)]
@@ -449,23 +364,6 @@ pub enum EqGains {
     Equalizer16KHzGain,
 }
 
-impl EqGains {
-    pub fn to_effect_key(&self) -> EffectKey {
-        match self {
-            EqGains::Equalizer31HzGain => EffectKey::Equalizer31HzGain,
-            EqGains::Equalizer63HzGain => EffectKey::Equalizer63HzGain,
-            EqGains::Equalizer125HzGain => EffectKey::Equalizer125HzGain,
-            EqGains::Equalizer250HzGain => EffectKey::Equalizer250HzGain,
-            EqGains::Equalizer500HzGain => EffectKey::Equalizer500HzGain,
-            EqGains::Equalizer1KHzGain => EffectKey::Equalizer1KHzGain,
-            EqGains::Equalizer2KHzGain => EffectKey::Equalizer2KHzGain,
-            EqGains::Equalizer4KHzGain => EffectKey::Equalizer4KHzGain,
-            EqGains::Equalizer8KHzGain => EffectKey::Equalizer8KHzGain,
-            EqGains::Equalizer16KHzGain => EffectKey::Equalizer16KHzGain,
-        }
-    }
-}
-
 #[derive(Debug, Copy, Clone, Display, PartialEq)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -482,19 +380,53 @@ pub enum EqFrequencies {
     Equalizer16KHzFrequency,
 }
 
-impl EqFrequencies {
-    pub fn to_effect_key(&self) -> EffectKey {
-        match self {
-            EqFrequencies::Equalizer31HzFrequency => EffectKey::Equalizer31HzFrequency,
-            EqFrequencies::Equalizer63HzFrequency => EffectKey::Equalizer63HzFrequency,
-            EqFrequencies::Equalizer125HzFrequency => EffectKey::Equalizer125HzFrequency,
-            EqFrequencies::Equalizer250HzFrequency => EffectKey::Equalizer250HzFrequency,
-            EqFrequencies::Equalizer500HzFrequency => EffectKey::Equalizer500HzFrequency,
-            EqFrequencies::Equalizer1KHzFrequency => EffectKey::Equalizer1KHzFrequency,
-            EqFrequencies::Equalizer2KHzFrequency => EffectKey::Equalizer2KHzFrequency,
-            EqFrequencies::Equalizer4KHzFrequency => EffectKey::Equalizer4KHzFrequency,
-            EqFrequencies::Equalizer8KHzFrequency => EffectKey::Equalizer8KHzFrequency,
-            EqFrequencies::Equalizer16KHzFrequency => EffectKey::Equalizer16KHzFrequency,
-        }
-    }
+/*
+Ok, before we get started with these next couple of enums, lemme explain how the GoXLR works for
+certain values. While the UI under windows appears to display a range, these values are all mapped
+to fixed values in an array (eg. goxlr_shared.h line 415), and the index of that value is sent to
+the GoXLR. This will most often occur for values that aren't linear, the ratio starts at increments
+of 0.1, and by the end it's hitting increments of 16 and 32.
+
+These enums are essentially the same maps, and use 'as usize' and strum::iter().nth to convert.
+ */
+
+
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum CompressorRatio {
+    Ratio1_0, Ratio1_1, Ratio1_2, Ratio1_4,  Ratio1_6,  Ratio1_8, Ratio2_0, Ratio2_5, Ratio3_2,
+    Ratio4_0, Ratio5_6, Ratio8_0, Ratio16_0, Ratio32_0, Ratio64_0
+}
+
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum GateTimes {
+    Gate10ms,   Gate20ms,   Gate30ms,   Gate40ms,   Gate50ms,   Gate60ms,   Gate70ms,   Gate80ms,
+    Gate90ms,   Gate100ms,  Gate110ms,  Gate120ms,  Gate130ms,  Gate140ms,  Gate150ms,  Gate160ms,
+    Gate170ms,  Gate180ms,  Gate190ms,  Gate200ms,  Gate250ms,  Gate300ms,  Gate350ms,  Gate400ms,
+    Gate450ms,  Gate500ms,  Gate550ms,  Gate600ms,  Gate650ms,  Gate700ms,  Gate750ms,  Gate800ms,
+    Gate850ms,  Gate900ms,  Gate950ms,  Gate1000ms, Gate1100ms, Gate1200ms, Gate1300ms, Gate1400ms,
+    Gate1500ms, Gate1600ms, Gate1700ms, Gate1800ms, Gate1900ms, Gate2000ms,
+}
+
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum CompressorAttackTime {
+    // Note: 0ms is technically 0.001ms
+    Comp0ms,  Comp2ms,  Comp3ms,  Comp4ms,  Comp5ms,  Comp6ms,  Comp7ms,  Comp8ms,  Comp9ms,
+    Comp10ms, Comp12ms, Comp14ms, Comp16ms, Comp18ms, Comp20ms, Comp23ms, Comp26ms, Comp30ms,
+    Comp35ms, Comp40ms
+}
+
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum CompressorReleaseTime {
+    // Note: 0 is technically 15 :)
+    Comp0ms,    Comp15ms,   Comp25ms,   Comp35ms,  Comp45ms,  Comp55ms,  Comp65ms,  Comp75ms,
+    Comp85ms,   Comp100ms,  Comp115ms,  Comp140ms,  Comp170ms, Comp230ms, Comp340ms, Comp680ms,
+    Comp1000ms, Comp1500ms, Comp2000ms, Comp3000ms
 }

@@ -6,7 +6,7 @@ mod socket;
 pub mod client;
 
 pub use device::*;
-use goxlr_types::{ChannelName, ColourDisplay, ColourOffStyle, EqFrequencies, EqGains, FaderName, InputDevice, MicrophoneType, MiniEqFrequencies, MiniEqGains, MuteFunction, OutputDevice};
+use goxlr_types::{ChannelName, ColourDisplay, ColourOffStyle, CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EqFrequencies, EqGains, FaderName, GateTimes, InputDevice, MicrophoneType, MiniEqFrequencies, MiniEqGains, MuteFunction, OutputDevice};
 pub use socket::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -45,14 +45,25 @@ pub enum GoXLRCommand {
     SetSwearButtonVolume(i8),
     SetSwearButtonColourConfiguration(String, ColourOffStyle, Option<String>),
 
-    // EQ Settings, The Full GoXLR supports between 300 and 18000 for the freq value, but I don't
-    // know the ranges for the mini. Any Client / UI should probably sanity them to prevent users
-    // from producing weird freq graphs until backend verification is done.
+    // EQ Settings
     SetEqMiniGain(MiniEqGains, i8),
     SetEqMiniFreq(MiniEqFrequencies, f32),
-
     SetEqGain(EqGains, i8),
     SetEqFreq(EqFrequencies, f32),
+
+    // Gate Settings
+    SetGateThreshold(i8),
+    SetGateAttenuation(u8),
+    SetGateAttack(GateTimes),
+    SetGateRelease(GateTimes),
+    SetGateActive(bool),
+
+    // Compressor..
+    SetCompressorThreshold(i8),
+    SetCompressorRatio(CompressorRatio),
+    SetCompressorAttack(CompressorAttackTime),
+    SetCompressorReleaseTime(CompressorReleaseTime),
+    SetCompressorMakupGain(u8),
 
     // Profile Handling..
     LoadProfile(String),

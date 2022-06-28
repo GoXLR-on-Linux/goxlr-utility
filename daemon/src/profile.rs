@@ -2,12 +2,11 @@ use std::collections::HashSet;
 use anyhow::{anyhow, Context, Result};
 use enumset::EnumSet;
 use goxlr_profile_loader::components::colours::{Colour, ColourDisplay, ColourMap, ColourOffStyle, ColourState};
-use goxlr_profile_loader::components::colours::ColourOffStyle::Dimmed;
 use goxlr_profile_loader::components::mixer::{FullChannelList, InputChannels, OutputChannels};
 use goxlr_profile_loader::mic_profile::MicProfileSettings;
 use goxlr_profile_loader::profile::{Profile, ProfileSettings};
 use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
-use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice, VersionNumber, MuteFunction as BasicMuteFunction, ColourDisplay as BasicColourDisplay, ColourOffStyle as BasicColourOffStyle, EffectBankPresets, MicrophoneParamKey, EffectKey, EqGains, EqFrequencies, MiniEqGains, MiniEqFrequencies};
+use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice, VersionNumber, MuteFunction as BasicMuteFunction, ColourDisplay as BasicColourDisplay, ColourOffStyle as BasicColourOffStyle, EffectBankPresets, MicrophoneParamKey, EffectKey, EqGains, EqFrequencies, MiniEqGains, MiniEqFrequencies, CompressorRatio, CompressorAttackTime, GateTimes, CompressorReleaseTime};
 use goxlr_usb::colouring::ColourTargets;
 use log::error;
 use std::fs::{create_dir_all, File};
@@ -39,6 +38,11 @@ const DEFAULT_PROFILE: &[u8] = include_bytes!("../profiles/Default - Vaporwave.g
 
 pub const DEFAULT_MIC_PROFILE_NAME: &str = "DEFAULT";
 const DEFAULT_MIC_PROFILE: &[u8] = include_bytes!("../profiles/DEFAULT.goxlrMicProfile");
+
+static GATE_ATTENUATION: [i8; 26] = [
+    -6,  -7,  -8,  -9,  -10, -11, -12, -13, -14, -15, -16, -17, -18,
+    -19, -20, -21, -22, -23, -24, -25, -26, -27, -28, -30, -32, -61
+];
 
 #[derive(Debug)]
 pub struct ProfileAdapter {
@@ -886,8 +890,8 @@ impl MicProfileAdapter {
     pub fn noise_gate_ipc(&self) -> NoiseGate {
         NoiseGate {
             threshold: self.profile.gate().threshold(),
-            attack: self.profile.gate().attack(),
-            release: self.profile.gate().release(),
+            attack: GateTimes::iter().nth(self.profile.gate().attack() as usize).unwrap(),
+            release: GateTimes::iter().nth(self.profile.gate().release() as usize).unwrap(),
             enabled: self.profile.gate().enabled(),
             attenuation: self.profile.gate().attenuation()
         }
@@ -896,9 +900,9 @@ impl MicProfileAdapter {
     pub fn compressor_ipc(&self) -> Compressor {
         Compressor {
             threshold: self.profile.compressor().threshold(),
-            ratio: self.profile.compressor().ratio(),
-            attack: self.profile.compressor().attack(),
-            release: self.profile.compressor().release(),
+            ratio: CompressorRatio::iter().nth(self.profile.compressor().ratio() as usize).unwrap(),
+            attack: CompressorAttackTime::iter().nth(self.profile.compressor().attack() as usize).unwrap(),
+            release: CompressorReleaseTime::iter().nth(self.profile.compressor().release() as usize).unwrap(),
             makeup_gain: self.profile.compressor().makeup()
         }
     }
@@ -1153,6 +1157,45 @@ impl MicProfileAdapter {
         }
     }
 
+    pub fn set_gate_threshold(&mut self, value: i8) {
+        self.profile.gate_mut().set_threshold(value);
+    }
+
+    pub fn set_gate_attenuation(&mut self, value: u8) {
+        self.profile.gate_mut().set_attenuation(value);
+    }
+
+    pub fn set_gate_attack(&mut self, value: GateTimes) {
+        self.profile.gate_mut().set_attack(value as u8);
+    }
+
+    pub fn set_gate_release(&mut self,value: GateTimes) {
+        self.profile.gate_mut().set_release(value as u8);
+    }
+
+    pub fn set_gate_active(&mut self, value: bool) {
+        self.profile.gate_mut().set_enabled(value);
+    }
+
+    pub fn set_compressor_threshold(&mut self, value: i8) {
+        self.profile.compressor_mut().set_threshold(value);
+    }
+
+    pub fn set_compressor_ratio(&mut self, value: CompressorRatio) {
+        self.profile.compressor_mut().set_ratio(value as u8);
+    }
+
+    pub fn set_compressor_attack(&mut self, value: CompressorAttackTime) {
+        self.profile.compressor_mut().set_attack(value as u8);
+    }
+
+    pub fn set_compressor_release(&mut self, value: CompressorReleaseTime) {
+        self.profile.compressor_mut().set_release(value as u8);
+    }
+
+    pub fn set_compressor_makeup(&mut self, value: u8) {
+        self.profile.compressor_mut().set_makeup_gain(value);
+    }
 
     /// The uber method, fetches the relevant setting from the profile and returns it..
     pub fn get_param_value(&self, param: MicrophoneParamKey, serial: &str, settings: &SettingsHandle) -> [u8; 4] {
@@ -1170,7 +1213,7 @@ impl MicProfileAdapter {
             MicrophoneParamKey::GateThreshold => self.i8_to_f32(self.profile.gate().threshold()),
             MicrophoneParamKey::GateAttack => self.u8_to_f32(self.profile.gate().attack()),
             MicrophoneParamKey::GateRelease => self.u8_to_f32(self.profile.gate().release()),
-            MicrophoneParamKey::GateAttenuation => self.i8_to_f32(self.profile.gate().attenuation()),
+            MicrophoneParamKey::GateAttenuation => self.i8_to_f32(self.gate_attenuation_from_percent(self.profile.gate().attenuation())),
             MicrophoneParamKey::CompressorThreshold => self.i8_to_f32(self.profile.compressor().threshold()),
             MicrophoneParamKey::CompressorRatio => self.u8_to_f32(self.profile.compressor().ratio()),
             MicrophoneParamKey::CompressorAttack => self.u8_to_f32(self.profile.compressor().ratio()),
@@ -1222,7 +1265,7 @@ impl MicProfileAdapter {
             EffectKey::GateMode => 2,   // Not a profile setting, hard coded in Windows
             EffectKey::GateEnabled => 1,    // Used for 'Mic Testing' in the UI
             EffectKey::GateThreshold => self.profile.gate().threshold().into(),
-            EffectKey::GateAttenuation => self.profile.gate().attenuation().into(),
+            EffectKey::GateAttenuation => self.gate_attenuation_from_percent(self.profile.gate().attenuation()).into(),
             EffectKey::GateAttack => self.profile.gate().attack().into(),
             EffectKey::GateRelease => self.profile.gate().release().into(),
             EffectKey::Unknown14b => 0,
@@ -1362,6 +1405,21 @@ impl MicProfileAdapter {
         let mut return_value = [0;4];
         LittleEndian::write_u16(&mut return_value[2..], value);
         return return_value;
+    }
+
+    /*
+    Gate attenuation is an interesting one, it's stored and represented as a percent,
+    but implemented as a non-linear array, so we're going to implement this the same way
+    the Windows client does.
+     */
+    fn gate_attenuation_from_percent(&self, value: u8) -> i8 {
+        let index = value as f32 * 0.24;
+
+        if value > 99 {
+            return GATE_ATTENUATION[25];
+        }
+
+        return GATE_ATTENUATION[index as usize];
     }
 
     pub fn get_common_keys(&self) -> HashSet<EffectKey> {
