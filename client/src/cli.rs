@@ -6,7 +6,7 @@ use goxlr_types::{ChannelName, ColourDisplay, ColourOffStyle, FaderName, InputDe
 
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]
-#[clap(global_setting = AppSettings::ArgRequiredElseHelp)]
+#[clap(setting = AppSettings::ArgRequiredElseHelp)]
 pub struct Cli {
     /// The specific device's serial number to execute commands on.
     /// This field is optional if you have exactly one GoXLR, but required if you have more.
@@ -48,6 +48,7 @@ pub struct MicrophoneControls {
 
 #[derive(Subcommand, Debug)]
 #[clap(setting = AppSettings::DeriveDisplayOrder)]
+#[clap(setting = AppSettings::ArgRequiredElseHelp)]
 pub enum SubCommands {
     /// Profile Settings
     Profiles {
@@ -121,6 +122,7 @@ fn parse_volume(s: &str) -> Result<u8, String> {
 
 #[derive(Subcommand, Debug)]
 #[clap(setting = AppSettings::DeriveDisplayOrder)]
+#[clap(setting = AppSettings::ArgRequiredElseHelp)]
 pub enum ProfileType {
     /// General Device Profile
     Device {
@@ -137,17 +139,21 @@ pub enum ProfileType {
 
 #[derive(Subcommand, Debug)]
 #[clap(setting = AppSettings::DeriveDisplayOrder)]
+#[clap(setting = AppSettings::ArgRequiredElseHelp)]
 pub enum ProfileAction {
     /// Load a profile by name
+    #[clap(setting = AppSettings::ArgRequiredElseHelp)]
     Load {
         /// The profile name to load
         profile_name: String,
     },
 
     /// Save the currently running profile
+    #[clap(unset_setting = AppSettings::ArgRequiredElseHelp)]
     Save {},
 
     /// Save the currently running profile with a new name
+    #[clap(setting = AppSettings::ArgRequiredElseHelp)]
     SaveAs {
         /// The new Profile Name
         profile_name: String,
@@ -156,6 +162,7 @@ pub enum ProfileAction {
 
 #[derive(Subcommand, Debug)]
 #[clap(setting = AppSettings::DeriveDisplayOrder)]
+#[clap(setting = AppSettings::ArgRequiredElseHelp)]
 pub enum FaderCommands {
     /// Assign a new Channel to a Fader
     Channel {
@@ -222,6 +229,7 @@ pub enum FaderCommands {
 
 #[derive(Subcommand, Debug)]
 #[clap(setting = AppSettings::DeriveDisplayOrder)]
+#[clap(setting = AppSettings::ArgRequiredElseHelp)]
 pub enum CoughCommands {
     /// Change the behaviour of a Fader Mute Button
     MuteBehaviour {
@@ -245,6 +253,7 @@ pub enum CoughCommands {
 
 #[derive(Subcommand, Debug)]
 #[clap(setting = AppSettings::DeriveDisplayOrder)]
+#[clap(setting = AppSettings::ArgRequiredElseHelp)]
 pub enum BleepCommands {
     /// Change the behaviour of the Swear Button
     Volume {
@@ -268,6 +277,7 @@ pub enum BleepCommands {
 
 #[derive(Subcommand, Debug)]
 #[clap(setting = AppSettings::DeriveDisplayOrder)]
+#[clap(setting = AppSettings::ArgRequiredElseHelp)]
 pub enum AllFaderCommands {
     /// Set the appearance of Slider Lighting
     Display {
