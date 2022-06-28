@@ -837,6 +837,35 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 // Apply the change..
                 self.apply_routing(input)?;
             }
+            GoXLRCommand::SetEqMiniGain(gain, value) => {
+                if value < -9 || value > 9 {
+                    return Err(anyhow!("Gain volume should be between -9 and 9 dB"));
+                }
+
+                let param = self.mic_profile.set_mini_eq_gain(gain, value);
+                self.apply_mic_params(HashSet::from([param]))?;
+            }
+            GoXLRCommand::SetEqMiniFreq(freq, value) => {
+                // TODO: Verify?
+                if value < 300.0 || value > 18000.0 {
+                    return Err(anyhow!("EQ Frequency should be between 300hz and 18khz"));
+                }
+
+                let param = self.mic_profile.set_mini_eq_freq(freq, value);
+                self.apply_mic_params(HashSet::from([param]))?;
+            }
+            GoXLRCommand::SetEqGain(gain, value) => {
+                if value < -9 || value > 9 {
+                    return Err(anyhow!("Gain volume should be between -9 and 9 dB"));
+                }
+
+                let param = self.mic_profile.set_eq_gain(gain, value);
+                self.apply_effects(HashSet::from([param]))?;
+            }
+            GoXLRCommand::SetEqFreq(freq, value) => {
+                let param = self.mic_profile.set_eq_freq(freq, value)?;
+                self.apply_effects(HashSet::from([param]))?;
+            }
             GoXLRCommand::LoadProfile(profile_name) => {
                 let profile_directory = self.settings.get_profile_directory().await;
                 self.profile = ProfileAdapter::from_named(profile_name, &profile_directory)?;

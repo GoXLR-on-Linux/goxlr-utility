@@ -94,16 +94,16 @@ pub struct EqualiserGain {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EqualiserFrequency {
-    pub eq_31h_freq: f64,
-    pub eq_63h_freq: f64,
-    pub eq_125h_freq: f64,
-    pub eq_250h_freq: f64,
-    pub eq_500h_freq: f64,
-    pub eq_1k_freq: f64,
-    pub eq_2k_freq: f64,
-    pub eq_4k_freq: f64,
-    pub eq_8k_freq: f64,
-    pub eq_16k_freq: f64,
+    pub eq_31h_freq: f32,
+    pub eq_63h_freq: f32,
+    pub eq_125h_freq: f32,
+    pub eq_250h_freq: f32,
+    pub eq_500h_freq: f32,
+    pub eq_1k_freq: f32,
+    pub eq_2k_freq: f32,
+    pub eq_4k_freq: f32,
+    pub eq_8k_freq: f32,
+    pub eq_16k_freq: f32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

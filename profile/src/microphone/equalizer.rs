@@ -28,16 +28,16 @@ pub struct Equalizer {
     eq_8k_gain: i8,
     eq_16k_gain: i8,
 
-    eq_31h_freq: f64,
-    eq_63h_freq: f64,
-    eq_125h_freq: f64,
-    eq_250h_freq: f64,
-    eq_500h_freq: f64,
-    eq_1k_freq: f64,
-    eq_2k_freq: f64,
-    eq_4k_freq: f64,
-    eq_8k_freq: f64,
-    eq_16k_freq: f64,
+    eq_31h_freq: f32,
+    eq_63h_freq: f32,
+    eq_125h_freq: f32,
+    eq_250h_freq: f32,
+    eq_500h_freq: f32,
+    eq_1k_freq: f32,
+    eq_2k_freq: f32,
+    eq_4k_freq: f32,
+    eq_8k_freq: f32,
+    eq_16k_freq: f32,
 }
 
 impl Equalizer {
@@ -109,43 +109,43 @@ impl Equalizer {
             }
 
             if attr.name.local_name == "MIC_EQ_31.5HZ_F" {
-                self.eq_31h_freq = f64::from_str(attr.value.as_str())?;
+                self.eq_31h_freq = f32::from_str(attr.value.as_str())?;
             }
 
             if attr.name.local_name == "MIC_EQ_63HZ_F" {
-                self.eq_63h_freq = f64::from_str(attr.value.as_str())?;
+                self.eq_63h_freq = f32::from_str(attr.value.as_str())?;
             }
 
             if attr.name.local_name == "MIC_EQ_125HZ_F" {
-                self.eq_125h_freq = f64::from_str(attr.value.as_str())?;
+                self.eq_125h_freq = f32::from_str(attr.value.as_str())?;
             }
 
             if attr.name.local_name == "MIC_EQ_250HZ_F" {
-                self.eq_250h_freq = f64::from_str(attr.value.as_str())?;
+                self.eq_250h_freq = f32::from_str(attr.value.as_str())?;
             }
 
             if attr.name.local_name == "MIC_EQ_500HZ_F" {
-                self.eq_500h_freq = f64::from_str(attr.value.as_str())?;
+                self.eq_500h_freq = f32::from_str(attr.value.as_str())?;
             }
 
             if attr.name.local_name == "MIC_EQ_1KHZ_F" {
-                self.eq_1k_freq = f64::from_str(attr.value.as_str())?;
+                self.eq_1k_freq = f32::from_str(attr.value.as_str())?;
             }
 
             if attr.name.local_name == "MIC_EQ_2KHZ_F" {
-                self.eq_2k_freq = f64::from_str(attr.value.as_str())?;
+                self.eq_2k_freq = f32::from_str(attr.value.as_str())?;
             }
 
             if attr.name.local_name == "MIC_EQ_4KHZ_F" {
-                self.eq_4k_freq = f64::from_str(attr.value.as_str())?;
+                self.eq_4k_freq = f32::from_str(attr.value.as_str())?;
             }
 
             if attr.name.local_name == "MIC_EQ_8KHZ_F" {
-                self.eq_8k_freq = f64::from_str(attr.value.as_str())?;
+                self.eq_8k_freq = f32::from_str(attr.value.as_str())?;
             }
 
             if attr.name.local_name == "MIC_EQ_16KHZ_F" {
-                self.eq_16k_freq = f64::from_str(attr.value.as_str())?;
+                self.eq_16k_freq = f32::from_str(attr.value.as_str())?;
             }
         }
 
@@ -252,34 +252,34 @@ impl Equalizer {
     pub fn eq_16k_gain(&self) -> i8 {
         self.eq_16k_gain
     }
-    pub fn eq_31h_freq(&self) -> f64 {
+    pub fn eq_31h_freq(&self) -> f32 {
         self.eq_31h_freq
     }
-    pub fn eq_63h_freq(&self) -> f64 {
+    pub fn eq_63h_freq(&self) -> f32 {
         self.eq_63h_freq
     }
-    pub fn eq_125h_freq(&self) -> f64 {
+    pub fn eq_125h_freq(&self) -> f32 {
         self.eq_125h_freq
     }
-    pub fn eq_250h_freq(&self) -> f64 {
+    pub fn eq_250h_freq(&self) -> f32 {
         self.eq_250h_freq
     }
-    pub fn eq_500h_freq(&self) -> f64 {
+    pub fn eq_500h_freq(&self) -> f32 {
         self.eq_500h_freq
     }
-    pub fn eq_1k_freq(&self) -> f64 {
+    pub fn eq_1k_freq(&self) -> f32 {
         self.eq_1k_freq
     }
-    pub fn eq_2k_freq(&self) -> f64 {
+    pub fn eq_2k_freq(&self) -> f32 {
         self.eq_2k_freq
     }
-    pub fn eq_4k_freq(&self) -> f64 {
+    pub fn eq_4k_freq(&self) -> f32 {
         self.eq_4k_freq
     }
-    pub fn eq_8k_freq(&self) -> f64 {
+    pub fn eq_8k_freq(&self) -> f32 {
         self.eq_8k_freq
     }
-    pub fn eq_16k_freq(&self) -> f64 {
+    pub fn eq_16k_freq(&self) -> f32 {
         self.eq_16k_freq
     }
 
@@ -344,38 +344,38 @@ impl Equalizer {
     pub fn set_eq_16k_gain(&mut self, eq_16k_gain: i8) {
         self.eq_16k_gain = eq_16k_gain;
     }
-    pub fn set_eq_31h_freq(&mut self, eq_31h_freq: f64) {
+    pub fn set_eq_31h_freq(&mut self, eq_31h_freq: f32) {
         self.eq_31h_freq = eq_31h_freq;
     }
-    pub fn set_eq_63h_freq(&mut self, eq_63h_freq: f64) {
+    pub fn set_eq_63h_freq(&mut self, eq_63h_freq: f32) {
         self.eq_63h_freq = eq_63h_freq;
     }
-    pub fn set_eq_125h_freq(&mut self, eq_125h_freq: f64) {
+    pub fn set_eq_125h_freq(&mut self, eq_125h_freq: f32) {
         self.eq_125h_freq = eq_125h_freq;
     }
-    pub fn set_eq_250h_freq(&mut self, eq_250h_freq: f64) {
+    pub fn set_eq_250h_freq(&mut self, eq_250h_freq: f32) {
         self.eq_250h_freq = eq_250h_freq;
     }
-    pub fn set_eq_500h_freq(&mut self, eq_500h_freq: f64) {
+    pub fn set_eq_500h_freq(&mut self, eq_500h_freq: f32) {
         self.eq_500h_freq = eq_500h_freq;
     }
-    pub fn set_eq_1k_freq(&mut self, eq_1k_freq: f64) {
+    pub fn set_eq_1k_freq(&mut self, eq_1k_freq: f32) {
         self.eq_1k_freq = eq_1k_freq;
     }
-    pub fn set_eq_2k_freq(&mut self, eq_2k_freq: f64) {
+    pub fn set_eq_2k_freq(&mut self, eq_2k_freq: f32) {
         self.eq_2k_freq = eq_2k_freq;
     }
-    pub fn set_eq_4k_freq(&mut self, eq_4k_freq: f64) {
+    pub fn set_eq_4k_freq(&mut self, eq_4k_freq: f32) {
         self.eq_4k_freq = eq_4k_freq;
     }
-    pub fn set_eq_8k_freq(&mut self, eq_8k_freq: f64) {
+    pub fn set_eq_8k_freq(&mut self, eq_8k_freq: f32) {
         self.eq_8k_freq = eq_8k_freq;
     }
-    pub fn set_eq_16k_freq(&mut self, eq_16k_freq: f64) {
+    pub fn set_eq_16k_freq(&mut self, eq_16k_freq: f32) {
         self.eq_16k_freq = eq_16k_freq;
     }
 
-    fn freq_value(&self, freq: f64) -> i32 {
+    fn freq_value(&self, freq: f32) -> i32 {
         let value: f32 = ((24.0 * (freq / 20.0).log2()) as f32).round();
         return value as i32;
     }

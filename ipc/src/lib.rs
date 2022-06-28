@@ -6,7 +6,7 @@ mod socket;
 pub mod client;
 
 pub use device::*;
-use goxlr_types::{ChannelName, ColourDisplay, ColourOffStyle, FaderName, InputDevice, MicrophoneType, MuteFunction, OutputDevice};
+use goxlr_types::{ChannelName, ColourDisplay, ColourOffStyle, EqFrequencies, EqGains, FaderName, InputDevice, MicrophoneType, MiniEqFrequencies, MiniEqGains, MuteFunction, OutputDevice};
 pub use socket::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -44,6 +44,15 @@ pub enum GoXLRCommand {
     // Bleep Button
     SetSwearButtonVolume(i8),
     SetSwearButtonColourConfiguration(String, ColourOffStyle, Option<String>),
+
+    // EQ Settings, The Full GoXLR supports between 300 and 18000 for the freq value, but I don't
+    // know the ranges for the mini. Any Client / UI should probably sanity them to prevent users
+    // from producing weird freq graphs until backend verification is done.
+    SetEqMiniGain(MiniEqGains, i8),
+    SetEqMiniFreq(MiniEqFrequencies, f32),
+
+    SetEqGain(EqGains, i8),
+    SetEqFreq(EqFrequencies, f32),
 
     // Profile Handling..
     LoadProfile(String),

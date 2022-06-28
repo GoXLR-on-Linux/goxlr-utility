@@ -324,10 +324,7 @@ pub enum SampleBank {
     A, B, C
 }
 
-/*
- * The following Enums aren't technically passed via IPC, but they're instead used as 'assists'
- * to help map more refined keys to their respective Effect / MicParam keys.
- */
+
 
 pub enum GateKeys {
     GateThreshold,
@@ -386,6 +383,9 @@ impl CompressorKeys {
     }
 }
 
+#[derive(Debug, Copy, Clone, Display, PartialEq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum MiniEqGains {
     Equalizer90HzGain,
     Equalizer250HzGain,
@@ -408,6 +408,9 @@ impl MiniEqGains {
     }
 }
 
+#[derive(Debug, Copy, Clone, Display, PartialEq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum MiniEqFrequencies {
     Equalizer90HzFrequency,
     Equalizer250HzFrequency,
@@ -430,6 +433,9 @@ impl MiniEqFrequencies {
     }
 }
 
+#[derive(Debug, Copy, Clone, Display, PartialEq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum EqGains {
     Equalizer31HzGain,
     Equalizer63HzGain,
@@ -460,6 +466,9 @@ impl EqGains {
     }
 }
 
+#[derive(Debug, Copy, Clone, Display, PartialEq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum EqFrequencies {
     Equalizer31HzFrequency,
     Equalizer63HzFrequency,

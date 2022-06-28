@@ -7,7 +7,7 @@ use goxlr_profile_loader::components::mixer::{FullChannelList, InputChannels, Ou
 use goxlr_profile_loader::mic_profile::MicProfileSettings;
 use goxlr_profile_loader::profile::{Profile, ProfileSettings};
 use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
-use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice, VersionNumber, MuteFunction as BasicMuteFunction, ColourDisplay as BasicColourDisplay, ColourOffStyle as BasicColourOffStyle, EffectBankPresets, MicrophoneParamKey, EffectKey};
+use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice, VersionNumber, MuteFunction as BasicMuteFunction, ColourDisplay as BasicColourDisplay, ColourOffStyle as BasicColourOffStyle, EffectBankPresets, MicrophoneParamKey, EffectKey, EqGains, EqFrequencies, MiniEqGains, MiniEqFrequencies};
 use goxlr_usb::colouring::ColourTargets;
 use log::error;
 use std::fs::{create_dir_all, File};
@@ -964,6 +964,195 @@ impl MicProfileAdapter {
             MicrophoneType::Jack => self.profile.setup_mut().set_trs_mic_gain(gain)
         }
     }
+
+    pub fn set_eq_gain(&mut self, gain: EqGains, value: i8) -> EffectKey {
+        return match gain {
+            EqGains::Equalizer31HzGain => {
+                self.profile.equalizer_mut().set_eq_31h_gain(value);
+                EffectKey::Equalizer31HzGain
+            }
+            EqGains::Equalizer63HzGain => {
+                self.profile.equalizer_mut().set_eq_63h_gain(value);
+                EffectKey::Equalizer63HzGain
+            }
+            EqGains::Equalizer125HzGain => {
+                self.profile.equalizer_mut().set_eq_125h_gain(value);
+                EffectKey::Equalizer125HzGain
+            }
+            EqGains::Equalizer250HzGain => {
+                self.profile.equalizer_mut().set_eq_250h_gain(value);
+                EffectKey::Equalizer250HzGain
+            }
+            EqGains::Equalizer500HzGain => {
+                self.profile.equalizer_mut().set_eq_500h_gain(value);
+                EffectKey::Equalizer500HzGain
+            }
+            EqGains::Equalizer1KHzGain => {
+                self.profile.equalizer_mut().set_eq_1k_gain(value);
+                EffectKey::Equalizer1KHzGain
+            }
+            EqGains::Equalizer2KHzGain => {
+                self.profile.equalizer_mut().set_eq_2k_gain(value);
+                EffectKey::Equalizer2KHzGain
+            }
+            EqGains::Equalizer4KHzGain => {
+                self.profile.equalizer_mut().set_eq_4k_gain(value);
+                EffectKey::Equalizer4KHzGain
+            }
+            EqGains::Equalizer8KHzGain => {
+                self.profile.equalizer_mut().set_eq_8k_gain(value);
+                EffectKey::Equalizer8KHzGain
+            }
+            EqGains::Equalizer16KHzGain => {
+                self.profile.equalizer_mut().set_eq_16k_gain(value);
+                EffectKey::Equalizer16KHzGain
+            }
+        }
+    }
+
+    pub fn set_eq_freq(&mut self, freq: EqFrequencies, value: f32) -> Result<EffectKey> {
+        return match freq {
+            EqFrequencies::Equalizer31HzFrequency => {
+                if value < 30.0 || value > 300.0 {
+                    return Err(anyhow!("31Hz Frequency must be between 30.0 and 300.0"));
+                }
+
+                self.profile.equalizer_mut().set_eq_31h_freq(value);
+                Ok(EffectKey::Equalizer31HzFrequency)
+            }
+            EqFrequencies::Equalizer63HzFrequency => {
+                if value < 30.0 || value > 300.0 {
+                    return Err(anyhow!("63Hz Frequency must be between 30.0 and 300.0"));
+                }
+
+                self.profile.equalizer_mut().set_eq_63h_freq(value);
+                Ok(EffectKey::Equalizer63HzFrequency)
+            }
+            EqFrequencies::Equalizer125HzFrequency => {
+                if value < 30.0 || value > 300.0 {
+                    return Err(anyhow!("125Hz Frequency must be between 30.0 and 300.0"));
+                }
+
+                self.profile.equalizer_mut().set_eq_125h_freq(value);
+                Ok(EffectKey::Equalizer125HzFrequency)
+            }
+            EqFrequencies::Equalizer250HzFrequency => {
+                if value < 30.0 || value > 300.0 {
+                    return Err(anyhow!("250Hz Frequency must be between 30.0 and 300.0"));
+                }
+
+                self.profile.equalizer_mut().set_eq_250h_freq(value);
+                Ok(EffectKey::Equalizer250HzFrequency)
+            }
+            EqFrequencies::Equalizer500HzFrequency => {
+                if value < 300.0 || value > 2000.0 {
+                    return Err(anyhow!("500Hz Frequency must be between 300.0 and 2000.0"));
+                }
+
+                self.profile.equalizer_mut().set_eq_500h_freq(value);
+                Ok(EffectKey::Equalizer500HzFrequency)
+            }
+            EqFrequencies::Equalizer1KHzFrequency => {
+                if value < 300.0 || value > 2000.0 {
+                    return Err(anyhow!("1KHz Frequency must be between 300.0 and 2000.0"));
+                }
+
+                self.profile.equalizer_mut().set_eq_1k_freq(value);
+                Ok(EffectKey::Equalizer1KHzFrequency)
+            }
+            EqFrequencies::Equalizer2KHzFrequency => {
+                if value < 300.0 || value > 2000.0 {
+                    return Err(anyhow!("2KHz Frequency must be between 300.0 and 2000.0"));
+                }
+
+                self.profile.equalizer_mut().set_eq_2k_freq(value);
+                Ok(EffectKey::Equalizer2KHzFrequency)
+            }
+            EqFrequencies::Equalizer4KHzFrequency => {
+                if value < 2000.0 || value > 18000.0 {
+                    return Err(anyhow!("4KHz Frequency must be between 2000.0 and 18000.0"));
+                }
+
+                self.profile.equalizer_mut().set_eq_4k_freq(value);
+                Ok(EffectKey::Equalizer4KHzFrequency)
+            }
+            EqFrequencies::Equalizer8KHzFrequency => {
+                if value < 2000.0 || value > 18000.0 {
+                    return Err(anyhow!("8KHz Frequency must be between 2000.0 and 18000.0"));
+                }
+
+                self.profile.equalizer_mut().set_eq_8k_freq(value);
+                Ok(EffectKey::Equalizer8KHzFrequency)
+            }
+            EqFrequencies::Equalizer16KHzFrequency => {
+                if value < 2000.0 || value > 18000.0 {
+                    return Err(anyhow!("16KHz Frequency must be between 2000.0 and 18000.0"));
+                }
+
+                self.profile.equalizer_mut().set_eq_16k_freq(value);
+                Ok(EffectKey::Equalizer16KHzFrequency)
+            }
+        }
+    }
+
+    pub fn set_mini_eq_gain(&mut self, gain: MiniEqGains, value: i8) -> MicrophoneParamKey {
+        return match gain {
+            MiniEqGains::Equalizer90HzGain => {
+                self.profile.equalizer_mini_mut().set_eq_90h_gain(value);
+                MicrophoneParamKey::Equalizer90HzGain
+            }
+            MiniEqGains::Equalizer250HzGain => {
+                self.profile.equalizer_mini_mut().set_eq_250h_gain(value);
+                MicrophoneParamKey::Equalizer250HzGain
+            }
+            MiniEqGains::Equalizer500HzGain => {
+                self.profile.equalizer_mini_mut().set_eq_500h_gain(value);
+                MicrophoneParamKey::Equalizer500HzGain
+            }
+            MiniEqGains::Equalizer1KHzGain => {
+                self.profile.equalizer_mini_mut().set_eq_1k_gain(value);
+                MicrophoneParamKey::Equalizer1KHzGain
+            }
+            MiniEqGains::Equalizer3KHzGain => {
+                self.profile.equalizer_mini_mut().set_eq_3k_gain(value);
+                MicrophoneParamKey::Equalizer3KHzGain
+            }
+            MiniEqGains::Equalizer8KHzGain => {
+                self.profile.equalizer_mini_mut().set_eq_8k_gain(value);
+                MicrophoneParamKey::Equalizer8KHzGain
+            }
+        }
+    }
+
+    pub fn set_mini_eq_freq(&mut self, freq: MiniEqFrequencies, value: f32) -> MicrophoneParamKey {
+        return match freq {
+            MiniEqFrequencies::Equalizer90HzFrequency => {
+                self.profile.equalizer_mini_mut().set_eq_90h_freq(value);
+                MicrophoneParamKey::Equalizer90HzFrequency
+            }
+            MiniEqFrequencies::Equalizer250HzFrequency => {
+                self.profile.equalizer_mini_mut().set_eq_250h_freq(value);
+                MicrophoneParamKey::Equalizer250HzFrequency
+            }
+            MiniEqFrequencies::Equalizer500HzFrequency => {
+                self.profile.equalizer_mini_mut().set_eq_500h_freq(value);
+                MicrophoneParamKey::Equalizer500HzFrequency
+            }
+            MiniEqFrequencies::Equalizer1KHzFrequency => {
+                self.profile.equalizer_mini_mut().set_eq_1k_freq(value);
+                MicrophoneParamKey::Equalizer1KHzFrequency
+            }
+            MiniEqFrequencies::Equalizer3KHzFrequency => {
+                self.profile.equalizer_mini_mut().set_eq_3k_freq(value);
+                MicrophoneParamKey::Equalizer3KHzFrequency
+            }
+            MiniEqFrequencies::Equalizer8KHzFrequency => {
+                self.profile.equalizer_mini_mut().set_eq_8k_freq(value);
+                MicrophoneParamKey::Equalizer8KHzFrequency
+            }
+        }
+    }
+
 
     /// The uber method, fetches the relevant setting from the profile and returns it..
     pub fn get_param_value(&self, param: MicrophoneParamKey, serial: &str, settings: &SettingsHandle) -> [u8; 4] {
