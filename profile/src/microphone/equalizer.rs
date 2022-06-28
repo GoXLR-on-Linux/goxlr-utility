@@ -282,4 +282,40 @@ impl Equalizer {
     pub fn eq_16k_freq(&self) -> f64 {
         self.eq_16k_freq
     }
+
+    pub fn eq_31h_freq_as_goxlr(&self) -> i32 {
+        self.freq_value(self.eq_31h_freq)
+    }
+    pub fn eq_63h_freq_as_goxlr(&self) -> i32 {
+        self.freq_value(self.eq_63h_freq)
+    }
+    pub fn eq_125h_freq_as_goxlr(&self) -> i32 {
+        self.freq_value(self.eq_125h_freq)
+    }
+    pub fn eq_250h_freq_as_goxlr(&self) -> i32 {
+        self.freq_value(self.eq_250h_freq)
+    }
+    pub fn eq_500h_freq_as_goxlr(&self) -> i32 {
+        self.freq_value(self.eq_500h_freq)
+    }
+    pub fn eq_1k_freq_as_goxlr(&self) -> i32 {
+        self.freq_value(self.eq_1k_freq)
+    }
+    pub fn eq_2k_freq_as_goxlr(&self) -> i32 {
+        self.freq_value(self.eq_2k_freq)
+    }
+    pub fn eq_4k_freq_as_goxlr(&self) -> i32 {
+        self.freq_value(self.eq_4k_freq)
+    }
+    pub fn eq_8k_freq_as_goxlr(&self) -> i32 {
+        self.freq_value(self.eq_8k_freq)
+    }
+    pub fn eq_16k_freq_as_goxlr(&self) -> i32 {
+        self.freq_value(self.eq_16k_freq)
+    }
+
+    fn freq_value(&self, freq: f64) -> i32 {
+        let value: f32 = ((24.0 * (freq / 20.0).log2()) as f32).round();
+        return value as i32;
+    }
 }

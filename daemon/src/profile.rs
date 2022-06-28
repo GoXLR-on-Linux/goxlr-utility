@@ -1038,18 +1038,17 @@ impl MicProfileAdapter {
             EffectKey::GateRelease => self.profile.gate().release().into(),
             EffectKey::Unknown14b => 0,
 
-            // For Frequencies, we need to accurately reverse the profile -> value settings, until
-            // then, we'll hard code them.
-            EffectKey::Equalizer31HzFrequency => 15,
-            EffectKey::Equalizer63HzFrequency => 40,
-            EffectKey::Equalizer125HzFrequency => 63,
-            EffectKey::Equalizer250HzFrequency => 87,
-            EffectKey::Equalizer500HzFrequency => 111,
-            EffectKey::Equalizer1KHzFrequency => 135,
-            EffectKey::Equalizer2KHzFrequency => 159,
-            EffectKey::Equalizer4KHzFrequency => 183,
-            EffectKey::Equalizer8KHzFrequency => 207,
-            EffectKey::Equalizer16KHzFrequency => 231,
+            EffectKey::Equalizer31HzFrequency => self.profile.equalizer().eq_31h_freq_as_goxlr(),
+            EffectKey::Equalizer63HzFrequency => self.profile.equalizer().eq_63h_freq_as_goxlr(),
+            EffectKey::Equalizer125HzFrequency => self.profile.equalizer().eq_125h_freq_as_goxlr(),
+            EffectKey::Equalizer250HzFrequency => self.profile.equalizer().eq_250h_freq_as_goxlr(),
+            EffectKey::Equalizer500HzFrequency => self.profile.equalizer().eq_500h_freq_as_goxlr(),
+            EffectKey::Equalizer1KHzFrequency => self.profile.equalizer().eq_1k_freq_as_goxlr(),
+            EffectKey::Equalizer2KHzFrequency => self.profile.equalizer().eq_2k_freq_as_goxlr(),
+            EffectKey::Equalizer4KHzFrequency => self.profile.equalizer().eq_4k_freq_as_goxlr(),
+            EffectKey::Equalizer8KHzFrequency => self.profile.equalizer().eq_8k_freq_as_goxlr(),
+            EffectKey::Equalizer16KHzFrequency => self.profile.equalizer().eq_16k_freq_as_goxlr(),
+
             EffectKey::Equalizer31HzGain => self.profile.equalizer().eq_31h_gain().into(),
             EffectKey::Equalizer63HzGain => self.profile.equalizer().eq_63h_gain().into(),
             EffectKey::Equalizer125HzGain => self.profile.equalizer().eq_125h_gain().into(),
@@ -1169,21 +1168,12 @@ impl MicProfileAdapter {
         LittleEndian::write_f32(&mut return_value, value.into());
         return return_value;
     }
-    
-    /*
-    fn freq_value(&self, value: f32) -> i32 {
-        let value: f32 = (24.0 * (value / 20).log2()).round()
-        return value as i32;
-    }
-    */
 
     fn gain_value(&self, value: u16) -> [u8; 4] {
         let mut return_value = [0;4];
         LittleEndian::write_u16(&mut return_value[2..], value);
         return return_value;
     }
-    
-    
 
     pub fn get_common_keys(&self) -> HashSet<EffectKey> {
         let mut keys = HashSet::new();
