@@ -1,104 +1,107 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `types&#x2F;src&#x2F;lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script>
-    <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a class="sidebar-logo" href="../../goxlr_types/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.png" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../goxlr_types/index.html"><img class="rust-logo" src="../../rust-logo.png" alt="logo"></a><nav class="sub"><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
-<span id="2">  2</span>
-<span id="3">  3</span>
-<span id="4">  4</span>
-<span id="5">  5</span>
-<span id="6">  6</span>
-<span id="7">  7</span>
-<span id="8">  8</span>
-<span id="9">  9</span>
-<span id="10"> 10</span>
-<span id="11"> 11</span>
-<span id="12"> 12</span>
-<span id="13"> 13</span>
-<span id="14"> 14</span>
-<span id="15"> 15</span>
-<span id="16"> 16</span>
-<span id="17"> 17</span>
-<span id="18"> 18</span>
-<span id="19"> 19</span>
-<span id="20"> 20</span>
-<span id="21"> 21</span>
-<span id="22"> 22</span>
-<span id="23"> 23</span>
-<span id="24"> 24</span>
-<span id="25"> 25</span>
-<span id="26"> 26</span>
-<span id="27"> 27</span>
-<span id="28"> 28</span>
-<span id="29"> 29</span>
-<span id="30"> 30</span>
-<span id="31"> 31</span>
-<span id="32"> 32</span>
-<span id="33"> 33</span>
-<span id="34"> 34</span>
-<span id="35"> 35</span>
-<span id="36"> 36</span>
-<span id="37"> 37</span>
-<span id="38"> 38</span>
-<span id="39"> 39</span>
-<span id="40"> 40</span>
-<span id="41"> 41</span>
-<span id="42"> 42</span>
-<span id="43"> 43</span>
-<span id="44"> 44</span>
-<span id="45"> 45</span>
-<span id="46"> 46</span>
-<span id="47"> 47</span>
-<span id="48"> 48</span>
-<span id="49"> 49</span>
-<span id="50"> 50</span>
-<span id="51"> 51</span>
-<span id="52"> 52</span>
-<span id="53"> 53</span>
-<span id="54"> 54</span>
-<span id="55"> 55</span>
-<span id="56"> 56</span>
-<span id="57"> 57</span>
-<span id="58"> 58</span>
-<span id="59"> 59</span>
-<span id="60"> 60</span>
-<span id="61"> 61</span>
-<span id="62"> 62</span>
-<span id="63"> 63</span>
-<span id="64"> 64</span>
-<span id="65"> 65</span>
-<span id="66"> 66</span>
-<span id="67"> 67</span>
-<span id="68"> 68</span>
-<span id="69"> 69</span>
-<span id="70"> 70</span>
-<span id="71"> 71</span>
-<span id="72"> 72</span>
-<span id="73"> 73</span>
-<span id="74"> 74</span>
-<span id="75"> 75</span>
-<span id="76"> 76</span>
-<span id="77"> 77</span>
-<span id="78"> 78</span>
-<span id="79"> 79</span>
-<span id="80"> 80</span>
-<span id="81"> 81</span>
-<span id="82"> 82</span>
-<span id="83"> 83</span>
-<span id="84"> 84</span>
-<span id="85"> 85</span>
-<span id="86"> 86</span>
-<span id="87"> 87</span>
-<span id="88"> 88</span>
-<span id="89"> 89</span>
-<span id="90"> 90</span>
-<span id="91"> 91</span>
-<span id="92"> 92</span>
-<span id="93"> 93</span>
-<span id="94"> 94</span>
-<span id="95"> 95</span>
-<span id="96"> 96</span>
-<span id="97"> 97</span>
-<span id="98"> 98</span>
-<span id="99"> 99</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `types/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script>
+    <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../goxlr_types/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
+        </a><h2 class="location"></h2>
+    </nav>
+    <nav class="sidebar"><a class="sidebar-logo" href="../../goxlr_types/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
+        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../goxlr_types/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker hidden"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="22" height="22" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<span id="2">2</span>
+<span id="3">3</span>
+<span id="4">4</span>
+<span id="5">5</span>
+<span id="6">6</span>
+<span id="7">7</span>
+<span id="8">8</span>
+<span id="9">9</span>
+<span id="10">10</span>
+<span id="11">11</span>
+<span id="12">12</span>
+<span id="13">13</span>
+<span id="14">14</span>
+<span id="15">15</span>
+<span id="16">16</span>
+<span id="17">17</span>
+<span id="18">18</span>
+<span id="19">19</span>
+<span id="20">20</span>
+<span id="21">21</span>
+<span id="22">22</span>
+<span id="23">23</span>
+<span id="24">24</span>
+<span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
+<span id="39">39</span>
+<span id="40">40</span>
+<span id="41">41</span>
+<span id="42">42</span>
+<span id="43">43</span>
+<span id="44">44</span>
+<span id="45">45</span>
+<span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
+<span id="62">62</span>
+<span id="63">63</span>
+<span id="64">64</span>
+<span id="65">65</span>
+<span id="66">66</span>
+<span id="67">67</span>
+<span id="68">68</span>
+<span id="69">69</span>
+<span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
+<span id="79">79</span>
+<span id="80">80</span>
+<span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
+<span id="84">84</span>
+<span id="85">85</span>
+<span id="86">86</span>
+<span id="87">87</span>
+<span id="88">88</span>
+<span id="89">89</span>
+<span id="90">90</span>
+<span id="91">91</span>
+<span id="92">92</span>
+<span id="93">93</span>
+<span id="94">94</span>
+<span id="95">95</span>
+<span id="96">96</span>
+<span id="97">97</span>
+<span id="98">98</span>
+<span id="99">99</span>
 <span id="100">100</span>
 <span id="101">101</span>
 <span id="102">102</span>
@@ -296,6 +299,204 @@
 <span id="294">294</span>
 <span id="295">295</span>
 <span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
+<span id="362">362</span>
+<span id="363">363</span>
+<span id="364">364</span>
+<span id="365">365</span>
+<span id="366">366</span>
+<span id="367">367</span>
+<span id="368">368</span>
+<span id="369">369</span>
+<span id="370">370</span>
+<span id="371">371</span>
+<span id="372">372</span>
+<span id="373">373</span>
+<span id="374">374</span>
+<span id="375">375</span>
+<span id="376">376</span>
+<span id="377">377</span>
+<span id="378">378</span>
+<span id="379">379</span>
+<span id="380">380</span>
+<span id="381">381</span>
+<span id="382">382</span>
+<span id="383">383</span>
+<span id="384">384</span>
+<span id="385">385</span>
+<span id="386">386</span>
+<span id="387">387</span>
+<span id="388">388</span>
+<span id="389">389</span>
+<span id="390">390</span>
+<span id="391">391</span>
+<span id="392">392</span>
+<span id="393">393</span>
+<span id="394">394</span>
+<span id="395">395</span>
+<span id="396">396</span>
+<span id="397">397</span>
+<span id="398">398</span>
+<span id="399">399</span>
+<span id="400">400</span>
+<span id="401">401</span>
+<span id="402">402</span>
+<span id="403">403</span>
+<span id="404">404</span>
+<span id="405">405</span>
+<span id="406">406</span>
+<span id="407">407</span>
+<span id="408">408</span>
+<span id="409">409</span>
+<span id="410">410</span>
+<span id="411">411</span>
+<span id="412">412</span>
+<span id="413">413</span>
+<span id="414">414</span>
+<span id="415">415</span>
+<span id="416">416</span>
+<span id="417">417</span>
+<span id="418">418</span>
+<span id="419">419</span>
+<span id="420">420</span>
+<span id="421">421</span>
+<span id="422">422</span>
+<span id="423">423</span>
+<span id="424">424</span>
+<span id="425">425</span>
+<span id="426">426</span>
+<span id="427">427</span>
+<span id="428">428</span>
+<span id="429">429</span>
+<span id="430">430</span>
+<span id="431">431</span>
+<span id="432">432</span>
+<span id="433">433</span>
+<span id="434">434</span>
+<span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
+<span id="438">438</span>
+<span id="439">439</span>
+<span id="440">440</span>
+<span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
+<span id="452">452</span>
+<span id="453">453</span>
+<span id="454">454</span>
+<span id="455">455</span>
+<span id="456">456</span>
+<span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
+<span id="461">461</span>
+<span id="462">462</span>
+<span id="463">463</span>
+<span id="464">464</span>
+<span id="465">465</span>
+<span id="466">466</span>
+<span id="467">467</span>
+<span id="468">468</span>
+<span id="469">469</span>
+<span id="470">470</span>
+<span id="471">471</span>
+<span id="472">472</span>
+<span id="473">473</span>
+<span id="474">474</span>
+<span id="475">475</span>
+<span id="476">476</span>
+<span id="477">477</span>
+<span id="478">478</span>
+<span id="479">479</span>
+<span id="480">480</span>
+<span id="481">481</span>
+<span id="482">482</span>
+<span id="483">483</span>
+<span id="484">484</span>
+<span id="485">485</span>
+<span id="486">486</span>
+<span id="487">487</span>
+<span id="488">488</span>
+<span id="489">489</span>
+<span id="490">490</span>
+<span id="491">491</span>
+<span id="492">492</span>
+<span id="493">493</span>
+<span id="494">494</span>
 </pre><pre class="rust"><code><span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;clap&quot;</span>)]</span>
 <span class="kw">use</span> <span class="ident">clap::ArgEnum</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;enumset&quot;</span>)]</span>
@@ -305,6 +506,7 @@
 <span class="kw">use</span> <span class="ident">std::fmt::Formatter</span>;
 <span class="kw">use</span> <span class="ident">strum</span>::{<span class="ident">Display</span>, <span class="ident">EnumCount</span>, <span class="ident">EnumIter</span>};
 <span class="kw">use</span> <span class="ident">enum_map::Enum</span>;
+<span class="kw">use</span> <span class="ident">derivative::Derivative</span>;
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Display</span>, <span class="ident">EnumIter</span>, <span class="ident">EnumCount</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
 <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;clap&quot;</span>, <span class="ident">derive</span>(<span class="ident">ArgEnum</span>))]</span>
@@ -396,7 +598,8 @@
     <span class="ident">Samples</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Display</span>, <span class="ident">EnumIter</span>, <span class="ident">EnumCount</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Display</span>, <span class="ident">EnumIter</span>, <span class="ident">EnumCount</span>, <span class="ident">Derivative</span>)]</span>
+<span class="attribute">#[<span class="ident">derivative</span>(<span class="ident">PartialEq</span>, <span class="ident">Hash</span>)]</span>
 <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;clap&quot;</span>, <span class="ident">derive</span>(<span class="ident">ArgEnum</span>))]</span>
 <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;serde&quot;</span>, <span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>))]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">EffectKey</span> {
@@ -438,6 +641,7 @@
     <span class="ident">ReverbAmount</span> <span class="op">=</span> <span class="number">0x0076</span>,
     <span class="ident">ReverbDecay</span> <span class="op">=</span> <span class="number">0x002f</span>,
     <span class="ident">ReverbEarlyLevel</span> <span class="op">=</span> <span class="number">0x0037</span>,
+    <span class="ident">ReverbTailLevel</span> <span class="op">=</span> <span class="number">0x0039</span>,   <span class="comment">// Always sent as 0.</span>
     <span class="ident">ReverbPredelay</span> <span class="op">=</span> <span class="number">0x0030</span>,
     <span class="ident">ReverbLoColor</span> <span class="op">=</span> <span class="number">0x0032</span>,
     <span class="ident">ReverbHiColor</span> <span class="op">=</span> <span class="number">0x0033</span>,
@@ -452,15 +656,32 @@
     <span class="ident">EchoDelayL</span> <span class="op">=</span> <span class="number">0x0022</span>,
     <span class="ident">EchoDelayR</span> <span class="op">=</span> <span class="number">0x0023</span>,
     <span class="ident">EchoFeedbackL</span> <span class="op">=</span> <span class="number">0x0024</span>,
-    <span class="ident">EchoXFBLtoR</span> <span class="op">=</span> <span class="number">0x0026</span>,
     <span class="ident">EchoFeedbackR</span> <span class="op">=</span> <span class="number">0x0025</span>,
+    <span class="ident">EchoXFBLtoR</span> <span class="op">=</span> <span class="number">0x0026</span>,
     <span class="ident">EchoXFBRtoL</span> <span class="op">=</span> <span class="number">0x0027</span>,
+    <span class="ident">EchoSource</span> <span class="op">=</span> <span class="number">0x001e</span>,
+    <span class="ident">EchoDivL</span> <span class="op">=</span> <span class="number">0x0020</span>,
+    <span class="ident">EchoDivR</span> <span class="op">=</span> <span class="number">0x0021</span>,
+    <span class="ident">EchoFilterStyle</span> <span class="op">=</span> <span class="number">0x002a</span>,
     <span class="ident">PitchAmount</span> <span class="op">=</span> <span class="number">0x005d</span>,
     <span class="ident">PitchCharacter</span> <span class="op">=</span> <span class="number">0x0167</span>,
-    <span class="ident">PitchStyle</span> <span class="op">=</span> <span class="number">0x0159</span>,
+    <span class="ident">PitchThreshold</span> <span class="op">=</span> <span class="number">0x0159</span>,
     <span class="ident">GenderAmount</span> <span class="op">=</span> <span class="number">0x0060</span>,
     <span class="ident">MegaphoneAmount</span> <span class="op">=</span> <span class="number">0x003c</span>,
     <span class="ident">MegaphonePostGain</span> <span class="op">=</span> <span class="number">0x0040</span>,
+    <span class="ident">MegaphoneStyle</span> <span class="op">=</span> <span class="number">0x003a</span>,
+    <span class="ident">MegaphoneHP</span> <span class="op">=</span> <span class="number">0x003d</span>,
+    <span class="ident">MegaphoneLP</span> <span class="op">=</span> <span class="number">0x003e</span>,
+    <span class="ident">MegaphonePreGain</span> <span class="op">=</span> <span class="number">0x003f</span>,
+    <span class="ident">MegaphoneDistType</span> <span class="op">=</span> <span class="number">0x0041</span>,
+    <span class="ident">MegaphonePresenceGain</span> <span class="op">=</span> <span class="number">0x0042</span>,
+    <span class="ident">MegaphonePresenceFC</span> <span class="op">=</span> <span class="number">0x0043</span>,
+    <span class="ident">MegaphonePresenceBW</span> <span class="op">=</span> <span class="number">0x0044</span>,
+    <span class="ident">MegaphoneBeatboxEnable</span> <span class="op">=</span> <span class="number">0x0045</span>,
+    <span class="ident">MegaphoneFilterControl</span> <span class="op">=</span> <span class="number">0x0046</span>,
+    <span class="ident">MegaphoneFilter</span> <span class="op">=</span> <span class="number">0x0047</span>,
+    <span class="ident">MegaphoneDrivePotGainCompMid</span> <span class="op">=</span> <span class="number">0x0048</span>,
+    <span class="ident">MegaphoneDrivePotGainCompMax</span> <span class="op">=</span> <span class="number">0x0049</span>,
     <span class="ident">RobotLowGain</span> <span class="op">=</span> <span class="number">0x0134</span>,
     <span class="ident">RobotLowFreq</span> <span class="op">=</span> <span class="number">0x0133</span>,
     <span class="ident">RobotLowWidth</span> <span class="op">=</span> <span class="number">0x0135</span>,
@@ -475,9 +696,12 @@
     <span class="ident">RobotThreshold</span> <span class="op">=</span> <span class="number">0x0157</span>,
     <span class="ident">RobotDryMix</span> <span class="op">=</span> <span class="number">0x014d</span>,
     <span class="ident">RobotStyle</span> <span class="op">=</span> <span class="number">0x0000</span>,
+    <span class="ident">HardTuneKeySource</span> <span class="op">=</span> <span class="number">0x0059</span>, <span class="comment">// Always sent as 0.</span>
     <span class="ident">HardTuneAmount</span> <span class="op">=</span> <span class="number">0x005a</span>,
     <span class="ident">HardTuneRate</span> <span class="op">=</span> <span class="number">0x005c</span>,
     <span class="ident">HardTuneWindow</span> <span class="op">=</span> <span class="number">0x005b</span>,
+    <span class="ident">HardTuneScale</span> <span class="op">=</span> <span class="number">0x005e</span>,
+    <span class="ident">HardTunePitchAmount</span> <span class="op">=</span> <span class="number">0x005f</span>,
 
     <span class="ident">RobotEnabled</span> <span class="op">=</span> <span class="number">0x014e</span>,
     <span class="ident">MegaphoneEnabled</span> <span class="op">=</span> <span class="number">0x00d7</span>,
@@ -489,7 +713,9 @@
     <span class="ident">Encoder4Enabled</span> <span class="op">=</span> <span class="number">0x0151</span>
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Display</span>, <span class="ident">EnumIter</span>, <span class="ident">EnumCount</span>)]</span>
+<span class="comment">// Eq and Derivative allow for these to be added to a HashSet (the values make EnumSet unusable)</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Eq</span>, <span class="ident">Display</span>, <span class="ident">EnumIter</span>, <span class="ident">EnumCount</span>, <span class="ident">Derivative</span>)]</span>
+<span class="attribute">#[<span class="ident">derivative</span>(<span class="ident">PartialEq</span>, <span class="ident">Hash</span>)]</span>
 <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;clap&quot;</span>, <span class="ident">derive</span>(<span class="ident">ArgEnum</span>))]</span>
 <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;serde&quot;</span>, <span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>))]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">MicrophoneParamKey</span> {
@@ -524,13 +750,12 @@
     <span class="ident">Equalizer3KHzGain</span> <span class="op">=</span> <span class="number">0x50004</span>,
     <span class="ident">Equalizer8KHzFrequency</span> <span class="op">=</span> <span class="number">0x50006</span>,
     <span class="ident">Equalizer8KHzGain</span> <span class="op">=</span> <span class="number">0x50007</span>,
-
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Display</span>, <span class="ident">EnumIter</span>, <span class="ident">EnumCount</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
 <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;clap&quot;</span>, <span class="ident">derive</span>(<span class="ident">clap::ArgEnum</span>))]</span>
 <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;serde&quot;</span>, <span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>))]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ColourDisplay</span> {
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">FaderDisplayStyle</span> {
     <span class="ident">TwoColour</span>,
     <span class="ident">Gradient</span>,
     <span class="ident">Meter</span>,
@@ -538,12 +763,74 @@
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Display</span>, <span class="ident">EnumIter</span>, <span class="ident">EnumCount</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;clap&quot;</span>, <span class="ident">derive</span>(<span class="ident">ArgEnum</span>))]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;serde&quot;</span>, <span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>))]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ButtonColourTargets</span> {
+    <span class="comment">// These are all the buttons from the GoXLR Mini.</span>
+    <span class="ident">Fader1Mute</span>,
+    <span class="ident">Fader2Mute</span>,
+    <span class="ident">Fader3Mute</span>,
+    <span class="ident">Fader4Mute</span>,
+    <span class="ident">Bleep</span>,
+    <span class="ident">Cough</span>,
+
+    <span class="comment">// The rest are GoXLR Full Buttons. On the mini, they will simply be ignored.</span>
+    <span class="ident">EffectSelect1</span>,
+    <span class="ident">EffectSelect2</span>,
+    <span class="ident">EffectSelect3</span>,
+    <span class="ident">EffectSelect4</span>,
+    <span class="ident">EffectSelect5</span>,
+    <span class="ident">EffectSelect6</span>,
+
+    <span class="comment">// FX Button labelled as &#39;fxClear&#39; in config?</span>
+    <span class="ident">EffectFx</span>,
+    <span class="ident">EffectMegaphone</span>,
+    <span class="ident">EffectRobot</span>,
+    <span class="ident">EffectHardTune</span>,
+
+    <span class="ident">SamplerSelectA</span>,
+    <span class="ident">SamplerSelectB</span>,
+    <span class="ident">SamplerSelectC</span>,
+
+    <span class="ident">SamplerTopLeft</span>,
+    <span class="ident">SamplerTopRight</span>,
+    <span class="ident">SamplerBottomLeft</span>,
+    <span class="ident">SamplerBottomRight</span>,
+    <span class="ident">SamplerClear</span>,
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Display</span>, <span class="ident">EnumIter</span>, <span class="ident">EnumCount</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;clap&quot;</span>, <span class="ident">derive</span>(<span class="ident">ArgEnum</span>))]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;serde&quot;</span>, <span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>))]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ButtonColourGroups</span> {
+    <span class="ident">FaderMute</span>,
+    <span class="ident">EffectSelector</span>,
+    <span class="ident">SampleBankSelector</span>,
+    <span class="ident">SamplerButtons</span>
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Display</span>, <span class="ident">EnumIter</span>, <span class="ident">EnumCount</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
 <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;clap&quot;</span>, <span class="ident">derive</span>(<span class="ident">clap::ArgEnum</span>))]</span>
 <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;serde&quot;</span>, <span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>))]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ColourOffStyle</span> {
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ButtonColourOffStyle</span> {
     <span class="ident">Dimmed</span>,
     <span class="ident">Colour2</span>,
     <span class="ident">DimmedColour2</span>,
+}
+
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">SimpleColourTargets</span> {
+    <span class="ident">Global</span>,
+    <span class="ident">Scribble1</span>,
+    <span class="ident">Scribble2</span>,
+    <span class="ident">Scribble3</span>,
+    <span class="ident">Scribble4</span>
+}
+
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">EncoderColourTargets</span> {
+    <span class="ident">Reverb</span>,
+    <span class="ident">Pitch</span>,
+    <span class="ident">Echo</span>,
+    <span class="ident">Gender</span>
 }
 
 <span class="comment">// MuteChat</span>
@@ -591,6 +878,118 @@
     <span class="ident">Preset4</span>,
     <span class="ident">Preset5</span>,
     <span class="ident">Preset6</span>
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Display</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">SampleBank</span> {
+    <span class="ident">A</span>, <span class="ident">B</span>, <span class="ident">C</span>
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Display</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;clap&quot;</span>, <span class="ident">derive</span>(<span class="ident">ArgEnum</span>))]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;serde&quot;</span>, <span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>))]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">MiniEqGains</span> {
+    <span class="ident">Equalizer90HzGain</span>,
+    <span class="ident">Equalizer250HzGain</span>,
+    <span class="ident">Equalizer500HzGain</span>,
+    <span class="ident">Equalizer1KHzGain</span>,
+    <span class="ident">Equalizer3KHzGain</span>,
+    <span class="ident">Equalizer8KHzGain</span>,
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Display</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;clap&quot;</span>, <span class="ident">derive</span>(<span class="ident">ArgEnum</span>))]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;serde&quot;</span>, <span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>))]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">MiniEqFrequencies</span> {
+    <span class="ident">Equalizer90HzFrequency</span>,
+    <span class="ident">Equalizer250HzFrequency</span>,
+    <span class="ident">Equalizer500HzFrequency</span>,
+    <span class="ident">Equalizer1KHzFrequency</span>,
+    <span class="ident">Equalizer3KHzFrequency</span>,
+    <span class="ident">Equalizer8KHzFrequency</span>,
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Display</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;clap&quot;</span>, <span class="ident">derive</span>(<span class="ident">ArgEnum</span>))]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;serde&quot;</span>, <span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>))]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">EqGains</span> {
+    <span class="ident">Equalizer31HzGain</span>,
+    <span class="ident">Equalizer63HzGain</span>,
+    <span class="ident">Equalizer125HzGain</span>,
+    <span class="ident">Equalizer250HzGain</span>,
+    <span class="ident">Equalizer500HzGain</span>,
+    <span class="ident">Equalizer1KHzGain</span>,
+    <span class="ident">Equalizer2KHzGain</span>,
+    <span class="ident">Equalizer4KHzGain</span>,
+    <span class="ident">Equalizer8KHzGain</span>,
+    <span class="ident">Equalizer16KHzGain</span>,
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Display</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;clap&quot;</span>, <span class="ident">derive</span>(<span class="ident">ArgEnum</span>))]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;serde&quot;</span>, <span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>))]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">EqFrequencies</span> {
+    <span class="ident">Equalizer31HzFrequency</span>,
+    <span class="ident">Equalizer63HzFrequency</span>,
+    <span class="ident">Equalizer125HzFrequency</span>,
+    <span class="ident">Equalizer250HzFrequency</span>,
+    <span class="ident">Equalizer500HzFrequency</span>,
+    <span class="ident">Equalizer1KHzFrequency</span>,
+    <span class="ident">Equalizer2KHzFrequency</span>,
+    <span class="ident">Equalizer4KHzFrequency</span>,
+    <span class="ident">Equalizer8KHzFrequency</span>,
+    <span class="ident">Equalizer16KHzFrequency</span>,
+}
+
+<span class="comment">/*
+Ok, before we get started with these next couple of enums, lemme explain how the GoXLR works for
+certain values. While the UI under windows appears to display a range, these values are all mapped
+to fixed values in an array (eg. goxlr_shared.h line 415), and the index of that value is sent to
+the GoXLR. This will most often occur for values that aren&#39;t linear, the ratio starts at increments
+of 0.1, and by the end it&#39;s hitting increments of 16 and 32.
+
+These enums are essentially the same maps, and use &#39;as usize&#39; and strum::iter().nth to convert.
+ */</span>
+
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">EnumIter</span>, <span class="ident">Display</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;clap&quot;</span>, <span class="ident">derive</span>(<span class="ident">ArgEnum</span>))]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;serde&quot;</span>, <span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>))]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">CompressorRatio</span> {
+    <span class="ident">Ratio1_0</span>, <span class="ident">Ratio1_1</span>, <span class="ident">Ratio1_2</span>, <span class="ident">Ratio1_4</span>,  <span class="ident">Ratio1_6</span>,  <span class="ident">Ratio1_8</span>, <span class="ident">Ratio2_0</span>, <span class="ident">Ratio2_5</span>, <span class="ident">Ratio3_2</span>,
+    <span class="ident">Ratio4_0</span>, <span class="ident">Ratio5_6</span>, <span class="ident">Ratio8_0</span>, <span class="ident">Ratio16_0</span>, <span class="ident">Ratio32_0</span>, <span class="ident">Ratio64_0</span>
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">EnumIter</span>, <span class="ident">Display</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;clap&quot;</span>, <span class="ident">derive</span>(<span class="ident">ArgEnum</span>))]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;serde&quot;</span>, <span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>))]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">GateTimes</span> {
+    <span class="ident">Gate10ms</span>,   <span class="ident">Gate20ms</span>,   <span class="ident">Gate30ms</span>,   <span class="ident">Gate40ms</span>,   <span class="ident">Gate50ms</span>,   <span class="ident">Gate60ms</span>,   <span class="ident">Gate70ms</span>,   <span class="ident">Gate80ms</span>,
+    <span class="ident">Gate90ms</span>,   <span class="ident">Gate100ms</span>,  <span class="ident">Gate110ms</span>,  <span class="ident">Gate120ms</span>,  <span class="ident">Gate130ms</span>,  <span class="ident">Gate140ms</span>,  <span class="ident">Gate150ms</span>,  <span class="ident">Gate160ms</span>,
+    <span class="ident">Gate170ms</span>,  <span class="ident">Gate180ms</span>,  <span class="ident">Gate190ms</span>,  <span class="ident">Gate200ms</span>,  <span class="ident">Gate250ms</span>,  <span class="ident">Gate300ms</span>,  <span class="ident">Gate350ms</span>,  <span class="ident">Gate400ms</span>,
+    <span class="ident">Gate450ms</span>,  <span class="ident">Gate500ms</span>,  <span class="ident">Gate550ms</span>,  <span class="ident">Gate600ms</span>,  <span class="ident">Gate650ms</span>,  <span class="ident">Gate700ms</span>,  <span class="ident">Gate750ms</span>,  <span class="ident">Gate800ms</span>,
+    <span class="ident">Gate850ms</span>,  <span class="ident">Gate900ms</span>,  <span class="ident">Gate950ms</span>,  <span class="ident">Gate1000ms</span>, <span class="ident">Gate1100ms</span>, <span class="ident">Gate1200ms</span>, <span class="ident">Gate1300ms</span>, <span class="ident">Gate1400ms</span>,
+    <span class="ident">Gate1500ms</span>, <span class="ident">Gate1600ms</span>, <span class="ident">Gate1700ms</span>, <span class="ident">Gate1800ms</span>, <span class="ident">Gate1900ms</span>, <span class="ident">Gate2000ms</span>,
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">EnumIter</span>, <span class="ident">Display</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;clap&quot;</span>, <span class="ident">derive</span>(<span class="ident">ArgEnum</span>))]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;serde&quot;</span>, <span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>))]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">CompressorAttackTime</span> {
+    <span class="comment">// Note: 0ms is technically 0.001ms</span>
+    <span class="ident">Comp0ms</span>,  <span class="ident">Comp2ms</span>,  <span class="ident">Comp3ms</span>,  <span class="ident">Comp4ms</span>,  <span class="ident">Comp5ms</span>,  <span class="ident">Comp6ms</span>,  <span class="ident">Comp7ms</span>,  <span class="ident">Comp8ms</span>,  <span class="ident">Comp9ms</span>,
+    <span class="ident">Comp10ms</span>, <span class="ident">Comp12ms</span>, <span class="ident">Comp14ms</span>, <span class="ident">Comp16ms</span>, <span class="ident">Comp18ms</span>, <span class="ident">Comp20ms</span>, <span class="ident">Comp23ms</span>, <span class="ident">Comp26ms</span>, <span class="ident">Comp30ms</span>,
+    <span class="ident">Comp35ms</span>, <span class="ident">Comp40ms</span>
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">EnumIter</span>, <span class="ident">Display</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;clap&quot;</span>, <span class="ident">derive</span>(<span class="ident">ArgEnum</span>))]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;serde&quot;</span>, <span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>))]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">CompressorReleaseTime</span> {
+    <span class="comment">// Note: 0 is technically 15 :)</span>
+    <span class="ident">Comp0ms</span>,    <span class="ident">Comp15ms</span>,   <span class="ident">Comp25ms</span>,   <span class="ident">Comp35ms</span>,  <span class="ident">Comp45ms</span>,  <span class="ident">Comp55ms</span>,  <span class="ident">Comp65ms</span>,  <span class="ident">Comp75ms</span>,
+    <span class="ident">Comp85ms</span>,   <span class="ident">Comp100ms</span>,  <span class="ident">Comp115ms</span>,  <span class="ident">Comp140ms</span>,  <span class="ident">Comp170ms</span>, <span class="ident">Comp230ms</span>, <span class="ident">Comp340ms</span>, <span class="ident">Comp680ms</span>,
+    <span class="ident">Comp1000ms</span>, <span class="ident">Comp1500ms</span>, <span class="ident">Comp2000ms</span>, <span class="ident">Comp3000ms</span>
 }</code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="goxlr_types" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.59.0 (9d1b2106e 2022-02-23)" ></div>
+</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="goxlr_types" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.61.0 (fe5b13d68 2022-05-18)" ></div>
 </body></html>

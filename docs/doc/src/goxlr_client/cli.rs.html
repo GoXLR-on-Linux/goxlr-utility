@@ -1,104 +1,107 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `client&#x2F;src&#x2F;cli.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>cli.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script>
-    <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a class="sidebar-logo" href="../../goxlr_client/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.png" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../goxlr_client/index.html"><img class="rust-logo" src="../../rust-logo.png" alt="logo"></a><nav class="sub"><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
-<span id="2">  2</span>
-<span id="3">  3</span>
-<span id="4">  4</span>
-<span id="5">  5</span>
-<span id="6">  6</span>
-<span id="7">  7</span>
-<span id="8">  8</span>
-<span id="9">  9</span>
-<span id="10"> 10</span>
-<span id="11"> 11</span>
-<span id="12"> 12</span>
-<span id="13"> 13</span>
-<span id="14"> 14</span>
-<span id="15"> 15</span>
-<span id="16"> 16</span>
-<span id="17"> 17</span>
-<span id="18"> 18</span>
-<span id="19"> 19</span>
-<span id="20"> 20</span>
-<span id="21"> 21</span>
-<span id="22"> 22</span>
-<span id="23"> 23</span>
-<span id="24"> 24</span>
-<span id="25"> 25</span>
-<span id="26"> 26</span>
-<span id="27"> 27</span>
-<span id="28"> 28</span>
-<span id="29"> 29</span>
-<span id="30"> 30</span>
-<span id="31"> 31</span>
-<span id="32"> 32</span>
-<span id="33"> 33</span>
-<span id="34"> 34</span>
-<span id="35"> 35</span>
-<span id="36"> 36</span>
-<span id="37"> 37</span>
-<span id="38"> 38</span>
-<span id="39"> 39</span>
-<span id="40"> 40</span>
-<span id="41"> 41</span>
-<span id="42"> 42</span>
-<span id="43"> 43</span>
-<span id="44"> 44</span>
-<span id="45"> 45</span>
-<span id="46"> 46</span>
-<span id="47"> 47</span>
-<span id="48"> 48</span>
-<span id="49"> 49</span>
-<span id="50"> 50</span>
-<span id="51"> 51</span>
-<span id="52"> 52</span>
-<span id="53"> 53</span>
-<span id="54"> 54</span>
-<span id="55"> 55</span>
-<span id="56"> 56</span>
-<span id="57"> 57</span>
-<span id="58"> 58</span>
-<span id="59"> 59</span>
-<span id="60"> 60</span>
-<span id="61"> 61</span>
-<span id="62"> 62</span>
-<span id="63"> 63</span>
-<span id="64"> 64</span>
-<span id="65"> 65</span>
-<span id="66"> 66</span>
-<span id="67"> 67</span>
-<span id="68"> 68</span>
-<span id="69"> 69</span>
-<span id="70"> 70</span>
-<span id="71"> 71</span>
-<span id="72"> 72</span>
-<span id="73"> 73</span>
-<span id="74"> 74</span>
-<span id="75"> 75</span>
-<span id="76"> 76</span>
-<span id="77"> 77</span>
-<span id="78"> 78</span>
-<span id="79"> 79</span>
-<span id="80"> 80</span>
-<span id="81"> 81</span>
-<span id="82"> 82</span>
-<span id="83"> 83</span>
-<span id="84"> 84</span>
-<span id="85"> 85</span>
-<span id="86"> 86</span>
-<span id="87"> 87</span>
-<span id="88"> 88</span>
-<span id="89"> 89</span>
-<span id="90"> 90</span>
-<span id="91"> 91</span>
-<span id="92"> 92</span>
-<span id="93"> 93</span>
-<span id="94"> 94</span>
-<span id="95"> 95</span>
-<span id="96"> 96</span>
-<span id="97"> 97</span>
-<span id="98"> 98</span>
-<span id="99"> 99</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `client/src/cli.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>cli.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script>
+    <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../goxlr_client/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
+        </a><h2 class="location"></h2>
+    </nav>
+    <nav class="sidebar"><a class="sidebar-logo" href="../../goxlr_client/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
+        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../goxlr_client/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker hidden"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="22" height="22" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<span id="2">2</span>
+<span id="3">3</span>
+<span id="4">4</span>
+<span id="5">5</span>
+<span id="6">6</span>
+<span id="7">7</span>
+<span id="8">8</span>
+<span id="9">9</span>
+<span id="10">10</span>
+<span id="11">11</span>
+<span id="12">12</span>
+<span id="13">13</span>
+<span id="14">14</span>
+<span id="15">15</span>
+<span id="16">16</span>
+<span id="17">17</span>
+<span id="18">18</span>
+<span id="19">19</span>
+<span id="20">20</span>
+<span id="21">21</span>
+<span id="22">22</span>
+<span id="23">23</span>
+<span id="24">24</span>
+<span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
+<span id="39">39</span>
+<span id="40">40</span>
+<span id="41">41</span>
+<span id="42">42</span>
+<span id="43">43</span>
+<span id="44">44</span>
+<span id="45">45</span>
+<span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
+<span id="62">62</span>
+<span id="63">63</span>
+<span id="64">64</span>
+<span id="65">65</span>
+<span id="66">66</span>
+<span id="67">67</span>
+<span id="68">68</span>
+<span id="69">69</span>
+<span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
+<span id="79">79</span>
+<span id="80">80</span>
+<span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
+<span id="84">84</span>
+<span id="85">85</span>
+<span id="86">86</span>
+<span id="87">87</span>
+<span id="88">88</span>
+<span id="89">89</span>
+<span id="90">90</span>
+<span id="91">91</span>
+<span id="92">92</span>
+<span id="93">93</span>
+<span id="94">94</span>
+<span id="95">95</span>
+<span id="96">96</span>
+<span id="97">97</span>
+<span id="98">98</span>
+<span id="99">99</span>
 <span id="100">100</span>
 <span id="101">101</span>
 <span id="102">102</span>
@@ -363,18 +366,15 @@
 <span id="361">361</span>
 <span id="362">362</span>
 <span id="363">363</span>
-<span id="364">364</span>
-<span id="365">365</span>
-<span id="366">366</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::str::FromStr</span>;
 <span class="kw">use</span> <span class="ident">clap</span>::{<span class="ident">AppSettings</span>, <span class="ident">Args</span>, <span class="ident">Parser</span>, <span class="ident">Subcommand</span>};
-<span class="kw">use</span> <span class="ident">goxlr_types</span>::{<span class="ident">ChannelName</span>, <span class="ident">ColourDisplay</span>, <span class="ident">ColourOffStyle</span>, <span class="ident">FaderName</span>, <span class="ident">InputDevice</span>, <span class="ident">MuteFunction</span>, <span class="ident">OutputDevice</span>};
+<span class="kw">use</span> <span class="ident">goxlr_types</span>::{<span class="ident">ChannelName</span>, <span class="ident">FaderDisplayStyle</span>, <span class="ident">ButtonColourOffStyle</span>, <span class="ident">FaderName</span>, <span class="ident">InputDevice</span>, <span class="ident">MuteFunction</span>, <span class="ident">OutputDevice</span>, <span class="ident">ButtonColourTargets</span>, <span class="ident">ButtonColourGroups</span>};
 
 <span class="comment">// TODO: Likely going to shuffle this to use subcommands rather than parameters..</span>
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Parser</span>, <span class="ident">Debug</span>)]</span>
 <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">about</span>, <span class="ident">version</span>, <span class="ident">author</span>)]</span>
-<span class="attribute">#[<span class="ident">clap</span>(<span class="ident">global_setting</span> <span class="op">=</span> <span class="ident">AppSettings::ArgRequiredElseHelp</span>)]</span>
+<span class="attribute">#[<span class="ident">clap</span>(<span class="ident">setting</span> <span class="op">=</span> <span class="ident">AppSettings::ArgRequiredElseHelp</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Cli</span> {
     <span class="doccomment">/// The specific device&#39;s serial number to execute commands on.</span>
     <span class="doccomment">/// This field is optional if you have exactly one GoXLR, but required if you have more.</span>
@@ -385,121 +385,15 @@
     <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>)]</span>
     <span class="kw">pub</span> <span class="ident">status</span>: <span class="ident">bool</span>,
 
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">flatten</span>, <span class="ident">help_heading</span> <span class="op">=</span> <span class="string">&quot;Profile Management&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">profile</span>: <span class="ident">Profile</span>,
-
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">flatten</span>, <span class="ident">help_heading</span> <span class="op">=</span> <span class="string">&quot;Fader controls&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">faders</span>: <span class="ident">FaderControls</span>,
-
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">flatten</span>, <span class="ident">help_heading</span> <span class="op">=</span> <span class="string">&quot;Channel volumes&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">channel_volumes</span>: <span class="ident">ChannelVolumes</span>,
+    <span class="doccomment">/// Display device information as JSON after command..</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">status_json</span>: <span class="ident">bool</span>,
 
     <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">flatten</span>, <span class="ident">help_heading</span> <span class="op">=</span> <span class="string">&quot;Microphone controls&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">microphone_controls</span>: <span class="ident">MicrophoneControls</span>,
 
     <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">subcommand</span>)]</span>
     <span class="kw">pub</span> <span class="ident">subcommands</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">SubCommands</span><span class="op">&gt;</span>,
-}
-
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Args</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Profile</span> {
-    <span class="doccomment">/// List all profiles available for loading</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">display_order</span><span class="op">=</span><span class="number">1</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">list_profiles</span>: <span class="ident">bool</span>,
-
-    <span class="doccomment">/// List all microphone profiles available for loading</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">display_order</span><span class="op">=</span><span class="number">2</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">list_mic_profiles</span>: <span class="ident">bool</span>,
-
-    <span class="doccomment">/// Load a GoXLR Profile</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">name</span><span class="op">=</span><span class="string">&quot;PROFILE&quot;</span>, <span class="ident">display_order</span><span class="op">=</span><span class="number">3</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">load_profile</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-
-    <span class="doccomment">/// Load a GoXLR Microphone Profile</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">name</span><span class="op">=</span><span class="string">&quot;MIC_PROFILE&quot;</span>, <span class="ident">display_order</span><span class="op">=</span><span class="number">4</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">load_mic_profile</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-
-    <span class="doccomment">/// Saves the current configuration to disk</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">display_order</span><span class="op">=</span><span class="number">5</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">save_profile</span>: <span class="ident">bool</span>,
-
-    <span class="doccomment">/// Saves the current configuration as a new file..</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">display_order</span><span class="op">=</span><span class="number">6</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">save_profile_as</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-
-    <span class="doccomment">/// Save the currently configured microphone profile to disk</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">display_order</span><span class="op">=</span><span class="number">7</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">save_mic_profile</span>: <span class="ident">bool</span>,
-
-    <span class="doccomment">/// Saves the current microphone configuration as a new file..</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">display_order</span><span class="op">=</span><span class="number">8</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">save_mic_profile_as</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-}
-
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Args</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FaderControls</span> {
-    <span class="doccomment">/// Assign fader A</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">arg_enum</span>, <span class="ident">long</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">fader_a</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ChannelName</span><span class="op">&gt;</span>,
-
-    <span class="doccomment">/// Assign fader B</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">arg_enum</span>, <span class="ident">long</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">fader_b</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ChannelName</span><span class="op">&gt;</span>,
-
-    <span class="doccomment">/// Assign fader C</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">arg_enum</span>, <span class="ident">long</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">fader_c</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ChannelName</span><span class="op">&gt;</span>,
-
-    <span class="doccomment">/// Assign fader D</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">arg_enum</span>, <span class="ident">long</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">fader_d</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ChannelName</span><span class="op">&gt;</span>,
-}
-
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Args</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ChannelVolumes</span> {
-    <span class="doccomment">/// Set Mic volume (0-255)</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">mic_volume</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-
-    <span class="doccomment">/// Set Line-In volume (0-255)</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">line_in_volume</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-
-    <span class="doccomment">/// Set Console volume (0-255)</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">console_volume</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-
-    <span class="doccomment">/// Set System volume (0-255)</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">system_volume</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-
-    <span class="doccomment">/// Set Game volume (0-255)</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">game_volume</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-
-    <span class="doccomment">/// Set Chat volume (0-255)</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">chat_volume</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-
-    <span class="doccomment">/// Set Sample volume (0-255)</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">sample_volume</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-
-    <span class="doccomment">/// Set Music volume (0-255)</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">music_volume</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-
-    <span class="doccomment">/// Set Headphones volume (0-255)</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">headphones_volume</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-
-    <span class="doccomment">/// Set Mic-Monitor volume (0-255)</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">mic_monitor_volume</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-
-    <span class="doccomment">/// Set Line-Out volume (0-255)</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">line_out_volume</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Args</span>)]</span>
@@ -522,7 +416,14 @@
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Subcommand</span>, <span class="ident">Debug</span>)]</span>
 <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">setting</span> <span class="op">=</span> <span class="ident">AppSettings::DeriveDisplayOrder</span>)]</span>
+<span class="attribute">#[<span class="ident">clap</span>(<span class="ident">setting</span> <span class="op">=</span> <span class="ident">AppSettings::ArgRequiredElseHelp</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">SubCommands</span> {
+    <span class="doccomment">/// Profile Settings</span>
+    <span class="ident">Profiles</span> {
+        <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">subcommand</span>)]</span>
+        <span class="ident">command</span>: <span class="ident">ProfileType</span>,
+    },
+
     <span class="doccomment">/// Adjust Channel Volumes</span>
     <span class="ident">Volume</span> {
         <span class="doccomment">/// The Channel To Change</span>
@@ -531,31 +432,27 @@
 
         <span class="doccomment">/// The new volume as a percentage [0 - 100]</span>
         <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">parse</span>(<span class="ident">try_from_str</span><span class="op">=</span><span class="ident">parse_volume</span>))]</span>
-        <span class="ident">volume_percent</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>
+        <span class="ident">volume_percent</span>: <span class="ident">u8</span>
+    },
+
+    <span class="doccomment">/// Configure the Bleep Button</span>
+    <span class="ident">BleepVolume</span> {
+        <span class="doccomment">/// Set Bleep Button Volume</span>
+        <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">parse</span>(<span class="ident">try_from_str</span><span class="op">=</span><span class="ident">parse_volume</span>))]</span>
+        <span class="ident">volume_percent</span>: <span class="ident">u8</span>
     },
 
     <span class="doccomment">/// Commands to manipulate the individual GoXLR Faders</span>
     <span class="ident">Faders</span> {
         <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">subcommand</span>)]</span>
-        <span class="ident">fader</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">FaderCommands</span><span class="op">&gt;</span>
-    },
-
-    <span class="doccomment">/// Commands to manipulate all GoXLR faders at once</span>
-    <span class="ident">FadersAll</span> {
-        <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">subcommand</span>)]</span>
-        <span class="ident">command</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">AllFaderCommands</span><span class="op">&gt;</span>
+        <span class="ident">fader</span>: <span class="ident">FaderCommands</span>
     },
 
     <span class="doccomment">/// Commands for configuring the cough button</span>
-    <span class="ident">Cough</span> {
-        <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">subcommand</span>)]</span>
-        <span class="ident">command</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">CoughCommands</span><span class="op">&gt;</span>
-    },
-
-    <span class="doccomment">/// Configure the Bleep Button</span>
-    <span class="ident">Bleep</span> {
-        <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">subcommand</span>)]</span>
-        <span class="ident">command</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">BleepCommands</span><span class="op">&gt;</span>
+    <span class="ident">CoughBehaviour</span> {
+        <span class="doccomment">/// Where a single press will mute (Hold will always Mute to All)</span>
+        <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">arg_enum</span>)]</span>
+        <span class="ident">mute_behaviour</span>: <span class="ident">MuteFunction</span>
     },
 
     <span class="doccomment">/// Commands to manipulate the GoXLR Router</span>
@@ -570,8 +467,14 @@
 
         <span class="doccomment">/// Is routing enabled between these two devices? [true | false]</span>
         <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">parse</span>(<span class="ident">try_from_str</span>))]</span>
-        <span class="ident">enabled</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>
+        <span class="ident">enabled</span>: <span class="ident">bool</span>
     },
+
+    <span class="doccomment">/// Commands to control the GoXLR lighting</span>
+    <span class="ident">Lighting</span> {
+        <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">subcommand</span>)]</span>
+        <span class="ident">command</span>: <span class="ident">LightingCommands</span>
+    }
 }
 
 <span class="kw">fn</span> <span class="ident">parse_volume</span>(<span class="ident">s</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">u8</span>, <span class="ident">String</span><span class="op">&gt;</span> {
@@ -587,9 +490,49 @@
     <span class="prelude-val">Ok</span>(<span class="ident">value</span>)
 }
 
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Subcommand</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">clap</span>(<span class="ident">setting</span> <span class="op">=</span> <span class="ident">AppSettings::DeriveDisplayOrder</span>)]</span>
+<span class="attribute">#[<span class="ident">clap</span>(<span class="ident">setting</span> <span class="op">=</span> <span class="ident">AppSettings::ArgRequiredElseHelp</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ProfileType</span> {
+    <span class="doccomment">/// General Device Profile</span>
+    <span class="ident">Device</span> {
+        <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">subcommand</span>)]</span>
+        <span class="ident">command</span>: <span class="ident">ProfileAction</span>
+    },
+
+    <span class="doccomment">/// Microphone Profile</span>
+    <span class="ident">Microphone</span> {
+        <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">subcommand</span>)]</span>
+        <span class="ident">command</span>: <span class="ident">ProfileAction</span>
+    }
+}
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Subcommand</span>, <span class="ident">Debug</span>)]</span>
 <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">setting</span> <span class="op">=</span> <span class="ident">AppSettings::DeriveDisplayOrder</span>)]</span>
+<span class="attribute">#[<span class="ident">clap</span>(<span class="ident">setting</span> <span class="op">=</span> <span class="ident">AppSettings::ArgRequiredElseHelp</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ProfileAction</span> {
+    <span class="doccomment">/// Load a profile by name</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">setting</span> <span class="op">=</span> <span class="ident">AppSettings::ArgRequiredElseHelp</span>)]</span>
+    <span class="ident">Load</span> {
+        <span class="doccomment">/// The profile name to load</span>
+        <span class="ident">profile_name</span>: <span class="ident">String</span>,
+    },
+
+    <span class="doccomment">/// Save the currently running profile</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">unset_setting</span> <span class="op">=</span> <span class="ident">AppSettings::ArgRequiredElseHelp</span>)]</span>
+    <span class="ident">Save</span> {},
+
+    <span class="doccomment">/// Save the currently running profile with a new name</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">setting</span> <span class="op">=</span> <span class="ident">AppSettings::ArgRequiredElseHelp</span>)]</span>
+    <span class="ident">SaveAs</span> {
+        <span class="doccomment">/// The new Profile Name</span>
+        <span class="ident">profile_name</span>: <span class="ident">String</span>,
+    }
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Subcommand</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">clap</span>(<span class="ident">setting</span> <span class="op">=</span> <span class="ident">AppSettings::DeriveDisplayOrder</span>)]</span>
+<span class="attribute">#[<span class="ident">clap</span>(<span class="ident">setting</span> <span class="op">=</span> <span class="ident">AppSettings::ArgRequiredElseHelp</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">FaderCommands</span> {
     <span class="doccomment">/// Assign a new Channel to a Fader</span>
     <span class="ident">Channel</span> {
@@ -599,7 +542,7 @@
 
         <span class="doccomment">/// The New Channel Name</span>
         <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">arg_enum</span>)]</span>
-        <span class="ident">channel</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ChannelName</span><span class="op">&gt;</span>,
+        <span class="ident">channel</span>: <span class="ident">ChannelName</span>,
     },
 
     <span class="doccomment">/// Change the behaviour of a Fader Mute Button</span>
@@ -610,10 +553,51 @@
 
         <span class="doccomment">/// Where a single press will mute (Hold will always Mute to All)</span>
         <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">arg_enum</span>)]</span>
-        <span class="ident">mute_behaviour</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">MuteFunction</span><span class="op">&gt;</span>
+        <span class="ident">mute_behaviour</span>: <span class="ident">MuteFunction</span>
+    },
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Subcommand</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">clap</span>(<span class="ident">setting</span> <span class="op">=</span> <span class="ident">AppSettings::DeriveDisplayOrder</span>)]</span>
+<span class="attribute">#[<span class="ident">clap</span>(<span class="ident">setting</span> <span class="op">=</span> <span class="ident">AppSettings::ArgRequiredElseHelp</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">CoughCommands</span> {
+    <span class="doccomment">/// Change the behaviour of a Fader Mute Button</span>
+    <span class="ident">MuteBehaviour</span> {
+        <span class="doccomment">/// Where a single press will mute (Hold will always Mute to All)</span>
+        <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">arg_enum</span>)]</span>
+        <span class="ident">mute_behaviour</span>: <span class="ident">MuteFunction</span>
+    },
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Subcommand</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">clap</span>(<span class="ident">setting</span> <span class="op">=</span> <span class="ident">AppSettings::DeriveDisplayOrder</span>)]</span>
+<span class="attribute">#[<span class="ident">clap</span>(<span class="ident">setting</span> <span class="op">=</span> <span class="ident">AppSettings::ArgRequiredElseHelp</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">LightingCommands</span> {
+    <span class="ident">Fader</span> {
+        <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">subcommand</span>)]</span>
+        <span class="ident">command</span>: <span class="ident">FaderLightingCommands</span>
     },
 
-    <span class="doccomment">/// Set the appearance of Slider Lighting</span>
+    <span class="ident">FadersAll</span> {
+        <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">subcommand</span>)]</span>
+        <span class="ident">command</span>: <span class="ident">FadersAllLightingCommands</span>
+    },
+
+    <span class="ident">Button</span> {
+        <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">subcommand</span>)]</span>
+        <span class="ident">command</span>: <span class="ident">ButtonLightingCommands</span>
+    },
+
+    <span class="ident">ButtonGroup</span> {
+        <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">subcommand</span>)]</span>
+        <span class="ident">command</span>: <span class="ident">ButtonGroupLightingCommands</span>
+    }
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Subcommand</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">clap</span>(<span class="ident">setting</span> <span class="op">=</span> <span class="ident">AppSettings::DeriveDisplayOrder</span>)]</span>
+<span class="attribute">#[<span class="ident">clap</span>(<span class="ident">setting</span> <span class="op">=</span> <span class="ident">AppSettings::ArgRequiredElseHelp</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">FaderLightingCommands</span> {
     <span class="ident">Display</span> {
         <span class="doccomment">/// The Fader to Change</span>
         <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">arg_enum</span>)]</span>
@@ -621,7 +605,7 @@
 
         <span class="doccomment">/// The new display method</span>
         <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">arg_enum</span>)]</span>
-        <span class="ident">display</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ColourDisplay</span><span class="op">&gt;</span>
+        <span class="ident">display</span>: <span class="ident">FaderDisplayStyle</span>
     },
 
     <span class="doccomment">/// Sets the Top and Bottom colours of a fader</span>
@@ -636,78 +620,91 @@
         <span class="doccomment">/// Bottom colour in hex format [RRGGBB]</span>
         <span class="ident">bottom</span>: <span class="ident">String</span>
     },
+}
 
-    <span class="ident">ButtonColour</span> {
-        <span class="doccomment">/// The Fader to Change</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Subcommand</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">clap</span>(<span class="ident">setting</span> <span class="op">=</span> <span class="ident">AppSettings::DeriveDisplayOrder</span>)]</span>
+<span class="attribute">#[<span class="ident">clap</span>(<span class="ident">setting</span> <span class="op">=</span> <span class="ident">AppSettings::ArgRequiredElseHelp</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">FadersAllLightingCommands</span> {
+    <span class="ident">Display</span> {
+        <span class="doccomment">/// The new display method</span>
         <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">arg_enum</span>)]</span>
-        <span class="ident">fader</span>: <span class="ident">FaderName</span>,
+        <span class="ident">display</span>: <span class="ident">FaderDisplayStyle</span>
+    },
 
-        <span class="doccomment">/// The primary button colour [RRGGBB]</span>
-        <span class="ident">colour_one</span>: <span class="ident">String</span>,
+    <span class="doccomment">/// Sets the Top and Bottom colours of a fader</span>
+    <span class="ident">Colour</span> {
+        <span class="doccomment">/// Top colour in hex format [RRGGBB]</span>
+        <span class="ident">top</span>: <span class="ident">String</span>,
 
-        <span class="doccomment">/// How the button should be presented when &#39;off&#39;</span>
-        <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">arg_enum</span>)]</span>
-        <span class="ident">off_style</span>: <span class="ident">ColourOffStyle</span>,
-
-        <span class="doccomment">/// The secondary button colour [RRGGBB]</span>
-        <span class="ident">colour_two</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+        <span class="doccomment">/// Bottom colour in hex format [RRGGBB]</span>
+        <span class="ident">bottom</span>: <span class="ident">String</span>
     },
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Subcommand</span>, <span class="ident">Debug</span>)]</span>
 <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">setting</span> <span class="op">=</span> <span class="ident">AppSettings::DeriveDisplayOrder</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">CoughCommands</span> {
-    <span class="doccomment">/// Change the behaviour of a Fader Mute Button</span>
-    <span class="ident">MuteBehaviour</span> {
-        <span class="doccomment">/// Where a single press will mute (Hold will always Mute to All)</span>
-        <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">arg_enum</span>)]</span>
-        <span class="ident">mute_behaviour</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">MuteFunction</span><span class="op">&gt;</span>
-    },
-
+<span class="attribute">#[<span class="ident">clap</span>(<span class="ident">setting</span> <span class="op">=</span> <span class="ident">AppSettings::ArgRequiredElseHelp</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ButtonLightingCommands</span> {
     <span class="ident">Colour</span> {
+        <span class="doccomment">/// The Button to change</span>
+        <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">arg_enum</span>)]</span>
+        <span class="ident">button</span>: <span class="ident">ButtonColourTargets</span>,
+
         <span class="doccomment">/// The primary button colour [RRGGBB]</span>
         <span class="ident">colour_one</span>: <span class="ident">String</span>,
 
-        <span class="doccomment">/// How the button should be presented when &#39;off&#39;</span>
-        <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">arg_enum</span>)]</span>
-        <span class="ident">off_style</span>: <span class="ident">ColourOffStyle</span>,
-
         <span class="doccomment">/// The secondary button colour [RRGGBB]</span>
         <span class="ident">colour_two</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    },
+
+    <span class="ident">OffStyle</span> {
+        <span class="doccomment">/// The Button to change</span>
+        <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">arg_enum</span>)]</span>
+        <span class="ident">button</span>: <span class="ident">ButtonColourTargets</span>,
+
+        <span class="doccomment">/// How the button should be presented when &#39;off&#39;</span>
+        <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">arg_enum</span>)]</span>
+        <span class="ident">off_style</span>: <span class="ident">ButtonColourOffStyle</span>,
     }
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Subcommand</span>, <span class="ident">Debug</span>)]</span>
 <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">setting</span> <span class="op">=</span> <span class="ident">AppSettings::DeriveDisplayOrder</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">BleepCommands</span> {
-    <span class="doccomment">/// Change the behaviour of the Swear Button</span>
-    <span class="ident">Volume</span> {
-        <span class="doccomment">/// Set Bleep Button Volume</span>
-        <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">parse</span>(<span class="ident">try_from_str</span><span class="op">=</span><span class="ident">parse_volume</span>))]</span>
-        <span class="ident">volume_percent</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>
-    },
-
+<span class="attribute">#[<span class="ident">clap</span>(<span class="ident">setting</span> <span class="op">=</span> <span class="ident">AppSettings::ArgRequiredElseHelp</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ButtonGroupLightingCommands</span> {
     <span class="ident">Colour</span> {
+        <span class="doccomment">/// The group to change</span>
+        <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">arg_enum</span>)]</span>
+        <span class="ident">group</span>: <span class="ident">ButtonColourGroups</span>,
+
         <span class="doccomment">/// The primary button colour [RRGGBB]</span>
         <span class="ident">colour_one</span>: <span class="ident">String</span>,
 
-        <span class="doccomment">/// How the button should be presented when &#39;off&#39;</span>
-        <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">arg_enum</span>)]</span>
-        <span class="ident">off_style</span>: <span class="ident">ColourOffStyle</span>,
-
         <span class="doccomment">/// The secondary button colour [RRGGBB]</span>
         <span class="ident">colour_two</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    },
+
+    <span class="ident">OffStyle</span> {
+        <span class="doccomment">/// The group to change</span>
+        <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">arg_enum</span>)]</span>
+        <span class="ident">group</span>: <span class="ident">ButtonColourGroups</span>,
+
+        <span class="doccomment">/// How the button should be presented when &#39;off&#39;</span>
+        <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">arg_enum</span>)]</span>
+        <span class="ident">off_style</span>: <span class="ident">ButtonColourOffStyle</span>,
     }
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Subcommand</span>, <span class="ident">Debug</span>)]</span>
 <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">setting</span> <span class="op">=</span> <span class="ident">AppSettings::DeriveDisplayOrder</span>)]</span>
+<span class="attribute">#[<span class="ident">clap</span>(<span class="ident">setting</span> <span class="op">=</span> <span class="ident">AppSettings::ArgRequiredElseHelp</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">AllFaderCommands</span> {
     <span class="doccomment">/// Set the appearance of Slider Lighting</span>
     <span class="ident">Display</span> {
         <span class="doccomment">/// The new display method</span>
         <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">arg_enum</span>)]</span>
-        <span class="ident">display</span>: <span class="ident">ColourDisplay</span>
+        <span class="ident">display</span>: <span class="ident">FaderDisplayStyle</span>
     },
 
     <span class="doccomment">/// Set the colour of all GoXLR Faders</span>
@@ -726,11 +723,11 @@
 
         <span class="doccomment">/// How the button should be presented when &#39;off&#39;</span>
         <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">arg_enum</span>)]</span>
-        <span class="ident">off_style</span>: <span class="ident">ColourOffStyle</span>,
+        <span class="ident">off_style</span>: <span class="ident">ButtonColourOffStyle</span>,
 
         <span class="doccomment">/// The secondary button colour [RRGGBB]</span>
         <span class="ident">colour_two</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     }
 }</code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="goxlr_client" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.59.0 (9d1b2106e 2022-02-23)" ></div>
+</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="goxlr_client" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.61.0 (fe5b13d68 2022-05-18)" ></div>
 </body></html>

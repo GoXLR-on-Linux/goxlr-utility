@@ -1,104 +1,107 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `usb&#x2F;src&#x2F;goxlr.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>goxlr.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script>
-    <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a class="sidebar-logo" href="../../goxlr_usb/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.png" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../goxlr_usb/index.html"><img class="rust-logo" src="../../rust-logo.png" alt="logo"></a><nav class="sub"><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
-<span id="2">  2</span>
-<span id="3">  3</span>
-<span id="4">  4</span>
-<span id="5">  5</span>
-<span id="6">  6</span>
-<span id="7">  7</span>
-<span id="8">  8</span>
-<span id="9">  9</span>
-<span id="10"> 10</span>
-<span id="11"> 11</span>
-<span id="12"> 12</span>
-<span id="13"> 13</span>
-<span id="14"> 14</span>
-<span id="15"> 15</span>
-<span id="16"> 16</span>
-<span id="17"> 17</span>
-<span id="18"> 18</span>
-<span id="19"> 19</span>
-<span id="20"> 20</span>
-<span id="21"> 21</span>
-<span id="22"> 22</span>
-<span id="23"> 23</span>
-<span id="24"> 24</span>
-<span id="25"> 25</span>
-<span id="26"> 26</span>
-<span id="27"> 27</span>
-<span id="28"> 28</span>
-<span id="29"> 29</span>
-<span id="30"> 30</span>
-<span id="31"> 31</span>
-<span id="32"> 32</span>
-<span id="33"> 33</span>
-<span id="34"> 34</span>
-<span id="35"> 35</span>
-<span id="36"> 36</span>
-<span id="37"> 37</span>
-<span id="38"> 38</span>
-<span id="39"> 39</span>
-<span id="40"> 40</span>
-<span id="41"> 41</span>
-<span id="42"> 42</span>
-<span id="43"> 43</span>
-<span id="44"> 44</span>
-<span id="45"> 45</span>
-<span id="46"> 46</span>
-<span id="47"> 47</span>
-<span id="48"> 48</span>
-<span id="49"> 49</span>
-<span id="50"> 50</span>
-<span id="51"> 51</span>
-<span id="52"> 52</span>
-<span id="53"> 53</span>
-<span id="54"> 54</span>
-<span id="55"> 55</span>
-<span id="56"> 56</span>
-<span id="57"> 57</span>
-<span id="58"> 58</span>
-<span id="59"> 59</span>
-<span id="60"> 60</span>
-<span id="61"> 61</span>
-<span id="62"> 62</span>
-<span id="63"> 63</span>
-<span id="64"> 64</span>
-<span id="65"> 65</span>
-<span id="66"> 66</span>
-<span id="67"> 67</span>
-<span id="68"> 68</span>
-<span id="69"> 69</span>
-<span id="70"> 70</span>
-<span id="71"> 71</span>
-<span id="72"> 72</span>
-<span id="73"> 73</span>
-<span id="74"> 74</span>
-<span id="75"> 75</span>
-<span id="76"> 76</span>
-<span id="77"> 77</span>
-<span id="78"> 78</span>
-<span id="79"> 79</span>
-<span id="80"> 80</span>
-<span id="81"> 81</span>
-<span id="82"> 82</span>
-<span id="83"> 83</span>
-<span id="84"> 84</span>
-<span id="85"> 85</span>
-<span id="86"> 86</span>
-<span id="87"> 87</span>
-<span id="88"> 88</span>
-<span id="89"> 89</span>
-<span id="90"> 90</span>
-<span id="91"> 91</span>
-<span id="92"> 92</span>
-<span id="93"> 93</span>
-<span id="94"> 94</span>
-<span id="95"> 95</span>
-<span id="96"> 96</span>
-<span id="97"> 97</span>
-<span id="98"> 98</span>
-<span id="99"> 99</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `usb/src/goxlr.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>goxlr.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script>
+    <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../goxlr_usb/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
+        </a><h2 class="location"></h2>
+    </nav>
+    <nav class="sidebar"><a class="sidebar-logo" href="../../goxlr_usb/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
+        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../goxlr_usb/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker hidden"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="22" height="22" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<span id="2">2</span>
+<span id="3">3</span>
+<span id="4">4</span>
+<span id="5">5</span>
+<span id="6">6</span>
+<span id="7">7</span>
+<span id="8">8</span>
+<span id="9">9</span>
+<span id="10">10</span>
+<span id="11">11</span>
+<span id="12">12</span>
+<span id="13">13</span>
+<span id="14">14</span>
+<span id="15">15</span>
+<span id="16">16</span>
+<span id="17">17</span>
+<span id="18">18</span>
+<span id="19">19</span>
+<span id="20">20</span>
+<span id="21">21</span>
+<span id="22">22</span>
+<span id="23">23</span>
+<span id="24">24</span>
+<span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
+<span id="39">39</span>
+<span id="40">40</span>
+<span id="41">41</span>
+<span id="42">42</span>
+<span id="43">43</span>
+<span id="44">44</span>
+<span id="45">45</span>
+<span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
+<span id="62">62</span>
+<span id="63">63</span>
+<span id="64">64</span>
+<span id="65">65</span>
+<span id="66">66</span>
+<span id="67">67</span>
+<span id="68">68</span>
+<span id="69">69</span>
+<span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
+<span id="79">79</span>
+<span id="80">80</span>
+<span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
+<span id="84">84</span>
+<span id="85">85</span>
+<span id="86">86</span>
+<span id="87">87</span>
+<span id="88">88</span>
+<span id="89">89</span>
+<span id="90">90</span>
+<span id="91">91</span>
+<span id="92">92</span>
+<span id="93">93</span>
+<span id="94">94</span>
+<span id="95">95</span>
+<span id="96">96</span>
+<span id="97">97</span>
+<span id="98">98</span>
+<span id="99">99</span>
 <span id="100">100</span>
 <span id="101">101</span>
 <span id="102">102</span>
@@ -503,6 +506,64 @@
 <span id="501">501</span>
 <span id="502">502</span>
 <span id="503">503</span>
+<span id="504">504</span>
+<span id="505">505</span>
+<span id="506">506</span>
+<span id="507">507</span>
+<span id="508">508</span>
+<span id="509">509</span>
+<span id="510">510</span>
+<span id="511">511</span>
+<span id="512">512</span>
+<span id="513">513</span>
+<span id="514">514</span>
+<span id="515">515</span>
+<span id="516">516</span>
+<span id="517">517</span>
+<span id="518">518</span>
+<span id="519">519</span>
+<span id="520">520</span>
+<span id="521">521</span>
+<span id="522">522</span>
+<span id="523">523</span>
+<span id="524">524</span>
+<span id="525">525</span>
+<span id="526">526</span>
+<span id="527">527</span>
+<span id="528">528</span>
+<span id="529">529</span>
+<span id="530">530</span>
+<span id="531">531</span>
+<span id="532">532</span>
+<span id="533">533</span>
+<span id="534">534</span>
+<span id="535">535</span>
+<span id="536">536</span>
+<span id="537">537</span>
+<span id="538">538</span>
+<span id="539">539</span>
+<span id="540">540</span>
+<span id="541">541</span>
+<span id="542">542</span>
+<span id="543">543</span>
+<span id="544">544</span>
+<span id="545">545</span>
+<span id="546">546</span>
+<span id="547">547</span>
+<span id="548">548</span>
+<span id="549">549</span>
+<span id="550">550</span>
+<span id="551">551</span>
+<span id="552">552</span>
+<span id="553">553</span>
+<span id="554">554</span>
+<span id="555">555</span>
+<span id="556">556</span>
+<span id="557">557</span>
+<span id="558">558</span>
+<span id="559">559</span>
+<span id="560">560</span>
+<span id="561">561</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::buttonstate</span>::{<span class="ident">ButtonStates</span>, <span class="ident">Buttons</span>};
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::channelstate::ChannelState</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::commands::SystemInfoCommand</span>;
@@ -517,7 +578,7 @@
     <span class="ident">ChannelName</span>, <span class="ident">EffectKey</span>, <span class="ident">EncoderName</span>, <span class="ident">FaderName</span>, <span class="ident">FirmwareVersions</span>, <span class="ident">MicrophoneParamKey</span>,
     <span class="ident">MicrophoneType</span>, <span class="ident">VersionNumber</span>,
 };
-<span class="kw">use</span> <span class="ident">log::info</span>;
+<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">info</span>};
 <span class="kw">use</span> <span class="ident">rusb::Error::Pipe</span>;
 <span class="kw">use</span> <span class="ident">rusb</span>::{
     <span class="ident">Device</span>, <span class="ident">DeviceDescriptor</span>, <span class="ident">DeviceHandle</span>, <span class="ident">Direction</span>, <span class="ident">GlobalContext</span>, <span class="ident">Language</span>, <span class="ident">Recipient</span>,
@@ -537,6 +598,9 @@
     <span class="ident">command_count</span>: <span class="ident">u16</span>,
     <span class="ident">device_is_claimed</span>: <span class="ident">bool</span>,
 }
+
+<span class="comment">// Todo: Be nicer about this..</span>
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">SUPER_DEBUG</span>: <span class="ident">bool</span> <span class="op">=</span> <span class="bool-val">false</span>;
 
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">VID_GOXLR</span>: <span class="ident">u16</span> <span class="op">=</span> <span class="number">0x1220</span>;
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">PID_GOXLR_MINI</span>: <span class="ident">u16</span> <span class="op">=</span> <span class="number">0x8fe4</span>;
@@ -602,6 +666,10 @@
         <span class="comment">// Resets the state of the device (unconfirmed - Might just be the command id counter)</span>
         <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">goxlr</span>.<span class="ident">write_control</span>(<span class="number">1</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="kw-2">&amp;</span>[]);
 
+        <span class="macro">debug!</span>(<span class="string">&quot;Activating Vendor Interface..&quot;</span>);
+        <span class="comment">// Activate the vendor pipe regardless..</span>
+        <span class="ident">goxlr</span>.<span class="ident">read_control</span>(<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">24</span>)<span class="question-mark">?</span>;
+
         <span class="kw">if</span> <span class="ident">result</span> <span class="op">==</span> <span class="prelude-val">Err</span>(<span class="ident">Pipe</span>) {
             <span class="comment">// The GoXLR is not initialised, we need to fix that..</span>
             <span class="macro">info!</span>(<span class="string">&quot;Attempting to initialise device..&quot;</span>);
@@ -614,18 +682,23 @@
                 <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">ConnectError::DeviceNotClaimed</span>);
             }
 
-            <span class="comment">// Firstly, activate the command pipe..</span>
-            <span class="ident">goxlr</span>.<span class="ident">read_control</span>(<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">24</span>)<span class="question-mark">?</span>;
-
             <span class="comment">// Now activate audio..</span>
             <span class="ident">goxlr</span>.<span class="ident">write_class_control</span>(<span class="number">1</span>, <span class="number">0x0100</span>, <span class="number">0x2900</span>, <span class="kw-2">&amp;</span>[<span class="number">0x80</span>, <span class="number">0xbb</span>, <span class="number">0x00</span>, <span class="number">0x00</span>])<span class="question-mark">?</span>;
 
             <span class="ident">goxlr</span>.<span class="ident">handle</span>.<span class="ident">release_interface</span>(<span class="number">0</span>)<span class="question-mark">?</span>;
 
+            <span class="comment">// Reset the device, so ALSA can pick it up again..</span>
+            <span class="ident">goxlr</span>.<span class="ident">handle</span>.<span class="ident">reset</span>()<span class="question-mark">?</span>;
+
+            <span class="comment">// Sleep for a second for things to reinitialise..</span>
+            <span class="comment">//thread::sleep(time::Duration::from_secs(2));</span>
+
             <span class="comment">// We&#39;ll error here and prompt the user to reboot, until we can sort this properly.</span>
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">ConnectError::DeviceNeedsReboot</span>);
         }
 
+        <span class="comment">// Force command pipe activation in all cases.</span>
+        <span class="macro">debug!</span>(<span class="string">&quot;Handling initial request&quot;</span>);
         <span class="ident">goxlr</span>.<span class="ident">read_control</span>(<span class="number">3</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1040</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">goxlr</span>)
     }
@@ -740,19 +813,58 @@
         <span class="ident">LittleEndian::write_u16</span>(<span class="kw-2">&amp;mut</span> <span class="ident">full_request</span>[<span class="number">6</span>..<span class="number">8</span>], <span class="ident">command_index</span>);
         <span class="ident">full_request</span>.<span class="ident">extend</span>(<span class="ident">body</span>);
 
+        <span class="kw">if</span> <span class="ident">SUPER_DEBUG</span> {
+            <span class="macro">debug!</span>(<span class="string">&quot;Sending Request.. for {:?}&quot;</span>, <span class="ident">command</span>);
+        }
         <span class="self">self</span>.<span class="ident">write_control</span>(<span class="number">2</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="kw-2">&amp;</span><span class="ident">full_request</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// TODO: A retry mechanism</span>
-        <span class="ident">sleep</span>(<span class="ident">Duration::from_millis</span>(<span class="number">10</span>));
-        <span class="self">self</span>.<span class="ident">await_interrupt</span>(<span class="ident">Duration::from_secs</span>(<span class="number">2</span>));
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">response_header</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">read_control</span>(<span class="number">3</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1040</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">response_header</span>.<span class="ident">split_off</span>(<span class="number">16</span>);
-        <span class="kw">let</span> <span class="ident">response_length</span> <span class="op">=</span> <span class="ident">LittleEndian::read_u16</span>(<span class="kw-2">&amp;</span><span class="ident">response_header</span>[<span class="number">4</span>..<span class="number">6</span>]);
-        <span class="kw">let</span> <span class="ident">response_command_index</span> <span class="op">=</span> <span class="ident">LittleEndian::read_u16</span>(<span class="kw-2">&amp;</span><span class="ident">response_header</span>[<span class="number">6</span>..<span class="number">8</span>]);
 
-        <span class="macro">debug_assert!</span>(<span class="ident">response</span>.<span class="ident">len</span>() <span class="op">==</span> <span class="ident">response_length</span> <span class="kw">as</span> <span class="ident">usize</span>);
-        <span class="macro">debug_assert!</span>(<span class="ident">response_command_index</span> <span class="op">==</span> <span class="ident">command_index</span>);
+        <span class="comment">// The full fat GoXLR can handle requests incredibly quickly..</span>
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sleep_time</span> <span class="op">=</span> <span class="ident">Duration::from_millis</span>(<span class="number">3</span>);
+        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">device_descriptor</span>.<span class="ident">product_id</span>() <span class="op">==</span> <span class="ident">PID_GOXLR_MINI</span> {
+
+            <span class="comment">// The mini, however, cannot.</span>
+            <span class="ident">sleep_time</span> <span class="op">=</span> <span class="ident">Duration::from_millis</span>(<span class="number">10</span>);
+        }
+        <span class="ident">sleep</span>(<span class="ident">sleep_time</span>);
+
+        <span class="comment">// Interrupt reading doesnt work, because we can&#39;t claim the interface.</span>
+        <span class="comment">//self.await_interrupt(Duration::from_secs(2));</span>
+
+        <span class="kw">if</span> <span class="ident">SUPER_DEBUG</span> {
+            <span class="macro">debug!</span>(<span class="string">&quot;Reading Response..&quot;</span>);
+        }
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">response</span> <span class="op">=</span> <span class="macro">vec!</span>[];
+
+        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span> .. <span class="number">20</span> {
+            <span class="kw">let</span> <span class="ident">response_value</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">read_control</span>(<span class="number">3</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1040</span>);
+            <span class="kw">if</span> <span class="ident">response_value</span> <span class="op">==</span> <span class="prelude-val">Err</span>(<span class="ident">Pipe</span>) {
+                <span class="kw">if</span> <span class="ident">i</span> <span class="op">&lt;</span> <span class="number">2</span> {
+                    <span class="macro">debug!</span>(<span class="string">&quot;Response not arrived yet for {:?}, sleeping and retrying (Attempt {} of 20)&quot;</span>, <span class="ident">command</span>, <span class="ident">i</span> <span class="op">+</span> <span class="number">1</span>);
+                    <span class="ident">sleep</span>(<span class="ident">sleep_time</span>);
+                    <span class="kw">continue</span>;
+                } <span class="kw">else</span> {
+                    <span class="macro">debug!</span>(<span class="string">&quot;Failed to receive response (Attempt 20 of 20), possible Dead GoXLR?&quot;</span>);
+                    <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">response_value</span>.<span class="ident">err</span>().<span class="ident">unwrap</span>());
+                }
+            }
+            <span class="kw">if</span> <span class="ident">response_value</span>.<span class="ident">is_err</span>() {
+                <span class="kw">let</span> <span class="ident">err</span> <span class="op">=</span> <span class="ident">response_value</span>.<span class="ident">err</span>().<span class="ident">unwrap</span>();
+                <span class="macro">debug!</span>(<span class="string">&quot;Error Occured during packet read: {}&quot;</span>, <span class="ident">err</span>);
+                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>);
+            }
+
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">response_header</span> <span class="op">=</span> <span class="ident">response_value</span>.<span class="ident">unwrap</span>();
+            <span class="ident">response</span> <span class="op">=</span> <span class="ident">response_header</span>.<span class="ident">split_off</span>(<span class="number">16</span>);
+            <span class="kw">let</span> <span class="ident">response_length</span> <span class="op">=</span> <span class="ident">LittleEndian::read_u16</span>(<span class="kw-2">&amp;</span><span class="ident">response_header</span>[<span class="number">4</span>..<span class="number">6</span>]);
+            <span class="kw">let</span> <span class="ident">response_command_index</span> <span class="op">=</span> <span class="ident">LittleEndian::read_u16</span>(<span class="kw-2">&amp;</span><span class="ident">response_header</span>[<span class="number">6</span>..<span class="number">8</span>]);
+
+            <span class="macro">debug_assert!</span>(<span class="ident">response</span>.<span class="ident">len</span>() <span class="op">==</span> <span class="ident">response_length</span> <span class="kw">as</span> <span class="ident">usize</span>);
+            <span class="macro">debug_assert!</span>(<span class="ident">response_command_index</span> <span class="op">==</span> <span class="ident">command_index</span>);
+
+            <span class="kw">break</span>;
+        }
 
         <span class="prelude-val">Ok</span>(<span class="ident">response</span>)
     }
@@ -929,11 +1041,11 @@
             (
                 <span class="ident">MicrophoneParamKey::MicType</span>,
                 <span class="kw">match</span> <span class="ident">microphone_type</span>.<span class="ident">has_phantom_power</span>() {
-                    <span class="bool-val">true</span> =&gt; <span class="kw-2">&amp;</span>[<span class="number">0x01</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>],
-                    <span class="bool-val">false</span> =&gt; <span class="kw-2">&amp;</span>[<span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>],
+                    <span class="bool-val">true</span> =&gt; [<span class="number">0x01</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>],
+                    <span class="bool-val">false</span> =&gt; [<span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>],
                 },
             ),
-            (<span class="ident">microphone_type</span>.<span class="ident">get_gain_param</span>(), <span class="kw-2">&amp;</span><span class="ident">gain_value</span>),
+            (<span class="ident">microphone_type</span>.<span class="ident">get_gain_param</span>(), <span class="ident">gain_value</span>),
         ])<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
@@ -958,13 +1070,13 @@
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_mic_param</span>(
         <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-        <span class="ident">params</span>: <span class="kw-2">&amp;</span>[(<span class="ident">MicrophoneParamKey</span>, <span class="kw-2">&amp;</span>[<span class="ident">u8</span>; <span class="number">4</span>])],
+        <span class="ident">params</span>: <span class="kw-2">&amp;</span>[(<span class="ident">MicrophoneParamKey</span>, [<span class="ident">u8</span>; <span class="number">4</span>])]
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">CommandError</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">params</span>.<span class="ident">len</span>() <span class="op">*</span> <span class="number">8</span>);
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cursor</span> <span class="op">=</span> <span class="ident">Cursor::new</span>(<span class="kw-2">&amp;mut</span> <span class="ident">data</span>);
         <span class="kw">for</span> (<span class="ident">key</span>, <span class="ident">value</span>) <span class="kw">in</span> <span class="ident">params</span> {
             <span class="ident">cursor</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">LittleEndian</span><span class="op">&gt;</span>(<span class="kw-2">*</span><span class="ident">key</span> <span class="kw">as</span> <span class="ident">u32</span>)<span class="question-mark">?</span>;
-            <span class="ident">cursor</span>.<span class="ident">write_all</span>(<span class="kw-2">*</span><span class="ident">value</span>)<span class="question-mark">?</span>;
+            <span class="ident">cursor</span>.<span class="ident">write_all</span>(<span class="ident">value</span>)<span class="question-mark">?</span>;
         }
         <span class="self">self</span>.<span class="ident">request_data</span>(<span class="ident">Command::SetMicrophoneParameters</span>, <span class="kw-2">&amp;</span><span class="ident">data</span>)<span class="question-mark">?</span>;
 
@@ -1000,12 +1112,19 @@
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">await_interrupt</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">duration</span>: <span class="ident">Duration</span>) -&gt; <span class="ident">bool</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buffer</span> <span class="op">=</span> [<span class="number">0u8</span>; <span class="number">6</span>];
+        <span class="kw">let</span> <span class="ident">message</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">handle</span>.<span class="ident">read_interrupt</span>(<span class="number">0x81</span>, <span class="kw-2">&amp;mut</span> <span class="ident">buffer</span>, <span class="ident">duration</span>);
+        <span class="kw">if</span> <span class="ident">message</span>.<span class="ident">is_err</span>() {
+            <span class="macro">println!</span>(<span class="string">&quot;Error Reading Interrupt..&quot;</span>);
+        }
+
         <span class="macro">matches!</span>(
-            <span class="self">self</span>.<span class="ident">handle</span>.<span class="ident">read_interrupt</span>(<span class="number">0x81</span>, <span class="kw-2">&amp;mut</span> <span class="ident">buffer</span>, <span class="ident">duration</span>),
+            <span class="comment">//self.handle.read_interrupt(0x81, &amp;mut buffer, duration),</span>
+            <span class="ident">message</span>,
             <span class="prelude-val">Ok</span>(<span class="kw">_</span>)
         )
+
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="goxlr_usb" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.59.0 (9d1b2106e 2022-02-23)" ></div>
+</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="goxlr_usb" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.61.0 (fe5b13d68 2022-05-18)" ></div>
 </body></html>
