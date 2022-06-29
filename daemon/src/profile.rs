@@ -6,7 +6,7 @@ use goxlr_profile_loader::components::mixer::{FullChannelList, InputChannels, Ou
 use goxlr_profile_loader::mic_profile::MicProfileSettings;
 use goxlr_profile_loader::profile::{Profile, ProfileSettings};
 use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
-use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice, VersionNumber, MuteFunction as BasicMuteFunction, ColourDisplay as BasicColourDisplay, ColourOffStyle as BasicColourOffStyle, EffectBankPresets, MicrophoneParamKey, EffectKey, EqGains, EqFrequencies, MiniEqGains, MiniEqFrequencies, CompressorRatio, CompressorAttackTime, GateTimes, CompressorReleaseTime};
+use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice, VersionNumber, MuteFunction as BasicMuteFunction, FaderDisplayStyle as BasicColourDisplay, ButtonColourOffStyle as BasicColourOffStyle, EffectBankPresets, MicrophoneParamKey, EffectKey, EqGains, EqFrequencies, MiniEqGains, MiniEqFrequencies, CompressorRatio, CompressorAttackTime, GateTimes, CompressorReleaseTime, ButtonColourTargets, ButtonColourGroups};
 use goxlr_usb::colouring::ColourTargets;
 use log::error;
 use std::fs::{create_dir_all, File};
@@ -356,29 +356,6 @@ impl ProfileAdapter {
         self.get_mute_button_mut(fader).colour_map_mut().set_blink_on(on);
     }
 
-    pub fn set_mute_button_off_style(&mut self, fader: FaderName, off_style: BasicColourOffStyle) {
-        self.get_mute_button_mut(fader).colour_map_mut().set_off_style(
-            standard_to_profile_colour_off_style(off_style)
-        );
-    }
-
-    // TODO: This should (and hopefully will) be *FAR* more generic!
-    pub fn set_mute_button_colours(&mut self, fader: FaderName, colour_one: String, colour_two: Option<String>) -> Result<()> {
-        let colours = self.get_mute_button_mut(fader).colour_map_mut();
-        if colour_one.len() != 6 {
-            return Err(anyhow!("Expected Length: 6 (RRGGBB), Colour One: {}", colour_one.len()));
-        }
-
-        if let Some(two) = colour_two {
-            if two.len() != 6 {
-                return Err(anyhow!("Expected Length: 6 (RRGGBB), Colour Two: {}", two.len()));
-            }
-            colours.set_colour(1, Colour::fromrgb(two.as_str())?);
-        }
-        colours.set_colour(0, Colour::fromrgb(colour_one.as_str())?);
-        Ok(())
-    }
-
     /** 'Cough' / Mute Chat Button handlers.. */
     pub fn get_chat_mute_button(&self) -> &MuteChat {
         self.profile.settings().mute_chat()
@@ -440,29 +417,6 @@ impl ProfileAdapter {
             ColourOffStyle::Colour2 => ButtonStates::Colour2,
             ColourOffStyle::DimmedColour2 => ButtonStates::DimmedColour2
         }
-    }
-
-    pub fn set_mute_chat_off_style(&mut self, off_style: BasicColourOffStyle) {
-        self.profile.settings_mut().mute_chat_mut().colour_map_mut().set_off_style(
-            standard_to_profile_colour_off_style(off_style)
-        );
-    }
-
-    // TODO: This should (and hopefully will) be *FAR* more generic!
-    pub fn set_mute_chat_colours(&mut self, colour_one: String, colour_two: Option<String>) -> Result<()> {
-        let colours = self.profile.settings_mut().mute_chat_mut().colour_map_mut();
-        if colour_one.len() != 6 {
-            return Err(anyhow!("Expected Length: 6 (RRGGBB), Colour One: {}", colour_one.len()));
-        }
-
-        if let Some(two) = colour_two {
-            if two.len() != 6 {
-                return Err(anyhow!("Expected Length: 6 (RRGGBB), Colour Two: {}", two.len()));
-            }
-            colours.set_colour(1, Colour::fromrgb(two.as_str())?);
-        }
-        colours.set_colour(0, Colour::fromrgb(colour_one.as_str())?);
-        Ok(())
     }
 
     /** Fader Stuff */
@@ -689,32 +643,6 @@ impl ProfileAdapter {
         self.profile.settings().hardtune_effect().colour_map().get_state()
     }
 
-
-
-    /** Bleep Button **/
-    pub fn set_swear_off_style(&mut self, off_style: BasicColourOffStyle) {
-        self.profile.settings_mut().simple_element_mut(SimpleElements::Swear).colour_map_mut().set_off_style(
-            standard_to_profile_colour_off_style(off_style)
-        );
-    }
-
-    // TODO: This should (and hopefully will) be *FAR* more generic!
-    pub fn set_swear_colours(&mut self, colour_one: String, colour_two: Option<String>) -> Result<()> {
-        let colours = self.profile.settings_mut().simple_element_mut(SimpleElements::Swear).colour_map_mut();
-        if colour_one.len() != 6 {
-            return Err(anyhow!("Expected Length: 6 (RRGGBB), Colour One: {}", colour_one.len()));
-        }
-
-        if let Some(two) = colour_two {
-            if two.len() != 6 {
-                return Err(anyhow!("Expected Length: 6 (RRGGBB), Colour Two: {}", two.len()));
-            }
-            colours.set_colour(1, Colour::fromrgb(two.as_str())?);
-        }
-        colours.set_colour(0, Colour::fromrgb(colour_one.as_str())?);
-        Ok(())
-    }
-
     /** Sampler Related **/
     pub fn load_sample_bank(&mut self, bank: goxlr_types::SampleBank) {
         let bank = standard_to_profile_sample_bank(bank);
@@ -764,6 +692,98 @@ impl ProfileAdapter {
     pub fn set_sample_button_state(&mut self, button: SampleButtons, state: bool) {
         self.profile.settings_mut().sample_button_mut(button).colour_map_mut().set_state_on(state);
     }
+
+    /** Colour Changing Code **/
+    pub fn set_button_colours(&mut self, target: ButtonColourTargets, colour_one: String, colour_two: Option<&String>) -> Result<()> {
+        let colour_target = standard_to_colour_target(target);
+        let colours = get_profile_colour_map_mut(self.profile.settings_mut(), colour_target);
+
+        if colour_one.len() != 6 {
+            return Err(anyhow!("Expected Length: 6 (RRGGBB), Colour One: {}", colour_one.len()));
+        }
+
+        if let Some(two) = colour_two {
+            if two.len() != 6 {
+                return Err(anyhow!("Expected Length: 6 (RRGGBB), Colour Two: {}", two.len()));
+            }
+            colours.set_colour(1, Colour::fromrgb(two.as_str())?);
+        }
+        colours.set_colour(0, Colour::fromrgb(colour_one.as_str())?);
+        Ok(())
+    }
+
+    pub fn set_button_off_style(&mut self, target: ButtonColourTargets, off_style: BasicColourOffStyle) {
+        let colour_target = standard_to_colour_target(target);
+        get_profile_colour_map_mut(self.profile.settings_mut(), colour_target).set_off_style(
+            standard_to_profile_colour_off_style(off_style)
+        );
+    }
+
+    // TODO: We can probably do better with grouping these so they can be reused.
+    pub fn set_group_button_colours(&mut self, group: ButtonColourGroups, colour_one: String, colour_two: Option<String>) -> Result<()> {
+        match group {
+            ButtonColourGroups::FaderMute => {
+                self.set_button_colours(ButtonColourTargets::Fader1Mute, colour_one.clone(), colour_two.as_ref())?;
+                self.set_button_colours(ButtonColourTargets::Fader2Mute, colour_one.clone(), colour_two.as_ref())?;
+                self.set_button_colours(ButtonColourTargets::Fader3Mute, colour_one.clone(), colour_two.as_ref())?;
+                self.set_button_colours(ButtonColourTargets::Fader4Mute, colour_one.clone(), colour_two.as_ref())?;
+            }
+            ButtonColourGroups::EffectSelector => {
+                self.set_button_colours(ButtonColourTargets::EffectSelect1, colour_one.clone(), colour_two.as_ref())?;
+                self.set_button_colours(ButtonColourTargets::EffectSelect2, colour_one.clone(), colour_two.as_ref())?;
+                self.set_button_colours(ButtonColourTargets::EffectSelect3, colour_one.clone(), colour_two.as_ref())?;
+                self.set_button_colours(ButtonColourTargets::EffectSelect4, colour_one.clone(), colour_two.as_ref())?;
+                self.set_button_colours(ButtonColourTargets::EffectSelect5, colour_one.clone(), colour_two.as_ref())?;
+                self.set_button_colours(ButtonColourTargets::EffectSelect6, colour_one.clone(), colour_two.as_ref())?;
+            }
+            ButtonColourGroups::SampleBankSelector => {
+                self.set_button_colours(ButtonColourTargets::SamplerSelectA, colour_one.clone(), colour_two.as_ref())?;
+                self.set_button_colours(ButtonColourTargets::SamplerSelectB, colour_one.clone(), colour_two.as_ref())?;
+                self.set_button_colours(ButtonColourTargets::SamplerSelectC, colour_one.clone(), colour_two.as_ref())?;
+            }
+            ButtonColourGroups::SamplerButtons => {
+                self.set_button_colours(ButtonColourTargets::SamplerTopLeft, colour_one.clone(), colour_two.as_ref())?;
+                self.set_button_colours(ButtonColourTargets::SamplerTopRight, colour_one.clone(), colour_two.as_ref())?;
+                self.set_button_colours(ButtonColourTargets::SamplerBottomLeft, colour_one.clone(), colour_two.as_ref())?;
+                self.set_button_colours(ButtonColourTargets::SamplerBottomRight, colour_one.clone(), colour_two.as_ref())?;
+                self.set_button_colours(ButtonColourTargets::SamplerClear, colour_one.clone(), colour_two.as_ref())?;
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn set_group_button_off_style(&mut self, target: ButtonColourGroups, off_style: BasicColourOffStyle) {
+        match target {
+            ButtonColourGroups::FaderMute => {
+                self.set_button_off_style(ButtonColourTargets::Fader1Mute, off_style);
+                self.set_button_off_style(ButtonColourTargets::Fader2Mute, off_style);
+                self.set_button_off_style(ButtonColourTargets::Fader3Mute, off_style);
+                self.set_button_off_style(ButtonColourTargets::Fader4Mute, off_style);
+            }
+            ButtonColourGroups::EffectSelector => {
+                self.set_button_off_style(ButtonColourTargets::EffectSelect1, off_style);
+                self.set_button_off_style(ButtonColourTargets::EffectSelect2, off_style);
+                self.set_button_off_style(ButtonColourTargets::EffectSelect3, off_style);
+                self.set_button_off_style(ButtonColourTargets::EffectSelect4, off_style);
+                self.set_button_off_style(ButtonColourTargets::EffectSelect5, off_style);
+                self.set_button_off_style(ButtonColourTargets::EffectSelect6, off_style);
+            }
+            ButtonColourGroups::SampleBankSelector => {
+                self.set_button_off_style(ButtonColourTargets::SamplerSelectA, off_style);
+                self.set_button_off_style(ButtonColourTargets::SamplerSelectB, off_style);
+                self.set_button_off_style(ButtonColourTargets::SamplerSelectC, off_style);
+            }
+            ButtonColourGroups::SamplerButtons => {
+                self.set_button_off_style(ButtonColourTargets::SamplerTopLeft, off_style);
+                self.set_button_off_style(ButtonColourTargets::SamplerTopRight, off_style);
+                self.set_button_off_style(ButtonColourTargets::SamplerBottomLeft, off_style);
+                self.set_button_off_style(ButtonColourTargets::SamplerBottomRight, off_style);
+                self.set_button_off_style(ButtonColourTargets::SamplerClear, off_style);
+            }
+        }
+    }
+
 
     /** Generic Stuff **/
     pub fn get_button_colour_state(&self, button: Buttons) -> ButtonStates {
@@ -1828,6 +1848,84 @@ fn get_profile_colour_map(profile: &ProfileSettings, colour_target: ColourTarget
         ColourTargets::EchoEncoder => profile.echo_encoder().colour_map(),
         ColourTargets::LogoX => profile.simple_element(SimpleElements::LogoX).colour_map(),
         ColourTargets::Global => profile.simple_element(SimpleElements::GlobalColour).colour_map(),
+    }
+}
+
+fn get_profile_colour_map_mut(profile: &mut ProfileSettings, colour_target: ColourTargets) -> &mut ColourMap {
+    match colour_target {
+        ColourTargets::Fader1Mute => profile.mute_button_mut(0).colour_map_mut(),
+        ColourTargets::Fader2Mute => profile.mute_button_mut(1).colour_map_mut(),
+        ColourTargets::Fader3Mute => profile.mute_button_mut(2).colour_map_mut(),
+        ColourTargets::Fader4Mute => profile.mute_button_mut(3).colour_map_mut(),
+        ColourTargets::Bleep => profile.simple_element_mut(SimpleElements::Swear).colour_map_mut(),
+        ColourTargets::MicrophoneMute => profile.mute_chat_mut().colour_map_mut(),
+        ColourTargets::EffectSelect1 => profile.effects_mut(Preset::Preset1).colour_map_mut(),
+        ColourTargets::EffectSelect2 => profile.effects_mut(Preset::Preset2).colour_map_mut(),
+        ColourTargets::EffectSelect3 => profile.effects_mut(Preset::Preset3).colour_map_mut(),
+        ColourTargets::EffectSelect4 => profile.effects_mut(Preset::Preset4).colour_map_mut(),
+        ColourTargets::EffectSelect5 => profile.effects_mut(Preset::Preset5).colour_map_mut(),
+        ColourTargets::EffectSelect6 => profile.effects_mut(Preset::Preset6).colour_map_mut(),
+        ColourTargets::EffectFx => profile.simple_element_mut(SimpleElements::FxClear).colour_map_mut(),
+        ColourTargets::EffectMegaphone => profile.megaphone_effect_mut().colour_map_mut(),
+        ColourTargets::EffectRobot => profile.robot_effect_mut().colour_map_mut(),
+        ColourTargets::EffectHardTune => profile.hardtune_effect_mut().colour_map_mut(),
+        ColourTargets::SamplerSelectA => {
+            profile.simple_element_mut(SimpleElements::SampleBankA).colour_map_mut()
+        }
+        ColourTargets::SamplerSelectB => {
+            profile.simple_element_mut(SimpleElements::SampleBankB).colour_map_mut()
+        }
+        ColourTargets::SamplerSelectC => {
+            profile.simple_element_mut(SimpleElements::SampleBankC).colour_map_mut()
+        }
+        ColourTargets::SamplerTopLeft => profile.sample_button_mut(TopLeft).colour_map_mut(),
+        ColourTargets::SamplerTopRight => profile.sample_button_mut(TopRight).colour_map_mut(),
+        ColourTargets::SamplerBottomLeft => profile.sample_button_mut(BottomLeft).colour_map_mut(),
+        ColourTargets::SamplerBottomRight => profile.sample_button_mut(BottomRight).colour_map_mut(),
+        ColourTargets::SamplerClear => profile.sample_button_mut(Clear).colour_map_mut(),
+        ColourTargets::FadeMeter1 => profile.fader_mut(0).colour_map_mut(),
+        ColourTargets::FadeMeter2 => profile.fader_mut(1).colour_map_mut(),
+        ColourTargets::FadeMeter3 => profile.fader_mut(2).colour_map_mut(),
+        ColourTargets::FadeMeter4 => profile.fader_mut(3).colour_map_mut(),
+        ColourTargets::Scribble1 => profile.scribble_mut(0).colour_map_mut(),
+        ColourTargets::Scribble2 => profile.scribble_mut(1).colour_map_mut(),
+        ColourTargets::Scribble3 => profile.scribble_mut(2).colour_map_mut(),
+        ColourTargets::Scribble4 => profile.scribble_mut(3).colour_map_mut(),
+        ColourTargets::PitchEncoder => profile.pitch_encoder_mut().colour_map_mut(),
+        ColourTargets::GenderEncoder => profile.gender_encoder_mut().colour_map_mut(),
+        ColourTargets::ReverbEncoder => profile.reverb_encoder_mut().colour_map_mut(),
+        ColourTargets::EchoEncoder => profile.echo_encoder_mut().colour_map_mut(),
+        ColourTargets::LogoX => profile.simple_element_mut(SimpleElements::LogoX).colour_map_mut(),
+        ColourTargets::Global => profile.simple_element_mut(SimpleElements::GlobalColour).colour_map_mut(),
+    }
+}
+
+pub fn standard_to_colour_target(target: ButtonColourTargets) -> ColourTargets {
+    match target {
+        ButtonColourTargets::Fader1Mute => ColourTargets::Fader1Mute,
+        ButtonColourTargets::Fader2Mute => ColourTargets::Fader2Mute,
+        ButtonColourTargets::Fader3Mute => ColourTargets::Fader3Mute,
+        ButtonColourTargets::Fader4Mute => ColourTargets::Fader4Mute,
+        ButtonColourTargets::Bleep => ColourTargets::Bleep,
+        ButtonColourTargets::Cough => ColourTargets::MicrophoneMute,
+        ButtonColourTargets::EffectSelect1 => ColourTargets::EffectSelect1,
+        ButtonColourTargets::EffectSelect2 => ColourTargets::EffectSelect2,
+        ButtonColourTargets::EffectSelect3 => ColourTargets::EffectSelect3,
+        ButtonColourTargets::EffectSelect4 => ColourTargets::EffectSelect4,
+        ButtonColourTargets::EffectSelect5 => ColourTargets::EffectSelect5,
+        ButtonColourTargets::EffectSelect6 => ColourTargets::EffectSelect6,
+        ButtonColourTargets::EffectFx => ColourTargets::EffectFx,
+        ButtonColourTargets::EffectMegaphone => ColourTargets::EffectMegaphone,
+        ButtonColourTargets::EffectRobot => ColourTargets::EffectRobot,
+        ButtonColourTargets::EffectHardTune => ColourTargets::EffectHardTune,
+        ButtonColourTargets::SamplerSelectA => ColourTargets::SamplerSelectA,
+        ButtonColourTargets::SamplerSelectB => ColourTargets::SamplerSelectB,
+        ButtonColourTargets::SamplerSelectC => ColourTargets::SamplerSelectC,
+        ButtonColourTargets::SamplerTopLeft => ColourTargets::SamplerTopLeft,
+        ButtonColourTargets::SamplerTopRight => ColourTargets::SamplerTopRight,
+        ButtonColourTargets::SamplerBottomLeft => ColourTargets::SamplerBottomLeft,
+        ButtonColourTargets::SamplerBottomRight => ColourTargets::SamplerBottomRight,
+        ButtonColourTargets::SamplerClear => ColourTargets::SamplerClear
     }
 }
 

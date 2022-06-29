@@ -1,6 +1,6 @@
 use std::str::FromStr;
 use clap::{AppSettings, Args, Parser, Subcommand};
-use goxlr_types::{ChannelName, ColourDisplay, ColourOffStyle, FaderName, InputDevice, MuteFunction, OutputDevice};
+use goxlr_types::{ChannelName, FaderDisplayStyle, ButtonColourOffStyle, FaderName, InputDevice, MuteFunction, OutputDevice, ButtonColourTargets, ButtonColourGroups};
 
 // TODO: Likely going to shuffle this to use subcommands rather than parameters..
 
@@ -53,7 +53,7 @@ pub enum SubCommands {
     /// Profile Settings
     Profiles {
         #[clap(subcommand)]
-        command: Option<ProfileType>,
+        command: ProfileType,
     },
 
     /// Adjust Channel Volumes
@@ -64,31 +64,27 @@ pub enum SubCommands {
 
         /// The new volume as a percentage [0 - 100]
         #[clap(parse(try_from_str=parse_volume))]
-        volume_percent: Option<u8>
+        volume_percent: u8
+    },
+
+    /// Configure the Bleep Button
+    BleepVolume {
+        /// Set Bleep Button Volume
+        #[clap(parse(try_from_str=parse_volume))]
+        volume_percent: u8
     },
 
     /// Commands to manipulate the individual GoXLR Faders
     Faders {
         #[clap(subcommand)]
-        fader: Option<FaderCommands>
-    },
-
-    /// Commands to manipulate all GoXLR faders at once
-    FadersAll {
-        #[clap(subcommand)]
-        command: Option<AllFaderCommands>
+        fader: FaderCommands
     },
 
     /// Commands for configuring the cough button
-    Cough {
-        #[clap(subcommand)]
-        command: Option<CoughCommands>
-    },
-
-    /// Configure the Bleep Button
-    Bleep {
-        #[clap(subcommand)]
-        command: Option<BleepCommands>
+    CoughBehaviour {
+        /// Where a single press will mute (Hold will always Mute to All)
+        #[clap(arg_enum)]
+        mute_behaviour: MuteFunction
     },
 
     /// Commands to manipulate the GoXLR Router
@@ -103,8 +99,14 @@ pub enum SubCommands {
 
         /// Is routing enabled between these two devices? [true | false]
         #[clap(parse(try_from_str))]
-        enabled: Option<bool>
+        enabled: bool
     },
+
+    /// Commands to control the GoXLR lighting
+    Lighting {
+        #[clap(subcommand)]
+        command: LightingCommands
+    }
 }
 
 fn parse_volume(s: &str) -> Result<u8, String> {
@@ -172,7 +174,7 @@ pub enum FaderCommands {
 
         /// The New Channel Name
         #[clap(arg_enum)]
-        channel: Option<ChannelName>,
+        channel: ChannelName,
     },
 
     /// Change the behaviour of a Fader Mute Button
@@ -183,10 +185,51 @@ pub enum FaderCommands {
 
         /// Where a single press will mute (Hold will always Mute to All)
         #[clap(arg_enum)]
-        mute_behaviour: Option<MuteFunction>
+        mute_behaviour: MuteFunction
+    },
+}
+
+#[derive(Subcommand, Debug)]
+#[clap(setting = AppSettings::DeriveDisplayOrder)]
+#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+pub enum CoughCommands {
+    /// Change the behaviour of a Fader Mute Button
+    MuteBehaviour {
+        /// Where a single press will mute (Hold will always Mute to All)
+        #[clap(arg_enum)]
+        mute_behaviour: MuteFunction
+    },
+}
+
+#[derive(Subcommand, Debug)]
+#[clap(setting = AppSettings::DeriveDisplayOrder)]
+#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+pub enum LightingCommands {
+    Fader {
+        #[clap(subcommand)]
+        command: FaderLightingCommands
     },
 
-    /// Set the appearance of Slider Lighting
+    FadersAll {
+        #[clap(subcommand)]
+        command: FadersAllLightingCommands
+    },
+
+    Button {
+        #[clap(subcommand)]
+        command: ButtonLightingCommands
+    },
+
+    ButtonGroup {
+        #[clap(subcommand)]
+        command: ButtonGroupLightingCommands
+    }
+}
+
+#[derive(Subcommand, Debug)]
+#[clap(setting = AppSettings::DeriveDisplayOrder)]
+#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+pub enum FaderLightingCommands {
     Display {
         /// The Fader to Change
         #[clap(arg_enum)]
@@ -194,7 +237,7 @@ pub enum FaderCommands {
 
         /// The new display method
         #[clap(arg_enum)]
-        display: Option<ColourDisplay>
+        display: FaderDisplayStyle
     },
 
     /// Sets the Top and Bottom colours of a fader
@@ -209,69 +252,79 @@ pub enum FaderCommands {
         /// Bottom colour in hex format [RRGGBB]
         bottom: String
     },
+}
 
-    ButtonColour {
-        /// The Fader to Change
+#[derive(Subcommand, Debug)]
+#[clap(setting = AppSettings::DeriveDisplayOrder)]
+#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+pub enum FadersAllLightingCommands {
+    Display {
+        /// The new display method
         #[clap(arg_enum)]
-        fader: FaderName,
+        display: FaderDisplayStyle
+    },
 
-        /// The primary button colour [RRGGBB]
-        colour_one: String,
+    /// Sets the Top and Bottom colours of a fader
+    Colour {
+        /// Top colour in hex format [RRGGBB]
+        top: String,
 
-        /// How the button should be presented when 'off'
-        #[clap(arg_enum)]
-        off_style: ColourOffStyle,
-
-        /// The secondary button colour [RRGGBB]
-        colour_two: Option<String>,
+        /// Bottom colour in hex format [RRGGBB]
+        bottom: String
     },
 }
 
 #[derive(Subcommand, Debug)]
 #[clap(setting = AppSettings::DeriveDisplayOrder)]
 #[clap(setting = AppSettings::ArgRequiredElseHelp)]
-pub enum CoughCommands {
-    /// Change the behaviour of a Fader Mute Button
-    MuteBehaviour {
-        /// Where a single press will mute (Hold will always Mute to All)
-        #[clap(arg_enum)]
-        mute_behaviour: Option<MuteFunction>
-    },
-
+pub enum ButtonLightingCommands {
     Colour {
+        /// The Button to change
+        #[clap(arg_enum)]
+        button: ButtonColourTargets,
+
         /// The primary button colour [RRGGBB]
         colour_one: String,
 
-        /// How the button should be presented when 'off'
-        #[clap(arg_enum)]
-        off_style: ColourOffStyle,
-
         /// The secondary button colour [RRGGBB]
         colour_two: Option<String>,
+    },
+
+    OffStyle {
+        /// The Button to change
+        #[clap(arg_enum)]
+        button: ButtonColourTargets,
+
+        /// How the button should be presented when 'off'
+        #[clap(arg_enum)]
+        off_style: ButtonColourOffStyle,
     }
 }
 
 #[derive(Subcommand, Debug)]
 #[clap(setting = AppSettings::DeriveDisplayOrder)]
 #[clap(setting = AppSettings::ArgRequiredElseHelp)]
-pub enum BleepCommands {
-    /// Change the behaviour of the Swear Button
-    Volume {
-        /// Set Bleep Button Volume
-        #[clap(parse(try_from_str=parse_volume))]
-        volume_percent: Option<u8>
-    },
-
+pub enum ButtonGroupLightingCommands {
     Colour {
+        /// The group to change
+        #[clap(arg_enum)]
+        group: ButtonColourGroups,
+
         /// The primary button colour [RRGGBB]
         colour_one: String,
 
-        /// How the button should be presented when 'off'
-        #[clap(arg_enum)]
-        off_style: ColourOffStyle,
-
         /// The secondary button colour [RRGGBB]
         colour_two: Option<String>,
+    },
+
+    OffStyle {
+        /// The group to change
+        #[clap(arg_enum)]
+        group: ButtonColourGroups,
+
+        /// How the button should be presented when 'off'
+        #[clap(arg_enum)]
+        off_style: ButtonColourOffStyle,
     }
 }
 
@@ -283,7 +336,7 @@ pub enum AllFaderCommands {
     Display {
         /// The new display method
         #[clap(arg_enum)]
-        display: ColourDisplay
+        display: FaderDisplayStyle
     },
 
     /// Set the colour of all GoXLR Faders
@@ -302,7 +355,7 @@ pub enum AllFaderCommands {
 
         /// How the button should be presented when 'off'
         #[clap(arg_enum)]
-        off_style: ColourOffStyle,
+        off_style: ButtonColourOffStyle,
 
         /// The secondary button colour [RRGGBB]
         colour_two: Option<String>,

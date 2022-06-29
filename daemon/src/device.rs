@@ -749,39 +749,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 self.unmute_if_muted(fader).await?;
                 self.profile.set_mute_button_behaviour(fader, behaviour);
             }
-            GoXLRCommand::SetFaderDisplay(fader, display) => {
-                self.profile.set_fader_display(fader, display);
-                self.set_fader_display_from_profile(fader)?;
-            }
-            GoXLRCommand::SetFaderColours(fader, top, bottom) => {
-                // Need to get the fader colour map, and set values..
-                self.profile.set_fader_colours(fader, top, bottom)?;
-                self.load_colour_map()?;
-            },
-            GoXLRCommand::SetFaderButtonColours(fader, one, style, two) => {
-                self.profile.set_mute_button_off_style(fader, style);
-                self.profile.set_mute_button_colours(fader, one, two)?;
 
-                self.load_colour_map()?;
-                self.update_button_states()?;
-            },
-            GoXLRCommand::SetAllFaderColours(top, bottom) => {
-                // I considered this as part of SetFaderColours, but spamming a new colour map
-                // for every fader change seemed excessive, this allows us to set them all before
-                // reloading.
-                for fader in FaderName::iter() {
-                    self.profile.set_fader_colours(fader, top.to_owned(), bottom.to_owned())?;
-                }
-                self.load_colour_map()?;
-            }
-            GoXLRCommand::SetAllFaderButtonColours(one, style, two) => {
-                for fader in FaderName::iter() {
-                    self.profile.set_mute_button_off_style(fader, style);
-                    self.profile.set_mute_button_colours(fader,one.to_owned(), two.to_owned())?;
-                }
-                self.load_colour_map()?;
-                self.update_button_states()?;
-            }
             GoXLRCommand::SetVolume(channel, volume) => {
                 self.profile.set_channel_volume(channel, volume);
                 self.goxlr.set_volume(channel, volume)?;
@@ -797,12 +765,6 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 self.unmute_chat_if_muted().await?;
                 self.profile.set_chat_mute_button_behaviour(mute_function);
             }
-            GoXLRCommand::SetCoughColourConfiguration(colour_one, off_style, colour_two) => {
-                self.profile.set_mute_chat_off_style(off_style);
-                self.profile.set_mute_chat_colours(colour_one, colour_two)?;
-                self.load_colour_map()?;
-                self.update_button_states()?;
-            }
             GoXLRCommand::SetSwearButtonVolume(volume) => {
                 if volume < -34 || volume > 0 {
                     return Err(anyhow!("Mute volume must be between -34 and 0"));
@@ -816,13 +778,6 @@ impl<'a, T: UsbContext> Device<'a, T> {
                     (EffectKey::BleepLevel, volume as i32),
                 ])?;
             }
-            GoXLRCommand::SetSwearButtonColourConfiguration(colour_one, off_style, colour_two) => {
-                self.profile.set_swear_off_style(off_style);
-                self.profile.set_swear_colours(colour_one, colour_two)?;
-                self.load_colour_map()?;
-                self.update_button_states()?;
-            }
-
             GoXLRCommand::SetMicrophoneGain(mic_type, gain) => {
                 self.goxlr.set_microphone_gain(mic_type, gain.into())?;
                 self.mic_profile.set_mic_type(mic_type);
@@ -926,13 +881,63 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 self.apply_mic_params(HashSet::from([MicrophoneParamKey::CompressorRelease]))?;
                 self.apply_effects(HashSet::from([EffectKey::CompressorRelease]))?;
             }
-            GoXLRCommand::SetCompressorMakupGain(value) => {
+            GoXLRCommand::SetCompressorMakeupGain(value) => {
                 if value > 24 {
                     return Err(anyhow!("Makeup Gain should be between 0 and 24dB"));
                 }
                 self.mic_profile.set_compressor_makeup(value);
                 self.apply_mic_params(HashSet::from([MicrophoneParamKey::CompressorMakeUpGain]))?;
                 self.apply_effects(HashSet::from([EffectKey::CompressorMakeUpGain]))?;
+            }
+
+            // Colouring..
+            GoXLRCommand::SetFaderDisplayStyle(fader, display) => {
+                self.profile.set_fader_display(fader, display);
+                self.set_fader_display_from_profile(fader)?;
+            }
+            GoXLRCommand::SetFaderColours(fader, top, bottom) => {
+                // Need to get the fader colour map, and set values..
+                self.profile.set_fader_colours(fader, top, bottom)?;
+                self.load_colour_map()?;
+            },
+            GoXLRCommand::SetAllFaderColours(top, bottom) => {
+                // I considered this as part of SetFaderColours, but spamming a new colour map
+                // for every fader change seemed excessive, this allows us to set them all before
+                // reloading.
+                for fader in FaderName::iter() {
+                    self.profile.set_fader_colours(fader, top.to_owned(), bottom.to_owned())?;
+                }
+                self.load_colour_map()?;
+            },
+            GoXLRCommand::SetAllFaderDisplayStyle(display_style) => {
+                for fader in FaderName::iter() {
+                    self.profile.set_fader_display(fader, display_style);
+                }
+                self.load_colour_map()?;
+            }
+            GoXLRCommand::SetButtonColours(target, colour, colour2) => {
+                self.profile.set_button_colours(target, colour, colour2.as_ref())?;
+
+                // Reload the colour map and button states..
+                self.load_colour_map()?;
+                self.update_button_states()?;
+            }
+            GoXLRCommand::SetButtonOffStyle(target, off_style) => {
+                self.profile.set_button_off_style(target, off_style);
+
+                self.load_colour_map()?;
+                self.update_button_states()?;
+            }
+            GoXLRCommand::SetButtonGroupColours(target, colour, colour_2) => {
+                self.profile.set_group_button_colours(target, colour, colour_2)?;
+
+                self.load_colour_map()?;
+                self.update_button_states()?;
+            }
+            GoXLRCommand::SetButtonGroupOffStyle(target, off_style) => {
+                self.profile.set_group_button_off_style(target, off_style);
+                self.load_colour_map()?;
+                self.update_button_states()?;
             }
 
             // Profiles

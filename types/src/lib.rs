@@ -256,7 +256,7 @@ pub enum MicrophoneParamKey {
 #[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq)]
 #[cfg_attr(feature = "clap", derive(clap::ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub enum ColourDisplay {
+pub enum FaderDisplayStyle {
     TwoColour,
     Gradient,
     Meter,
@@ -264,12 +264,74 @@ pub enum ColourDisplay {
 }
 
 #[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum ButtonColourTargets {
+    // These are all the buttons from the GoXLR Mini.
+    Fader1Mute,
+    Fader2Mute,
+    Fader3Mute,
+    Fader4Mute,
+    Bleep,
+    Cough,
+
+    // The rest are GoXLR Full Buttons. On the mini, they will simply be ignored.
+    EffectSelect1,
+    EffectSelect2,
+    EffectSelect3,
+    EffectSelect4,
+    EffectSelect5,
+    EffectSelect6,
+
+    // FX Button labelled as 'fxClear' in config?
+    EffectFx,
+    EffectMegaphone,
+    EffectRobot,
+    EffectHardTune,
+
+    SamplerSelectA,
+    SamplerSelectB,
+    SamplerSelectC,
+
+    SamplerTopLeft,
+    SamplerTopRight,
+    SamplerBottomLeft,
+    SamplerBottomRight,
+    SamplerClear,
+}
+
+#[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum ButtonColourGroups {
+    FaderMute,
+    EffectSelector,
+    SampleBankSelector,
+    SamplerButtons
+}
+
+#[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq)]
 #[cfg_attr(feature = "clap", derive(clap::ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub enum ColourOffStyle {
+pub enum ButtonColourOffStyle {
     Dimmed,
     Colour2,
     DimmedColour2,
+}
+
+pub enum SimpleColourTargets {
+    Global,
+    Scribble1,
+    Scribble2,
+    Scribble3,
+    Scribble4
+}
+
+pub enum EncoderColourTargets {
+    Reverb,
+    Pitch,
+    Echo,
+    Gender
 }
 
 // MuteChat

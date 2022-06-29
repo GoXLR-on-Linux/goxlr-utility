@@ -6,7 +6,7 @@ mod socket;
 pub mod client;
 
 pub use device::*;
-use goxlr_types::{ChannelName, ColourDisplay, ColourOffStyle, CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EqFrequencies, EqGains, FaderName, GateTimes, InputDevice, MicrophoneType, MiniEqFrequencies, MiniEqGains, MuteFunction, OutputDevice};
+use goxlr_types::{ChannelName, FaderDisplayStyle, ButtonColourOffStyle, CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EqFrequencies, EqGains, FaderName, GateTimes, InputDevice, MicrophoneType, MiniEqFrequencies, MiniEqGains, MuteFunction, OutputDevice, ButtonColourTargets, ButtonColourGroups};
 pub use socket::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -27,11 +27,6 @@ pub enum DaemonResponse {
 pub enum GoXLRCommand {
     SetFader(FaderName, ChannelName),
     SetFaderMuteFunction(FaderName, MuteFunction),
-    SetFaderDisplay(FaderName, ColourDisplay),
-    SetFaderColours(FaderName, String, String),
-    SetFaderButtonColours(FaderName, String, ColourOffStyle, Option<String>),
-    SetAllFaderColours(String, String),
-    SetAllFaderButtonColours(String, ColourOffStyle, Option<String>),
 
     SetVolume(ChannelName, u8),
     SetMicrophoneGain(MicrophoneType, u16),
@@ -39,11 +34,9 @@ pub enum GoXLRCommand {
 
     // Cough Button
     SetCoughMuteFunction(MuteFunction),
-    SetCoughColourConfiguration(String, ColourOffStyle, Option<String>),
 
     // Bleep Button
     SetSwearButtonVolume(i8),
-    SetSwearButtonColourConfiguration(String, ColourOffStyle, Option<String>),
 
     // EQ Settings
     SetEqMiniGain(MiniEqGains, i8),
@@ -63,7 +56,18 @@ pub enum GoXLRCommand {
     SetCompressorRatio(CompressorRatio),
     SetCompressorAttack(CompressorAttackTime),
     SetCompressorReleaseTime(CompressorReleaseTime),
-    SetCompressorMakupGain(u8),
+    SetCompressorMakeupGain(u8),
+
+    // Colour Related Settings..
+    SetFaderDisplayStyle(FaderName, FaderDisplayStyle),
+    SetFaderColours(FaderName, String, String),
+    SetAllFaderColours(String, String),
+    SetAllFaderDisplayStyle(FaderDisplayStyle),
+
+    SetButtonColours(ButtonColourTargets, String, Option<String>),
+    SetButtonOffStyle(ButtonColourTargets, ButtonColourOffStyle),
+    SetButtonGroupColours(ButtonColourGroups, String, Option<String>),
+    SetButtonGroupOffStyle(ButtonColourGroups, ButtonColourOffStyle),
 
     // Profile Handling..
     LoadProfile(String),

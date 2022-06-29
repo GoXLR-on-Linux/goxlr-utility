@@ -617,6 +617,9 @@ impl ProfileSettings {
         &self.scribbles[index]
     }
 
+    pub fn scribble_mut(&mut self, index: usize) -> &mut Scribble {
+        &mut self.scribbles[index]
+    }
 
     pub fn effects(&self, effect: Preset) -> &Effects {
         &self.effects[effect].as_ref().unwrap()
