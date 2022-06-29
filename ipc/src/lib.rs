@@ -6,7 +6,7 @@ mod socket;
 pub mod client;
 
 pub use device::*;
-use goxlr_types::{ChannelName, FaderDisplayStyle, ButtonColourOffStyle, CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EqFrequencies, EqGains, FaderName, GateTimes, InputDevice, MicrophoneType, MiniEqFrequencies, MiniEqGains, MuteFunction, OutputDevice, ButtonColourTargets, ButtonColourGroups};
+use goxlr_types::{ChannelName, FaderDisplayStyle, ButtonColourOffStyle, CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EqFrequencies, FaderName, GateTimes, InputDevice, MicrophoneType, MiniEqFrequencies, MuteFunction, OutputDevice, ButtonColourTargets, ButtonColourGroups};
 pub use socket::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -39,9 +39,9 @@ pub enum GoXLRCommand {
     SetSwearButtonVolume(i8),
 
     // EQ Settings
-    SetEqMiniGain(MiniEqGains, i8),
+    SetEqMiniGain(MiniEqFrequencies, i8),
     SetEqMiniFreq(MiniEqFrequencies, f32),
-    SetEqGain(EqGains, i8),
+    SetEqGain(EqFrequencies, i8),
     SetEqFreq(EqFrequencies, f32),
 
     // Gate Settings

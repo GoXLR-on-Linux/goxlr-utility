@@ -389,57 +389,29 @@ pub enum SampleBank {
 #[derive(Debug, Copy, Clone, Display, PartialEq)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub enum MiniEqGains {
-    Equalizer90HzGain,
-    Equalizer250HzGain,
-    Equalizer500HzGain,
-    Equalizer1KHzGain,
-    Equalizer3KHzGain,
-    Equalizer8KHzGain,
-}
-
-#[derive(Debug, Copy, Clone, Display, PartialEq)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum MiniEqFrequencies {
-    Equalizer90HzFrequency,
-    Equalizer250HzFrequency,
-    Equalizer500HzFrequency,
-    Equalizer1KHzFrequency,
-    Equalizer3KHzFrequency,
-    Equalizer8KHzFrequency,
-}
-
-#[derive(Debug, Copy, Clone, Display, PartialEq)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub enum EqGains {
-    Equalizer31HzGain,
-    Equalizer63HzGain,
-    Equalizer125HzGain,
-    Equalizer250HzGain,
-    Equalizer500HzGain,
-    Equalizer1KHzGain,
-    Equalizer2KHzGain,
-    Equalizer4KHzGain,
-    Equalizer8KHzGain,
-    Equalizer16KHzGain,
+    Equalizer90Hz,
+    Equalizer250Hz,
+    Equalizer500Hz,
+    Equalizer1KHz,
+    Equalizer3KHz,
+    Equalizer8KHz,
 }
 
 #[derive(Debug, Copy, Clone, Display, PartialEq)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum EqFrequencies {
-    Equalizer31HzFrequency,
-    Equalizer63HzFrequency,
-    Equalizer125HzFrequency,
-    Equalizer250HzFrequency,
-    Equalizer500HzFrequency,
-    Equalizer1KHzFrequency,
-    Equalizer2KHzFrequency,
-    Equalizer4KHzFrequency,
-    Equalizer8KHzFrequency,
-    Equalizer16KHzFrequency,
+    Equalizer31Hz,
+    Equalizer63Hz,
+    Equalizer125Hz,
+    Equalizer250Hz,
+    Equalizer500Hz,
+    Equalizer1KHz,
+    Equalizer2KHz,
+    Equalizer4KHz,
+    Equalizer8KHz,
+    Equalizer16KHz,
 }
 
 /*

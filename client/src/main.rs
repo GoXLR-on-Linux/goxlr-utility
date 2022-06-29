@@ -11,7 +11,7 @@ use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDev
 use strum::IntoEnumIterator;
 use tokio::net::UnixStream;
 use goxlr_ipc::client::Client;
-use crate::cli::{ButtonGroupLightingCommands, ButtonLightingCommands, FaderCommands, FaderLightingCommands, FadersAllLightingCommands, LightingCommands, ProfileAction, ProfileType, SubCommands};
+use crate::cli::{ButtonGroupLightingCommands, ButtonLightingCommands, CompressorCommands, EqualiserCommands, EqualiserMiniCommands, FaderCommands, FaderLightingCommands, FadersAllLightingCommands, LightingCommands, MicrophoneCommands, NoiseGateCommands, ProfileAction, ProfileType, SubCommands};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -63,6 +63,100 @@ async fn main() -> Result<()> {
         None => {},
         Some(command)=> {
             match command {
+                SubCommands::Microphone { command } => {
+                    match command {
+                        MicrophoneCommands::Equaliser { command } => {
+                            match command {
+                                EqualiserCommands::Frequency { frequency, value } => {
+                                    client.command(&serial, GoXLRCommand::SetEqFreq(
+                                        *frequency,
+                                        *value
+                                    )).await?;
+                                }
+                                EqualiserCommands::Gain { frequency, gain } => {
+                                    client.command(&serial, GoXLRCommand::SetEqGain(
+                                        *frequency,
+                                        *gain
+                                    )).await?;
+                                }
+                            }
+                        }
+                        MicrophoneCommands::EqualiserMini { command } => {
+                            match command {
+                                EqualiserMiniCommands::Frequency { frequency, value } => {
+                                    client.command(&serial, GoXLRCommand::SetEqMiniFreq(
+                                        *frequency,
+                                        *value
+                                    )).await?;
+                                }
+                                EqualiserMiniCommands::Gain { frequency, gain } => {
+                                    client.command(&serial, GoXLRCommand::SetEqMiniGain(
+                                        *frequency,
+                                        *gain
+                                    )).await?;
+                                }
+                            }
+                        }
+                        MicrophoneCommands::NoiseGate { command } => {
+                            match command {
+                                NoiseGateCommands::Threshold { value } => {
+                                    client.command(&serial, GoXLRCommand::SetGateThreshold(
+                                        *value
+                                    )).await?;
+                                }
+                                NoiseGateCommands::Attenuation { value } => {
+                                    client.command(&serial, GoXLRCommand::SetGateAttenuation(
+                                        *value
+                                    )).await?;
+                                }
+                                NoiseGateCommands::Attack { value } => {
+                                    client.command(&serial, GoXLRCommand::SetGateAttack(
+                                        *value
+                                    )).await?;
+                                }
+                                NoiseGateCommands::Release { value } => {
+                                    client.command(&serial, GoXLRCommand::SetGateRelease(
+                                        *value
+                                    )).await?;
+                                }
+                                NoiseGateCommands::Active { enabled } => {
+                                    client.command(&serial, GoXLRCommand::SetGateActive(
+                                        *enabled
+                                    )).await?;
+                                }
+                            }
+                        }
+                        MicrophoneCommands::Compressor { command } => {
+                            match command {
+                                CompressorCommands::Threshold { value } => {
+                                    client.command(&serial, GoXLRCommand::SetCompressorThreshold(
+                                        *value
+                                    )).await?;
+                                }
+                                CompressorCommands::Ratio { value } => {
+                                    client.command(&serial, GoXLRCommand::SetCompressorRatio(
+                                        *value
+                                    )).await?;
+                                }
+                                CompressorCommands::Attack { value } => {
+                                    client.command(&serial, GoXLRCommand::SetCompressorAttack(
+                                        *value
+                                    )).await?;
+                                }
+                                CompressorCommands::Release { value } => {
+                                    client.command(&serial, GoXLRCommand::SetCompressorReleaseTime(
+                                        *value
+                                    )).await?;
+                                }
+                                CompressorCommands::MakeUp { value } => {
+                                    client.command(&serial, GoXLRCommand::SetCompressorMakeupGain(
+                                        *value
+                                    )).await?;
+                                }
+                            }
+                        }
+                    }
+                }
                 SubCommands::Faders { fader } => {
                     match fader {
                         FaderCommands::Channel { fader, channel } => {
