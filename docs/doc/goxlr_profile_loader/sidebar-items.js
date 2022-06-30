@@ -1,1 +1,0 @@
-initSidebarItems({"enum":[["SampleButtons",""]],"mod":[["components",""],["error",""],["mic_profile",""],["microphone",""],["profile",""]],"struct":[["SampleButtonsIter",""]]});

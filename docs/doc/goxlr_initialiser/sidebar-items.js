@@ -1,1 +1,0 @@
-initSidebarItems({"constant":[["PID_GOXLR_FULL",""],["PID_GOXLR_MINI",""],["VID_GOXLR",""]],"fn":[["find_devices",""],["main",""]]});

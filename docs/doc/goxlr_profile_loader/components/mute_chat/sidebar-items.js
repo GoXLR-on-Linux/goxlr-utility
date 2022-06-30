@@ -1,1 +1,0 @@
-initSidebarItems({"enum":[["CoughToggle",""],["ParseError",""]],"struct":[["MuteChat","These have no special properties, they are literally just button colours.."]]});

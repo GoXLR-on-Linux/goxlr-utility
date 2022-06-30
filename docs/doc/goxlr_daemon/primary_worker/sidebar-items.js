@@ -1,1 +1,0 @@
-initSidebarItems({"enum":[["DeviceCommand",""]],"fn":[["find_new_device",""],["handle_changes",""],["load_device",""]],"type":[["DeviceReceiver",""],["DeviceSender",""]]});

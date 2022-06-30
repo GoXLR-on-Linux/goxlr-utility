@@ -1,1 +1,0 @@
-initSidebarItems({"mod":[["compressor",""],["equalizer",""],["equalizer_mini",""],["gate",""],["mic_setup",""],["ui_setup",""]]});

@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["await_ctrl_c",""],["create_listener",""],["is_already_running",""],["main",""]],"mod":[["audio",""],["communication",""],["device",""],["primary_worker",""],["profile",""],["settings",""],["shutdown",""]]});

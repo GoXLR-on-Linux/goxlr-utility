@@ -1,1 +1,0 @@
-initSidebarItems({"mod":[["browser",""],["colours",""],["context",""],["echo",""],["effects",""],["fader",""],["gender",""],["hardtune",""],["megaphone",""],["mixer",""],["mute",""],["mute_chat",""],["pitch",""],["reverb",""],["robot",""],["root",""],["sample",""],["scribble",""],["simple",""]]});

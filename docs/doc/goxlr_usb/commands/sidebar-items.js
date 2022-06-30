@@ -1,1 +1,0 @@
-initSidebarItems({"enum":[["Command",""],["HardwareInfoCommand",""],["SystemInfoCommand",""]]});

@@ -1,1 +1,0 @@
-initSidebarItems({"mod":[["buttonstate",""],["channelstate",""],["colouring",""],["commands",""],["dcp",""],["error",""],["goxlr",""],["microphone",""],["routing",""]]});

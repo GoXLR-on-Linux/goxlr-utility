@@ -1,1 +1,0 @@
-initSidebarItems({"enum":[["AllFaderCommands",""],["ButtonGroupLightingCommands",""],["ButtonLightingCommands",""],["CoughCommands",""],["FaderCommands",""],["FaderLightingCommands",""],["FadersAllLightingCommands",""],["LightingCommands",""],["ProfileAction",""],["ProfileType",""],["SubCommands",""]],"fn":[["parse_volume",""]],"struct":[["Cli",""],["MicrophoneControls",""]]});
