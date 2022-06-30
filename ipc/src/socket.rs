@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::io::Error;
 use tokio::net::unix::{OwnedReadHalf, OwnedWriteHalf, SocketAddr};
 use tokio::net::UnixStream;
-use tokio_serde::formats::SymmetricalBincode;
+use tokio_serde::formats::{SymmetricalJson};
 use tokio_serde::SymmetricallyFramed;
 use tokio_util::codec::{FramedRead, FramedWrite, LengthDelimitedCodec};
 
@@ -13,12 +13,12 @@ pub struct Socket<In, Out> {
     reader: SymmetricallyFramed<
         FramedRead<OwnedReadHalf, LengthDelimitedCodec>,
         In,
-        SymmetricalBincode<In>,
+        SymmetricalJson<In>,
     >,
     writer: SymmetricallyFramed<
         FramedWrite<OwnedWriteHalf, LengthDelimitedCodec>,
         Out,
-        SymmetricalBincode<Out>,
+        SymmetricalJson<Out>,
     >,
 }
 
@@ -32,12 +32,12 @@ where
         let length_delimited_read = FramedRead::new(stream_read, LengthDelimitedCodec::new());
         let reader = tokio_serde::SymmetricallyFramed::new(
             length_delimited_read,
-            SymmetricalBincode::default(),
+            SymmetricalJson::default(),
         );
         let length_delimited_write = FramedWrite::new(stream_write, LengthDelimitedCodec::new());
         let writer = tokio_serde::SymmetricallyFramed::new(
             length_delimited_write,
-            SymmetricalBincode::default(),
+            SymmetricalJson::default(),
         );
 
         Self {
