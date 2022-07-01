@@ -20,6 +20,7 @@ anyhow = "1.0"
 clap = { version = "3.0.0", features = ["derive"] }
 strum = { version = "0.23"}
 serde_json = { version = "1.0" }
+tokio-serde = { version = "0.8.0", features=["json"]}
 
 [build-dependencies]
 clap = { version = "3.0.0", features = ["derive"] }
