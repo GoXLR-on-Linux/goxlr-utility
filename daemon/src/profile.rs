@@ -17,7 +17,7 @@ use strum::IntoEnumIterator;
 use byteorder::{ByteOrder, LittleEndian};
 use enum_map::EnumMap;
 use futures::executor::block_on;
-use goxlr_ipc::{Compressor, Equaliser, EqualiserFrequency, EqualiserGain, EqualiserMini, EqualiserMiniFrequency, EqualiserMiniGain, NoiseGate};
+use goxlr_ipc::{Compressor, CoughButton, Equaliser, EqualiserFrequency, EqualiserGain, EqualiserMini, EqualiserMiniFrequency, EqualiserMiniGain, NoiseGate};
 use goxlr_profile_loader::components::echo::EchoEncoder;
 use goxlr_profile_loader::components::gender::GenderEncoder;
 use goxlr_profile_loader::components::hardtune::{HardtuneEffect, HardtuneSource};
@@ -416,6 +416,15 @@ impl ProfileAdapter {
             ColourOffStyle::Dimmed => ButtonStates::DimmedColour1,
             ColourOffStyle::Colour2 => ButtonStates::Colour2,
             ColourOffStyle::DimmedColour2 => ButtonStates::DimmedColour2
+        }
+    }
+
+    pub fn get_cough_status(&self) -> CoughButton {
+        CoughButton {
+            is_toggle: self.profile.settings().mute_chat().is_cough_toggle(),
+            mute_type: profile_to_standard_mute_function(
+                self.profile.settings().mute_chat().cough_mute_source().clone()
+            )
         }
     }
 

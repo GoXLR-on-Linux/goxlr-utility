@@ -92,6 +92,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
         MixerStatus {
             hardware: self.hardware.clone(),
             fader_status: fader_map,
+            cough_button: self.profile.get_cough_status(),
             volumes: self.profile.get_volumes(),
             router: self.profile.create_router(),
             router_table: self.profile.create_router_table(),

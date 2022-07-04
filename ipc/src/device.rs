@@ -19,6 +19,7 @@ pub struct MixerStatus {
     pub volumes: [u8; ChannelName::COUNT],
     pub router: [EnumSet<OutputDevice>; InputDevice::COUNT],
     pub router_table: [[bool; OutputDevice::COUNT]; InputDevice::COUNT],
+    pub cough_button: CoughButton,
     pub profile_name: String,
     pub mic_profile_name: String,
 }
@@ -49,6 +50,12 @@ pub struct HardwareStatus {
 #[derive(Debug, Clone, Serialize, Deserialize, Copy)]
 pub struct FaderStatus {
     pub channel: ChannelName,
+    pub mute_type: MuteFunction
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Copy)]
+pub struct CoughButton {
+    pub is_toggle: bool,
     pub mute_type: MuteFunction
 }
 
