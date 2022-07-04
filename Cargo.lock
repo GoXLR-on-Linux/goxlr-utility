@@ -427,6 +427,7 @@ dependencies = [
  "simplelog",
  "strum",
  "tokio",
+ "tokio-serde",
 ]
 
 [[package]]
@@ -449,6 +450,7 @@ dependencies = [
  "simplelog",
  "strum",
  "tokio",
+ "tokio-serde",
 ]
 
 [[package]]
@@ -1079,6 +1081,7 @@ dependencies = [
  "futures-sink",
  "pin-project",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
