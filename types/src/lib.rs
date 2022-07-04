@@ -4,6 +4,7 @@ use clap::ArgEnum;
 use enumset::EnumSetType;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+use serde_repr::{Serialize_repr, Deserialize_repr};
 use std::fmt::Formatter;
 use strum::{Display, EnumCount, EnumIter};
 use enum_map::Enum;
@@ -427,7 +428,8 @@ These enums are essentially the same maps, and use 'as usize' and strum::iter().
 
 #[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize_repr, Deserialize_repr))]
+#[repr(u8)]
 pub enum CompressorRatio {
     Ratio1_0, Ratio1_1, Ratio1_2, Ratio1_4,  Ratio1_6,  Ratio1_8, Ratio2_0, Ratio2_5, Ratio3_2,
     Ratio4_0, Ratio5_6, Ratio8_0, Ratio16_0, Ratio32_0, Ratio64_0
@@ -435,7 +437,8 @@ pub enum CompressorRatio {
 
 #[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize_repr, Deserialize_repr))]
+#[repr(u8)]
 pub enum GateTimes {
     Gate10ms,   Gate20ms,   Gate30ms,   Gate40ms,   Gate50ms,   Gate60ms,   Gate70ms,   Gate80ms,
     Gate90ms,   Gate100ms,  Gate110ms,  Gate120ms,  Gate130ms,  Gate140ms,  Gate150ms,  Gate160ms,
@@ -447,7 +450,8 @@ pub enum GateTimes {
 
 #[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize_repr, Deserialize_repr))]
+#[repr(u8)]
 pub enum CompressorAttackTime {
     // Note: 0ms is technically 0.001ms
     Comp0ms,  Comp2ms,  Comp3ms,  Comp4ms,  Comp5ms,  Comp6ms,  Comp7ms,  Comp8ms,  Comp9ms,
@@ -457,7 +461,8 @@ pub enum CompressorAttackTime {
 
 #[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize_repr, Deserialize_repr))]
+#[repr(u8)]
 pub enum CompressorReleaseTime {
     // Note: 0 is technically 15 :)
     Comp0ms,    Comp15ms,   Comp25ms,   Comp35ms,  Comp45ms,  Comp55ms,  Comp65ms,  Comp75ms,
