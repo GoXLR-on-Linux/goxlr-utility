@@ -23,7 +23,7 @@ use goxlr_profile_loader::components::gender::GenderEncoder;
 use goxlr_profile_loader::components::hardtune::{HardtuneEffect, HardtuneSource};
 use goxlr_profile_loader::components::megaphone::{MegaphoneEffect, Preset};
 use goxlr_profile_loader::components::mute::{MuteButton, MuteFunction};
-use goxlr_profile_loader::components::mute_chat::MuteChat;
+use goxlr_profile_loader::components::mute_chat::{CoughToggle, MuteChat};
 use goxlr_profile_loader::components::pitch::{PitchEncoder, PitchStyle};
 use goxlr_profile_loader::components::reverb::ReverbEncoder;
 use goxlr_profile_loader::components::robot::RobotEffect;
@@ -374,6 +374,16 @@ impl ProfileAdapter {
         let mute_config = self.get_chat_mute_button_mut();
         mute_config.set_cough_mute_source(standard_to_profile_mute_function(behaviour));
     }
+
+    pub fn set_chat_mute_button_is_held(&mut self, is_hold: bool) {
+        let mute_config = self.get_chat_mute_button_mut();
+        if is_hold {
+            mute_config.set_cough_behaviour(CoughToggle::Hold);
+        } else {
+            mute_config.set_cough_behaviour(CoughToggle::Toggle);
+        }
+    }
+
 
     pub fn get_mute_chat_button_state(&self) -> (bool, bool, bool, MuteFunction) {
         let mute_config = self.profile.settings().mute_chat();

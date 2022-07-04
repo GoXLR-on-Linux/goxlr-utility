@@ -11,7 +11,7 @@ use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDev
 use strum::IntoEnumIterator;
 use tokio::net::UnixStream;
 use goxlr_ipc::client::Client;
-use crate::cli::{ButtonGroupLightingCommands, ButtonLightingCommands, CompressorCommands, EqualiserCommands, EqualiserMiniCommands, FaderCommands, FaderLightingCommands, FadersAllLightingCommands, LightingCommands, MicrophoneCommands, NoiseGateCommands, ProfileAction, ProfileType, SubCommands};
+use crate::cli::{ButtonGroupLightingCommands, ButtonLightingCommands, CompressorCommands, CoughButtonBehaviours, EqualiserCommands, EqualiserMiniCommands, FaderCommands, FaderLightingCommands, FadersAllLightingCommands, LightingCommands, MicrophoneCommands, NoiseGateCommands, ProfileAction, ProfileType, SubCommands};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -188,10 +188,19 @@ async fn main() -> Result<()> {
                         value as u8
                     )).await?;
                 }
-                SubCommands::CoughBehaviour { mute_behaviour } => {
-                    client.command(&serial, GoXLRCommand::SetCoughMuteFunction(
-                        *mute_behaviour
-                    )).await?;
+                SubCommands::CoughButton { command } => {
+                    match command {
+                        CoughButtonBehaviours::ButtonIsHold { is_hold } => {
+                            client.command(&serial, GoXLRCommand::SetCoughIsHold(
+                                *is_hold
+                            )).await?;
+                        }
+                        CoughButtonBehaviours::MuteBehaviour { mute_behaviour } => {
+                            client.command(&serial, GoXLRCommand::SetCoughMuteFunction(
+                                *mute_behaviour
+                            )).await?;
+                        }
+                    }
                 }
                 SubCommands::BleepVolume { volume_percent } => {
                     // Ok, this is a value between -37 and 0, with 0 being loudest :D

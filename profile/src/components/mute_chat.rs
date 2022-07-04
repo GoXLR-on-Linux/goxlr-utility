@@ -168,6 +168,7 @@ impl MuteChat {
     pub fn cough_behaviour(&self) -> &CoughToggle {
         &self.cough_behaviour
     }
+
     pub fn cough_mute_source(&self) -> &MuteFunction {
         &self.cough_mute_source
     }
@@ -201,6 +202,10 @@ impl MuteChat {
 
     pub fn set_mic_fader_id(&mut self, mic_fader_id: u8) {
         self.mic_fader_id = mic_fader_id;
+    }
+
+    pub fn set_cough_behaviour(&mut self, cough_behaviour: CoughToggle) {
+        self.cough_behaviour = cough_behaviour;
     }
 }
 

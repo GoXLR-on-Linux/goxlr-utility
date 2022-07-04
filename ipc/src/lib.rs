@@ -34,6 +34,7 @@ pub enum GoXLRCommand {
 
     // Cough Button
     SetCoughMuteFunction(MuteFunction),
+    SetCoughIsHold(bool),
 
     // Bleep Button
     SetSwearButtonVolume(i8),

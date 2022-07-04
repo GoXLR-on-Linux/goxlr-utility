@@ -87,10 +87,9 @@ pub enum SubCommands {
     },
 
     /// Commands for configuring the cough button
-    CoughBehaviour {
-        /// Where a single press will mute (Hold will always Mute to All)
-        #[clap(arg_enum)]
-        mute_behaviour: MuteFunction
+    CoughButton {
+        #[clap(subcommand)]
+        command: CoughButtonBehaviours,
     },
 
     /// Commands to manipulate the GoXLR Router
@@ -126,6 +125,22 @@ fn percent_value(s: &str) -> Result<u8, String> {
         return Err(String::from("Value must be lower than 100"));
     }
     Ok(value)
+}
+
+#[derive(Subcommand, Debug)]
+#[clap(setting = AppSettings::DeriveDisplayOrder)]
+#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+pub enum CoughButtonBehaviours {
+    ButtonIsHold {
+        #[clap(parse(try_from_str))]
+        is_hold: bool
+    },
+
+    MuteBehaviour {
+        /// Where a single press will mute (Hold will always Mute to All)
+        #[clap(arg_enum)]
+        mute_behaviour: MuteFunction
+    }
 }
 
 #[derive(Subcommand, Debug)]

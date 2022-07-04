@@ -766,6 +766,10 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 self.unmute_chat_if_muted().await?;
                 self.profile.set_chat_mute_button_behaviour(mute_function);
             }
+            GoXLRCommand::SetCoughIsHold(is_hold) => {
+                self.unmute_chat_if_muted().await?;
+                self.profile.set_chat_mute_button_is_held(is_hold);
+            }
             GoXLRCommand::SetSwearButtonVolume(volume) => {
                 if volume < -34 || volume > 0 {
                     return Err(anyhow!("Mute volume must be between -34 and 0"));
