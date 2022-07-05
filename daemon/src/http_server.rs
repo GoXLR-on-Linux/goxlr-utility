@@ -1,12 +1,14 @@
-use std::future::Future;
 use std::ops::DerefMut;
+use std::path::PathBuf;
 
 use anyhow::{anyhow, Context, Result};
 use futures::lock::Mutex;
+use include_dir::{Dir, include_dir};
 use log::{debug, warn};
 use rocket::{Ignite, Rocket, routes, State};
 use rocket::{get, post};
-use rocket::http::Status;
+use rocket::fs::{FileServer, NamedFile};
+use rocket::http::{ContentType, Status};
 use strum::IntoEnumIterator;
 use tokio::net::UnixStream;
 
@@ -17,8 +19,9 @@ use goxlr_types::{ChannelName, CompressorAttackTime, CompressorRatio, Compressor
 use crate::communication::handle_packet;
 use crate::primary_worker::DeviceSender;
 
+static WEB_CONTENT: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/web-content/");
+
 pub struct HttpServer {
-    rocket: Rocket<Ignite>,
 }
 
 impl HttpServer {
@@ -28,8 +31,9 @@ impl HttpServer {
 
         let rocket = rocket::build()
             .manage(Mutex::new(usb_tx))
-            .mount("/", routes![home])
+            .mount("/", routes![files])
             .mount("/api/", routes![
+                get_devices,
                 set_volume,
                 set_fader_channel,
                 set_fader_mute_function,
@@ -67,18 +71,41 @@ impl HttpServer {
         Ok(client)
     }
 
-    pub async fn shutdown(&self) {
-        debug!("Attempting HTTP Shutdown..");
-        self.rocket.shutdown().notify();
-    }
+    // pub async fn shutdown(&self) {
+    //     debug!("Attempting HTTP Shutdown..");
+    //     self.rocket.shutdown().notify();
+    // }
 }
 
-#[get("/")]
-async fn home(state: &State<Mutex<DeviceSender>>) -> Result<String, Status> {
+#[get("/get-devices")]
+async fn get_devices(state: &State<Mutex<DeviceSender>>) -> Result<String, Status> {
     if let Ok(response) = get_status(state).await {
         return Ok(serde_json::to_string(&response).unwrap());
     }
     Err(Status::InternalServerError)
+}
+
+#[get("/<file..>")]
+async fn files(mut file: PathBuf) -> (Status, (ContentType, &'static str)) {
+    if file.as_os_str().is_empty() {
+        file = PathBuf::from("index.html");
+    }
+
+    // Attempt to determine the content type..
+    let mut content_type: ContentType = ContentType::Plain;
+    if let Some(ext) = file.extension() {
+        if let Some(ct) = ContentType::from_extension(&ext.to_string_lossy()) {
+            content_type = ct;
+        }
+    }
+
+    // Ok, try and find this file in our embedded data..
+    if let Some(file) = WEB_CONTENT.get_file(file) {
+        if let Some(content) = file.contents_utf8() {
+            return (Status::Ok, (content_type, content));
+        }
+    }
+    return (Status::NotFound, (ContentType::Plain, "File not Found"));
 }
 
 /**
