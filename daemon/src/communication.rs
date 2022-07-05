@@ -55,7 +55,7 @@ async fn handle_connection(
     debug!("Disconnected {:?}", socket.address());
 }
 
-async fn handle_packet(
+pub async fn handle_packet(
     request: DaemonRequest,
     usb_tx: &mut DeviceSender,
 ) -> Result<DaemonResponse> {

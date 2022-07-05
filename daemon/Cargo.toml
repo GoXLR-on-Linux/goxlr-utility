@@ -19,7 +19,6 @@ simplelog = "0.11.1"
 tokio = {version = "1.0", features=["full"]}
 log = "0.4.14"
 anyhow = "1.0"
-tokio-serde = { version = "0.8.0", features=["json"]}
 strum = { version = "0.23"}
 enumset = "1.0.8"
 serde = { version = "1.0", features = ["derive"] }
@@ -28,6 +27,9 @@ directories = "4.0"
 byteorder = "1"
 enum-map = "2.1.0"
 futures = "0.3.21"
+
+## HTTPd Server
+rocket = "0.5.0-rc.2"
 
 # Enable debugging symbols, and disable optimisation..
 [profile.dev]

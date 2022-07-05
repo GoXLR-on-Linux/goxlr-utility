@@ -5,10 +5,12 @@ mod profile;
 mod settings;
 mod shutdown;
 mod audio;
+mod http_server;
 
 use crate::primary_worker::handle_changes;
 use crate::settings::SettingsHandle;
 use crate::shutdown::Shutdown;
+use crate::http_server::HttpServer;
 use anyhow::{anyhow, Context, Result};
 use communication::listen_for_connections;
 use directories::ProjectDirs;
@@ -52,16 +54,19 @@ async fn main() -> Result<()> {
     let (usb_tx, usb_rx) = mpsc::channel(32);
     let usb_handle = tokio::spawn(handle_changes(usb_rx, shutdown.clone(), settings));
     let communications_handle =
-        tokio::spawn(listen_for_connections(listener, usb_tx, shutdown.clone()));
+        tokio::spawn(listen_for_connections(listener, usb_tx.clone(), shutdown.clone()));
+
+    // Rocket has its own Ctrl+C listener, so we don't track global shutdown there.
+    let http_server = tokio::spawn(HttpServer::launch(usb_tx.clone()));
 
     tokio::spawn(await_ctrl_c(shutdown.clone()));
 
-    shutdown.recv().await;
     info!("Shutting down daemon");
-    let _ = join!(usb_handle, communications_handle);
+    let _ = join!(usb_handle, communications_handle, http_server);
 
     info!("Removing Socket");
     fs::remove_file("/tmp/goxlr.socket")?;
+    shutdown.recv().await;
     Ok(())
 }
 
