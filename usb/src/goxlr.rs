@@ -274,7 +274,7 @@ impl<T: UsbContext> GoXLR<T> {
         for i in 0 .. 20 {
             let response_value = self.read_control(3, 0, 0, 1040);
             if response_value == Err(Pipe) {
-                if i < 2 {
+                if i < 20 {
                     debug!("Response not arrived yet for {:?}, sleeping and retrying (Attempt {} of 20)", command, i + 1);
                     sleep(sleep_time);
                     continue;
