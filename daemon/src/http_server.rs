@@ -1,3 +1,4 @@
+use std::net::{IpAddr, Ipv4Addr};
 use std::ops::DerefMut;
 use std::path::PathBuf;
 
@@ -21,6 +22,8 @@ use crate::primary_worker::DeviceSender;
 
 static WEB_CONTENT: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/web-content/");
 
+static version: f64 = 0.3;
+
 pub struct HttpServer {
 }
 
@@ -29,6 +32,8 @@ impl HttpServer {
 
         //let config = rocket::custom()
         let config = Config {
+            address: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            port: 14564,
             ..Config::default()
         };
 
