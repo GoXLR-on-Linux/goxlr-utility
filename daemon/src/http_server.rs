@@ -5,15 +5,15 @@ use anyhow::{anyhow, Context, Result};
 use futures::lock::Mutex;
 use include_dir::{Dir, include_dir};
 use log::{debug, warn};
-use rocket::{Ignite, Rocket, routes, State};
+use rocket::{Config, Ignite, Request, Response, Rocket, routes, State};
 use rocket::{get, post};
+use rocket::config::LogLevel;
+use rocket::fairing::{Fairing, Info, Kind};
 use rocket::fs::{FileServer, NamedFile};
-use rocket::http::{ContentType, Status};
+use rocket::http::{ContentType, Header, Status};
 use strum::IntoEnumIterator;
-use tokio::net::UnixStream;
 
 use goxlr_ipc::{DaemonRequest, DaemonResponse, DaemonStatus, GoXLRCommand, Socket};
-use goxlr_ipc::client::Client;
 use goxlr_types::{ChannelName, CompressorAttackTime, CompressorRatio, CompressorReleaseTime, FaderName, GateTimes, InputDevice, MuteFunction, OutputDevice};
 
 use crate::communication::handle_packet;
@@ -27,11 +27,13 @@ pub struct HttpServer {
 impl HttpServer {
     pub async fn launch(usb_tx: DeviceSender) -> Result<()> {
 
-        let client = HttpServer::connect_to_daemon().await?;
+        //let config = rocket::custom()
+        let config = Config {
+            ..Config::default()
+        };
 
-        let rocket = rocket::build()
+        let rocket = rocket::custom(&config)
             .manage(Mutex::new(usb_tx))
-            .mount("/", routes![files])
             .mount("/api/", routes![
                 get_devices,
                 set_volume,
@@ -50,31 +52,12 @@ impl HttpServer {
                 set_noise_gate_attack,
                 set_noise_gate_release,
             ])
+            .mount("/", routes![files])
+            .attach(CORS)
             .ignite().await?
             .launch().await?;
         Ok(())
     }
-
-    async fn connect_to_daemon() -> Result<Client> {
-        let stream = UnixStream::connect("/tmp/goxlr.socket")
-            .await
-            .context("Could not connect to the GoXLR Daemon Socket")?;
-
-        let address = stream
-            .peer_addr()
-            .context("Could not get the address of the GoXLR daemon process")?;
-
-        let socket = Socket::new(address, stream);
-        let mut client = Client::new(socket);
-        client.poll_status().await?;
-
-        Ok(client)
-    }
-
-    // pub async fn shutdown(&self) {
-    //     debug!("Attempting HTTP Shutdown..");
-    //     self.rocket.shutdown().notify();
-    // }
 }
 
 #[get("/get-devices")]
@@ -114,7 +97,7 @@ async fn files(mut file: PathBuf) -> (Status, (ContentType, &'static str)) {
  structs for processing form data / json on the incoming data.
 */
 
-#[post("/set-volumes/<serial>/<channel>/<volume>")]
+#[post("/set-volume/<serial>/<channel>/<volume>")]
 async fn set_volume(serial: String, channel: u8, volume: u8, state: &State<Mutex<DeviceSender>>) -> Status {
     if let Some(channel_name) = ChannelName::iter().nth(channel.into()) {
         return send_cmd(state, serial,
@@ -245,7 +228,29 @@ async fn set_noise_gate_release(serial: String, value: u8, state: &State<Mutex<D
     Status::InternalServerError
 }
 
+/** CORS Related.. **/
+pub struct CORS;
+#[rocket::async_trait]
+impl Fairing for CORS {
+    fn info(&self) -> Info {
+        Info {
+            name: "Add CORS headers to responses",
+            kind: Kind::Response
+        }
+    }
+
+    async fn on_response<'r>(&self, _request: &'r Request<'_>, response: &mut Response<'r>) {
+        response.set_header(Header::new("Access-Control-Allow-Origin", "*"));
+        response.set_header(Header::new("Access-Control-Allow-Methods", "POST, GET, PATCH, OPTIONS"));
+        response.set_header(Header::new("Access-Control-Allow-Headers", "*"));
+        response.set_header(Header::new("Access-Control-Allow-Credentials", "true"));
+    }
+}
+
+
 async fn send_cmd(usb_tx: &State<Mutex<DeviceSender>>, serial: String, command: GoXLRCommand) -> Status {
+    debug!("Request: {:?}", command.clone());
+
     // Unwrap the Mutex Guard..
     let mut guard = usb_tx.lock().await;
     let sender = guard.deref_mut();
@@ -256,6 +261,7 @@ async fn send_cmd(usb_tx: &State<Mutex<DeviceSender>>, serial: String, command: 
         1: command
     };
 
+
     // Because most request are going to either send a 200 Ok, or 500 Internal Server error,
     // we might as well intercept any errors here, and straight up return the status.
     let result = handle_packet(request, sender).await;
@@ -263,6 +269,7 @@ async fn send_cmd(usb_tx: &State<Mutex<DeviceSender>>, serial: String, command: 
         warn!("Error Handling Request, {:?}", result.as_ref().err());
         return Status::InternalServerError;
     }
+
 
     return Status::Ok;
 }
