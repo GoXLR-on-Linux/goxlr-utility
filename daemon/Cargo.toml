@@ -27,10 +27,10 @@ directories = "4.0"
 byteorder = "1"
 enum-map = "2.1.0"
 futures = "0.3.21"
-include_dir = "0.7.2"
 
 ## HTTPd Server
-rocket = "0.5.0-rc.2"
+actix-web = "4.0"
+actix-plus-static-files = {git = "https://github.com/john01dav/actix-plus", commit = "4f7837c0d3d413bf82d7906b33abb7801340c063"}
 
 # Enable debugging symbols, and disable optimisation..
 [profile.dev]

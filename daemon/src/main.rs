@@ -10,7 +10,6 @@ mod http_server;
 use crate::primary_worker::handle_changes;
 use crate::settings::SettingsHandle;
 use crate::shutdown::Shutdown;
-use crate::http_server::HttpServer;
 use anyhow::{anyhow, Context, Result};
 use communication::listen_for_connections;
 use directories::ProjectDirs;
@@ -25,6 +24,7 @@ use std::path::Path;
 use tokio::net::{UnixListener, UnixStream};
 use tokio::sync::mpsc;
 use tokio::{join, signal};
+use crate::http_server::launch_httpd;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -56,13 +56,14 @@ async fn main() -> Result<()> {
     let communications_handle =
         tokio::spawn(listen_for_connections(listener, usb_tx.clone(), shutdown.clone()));
 
-    // Rocket has its own Ctrl+C listener, so we don't track global shutdown there.
-    let http_server = tokio::spawn(HttpServer::launch(usb_tx.clone()));
+    let (httpd_tx, httpd_rx) = tokio::sync::oneshot::channel();
+    tokio::spawn(launch_httpd(usb_tx.clone(), httpd_tx));
+    let http_server = httpd_rx.await?;
 
-    tokio::spawn(await_ctrl_c(shutdown.clone()));
+    await_ctrl_c(shutdown.clone()).await;
 
     info!("Shutting down daemon");
-    let _ = join!(usb_handle, communications_handle, http_server);
+    let _ = join!(usb_handle, communications_handle, http_server.stop(true));
 
     info!("Removing Socket");
     fs::remove_file("/tmp/goxlr.socket")?;
