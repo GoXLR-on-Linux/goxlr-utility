@@ -1,8 +1,9 @@
 use std::ops::DerefMut;
 use actix_plus_static_files::{build_hashmap_from_included_dir, ResourceFiles, include_dir, Dir};
-use actix_web::{App, get, post, HttpResponse, web, HttpServer, HttpRequest};
+use actix_web::{App, get, post, HttpResponse, web, HttpServer, HttpRequest, http};
 use actix_web::dev::ServerHandle;
 use actix_web::web::Data;
+use actix_cors::Cors;
 use actix::{Message, Actor, ActorContext, AsyncContext, ContextFutureSpawner, Handler, StreamHandler, WrapFuture, WrapStream};
 use actix_web_actors::ws;
 use actix_web_actors::ws::{CloseCode, CloseReason};
@@ -82,7 +83,17 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for Websocket {
 pub async fn launch_httpd(usb_tx: DeviceSender, handle_tx: Sender<ServerHandle>) -> Result<()> {
     let server = HttpServer::new(move || {
         let static_files = build_hashmap_from_included_dir(&WEB_CONTENT);
+        let cors = Cors::default()
+            .allowed_origin("http://127.0.0.1")
+            .allowed_origin( "http://localhost")
+            .allowed_origin_fn(|origin, _req_head| {
+                origin.as_bytes().starts_with(b"http://127.0.0.1") || origin.as_bytes().starts_with(b"http://localhost")
+            })
+            .allow_any_method()
+            .allow_any_header()
+            .max_age(3600);
         App::new()
+            .wrap(cors)
             .app_data(Data::new(Mutex::new(usb_tx.clone())))
             .service(get_devices)
             .service(set_volume)
