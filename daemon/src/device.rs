@@ -752,8 +752,8 @@ impl<'a, T: UsbContext> Device<'a, T> {
             }
 
             GoXLRCommand::SetVolume(channel, volume) => {
+                self.goxlr.set_volume(channel, volume);
                 self.profile.set_channel_volume(channel, volume);
-                self.goxlr.set_volume(channel, volume)?;
             }
 
             GoXLRCommand::SetCoughMuteFunction(mute_function) => {
