@@ -29,7 +29,9 @@ enum-map = "2.1.0"
 futures = "0.3.21"
 
 ## HTTPd Server
-actix-web = "4.0"
+actix = "0.13"
+actix-web-actors = "4.1"
+actix-web = "4.1"
 actix-plus-static-files = {git = "https://github.com/john01dav/actix-plus", commit = "4f7837c0d3d413bf82d7906b33abb7801340c063"}
 
 # Enable debugging symbols, and disable optimisation..

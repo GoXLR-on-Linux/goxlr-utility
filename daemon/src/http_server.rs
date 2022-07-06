@@ -1,8 +1,11 @@
 use std::ops::DerefMut;
 use actix_plus_static_files::{build_hashmap_from_included_dir, ResourceFiles, include_dir, Dir};
-use actix_web::{App, get, post, HttpResponse, web, HttpServer};
+use actix_web::{App, get, post, HttpResponse, web, HttpServer, HttpRequest};
 use actix_web::dev::ServerHandle;
 use actix_web::web::Data;
+use actix::{Message, Actor, ActorContext, AsyncContext, ContextFutureSpawner, Handler, StreamHandler, WrapFuture, WrapStream};
+use actix_web_actors::ws;
+use actix_web_actors::ws::{CloseCode, CloseReason};
 
 use anyhow::{anyhow, Result};
 use futures::lock::Mutex;
@@ -19,6 +22,62 @@ use crate::primary_worker::DeviceSender;
 const WEB_CONTENT: Dir = include_dir!("./web-content/");
 
 static version: f64 = 0.3;
+
+struct Websocket {
+    sender: DeviceSender,
+}
+
+impl Actor for Websocket {
+    type Context = ws::WebsocketContext<Self>;
+}
+
+#[derive(Message)]
+#[rtype(result = "()")]
+struct WsResponse(DaemonResponse);
+
+impl Handler<WsResponse> for Websocket {
+    type Result = ();
+
+    fn handle(&mut self, msg: WsResponse, ctx: &mut Self::Context) -> Self::Result {
+        if let Ok(result) = serde_json::to_string(&msg.0) {
+            ctx.text(result);
+        }
+    }
+}
+
+impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for Websocket {
+    fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
+        match msg {
+            Ok(ws::Message::Ping(msg)) => ctx.pong(&msg),
+            Ok(ws::Message::Text(text)) => {
+                if let Ok(request) = serde_json::from_slice::<DaemonRequest>(text.as_ref()) {
+                    let recipient = ctx.address().recipient();
+                    let mut usb_tx = self.sender.clone();
+                    let future = async move {
+                        let result = handle_packet(request, &mut usb_tx).await;
+                        match result {
+                            Ok(resp) => {
+                                recipient.do_send(WsResponse(resp));
+                            },
+                            Err(error) => {
+                                recipient.do_send(WsResponse(DaemonResponse::Error(error.to_string())));
+                            },
+                        }
+                    };
+                    future.into_actor(self).spawn(ctx);
+                } else {
+                    ctx.close(Some(CloseCode::Invalid.into()));
+                    ctx.stop();
+                }
+            },
+            Ok(ws::Message::Binary(bin)) => {
+                ctx.close(Some(CloseCode::Unsupported.into()));
+                ctx.stop();
+            },
+            _ => (),
+        }
+    }
+}
 
 pub async fn launch_httpd(usb_tx: DeviceSender, handle_tx: Sender<ServerHandle>) -> Result<()> {
     let server = HttpServer::new(move || {
@@ -43,6 +102,7 @@ pub async fn launch_httpd(usb_tx: DeviceSender, handle_tx: Sender<ServerHandle>)
             .service(set_noise_gate_attenuation)
             .service(set_noise_gate_attack)
             .service(set_noise_gate_release)
+            .service(websocket)
             .service(ResourceFiles::new("/", static_files))
     })
         .bind(("127.0.0.1", 14564))?
@@ -50,6 +110,11 @@ pub async fn launch_httpd(usb_tx: DeviceSender, handle_tx: Sender<ServerHandle>)
     let _ = handle_tx.send(server.handle());
     server.await?;
     Ok(())
+}
+
+#[get("/api/websocket")]
+async fn websocket(usb_mutex: Data<Mutex<DeviceSender>>, req: HttpRequest, stream: web::Payload) -> Result<HttpResponse, actix_web::Error> {
+    ws::start(Websocket{sender: usb_mutex.lock().await.clone()}, &req, stream)
 }
 
 #[get("/api/get-devices")]
