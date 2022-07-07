@@ -20,6 +20,7 @@ pub struct MixerStatus {
     pub router: [EnumSet<OutputDevice>; InputDevice::COUNT],
     pub router_table: [[bool; OutputDevice::COUNT]; InputDevice::COUNT],
     pub cough_button: CoughButton,
+    pub bleep_volume: i8,
     pub profile_name: String,
     pub mic_profile_name: String,
 }

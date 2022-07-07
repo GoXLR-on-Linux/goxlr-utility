@@ -99,6 +99,7 @@ pub async fn launch_httpd(usb_tx: DeviceSender, handle_tx: Sender<ServerHandle>)
             .service(set_volume)
             .service(get_devices)
             .service(set_volume)
+            .service(set_bleep_volume)
             .service(set_fader_channel)
             .service(set_fader_mute_function)
             .service(set_routing)
@@ -211,6 +212,12 @@ async fn set_cough_behaviour(path: web::Path<(String, u8)>, usb_mutex: Data<Mute
     HttpResponse::InternalServerError().finish()
 }
 
+#[post("/api/set-bleep-volume/{serial}/{value}")]
+async fn set_bleep_volume(path: web::Path<(String, i8)>, usb_mutex: Data<Mutex<DeviceSender>>) -> HttpResponse {
+    let (serial, function) = path.into_inner();
+    return send_cmd(usb_mutex, serial, GoXLRCommand::SetSwearButtonVolume(function)).await;
+}
+
 /** Compressor **/
 #[post("/api/set-compressor-threshold/{serial}/{value}")]
 async fn set_compressor_threshold(path: web::Path<(String, i8)>, usb_mutex: Data<Mutex<DeviceSender>>) -> HttpResponse {
@@ -304,6 +311,7 @@ async fn send_cmd(usb_tx: Data<Mutex<DeviceSender>>, serial: String, command: Go
         1: command
     };
 
+    debug!("Command: {}", serde_json::to_string(&request).unwrap());
 
     // Because most request are going to either send a 200 Ok, or 500 Internal Server error,
     // we might as well intercept any errors here, and straight up return the status.

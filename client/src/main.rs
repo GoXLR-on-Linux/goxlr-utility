@@ -203,7 +203,7 @@ async fn main() -> Result<()> {
                     }
                 }
                 SubCommands::BleepVolume { volume_percent } => {
-                    // Ok, this is a value between -37 and 0, with 0 being loudest :D
+                    // Ok, this is a value between -34 and 0, with 0 being loudest :D
                     let value = (34 * *volume_percent as u16) / 100;
                     client.command(&serial, GoXLRCommand::SetSwearButtonVolume(
                         (value as i8 - 34) as i8,

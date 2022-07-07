@@ -14,6 +14,7 @@ use log::{debug, error, info};
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 use enum_map::EnumMap;
+use futures::executor::block_on;
 use strum::{IntoEnumIterator};
 use goxlr_profile_loader::components::mute::{MuteFunction};
 use goxlr_profile_loader::SampleButtons;
@@ -93,6 +94,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
             hardware: self.hardware.clone(),
             fader_status: fader_map,
             cough_button: self.profile.get_cough_status(),
+            bleep_volume: self.get_bleep_volume(),
             volumes: self.profile.get_volumes(),
             router: self.profile.create_router(),
             router_table: self.profile.create_router_table(),
@@ -1250,6 +1252,18 @@ impl<'a, T: UsbContext> Device<'a, T> {
             self.profile.is_fader_meter(fader)
         )?;
         Ok(())
+    }
+
+    fn get_bleep_volume(&self) -> i8 {
+        // This should be fast, block on the request..
+        let value = block_on(
+            self.settings.get_device_bleep_volume(self.serial())
+        );
+
+        if let Some(bleep) = value  {
+            return bleep;
+        }
+        return -14;
     }
 
     fn load_colour_map(&mut self) -> Result<()> {
