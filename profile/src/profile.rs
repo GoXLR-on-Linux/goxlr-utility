@@ -46,11 +46,11 @@ impl Profile {
         let mut scribbles: [Vec<u8>; 4] = Default::default();
 
         // Load the scribbles if they exist, store them in memory for later fuckery.
-        for i in 0..4 {
+        for (i, scribble) in scribbles.iter_mut().enumerate() {
             let filename = format!("scribble{}.png", i + 1);
             if let Ok(mut file) = archive.by_name(filename.as_str()) {
-                scribbles[i] = vec![0; file.size() as usize];
-                file.read_exact(&mut scribbles[i])?;
+                *scribble = vec![0; file.size() as usize];
+                file.read_exact(scribble)?;
             }
         }
 
@@ -73,12 +73,12 @@ impl Profile {
         self.settings.write_to(&mut archive)?;
 
         // Write the scribbles..
-        for i in 0..4 {
+        for (i, scribble) in self.scribbles.iter().enumerate() {
             // Only write if there's actually data stored..
             if !self.scribbles[i].is_empty() {
                 let filename = format!("scribble{}.png", i + 1);
                 archive.start_file(filename, FileOptions::default())?;
-                archive.write_all(&self.scribbles[i])?;
+                archive.write_all(scribble)?;
             }
         }
         archive.finish()?;
