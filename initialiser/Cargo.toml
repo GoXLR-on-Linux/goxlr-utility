@@ -10,3 +10,4 @@ categories = ["hardware-support", "command-line-utilities"]
 
 [dependencies]
 rusb = "0.9"
+anyhow = "1.0"
