@@ -1,5 +1,5 @@
 use enum_map::Enum;
-use enumset::EnumSetType;
+use enumset::{EnumSet, EnumSetType};
 use strum::EnumIter;
 
 #[derive(Debug, Copy, Clone)]
@@ -9,6 +9,13 @@ pub enum ButtonStates {
     DimmedColour1 = 0x02,
     DimmedColour2 = 0x04,
     Flashing = 0x03,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct CurrentButtonStates {
+    pub pressed: EnumSet<Buttons>,
+    pub volumes: [u8; 4],
+    pub encoders: [i8; 4],
 }
 
 #[derive(EnumSetType, Enum, EnumIter, Debug)]

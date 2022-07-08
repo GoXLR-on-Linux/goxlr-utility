@@ -1,4 +1,4 @@
-use crate::buttonstate::{ButtonStates, Buttons};
+use crate::buttonstate::{ButtonStates, Buttons, CurrentButtonStates};
 use crate::channelstate::ChannelState;
 use crate::commands::SystemInfoCommand;
 use crate::commands::SystemInfoCommand::SupportsDCPCategory;
@@ -514,9 +514,7 @@ impl<T: UsbContext> GoXLR<T> {
         Ok(())
     }
 
-    pub fn get_button_states(
-        &mut self,
-    ) -> Result<(EnumSet<Buttons>, [u8; 4], [i8; 4]), rusb::Error> {
+    pub fn get_button_states(&mut self) -> Result<CurrentButtonStates, rusb::Error> {
         let result = self.request_data(Command::GetButtonStates, &[])?;
         let mut pressed = EnumSet::empty();
         let mut mixers = [0; 4];
@@ -540,7 +538,11 @@ impl<T: UsbContext> GoXLR<T> {
             }
         }
 
-        Ok((pressed, mixers, encoders))
+        Ok(CurrentButtonStates {
+            pressed,
+            volumes: mixers,
+            encoders,
+        })
     }
 
     pub fn await_interrupt(&mut self, duration: Duration) -> bool {

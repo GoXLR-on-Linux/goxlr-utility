@@ -140,11 +140,11 @@ impl<'a, T: UsbContext> Device<'a, T> {
             self.sync_sample_lighting().await?;
         }
 
-        if let Ok((buttons, volumes, encoders)) = self.goxlr.get_button_states() {
-            self.update_volumes_to(volumes);
-            self.update_encoders_to(encoders)?;
+        if let Ok(state) = self.goxlr.get_button_states() {
+            self.update_volumes_to(state.volumes);
+            self.update_encoders_to(state.encoders)?;
 
-            let pressed_buttons = buttons.difference(self.last_buttons);
+            let pressed_buttons = state.pressed.difference(self.last_buttons);
             for button in pressed_buttons {
                 // This is a new press, store it in the states..
                 self.button_states[button] = ButtonState {
@@ -157,7 +157,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 }
             }
 
-            let released_buttons = self.last_buttons.difference(buttons);
+            let released_buttons = self.last_buttons.difference(state.pressed);
             for button in released_buttons {
                 let button_state = self.button_states[button];
 
@@ -174,7 +174,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
 
             // Finally, iterate over our existing button states, and see if any have been
             // pressed for more than half a second and not handled.
-            for button in buttons {
+            for button in state.pressed {
                 if !self.button_states[button].hold_handled {
                     let now = self.get_epoch_ms();
                     if (now - self.button_states[button].press_time) > 500 {
@@ -186,7 +186,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 }
             }
 
-            self.last_buttons = buttons;
+            self.last_buttons = state.pressed;
         }
 
         Ok(())
