@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::io::Error;
 use tokio::net::unix::{OwnedReadHalf, OwnedWriteHalf, SocketAddr};
 use tokio::net::UnixStream;
-use tokio_serde::formats::{SymmetricalJson};
+use tokio_serde::formats::SymmetricalJson;
 use tokio_serde::SymmetricallyFramed;
 use tokio_util::codec::{FramedRead, FramedWrite, LengthDelimitedCodec};
 

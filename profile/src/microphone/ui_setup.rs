@@ -77,7 +77,10 @@ impl UiSetup {
         Ok(())
     }
 
-    pub fn write_ui<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<(), xml::writer::Error> {
+    pub fn write_ui<W: Write>(
+        &self,
+        writer: &mut EventWriter<&mut W>,
+    ) -> Result<(), xml::writer::Error> {
         let mut element: StartElementBuilder =
             XmlWriterEvent::start_element("micProfileUIMicProfile");
 

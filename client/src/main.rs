@@ -1,17 +1,22 @@
 mod cli;
 mod microphone;
 
+use crate::cli::{
+    ButtonGroupLightingCommands, ButtonLightingCommands, CompressorCommands, CoughButtonBehaviours,
+    EqualiserCommands, EqualiserMiniCommands, FaderCommands, FaderLightingCommands,
+    FadersAllLightingCommands, LightingCommands, MicrophoneCommands, NoiseGateCommands,
+    ProfileAction, ProfileType, SubCommands,
+};
 use crate::microphone::apply_microphone_controls;
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use cli::Cli;
+use goxlr_ipc::client::Client;
 use goxlr_ipc::{DaemonRequest, DaemonResponse, DeviceType, MixerStatus, UsbProductInformation};
 use goxlr_ipc::{GoXLRCommand, Socket};
 use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice};
 use strum::IntoEnumIterator;
 use tokio::net::UnixStream;
-use goxlr_ipc::client::Client;
-use crate::cli::{ButtonGroupLightingCommands, ButtonLightingCommands, CompressorCommands, CoughButtonBehaviours, EqualiserCommands, EqualiserMiniCommands, FaderCommands, FaderLightingCommands, FadersAllLightingCommands, LightingCommands, MicrophoneCommands, NoiseGateCommands, ProfileAction, ProfileType, SubCommands};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -60,281 +65,308 @@ async fn main() -> Result<()> {
     }
 
     match &cli.subcommands {
-        None => {},
-        Some(command)=> {
+        None => {}
+        Some(command) => {
             match command {
-                SubCommands::Microphone { command } => {
-                    match command {
-                        MicrophoneCommands::Equaliser { command } => {
-                            match command {
-                                EqualiserCommands::Frequency { frequency, value } => {
-                                    client.command(&serial, GoXLRCommand::SetEqFreq(
-                                        *frequency,
-                                        *value
-                                    )).await?;
-                                }
-                                EqualiserCommands::Gain { frequency, gain } => {
-                                    client.command(&serial, GoXLRCommand::SetEqGain(
-                                        *frequency,
-                                        *gain
-                                    )).await?;
-                                }
-                            }
+                SubCommands::Microphone { command } => match command {
+                    MicrophoneCommands::Equaliser { command } => match command {
+                        EqualiserCommands::Frequency { frequency, value } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetEqFreq(*frequency, *value))
+                                .await?;
                         }
-                        MicrophoneCommands::EqualiserMini { command } => {
-                            match command {
-                                EqualiserMiniCommands::Frequency { frequency, value } => {
-                                    client.command(&serial, GoXLRCommand::SetEqMiniFreq(
-                                        *frequency,
-                                        *value
-                                    )).await?;
-                                }
-                                EqualiserMiniCommands::Gain { frequency, gain } => {
-                                    client.command(&serial, GoXLRCommand::SetEqMiniGain(
-                                        *frequency,
-                                        *gain
-                                    )).await?;
-                                }
-                            }
+                        EqualiserCommands::Gain { frequency, gain } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetEqGain(*frequency, *gain))
+                                .await?;
                         }
-                        MicrophoneCommands::NoiseGate { command } => {
-                            match command {
-                                NoiseGateCommands::Threshold { value } => {
-                                    client.command(&serial, GoXLRCommand::SetGateThreshold(
-                                        *value
-                                    )).await?;
-                                }
-                                NoiseGateCommands::Attenuation { value } => {
-                                    client.command(&serial, GoXLRCommand::SetGateAttenuation(
-                                        *value
-                                    )).await?;
-                                }
-                                NoiseGateCommands::Attack { value } => {
-                                    client.command(&serial, GoXLRCommand::SetGateAttack(
-                                        *value
-                                    )).await?;
-                                }
-                                NoiseGateCommands::Release { value } => {
-                                    client.command(&serial, GoXLRCommand::SetGateRelease(
-                                        *value
-                                    )).await?;
-                                }
-                                NoiseGateCommands::Active { enabled } => {
-                                    client.command(&serial, GoXLRCommand::SetGateActive(
-                                        *enabled
-                                    )).await?;
-                                }
-                            }
+                    },
+                    MicrophoneCommands::EqualiserMini { command } => match command {
+                        EqualiserMiniCommands::Frequency { frequency, value } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetEqMiniFreq(*frequency, *value))
+                                .await?;
                         }
-                        MicrophoneCommands::Compressor { command } => {
-                            match command {
-                                CompressorCommands::Threshold { value } => {
-                                    client.command(&serial, GoXLRCommand::SetCompressorThreshold(
-                                        *value
-                                    )).await?;
-                                }
-                                CompressorCommands::Ratio { value } => {
-                                    client.command(&serial, GoXLRCommand::SetCompressorRatio(
-                                        *value
-                                    )).await?;
-                                }
-                                CompressorCommands::Attack { value } => {
-                                    client.command(&serial, GoXLRCommand::SetCompressorAttack(
-                                        *value
-                                    )).await?;
-                                }
-                                CompressorCommands::Release { value } => {
-                                    client.command(&serial, GoXLRCommand::SetCompressorReleaseTime(
-                                        *value
-                                    )).await?;
-                                }
-                                CompressorCommands::MakeUp { value } => {
-                                    client.command(&serial, GoXLRCommand::SetCompressorMakeupGain(
-                                        *value
-                                    )).await?;
-                                }
-                            }
+                        EqualiserMiniCommands::Gain { frequency, gain } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetEqMiniGain(*frequency, *gain))
+                                .await?;
                         }
+                    },
+                    MicrophoneCommands::NoiseGate { command } => match command {
+                        NoiseGateCommands::Threshold { value } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetGateThreshold(*value))
+                                .await?;
+                        }
+                        NoiseGateCommands::Attenuation { value } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetGateAttenuation(*value))
+                                .await?;
+                        }
+                        NoiseGateCommands::Attack { value } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetGateAttack(*value))
+                                .await?;
+                        }
+                        NoiseGateCommands::Release { value } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetGateRelease(*value))
+                                .await?;
+                        }
+                        NoiseGateCommands::Active { enabled } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetGateActive(*enabled))
+                                .await?;
+                        }
+                    },
+                    MicrophoneCommands::Compressor { command } => match command {
+                        CompressorCommands::Threshold { value } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetCompressorThreshold(*value))
+                                .await?;
+                        }
+                        CompressorCommands::Ratio { value } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetCompressorRatio(*value))
+                                .await?;
+                        }
+                        CompressorCommands::Attack { value } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetCompressorAttack(*value))
+                                .await?;
+                        }
+                        CompressorCommands::Release { value } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetCompressorReleaseTime(*value))
+                                .await?;
+                        }
+                        CompressorCommands::MakeUp { value } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetCompressorMakeupGain(*value))
+                                .await?;
+                        }
+                    },
+                },
+                SubCommands::Faders { fader } => match fader {
+                    FaderCommands::Channel { fader, channel } => {
+                        client
+                            .command(&serial, GoXLRCommand::SetFader(*fader, *channel))
+                            .await?;
                     }
-                }
-                SubCommands::Faders { fader } => {
-                    match fader {
-                        FaderCommands::Channel { fader, channel } => {
-                            client.command(&serial, GoXLRCommand::SetFader(
-                                *fader,
-                                *channel
-                            )).await?;
-                        }
-                        FaderCommands::MuteBehaviour { fader, mute_behaviour } => {
-                            client.command(&serial, GoXLRCommand::SetFaderMuteFunction(
-                                *fader,
-                                *mute_behaviour
-                            )).await?;
-                        }
+                    FaderCommands::MuteBehaviour {
+                        fader,
+                        mute_behaviour,
+                    } => {
+                        client
+                            .command(
+                                &serial,
+                                GoXLRCommand::SetFaderMuteFunction(*fader, *mute_behaviour),
+                            )
+                            .await?;
                     }
+                },
+                SubCommands::Router {
+                    input,
+                    output,
+                    enabled,
+                } => {
+                    client
+                        .command(&serial, GoXLRCommand::SetRouter(*input, *output, *enabled))
+                        .await?;
                 }
-                SubCommands::Router { input, output, enabled } => {
-                    client.command(&serial, GoXLRCommand::SetRouter(
-                        *input,
-                        *output,
-                        *enabled
-                    )).await?;
-                }
-                SubCommands::Volume { channel, volume_percent } => {
+                SubCommands::Volume {
+                    channel,
+                    volume_percent,
+                } => {
                     let value = (255 * *volume_percent as u16) / 100;
 
-                    client.command(&serial, GoXLRCommand::SetVolume(
-                        *channel,
-                        value as u8
-                    )).await?;
+                    client
+                        .command(&serial, GoXLRCommand::SetVolume(*channel, value as u8))
+                        .await?;
                 }
-                SubCommands::CoughButton { command } => {
-                    match command {
-                        CoughButtonBehaviours::ButtonIsHold { is_hold } => {
-                            client.command(&serial, GoXLRCommand::SetCoughIsHold(
-                                *is_hold
-                            )).await?;
-                        }
-                        CoughButtonBehaviours::MuteBehaviour { mute_behaviour } => {
-                            client.command(&serial, GoXLRCommand::SetCoughMuteFunction(
-                                *mute_behaviour
-                            )).await?;
-                        }
+                SubCommands::CoughButton { command } => match command {
+                    CoughButtonBehaviours::ButtonIsHold { is_hold } => {
+                        client
+                            .command(&serial, GoXLRCommand::SetCoughIsHold(*is_hold))
+                            .await?;
                     }
-                }
+                    CoughButtonBehaviours::MuteBehaviour { mute_behaviour } => {
+                        client
+                            .command(&serial, GoXLRCommand::SetCoughMuteFunction(*mute_behaviour))
+                            .await?;
+                    }
+                },
                 SubCommands::BleepVolume { volume_percent } => {
                     // Ok, this is a value between -34 and 0, with 0 being loudest :D
                     let value = (34 * *volume_percent as u16) / 100;
-                    client.command(&serial, GoXLRCommand::SetSwearButtonVolume(
-                        (value as i8 - 34) as i8,
-                    )).await?;
+                    client
+                        .command(
+                            &serial,
+                            GoXLRCommand::SetSwearButtonVolume((value as i8 - 34) as i8),
+                        )
+                        .await?;
                 }
 
-                SubCommands::Lighting { command } => {
-                    match command {
-                        LightingCommands::Fader { command } => {
-                            match command {
-                                FaderLightingCommands::Display { fader, display } => {
-                                    client.command(&serial, GoXLRCommand::SetFaderDisplayStyle(
-                                        *fader, *display
-                                    )).await?;
-                                }
-                                FaderLightingCommands::Colour { fader, top, bottom } => {
-                                    client.command(&serial, GoXLRCommand::SetFaderColours(
-                                        *fader, top.to_string(), bottom.to_string()
-                                    )).await?;
-                                }
-                            }
+                SubCommands::Lighting { command } => match command {
+                    LightingCommands::Fader { command } => match command {
+                        FaderLightingCommands::Display { fader, display } => {
+                            client
+                                .command(
+                                    &serial,
+                                    GoXLRCommand::SetFaderDisplayStyle(*fader, *display),
+                                )
+                                .await?;
                         }
-                        LightingCommands::FadersAll { command } => {
-                            match command {
-                                FadersAllLightingCommands::Display { display } => {
-                                    client.command(&serial,GoXLRCommand::SetAllFaderDisplayStyle(
-                                        *display
-                                    )).await?;
-                                }
-                                FadersAllLightingCommands::Colour { top, bottom } => {
-                                    client.command(&serial, GoXLRCommand::SetAllFaderColours(
-                                        top.to_string(), bottom.to_string()
-                                    )).await?;
-                                }
-                            }
+                        FaderLightingCommands::Colour { fader, top, bottom } => {
+                            client
+                                .command(
+                                    &serial,
+                                    GoXLRCommand::SetFaderColours(
+                                        *fader,
+                                        top.to_string(),
+                                        bottom.to_string(),
+                                    ),
+                                )
+                                .await?;
                         }
-                        LightingCommands::Button { command } => {
-                            match command {
-                                ButtonLightingCommands::Colour { button, colour_one, colour_two } => {
-                                    let mut colour_send = None;
-                                    if let Some(value) = colour_two {
-                                        colour_send = Some(value.to_string());
-                                    }
+                    },
+                    LightingCommands::FadersAll { command } => match command {
+                        FadersAllLightingCommands::Display { display } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetAllFaderDisplayStyle(*display))
+                                .await?;
+                        }
+                        FadersAllLightingCommands::Colour { top, bottom } => {
+                            client
+                                .command(
+                                    &serial,
+                                    GoXLRCommand::SetAllFaderColours(
+                                        top.to_string(),
+                                        bottom.to_string(),
+                                    ),
+                                )
+                                .await?;
+                        }
+                    },
+                    LightingCommands::Button { command } => match command {
+                        ButtonLightingCommands::Colour {
+                            button,
+                            colour_one,
+                            colour_two,
+                        } => {
+                            let mut colour_send = None;
+                            if let Some(value) = colour_two {
+                                colour_send = Some(value.to_string());
+                            }
 
-                                    client.command(&serial, GoXLRCommand::SetButtonColours(
+                            client
+                                .command(
+                                    &serial,
+                                    GoXLRCommand::SetButtonColours(
                                         *button,
                                         colour_one.to_string(),
-                                        colour_send
-                                    )).await?;
-                                }
-                                ButtonLightingCommands::OffStyle { button, off_style } => {
-                                    client.command(&serial, GoXLRCommand::SetButtonOffStyle(
-                                        *button,
-                                        *off_style
-                                    )).await?;
-                                }
-                            }
+                                        colour_send,
+                                    ),
+                                )
+                                .await?;
                         }
-                        LightingCommands::ButtonGroup { command } => {
-                            match command {
-                                ButtonGroupLightingCommands::Colour { group, colour_one, colour_two } => {
-                                    let mut colour_send = None;
-                                    if let Some(value) = colour_two {
-                                        colour_send = Some(value.to_string());
-                                    }
+                        ButtonLightingCommands::OffStyle { button, off_style } => {
+                            client
+                                .command(
+                                    &serial,
+                                    GoXLRCommand::SetButtonOffStyle(*button, *off_style),
+                                )
+                                .await?;
+                        }
+                    },
+                    LightingCommands::ButtonGroup { command } => match command {
+                        ButtonGroupLightingCommands::Colour {
+                            group,
+                            colour_one,
+                            colour_two,
+                        } => {
+                            let mut colour_send = None;
+                            if let Some(value) = colour_two {
+                                colour_send = Some(value.to_string());
+                            }
 
-                                    client.command(&serial, GoXLRCommand::SetButtonGroupColours(
+                            client
+                                .command(
+                                    &serial,
+                                    GoXLRCommand::SetButtonGroupColours(
                                         *group,
                                         colour_one.clone(),
-                                        colour_send
-                                    )).await?;
-                                }
-                                ButtonGroupLightingCommands::OffStyle { group, off_style } => {
-                                    client.command(&serial, GoXLRCommand::SetButtonGroupOffStyle(
-                                        *group,
-                                        *off_style
-                                    )).await?;
-                                }
-                            }
+                                        colour_send,
+                                    ),
+                                )
+                                .await?;
                         }
-                    }
-                }
+                        ButtonGroupLightingCommands::OffStyle { group, off_style } => {
+                            client
+                                .command(
+                                    &serial,
+                                    GoXLRCommand::SetButtonGroupOffStyle(*group, *off_style),
+                                )
+                                .await?;
+                        }
+                    },
+                },
 
-                SubCommands::Profiles { command } => {
-                    match command {
-                        ProfileType::Device { command } => {
-                            match command {
-                                ProfileAction::Load { profile_name } => {
-                                    client.command(
-                                        &serial,
-                                        GoXLRCommand::LoadProfile(profile_name.to_string())
-                                    ).await.context("Unable to Load Profile")?;
-                                }
-                                ProfileAction::Save {} => {
-                                    client.command(
-                                        &serial,
-                                        GoXLRCommand::SaveProfile()
-                                    ).await.context("Unable to Save Profile")?;
-                                }
-                                ProfileAction::SaveAs { profile_name } => {
-                                    client.command(
-                                        &serial,
-                                        GoXLRCommand::SaveProfileAs(profile_name.to_string())
-                                    ).await.context("Unable to Save Profile")?;
-                                }
-                            }
+                SubCommands::Profiles { command } => match command {
+                    ProfileType::Device { command } => match command {
+                        ProfileAction::Load { profile_name } => {
+                            client
+                                .command(
+                                    &serial,
+                                    GoXLRCommand::LoadProfile(profile_name.to_string()),
+                                )
+                                .await
+                                .context("Unable to Load Profile")?;
                         }
-                        ProfileType::Microphone { command } => {
-                            match command {
-                                ProfileAction::Load { profile_name } => {
-                                    client.command(
-                                        &serial,
-                                        GoXLRCommand::LoadMicProfile(profile_name.to_string())
-                                    ).await.context("Unable to Load Microphone Profile")?;
-                                }
-                                ProfileAction::Save {} => {
-                                    client.command(
-                                        &serial,
-                                        GoXLRCommand::SaveMicProfile()
-                                    ).await.context("Unable to Save Microphone Profile")?;
-                                }
-                                ProfileAction::SaveAs { profile_name } => {
-                                    client.command(
-                                        &serial,
-                                        GoXLRCommand::SaveMicProfileAs(profile_name.to_string())
-                                    ).await.context("Unable to Save Microphone Profile")?;
-                                }
-                            }
+                        ProfileAction::Save {} => {
+                            client
+                                .command(&serial, GoXLRCommand::SaveProfile())
+                                .await
+                                .context("Unable to Save Profile")?;
                         }
-                    }
-                }
+                        ProfileAction::SaveAs { profile_name } => {
+                            client
+                                .command(
+                                    &serial,
+                                    GoXLRCommand::SaveProfileAs(profile_name.to_string()),
+                                )
+                                .await
+                                .context("Unable to Save Profile")?;
+                        }
+                    },
+                    ProfileType::Microphone { command } => match command {
+                        ProfileAction::Load { profile_name } => {
+                            client
+                                .command(
+                                    &serial,
+                                    GoXLRCommand::LoadMicProfile(profile_name.to_string()),
+                                )
+                                .await
+                                .context("Unable to Load Microphone Profile")?;
+                        }
+                        ProfileAction::Save {} => {
+                            client
+                                .command(&serial, GoXLRCommand::SaveMicProfile())
+                                .await
+                                .context("Unable to Save Microphone Profile")?;
+                        }
+                        ProfileAction::SaveAs { profile_name } => {
+                            client
+                                .command(
+                                    &serial,
+                                    GoXLRCommand::SaveMicProfileAs(profile_name.to_string()),
+                                )
+                                .await
+                                .context("Unable to Save Microphone Profile")?;
+                        }
+                    },
+                },
             }
         }
     }
@@ -352,7 +384,11 @@ async fn main() -> Result<()> {
         );
         println!(
             "Mic Profile directory: {}",
-            client.status().paths.mic_profile_directory.to_string_lossy()
+            client
+                .status()
+                .paths
+                .mic_profile_directory
+                .to_string_lossy()
         );
         println!(
             "Samples directory: {}",
@@ -365,7 +401,6 @@ async fn main() -> Result<()> {
 
     Ok(())
 }
-
 
 fn print_device(device: &MixerStatus) {
     println!(

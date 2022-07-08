@@ -303,7 +303,6 @@ impl ReverbEncoder {
         self.knob_position = knob_position;
     }
 
-
     pub fn style(&self) -> &ReverbStyle {
         &self.style
     }

@@ -270,7 +270,6 @@ impl HardtuneEffect {
         self.state = state;
     }
 
-
     pub fn style(&self) -> &HardtuneStyle {
         &self.style
     }

@@ -252,12 +252,9 @@ impl<T: UsbContext> GoXLR<T> {
         }
         self.write_control(2, 0, 0, &full_request)?;
 
-
-
         // The full fat GoXLR can handle requests incredibly quickly..
         let mut sleep_time = Duration::from_millis(3);
         if self.device_descriptor.product_id() == PID_GOXLR_MINI {
-
             // The mini, however, cannot.
             sleep_time = Duration::from_millis(10);
         }
@@ -271,7 +268,7 @@ impl<T: UsbContext> GoXLR<T> {
         }
         let mut response = vec![];
 
-        for i in 0 .. 20 {
+        for i in 0..20 {
             let response_value = self.read_control(3, 0, 0, 1040);
             if response_value == Err(Pipe) {
                 if i < 20 {
@@ -397,7 +394,7 @@ impl<T: UsbContext> GoXLR<T> {
         &mut self,
         encoder: EncoderName,
         mode: u8,
-        resolution: u8
+        resolution: u8,
     ) -> Result<(), rusb::Error> {
         self.request_data(Command::SetEncoderMode(encoder), &[mode, resolution])?;
         Ok(())
@@ -504,7 +501,7 @@ impl<T: UsbContext> GoXLR<T> {
 
     pub fn set_mic_param(
         &mut self,
-        params: &[(MicrophoneParamKey, [u8; 4])]
+        params: &[(MicrophoneParamKey, [u8; 4])],
     ) -> Result<(), CommandError> {
         let mut data = Vec::with_capacity(params.len() * 8);
         let mut cursor = Cursor::new(&mut data);
@@ -517,7 +514,9 @@ impl<T: UsbContext> GoXLR<T> {
         Ok(())
     }
 
-    pub fn get_button_states(&mut self) -> Result<(EnumSet<Buttons>, [u8; 4], [i8; 4]), rusb::Error> {
+    pub fn get_button_states(
+        &mut self,
+    ) -> Result<(EnumSet<Buttons>, [u8; 4], [i8; 4]), rusb::Error> {
         let result = self.request_data(Command::GetButtonStates, &[])?;
         let mut pressed = EnumSet::empty();
         let mut mixers = [0; 4];
@@ -530,10 +529,10 @@ impl<T: UsbContext> GoXLR<T> {
         mixers[3] = result[11];
 
         // These can technically be negative, cast straight to i8
-        encoders[0] = result[4] as i8;  // Pitch
-        encoders[1] = result[5] as i8;  // Gender
-        encoders[2] = result[6] as i8;  // Reverb
-        encoders[3] = result[7] as i8;  // Echo
+        encoders[0] = result[4] as i8; // Pitch
+        encoders[1] = result[5] as i8; // Gender
+        encoders[2] = result[6] as i8; // Reverb
+        encoders[3] = result[7] as i8; // Echo
 
         for button in EnumSet::<Buttons>::all() {
             if button_states & (1 << button as u8) != 0 {
@@ -556,6 +555,5 @@ impl<T: UsbContext> GoXLR<T> {
             message,
             Ok(_)
         )
-
     }
 }

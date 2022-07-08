@@ -1,8 +1,8 @@
-use std::time::Duration;
 use rusb::Direction::{In, Out};
 use rusb::Error::Pipe;
 use rusb::Recipient::Interface;
 use rusb::RequestType::{Class, Vendor};
+use std::time::Duration;
 
 pub const VID_GOXLR: u16 = 0x1220;
 pub const PID_GOXLR_MINI: u16 = 0x8fe4;
@@ -19,7 +19,7 @@ fn find_devices() {
             if let Ok(descriptor) = device.device_descriptor() {
                 if descriptor.vendor_id() == VID_GOXLR
                     && (descriptor.product_id() == PID_GOXLR_FULL
-                    || descriptor.product_id() == PID_GOXLR_MINI)
+                        || descriptor.product_id() == PID_GOXLR_MINI)
                 {
                     match device.open() {
                         Ok(mut handle) => {
@@ -29,7 +29,14 @@ fn find_devices() {
 
                             // Send a single vendor command across, see what happens..
                             let request_type = rusb::request_type(Out, Vendor, Interface);
-                            let result = handle.write_control(request_type, 1, 0, 0, &[], Duration::from_secs(1));
+                            let result = handle.write_control(
+                                request_type,
+                                1,
+                                0,
+                                0,
+                                &[],
+                                Duration::from_secs(1),
+                            );
 
                             if result == Err(Pipe) {
                                 println!("Device not initialised, preparing..");
@@ -44,11 +51,25 @@ fn find_devices() {
                                 // Activate the GoXLR Vendor interface..
                                 let request_type = rusb::request_type(In, Vendor, Interface);
                                 let mut buf = vec![0; 24];
-                                handle.read_control(request_type, 0, 0, 0, &mut buf, Duration::from_secs(1));
+                                handle.read_control(
+                                    request_type,
+                                    0,
+                                    0,
+                                    0,
+                                    &mut buf,
+                                    Duration::from_secs(1),
+                                );
 
                                 // Now activate audio..
                                 let request_type = rusb::request_type(Out, Class, Interface);
-                                handle.write_control(request_type, 1, 0x0100, 0x2900, &[0x80, 0xbb, 0x00, 0x00], Duration::from_secs(1));
+                                handle.write_control(
+                                    request_type,
+                                    1,
+                                    0x0100,
+                                    0x2900,
+                                    &[0x80, 0xbb, 0x00, 0x00],
+                                    Duration::from_secs(1),
+                                );
                                 handle.release_interface(0);
 
                                 // Trigger a reset on the device, to hard reload kernel drivers, and reinit audio..

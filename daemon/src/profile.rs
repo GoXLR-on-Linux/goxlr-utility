@@ -1,27 +1,21 @@
-use std::collections::HashSet;
+use crate::SettingsHandle;
 use anyhow::{anyhow, Context, Result};
-use enumset::EnumSet;
-use goxlr_profile_loader::components::colours::{Colour, ColourDisplay, ColourMap, ColourOffStyle, ColourState};
-use goxlr_profile_loader::components::mixer::{FullChannelList, InputChannels, OutputChannels};
-use goxlr_profile_loader::mic_profile::MicProfileSettings;
-use goxlr_profile_loader::profile::{Profile, ProfileSettings};
-use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
-use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice, VersionNumber, MuteFunction as BasicMuteFunction, FaderDisplayStyle as BasicColourDisplay, ButtonColourOffStyle as BasicColourOffStyle, EffectBankPresets, MicrophoneParamKey, EffectKey, EqFrequencies, MiniEqFrequencies, CompressorRatio, CompressorAttackTime, GateTimes, CompressorReleaseTime, ButtonColourTargets, ButtonColourGroups};
-use goxlr_usb::colouring::ColourTargets;
-use log::error;
-use std::fs::{create_dir_all, File};
-use std::io::{Cursor, Read, Seek};
-use std::path::Path;
-use strum::EnumCount;
-use strum::IntoEnumIterator;
 use byteorder::{ByteOrder, LittleEndian};
 use enum_map::EnumMap;
+use enumset::EnumSet;
 use futures::executor::block_on;
-use goxlr_ipc::{Compressor, CoughButton, Equaliser, EqualiserFrequency, EqualiserGain, EqualiserMini, EqualiserMiniFrequency, EqualiserMiniGain, NoiseGate};
+use goxlr_ipc::{
+    Compressor, CoughButton, Equaliser, EqualiserFrequency, EqualiserGain, EqualiserMini,
+    EqualiserMiniFrequency, EqualiserMiniGain, NoiseGate,
+};
+use goxlr_profile_loader::components::colours::{
+    Colour, ColourDisplay, ColourMap, ColourOffStyle, ColourState,
+};
 use goxlr_profile_loader::components::echo::EchoEncoder;
 use goxlr_profile_loader::components::gender::GenderEncoder;
 use goxlr_profile_loader::components::hardtune::{HardtuneEffect, HardtuneSource};
 use goxlr_profile_loader::components::megaphone::{MegaphoneEffect, Preset};
+use goxlr_profile_loader::components::mixer::{FullChannelList, InputChannels, OutputChannels};
 use goxlr_profile_loader::components::mute::{MuteButton, MuteFunction};
 use goxlr_profile_loader::components::mute_chat::{CoughToggle, MuteChat};
 use goxlr_profile_loader::components::pitch::{PitchEncoder, PitchStyle};
@@ -29,9 +23,26 @@ use goxlr_profile_loader::components::reverb::ReverbEncoder;
 use goxlr_profile_loader::components::robot::RobotEffect;
 use goxlr_profile_loader::components::sample::SampleBank;
 use goxlr_profile_loader::components::simple::SimpleElements;
+use goxlr_profile_loader::mic_profile::MicProfileSettings;
+use goxlr_profile_loader::profile::{Profile, ProfileSettings};
 use goxlr_profile_loader::SampleButtons;
-use goxlr_usb::buttonstate::{Buttons, ButtonStates};
-use crate::SettingsHandle;
+use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
+use goxlr_types::{
+    ButtonColourGroups, ButtonColourOffStyle as BasicColourOffStyle, ButtonColourTargets,
+    ChannelName, CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EffectBankPresets,
+    EffectKey, EqFrequencies, FaderDisplayStyle as BasicColourDisplay, FaderName, GateTimes,
+    InputDevice, MicrophoneParamKey, MicrophoneType, MiniEqFrequencies,
+    MuteFunction as BasicMuteFunction, OutputDevice, VersionNumber,
+};
+use goxlr_usb::buttonstate::{ButtonStates, Buttons};
+use goxlr_usb::colouring::ColourTargets;
+use log::error;
+use std::collections::HashSet;
+use std::fs::{create_dir_all, File};
+use std::io::{Cursor, Read, Seek};
+use std::path::Path;
+use strum::EnumCount;
+use strum::IntoEnumIterator;
 
 pub const DEFAULT_PROFILE_NAME: &str = "Default - Vaporwave";
 const DEFAULT_PROFILE: &[u8] = include_bytes!("../profiles/Default - Vaporwave.goxlr");
@@ -40,8 +51,8 @@ pub const DEFAULT_MIC_PROFILE_NAME: &str = "DEFAULT";
 const DEFAULT_MIC_PROFILE: &[u8] = include_bytes!("../profiles/DEFAULT.goxlrMicProfile");
 
 static GATE_ATTENUATION: [i8; 26] = [
-    -6,  -7,  -8,  -9,  -10, -11, -12, -13, -14, -15, -16, -17, -18,
-    -19, -20, -21, -22, -23, -24, -25, -26, -27, -28, -30, -32, -61
+    -6, -7, -8, -9, -10, -11, -12, -13, -14, -15, -16, -17, -18, -19, -20, -21, -22, -23, -24, -25,
+    -26, -27, -28, -30, -32, -61,
 ];
 
 #[derive(Debug)]
@@ -167,7 +178,8 @@ impl ProfileAdapter {
         let mut map: EnumMap<OutputDevice, bool> = EnumMap::default();
 
         // Get the mixer table
-        let mixer = &self.profile.settings().mixer().mixer_table()[standard_input_to_profile(input)];
+        let mixer =
+            &self.profile.settings().mixer().mixer_table()[standard_input_to_profile(input)];
         for (channel, volume) in mixer.iter() {
             map[profile_to_standard_output(channel)] = *volume > 0;
         }
@@ -186,7 +198,6 @@ impl ProfileAdapter {
 
         let table = self.profile.settings_mut().mixer_mut().mixer_table_mut();
         table[input][output] = value;
-
     }
 
     pub fn get_fader_assignment(&self, fader: FaderName) -> ChannelName {
@@ -203,20 +214,43 @@ impl ProfileAdapter {
 
     pub fn switch_fader_assignment(&mut self, fader_one: FaderName, fader_two: FaderName) {
         // TODO: Scribble?
-        self.profile.settings_mut().faders().swap(fader_one as usize, fader_two as usize);
-        self.profile.settings_mut().mute_buttons().swap(fader_one as usize, fader_two as usize);
+        self.profile
+            .settings_mut()
+            .faders()
+            .swap(fader_one as usize, fader_two as usize);
+        self.profile
+            .settings_mut()
+            .mute_buttons()
+            .swap(fader_one as usize, fader_two as usize);
     }
 
     pub fn set_fader_display(&mut self, fader: FaderName, display: BasicColourDisplay) {
-        let colours = self.profile.settings_mut().fader_mut(fader as usize).colour_map_mut();
+        let colours = self
+            .profile
+            .settings_mut()
+            .fader_mut(fader as usize)
+            .colour_map_mut();
         colours.set_fader_display(standard_to_profile_fader_display(display));
     }
 
     // We have a return type here, as there's string parsing involved..
-    pub fn set_fader_colours(&mut self, fader: FaderName, top: String, bottom: String) -> Result<()> {
-        let colours = self.profile.settings_mut().fader_mut(fader as usize).colour_map_mut();
+    pub fn set_fader_colours(
+        &mut self,
+        fader: FaderName,
+        top: String,
+        bottom: String,
+    ) -> Result<()> {
+        let colours = self
+            .profile
+            .settings_mut()
+            .fader_mut(fader as usize)
+            .colour_map_mut();
         if top.len() != 6 || bottom.len() != 6 {
-            return Err(anyhow!("Expected Length: 6 (RRGGBB), Top: {}, Bottom: {}", top.len(), bottom.len()));
+            return Err(anyhow!(
+                "Expected Length: 6 (RRGGBB), Top: {}, Bottom: {}",
+                top.len(),
+                bottom.len()
+            ));
         }
 
         colours.set_colour(0, Colour::fromrgb(top.as_str())?);
@@ -260,12 +294,13 @@ impl ProfileAdapter {
                 // what was going on there, if a sample button has no samples assigned to it, it'll go
                 // dark, so we need to check for that here.
                 match colour {
-                    ColourTargets::SamplerBottomLeft |
-                    ColourTargets::SamplerBottomRight |
-                    ColourTargets::SamplerTopLeft |
-                    ColourTargets::SamplerTopRight => {
+                    ColourTargets::SamplerBottomLeft
+                    | ColourTargets::SamplerBottomRight
+                    | ColourTargets::SamplerTopLeft
+                    | ColourTargets::SamplerTopRight => {
                         if i == 0 {
-                            colour_array[position..position + 4].copy_from_slice(&self.get_sampler_lighting(colour));
+                            colour_array[position..position + 4]
+                                .copy_from_slice(&self.get_sampler_lighting(colour));
                         } else {
                             colour_array[position..position + 4]
                                 .copy_from_slice(&colour_map.colour(i).to_reverse_bytes());
@@ -285,17 +320,23 @@ impl ProfileAdapter {
 
     fn get_sampler_lighting(&self, target: ColourTargets) -> [u8; 4] {
         return match target {
-            ColourTargets::SamplerBottomLeft => self.get_colour_array(target, SampleButtons::BottomLeft),
-            ColourTargets::SamplerBottomRight => self.get_colour_array(target, SampleButtons::BottomRight),
+            ColourTargets::SamplerBottomLeft => {
+                self.get_colour_array(target, SampleButtons::BottomLeft)
+            }
+            ColourTargets::SamplerBottomRight => {
+                self.get_colour_array(target, SampleButtons::BottomRight)
+            }
             ColourTargets::SamplerTopLeft => self.get_colour_array(target, SampleButtons::TopLeft),
-            ColourTargets::SamplerTopRight => self.get_colour_array(target, SampleButtons::TopRight),
+            ColourTargets::SamplerTopRight => {
+                self.get_colour_array(target, SampleButtons::TopRight)
+            }
 
             // Honestly, we should never reach this, return nothing.
-            _ => [00, 00, 00, 00]
+            _ => [00, 00, 00, 00],
         };
     }
 
-    fn get_colour_array(&self, target: ColourTargets, button: SampleButtons) -> [u8;4] {
+    fn get_colour_array(&self, target: ColourTargets, button: SampleButtons) -> [u8; 4] {
         if self.current_sample_bank_has_samples(button) {
             return get_profile_colour_map(self.profile.settings(), target)
                 .colour(0)
@@ -349,11 +390,15 @@ impl ProfileAdapter {
     }
 
     pub fn set_mute_button_on(&mut self, fader: FaderName, on: bool) {
-        self.get_mute_button_mut(fader).colour_map_mut().set_state_on(on);
+        self.get_mute_button_mut(fader)
+            .colour_map_mut()
+            .set_state_on(on);
     }
 
     pub fn set_mute_button_blink(&mut self, fader: FaderName, on: bool) {
-        self.get_mute_button_mut(fader).colour_map_mut().set_blink_on(on);
+        self.get_mute_button_mut(fader)
+            .colour_map_mut()
+            .set_blink_on(on);
     }
 
     /** 'Cough' / Mute Chat Button handlers.. */
@@ -384,7 +429,6 @@ impl ProfileAdapter {
         }
     }
 
-
     pub fn get_mute_chat_button_state(&self) -> (bool, bool, bool, MuteFunction) {
         let mute_config = self.profile.settings().mute_chat();
 
@@ -398,7 +442,10 @@ impl ProfileAdapter {
     }
 
     pub fn set_mute_chat_button_on(&mut self, on: bool) {
-        self.profile.settings_mut().mute_chat_mut().set_cough_button_on(on);
+        self.profile
+            .settings_mut()
+            .mute_chat_mut()
+            .set_cough_button_on(on);
     }
 
     pub fn set_mute_chat_button_blink(&mut self, on: bool) {
@@ -422,19 +469,29 @@ impl ProfileAdapter {
             return ButtonStates::Colour1;
         }
 
-        return match self.profile.settings().mute_chat().colour_map().get_off_style() {
+        return match self
+            .profile
+            .settings()
+            .mute_chat()
+            .colour_map()
+            .get_off_style()
+        {
             ColourOffStyle::Dimmed => ButtonStates::DimmedColour1,
             ColourOffStyle::Colour2 => ButtonStates::Colour2,
-            ColourOffStyle::DimmedColour2 => ButtonStates::DimmedColour2
-        }
+            ColourOffStyle::DimmedColour2 => ButtonStates::DimmedColour2,
+        };
     }
 
     pub fn get_cough_status(&self) -> CoughButton {
         CoughButton {
             is_toggle: self.profile.settings().mute_chat().is_cough_toggle(),
             mute_type: profile_to_standard_mute_function(
-                self.profile.settings().mute_chat().cough_mute_source().clone()
-            )
+                self.profile
+                    .settings()
+                    .mute_chat()
+                    .cough_mute_source()
+                    .clone(),
+            ),
         }
     }
 
@@ -444,7 +501,10 @@ impl ProfileAdapter {
     }
 
     pub fn set_mic_fader_id(&mut self, id: u8) {
-        self.profile.settings_mut().mute_chat_mut().set_mic_fader_id(id);
+        self.profile
+            .settings_mut()
+            .mute_chat_mut()
+            .set_mic_fader_id(id);
     }
 
     pub fn fader_from_id(&self, fader: u8) -> FaderName {
@@ -452,23 +512,31 @@ impl ProfileAdapter {
             0 => FaderName::A,
             1 => FaderName::B,
             2 => FaderName::C,
-            _ => FaderName::D
-        }
+            _ => FaderName::D,
+        };
     }
 
     pub fn is_fader_gradient(&self, fader: FaderName) -> bool {
-        self.profile.settings().fader(fader as usize).colour_map().is_fader_gradient()
+        self.profile
+            .settings()
+            .fader(fader as usize)
+            .colour_map()
+            .is_fader_gradient()
     }
 
     pub fn is_fader_meter(&self, fader: FaderName) -> bool {
-        self.profile.settings().fader(fader as usize).colour_map().is_fader_meter()
+        self.profile
+            .settings()
+            .fader(fader as usize)
+            .colour_map()
+            .is_fader_meter()
     }
 
     /** Bleep Button **/
     pub fn set_swear_button_on(&mut self, on: bool) {
         // Get the colour map for the bleep button..
-        self.profile.
-            settings_mut()
+        self.profile
+            .settings_mut()
             .simple_element_mut(SimpleElements::Swear)
             .colour_map_mut()
             .set_state_on(on);
@@ -480,65 +548,159 @@ impl ProfileAdapter {
         let current = self.profile.settings().context().selected_effects();
 
         // Ok, first thing we need to do is set the prefix in the profile..
-        self.profile.settings_mut().context_mut().set_selected_effects(preset);
+        self.profile
+            .settings_mut()
+            .context_mut()
+            .set_selected_effects(preset);
 
         // Disable the 'On' state of the existing button..
-        self.profile.settings_mut().effects_mut(current).colour_map_mut().set_state_on(false);
+        self.profile
+            .settings_mut()
+            .effects_mut(current)
+            .colour_map_mut()
+            .set_state_on(false);
 
         // Now we need to go through all the buttons, and set their new colour state..
-        let state = self.profile.settings_mut().robot_effect().get_preset(preset).state();
-        self.profile.settings_mut().robot_effect_mut().colour_map_mut().set_state_on(state);
+        let state = self
+            .profile
+            .settings_mut()
+            .robot_effect()
+            .get_preset(preset)
+            .state();
+        self.profile
+            .settings_mut()
+            .robot_effect_mut()
+            .colour_map_mut()
+            .set_state_on(state);
 
-        let state = self.profile.settings_mut().megaphone_effect().get_preset(preset).state();
-        self.profile.settings_mut().megaphone_effect_mut().colour_map_mut().set_state_on(state);
+        let state = self
+            .profile
+            .settings_mut()
+            .megaphone_effect()
+            .get_preset(preset)
+            .state();
+        self.profile
+            .settings_mut()
+            .megaphone_effect_mut()
+            .colour_map_mut()
+            .set_state_on(state);
 
-        let state = self.profile.settings_mut().hardtune_effect().get_preset(preset).state();
-        self.profile.settings_mut().hardtune_effect_mut().colour_map_mut().set_state_on(state);
+        let state = self
+            .profile
+            .settings_mut()
+            .hardtune_effect()
+            .get_preset(preset)
+            .state();
+        self.profile
+            .settings_mut()
+            .hardtune_effect_mut()
+            .colour_map_mut()
+            .set_state_on(state);
 
         // Set the new button 'On'
-        self.profile.settings_mut().effects_mut(preset).colour_map_mut().set_state_on(true);
+        self.profile
+            .settings_mut()
+            .effects_mut(preset)
+            .colour_map_mut()
+            .set_state_on(true);
     }
 
     pub fn toggle_megaphone(&mut self) {
         let current = self.profile.settings().context().selected_effects();
 
-        let new_state = !self.profile.settings().megaphone_effect().get_preset(current).state();
+        let new_state = !self
+            .profile
+            .settings()
+            .megaphone_effect()
+            .get_preset(current)
+            .state();
 
-        self.profile.settings_mut().megaphone_effect_mut().get_preset_mut(current).set_state(new_state);
-        self.profile.settings_mut().megaphone_effect_mut().colour_map_mut().set_state_on(new_state);
+        self.profile
+            .settings_mut()
+            .megaphone_effect_mut()
+            .get_preset_mut(current)
+            .set_state(new_state);
+        self.profile
+            .settings_mut()
+            .megaphone_effect_mut()
+            .colour_map_mut()
+            .set_state_on(new_state);
     }
 
     pub fn toggle_robot(&mut self) {
         let current = self.profile.settings().context().selected_effects();
 
-        let new_state = !self.profile.settings().robot_effect().get_preset(current).state();
+        let new_state = !self
+            .profile
+            .settings()
+            .robot_effect()
+            .get_preset(current)
+            .state();
 
-        self.profile.settings_mut().robot_effect_mut().get_preset_mut(current).set_state(new_state);
-        self.profile.settings_mut().robot_effect_mut().colour_map_mut().set_state_on(new_state);
+        self.profile
+            .settings_mut()
+            .robot_effect_mut()
+            .get_preset_mut(current)
+            .set_state(new_state);
+        self.profile
+            .settings_mut()
+            .robot_effect_mut()
+            .colour_map_mut()
+            .set_state_on(new_state);
     }
 
     pub fn toggle_hardtune(&mut self) {
         let current = self.profile.settings().context().selected_effects();
 
-        let new_state = !self.profile.settings().hardtune_effect().get_preset(current).state();
+        let new_state = !self
+            .profile
+            .settings()
+            .hardtune_effect()
+            .get_preset(current)
+            .state();
 
-        self.profile.settings_mut().hardtune_effect_mut().get_preset_mut(current).set_state(new_state);
-        self.profile.settings_mut().hardtune_effect_mut().colour_map_mut().set_state_on(new_state);
+        self.profile
+            .settings_mut()
+            .hardtune_effect_mut()
+            .get_preset_mut(current)
+            .set_state(new_state);
+        self.profile
+            .settings_mut()
+            .hardtune_effect_mut()
+            .colour_map_mut()
+            .set_state_on(new_state);
     }
 
     pub fn toggle_effects(&mut self) {
-        let state = !self.profile.settings().simple_element(SimpleElements::FxClear).colour_map().get_state();
-        self.profile.settings_mut().simple_element_mut(SimpleElements::FxClear).colour_map_mut().set_state_on(state);
+        let state = !self
+            .profile
+            .settings()
+            .simple_element(SimpleElements::FxClear)
+            .colour_map()
+            .get_state();
+        self.profile
+            .settings_mut()
+            .simple_element_mut(SimpleElements::FxClear)
+            .colour_map_mut()
+            .set_state_on(state);
     }
 
     pub fn get_pitch_value(&self) -> i8 {
         let current = self.profile.settings().context().selected_effects();
-        self.profile.settings().pitch_encoder().get_preset(current).knob_position()
+        self.profile
+            .settings()
+            .pitch_encoder()
+            .get_preset(current)
+            .knob_position()
     }
 
     pub fn set_pitch_value(&mut self, value: i8) {
         let current = self.profile.settings().context().selected_effects();
-        self.profile.settings_mut().pitch_encoder_mut().get_preset_mut(current).set_knob_position(value)
+        self.profile
+            .settings_mut()
+            .pitch_encoder_mut()
+            .get_preset_mut(current)
+            .set_knob_position(value)
     }
 
     pub fn get_active_pitch_profile(&self) -> &PitchEncoder {
@@ -548,12 +710,20 @@ impl ProfileAdapter {
 
     pub fn get_gender_value(&self) -> i8 {
         let current = self.profile.settings().context().selected_effects();
-        self.profile.settings().gender_encoder().get_preset(current).knob_position()
+        self.profile
+            .settings()
+            .gender_encoder()
+            .get_preset(current)
+            .knob_position()
     }
 
     pub fn set_gender_value(&mut self, value: i8) {
         let current = self.profile.settings().context().selected_effects();
-        self.profile.settings_mut().gender_encoder_mut().get_preset_mut(current).set_knob_position(value)
+        self.profile
+            .settings_mut()
+            .gender_encoder_mut()
+            .get_preset_mut(current)
+            .set_knob_position(value)
     }
 
     pub fn get_active_gender_profile(&self) -> &GenderEncoder {
@@ -563,12 +733,20 @@ impl ProfileAdapter {
 
     pub fn get_reverb_value(&self) -> i8 {
         let current = self.profile.settings().context().selected_effects();
-        self.profile.settings().reverb_encoder().get_preset(current).knob_position()
+        self.profile
+            .settings()
+            .reverb_encoder()
+            .get_preset(current)
+            .knob_position()
     }
 
     pub fn set_reverb_value(&mut self, value: i8) {
         let current = self.profile.settings().context().selected_effects();
-        self.profile.settings_mut().reverb_encoder_mut().get_preset_mut(current).set_knob_position(value)
+        self.profile
+            .settings_mut()
+            .reverb_encoder_mut()
+            .get_preset_mut(current)
+            .set_knob_position(value)
     }
 
     pub fn get_active_reverb_profile(&self) -> &ReverbEncoder {
@@ -578,12 +756,20 @@ impl ProfileAdapter {
 
     pub fn get_echo_value(&self) -> i8 {
         let current = self.profile.settings().context().selected_effects();
-        self.profile.settings().echo_encoder().get_preset(current).knob_position()
+        self.profile
+            .settings()
+            .echo_encoder()
+            .get_preset(current)
+            .knob_position()
     }
 
     pub fn set_echo_value(&mut self, value: i8) {
         let current = self.profile.settings().context().selected_effects();
-        self.profile.settings_mut().echo_encoder_mut().get_preset_mut(current).set_knob_position(value)
+        self.profile
+            .settings_mut()
+            .echo_encoder_mut()
+            .get_preset_mut(current)
+            .set_knob_position(value)
     }
 
     pub fn get_active_echo_profile(&self) -> &EchoEncoder {
@@ -593,7 +779,10 @@ impl ProfileAdapter {
 
     pub fn get_active_megaphone_profile(&self) -> &MegaphoneEffect {
         let current = self.profile.settings().context().selected_effects();
-        self.profile.settings().megaphone_effect().get_preset(current)
+        self.profile
+            .settings()
+            .megaphone_effect()
+            .get_preset(current)
     }
 
     pub fn get_active_robot_profile(&self) -> &RobotEffect {
@@ -603,7 +792,10 @@ impl ProfileAdapter {
 
     pub fn get_active_hardtune_profile(&self) -> &HardtuneEffect {
         let current = self.profile.settings().context().selected_effects();
-        self.profile.settings().hardtune_effect().get_preset(current)
+        self.profile
+            .settings()
+            .hardtune_effect()
+            .get_preset(current)
     }
 
     pub fn is_active_hardtune_source_all(&self) -> bool {
@@ -624,42 +816,66 @@ impl ProfileAdapter {
 
             // This should never really be called when Source is All, return a default.
             HardtuneSource::All => InputDevice::Music,
-        }
-
+        };
     }
 
     pub fn is_hardtune_pitch_enabled(&self) -> bool {
-        self.profile.settings().hardtune_effect().colour_map().get_state()
+        self.profile
+            .settings()
+            .hardtune_effect()
+            .colour_map()
+            .get_state()
     }
 
     pub fn is_pitch_narrow(&self) -> bool {
         let current = self.profile.settings().context().selected_effects();
-        self.profile.settings().pitch_encoder().get_preset(current).style() == &PitchStyle::Narrow
+        self.profile
+            .settings()
+            .pitch_encoder()
+            .get_preset(current)
+            .style()
+            == &PitchStyle::Narrow
     }
 
     pub fn is_fx_enabled(&self) -> bool {
-        self.profile.settings().simple_element(SimpleElements::FxClear).colour_map().get_state()
+        self.profile
+            .settings()
+            .simple_element(SimpleElements::FxClear)
+            .colour_map()
+            .get_state()
     }
 
     pub fn is_megaphone_enabled(&self) -> bool {
         if !self.is_fx_enabled() {
             return false;
         }
-        self.profile.settings().megaphone_effect().colour_map().get_state()
+        self.profile
+            .settings()
+            .megaphone_effect()
+            .colour_map()
+            .get_state()
     }
 
     pub fn is_robot_enabled(&self) -> bool {
         if !self.is_fx_enabled() {
             return false;
         }
-        self.profile.settings().robot_effect().colour_map().get_state()
+        self.profile
+            .settings()
+            .robot_effect()
+            .colour_map()
+            .get_state()
     }
 
     pub fn is_hardtune_enabled(&self) -> bool {
         if !self.is_fx_enabled() {
             return false;
         }
-        self.profile.settings().hardtune_effect().colour_map().get_state()
+        self.profile
+            .settings()
+            .hardtune_effect()
+            .colour_map()
+            .get_state()
     }
 
     /** Sampler Related **/
@@ -668,10 +884,14 @@ impl ProfileAdapter {
         let current = self.profile.settings().context().selected_sample();
 
         // Set the new context..
-        self.profile.settings_mut().context_mut().set_selected_sample(bank);
+        self.profile
+            .settings_mut()
+            .context_mut()
+            .set_selected_sample(bank);
 
         // Disable the 'on' state of the existing bank..
-        self.profile.settings_mut()
+        self.profile
+            .settings_mut()
             .simple_element_mut(sample_bank_to_simple_element(current))
             .colour_map_mut()
             .set_state_on(false);
@@ -680,7 +900,8 @@ impl ProfileAdapter {
         // If they're missing, remove them from the stack.
 
         // Set the 'on' state for the new bank..
-        self.profile.settings_mut()
+        self.profile
+            .settings_mut()
             .simple_element_mut(sample_bank_to_simple_element(bank))
             .colour_map_mut()
             .set_state_on(true);
@@ -688,8 +909,11 @@ impl ProfileAdapter {
 
     pub fn current_sample_bank_has_samples(&self, button: SampleButtons) -> bool {
         let bank = self.profile.settings().context().selected_sample();
-        let stack = self.profile.settings().sample_button(button).get_stack(bank);
-
+        let stack = self
+            .profile
+            .settings()
+            .sample_button(button)
+            .get_stack(bank);
 
         if stack.get_sample_count() == 0 {
             return false;
@@ -699,31 +923,54 @@ impl ProfileAdapter {
 
     pub fn get_sample_file(&self, button: SampleButtons) -> String {
         let bank = self.profile.settings().context().selected_sample();
-        let stack = self.profile.settings().sample_button(button).get_stack(bank);
+        let stack = self
+            .profile
+            .settings()
+            .sample_button(button)
+            .get_stack(bank);
 
         stack.get_first_sample_file()
     }
 
     pub fn is_sample_active(&self, button: SampleButtons) -> bool {
-        self.profile.settings().sample_button(button).colour_map().get_state()
+        self.profile
+            .settings()
+            .sample_button(button)
+            .colour_map()
+            .get_state()
     }
 
     pub fn set_sample_button_state(&mut self, button: SampleButtons, state: bool) {
-        self.profile.settings_mut().sample_button_mut(button).colour_map_mut().set_state_on(state);
+        self.profile
+            .settings_mut()
+            .sample_button_mut(button)
+            .colour_map_mut()
+            .set_state_on(state);
     }
 
     /** Colour Changing Code **/
-    pub fn set_button_colours(&mut self, target: ButtonColourTargets, colour_one: String, colour_two: Option<&String>) -> Result<()> {
+    pub fn set_button_colours(
+        &mut self,
+        target: ButtonColourTargets,
+        colour_one: String,
+        colour_two: Option<&String>,
+    ) -> Result<()> {
         let colour_target = standard_to_colour_target(target);
         let colours = get_profile_colour_map_mut(self.profile.settings_mut(), colour_target);
 
         if colour_one.len() != 6 {
-            return Err(anyhow!("Expected Length: 6 (RRGGBB), Colour One: {}", colour_one.len()));
+            return Err(anyhow!(
+                "Expected Length: 6 (RRGGBB), Colour One: {}",
+                colour_one.len()
+            ));
         }
 
         if let Some(two) = colour_two {
             if two.len() != 6 {
-                return Err(anyhow!("Expected Length: 6 (RRGGBB), Colour Two: {}", two.len()));
+                return Err(anyhow!(
+                    "Expected Length: 6 (RRGGBB), Colour Two: {}",
+                    two.len()
+                ));
             }
             colours.set_colour(1, Colour::fromrgb(two.as_str())?);
         }
@@ -731,48 +978,132 @@ impl ProfileAdapter {
         Ok(())
     }
 
-    pub fn set_button_off_style(&mut self, target: ButtonColourTargets, off_style: BasicColourOffStyle) {
+    pub fn set_button_off_style(
+        &mut self,
+        target: ButtonColourTargets,
+        off_style: BasicColourOffStyle,
+    ) {
         let colour_target = standard_to_colour_target(target);
-        get_profile_colour_map_mut(self.profile.settings_mut(), colour_target).set_off_style(
-            standard_to_profile_colour_off_style(off_style)
-        );
+        get_profile_colour_map_mut(self.profile.settings_mut(), colour_target)
+            .set_off_style(standard_to_profile_colour_off_style(off_style));
     }
 
     // TODO: We can probably do better with grouping these so they can be reused.
-    pub fn set_group_button_colours(&mut self, group: ButtonColourGroups, colour_one: String, colour_two: Option<String>) -> Result<()> {
+    pub fn set_group_button_colours(
+        &mut self,
+        group: ButtonColourGroups,
+        colour_one: String,
+        colour_two: Option<String>,
+    ) -> Result<()> {
         match group {
             ButtonColourGroups::FaderMute => {
-                self.set_button_colours(ButtonColourTargets::Fader1Mute, colour_one.clone(), colour_two.as_ref())?;
-                self.set_button_colours(ButtonColourTargets::Fader2Mute, colour_one.clone(), colour_two.as_ref())?;
-                self.set_button_colours(ButtonColourTargets::Fader3Mute, colour_one.clone(), colour_two.as_ref())?;
-                self.set_button_colours(ButtonColourTargets::Fader4Mute, colour_one.clone(), colour_two.as_ref())?;
+                self.set_button_colours(
+                    ButtonColourTargets::Fader1Mute,
+                    colour_one.clone(),
+                    colour_two.as_ref(),
+                )?;
+                self.set_button_colours(
+                    ButtonColourTargets::Fader2Mute,
+                    colour_one.clone(),
+                    colour_two.as_ref(),
+                )?;
+                self.set_button_colours(
+                    ButtonColourTargets::Fader3Mute,
+                    colour_one.clone(),
+                    colour_two.as_ref(),
+                )?;
+                self.set_button_colours(
+                    ButtonColourTargets::Fader4Mute,
+                    colour_one.clone(),
+                    colour_two.as_ref(),
+                )?;
             }
             ButtonColourGroups::EffectSelector => {
-                self.set_button_colours(ButtonColourTargets::EffectSelect1, colour_one.clone(), colour_two.as_ref())?;
-                self.set_button_colours(ButtonColourTargets::EffectSelect2, colour_one.clone(), colour_two.as_ref())?;
-                self.set_button_colours(ButtonColourTargets::EffectSelect3, colour_one.clone(), colour_two.as_ref())?;
-                self.set_button_colours(ButtonColourTargets::EffectSelect4, colour_one.clone(), colour_two.as_ref())?;
-                self.set_button_colours(ButtonColourTargets::EffectSelect5, colour_one.clone(), colour_two.as_ref())?;
-                self.set_button_colours(ButtonColourTargets::EffectSelect6, colour_one.clone(), colour_two.as_ref())?;
+                self.set_button_colours(
+                    ButtonColourTargets::EffectSelect1,
+                    colour_one.clone(),
+                    colour_two.as_ref(),
+                )?;
+                self.set_button_colours(
+                    ButtonColourTargets::EffectSelect2,
+                    colour_one.clone(),
+                    colour_two.as_ref(),
+                )?;
+                self.set_button_colours(
+                    ButtonColourTargets::EffectSelect3,
+                    colour_one.clone(),
+                    colour_two.as_ref(),
+                )?;
+                self.set_button_colours(
+                    ButtonColourTargets::EffectSelect4,
+                    colour_one.clone(),
+                    colour_two.as_ref(),
+                )?;
+                self.set_button_colours(
+                    ButtonColourTargets::EffectSelect5,
+                    colour_one.clone(),
+                    colour_two.as_ref(),
+                )?;
+                self.set_button_colours(
+                    ButtonColourTargets::EffectSelect6,
+                    colour_one.clone(),
+                    colour_two.as_ref(),
+                )?;
             }
             ButtonColourGroups::SampleBankSelector => {
-                self.set_button_colours(ButtonColourTargets::SamplerSelectA, colour_one.clone(), colour_two.as_ref())?;
-                self.set_button_colours(ButtonColourTargets::SamplerSelectB, colour_one.clone(), colour_two.as_ref())?;
-                self.set_button_colours(ButtonColourTargets::SamplerSelectC, colour_one.clone(), colour_two.as_ref())?;
+                self.set_button_colours(
+                    ButtonColourTargets::SamplerSelectA,
+                    colour_one.clone(),
+                    colour_two.as_ref(),
+                )?;
+                self.set_button_colours(
+                    ButtonColourTargets::SamplerSelectB,
+                    colour_one.clone(),
+                    colour_two.as_ref(),
+                )?;
+                self.set_button_colours(
+                    ButtonColourTargets::SamplerSelectC,
+                    colour_one.clone(),
+                    colour_two.as_ref(),
+                )?;
             }
             ButtonColourGroups::SamplerButtons => {
-                self.set_button_colours(ButtonColourTargets::SamplerTopLeft, colour_one.clone(), colour_two.as_ref())?;
-                self.set_button_colours(ButtonColourTargets::SamplerTopRight, colour_one.clone(), colour_two.as_ref())?;
-                self.set_button_colours(ButtonColourTargets::SamplerBottomLeft, colour_one.clone(), colour_two.as_ref())?;
-                self.set_button_colours(ButtonColourTargets::SamplerBottomRight, colour_one.clone(), colour_two.as_ref())?;
-                self.set_button_colours(ButtonColourTargets::SamplerClear, colour_one.clone(), colour_two.as_ref())?;
+                self.set_button_colours(
+                    ButtonColourTargets::SamplerTopLeft,
+                    colour_one.clone(),
+                    colour_two.as_ref(),
+                )?;
+                self.set_button_colours(
+                    ButtonColourTargets::SamplerTopRight,
+                    colour_one.clone(),
+                    colour_two.as_ref(),
+                )?;
+                self.set_button_colours(
+                    ButtonColourTargets::SamplerBottomLeft,
+                    colour_one.clone(),
+                    colour_two.as_ref(),
+                )?;
+                self.set_button_colours(
+                    ButtonColourTargets::SamplerBottomRight,
+                    colour_one.clone(),
+                    colour_two.as_ref(),
+                )?;
+                self.set_button_colours(
+                    ButtonColourTargets::SamplerClear,
+                    colour_one.clone(),
+                    colour_two.as_ref(),
+                )?;
             }
         }
 
         Ok(())
     }
 
-    pub fn set_group_button_off_style(&mut self, target: ButtonColourGroups, off_style: BasicColourOffStyle) {
+    pub fn set_group_button_off_style(
+        &mut self,
+        target: ButtonColourGroups,
+        off_style: BasicColourOffStyle,
+    ) {
         match target {
             ButtonColourGroups::FaderMute => {
                 self.set_button_off_style(ButtonColourTargets::Fader1Mute, off_style);
@@ -803,7 +1134,6 @@ impl ProfileAdapter {
         }
     }
 
-
     /** Generic Stuff **/
     pub fn get_button_colour_state(&self, button: Buttons) -> ButtonStates {
         let colour_map = self.get_button_colour_map(button);
@@ -824,8 +1154,8 @@ impl ProfileAdapter {
         return match colour_map.get_off_style() {
             ColourOffStyle::Dimmed => ButtonStates::DimmedColour1,
             ColourOffStyle::Colour2 => ButtonStates::Colour2,
-            ColourOffStyle::DimmedColour2 => ButtonStates::DimmedColour2
-        }
+            ColourOffStyle::DimmedColour2 => ButtonStates::DimmedColour2,
+        };
     }
 }
 
@@ -929,20 +1259,30 @@ impl MicProfileAdapter {
     pub fn noise_gate_ipc(&self) -> NoiseGate {
         NoiseGate {
             threshold: self.profile.gate().threshold(),
-            attack: GateTimes::iter().nth(self.profile.gate().attack() as usize).unwrap(),
-            release: GateTimes::iter().nth(self.profile.gate().release() as usize).unwrap(),
+            attack: GateTimes::iter()
+                .nth(self.profile.gate().attack() as usize)
+                .unwrap(),
+            release: GateTimes::iter()
+                .nth(self.profile.gate().release() as usize)
+                .unwrap(),
             enabled: self.profile.gate().enabled(),
-            attenuation: self.profile.gate().attenuation()
+            attenuation: self.profile.gate().attenuation(),
         }
     }
 
     pub fn compressor_ipc(&self) -> Compressor {
         Compressor {
             threshold: self.profile.compressor().threshold(),
-            ratio: CompressorRatio::iter().nth(self.profile.compressor().ratio() as usize).unwrap(),
-            attack: CompressorAttackTime::iter().nth(self.profile.compressor().attack() as usize).unwrap(),
-            release: CompressorReleaseTime::iter().nth(self.profile.compressor().release() as usize).unwrap(),
-            makeup_gain: self.profile.compressor().makeup()
+            ratio: CompressorRatio::iter()
+                .nth(self.profile.compressor().ratio() as usize)
+                .unwrap(),
+            attack: CompressorAttackTime::iter()
+                .nth(self.profile.compressor().attack() as usize)
+                .unwrap(),
+            release: CompressorReleaseTime::iter()
+                .nth(self.profile.compressor().release() as usize)
+                .unwrap(),
+            makeup_gain: self.profile.compressor().makeup(),
         }
     }
 
@@ -970,8 +1310,8 @@ impl MicProfileAdapter {
                 eq_2k_freq: self.profile.equalizer().eq_2k_freq(),
                 eq_4k_freq: self.profile.equalizer().eq_4k_freq(),
                 eq_8k_freq: self.profile.equalizer().eq_8k_freq(),
-                eq_16k_freq: self.profile.equalizer().eq_16k_freq()
-            }
+                eq_16k_freq: self.profile.equalizer().eq_16k_freq(),
+            },
         }
     }
 
@@ -983,7 +1323,7 @@ impl MicProfileAdapter {
                 eq_500h_gain: self.profile.equalizer_mini().eq_500h_gain(),
                 eq_1k_gain: self.profile.equalizer_mini().eq_1k_gain(),
                 eq_3k_gain: self.profile.equalizer_mini().eq_3k_gain(),
-                eq_8k_gain: self.profile.equalizer_mini().eq_8k_gain()
+                eq_8k_gain: self.profile.equalizer_mini().eq_8k_gain(),
             },
             frequency: EqualiserMiniFrequency {
                 eq_90h_freq: self.profile.equalizer_mini().eq_90h_freq(),
@@ -991,8 +1331,8 @@ impl MicProfileAdapter {
                 eq_500h_freq: self.profile.equalizer_mini().eq_500h_freq(),
                 eq_1k_freq: self.profile.equalizer_mini().eq_1k_freq(),
                 eq_3k_freq: self.profile.equalizer_mini().eq_3k_freq(),
-                eq_8k_freq: self.profile.equalizer_mini().eq_8k_freq()
-            }
+                eq_8k_freq: self.profile.equalizer_mini().eq_8k_freq(),
+            },
         }
     }
 
@@ -1004,7 +1344,7 @@ impl MicProfileAdapter {
         match mic_type {
             MicrophoneType::Dynamic => self.profile.setup_mut().set_dynamic_mic_gain(gain),
             MicrophoneType::Condenser => self.profile.setup_mut().set_condenser_mic_gain(gain),
-            MicrophoneType::Jack => self.profile.setup_mut().set_trs_mic_gain(gain)
+            MicrophoneType::Jack => self.profile.setup_mut().set_trs_mic_gain(gain),
         }
     }
 
@@ -1050,7 +1390,7 @@ impl MicProfileAdapter {
                 self.profile.equalizer_mut().set_eq_16k_gain(value);
                 EffectKey::Equalizer16KHzGain
             }
-        }
+        };
     }
 
     pub fn set_eq_freq(&mut self, freq: EqFrequencies, value: f32) -> Result<EffectKey> {
@@ -1129,13 +1469,15 @@ impl MicProfileAdapter {
             }
             EqFrequencies::Equalizer16KHz => {
                 if value < 2000.0 || value > 18000.0 {
-                    return Err(anyhow!("16KHz Frequency must be between 2000.0 and 18000.0"));
+                    return Err(anyhow!(
+                        "16KHz Frequency must be between 2000.0 and 18000.0"
+                    ));
                 }
 
                 self.profile.equalizer_mut().set_eq_16k_freq(value);
                 Ok(EffectKey::Equalizer16KHzFrequency)
             }
-        }
+        };
     }
 
     pub fn set_mini_eq_gain(&mut self, gain: MiniEqFrequencies, value: i8) -> MicrophoneParamKey {
@@ -1164,7 +1506,7 @@ impl MicProfileAdapter {
                 self.profile.equalizer_mini_mut().set_eq_8k_gain(value);
                 MicrophoneParamKey::Equalizer8KHzGain
             }
-        }
+        };
     }
 
     pub fn set_mini_eq_freq(&mut self, freq: MiniEqFrequencies, value: f32) -> MicrophoneParamKey {
@@ -1193,7 +1535,7 @@ impl MicProfileAdapter {
                 self.profile.equalizer_mini_mut().set_eq_8k_freq(value);
                 MicrophoneParamKey::Equalizer8KHzFrequency
             }
-        }
+        };
     }
 
     pub fn set_gate_threshold(&mut self, value: i8) {
@@ -1208,7 +1550,7 @@ impl MicProfileAdapter {
         self.profile.gate_mut().set_attack(value as u8);
     }
 
-    pub fn set_gate_release(&mut self,value: GateTimes) {
+    pub fn set_gate_release(&mut self, value: GateTimes) {
         self.profile.gate_mut().set_release(value as u8);
     }
 
@@ -1237,7 +1579,12 @@ impl MicProfileAdapter {
     }
 
     /// The uber method, fetches the relevant setting from the profile and returns it..
-    pub fn get_param_value(&self, param: MicrophoneParamKey, serial: &str, settings: &SettingsHandle) -> [u8; 4] {
+    pub fn get_param_value(
+        &self,
+        param: MicrophoneParamKey,
+        serial: &str,
+        settings: &SettingsHandle,
+    ) -> [u8; 4] {
         match param {
             MicrophoneParamKey::MicType => {
                 let microphone_type: MicrophoneType = self.mic_type();
@@ -1245,52 +1592,94 @@ impl MicProfileAdapter {
                     true => [0x01 as u8, 0, 0, 0],
                     false => [0, 0, 0, 0],
                 }
-            },
-            MicrophoneParamKey::DynamicGain => self.gain_value(self.mic_gains()[MicrophoneType::Dynamic as usize]),
-            MicrophoneParamKey::CondenserGain => self.gain_value(self.mic_gains()[MicrophoneType::Condenser as usize]),
-            MicrophoneParamKey::JackGain => self.gain_value(self.mic_gains()[MicrophoneType::Jack as usize]),
+            }
+            MicrophoneParamKey::DynamicGain => {
+                self.gain_value(self.mic_gains()[MicrophoneType::Dynamic as usize])
+            }
+            MicrophoneParamKey::CondenserGain => {
+                self.gain_value(self.mic_gains()[MicrophoneType::Condenser as usize])
+            }
+            MicrophoneParamKey::JackGain => {
+                self.gain_value(self.mic_gains()[MicrophoneType::Jack as usize])
+            }
             MicrophoneParamKey::GateThreshold => self.i8_to_f32(self.profile.gate().threshold()),
             MicrophoneParamKey::GateAttack => self.u8_to_f32(self.profile.gate().attack()),
             MicrophoneParamKey::GateRelease => self.u8_to_f32(self.profile.gate().release()),
-            MicrophoneParamKey::GateAttenuation => self.i8_to_f32(self.gate_attenuation_from_percent(self.profile.gate().attenuation())),
-            MicrophoneParamKey::CompressorThreshold => self.i8_to_f32(self.profile.compressor().threshold()),
-            MicrophoneParamKey::CompressorRatio => self.u8_to_f32(self.profile.compressor().ratio()),
-            MicrophoneParamKey::CompressorAttack => self.u8_to_f32(self.profile.compressor().ratio()),
-            MicrophoneParamKey::CompressorRelease => self.u8_to_f32(self.profile.compressor().release()),
-            MicrophoneParamKey::CompressorMakeUpGain => self.u8_to_f32(self.profile.compressor().makeup()),
+            MicrophoneParamKey::GateAttenuation => self
+                .i8_to_f32(self.gate_attenuation_from_percent(self.profile.gate().attenuation())),
+            MicrophoneParamKey::CompressorThreshold => {
+                self.i8_to_f32(self.profile.compressor().threshold())
+            }
+            MicrophoneParamKey::CompressorRatio => {
+                self.u8_to_f32(self.profile.compressor().ratio())
+            }
+            MicrophoneParamKey::CompressorAttack => {
+                self.u8_to_f32(self.profile.compressor().ratio())
+            }
+            MicrophoneParamKey::CompressorRelease => {
+                self.u8_to_f32(self.profile.compressor().release())
+            }
+            MicrophoneParamKey::CompressorMakeUpGain => {
+                self.u8_to_f32(self.profile.compressor().makeup())
+            }
             MicrophoneParamKey::BleepLevel => {
                 // Hopefully we can eventually move this to the profile, it's a little obnoxious right now!
                 let bleep_value = block_on(settings.get_device_bleep_volume(serial)).unwrap_or(-20);
                 self.calculate_bleep(bleep_value)
-            },
-            MicrophoneParamKey::Equalizer90HzFrequency => self.f32_to_f32(self.profile.equalizer_mini().eq_90h_freq()),
-            MicrophoneParamKey::Equalizer90HzGain => self.i8_to_f32(self.profile.equalizer_mini().eq_90h_gain()),
-            MicrophoneParamKey::Equalizer250HzFrequency => self.f32_to_f32(self.profile.equalizer_mini().eq_250h_freq()),
-            MicrophoneParamKey::Equalizer250HzGain => self.i8_to_f32(self.profile.equalizer_mini().eq_250h_gain()),
-            MicrophoneParamKey::Equalizer500HzFrequency => self.f32_to_f32(self.profile.equalizer_mini().eq_500h_freq()),
-            MicrophoneParamKey::Equalizer500HzGain => self.i8_to_f32(self.profile.equalizer_mini().eq_500h_gain()),
-            MicrophoneParamKey::Equalizer1KHzFrequency => self.f32_to_f32(self.profile.equalizer_mini().eq_1k_freq()),
-            MicrophoneParamKey::Equalizer1KHzGain => self.i8_to_f32(self.profile.equalizer_mini().eq_1k_gain()),
-            MicrophoneParamKey::Equalizer3KHzFrequency => self.f32_to_f32(self.profile.equalizer_mini().eq_3k_freq()),
-            MicrophoneParamKey::Equalizer3KHzGain => self.i8_to_f32(self.profile.equalizer_mini().eq_3k_gain()),
-            MicrophoneParamKey::Equalizer8KHzFrequency => self.f32_to_f32(self.profile.equalizer_mini().eq_8k_freq()),
-            MicrophoneParamKey::Equalizer8KHzGain => self.i8_to_f32(self.profile.equalizer_mini().eq_8k_gain()),
+            }
+            MicrophoneParamKey::Equalizer90HzFrequency => {
+                self.f32_to_f32(self.profile.equalizer_mini().eq_90h_freq())
+            }
+            MicrophoneParamKey::Equalizer90HzGain => {
+                self.i8_to_f32(self.profile.equalizer_mini().eq_90h_gain())
+            }
+            MicrophoneParamKey::Equalizer250HzFrequency => {
+                self.f32_to_f32(self.profile.equalizer_mini().eq_250h_freq())
+            }
+            MicrophoneParamKey::Equalizer250HzGain => {
+                self.i8_to_f32(self.profile.equalizer_mini().eq_250h_gain())
+            }
+            MicrophoneParamKey::Equalizer500HzFrequency => {
+                self.f32_to_f32(self.profile.equalizer_mini().eq_500h_freq())
+            }
+            MicrophoneParamKey::Equalizer500HzGain => {
+                self.i8_to_f32(self.profile.equalizer_mini().eq_500h_gain())
+            }
+            MicrophoneParamKey::Equalizer1KHzFrequency => {
+                self.f32_to_f32(self.profile.equalizer_mini().eq_1k_freq())
+            }
+            MicrophoneParamKey::Equalizer1KHzGain => {
+                self.i8_to_f32(self.profile.equalizer_mini().eq_1k_gain())
+            }
+            MicrophoneParamKey::Equalizer3KHzFrequency => {
+                self.f32_to_f32(self.profile.equalizer_mini().eq_3k_freq())
+            }
+            MicrophoneParamKey::Equalizer3KHzGain => {
+                self.i8_to_f32(self.profile.equalizer_mini().eq_3k_gain())
+            }
+            MicrophoneParamKey::Equalizer8KHzFrequency => {
+                self.f32_to_f32(self.profile.equalizer_mini().eq_8k_freq())
+            }
+            MicrophoneParamKey::Equalizer8KHzGain => {
+                self.i8_to_f32(self.profile.equalizer_mini().eq_8k_gain())
+            }
         }
     }
 
-    fn calculate_bleep(&self, value: i8) -> [u8;4] {
+    fn calculate_bleep(&self, value: i8) -> [u8; 4] {
         // TODO: Confirm the output here..
-        let mut return_value = [0;4];
+        let mut return_value = [0; 4];
         LittleEndian::write_f32(&mut return_value, value as f32 * 65536.0);
         return return_value;
     }
 
     /// This is going to require a CRAPLOAD of work to sort..
-    pub fn get_effect_value(&self,
-                            effect: EffectKey,
-                            serial: &str,
-                            settings: &SettingsHandle,
-                            main_profile: &ProfileAdapter
+    pub fn get_effect_value(
+        &self,
+        effect: EffectKey,
+        serial: &str,
+        settings: &SettingsHandle,
+        main_profile: &ProfileAdapter,
     ) -> i32 {
         match effect {
             EffectKey::DisableMic => {
@@ -1299,12 +1688,16 @@ impl MicProfileAdapter {
                 // of the effects that the mic is still read even when the channel is muted, so we
                 // need to correctly send this when the mic gets muted / unmuted.
                 0
-            },
-            EffectKey::BleepLevel => block_on(settings.get_device_bleep_volume(serial)).unwrap_or(-20).into(),
-            EffectKey::GateMode => 2,   // Not a profile setting, hard coded in Windows
-            EffectKey::GateEnabled => 1,    // Used for 'Mic Testing' in the UI
+            }
+            EffectKey::BleepLevel => block_on(settings.get_device_bleep_volume(serial))
+                .unwrap_or(-20)
+                .into(),
+            EffectKey::GateMode => 2, // Not a profile setting, hard coded in Windows
+            EffectKey::GateEnabled => 1, // Used for 'Mic Testing' in the UI
             EffectKey::GateThreshold => self.profile.gate().threshold().into(),
-            EffectKey::GateAttenuation => self.gate_attenuation_from_percent(self.profile.gate().attenuation()).into(),
+            EffectKey::GateAttenuation => self
+                .gate_attenuation_from_percent(self.profile.gate().attenuation())
+                .into(),
             EffectKey::GateAttack => self.profile.gate().attack().into(),
             EffectKey::GateRelease => self.profile.gate().release().into(),
             EffectKey::Unknown14b => 0,
@@ -1341,72 +1734,179 @@ impl MicProfileAdapter {
 
             EffectKey::ReverbAmount => main_profile.get_active_reverb_profile().amount().into(),
             EffectKey::ReverbDecay => main_profile.get_active_reverb_profile().decay().into(),
-            EffectKey::ReverbEarlyLevel => main_profile.get_active_reverb_profile().early_level().into(),
+            EffectKey::ReverbEarlyLevel => main_profile
+                .get_active_reverb_profile()
+                .early_level()
+                .into(),
             EffectKey::ReverbTailLevel => 0, // Always 0 from the Windows UI
             EffectKey::ReverbPredelay => main_profile.get_active_reverb_profile().predelay().into(),
             EffectKey::ReverbLoColor => main_profile.get_active_reverb_profile().locolor().into(),
             EffectKey::ReverbHiColor => main_profile.get_active_reverb_profile().hicolor().into(),
             EffectKey::ReverbHiFactor => main_profile.get_active_reverb_profile().hifactor().into(),
             EffectKey::ReverbDiffuse => main_profile.get_active_reverb_profile().diffuse().into(),
-            EffectKey::ReverbModSpeed => main_profile.get_active_reverb_profile().mod_speed().into(),
-            EffectKey::ReverbModDepth => main_profile.get_active_reverb_profile().mod_depth().into(),
+            EffectKey::ReverbModSpeed => {
+                main_profile.get_active_reverb_profile().mod_speed().into()
+            }
+            EffectKey::ReverbModDepth => {
+                main_profile.get_active_reverb_profile().mod_depth().into()
+            }
             EffectKey::ReverbStyle => *main_profile.get_active_reverb_profile().style() as i32,
 
             EffectKey::EchoAmount => main_profile.get_active_echo_profile().amount().into(),
-            EffectKey::EchoFeedback => main_profile.get_active_echo_profile().feedback_control().into(),
+            EffectKey::EchoFeedback => main_profile
+                .get_active_echo_profile()
+                .feedback_control()
+                .into(),
             EffectKey::EchoTempo => main_profile.get_active_echo_profile().tempo().into(),
             EffectKey::EchoDelayL => main_profile.get_active_echo_profile().time_left().into(),
             EffectKey::EchoDelayR => main_profile.get_active_echo_profile().time_right().into(),
-            EffectKey::EchoFeedbackL => main_profile.get_active_echo_profile().feedback_left().into(),
+            EffectKey::EchoFeedbackL => main_profile
+                .get_active_echo_profile()
+                .feedback_left()
+                .into(),
             EffectKey::EchoXFBLtoR => main_profile.get_active_echo_profile().xfb_l_to_r().into(),
-            EffectKey::EchoFeedbackR => main_profile.get_active_echo_profile().feedback_right().into(),
+            EffectKey::EchoFeedbackR => main_profile
+                .get_active_echo_profile()
+                .feedback_right()
+                .into(),
             EffectKey::EchoXFBRtoL => main_profile.get_active_echo_profile().xfb_r_to_l().into(),
             EffectKey::EchoSource => main_profile.get_active_echo_profile().source() as i32,
             EffectKey::EchoDivL => main_profile.get_active_echo_profile().div_l().into(),
             EffectKey::EchoDivR => main_profile.get_active_echo_profile().div_r().into(),
-            EffectKey::EchoFilterStyle => main_profile.get_active_echo_profile().filter_style().into(),
+            EffectKey::EchoFilterStyle => {
+                main_profile.get_active_echo_profile().filter_style().into()
+            }
 
-            EffectKey::PitchAmount => main_profile.get_active_pitch_profile().knob_position().into(),
+            EffectKey::PitchAmount => main_profile
+                .get_active_pitch_profile()
+                .knob_position()
+                .into(),
             EffectKey::PitchThreshold => main_profile.get_active_pitch_profile().threshold().into(),
-            EffectKey::PitchCharacter => main_profile.get_active_pitch_profile().inst_ratio_value().into(),
+            EffectKey::PitchCharacter => main_profile
+                .get_active_pitch_profile()
+                .inst_ratio_value()
+                .into(),
 
             EffectKey::GenderAmount => main_profile.get_active_gender_profile().amount().into(),
 
-            EffectKey::MegaphoneAmount => main_profile.get_active_megaphone_profile().trans_dist_amt().into(),
-            EffectKey::MegaphonePostGain => main_profile.get_active_megaphone_profile().trans_postgain().into(),
-            EffectKey::MegaphoneStyle => *main_profile.get_active_megaphone_profile().style() as i32,
-            EffectKey::MegaphoneHP => main_profile.get_active_megaphone_profile().trans_hp().into(),
-            EffectKey::MegaphoneLP => main_profile.get_active_megaphone_profile().trans_lp().into(),
-            EffectKey::MegaphonePreGain => main_profile.get_active_megaphone_profile().trans_pregain().into(),
-            EffectKey::MegaphoneDistType => main_profile.get_active_megaphone_profile().trans_dist_type().into(),
-            EffectKey::MegaphonePresenceGain => main_profile.get_active_megaphone_profile().trans_presence_gain().into(),
-            EffectKey::MegaphonePresenceFC => main_profile.get_active_megaphone_profile().trans_presence_fc().into(),
-            EffectKey::MegaphonePresenceBW => main_profile.get_active_megaphone_profile().trans_presence_bw().into(),
-            EffectKey::MegaphoneBeatboxEnable => main_profile.get_active_megaphone_profile().trans_beatbox_enabled().into(),
-            EffectKey::MegaphoneFilterControl => main_profile.get_active_megaphone_profile().trans_filter_control().into(),
-            EffectKey::MegaphoneFilter => main_profile.get_active_megaphone_profile().trans_filter().into(),
-            EffectKey::MegaphoneDrivePotGainCompMid => main_profile.get_active_megaphone_profile().trans_drive_pot_gain_comp_mid().into(),
-            EffectKey::MegaphoneDrivePotGainCompMax => main_profile.get_active_megaphone_profile().trans_drive_pot_gain_comp_max().into(),
+            EffectKey::MegaphoneAmount => main_profile
+                .get_active_megaphone_profile()
+                .trans_dist_amt()
+                .into(),
+            EffectKey::MegaphonePostGain => main_profile
+                .get_active_megaphone_profile()
+                .trans_postgain()
+                .into(),
+            EffectKey::MegaphoneStyle => {
+                *main_profile.get_active_megaphone_profile().style() as i32
+            }
+            EffectKey::MegaphoneHP => main_profile
+                .get_active_megaphone_profile()
+                .trans_hp()
+                .into(),
+            EffectKey::MegaphoneLP => main_profile
+                .get_active_megaphone_profile()
+                .trans_lp()
+                .into(),
+            EffectKey::MegaphonePreGain => main_profile
+                .get_active_megaphone_profile()
+                .trans_pregain()
+                .into(),
+            EffectKey::MegaphoneDistType => main_profile
+                .get_active_megaphone_profile()
+                .trans_dist_type()
+                .into(),
+            EffectKey::MegaphonePresenceGain => main_profile
+                .get_active_megaphone_profile()
+                .trans_presence_gain()
+                .into(),
+            EffectKey::MegaphonePresenceFC => main_profile
+                .get_active_megaphone_profile()
+                .trans_presence_fc()
+                .into(),
+            EffectKey::MegaphonePresenceBW => main_profile
+                .get_active_megaphone_profile()
+                .trans_presence_bw()
+                .into(),
+            EffectKey::MegaphoneBeatboxEnable => main_profile
+                .get_active_megaphone_profile()
+                .trans_beatbox_enabled()
+                .into(),
+            EffectKey::MegaphoneFilterControl => main_profile
+                .get_active_megaphone_profile()
+                .trans_filter_control()
+                .into(),
+            EffectKey::MegaphoneFilter => main_profile
+                .get_active_megaphone_profile()
+                .trans_filter()
+                .into(),
+            EffectKey::MegaphoneDrivePotGainCompMid => main_profile
+                .get_active_megaphone_profile()
+                .trans_drive_pot_gain_comp_mid()
+                .into(),
+            EffectKey::MegaphoneDrivePotGainCompMax => main_profile
+                .get_active_megaphone_profile()
+                .trans_drive_pot_gain_comp_max()
+                .into(),
 
             EffectKey::HardTuneAmount => main_profile.get_active_hardtune_profile().amount().into(),
-            EffectKey::HardTuneKeySource => 0,  // Always 0, HardTune is handled through routing
+            EffectKey::HardTuneKeySource => 0, // Always 0, HardTune is handled through routing
             EffectKey::HardTuneScale => main_profile.get_active_hardtune_profile().scale().into(),
-            EffectKey::HardTunePitchAmount => main_profile.get_active_hardtune_profile().pitch_amt().into(),
+            EffectKey::HardTunePitchAmount => main_profile
+                .get_active_hardtune_profile()
+                .pitch_amt()
+                .into(),
             EffectKey::HardTuneRate => main_profile.get_active_hardtune_profile().rate().into(),
             EffectKey::HardTuneWindow => main_profile.get_active_hardtune_profile().window().into(),
 
-            EffectKey::RobotLowGain => main_profile.get_active_robot_profile().vocoder_low_gain().into(),
-            EffectKey::RobotLowFreq => main_profile.get_active_robot_profile().vocoder_low_freq().into(),
-            EffectKey::RobotLowWidth => main_profile.get_active_robot_profile().vocoder_low_bw().into(),
-            EffectKey::RobotMidGain => main_profile.get_active_robot_profile().vocoder_mid_gain().into(),
-            EffectKey::RobotMidFreq => main_profile.get_active_robot_profile().vocoder_mid_freq().into(),
-            EffectKey::RobotMidWidth => main_profile.get_active_robot_profile().vocoder_mid_bw().into(),
-            EffectKey::RobotHiGain => main_profile.get_active_robot_profile().vocoder_high_gain().into(),
-            EffectKey::RobotHiFreq => main_profile.get_active_robot_profile().vocoder_high_freq().into(),
-            EffectKey::RobotHiWidth => main_profile.get_active_robot_profile().vocoder_high_bw().into(),
-            EffectKey::RobotWaveform => main_profile.get_active_robot_profile().synthosc_waveform().into(),
-            EffectKey::RobotPulseWidth => main_profile.get_active_robot_profile().synthosc_pulse_width().into(),
-            EffectKey::RobotThreshold => main_profile.get_active_robot_profile().vocoder_gate_threshold().into(),
+            EffectKey::RobotLowGain => main_profile
+                .get_active_robot_profile()
+                .vocoder_low_gain()
+                .into(),
+            EffectKey::RobotLowFreq => main_profile
+                .get_active_robot_profile()
+                .vocoder_low_freq()
+                .into(),
+            EffectKey::RobotLowWidth => main_profile
+                .get_active_robot_profile()
+                .vocoder_low_bw()
+                .into(),
+            EffectKey::RobotMidGain => main_profile
+                .get_active_robot_profile()
+                .vocoder_mid_gain()
+                .into(),
+            EffectKey::RobotMidFreq => main_profile
+                .get_active_robot_profile()
+                .vocoder_mid_freq()
+                .into(),
+            EffectKey::RobotMidWidth => main_profile
+                .get_active_robot_profile()
+                .vocoder_mid_bw()
+                .into(),
+            EffectKey::RobotHiGain => main_profile
+                .get_active_robot_profile()
+                .vocoder_high_gain()
+                .into(),
+            EffectKey::RobotHiFreq => main_profile
+                .get_active_robot_profile()
+                .vocoder_high_freq()
+                .into(),
+            EffectKey::RobotHiWidth => main_profile
+                .get_active_robot_profile()
+                .vocoder_high_bw()
+                .into(),
+            EffectKey::RobotWaveform => main_profile
+                .get_active_robot_profile()
+                .synthosc_waveform()
+                .into(),
+            EffectKey::RobotPulseWidth => main_profile
+                .get_active_robot_profile()
+                .synthosc_pulse_width()
+                .into(),
+            EffectKey::RobotThreshold => main_profile
+                .get_active_robot_profile()
+                .vocoder_gate_threshold()
+                .into(),
             EffectKey::RobotDryMix => main_profile.get_active_robot_profile().dry_mix().into(),
             EffectKey::RobotStyle => *main_profile.get_active_robot_profile().style() as i32,
 
@@ -1423,25 +1923,25 @@ impl MicProfileAdapter {
     }
 
     fn u8_to_f32(&self, value: u8) -> [u8; 4] {
-        let mut return_value = [0;4];
+        let mut return_value = [0; 4];
         LittleEndian::write_f32(&mut return_value, value.into());
         return return_value;
     }
 
     fn i8_to_f32(&self, value: i8) -> [u8; 4] {
-        let mut return_value = [0;4];
+        let mut return_value = [0; 4];
         LittleEndian::write_f32(&mut return_value, value.into());
         return return_value;
     }
 
     fn f32_to_f32(&self, value: f32) -> [u8; 4] {
-        let mut return_value = [0;4];
+        let mut return_value = [0; 4];
         LittleEndian::write_f32(&mut return_value, value.into());
         return return_value;
     }
 
     fn gain_value(&self, value: u16) -> [u8; 4] {
-        let mut return_value = [0;4];
+        let mut return_value = [0; 4];
         LittleEndian::write_u16(&mut return_value[2..], value);
         return return_value;
     }
@@ -1670,7 +2170,7 @@ fn profile_to_standard_mute_function(value: MuteFunction) -> BasicMuteFunction {
         MuteFunction::ToStream => BasicMuteFunction::ToStream,
         MuteFunction::ToVoiceChat => BasicMuteFunction::ToVoiceChat,
         MuteFunction::ToPhones => BasicMuteFunction::ToPhones,
-        MuteFunction::ToLineOut => BasicMuteFunction::ToLineOut
+        MuteFunction::ToLineOut => BasicMuteFunction::ToLineOut,
     }
 }
 
@@ -1680,7 +2180,7 @@ fn standard_to_profile_mute_function(value: BasicMuteFunction) -> MuteFunction {
         BasicMuteFunction::ToStream => MuteFunction::ToStream,
         BasicMuteFunction::ToVoiceChat => MuteFunction::ToVoiceChat,
         BasicMuteFunction::ToPhones => MuteFunction::ToPhones,
-        BasicMuteFunction::ToLineOut => MuteFunction::ToLineOut
+        BasicMuteFunction::ToLineOut => MuteFunction::ToLineOut,
     }
 }
 
@@ -1689,7 +2189,7 @@ fn standard_to_profile_fader_display(value: BasicColourDisplay) -> ColourDisplay
         BasicColourDisplay::TwoColour => ColourDisplay::TwoColour,
         BasicColourDisplay::Gradient => ColourDisplay::Gradient,
         BasicColourDisplay::Meter => ColourDisplay::Meter,
-        BasicColourDisplay::GradientMeter => ColourDisplay::GradientMeter
+        BasicColourDisplay::GradientMeter => ColourDisplay::GradientMeter,
     }
 }
 
@@ -1698,7 +2198,7 @@ fn profile_to_standard_fader_display(value: ColourDisplay) -> BasicColourDisplay
         ColourDisplay::TwoColour => BasicColourDisplay::TwoColour,
         ColourDisplay::Gradient => BasicColourDisplay::Gradient,
         ColourDisplay::Meter => BasicColourDisplay::Meter,
-        ColourDisplay::GradientMeter => BasicColourDisplay::Gradient
+        ColourDisplay::GradientMeter => BasicColourDisplay::Gradient,
     }
 }
 
@@ -1706,7 +2206,7 @@ fn standard_to_profile_colour_off_style(value: BasicColourOffStyle) -> ColourOff
     match value {
         BasicColourOffStyle::Dimmed => ColourOffStyle::Dimmed,
         BasicColourOffStyle::Colour2 => ColourOffStyle::Colour2,
-        BasicColourOffStyle::DimmedColour2 => ColourOffStyle::DimmedColour2
+        BasicColourOffStyle::DimmedColour2 => ColourOffStyle::DimmedColour2,
     }
 }
 
@@ -1746,7 +2246,7 @@ fn profile_to_standard_sample_bank(bank: SampleBank) -> goxlr_types::SampleBank 
     match bank {
         SampleBank::A => goxlr_types::SampleBank::A,
         SampleBank::B => goxlr_types::SampleBank::B,
-        SampleBank::C => goxlr_types::SampleBank::C
+        SampleBank::C => goxlr_types::SampleBank::C,
     }
 }
 
@@ -1754,7 +2254,7 @@ fn standard_to_profile_sample_bank(bank: goxlr_types::SampleBank) -> SampleBank 
     match bank {
         goxlr_types::SampleBank::A => SampleBank::A,
         goxlr_types::SampleBank::B => SampleBank::B,
-        goxlr_types::SampleBank::C => SampleBank::C
+        goxlr_types::SampleBank::C => SampleBank::C,
     }
 }
 
@@ -1762,7 +2262,7 @@ fn sample_bank_to_simple_element(bank: SampleBank) -> SimpleElements {
     match bank {
         SampleBank::A => SimpleElements::SampleBankA,
         SampleBank::B => SimpleElements::SampleBankB,
-        SampleBank::C => SimpleElements::SampleBankC
+        SampleBank::C => SimpleElements::SampleBankC,
     }
 }
 
@@ -1773,7 +2273,7 @@ fn profile_to_standard_preset(value: Preset) -> EffectBankPresets {
         Preset::Preset3 => EffectBankPresets::Preset3,
         Preset::Preset4 => EffectBankPresets::Preset4,
         Preset::Preset5 => EffectBankPresets::Preset5,
-        Preset::Preset6 => EffectBankPresets::Preset6
+        Preset::Preset6 => EffectBankPresets::Preset6,
     }
 }
 
@@ -1784,7 +2284,7 @@ fn standard_to_profile_preset(value: EffectBankPresets) -> Preset {
         EffectBankPresets::Preset3 => Preset::Preset3,
         EffectBankPresets::Preset4 => Preset::Preset4,
         EffectBankPresets::Preset5 => Preset::Preset5,
-        EffectBankPresets::Preset6 => Preset::Preset6
+        EffectBankPresets::Preset6 => Preset::Preset6,
     }
 }
 
@@ -1839,15 +2339,15 @@ fn get_profile_colour_map(profile: &ProfileSettings, colour_target: ColourTarget
         ColourTargets::EffectMegaphone => profile.megaphone_effect().colour_map(),
         ColourTargets::EffectRobot => profile.robot_effect().colour_map(),
         ColourTargets::EffectHardTune => profile.hardtune_effect().colour_map(),
-        ColourTargets::SamplerSelectA => {
-            profile.simple_element(SimpleElements::SampleBankA).colour_map()
-        }
-        ColourTargets::SamplerSelectB => {
-            profile.simple_element(SimpleElements::SampleBankB).colour_map()
-        }
-        ColourTargets::SamplerSelectC => {
-            profile.simple_element(SimpleElements::SampleBankC).colour_map()
-        }
+        ColourTargets::SamplerSelectA => profile
+            .simple_element(SimpleElements::SampleBankA)
+            .colour_map(),
+        ColourTargets::SamplerSelectB => profile
+            .simple_element(SimpleElements::SampleBankB)
+            .colour_map(),
+        ColourTargets::SamplerSelectC => profile
+            .simple_element(SimpleElements::SampleBankC)
+            .colour_map(),
         ColourTargets::SamplerTopLeft => profile.sample_button(TopLeft).colour_map(),
         ColourTargets::SamplerTopRight => profile.sample_button(TopRight).colour_map(),
         ColourTargets::SamplerBottomLeft => profile.sample_button(BottomLeft).colour_map(),
@@ -1866,17 +2366,24 @@ fn get_profile_colour_map(profile: &ProfileSettings, colour_target: ColourTarget
         ColourTargets::ReverbEncoder => profile.reverb_encoder().colour_map(),
         ColourTargets::EchoEncoder => profile.echo_encoder().colour_map(),
         ColourTargets::LogoX => profile.simple_element(SimpleElements::LogoX).colour_map(),
-        ColourTargets::Global => profile.simple_element(SimpleElements::GlobalColour).colour_map(),
+        ColourTargets::Global => profile
+            .simple_element(SimpleElements::GlobalColour)
+            .colour_map(),
     }
 }
 
-fn get_profile_colour_map_mut(profile: &mut ProfileSettings, colour_target: ColourTargets) -> &mut ColourMap {
+fn get_profile_colour_map_mut(
+    profile: &mut ProfileSettings,
+    colour_target: ColourTargets,
+) -> &mut ColourMap {
     match colour_target {
         ColourTargets::Fader1Mute => profile.mute_button_mut(0).colour_map_mut(),
         ColourTargets::Fader2Mute => profile.mute_button_mut(1).colour_map_mut(),
         ColourTargets::Fader3Mute => profile.mute_button_mut(2).colour_map_mut(),
         ColourTargets::Fader4Mute => profile.mute_button_mut(3).colour_map_mut(),
-        ColourTargets::Bleep => profile.simple_element_mut(SimpleElements::Swear).colour_map_mut(),
+        ColourTargets::Bleep => profile
+            .simple_element_mut(SimpleElements::Swear)
+            .colour_map_mut(),
         ColourTargets::MicrophoneMute => profile.mute_chat_mut().colour_map_mut(),
         ColourTargets::EffectSelect1 => profile.effects_mut(Preset::Preset1).colour_map_mut(),
         ColourTargets::EffectSelect2 => profile.effects_mut(Preset::Preset2).colour_map_mut(),
@@ -1884,23 +2391,27 @@ fn get_profile_colour_map_mut(profile: &mut ProfileSettings, colour_target: Colo
         ColourTargets::EffectSelect4 => profile.effects_mut(Preset::Preset4).colour_map_mut(),
         ColourTargets::EffectSelect5 => profile.effects_mut(Preset::Preset5).colour_map_mut(),
         ColourTargets::EffectSelect6 => profile.effects_mut(Preset::Preset6).colour_map_mut(),
-        ColourTargets::EffectFx => profile.simple_element_mut(SimpleElements::FxClear).colour_map_mut(),
+        ColourTargets::EffectFx => profile
+            .simple_element_mut(SimpleElements::FxClear)
+            .colour_map_mut(),
         ColourTargets::EffectMegaphone => profile.megaphone_effect_mut().colour_map_mut(),
         ColourTargets::EffectRobot => profile.robot_effect_mut().colour_map_mut(),
         ColourTargets::EffectHardTune => profile.hardtune_effect_mut().colour_map_mut(),
-        ColourTargets::SamplerSelectA => {
-            profile.simple_element_mut(SimpleElements::SampleBankA).colour_map_mut()
-        }
-        ColourTargets::SamplerSelectB => {
-            profile.simple_element_mut(SimpleElements::SampleBankB).colour_map_mut()
-        }
-        ColourTargets::SamplerSelectC => {
-            profile.simple_element_mut(SimpleElements::SampleBankC).colour_map_mut()
-        }
+        ColourTargets::SamplerSelectA => profile
+            .simple_element_mut(SimpleElements::SampleBankA)
+            .colour_map_mut(),
+        ColourTargets::SamplerSelectB => profile
+            .simple_element_mut(SimpleElements::SampleBankB)
+            .colour_map_mut(),
+        ColourTargets::SamplerSelectC => profile
+            .simple_element_mut(SimpleElements::SampleBankC)
+            .colour_map_mut(),
         ColourTargets::SamplerTopLeft => profile.sample_button_mut(TopLeft).colour_map_mut(),
         ColourTargets::SamplerTopRight => profile.sample_button_mut(TopRight).colour_map_mut(),
         ColourTargets::SamplerBottomLeft => profile.sample_button_mut(BottomLeft).colour_map_mut(),
-        ColourTargets::SamplerBottomRight => profile.sample_button_mut(BottomRight).colour_map_mut(),
+        ColourTargets::SamplerBottomRight => {
+            profile.sample_button_mut(BottomRight).colour_map_mut()
+        }
         ColourTargets::SamplerClear => profile.sample_button_mut(Clear).colour_map_mut(),
         ColourTargets::FadeMeter1 => profile.fader_mut(0).colour_map_mut(),
         ColourTargets::FadeMeter2 => profile.fader_mut(1).colour_map_mut(),
@@ -1914,8 +2425,12 @@ fn get_profile_colour_map_mut(profile: &mut ProfileSettings, colour_target: Colo
         ColourTargets::GenderEncoder => profile.gender_encoder_mut().colour_map_mut(),
         ColourTargets::ReverbEncoder => profile.reverb_encoder_mut().colour_map_mut(),
         ColourTargets::EchoEncoder => profile.echo_encoder_mut().colour_map_mut(),
-        ColourTargets::LogoX => profile.simple_element_mut(SimpleElements::LogoX).colour_map_mut(),
-        ColourTargets::Global => profile.simple_element_mut(SimpleElements::GlobalColour).colour_map_mut(),
+        ColourTargets::LogoX => profile
+            .simple_element_mut(SimpleElements::LogoX)
+            .colour_map_mut(),
+        ColourTargets::Global => profile
+            .simple_element_mut(SimpleElements::GlobalColour)
+            .colour_map_mut(),
     }
 }
 
@@ -1944,7 +2459,7 @@ pub fn standard_to_colour_target(target: ButtonColourTargets) -> ColourTargets {
         ButtonColourTargets::SamplerTopRight => ColourTargets::SamplerTopRight,
         ButtonColourTargets::SamplerBottomLeft => ColourTargets::SamplerBottomLeft,
         ButtonColourTargets::SamplerBottomRight => ColourTargets::SamplerBottomRight,
-        ButtonColourTargets::SamplerClear => ColourTargets::SamplerClear
+        ButtonColourTargets::SamplerClear => ColourTargets::SamplerClear,
     }
 }
 

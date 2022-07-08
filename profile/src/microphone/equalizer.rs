@@ -221,7 +221,6 @@ impl Equalizer {
         );
     }
 
-
     pub fn eq_31h_gain(&self) -> i8 {
         self.eq_31h_gain
     }

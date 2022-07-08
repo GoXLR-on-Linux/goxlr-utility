@@ -1,5 +1,8 @@
 use enumset::EnumSet;
-use goxlr_types::{ChannelName, CompressorAttackTime, FaderName, FirmwareVersions, GateTimes, InputDevice, MicrophoneType, MuteFunction, OutputDevice, CompressorRatio, CompressorReleaseTime};
+use goxlr_types::{
+    ChannelName, CompressorAttackTime, CompressorRatio, CompressorReleaseTime, FaderName,
+    FirmwareVersions, GateTimes, InputDevice, MicrophoneType, MuteFunction, OutputDevice,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -51,13 +54,13 @@ pub struct HardwareStatus {
 #[derive(Debug, Clone, Serialize, Deserialize, Copy)]
 pub struct FaderStatus {
     pub channel: ChannelName,
-    pub mute_type: MuteFunction
+    pub mute_type: MuteFunction,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Copy)]
 pub struct CoughButton {
     pub is_toggle: bool,
-    pub mute_type: MuteFunction
+    pub mute_type: MuteFunction,
 }
 
 impl Default for FaderStatus {
@@ -137,7 +140,7 @@ pub struct EqualiserMiniFrequency {
     pub eq_500h_freq: f32,
     pub eq_1k_freq: f32,
     pub eq_3k_freq: f32,
-    pub eq_8k_freq: f32
+    pub eq_8k_freq: f32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -157,7 +160,6 @@ pub struct Compressor {
     pub release: CompressorReleaseTime,
     pub makeup_gain: u8,
 }
-
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Paths {

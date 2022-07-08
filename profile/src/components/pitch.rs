@@ -222,7 +222,6 @@ impl PitchEncoder {
         }
     }
 
-
     pub fn knob_position(&self) -> i8 {
         self.knob_position
     }

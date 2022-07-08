@@ -1,5 +1,5 @@
-use anyhow::{anyhow, Context, Result};
 use crate::{DaemonRequest, DaemonResponse, DaemonStatus, GoXLRCommand, Socket};
+use anyhow::{anyhow, Context, Result};
 //use goxlr_ipc::{DaemonRequest, DaemonResponse, DaemonStatus, GoXLRCommand, Socket};
 
 #[derive(Debug)]

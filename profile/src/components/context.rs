@@ -6,8 +6,8 @@ use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
-use strum::IntoEnumIterator;
 use strum::EnumProperty;
+use strum::IntoEnumIterator;
 
 use crate::components::colours::ColourMap;
 use crate::components::megaphone::Preset;
@@ -41,7 +41,7 @@ pub struct Context {
     selected: u8,
     selected_id: Option<u8>,
     selected_sample: SampleBank, // These two should probably map to enums somewhere, matched up against
-    selected_effects: Preset, // the relevant sections of the tags (for quickly pulling presets)
+    selected_effects: Preset,    // the relevant sections of the tags (for quickly pulling presets)
 }
 
 impl Context {
@@ -120,11 +120,17 @@ impl Context {
 
         attributes.insert(
             "selectedSampleStack".to_string(),
-            self.selected_sample.get_str("contextTitle").unwrap().to_string(),
+            self.selected_sample
+                .get_str("contextTitle")
+                .unwrap()
+                .to_string(),
         );
         attributes.insert(
             "selectedEffectBank".to_string(),
-            self.selected_effects.get_str("contextTitle").unwrap().to_string(),
+            self.selected_effects
+                .get_str("contextTitle")
+                .unwrap()
+                .to_string(),
         );
 
         self.colour_map.write_colours(&mut attributes);

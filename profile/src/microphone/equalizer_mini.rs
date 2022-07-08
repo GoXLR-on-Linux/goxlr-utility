@@ -138,7 +138,7 @@ impl EqualizerMini {
         );
         attributes.insert(
             "MIC_MINI_EQ_250HZ_F".to_string(),
-            format!("{}", self.eq_250h_freq)
+            format!("{}", self.eq_250h_freq),
         );
         attributes.insert(
             "MIC_MINI_EQ_500HZ_F".to_string(),
@@ -157,7 +157,6 @@ impl EqualizerMini {
             format!("{}", self.eq_8k_freq),
         );
     }
-
 
     pub fn eq_90h_gain(&self) -> i8 {
         self.eq_90h_gain

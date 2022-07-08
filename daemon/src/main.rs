@@ -1,12 +1,13 @@
+mod audio;
 mod communication;
 mod device;
+mod http_server;
 mod primary_worker;
 mod profile;
 mod settings;
 mod shutdown;
-mod audio;
-mod http_server;
 
+use crate::http_server::launch_httpd;
 use crate::primary_worker::handle_changes;
 use crate::settings::SettingsHandle;
 use crate::shutdown::Shutdown;
@@ -24,7 +25,6 @@ use std::path::Path;
 use tokio::net::{UnixListener, UnixStream};
 use tokio::sync::mpsc;
 use tokio::{join, signal};
-use crate::http_server::launch_httpd;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -53,8 +53,11 @@ async fn main() -> Result<()> {
     let mut shutdown = Shutdown::new();
     let (usb_tx, usb_rx) = mpsc::channel(32);
     let usb_handle = tokio::spawn(handle_changes(usb_rx, shutdown.clone(), settings));
-    let communications_handle =
-        tokio::spawn(listen_for_connections(listener, usb_tx.clone(), shutdown.clone()));
+    let communications_handle = tokio::spawn(listen_for_connections(
+        listener,
+        usb_tx.clone(),
+        shutdown.clone(),
+    ));
 
     let (httpd_tx, httpd_rx) = tokio::sync::oneshot::channel();
     tokio::spawn(launch_httpd(usb_tx.clone(), httpd_tx));

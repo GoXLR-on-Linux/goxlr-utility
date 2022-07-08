@@ -1,11 +1,10 @@
 use std::collections::HashMap;
-use std::str::FromStr;
 use std::io::Write;
-
+use std::str::FromStr;
 
 use enum_map::Enum;
 use ritelinked::LinkedHashMap;
-use strum::{EnumProperty, EnumString, Display, EnumIter};
+use strum::{Display, EnumIter, EnumProperty, EnumString};
 use xml::attribute::OwnedAttribute;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
@@ -102,7 +101,8 @@ impl SampleBase {
 
         if !map.contains_key(key.as_str()) {
             // Stack doesn't contain any tracks, we're done here.
-            self.sample_stack.insert(SampleBank::from_str(id.to_string().as_str())?, sample_stack);
+            self.sample_stack
+                .insert(SampleBank::from_str(id.to_string().as_str())?, sample_stack);
             return Ok(());
         }
 
@@ -126,7 +126,8 @@ impl SampleBase {
             }
         }
 
-        self.sample_stack.insert(SampleBank::from_str(id.to_string().as_str())?, sample_stack);
+        self.sample_stack
+            .insert(SampleBank::from_str(id.to_string().as_str())?, sample_stack);
 
         Ok(())
     }
@@ -298,12 +299,14 @@ enum PlayOrder {
     Random,
 }
 
-#[derive(Debug, Copy, Clone, Display, Enum, EnumString, EnumProperty, EnumIter, PartialEq, Eq, Hash)]
+#[derive(
+    Debug, Copy, Clone, Display, Enum, EnumString, EnumProperty, EnumIter, PartialEq, Eq, Hash,
+)]
 pub enum SampleBank {
     #[strum(props(contextTitle = "sampleStackA"))]
     A,
     #[strum(props(contextTitle = "sampleStackB"))]
     B,
     #[strum(props(contextTitle = "sampleStackC"))]
-    C
+    C,
 }

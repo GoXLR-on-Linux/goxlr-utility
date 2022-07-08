@@ -13,9 +13,9 @@ pub enum ParseError {
     #[error("Expected enum: {0}")]
     ExpectedEnum(#[from] strum::ParseError),
 }
+use crate::components::colours::ColourDisplay::{Gradient, GradientMeter, Meter};
 use strum::{Display, EnumString};
 use xml::attribute::OwnedAttribute;
-use crate::components::colours::ColourDisplay::{Gradient, GradientMeter, Meter};
 
 #[derive(Debug)]
 pub struct ColourMap {
@@ -235,7 +235,6 @@ impl ColourMap {
     pub fn blink(&self) -> &Option<ColourState> {
         &self.blink
     }
-
 
     pub fn set_state(&mut self, state: Option<ColourState>) {
         self.state = state;

@@ -1,6 +1,10 @@
-use std::str::FromStr;
 use clap::{AppSettings, Args, Parser, Subcommand};
-use goxlr_types::{ChannelName, FaderDisplayStyle, ButtonColourOffStyle, FaderName, InputDevice, MuteFunction, OutputDevice, ButtonColourTargets, ButtonColourGroups, GateTimes, CompressorRatio, CompressorAttackTime, CompressorReleaseTime, EqFrequencies, MiniEqFrequencies};
+use goxlr_types::{
+    ButtonColourGroups, ButtonColourOffStyle, ButtonColourTargets, ChannelName,
+    CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EqFrequencies, FaderDisplayStyle,
+    FaderName, GateTimes, InputDevice, MiniEqFrequencies, MuteFunction, OutputDevice,
+};
+use std::str::FromStr;
 
 // TODO: Likely going to shuffle this to use subcommands rather than parameters..
 
@@ -70,20 +74,20 @@ pub enum SubCommands {
 
         /// The new volume as a percentage [0 - 100]
         #[clap(parse(try_from_str=percent_value))]
-        volume_percent: u8
+        volume_percent: u8,
     },
 
     /// Configure the Bleep Button
     BleepVolume {
         /// Set Bleep Button Volume
         #[clap(parse(try_from_str=percent_value))]
-        volume_percent: u8
+        volume_percent: u8,
     },
 
     /// Commands to manipulate the individual GoXLR Faders
     Faders {
         #[clap(subcommand)]
-        fader: FaderCommands
+        fader: FaderCommands,
     },
 
     /// Commands for configuring the cough button
@@ -104,14 +108,14 @@ pub enum SubCommands {
 
         /// Is routing enabled between these two devices? [true | false]
         #[clap(parse(try_from_str))]
-        enabled: bool
+        enabled: bool,
     },
 
     /// Commands to control the GoXLR lighting
     Lighting {
         #[clap(subcommand)]
-        command: LightingCommands
-    }
+        command: LightingCommands,
+    },
 }
 
 fn percent_value(s: &str) -> Result<u8, String> {
@@ -133,14 +137,14 @@ fn percent_value(s: &str) -> Result<u8, String> {
 pub enum CoughButtonBehaviours {
     ButtonIsHold {
         #[clap(parse(try_from_str))]
-        is_hold: bool
+        is_hold: bool,
     },
 
     MuteBehaviour {
         /// Where a single press will mute (Hold will always Mute to All)
         #[clap(arg_enum)]
-        mute_behaviour: MuteFunction
-    }
+        mute_behaviour: MuteFunction,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -150,14 +154,14 @@ pub enum ProfileType {
     /// General Device Profile
     Device {
         #[clap(subcommand)]
-        command: ProfileAction
+        command: ProfileAction,
     },
 
     /// Microphone Profile
     Microphone {
         #[clap(subcommand)]
-        command: ProfileAction
-    }
+        command: ProfileAction,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -178,7 +182,7 @@ pub enum ProfileAction {
     SaveAs {
         /// The new Profile Name
         profile_name: String,
-    }
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -235,7 +239,7 @@ pub enum EqualiserMiniCommands {
         #[clap(allow_hyphen_values = true)]
         /// The new Gain Value
         gain: i8,
-    }
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -260,8 +264,8 @@ pub enum EqualiserCommands {
         #[clap(parse(try_from_str=parse_gain))]
         #[clap(allow_hyphen_values = true)]
         /// The new Gain Value
-        gain: i8
-    }
+        gain: i8,
+    },
 }
 
 // TODO: The mini has a known smaller frequency range than the full device, find it.
@@ -298,7 +302,6 @@ fn parse_gain(s: &str) -> Result<i8, String> {
     }
     Ok(value)
 }
-
 
 #[derive(Subcommand, Debug)]
 #[clap(setting = AppSettings::DeriveDisplayOrder)]
@@ -361,7 +364,7 @@ pub enum CompressorCommands {
     Threshold {
         #[clap(parse(try_from_str=parse_compressor_threshold))]
         #[clap(allow_hyphen_values = true)]
-        value: i8
+        value: i8,
     },
     Ratio {
         #[clap(arg_enum)]
@@ -378,7 +381,7 @@ pub enum CompressorCommands {
     MakeUp {
         #[clap(parse(try_from_str=parse_compressor_makeup))]
         value: u8,
-    }
+    },
 }
 
 fn parse_compressor_threshold(s: &str) -> Result<i8, String> {
@@ -411,7 +414,6 @@ fn parse_compressor_makeup(s: &str) -> Result<u8, String> {
     Ok(value)
 }
 
-
 #[derive(Subcommand, Debug)]
 #[clap(setting = AppSettings::DeriveDisplayOrder)]
 #[clap(setting = AppSettings::ArgRequiredElseHelp)]
@@ -435,7 +437,7 @@ pub enum FaderCommands {
 
         /// Where a single press will mute (Hold will always Mute to All)
         #[clap(arg_enum)]
-        mute_behaviour: MuteFunction
+        mute_behaviour: MuteFunction,
     },
 }
 
@@ -447,7 +449,7 @@ pub enum CoughCommands {
     MuteBehaviour {
         /// Where a single press will mute (Hold will always Mute to All)
         #[clap(arg_enum)]
-        mute_behaviour: MuteFunction
+        mute_behaviour: MuteFunction,
     },
 }
 
@@ -458,26 +460,26 @@ pub enum LightingCommands {
     /// Configure Lighting for a specific fader
     Fader {
         #[clap(subcommand)]
-        command: FaderLightingCommands
+        command: FaderLightingCommands,
     },
 
     /// Configure lighting for all faders at once
     FadersAll {
         #[clap(subcommand)]
-        command: FadersAllLightingCommands
+        command: FadersAllLightingCommands,
     },
 
     /// Configure lighting for a specific button
     Button {
         #[clap(subcommand)]
-        command: ButtonLightingCommands
+        command: ButtonLightingCommands,
     },
 
     /// Configure lighting for a group of common bottoms
     ButtonGroup {
         #[clap(subcommand)]
-        command: ButtonGroupLightingCommands
-    }
+        command: ButtonGroupLightingCommands,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -491,7 +493,7 @@ pub enum FaderLightingCommands {
 
         /// The new display method
         #[clap(arg_enum)]
-        display: FaderDisplayStyle
+        display: FaderDisplayStyle,
     },
 
     /// Sets the Top and Bottom colours of a fader
@@ -504,7 +506,7 @@ pub enum FaderLightingCommands {
         top: String,
 
         /// Bottom colour in hex format [RRGGBB]
-        bottom: String
+        bottom: String,
     },
 }
 
@@ -515,7 +517,7 @@ pub enum FadersAllLightingCommands {
     Display {
         /// The new display method
         #[clap(arg_enum)]
-        display: FaderDisplayStyle
+        display: FaderDisplayStyle,
     },
 
     /// Sets the Top and Bottom colours of a fader
@@ -524,7 +526,7 @@ pub enum FadersAllLightingCommands {
         top: String,
 
         /// Bottom colour in hex format [RRGGBB]
-        bottom: String
+        bottom: String,
     },
 }
 
@@ -552,7 +554,7 @@ pub enum ButtonLightingCommands {
         /// How the button should be presented when 'off'
         #[clap(arg_enum)]
         off_style: ButtonColourOffStyle,
-    }
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -579,7 +581,7 @@ pub enum ButtonGroupLightingCommands {
         /// How the button should be presented when 'off'
         #[clap(arg_enum)]
         off_style: ButtonColourOffStyle,
-    }
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -590,7 +592,7 @@ pub enum AllFaderCommands {
     Display {
         /// The new display method
         #[clap(arg_enum)]
-        display: FaderDisplayStyle
+        display: FaderDisplayStyle,
     },
 
     /// Set the colour of all GoXLR Faders
@@ -599,7 +601,7 @@ pub enum AllFaderCommands {
         top: String,
 
         /// Bottom colour in hex format [RRGGBB]
-        bottom: String
+        bottom: String,
     },
 
     /// Set the colours of all the fader buttons
@@ -613,5 +615,5 @@ pub enum AllFaderCommands {
 
         /// The secondary button colour [RRGGBB]
         colour_two: Option<String>,
-    }
+    },
 }

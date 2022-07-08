@@ -1,12 +1,17 @@
 use futures::{SinkExt, StreamExt, TryStreamExt};
 use serde::{Deserialize, Serialize};
 
+pub mod client;
 mod device;
 mod socket;
-pub mod client;
 
 pub use device::*;
-use goxlr_types::{ChannelName, FaderDisplayStyle, ButtonColourOffStyle, CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EqFrequencies, FaderName, GateTimes, InputDevice, MicrophoneType, MiniEqFrequencies, MuteFunction, OutputDevice, ButtonColourTargets, ButtonColourGroups};
+use goxlr_types::{
+    ButtonColourGroups, ButtonColourOffStyle, ButtonColourTargets, ChannelName,
+    CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EqFrequencies, FaderDisplayStyle,
+    FaderName, GateTimes, InputDevice, MicrophoneType, MiniEqFrequencies, MuteFunction,
+    OutputDevice,
+};
 pub use socket::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

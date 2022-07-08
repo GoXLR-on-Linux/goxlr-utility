@@ -1,10 +1,10 @@
+use anyhow::{anyhow, Context, Result};
+use directories::ProjectDirs;
+use goxlr_profile_loader::SampleButtons;
+use log::{debug, error};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
-use anyhow::{anyhow, Context, Result};
-use directories::ProjectDirs;
-use log::{debug, error};
-use goxlr_profile_loader::SampleButtons;
 
 #[derive(Debug)]
 pub struct AudioHandler {
@@ -12,7 +12,7 @@ pub struct AudioHandler {
     output_device: String,
     input_device: Option<String>,
 
-    active_streams: HashMap<SampleButtons, Child>
+    active_streams: HashMap<SampleButtons, Child>,
 }
 
 impl AudioHandler {
@@ -31,23 +31,24 @@ impl AudioHandler {
         debug!("Checking For {}", script_path.to_string_lossy());
 
         if !script_path.exists() {
-            let proj_dirs = ProjectDirs::from(
-                "org",
-                "GoXLR-on-Linux",
-                "GoXLR-Utility")
+            let proj_dirs = ProjectDirs::from("org", "GoXLR-on-Linux", "GoXLR-Utility")
                 .context("Couldn't find project directories")?;
 
             script_path = proj_dirs.data_dir().join("goxlr-audio.sh");
         }
         debug!("Checking For {}", script_path.to_string_lossy());
 
-
         // This is temporary, just grab the script in the dev directory.
         if !script_path.exists() {
             error!("Unable to locate GoXLR Audio Script, Sampler Disabled.");
-            return Err(anyhow!("Unable to locate GoXLR Audio Script, Sampler Disabled."));
+            return Err(anyhow!(
+                "Unable to locate GoXLR Audio Script, Sampler Disabled."
+            ));
         }
-        debug!("Found GoXLR Audio script in {}", script_path.to_string_lossy());
+        debug!(
+            "Found GoXLR Audio script in {}",
+            script_path.to_string_lossy()
+        );
 
         let script = script_path.to_str().expect("Unable to get the Script Path");
 
@@ -62,7 +63,9 @@ impl AudioHandler {
         if !sampler_out.status.success() {
             error!("{}", String::from_utf8(sampler_out.stderr)?);
             error!("Unable to find sample output device, Sampler Disabled.");
-            return Err(anyhow!("Unable to find sample output device, Sampler Disabled."));
+            return Err(anyhow!(
+                "Unable to find sample output device, Sampler Disabled."
+            ));
         }
         let output_device = String::from_utf8(sampler_out.stdout)?;
         let output_device = output_device.trim().to_string();
@@ -92,7 +95,7 @@ impl AudioHandler {
             output_device,
             input_device,
 
-            active_streams: HashMap::new()
+            active_streams: HashMap::new(),
         })
     }
 

@@ -83,7 +83,6 @@ impl SimpleElement {
         &mut self.colour_map
     }
 
-
     pub fn colour_map(&self) -> &ColourMap {
         &self.colour_map
     }

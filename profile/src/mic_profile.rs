@@ -1,6 +1,7 @@
 use crate::error::{ParseError, SaveError};
 use crate::microphone::compressor::Compressor;
 use crate::microphone::equalizer::Equalizer;
+use crate::microphone::equalizer_mini::EqualizerMini;
 use crate::microphone::gate::Gate;
 use crate::microphone::mic_setup::MicSetup;
 use crate::microphone::ui_setup::UiSetup;
@@ -13,7 +14,6 @@ use xml::reader::XmlEvent as XmlReaderEvent;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::{EmitterConfig, EventReader};
-use crate::microphone::equalizer_mini::EqualizerMini;
 
 #[derive(Debug)]
 pub struct MicProfileSettings {
@@ -147,22 +147,32 @@ impl MicProfileSettings {
         &self.mic_setup
     }
 
-    pub fn gate(&self) -> &Gate { &self.gate }
+    pub fn gate(&self) -> &Gate {
+        &self.gate
+    }
     pub fn gate_mut(&mut self) -> &mut Gate {
         &mut self.gate
     }
-    pub fn compressor(&self) -> &Compressor { &self.compressor }
+    pub fn compressor(&self) -> &Compressor {
+        &self.compressor
+    }
     pub fn compressor_mut(&mut self) -> &mut Compressor {
         &mut self.compressor
     }
-    pub fn equalizer(&self) -> &Equalizer { &self.equalizer }
+    pub fn equalizer(&self) -> &Equalizer {
+        &self.equalizer
+    }
     pub fn equalizer_mut(&mut self) -> &mut Equalizer {
         &mut self.equalizer
     }
 
-    pub fn equalizer_mini(&self) -> &EqualizerMini { &self.equalizer_mini }
+    pub fn equalizer_mini(&self) -> &EqualizerMini {
+        &self.equalizer_mini
+    }
     pub fn equalizer_mini_mut(&mut self) -> &mut EqualizerMini {
         &mut self.equalizer_mini
     }
-    pub fn deess(&self) -> u8 { self.deess }
+    pub fn deess(&self) -> u8 {
+        self.deess
+    }
 }

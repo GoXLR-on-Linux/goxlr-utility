@@ -1,5 +1,5 @@
-use enumset::EnumSetType;
 use enum_map::Enum;
+use enumset::EnumSetType;
 use strum::EnumIter;
 
 #[derive(Debug, Copy, Clone)]

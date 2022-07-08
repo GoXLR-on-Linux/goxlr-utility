@@ -1,14 +1,14 @@
 #[cfg(feature = "clap")]
 use clap::ArgEnum;
+use derivative::Derivative;
+use enum_map::Enum;
 #[cfg(feature = "enumset")]
 use enumset::EnumSetType;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
-use serde_repr::{Serialize_repr, Deserialize_repr};
+use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::fmt::Formatter;
 use strum::{Display, EnumCount, EnumIter};
-use enum_map::Enum;
-use derivative::Derivative;
 
 #[derive(Copy, Clone, Debug, Display, EnumIter, EnumCount, PartialEq, Eq)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
@@ -143,7 +143,7 @@ pub enum EffectKey {
     ReverbAmount = 0x0076,
     ReverbDecay = 0x002f,
     ReverbEarlyLevel = 0x0037,
-    ReverbTailLevel = 0x0039,   // Always sent as 0.
+    ReverbTailLevel = 0x0039, // Always sent as 0.
     ReverbPredelay = 0x0030,
     ReverbLoColor = 0x0032,
     ReverbHiColor = 0x0033,
@@ -212,7 +212,7 @@ pub enum EffectKey {
     Encoder1Enabled = 0x00d5,
     Encoder2Enabled = 0x00d6,
     Encoder3Enabled = 0x0150,
-    Encoder4Enabled = 0x0151
+    Encoder4Enabled = 0x0151,
 }
 
 // Eq and Derivative allow for these to be added to a HashSet (the values make EnumSet unusable)
@@ -237,9 +237,9 @@ pub enum MicrophoneParamKey {
     BleepLevel = 0x70100,
 
     /*
-      These are the values for the GoXLR mini, it seems there's a difference in how the two
-      are setup, The Mini does EQ via mic parameters, where as the full does it via effects.
-     */
+     These are the values for the GoXLR mini, it seems there's a difference in how the two
+     are setup, The Mini does EQ via mic parameters, where as the full does it via effects.
+    */
     Equalizer90HzFrequency = 0x40000,
     Equalizer90HzGain = 0x40001,
     Equalizer250HzFrequency = 0x40003,
@@ -308,7 +308,7 @@ pub enum ButtonColourGroups {
     FaderMute,
     EffectSelector,
     SampleBankSelector,
-    SamplerButtons
+    SamplerButtons,
 }
 
 #[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq)]
@@ -325,14 +325,14 @@ pub enum SimpleColourTargets {
     Scribble1,
     Scribble2,
     Scribble3,
-    Scribble4
+    Scribble4,
 }
 
 pub enum EncoderColourTargets {
     Reverb,
     Pitch,
     Echo,
-    Gender
+    Gender,
 }
 
 // MuteChat
@@ -379,12 +379,14 @@ pub enum EffectBankPresets {
     Preset3,
     Preset4,
     Preset5,
-    Preset6
+    Preset6,
 }
 
 #[derive(Debug, Copy, Clone, Display, PartialEq)]
 pub enum SampleBank {
-    A, B, C
+    A,
+    B,
+    C,
 }
 
 #[derive(Debug, Copy, Clone, Display, PartialEq)]
@@ -425,14 +427,26 @@ of 0.1, and by the end it's hitting increments of 16 and 32.
 These enums are essentially the same maps, and use 'as usize' and strum::iter().nth to convert.
  */
 
-
 #[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize_repr, Deserialize_repr))]
 #[repr(u8)]
 pub enum CompressorRatio {
-    Ratio1_0, Ratio1_1, Ratio1_2, Ratio1_4,  Ratio1_6,  Ratio1_8, Ratio2_0, Ratio2_5, Ratio3_2,
-    Ratio4_0, Ratio5_6, Ratio8_0, Ratio16_0, Ratio32_0, Ratio64_0
+    Ratio1_0,
+    Ratio1_1,
+    Ratio1_2,
+    Ratio1_4,
+    Ratio1_6,
+    Ratio1_8,
+    Ratio2_0,
+    Ratio2_5,
+    Ratio3_2,
+    Ratio4_0,
+    Ratio5_6,
+    Ratio8_0,
+    Ratio16_0,
+    Ratio32_0,
+    Ratio64_0,
 }
 
 #[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq)]
@@ -440,12 +454,52 @@ pub enum CompressorRatio {
 #[cfg_attr(feature = "serde", derive(Serialize_repr, Deserialize_repr))]
 #[repr(u8)]
 pub enum GateTimes {
-    Gate10ms,   Gate20ms,   Gate30ms,   Gate40ms,   Gate50ms,   Gate60ms,   Gate70ms,   Gate80ms,
-    Gate90ms,   Gate100ms,  Gate110ms,  Gate120ms,  Gate130ms,  Gate140ms,  Gate150ms,  Gate160ms,
-    Gate170ms,  Gate180ms,  Gate190ms,  Gate200ms,  Gate250ms,  Gate300ms,  Gate350ms,  Gate400ms,
-    Gate450ms,  Gate500ms,  Gate550ms,  Gate600ms,  Gate650ms,  Gate700ms,  Gate750ms,  Gate800ms,
-    Gate850ms,  Gate900ms,  Gate950ms,  Gate1000ms, Gate1100ms, Gate1200ms, Gate1300ms, Gate1400ms,
-    Gate1500ms, Gate1600ms, Gate1700ms, Gate1800ms, Gate1900ms, Gate2000ms,
+    Gate10ms,
+    Gate20ms,
+    Gate30ms,
+    Gate40ms,
+    Gate50ms,
+    Gate60ms,
+    Gate70ms,
+    Gate80ms,
+    Gate90ms,
+    Gate100ms,
+    Gate110ms,
+    Gate120ms,
+    Gate130ms,
+    Gate140ms,
+    Gate150ms,
+    Gate160ms,
+    Gate170ms,
+    Gate180ms,
+    Gate190ms,
+    Gate200ms,
+    Gate250ms,
+    Gate300ms,
+    Gate350ms,
+    Gate400ms,
+    Gate450ms,
+    Gate500ms,
+    Gate550ms,
+    Gate600ms,
+    Gate650ms,
+    Gate700ms,
+    Gate750ms,
+    Gate800ms,
+    Gate850ms,
+    Gate900ms,
+    Gate950ms,
+    Gate1000ms,
+    Gate1100ms,
+    Gate1200ms,
+    Gate1300ms,
+    Gate1400ms,
+    Gate1500ms,
+    Gate1600ms,
+    Gate1700ms,
+    Gate1800ms,
+    Gate1900ms,
+    Gate2000ms,
 }
 
 #[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq)]
@@ -454,9 +508,26 @@ pub enum GateTimes {
 #[repr(u8)]
 pub enum CompressorAttackTime {
     // Note: 0ms is technically 0.001ms
-    Comp0ms,  Comp2ms,  Comp3ms,  Comp4ms,  Comp5ms,  Comp6ms,  Comp7ms,  Comp8ms,  Comp9ms,
-    Comp10ms, Comp12ms, Comp14ms, Comp16ms, Comp18ms, Comp20ms, Comp23ms, Comp26ms, Comp30ms,
-    Comp35ms, Comp40ms
+    Comp0ms,
+    Comp2ms,
+    Comp3ms,
+    Comp4ms,
+    Comp5ms,
+    Comp6ms,
+    Comp7ms,
+    Comp8ms,
+    Comp9ms,
+    Comp10ms,
+    Comp12ms,
+    Comp14ms,
+    Comp16ms,
+    Comp18ms,
+    Comp20ms,
+    Comp23ms,
+    Comp26ms,
+    Comp30ms,
+    Comp35ms,
+    Comp40ms,
 }
 
 #[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq)]
@@ -465,7 +536,24 @@ pub enum CompressorAttackTime {
 #[repr(u8)]
 pub enum CompressorReleaseTime {
     // Note: 0 is technically 15 :)
-    Comp0ms,    Comp15ms,   Comp25ms,   Comp35ms,  Comp45ms,  Comp55ms,  Comp65ms,  Comp75ms,
-    Comp85ms,   Comp100ms,  Comp115ms,  Comp140ms,  Comp170ms, Comp230ms, Comp340ms, Comp680ms,
-    Comp1000ms, Comp1500ms, Comp2000ms, Comp3000ms
+    Comp0ms,
+    Comp15ms,
+    Comp25ms,
+    Comp35ms,
+    Comp45ms,
+    Comp55ms,
+    Comp65ms,
+    Comp75ms,
+    Comp85ms,
+    Comp100ms,
+    Comp115ms,
+    Comp140ms,
+    Comp170ms,
+    Comp230ms,
+    Comp340ms,
+    Comp680ms,
+    Comp1000ms,
+    Comp1500ms,
+    Comp2000ms,
+    Comp3000ms,
 }

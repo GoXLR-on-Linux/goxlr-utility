@@ -5,11 +5,11 @@ use std::process::exit;
 use std::str::FromStr;
 
 use enum_map::EnumMap;
-use xml::{EmitterConfig, EventReader};
-use xml::reader::XmlEvent as XmlReaderEvent;
-use zip::write::FileOptions;
-use strum::IntoEnumIterator;
 use strum::EnumProperty;
+use strum::IntoEnumIterator;
+use xml::reader::XmlEvent as XmlReaderEvent;
+use xml::{EmitterConfig, EventReader};
+use zip::write::FileOptions;
 
 use crate::components::browser::BrowserPreviewTree;
 use crate::components::context::Context;
@@ -46,7 +46,7 @@ impl Profile {
         let mut scribbles: [Vec<u8>; 4] = Default::default();
 
         // Load the scribbles if they exist, store them in memory for later fuckery.
-        for i in 0 .. 4 {
+        for i in 0..4 {
             let filename = format!("scribble{}.png", i + 1);
             if let Ok(mut file) = archive.by_name(filename.as_str()) {
                 scribbles[i] = vec![0; file.size() as usize];
@@ -55,7 +55,10 @@ impl Profile {
         }
 
         let settings = ProfileSettings::load(archive.by_name("profile.xml")?)?;
-        Ok(Profile { settings, scribbles })
+        Ok(Profile {
+            settings,
+            scribbles,
+        })
     }
 
     // Ok, this is better.
@@ -70,7 +73,7 @@ impl Profile {
         self.settings.write_to(&mut archive)?;
 
         // Write the scribbles..
-        for i in 0 .. 4 {
+        for i in 0..4 {
             // Only write if there's actually data stored..
             if !self.scribbles[i].is_empty() {
                 let filename = format!("scribble{}.png", i + 1);
@@ -94,7 +97,6 @@ impl Profile {
     pub fn get_scribble(&self, id: usize) -> &Vec<u8> {
         &self.scribbles[id]
     }
-
 }
 
 #[derive(Debug)]
@@ -145,8 +147,8 @@ impl ProfileSettings {
         let mut scribbles: Vec<Scribble> = Vec::new();
         scribbles.reserve_exact(4);
 
-        let mut simple_elements: EnumMap<SimpleElements, Option<SimpleElement>> = Default::default();
-
+        let mut simple_elements: EnumMap<SimpleElements, Option<SimpleElement>> =
+            Default::default();
 
         let mut megaphone_effect = MegaphoneEffectBase::new("megaphoneEffect".to_string());
         let mut robot_effect = RobotEffectBase::new("robotEffect".to_string());
@@ -458,7 +460,8 @@ impl ProfileSettings {
                         // In this case, the tag name, and attribute prefixes are the same..
                         let mut simple_element = SimpleElement::new(name.local_name.clone());
                         simple_element.parse_simple(&attributes)?;
-                        simple_elements[SimpleElements::from_str(&name.local_name)?] = Some(simple_element);
+                        simple_elements[SimpleElements::from_str(&name.local_name)?] =
+                            Some(simple_element);
 
                         continue;
                     }
@@ -568,7 +571,10 @@ impl ProfileSettings {
         }
 
         for simple_element in SimpleElements::iter() {
-            self.simple_elements[simple_element].as_ref().unwrap().write_simple(&mut writer)?;
+            self.simple_elements[simple_element]
+                .as_ref()
+                .unwrap()
+                .write_simple(&mut writer)?;
         }
 
         // Finalise the XML..
@@ -707,7 +713,9 @@ impl ProfileSettings {
         }
 
         // If for whatever reason, this is missing, we'll use the global colour.
-        return self.simple_elements[SimpleElements::GlobalColour].as_mut().unwrap();
+        return self.simple_elements[SimpleElements::GlobalColour]
+            .as_mut()
+            .unwrap();
     }
 
     pub fn simple_element(&self, name: SimpleElements) -> &SimpleElement {
@@ -716,9 +724,10 @@ impl ProfileSettings {
         }
 
         // If for whatever reason, this is missing, we'll use the global colour.
-        return self.simple_elements[SimpleElements::GlobalColour].as_ref().unwrap();
+        return self.simple_elements[SimpleElements::GlobalColour]
+            .as_ref()
+            .unwrap();
     }
-
 
     pub fn context(&self) -> &Context {
         &self.context

@@ -1,6 +1,6 @@
 use crate::profile::{DEFAULT_MIC_PROFILE_NAME, DEFAULT_PROFILE_NAME};
 use anyhow::{Context, Result};
-use log::{error};
+use log::error;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::{create_dir_all, File};
@@ -37,7 +37,6 @@ impl SettingsHandle {
             settings.samples_directory = Some(data_dir.join("samples"));
         }
 
-
         let handle = SettingsHandle {
             path,
             settings: Arc::new(RwLock::new(settings)),
@@ -72,7 +71,6 @@ impl SettingsHandle {
         settings.samples_directory.clone().unwrap()
     }
 
-
     pub async fn get_device_profile_name(&self, device_serial: &str) -> Option<String> {
         let settings = self.settings.read().await;
         settings
@@ -91,10 +89,7 @@ impl SettingsHandle {
 
     pub async fn get_device_bleep_volume(&self, device_serial: &str) -> Option<i8> {
         let settings = self.settings.read().await;
-        settings.
-            devices
-            .get(device_serial)
-            .map(|d| d.bleep_volume)
+        settings.devices.get(device_serial).map(|d| d.bleep_volume)
     }
 
     pub async fn set_device_profile_name(&self, device_serial: &str, profile_name: &str) {

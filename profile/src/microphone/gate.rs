@@ -93,17 +93,28 @@ impl Gate {
         attributes.insert(
             "MIC_GATE_ATTEN".to_string(),
             //format!("{}", ((self.attenuation as f32 / -61 as f32) * 100 as f32) as u8),
-            format!("{}", self.attenuation)
+            format!("{}", self.attenuation),
         );
     }
 
-    pub fn amount(&self) -> u8 { self.amount }
-    pub fn enabled(&self) -> bool { self.enabled }
-    pub fn threshold(&self) -> i8 { self.threshold }
-    pub fn attack(&self) -> u8 { self.attack }
-    pub fn release(&self) -> u8 { self.release }
-    pub fn attenuation(&self) -> u8 { self.attenuation }
-
+    pub fn amount(&self) -> u8 {
+        self.amount
+    }
+    pub fn enabled(&self) -> bool {
+        self.enabled
+    }
+    pub fn threshold(&self) -> i8 {
+        self.threshold
+    }
+    pub fn attack(&self) -> u8 {
+        self.attack
+    }
+    pub fn release(&self) -> u8 {
+        self.release
+    }
+    pub fn attenuation(&self) -> u8 {
+        self.attenuation
+    }
 
     pub fn set_amount(&mut self, amount: u8) {
         self.amount = amount;
