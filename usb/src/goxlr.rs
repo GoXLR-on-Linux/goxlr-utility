@@ -235,7 +235,7 @@ impl<T: UsbContext> GoXLR<T> {
         if command == Command::ResetCommandIndex {
             self.command_count = 0;
         } else {
-            if self.command_count >= u16::MAX {
+            if self.command_count == u16::MAX {
                 let _ = self.request_data(Command::ResetCommandIndex, &[])?;
             }
             self.command_count += 1;
