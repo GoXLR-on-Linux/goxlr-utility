@@ -56,13 +56,15 @@ impl<'a, T: UsbContext> Device<'a, T> {
     ) -> Result<Self> {
         info!(
             "Loading Profile: {}",
-            profile_name.clone().unwrap_or("Not Defined".to_string())
+            profile_name
+                .clone()
+                .unwrap_or_else(|| "Not Defined".to_string())
         );
         info!(
             "Loading Mic Profile: {}",
             mic_profile_name
                 .clone()
-                .unwrap_or("Not Defined".to_string())
+                .unwrap_or_else(|| "Not Defined".to_string())
         );
         let profile = ProfileAdapter::from_named_or_default(profile_name, profile_directory);
         let mic_profile =
