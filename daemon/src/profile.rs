@@ -2189,6 +2189,7 @@ fn standard_to_profile_fader_display(value: BasicColourDisplay) -> ColourDisplay
     }
 }
 
+#[allow(dead_code)]
 fn profile_to_standard_fader_display(value: ColourDisplay) -> BasicColourDisplay {
     match value {
         ColourDisplay::TwoColour => BasicColourDisplay::TwoColour,
@@ -2238,6 +2239,7 @@ fn standard_to_profile_channel(value: ChannelName) -> FullChannelList {
     }
 }
 
+#[allow(dead_code)]
 fn profile_to_standard_sample_bank(bank: SampleBank) -> goxlr_types::SampleBank {
     match bank {
         SampleBank::A => goxlr_types::SampleBank::A,
@@ -2262,6 +2264,7 @@ fn sample_bank_to_simple_element(bank: SampleBank) -> SimpleElements {
     }
 }
 
+#[allow(dead_code)]
 fn profile_to_standard_preset(value: Preset) -> EffectBankPresets {
     match value {
         Preset::Preset1 => EffectBankPresets::Preset1,
