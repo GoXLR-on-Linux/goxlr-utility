@@ -28,8 +28,6 @@ use crate::primary_worker::DeviceSender;
 
 const WEB_CONTENT: Dir = include_dir!("./web-content/");
 
-static version: f64 = 0.3;
-
 struct Websocket {
     sender: DeviceSender,
 }
