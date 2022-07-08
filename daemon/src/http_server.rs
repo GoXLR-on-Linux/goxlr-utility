@@ -1,6 +1,6 @@
 use actix::{
     Actor, ActorContext, AsyncContext, ContextFutureSpawner, Handler, Message, StreamHandler,
-    WrapFuture, WrapStream,
+    WrapFuture,
 };
 use actix_cors::Cors;
 use actix_plus_static_files::{build_hashmap_from_included_dir, include_dir, Dir, ResourceFiles};
