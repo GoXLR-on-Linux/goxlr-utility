@@ -389,7 +389,7 @@ pub enum SampleBank {
     C,
 }
 
-#[derive(Debug, Copy, Clone, Display, PartialEq)]
+#[derive(Debug, Copy, Clone, Display, EnumIter, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum MiniEqFrequencies {
@@ -401,7 +401,7 @@ pub enum MiniEqFrequencies {
     Equalizer8KHz,
 }
 
-#[derive(Debug, Copy, Clone, Display, PartialEq)]
+#[derive(Debug, Copy, Clone, Display, EnumIter, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum EqFrequencies {

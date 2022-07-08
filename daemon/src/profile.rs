@@ -5,8 +5,7 @@ use enum_map::EnumMap;
 use enumset::EnumSet;
 use futures::executor::block_on;
 use goxlr_ipc::{
-    Compressor, CoughButton, Equaliser, EqualiserFrequency, EqualiserGain, EqualiserMini,
-    EqualiserMiniFrequency, EqualiserMiniGain, NoiseGate,
+    Compressor, CoughButton, Equaliser, EqualiserMini, NoiseGate,
 };
 use goxlr_profile_loader::components::colours::{
     Colour, ColourDisplay, ColourMap, ColourOffStyle, ColourState,
@@ -37,7 +36,7 @@ use goxlr_types::{
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::colouring::ColourTargets;
 use log::error;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs::{create_dir_all, File};
 use std::io::{Cursor, Read, Seek};
 use std::path::Path;
@@ -1283,52 +1282,38 @@ impl MicProfileAdapter {
     }
 
     pub fn equalizer_ipc(&self) -> Equaliser {
+
+        let mut gains: HashMap<EqFrequencies, i8> = Default::default();
+        for freq in EqFrequencies::iter() {
+            gains.insert(freq, self.get_eq_gain(freq));
+        }
+
+        let mut freqs: HashMap<EqFrequencies, f32> = Default::default();
+        for freq in EqFrequencies::iter() {
+            freqs.insert(freq, self.get_eq_freq(freq));
+        }
+
         Equaliser {
-            gain: EqualiserGain {
-                eq_31h_gain: self.profile.equalizer().eq_31h_gain(),
-                eq_63h_gain: self.profile.equalizer().eq_63h_gain(),
-                eq_125h_gain: self.profile.equalizer().eq_125h_gain(),
-                eq_250h_gain: self.profile.equalizer().eq_250h_gain(),
-                eq_500h_gain: self.profile.equalizer().eq_500h_gain(),
-                eq_1k_gain: self.profile.equalizer().eq_1k_gain(),
-                eq_2k_gain: self.profile.equalizer().eq_2k_gain(),
-                eq_4k_gain: self.profile.equalizer().eq_4k_gain(),
-                eq_8k_gain: self.profile.equalizer().eq_8k_gain(),
-                eq_16k_gain: self.profile.equalizer().eq_16k_gain(),
-            },
-            frequency: EqualiserFrequency {
-                eq_31h_freq: self.profile.equalizer().eq_31h_freq(),
-                eq_63h_freq: self.profile.equalizer().eq_63h_freq(),
-                eq_125h_freq: self.profile.equalizer().eq_125h_freq(),
-                eq_250h_freq: self.profile.equalizer().eq_250h_freq(),
-                eq_500h_freq: self.profile.equalizer().eq_500h_freq(),
-                eq_1k_freq: self.profile.equalizer().eq_1k_freq(),
-                eq_2k_freq: self.profile.equalizer().eq_2k_freq(),
-                eq_4k_freq: self.profile.equalizer().eq_4k_freq(),
-                eq_8k_freq: self.profile.equalizer().eq_8k_freq(),
-                eq_16k_freq: self.profile.equalizer().eq_16k_freq(),
-            },
+            gain: gains,
+            frequency: freqs,
         }
     }
 
     pub fn equalizer_mini_ipc(&self) -> EqualiserMini {
+        let mut gains: HashMap<MiniEqFrequencies, i8> = Default::default();
+        for freq in MiniEqFrequencies::iter() {
+            gains.insert(freq, self.get_mini_eq_gain(freq));
+        }
+
+        let mut freqs: HashMap<MiniEqFrequencies, f32> = Default::default();
+        for freq in MiniEqFrequencies::iter() {
+            freqs.insert(freq, self.get_mini_eq_freq(freq));
+        }
+
+
         EqualiserMini {
-            gain: EqualiserMiniGain {
-                eq_90h_gain: self.profile.equalizer_mini().eq_90h_gain(),
-                eq_250h_gain: self.profile.equalizer_mini().eq_250h_gain(),
-                eq_500h_gain: self.profile.equalizer_mini().eq_500h_gain(),
-                eq_1k_gain: self.profile.equalizer_mini().eq_1k_gain(),
-                eq_3k_gain: self.profile.equalizer_mini().eq_3k_gain(),
-                eq_8k_gain: self.profile.equalizer_mini().eq_8k_gain(),
-            },
-            frequency: EqualiserMiniFrequency {
-                eq_90h_freq: self.profile.equalizer_mini().eq_90h_freq(),
-                eq_250h_freq: self.profile.equalizer_mini().eq_250h_freq(),
-                eq_500h_freq: self.profile.equalizer_mini().eq_500h_freq(),
-                eq_1k_freq: self.profile.equalizer_mini().eq_1k_freq(),
-                eq_3k_freq: self.profile.equalizer_mini().eq_3k_freq(),
-                eq_8k_freq: self.profile.equalizer_mini().eq_8k_freq(),
-            },
+            gain: gains,
+            frequency: freqs,
         }
     }
 
@@ -1387,6 +1372,22 @@ impl MicProfileAdapter {
                 EffectKey::Equalizer16KHzGain
             }
         };
+    }
+
+    pub fn get_eq_gain(&self, freq: EqFrequencies) -> i8 {
+        let eq = self.profile.equalizer();
+        match freq {
+            EqFrequencies::Equalizer31Hz => eq.eq_31h_gain(),
+            EqFrequencies::Equalizer63Hz => eq.eq_63h_gain(),
+            EqFrequencies::Equalizer125Hz => eq.eq_125h_gain(),
+            EqFrequencies::Equalizer250Hz => eq.eq_250h_gain(),
+            EqFrequencies::Equalizer500Hz => eq.eq_500h_gain(),
+            EqFrequencies::Equalizer1KHz => eq.eq_1k_gain(),
+            EqFrequencies::Equalizer2KHz => eq.eq_2k_gain(),
+            EqFrequencies::Equalizer4KHz => eq.eq_4k_gain(),
+            EqFrequencies::Equalizer8KHz => eq.eq_8k_gain(),
+            EqFrequencies::Equalizer16KHz => eq.eq_16k_gain()
+        }
     }
 
     pub fn set_eq_freq(&mut self, freq: EqFrequencies, value: f32) -> Result<EffectKey> {
@@ -1476,6 +1477,22 @@ impl MicProfileAdapter {
         };
     }
 
+    pub fn get_eq_freq(&self, freq: EqFrequencies) -> f32 {
+        let eq = self.profile.equalizer();
+        match freq {
+            EqFrequencies::Equalizer31Hz => eq.eq_31h_freq(),
+            EqFrequencies::Equalizer63Hz => eq.eq_63h_freq(),
+            EqFrequencies::Equalizer125Hz => eq.eq_125h_freq(),
+            EqFrequencies::Equalizer250Hz => eq.eq_250h_freq(),
+            EqFrequencies::Equalizer500Hz => eq.eq_500h_freq(),
+            EqFrequencies::Equalizer1KHz => eq.eq_1k_freq(),
+            EqFrequencies::Equalizer2KHz => eq.eq_2k_freq(),
+            EqFrequencies::Equalizer4KHz => eq.eq_4k_freq(),
+            EqFrequencies::Equalizer8KHz => eq.eq_8k_freq(),
+            EqFrequencies::Equalizer16KHz => eq.eq_16k_freq(),
+        }
+    }
+
     pub fn set_mini_eq_gain(&mut self, gain: MiniEqFrequencies, value: i8) -> MicrophoneParamKey {
         return match gain {
             MiniEqFrequencies::Equalizer90Hz => {
@@ -1505,6 +1522,18 @@ impl MicProfileAdapter {
         };
     }
 
+    pub fn get_mini_eq_gain(&self, gain: MiniEqFrequencies) -> i8 {
+        let eq = self.profile.equalizer_mini();
+        match gain {
+            MiniEqFrequencies::Equalizer90Hz => eq.eq_90h_gain(),
+            MiniEqFrequencies::Equalizer250Hz => eq.eq_250h_gain(),
+            MiniEqFrequencies::Equalizer500Hz => eq.eq_500h_gain(),
+            MiniEqFrequencies::Equalizer1KHz => eq.eq_1k_gain(),
+            MiniEqFrequencies::Equalizer3KHz => eq.eq_3k_gain(),
+            MiniEqFrequencies::Equalizer8KHz => eq.eq_8k_gain()
+        }
+    }
+
     pub fn set_mini_eq_freq(&mut self, freq: MiniEqFrequencies, value: f32) -> MicrophoneParamKey {
         return match freq {
             MiniEqFrequencies::Equalizer90Hz => {
@@ -1532,6 +1561,18 @@ impl MicProfileAdapter {
                 MicrophoneParamKey::Equalizer8KHzFrequency
             }
         };
+    }
+
+    pub fn get_mini_eq_freq(&self, freq: MiniEqFrequencies) -> f32 {
+        let eq = self.profile.equalizer_mini();
+        match freq {
+            MiniEqFrequencies::Equalizer90Hz => eq.eq_90h_freq(),
+            MiniEqFrequencies::Equalizer250Hz => eq.eq_250h_freq(),
+            MiniEqFrequencies::Equalizer500Hz => eq.eq_500h_freq(),
+            MiniEqFrequencies::Equalizer1KHz => eq.eq_1k_freq(),
+            MiniEqFrequencies::Equalizer3KHz => eq.eq_3k_freq(),
+            MiniEqFrequencies::Equalizer8KHz => eq.eq_8k_freq()
+        }
     }
 
     pub fn set_gate_threshold(&mut self, value: i8) {

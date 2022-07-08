@@ -1,8 +1,5 @@
 use enumset::EnumSet;
-use goxlr_types::{
-    ChannelName, CompressorAttackTime, CompressorRatio, CompressorReleaseTime, FaderName,
-    FirmwareVersions, GateTimes, InputDevice, MicrophoneType, MuteFunction, OutputDevice,
-};
+use goxlr_types::{ChannelName, CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EqFrequencies, FaderName, FirmwareVersions, GateTimes, InputDevice, MicrophoneType, MiniEqFrequencies, MuteFunction, OutputDevice};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -85,62 +82,14 @@ pub struct MicSettings {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Equaliser {
-    pub gain: EqualiserGain,
-    pub frequency: EqualiserFrequency,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EqualiserGain {
-    pub eq_31h_gain: i8,
-    pub eq_63h_gain: i8,
-    pub eq_125h_gain: i8,
-    pub eq_250h_gain: i8,
-    pub eq_500h_gain: i8,
-    pub eq_1k_gain: i8,
-    pub eq_2k_gain: i8,
-    pub eq_4k_gain: i8,
-    pub eq_8k_gain: i8,
-    pub eq_16k_gain: i8,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EqualiserFrequency {
-    pub eq_31h_freq: f32,
-    pub eq_63h_freq: f32,
-    pub eq_125h_freq: f32,
-    pub eq_250h_freq: f32,
-    pub eq_500h_freq: f32,
-    pub eq_1k_freq: f32,
-    pub eq_2k_freq: f32,
-    pub eq_4k_freq: f32,
-    pub eq_8k_freq: f32,
-    pub eq_16k_freq: f32,
+    pub gain: HashMap<EqFrequencies, i8>,
+    pub frequency: HashMap<EqFrequencies, f32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EqualiserMini {
-    pub gain: EqualiserMiniGain,
-    pub frequency: EqualiserMiniFrequency,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EqualiserMiniGain {
-    pub eq_90h_gain: i8,
-    pub eq_250h_gain: i8,
-    pub eq_500h_gain: i8,
-    pub eq_1k_gain: i8,
-    pub eq_3k_gain: i8,
-    pub eq_8k_gain: i8,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EqualiserMiniFrequency {
-    pub eq_90h_freq: f32,
-    pub eq_250h_freq: f32,
-    pub eq_500h_freq: f32,
-    pub eq_1k_freq: f32,
-    pub eq_3k_freq: f32,
-    pub eq_8k_freq: f32,
+    pub gain: HashMap<MiniEqFrequencies, i8>,
+    pub frequency: HashMap<MiniEqFrequencies, f32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
