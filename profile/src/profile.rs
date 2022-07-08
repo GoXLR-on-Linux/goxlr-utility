@@ -245,7 +245,7 @@ impl ProfileSettings {
                         // Version 2, now with more enum, search for the prefix..
                         for preset in Preset::iter() {
                             if preset.get_str("contextTitle").unwrap() == name.local_name {
-                                let mut effect = Effects::new(preset.clone());
+                                let mut effect = Effects::new(preset);
                                 effect.parse_effect(&attributes)?;
                                 effects[preset] = Some(effect);
                                 found = true;
@@ -518,7 +518,7 @@ impl ProfileSettings {
 
     pub fn write<P: AsRef<Path>>(&self, path: P) -> Result<(), xml::writer::Error> {
         let out_file = File::create(path)?;
-        return self.write_to(out_file);
+        self.write_to(out_file)
     }
 
     pub fn write_to<W: Write>(&self, mut sink: W) -> Result<(), xml::writer::Error> {
@@ -628,7 +628,7 @@ impl ProfileSettings {
     }
 
     pub fn effects(&self, effect: Preset) -> &Effects {
-        &self.effects[effect].as_ref().unwrap()
+        self.effects[effect].as_ref().unwrap()
     }
 
     pub fn effects_mut(&mut self, effect: Preset) -> &mut Effects {

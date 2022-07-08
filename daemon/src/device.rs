@@ -393,10 +393,8 @@ impl<'a, T: UsbContext> Device<'a, T> {
                     self.goxlr
                         .set_channel_state(channel, ChannelState::Unmuted)?;
                 }
-            } else {
-                if basic_input.is_some() {
-                    self.apply_routing(basic_input.unwrap())?;
-                }
+            } else if basic_input.is_some() {
+                self.apply_routing(basic_input.unwrap())?;
             }
 
             return Ok(());
@@ -494,10 +492,10 @@ impl<'a, T: UsbContext> Device<'a, T> {
                     self.profile.set_mute_chat_button_on(false);
                     self.profile.set_mute_chat_button_blink(false);
 
-                    if muted_to_all || (muted_to_x && mute_function == MuteFunction::All) {
-                        if !self.mic_muted_by_fader() {
-                            self.goxlr.set_channel_state(ChannelName::Mic, Unmuted)?;
-                        }
+                    if (muted_to_all || (muted_to_x && mute_function == MuteFunction::All))
+                        && !self.mic_muted_by_fader()
+                    {
+                        self.goxlr.set_channel_state(ChannelName::Mic, Unmuted)?;
                     }
 
                     if muted_to_x && mute_function != MuteFunction::All {
@@ -678,14 +676,14 @@ impl<'a, T: UsbContext> Device<'a, T> {
         let fader = self.profile.fader_from_id(mic_fader_id);
         let (muted_to_x, muted_to_all, mute_function) = self.profile.get_mute_button_state(fader);
 
-        return muted_to_all || (muted_to_x && mute_function == MuteFunction::All);
+        muted_to_all || (muted_to_x && mute_function == MuteFunction::All)
     }
 
     fn mic_muted_by_cough(&self) -> bool {
         let (_mute_toggle, muted_to_x, muted_to_all, mute_function) =
             self.profile.get_mute_chat_button_state();
 
-        return muted_to_all || (muted_to_x && mute_function == MuteFunction::All);
+        muted_to_all || (muted_to_x && mute_function == MuteFunction::All)
     }
 
     fn update_volumes_to(&mut self, volumes: [u8; 4]) {
@@ -709,9 +707,9 @@ impl<'a, T: UsbContext> Device<'a, T> {
         // the profile value if hardtune is enabled, so we'll pre-emptively calculate pitch here..
         let mut pitch_value = encoders[0];
         if self.profile.is_hardtune_pitch_enabled() {
-            pitch_value = pitch_value * 12;
+            pitch_value *= 12;
         } else if self.profile.is_pitch_narrow() {
-            pitch_value = pitch_value / 2;
+            pitch_value /= 2;
         }
 
         if pitch_value != self.profile.get_pitch_value() {
@@ -807,7 +805,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
                     .set_effect_values(&[(EffectKey::BleepLevel, volume as i32)])?;
             }
             GoXLRCommand::SetMicrophoneGain(mic_type, gain) => {
-                self.goxlr.set_microphone_gain(mic_type, gain.into())?;
+                self.goxlr.set_microphone_gain(mic_type, gain)?;
                 self.mic_profile.set_mic_type(mic_type);
                 self.mic_profile.set_mic_gain(mic_type, gain);
             }
@@ -830,7 +828,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
             }
             GoXLRCommand::SetEqMiniFreq(freq, value) => {
                 // TODO: Verify?
-                if value < 300.0 || value > 18000.0 {
+                if !(300.0..=18000.0).contains(&value) {
                     return Err(anyhow!("EQ Frequency should be between 300hz and 18khz"));
                 }
 
@@ -1307,7 +1305,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
         if let Some(bleep) = value {
             return bleep;
         }
-        return -14;
+        -14
     }
 
     fn load_colour_map(&mut self) -> Result<()> {

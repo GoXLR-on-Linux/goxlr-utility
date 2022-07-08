@@ -155,7 +155,7 @@ impl SampleBase {
 
         // Now onto the damn stacks..
         for (key, value) in &self.sample_stack {
-            let sub_element_name = format!("sampleStack{}", key.to_string());
+            let sub_element_name = format!("sampleStack{}", key);
 
             let mut sub_element = XmlWriterEvent::start_element(sub_element_name.as_str());
 
@@ -248,7 +248,7 @@ impl SampleStack {
     }
 
     pub fn get_sample_count(&self) -> usize {
-        return self.tracks.len();
+        self.tracks.len()
     }
 
     pub fn get_first_sample_file(&self) -> String {

@@ -97,7 +97,7 @@ impl SettingsHandle {
         let entry = settings
             .devices
             .entry(device_serial.to_owned())
-            .or_insert_with(|| DeviceSettings::default());
+            .or_insert_with(DeviceSettings::default);
         entry.profile = profile_name.to_owned();
     }
 
@@ -106,7 +106,7 @@ impl SettingsHandle {
         let entry = settings
             .devices
             .entry(device_serial.to_owned())
-            .or_insert_with(|| DeviceSettings::default());
+            .or_insert_with(DeviceSettings::default);
         entry.mic_profile = mic_profile_name.to_owned();
     }
 
@@ -115,7 +115,7 @@ impl SettingsHandle {
         let entry = settings
             .devices
             .entry(device_serial.to_owned())
-            .or_insert_with(|| DeviceSettings::default());
+            .or_insert_with(DeviceSettings::default);
         entry.bleep_volume = bleep_volume;
     }
 }

@@ -184,7 +184,7 @@ impl ProfileAdapter {
             map[profile_to_standard_output(channel)] = *volume > 0;
         }
 
-        return map;
+        map
     }
 
     pub fn set_routing(&mut self, input: InputDevice, output: OutputDevice, enabled: bool) {
@@ -271,7 +271,7 @@ impl ProfileAdapter {
             volumes[channel as usize] = self.get_channel_volume(channel);
         }
 
-        return volumes;
+        volumes
     }
 
     pub fn set_channel_volume(&mut self, channel: ChannelName, volume: u8) {
@@ -319,7 +319,7 @@ impl ProfileAdapter {
     }
 
     fn get_sampler_lighting(&self, target: ColourTargets) -> [u8; 4] {
-        return match target {
+        match target {
             ColourTargets::SamplerBottomLeft => {
                 self.get_colour_array(target, SampleButtons::BottomLeft)
             }
@@ -333,7 +333,7 @@ impl ProfileAdapter {
 
             // Honestly, we should never reach this, return nothing.
             _ => [00, 00, 00, 00],
-        };
+        }
     }
 
     fn get_colour_array(&self, target: ColourTargets, button: SampleButtons) -> [u8; 4] {
@@ -376,9 +376,9 @@ impl ProfileAdapter {
         // We should be safe to straight unwrap these, state and blink are always present.
         let muted_to_x = colour_map.state().as_ref().unwrap() == &ColourState::On;
         let muted_to_all = colour_map.blink().as_ref().unwrap() == &ColourState::On;
-        let mute_function = mute_config.mute_function().clone();
+        let mute_function = *mute_config.mute_function();
 
-        return (muted_to_x, muted_to_all, mute_function);
+        (muted_to_x, muted_to_all, mute_function)
     }
 
     pub fn get_mute_button_previous_volume(&self, fader: FaderName) -> u8 {
@@ -436,9 +436,9 @@ impl ProfileAdapter {
         let mute_toggle = mute_config.is_cough_toggle();
         let muted_to_x = mute_config.cough_button_on();
         let muted_to_all = mute_config.blink() == &ColourState::On;
-        let mute_function = mute_config.cough_mute_source().clone();
+        let mute_function = *mute_config.cough_mute_source();
 
-        return (mute_toggle, muted_to_x, muted_to_all, mute_function);
+        (mute_toggle, muted_to_x, muted_to_all, mute_function)
     }
 
     pub fn set_mute_chat_button_on(&mut self, on: bool) {
@@ -486,11 +486,7 @@ impl ProfileAdapter {
         CoughButton {
             is_toggle: self.profile.settings().mute_chat().is_cough_toggle(),
             mute_type: profile_to_standard_mute_function(
-                self.profile
-                    .settings()
-                    .mute_chat()
-                    .cough_mute_source()
-                    .clone(),
+                *self.profile.settings().mute_chat().cough_mute_source(),
             ),
         }
     }
@@ -508,12 +504,12 @@ impl ProfileAdapter {
     }
 
     pub fn fader_from_id(&self, fader: u8) -> FaderName {
-        return match fader {
+        match fader {
             0 => FaderName::A,
             1 => FaderName::B,
             2 => FaderName::C,
             _ => FaderName::D,
-        };
+        }
     }
 
     pub fn is_fader_gradient(&self, fader: FaderName) -> bool {
@@ -804,19 +800,19 @@ impl ProfileAdapter {
         }
 
         // If it's not set, assume default behaviour of 'All'
-        return true;
+        true
     }
 
     pub fn get_active_hardtune_source(&self) -> InputDevice {
         let source = self.get_active_hardtune_profile().source();
-        return match source.unwrap() {
+        match source.unwrap() {
             HardtuneSource::Music => InputDevice::Music,
             HardtuneSource::Game => InputDevice::Game,
             HardtuneSource::LineIn => InputDevice::LineIn,
 
             // This should never really be called when Source is All, return a default.
             HardtuneSource::All => InputDevice::Music,
-        };
+        }
     }
 
     pub fn is_hardtune_pitch_enabled(&self) -> bool {
@@ -918,7 +914,7 @@ impl ProfileAdapter {
         if stack.get_sample_count() == 0 {
             return false;
         }
-        return true;
+        true
     }
 
     pub fn get_sample_file(&self, button: SampleButtons) -> String {
@@ -1014,7 +1010,7 @@ impl ProfileAdapter {
                 )?;
                 self.set_button_colours(
                     ButtonColourTargets::Fader4Mute,
-                    colour_one.clone(),
+                    colour_one,
                     colour_two.as_ref(),
                 )?;
             }
@@ -1046,7 +1042,7 @@ impl ProfileAdapter {
                 )?;
                 self.set_button_colours(
                     ButtonColourTargets::EffectSelect6,
-                    colour_one.clone(),
+                    colour_one,
                     colour_two.as_ref(),
                 )?;
             }
@@ -1063,7 +1059,7 @@ impl ProfileAdapter {
                 )?;
                 self.set_button_colours(
                     ButtonColourTargets::SamplerSelectC,
-                    colour_one.clone(),
+                    colour_one,
                     colour_two.as_ref(),
                 )?;
             }
@@ -1090,7 +1086,7 @@ impl ProfileAdapter {
                 )?;
                 self.set_button_colours(
                     ButtonColourTargets::SamplerClear,
-                    colour_one.clone(),
+                    colour_one,
                     colour_two.as_ref(),
                 )?;
             }
@@ -1396,7 +1392,7 @@ impl MicProfileAdapter {
     pub fn set_eq_freq(&mut self, freq: EqFrequencies, value: f32) -> Result<EffectKey> {
         return match freq {
             EqFrequencies::Equalizer31Hz => {
-                if value < 30.0 || value > 300.0 {
+                if !(30.0..=300.0).contains(&value) {
                     return Err(anyhow!("31Hz Frequency must be between 30.0 and 300.0"));
                 }
 
@@ -1404,7 +1400,7 @@ impl MicProfileAdapter {
                 Ok(EffectKey::Equalizer31HzFrequency)
             }
             EqFrequencies::Equalizer63Hz => {
-                if value < 30.0 || value > 300.0 {
+                if !(30.0..=300.0).contains(&value) {
                     return Err(anyhow!("63Hz Frequency must be between 30.0 and 300.0"));
                 }
 
@@ -1412,7 +1408,7 @@ impl MicProfileAdapter {
                 Ok(EffectKey::Equalizer63HzFrequency)
             }
             EqFrequencies::Equalizer125Hz => {
-                if value < 30.0 || value > 300.0 {
+                if !(30.0..=300.0).contains(&value) {
                     return Err(anyhow!("125Hz Frequency must be between 30.0 and 300.0"));
                 }
 
@@ -1420,7 +1416,7 @@ impl MicProfileAdapter {
                 Ok(EffectKey::Equalizer125HzFrequency)
             }
             EqFrequencies::Equalizer250Hz => {
-                if value < 30.0 || value > 300.0 {
+                if !(30.0..=300.0).contains(&value) {
                     return Err(anyhow!("250Hz Frequency must be between 30.0 and 300.0"));
                 }
 
@@ -1428,7 +1424,7 @@ impl MicProfileAdapter {
                 Ok(EffectKey::Equalizer250HzFrequency)
             }
             EqFrequencies::Equalizer500Hz => {
-                if value < 300.0 || value > 2000.0 {
+                if !(300.0..=2000.0).contains(&value) {
                     return Err(anyhow!("500Hz Frequency must be between 300.0 and 2000.0"));
                 }
 
@@ -1436,7 +1432,7 @@ impl MicProfileAdapter {
                 Ok(EffectKey::Equalizer500HzFrequency)
             }
             EqFrequencies::Equalizer1KHz => {
-                if value < 300.0 || value > 2000.0 {
+                if !(300.0..=2000.0).contains(&value) {
                     return Err(anyhow!("1KHz Frequency must be between 300.0 and 2000.0"));
                 }
 
@@ -1444,7 +1440,7 @@ impl MicProfileAdapter {
                 Ok(EffectKey::Equalizer1KHzFrequency)
             }
             EqFrequencies::Equalizer2KHz => {
-                if value < 300.0 || value > 2000.0 {
+                if !(300.0..=2000.0).contains(&value) {
                     return Err(anyhow!("2KHz Frequency must be between 300.0 and 2000.0"));
                 }
 
@@ -1452,7 +1448,7 @@ impl MicProfileAdapter {
                 Ok(EffectKey::Equalizer2KHzFrequency)
             }
             EqFrequencies::Equalizer4KHz => {
-                if value < 2000.0 || value > 18000.0 {
+                if !(2000.0..=18000.0).contains(&value) {
                     return Err(anyhow!("4KHz Frequency must be between 2000.0 and 18000.0"));
                 }
 
@@ -1460,7 +1456,7 @@ impl MicProfileAdapter {
                 Ok(EffectKey::Equalizer4KHzFrequency)
             }
             EqFrequencies::Equalizer8KHz => {
-                if value < 2000.0 || value > 18000.0 {
+                if !(2000.0..=18000.0).contains(&value) {
                     return Err(anyhow!("8KHz Frequency must be between 2000.0 and 18000.0"));
                 }
 
@@ -1468,7 +1464,7 @@ impl MicProfileAdapter {
                 Ok(EffectKey::Equalizer8KHzFrequency)
             }
             EqFrequencies::Equalizer16KHz => {
-                if value < 2000.0 || value > 18000.0 {
+                if !(2000.0..=18000.0).contains(&value) {
                     return Err(anyhow!(
                         "16KHz Frequency must be between 2000.0 and 18000.0"
                     ));
@@ -1589,7 +1585,7 @@ impl MicProfileAdapter {
             MicrophoneParamKey::MicType => {
                 let microphone_type: MicrophoneType = self.mic_type();
                 match microphone_type.has_phantom_power() {
-                    true => [0x01 as u8, 0, 0, 0],
+                    true => [0x01_u8, 0, 0, 0],
                     false => [0, 0, 0, 0],
                 }
             }
@@ -1670,7 +1666,7 @@ impl MicProfileAdapter {
         // TODO: Confirm the output here..
         let mut return_value = [0; 4];
         LittleEndian::write_f32(&mut return_value, value as f32 * 65536.0);
-        return return_value;
+        return_value
     }
 
     /// This is going to require a CRAPLOAD of work to sort..
@@ -1925,25 +1921,25 @@ impl MicProfileAdapter {
     fn u8_to_f32(&self, value: u8) -> [u8; 4] {
         let mut return_value = [0; 4];
         LittleEndian::write_f32(&mut return_value, value.into());
-        return return_value;
+        return_value
     }
 
     fn i8_to_f32(&self, value: i8) -> [u8; 4] {
         let mut return_value = [0; 4];
         LittleEndian::write_f32(&mut return_value, value.into());
-        return return_value;
+        return_value
     }
 
     fn f32_to_f32(&self, value: f32) -> [u8; 4] {
         let mut return_value = [0; 4];
-        LittleEndian::write_f32(&mut return_value, value.into());
-        return return_value;
+        LittleEndian::write_f32(&mut return_value, value);
+        return_value
     }
 
     fn gain_value(&self, value: u16) -> [u8; 4] {
         let mut return_value = [0; 4];
         LittleEndian::write_u16(&mut return_value[2..], value);
-        return return_value;
+        return_value
     }
 
     /*
@@ -1958,7 +1954,7 @@ impl MicProfileAdapter {
             return GATE_ATTENUATION[25];
         }
 
-        return GATE_ATTENUATION[index as usize];
+        GATE_ATTENUATION[index as usize]
     }
 
     pub fn get_common_keys(&self) -> HashSet<EffectKey> {
@@ -1988,7 +1984,7 @@ impl MicProfileAdapter {
         keys.insert(EffectKey::HardTuneEnabled);
         keys.insert(EffectKey::MegaphoneEnabled);
 
-        return keys;
+        keys
     }
 
     pub fn get_full_keys(&self) -> HashSet<EffectKey> {
@@ -2003,7 +1999,7 @@ impl MicProfileAdapter {
             }
         }
 
-        return keys;
+        keys
     }
 
     // These are specific Group Key sets, useful for applying a specific effect at once.

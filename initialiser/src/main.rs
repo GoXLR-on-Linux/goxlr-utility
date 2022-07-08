@@ -43,7 +43,7 @@ fn find_devices() {
                                 // The GoXLR is not initialised, we need to fix that..
                                 handle.set_auto_detach_kernel_driver(true);
 
-                                if !handle.claim_interface(0).is_ok() {
+                                if handle.claim_interface(0).is_err() {
                                     println!("Unable to claim, failed to initialise..");
                                     continue;
                                 }

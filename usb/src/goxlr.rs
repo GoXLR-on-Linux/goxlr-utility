@@ -112,7 +112,7 @@ impl<T: UsbContext> GoXLR<T> {
             }
             goxlr.handle.set_auto_detach_kernel_driver(true)?;
 
-            if !goxlr.handle.claim_interface(0).is_ok() {
+            if goxlr.handle.claim_interface(0).is_err() {
                 return Err(ConnectError::DeviceNotClaimed);
             }
 

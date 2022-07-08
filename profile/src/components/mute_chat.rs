@@ -187,7 +187,7 @@ impl MuteChat {
         }
     }
     pub fn get_blink_on(&self) -> bool {
-        return self.blink == ColourState::On;
+        self.blink == ColourState::On
     }
 
     pub fn set_cough_mute_source(&mut self, cough_mute_source: MuteFunction) {

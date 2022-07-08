@@ -34,7 +34,7 @@ impl MixerStatus {
     }
 
     pub fn get_channel_volume(&self, channel: ChannelName) -> u8 {
-        return self.volumes[channel as usize];
+        self.volumes[channel as usize]
     }
 
     pub fn set_channel_volume(&mut self, channel: ChannelName, volume: u8) {

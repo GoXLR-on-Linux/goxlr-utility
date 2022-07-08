@@ -201,7 +201,7 @@ impl ColourMap {
             return true;
         }
 
-        return false;
+        false
     }
 
     pub fn is_fader_meter(&self) -> bool {
@@ -215,7 +215,7 @@ impl ColourMap {
             return true;
         }
 
-        return false;
+        false
     }
 
     pub fn set_fader_display(&mut self, display: ColourDisplay) {

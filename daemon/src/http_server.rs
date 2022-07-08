@@ -6,9 +6,9 @@ use actix_cors::Cors;
 use actix_plus_static_files::{build_hashmap_from_included_dir, include_dir, Dir, ResourceFiles};
 use actix_web::dev::ServerHandle;
 use actix_web::web::Data;
-use actix_web::{get, http, post, web, App, HttpRequest, HttpResponse, HttpServer};
+use actix_web::{get, post, web, App, HttpRequest, HttpResponse, HttpServer};
 use actix_web_actors::ws;
-use actix_web_actors::ws::{CloseCode, CloseReason};
+use actix_web_actors::ws::CloseCode;
 use std::ops::DerefMut;
 
 use anyhow::{anyhow, Result};
@@ -78,7 +78,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for Websocket {
                     ctx.stop();
                 }
             }
-            Ok(ws::Message::Binary(bin)) => {
+            Ok(ws::Message::Binary(_bin)) => {
                 ctx.close(Some(CloseCode::Unsupported.into()));
                 ctx.stop();
             }
@@ -397,10 +397,7 @@ async fn send_cmd(
     let sender = guard.deref_mut();
 
     // Prepare the Command..
-    let request = DaemonRequest::Command {
-        0: serial,
-        1: command,
-    };
+    let request = DaemonRequest::Command(serial, command);
 
     debug!("Command: {}", serde_json::to_string(&request).unwrap());
 
@@ -412,7 +409,7 @@ async fn send_cmd(
         return HttpResponse::InternalServerError().finish();
     }
 
-    return HttpResponse::Ok().finish();
+    HttpResponse::Ok().finish()
 }
 
 async fn get_status(usb_tx: Data<Mutex<DeviceSender>>) -> Result<DaemonStatus> {

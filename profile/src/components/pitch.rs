@@ -247,7 +247,7 @@ impl PitchEncoder {
         if let Some(value) = self.inst_ratio {
             return value;
         }
-        return 0;
+        0
     }
 }
 
