@@ -1483,12 +1483,12 @@ impl<'a, T: UsbContext> Device<'a, T> {
 
         if self.profile.is_hardtune_pitch_enabled() {
             if self.profile.is_pitch_narrow() {
-                self.goxlr.set_encoder_mode(EncoderName::Pitch, 03, 01)?;
+                self.goxlr.set_encoder_mode(EncoderName::Pitch, 3, 1)?;
             } else {
-                self.goxlr.set_encoder_mode(EncoderName::Pitch, 03, 02)?;
+                self.goxlr.set_encoder_mode(EncoderName::Pitch, 3, 2)?;
             }
         } else {
-            self.goxlr.set_encoder_mode(EncoderName::Pitch, 01, 04)?;
+            self.goxlr.set_encoder_mode(EncoderName::Pitch, 1, 4)?;
         }
 
         Ok(())
