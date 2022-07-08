@@ -4,9 +4,7 @@ use byteorder::{ByteOrder, LittleEndian};
 use enum_map::EnumMap;
 use enumset::EnumSet;
 use futures::executor::block_on;
-use goxlr_ipc::{
-    Compressor, CoughButton, Equaliser, EqualiserMini, NoiseGate,
-};
+use goxlr_ipc::{Compressor, CoughButton, Equaliser, EqualiserMini, NoiseGate};
 use goxlr_profile_loader::components::colours::{
     Colour, ColourDisplay, ColourMap, ColourOffStyle, ColourState,
 };
@@ -1282,7 +1280,6 @@ impl MicProfileAdapter {
     }
 
     pub fn equalizer_ipc(&self) -> Equaliser {
-
         let mut gains: HashMap<EqFrequencies, i8> = Default::default();
         for freq in EqFrequencies::iter() {
             gains.insert(freq, self.get_eq_gain(freq));
@@ -1309,7 +1306,6 @@ impl MicProfileAdapter {
         for freq in MiniEqFrequencies::iter() {
             freqs.insert(freq, self.get_mini_eq_freq(freq));
         }
-
 
         EqualiserMini {
             gain: gains,
@@ -1386,7 +1382,7 @@ impl MicProfileAdapter {
             EqFrequencies::Equalizer2KHz => eq.eq_2k_gain(),
             EqFrequencies::Equalizer4KHz => eq.eq_4k_gain(),
             EqFrequencies::Equalizer8KHz => eq.eq_8k_gain(),
-            EqFrequencies::Equalizer16KHz => eq.eq_16k_gain()
+            EqFrequencies::Equalizer16KHz => eq.eq_16k_gain(),
         }
     }
 
@@ -1530,7 +1526,7 @@ impl MicProfileAdapter {
             MiniEqFrequencies::Equalizer500Hz => eq.eq_500h_gain(),
             MiniEqFrequencies::Equalizer1KHz => eq.eq_1k_gain(),
             MiniEqFrequencies::Equalizer3KHz => eq.eq_3k_gain(),
-            MiniEqFrequencies::Equalizer8KHz => eq.eq_8k_gain()
+            MiniEqFrequencies::Equalizer8KHz => eq.eq_8k_gain(),
         }
     }
 
@@ -1571,7 +1567,7 @@ impl MicProfileAdapter {
             MiniEqFrequencies::Equalizer500Hz => eq.eq_500h_freq(),
             MiniEqFrequencies::Equalizer1KHz => eq.eq_1k_freq(),
             MiniEqFrequencies::Equalizer3KHz => eq.eq_3k_freq(),
-            MiniEqFrequencies::Equalizer8KHz => eq.eq_8k_freq()
+            MiniEqFrequencies::Equalizer8KHz => eq.eq_8k_freq(),
         }
     }
 

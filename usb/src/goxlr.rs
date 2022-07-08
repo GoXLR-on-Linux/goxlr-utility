@@ -558,4 +558,8 @@ impl<T: UsbContext> GoXLR<T> {
             Ok(_)
         )
     }
+
+    pub fn is_connected(&self) -> bool {
+        self.handle.active_configuration().is_ok()
+    }
 }

@@ -57,10 +57,15 @@ pub async fn handle_changes(
                     loop_count = -1;
                 }
                 loop_count += 1;
+                let mut found_error = false;
                 for device in devices.values_mut() {
                     if let Err(e) = device.monitor_inputs().await {
                         error!("Couldn't monitor device for inputs: {}", e);
+                        found_error = true;
                     }
+                }
+                if found_error {
+                    devices.retain(|_, d| d.is_connected());
                 }
             },
             () = shutdown.recv() => {

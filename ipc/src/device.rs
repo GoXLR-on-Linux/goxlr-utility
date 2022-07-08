@@ -1,5 +1,9 @@
 use enumset::EnumSet;
-use goxlr_types::{ChannelName, CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EqFrequencies, FaderName, FirmwareVersions, GateTimes, InputDevice, MicrophoneType, MiniEqFrequencies, MuteFunction, OutputDevice};
+use goxlr_types::{
+    ChannelName, CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EqFrequencies,
+    FaderName, FirmwareVersions, GateTimes, InputDevice, MicrophoneType, MiniEqFrequencies,
+    MuteFunction, OutputDevice,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;

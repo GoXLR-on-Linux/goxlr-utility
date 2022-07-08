@@ -1503,4 +1503,8 @@ impl<'a, T: UsbContext> Device<'a, T> {
             .unwrap()
             .as_millis()
     }
+
+    pub fn is_connected(&self) -> bool {
+        self.goxlr.is_connected()
+    }
 }
