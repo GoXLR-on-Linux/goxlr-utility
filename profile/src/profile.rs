@@ -50,7 +50,7 @@ impl Profile {
             let filename = format!("scribble{}.png", i + 1);
             if let Ok(mut file) = archive.by_name(filename.as_str()) {
                 scribbles[i] = vec![0; file.size() as usize];
-                file.read(&mut scribbles[i])?;
+                file.read_exact(&mut scribbles[i])?;
             }
         }
 
