@@ -10,7 +10,7 @@ use std::process::{Child, Command, Stdio};
 pub struct AudioHandler {
     script_path: PathBuf,
     output_device: String,
-    input_device: Option<String>,
+    _input_device: Option<String>,
 
     active_streams: HashMap<SampleButtons, Child>,
 }
@@ -93,7 +93,7 @@ impl AudioHandler {
         Ok(Self {
             script_path,
             output_device,
-            input_device,
+            _input_device: input_device,
 
             active_streams: HashMap::new(),
         })
