@@ -25,6 +25,12 @@ pub struct UiSetup {
     eq_fine_tune: bool,
 }
 
+impl Default for UiSetup {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl UiSetup {
     pub fn new() -> Self {
         Self {

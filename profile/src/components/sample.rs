@@ -238,6 +238,12 @@ pub struct SampleStack {
     play_order: Option<PlayOrder>,
 }
 
+impl Default for SampleStack {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SampleStack {
     pub fn new() -> Self {
         Self {

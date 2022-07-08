@@ -33,6 +33,12 @@ pub struct RootElement {
     device: u64,
 }
 
+impl Default for RootElement {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RootElement {
     pub fn new() -> Self {
         Self {

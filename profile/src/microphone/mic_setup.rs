@@ -23,6 +23,12 @@ pub struct MicSetup {
     trs_mic_gain: u16,
 }
 
+impl Default for MicSetup {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MicSetup {
     pub fn new() -> Self {
         Self {

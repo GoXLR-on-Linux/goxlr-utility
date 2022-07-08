@@ -33,6 +33,12 @@ pub struct Mixers {
     colour_map: ColourMap,
 }
 
+impl Default for Mixers {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Mixers {
     pub fn new() -> Self {
         Self {

@@ -40,6 +40,12 @@ pub struct Equalizer {
     eq_16k_freq: f32,
 }
 
+impl Default for Equalizer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Equalizer {
     pub fn new() -> Self {
         Self {

@@ -31,6 +31,12 @@ pub struct EqualizerMini {
     eq_8k_freq: f32,
 }
 
+impl Default for EqualizerMini {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EqualizerMini {
     pub fn new() -> Self {
         Self {

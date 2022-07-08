@@ -21,6 +21,12 @@ pub struct Compressor {
     makeup_gain: u8,
 }
 
+impl Default for Compressor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Compressor {
     pub fn new() -> Self {
         Self {

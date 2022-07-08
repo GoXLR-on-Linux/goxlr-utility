@@ -22,6 +22,12 @@ pub struct Gate {
     attenuation: u8,
 }
 
+impl Default for Gate {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Gate {
     pub fn new() -> Self {
         Self {
