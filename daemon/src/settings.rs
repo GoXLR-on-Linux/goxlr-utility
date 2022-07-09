@@ -1,5 +1,6 @@
 use crate::profile::{DEFAULT_MIC_PROFILE_NAME, DEFAULT_PROFILE_NAME};
 use anyhow::{Context, Result};
+use directories::ProjectDirs;
 use log::error;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -16,7 +17,12 @@ pub struct SettingsHandle {
 }
 
 impl SettingsHandle {
-    pub async fn load(path: PathBuf, data_dir: &Path) -> Result<SettingsHandle> {
+    pub async fn load(path: PathBuf) -> Result<SettingsHandle> {
+        // This is only used for defaults
+        let proj_dirs = ProjectDirs::from("org", "GoXLR-on-Linux", "GoXLR-Utility")
+            .context("Couldn't find project directories")?;
+        let data_dir = proj_dirs.data_dir();
+
         let mut settings = Settings::read(&path)?.unwrap_or_else(|| Settings {
             profile_directory: Some(data_dir.join("profiles")),
             mic_profile_directory: Some(data_dir.join("mic-profiles")),

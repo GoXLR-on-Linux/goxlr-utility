@@ -912,6 +912,8 @@ dependencies = [
  "actix-web-actors",
  "anyhow",
  "byteorder",
+ "clap",
+ "clap_complete",
  "directories",
  "enum-map",
  "enumset",

@@ -27,6 +27,7 @@ directories = "4.0"
 byteorder = "1"
 enum-map = "2.1.0"
 futures = "0.3.21"
+clap = { version = "3.0.0", features = ["derive"] }
 
 ## HTTPd Server
 actix = "0.13"
@@ -34,6 +35,11 @@ actix-web-actors = "4.1"
 actix-web = "4.1"
 actix-cors = "0.6.1"
 actix-plus-static-files = {git = "https://github.com/john01dav/actix-plus", commit = "4f7837c0d3d413bf82d7906b33abb7801340c063"}
+
+[build-dependencies]
+clap = { version = "3.0.0", features = ["derive"] }
+clap_complete = "3.0.0"
+directories = "4.0"
 
 # Enable debugging symbols, and disable optimisation..
 [profile.dev]

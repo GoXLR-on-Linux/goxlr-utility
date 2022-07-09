@@ -1,4 +1,5 @@
 mod audio;
+mod cli;
 mod communication;
 mod device;
 mod http_server;
@@ -7,16 +8,17 @@ mod profile;
 mod settings;
 mod shutdown;
 
+use crate::cli::{Cli, LevelFilter};
 use crate::http_server::launch_httpd;
 use crate::primary_worker::handle_changes;
 use crate::settings::SettingsHandle;
 use crate::shutdown::Shutdown;
 use anyhow::{anyhow, Context, Result};
+use clap::Parser;
 use communication::listen_for_connections;
-use directories::ProjectDirs;
 use goxlr_ipc::Socket;
 use goxlr_ipc::{DaemonRequest, DaemonResponse};
-use log::{info, warn, LevelFilter};
+use log::{info, warn};
 use simplelog::{ColorChoice, CombinedLogger, Config, TermLogger, TerminalMode};
 use std::fs;
 use std::fs::remove_file;
@@ -28,22 +30,24 @@ use tokio::{join, signal};
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let args: Cli = Cli::parse();
+
     CombinedLogger::init(vec![TermLogger::new(
-        LevelFilter::Debug,
+        match args.log_level {
+            LevelFilter::Off => log::LevelFilter::Off,
+            LevelFilter::Error => log::LevelFilter::Error,
+            LevelFilter::Warn => log::LevelFilter::Warn,
+            LevelFilter::Info => log::LevelFilter::Info,
+            LevelFilter::Debug => log::LevelFilter::Debug,
+            LevelFilter::Trace => log::LevelFilter::Trace,
+        },
         Config::default(),
         TerminalMode::Mixed,
         ColorChoice::Auto,
     )])
     .context("Could not configure the logger")?;
 
-    let proj_dirs = ProjectDirs::from("org", "GoXLR-on-Linux", "GoXLR-Utility")
-        .context("Couldn't find project directories")?;
-
-    let settings = SettingsHandle::load(
-        proj_dirs.config_dir().join("settings.json"),
-        proj_dirs.data_dir(),
-    )
-    .await?;
+    let settings = SettingsHandle::load(args.config).await?;
     let listener = create_listener("/tmp/goxlr.socket").await?;
 
     let mut perms = fs::metadata("/tmp/goxlr.socket")?.permissions();
