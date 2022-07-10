@@ -807,9 +807,9 @@ impl<'a, T: UsbContext> Device<'a, T> {
                     .set_effect_values(&[(EffectKey::BleepLevel, volume as i32)])?;
             }
             GoXLRCommand::SetMicrophoneGain(mic_type, gain) => {
-                self.goxlr.set_microphone_gain(mic_type, gain)?;
                 self.mic_profile.set_mic_type(mic_type);
                 self.mic_profile.set_mic_gain(mic_type, gain);
+                self.apply_mic_gain()?;
             }
             GoXLRCommand::SetRouter(input, output, enabled) => {
                 debug!("Setting Routing: {:?} {:?} {}", input, output, enabled);
@@ -1426,7 +1426,18 @@ impl<'a, T: UsbContext> Device<'a, T> {
         Ok(())
     }
 
+    fn apply_mic_gain(&mut self) -> Result<()> {
+        let mic_type = self.mic_profile.mic_type();
+        let gain = self.mic_profile.mic_gains()[mic_type as usize];
+        self.goxlr.set_microphone_gain(mic_type, gain)?;
+
+        Ok(())
+    }
+
     fn apply_mic_profile(&mut self) -> Result<()> {
+        // Configure the microphone..
+        self.apply_mic_gain()?;
+
         let mut keys = HashSet::new();
         for param in MicrophoneParamKey::iter() {
             keys.insert(param);
