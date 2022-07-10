@@ -1,7 +1,9 @@
 use clap::{ArgEnum, IntoApp};
 use clap_complete::{generate_to, Shell};
 use std::env;
+use std::fs::File;
 use std::io::Error;
+use std::path::Path;
 
 include!("src/cli.rs");
 
@@ -13,12 +15,12 @@ fn main() -> Result<(), Error> {
 
     let mut app = Cli::into_app();
     for shell in Shell::value_variants() {
-        let path = generate_to(*shell, &mut app, "goxlr-client", &outdir)?;
+        let _ = generate_to(*shell, &mut app, "goxlr-client", &outdir)?;
+    }
 
-        println!(
-            "cargo:warning={} completion file is generated: {:?}",
-            shell, path
-        );
+    let stamp_path = Path::new(&outdir).join("client-stamp");
+    if let Err(err) = File::create(&stamp_path) {
+        panic!("failed to write {}: {}", stamp_path.display(), err);
     }
 
     Ok(())

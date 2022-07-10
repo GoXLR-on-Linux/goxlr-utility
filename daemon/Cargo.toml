@@ -49,3 +49,21 @@ debug = true
 [profile.release]
 opt-level = 3
 debug = false
+
+[package.metadata.deb]
+name = "goxlr-utility"
+assets = [
+    ["../target/release/goxlr-daemon", "usr/bin/", "755"],
+    ["../target/release/goxlr-client", "usr/bin/", "755"],
+    ["../deployment/deb/goxlr-client.bash", "usr/share/bash-completion/completions/", "644"],
+    ["../deployment/deb/goxlr-client.fish", "usr/share/fish/vendor_completions.d/", "644"],
+    ["../deployment/deb/_goxlr-client", "usr/share/zsh/vendor-completions/", "644"],
+    ["../deployment/deb/goxlr-daemon.bash", "usr/share/bash-completion/completions/", "644"],
+    ["../deployment/deb/goxlr-daemon.fish", "usr/share/fish/vendor_completions.d/", "644"],
+    ["../deployment/deb/_goxlr-daemon", "usr/share/zsh/vendor-completions/", "644"],
+]
+section = "sound"
+priority = "optional"
+extended-description = """\
+A utility for monitoring and controlling a TC-Helicon GoXLR or GoXLR Mini.
+"""

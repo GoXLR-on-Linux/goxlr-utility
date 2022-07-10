@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# Finds Cargo's `OUT_DIR` directory from the most recent build.
+# Original script from ripgrep - https://github.com/BurntSushi/ripgrep (licensed MIT)
+#
+# This requires two parameters corresponding to the target directory
+# to search for the build output, and name of a stamp file produced
+# by build.rs
+
+if [ $# != 2 ]; then
+  echo "Usage: $(basename "$0") <target-dir> <stamp-name>" >&2
+  exit 2
+fi
+
+target_dir="$1"
+stamp_name="$2"
+find "$target_dir" -name "$stamp_name" -print0 \
+  | xargs -0 ls -t \
+  | head -n1 \
+  | xargs dirname
