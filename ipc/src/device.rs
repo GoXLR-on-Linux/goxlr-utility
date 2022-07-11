@@ -13,6 +13,7 @@ use strum::EnumCount;
 pub struct DaemonStatus {
     pub mixers: HashMap<String, MixerStatus>,
     pub paths: Paths,
+    pub files: Files,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -119,6 +120,12 @@ pub struct Paths {
     pub profile_directory: PathBuf,
     pub mic_profile_directory: PathBuf,
     pub samples_directory: PathBuf,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct Files {
+    pub profiles: Vec<String>,
+    pub mic_profiles: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

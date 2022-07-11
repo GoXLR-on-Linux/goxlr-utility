@@ -1,8 +1,8 @@
 use crate::device::Device;
-use crate::{SettingsHandle, Shutdown};
+use crate::{FileManager, SettingsHandle, Shutdown};
 use anyhow::{anyhow, Result};
 use goxlr_ipc::{
-    DaemonStatus, DeviceType, GoXLRCommand, HardwareStatus, Paths, UsbProductInformation,
+    DaemonStatus, DeviceType, GoXLRCommand, HardwareStatus, Paths, Files, UsbProductInformation,
 };
 use goxlr_usb::goxlr::{GoXLR, PID_GOXLR_FULL, PID_GOXLR_MINI, VID_GOXLR};
 use goxlr_usb::rusb::{DeviceDescriptor, GlobalContext};
@@ -25,6 +25,7 @@ pub async fn handle_changes(
     mut rx: DeviceReceiver,
     mut shutdown: Shutdown,
     settings: SettingsHandle,
+    mut file_manager: FileManager,
 ) {
     let detect_count = 10;
     let mut loop_count = 10;
@@ -80,6 +81,10 @@ pub async fn handle_changes(
                                 profile_directory: settings.get_profile_directory().await,
                                 mic_profile_directory: settings.get_mic_profile_directory().await,
                                 samples_directory: settings.get_samples_directory().await,
+                            },
+                            files: Files {
+                                profiles: file_manager.get_profiles(&settings),
+                                mic_profiles: file_manager.get_mic_profiles(&settings),
                             },
                             ..Default::default()
                         };
