@@ -54,7 +54,7 @@ impl FileManager {
         let extension = "goxlr";
 
         self.profiles = self.get_file_list(path, extension);
-        return self.profiles.names.clone();
+        self.profiles.names.clone()
     }
 
     pub fn get_mic_profiles(&mut self, settings: &SettingsHandle) -> Vec<String> {
@@ -66,7 +66,7 @@ impl FileManager {
         let extension = "goxlrMicProfile";
 
         self.mic_profiles = self.get_file_list(path, extension);
-        return self.mic_profiles.names.clone();
+        self.mic_profiles.names.clone()
     }
 
     fn get_file_list(&self, path: PathBuf, extension: &str) -> FileList {
@@ -91,7 +91,7 @@ impl FileManager {
                         .and_then(|e| {
                             e.path().file_stem().and_then(
                                 // Convert it to a String..
-                                |n| n.to_str().map(|s| String::from(s)),
+                                |n| n.to_str().map(String::from),
                             )
                         })
                     // Collect the result.
