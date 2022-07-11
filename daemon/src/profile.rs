@@ -73,10 +73,6 @@ impl ProfileAdapter {
     pub fn from_named(name: String, directory: &Path) -> Result<Self> {
         let mut path = directory.join(format!("{}.goxlr", name));
 
-        if !path.is_file() {
-            path = directory.join(format!("{}.goxlrProfile", name));
-        }
-
         if path.is_file() {
             let file = File::open(path).context("Couldn't open profile for reading")?;
             return ProfileAdapter::from_reader(name, file).context("Couldn't read profile");
