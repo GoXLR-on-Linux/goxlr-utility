@@ -74,7 +74,7 @@ impl FileManager {
         // We need to refresh..
         FileList {
             names: self.get_files_from_drive(path, extension),
-            timeout: Instant::now() + Duration::from_secs(60),
+            timeout: Instant::now() + Duration::from_secs(5),
         }
     }
 
