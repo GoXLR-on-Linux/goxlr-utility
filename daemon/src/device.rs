@@ -66,9 +66,11 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 .clone()
                 .unwrap_or_else(|| "Not Defined".to_string())
         );
-        let profile = ProfileAdapter::from_named_or_default(profile_name, profile_directory);
+        let profile = ProfileAdapter::from_named_or_default(profile_name,
+                                                            vec![profile_directory]);
         let mic_profile =
-            MicProfileAdapter::from_named_or_default(mic_profile_name, mic_profile_directory);
+            MicProfileAdapter::from_named_or_default(mic_profile_name,
+                                                     vec![mic_profile_directory]);
 
         let mut audio_handler = None;
         if let Ok(audio) = AudioHandler::new() {
@@ -973,7 +975,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
             // Profiles
             GoXLRCommand::LoadProfile(profile_name) => {
                 let profile_directory = self.settings.get_profile_directory().await;
-                self.profile = ProfileAdapter::from_named(profile_name, &profile_directory)?;
+                self.profile = ProfileAdapter::from_named(profile_name, vec![&profile_directory])?;
                 self.apply_profile()?;
                 self.settings
                     .set_device_profile_name(self.serial(), self.profile.name())
@@ -1004,7 +1006,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
             GoXLRCommand::LoadMicProfile(mic_profile_name) => {
                 let mic_profile_directory = self.settings.get_mic_profile_directory().await;
                 self.mic_profile =
-                    MicProfileAdapter::from_named(mic_profile_name, &mic_profile_directory)?;
+                    MicProfileAdapter::from_named(mic_profile_name, vec![&mic_profile_directory])?;
                 self.apply_mic_profile()?;
                 self.settings
                     .set_device_mic_profile_name(self.serial(), self.mic_profile.name())

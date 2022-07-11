@@ -59,9 +59,9 @@ pub struct ProfileAdapter {
 }
 
 impl ProfileAdapter {
-    pub fn from_named_or_default(name: Option<String>, directory: &Path) -> Self {
+    pub fn from_named_or_default(name: Option<String>, directories: Vec<&Path>) -> Self {
         if let Some(name) = name {
-            match ProfileAdapter::from_named(name.clone(), directory) {
+            match ProfileAdapter::from_named(name.clone(), directories) {
                 Ok(result) => return result,
                 Err(error) => error!("Couldn't load profile {}: {}", name, error),
             }
@@ -70,12 +70,18 @@ impl ProfileAdapter {
         ProfileAdapter::default()
     }
 
-    pub fn from_named(name: String, directory: &Path) -> Result<Self> {
-        let mut path = directory.join(format!("{}.goxlr", name));
+    pub fn from_named(name: String, directories: Vec<&Path>) -> Result<Self> {
+        let mut dir_list = "".to_string();
 
-        if path.is_file() {
-            let file = File::open(path).context("Couldn't open profile for reading")?;
-            return ProfileAdapter::from_reader(name, file).context("Couldn't read profile");
+        // Loop through the provided directories, and try to find the profile..
+        for directory in directories {
+            let path = directory.join(format!("{}.goxlr", name));
+
+            if path.is_file() {
+                let file = File::open(path).context("Couldn't open profile for reading")?;
+                return ProfileAdapter::from_reader(name, file).context("Couldn't read profile");
+            }
+            dir_list = format!("{}, {}", dir_list, directory.to_string_lossy());
         }
 
         if name == DEFAULT_PROFILE_NAME {
@@ -83,9 +89,9 @@ impl ProfileAdapter {
         }
 
         Err(anyhow!(
-            "Profile {} does not exist inside {}",
+            "Profile {} does not exist inside {:?}",
             name,
-            directory.to_string_lossy()
+            dir_list
         ))
     }
 
@@ -1155,9 +1161,9 @@ pub struct MicProfileAdapter {
 }
 
 impl MicProfileAdapter {
-    pub fn from_named_or_default(name: Option<String>, directory: &Path) -> Self {
+    pub fn from_named_or_default(name: Option<String>, directories: Vec<&Path>) -> Self {
         if let Some(name) = name {
-            match MicProfileAdapter::from_named(name.clone(), directory) {
+            match MicProfileAdapter::from_named(name.clone(), directories) {
                 Ok(result) => return result,
                 Err(error) => error!("Couldn't load mic profile {}: {}", name, error),
             }
@@ -1166,11 +1172,15 @@ impl MicProfileAdapter {
         MicProfileAdapter::default()
     }
 
-    pub fn from_named(name: String, directory: &Path) -> Result<Self> {
-        let path = directory.join(format!("{}.goxlrMicProfile", name));
-        if path.is_file() {
-            let file = File::open(path).context("Couldn't open mic profile for reading")?;
-            return MicProfileAdapter::from_reader(name, file).context("Couldn't read mic profile");
+    pub fn from_named(name: String, directories: Vec<&Path>) -> Result<Self> {
+        let mut dir_list = "".to_string();
+        for directory in directories {
+            let path = directory.join(format!("{}.goxlrMicProfile", name));
+            if path.is_file() {
+                let file = File::open(path).context("Couldn't open mic profile for reading")?;
+                return MicProfileAdapter::from_reader(name, file).context("Couldn't read mic profile");
+            }
+            dir_list = format!("{}, {}", dir_list, directory.to_string_lossy());
         }
 
         if name == DEFAULT_MIC_PROFILE_NAME {
@@ -1180,7 +1190,7 @@ impl MicProfileAdapter {
         Err(anyhow!(
             "Mic profile {} does not exist inside {}",
             name,
-            directory.to_string_lossy()
+            dir_list
         ))
     }
 
