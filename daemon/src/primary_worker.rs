@@ -2,7 +2,7 @@ use crate::device::Device;
 use crate::{FileManager, SettingsHandle, Shutdown};
 use anyhow::{anyhow, Result};
 use goxlr_ipc::{
-    DaemonStatus, DeviceType, GoXLRCommand, HardwareStatus, Paths, Files, UsbProductInformation,
+    DaemonStatus, DeviceType, Files, GoXLRCommand, HardwareStatus, Paths, UsbProductInformation,
 };
 use goxlr_usb::goxlr::{GoXLR, PID_GOXLR_FULL, PID_GOXLR_MINI, VID_GOXLR};
 use goxlr_usb::rusb::{DeviceDescriptor, GlobalContext};

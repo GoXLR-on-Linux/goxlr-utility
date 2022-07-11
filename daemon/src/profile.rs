@@ -1178,7 +1178,8 @@ impl MicProfileAdapter {
             let path = directory.join(format!("{}.goxlrMicProfile", name));
             if path.is_file() {
                 let file = File::open(path).context("Couldn't open mic profile for reading")?;
-                return MicProfileAdapter::from_reader(name, file).context("Couldn't read mic profile");
+                return MicProfileAdapter::from_reader(name, file)
+                    .context("Couldn't read mic profile");
             }
             dir_list = format!("{}, {}", dir_list, directory.to_string_lossy());
         }

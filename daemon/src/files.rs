@@ -8,12 +8,11 @@ This has been created as a separate mod primarily because profile.rs is big enou
 secondly because it's managing different types of files
  */
 
-use std::path::PathBuf;
-use std::time::{Duration, Instant};
+use crate::SettingsHandle;
 use futures::executor::block_on;
 use log::debug;
-use crate::SettingsHandle;
-
+use std::path::PathBuf;
+use std::time::{Duration, Instant};
 
 #[derive(Debug)]
 pub struct FileManager {
@@ -24,7 +23,7 @@ pub struct FileManager {
 #[derive(Debug, Clone)]
 struct FileList {
     names: Vec<String>,
-    timeout: Instant
+    timeout: Instant,
 }
 
 impl Default for FileList {
@@ -80,25 +79,30 @@ impl FileManager {
 
     fn get_files_from_drive(&self, path: PathBuf, extension: &str) -> Vec<String> {
         if let Ok(list) = path.read_dir() {
-            return list.filter_map(|entry| {
-                entry.ok()
-
-                    // Make sure this has an extension..
-                    .filter(| e | e.path().extension().is_some())
-
-                    // Is it the extension we're looking for?
-                    .filter(| e | e.path().extension().unwrap() == extension)
-
-                    // Get the File Name..
-                    .and_then(|e| e.path().file_stem().and_then(
-                        // Convert it to a String..
-                        |n| n.to_str().map(|s| String::from(s))
-                    ))
-            // Collect the result.
-            }).collect::<Vec<String>>();
+            return list
+                .filter_map(|entry| {
+                    entry
+                        .ok()
+                        // Make sure this has an extension..
+                        .filter(|e| e.path().extension().is_some())
+                        // Is it the extension we're looking for?
+                        .filter(|e| e.path().extension().unwrap() == extension)
+                        // Get the File Name..
+                        .and_then(|e| {
+                            e.path().file_stem().and_then(
+                                // Convert it to a String..
+                                |n| n.to_str().map(|s| String::from(s)),
+                            )
+                        })
+                    // Collect the result.
+                })
+                .collect::<Vec<String>>();
         }
 
-        debug!("Path not found, or unable to read: {:?}", path.to_string_lossy());
+        debug!(
+            "Path not found, or unable to read: {:?}",
+            path.to_string_lossy()
+        );
         return vec![];
     }
 }
