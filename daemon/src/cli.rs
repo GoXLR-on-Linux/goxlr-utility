@@ -12,6 +12,10 @@ pub struct Cli {
     /// Location of the daemon configuration file on disk
     #[clap(long, default_value_os_t = default_config_location())]
     pub config: PathBuf,
+
+    /// Disable the HTTP Server and Client Web UI
+    #[clap(long)]
+    pub disable_http: bool,
 }
 
 fn default_config_location() -> PathBuf {

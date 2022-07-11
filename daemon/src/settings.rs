@@ -1,4 +1,5 @@
-use crate::profile::{DEFAULT_MIC_PROFILE_NAME, DEFAULT_PROFILE_NAME};
+use crate::mic_profile::DEFAULT_MIC_PROFILE_NAME;
+use crate::profile::DEFAULT_PROFILE_NAME;
 use anyhow::{Context, Result};
 use directories::ProjectDirs;
 use log::error;

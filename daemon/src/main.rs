@@ -4,6 +4,7 @@ mod communication;
 mod device;
 mod files;
 mod http_server;
+mod mic_profile;
 mod primary_worker;
 mod profile;
 mod settings;

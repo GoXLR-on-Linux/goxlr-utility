@@ -1,5 +1,6 @@
 use crate::audio::AudioHandler;
-use crate::profile::{version_newer_or_equal_to, MicProfileAdapter, ProfileAdapter};
+use crate::mic_profile::MicProfileAdapter;
+use crate::profile::{version_newer_or_equal_to, ProfileAdapter};
 use crate::SettingsHandle;
 use anyhow::{anyhow, Result};
 use enum_map::EnumMap;
@@ -392,8 +393,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 if channel != ChannelName::Mic
                     || (channel == ChannelName::Mic && !self.mic_muted_by_cough())
                 {
-                    self.goxlr
-                        .set_channel_state(channel, ChannelState::Unmuted)?;
+                    self.goxlr.set_channel_state(channel, Unmuted)?;
                 }
             } else if basic_input.is_some() {
                 self.apply_routing(basic_input.unwrap())?;
