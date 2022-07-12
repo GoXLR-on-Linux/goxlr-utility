@@ -55,31 +55,38 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for Websocket {
         match msg {
             Ok(ws::Message::Ping(msg)) => ctx.pong(&msg),
             Ok(ws::Message::Text(text)) => {
-                if let Ok(request) = serde_json::from_slice::<DaemonRequest>(text.as_ref()) {
-                    let recipient = ctx.address().recipient();
-                    let mut usb_tx = self.sender.clone();
-                    let future = async move {
-                        let result = handle_packet(request, &mut usb_tx).await;
-                        match result {
-                            Ok(resp) => match resp {
-                                DaemonResponse::Ok => {}
-                                DaemonResponse::Error(error) => {
-                                    recipient.do_send(WsResponse(DaemonResponse::Error(error)));
+                match serde_json::from_slice::<DaemonRequest>(text.as_ref()) {
+                    Ok(request) => {
+                        let recipient = ctx.address().recipient();
+                        let mut usb_tx = self.sender.clone();
+                        let future = async move {
+                            let result = handle_packet(request, &mut usb_tx).await;
+                            match result {
+                                Ok(resp) => match resp {
+                                    DaemonResponse::Ok => {}
+                                    DaemonResponse::Error(error) => {
+                                        recipient.do_send(WsResponse(DaemonResponse::Error(error)));
+                                    }
+                                    DaemonResponse::Status(status) => {
+                                        recipient
+                                            .do_send(WsResponse(DaemonResponse::Status(status)));
+                                    }
+                                },
+                                Err(error) => {
+                                    recipient.do_send(WsResponse(DaemonResponse::Error(
+                                        error.to_string(),
+                                    )));
                                 }
-                                DaemonResponse::Status(status) => {
-                                    recipient.do_send(WsResponse(DaemonResponse::Status(status)));
-                                }
-                            },
-                            Err(error) => {
-                                recipient
-                                    .do_send(WsResponse(DaemonResponse::Error(error.to_string())));
                             }
-                        }
-                    };
-                    future.into_actor(self).spawn(ctx);
-                } else {
-                    ctx.close(Some(CloseCode::Invalid.into()));
-                    ctx.stop();
+                        };
+                        future.into_actor(self).spawn(ctx);
+                    }
+                    Err(error) => {
+                        warn!("HTTP Error: {}", error);
+                        warn!("Request: {}", text);
+                        ctx.close(Some(CloseCode::Invalid.into()));
+                        ctx.stop();
+                    }
                 }
             }
             Ok(ws::Message::Binary(_bin)) => {
