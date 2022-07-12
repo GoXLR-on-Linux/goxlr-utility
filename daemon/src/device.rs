@@ -1344,12 +1344,6 @@ impl<'a, T: UsbContext> Device<'a, T> {
     fn apply_profile(&mut self) -> Result<()> {
         // Set volumes first, applying mute may modify stuff..
         debug!("Applying Profile..");
-        debug!("Setting Channel Volumes..");
-        for channel in ChannelName::iter() {
-            let channel_volume = self.profile.get_channel_volume(channel);
-            debug!("Setting volume for {} to {}", channel, channel_volume);
-            self.goxlr.set_volume(channel, channel_volume)?;
-        }
 
         debug!("Setting Faders..");
         // Prepare the faders, and configure channel mute states
@@ -1376,6 +1370,13 @@ impl<'a, T: UsbContext> Device<'a, T> {
         for fader in FaderName::iter() {
             debug!("Setting display for {}", fader);
             self.set_fader_display_from_profile(fader)?;
+        }
+
+        debug!("Setting Channel Volumes..");
+        for channel in ChannelName::iter() {
+            let channel_volume = self.profile.get_channel_volume(channel);
+            debug!("Setting volume for {} to {}", channel, channel_volume);
+            self.goxlr.set_volume(channel, channel_volume)?;
         }
 
         debug!("Updating button states..");
