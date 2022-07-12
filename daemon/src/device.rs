@@ -808,6 +808,10 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 self.goxlr
                     .set_effect_values(&[(EffectKey::BleepLevel, volume as i32)])?;
             }
+            GoXLRCommand::SetMicrophoneType(mic_type) => {
+                self.mic_profile.set_mic_type(mic_type);
+                self.apply_mic_gain()?;
+            }
             GoXLRCommand::SetMicrophoneGain(mic_type, gain) => {
                 self.mic_profile.set_mic_type(mic_type);
                 self.mic_profile.set_mic_gain(mic_type, gain);

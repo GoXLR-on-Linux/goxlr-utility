@@ -34,6 +34,7 @@ pub enum GoXLRCommand {
     SetFaderMuteFunction(FaderName, MuteFunction),
 
     SetVolume(ChannelName, u8),
+    SetMicrophoneType(MicrophoneType),
     SetMicrophoneGain(MicrophoneType, u16),
     SetRouter(InputDevice, OutputDevice, bool),
 
