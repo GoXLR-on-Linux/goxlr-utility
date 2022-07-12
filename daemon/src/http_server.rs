@@ -61,9 +61,15 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for Websocket {
                     let future = async move {
                         let result = handle_packet(request, &mut usb_tx).await;
                         match result {
-                            Ok(resp) => {
-                                recipient.do_send(WsResponse(resp));
-                            }
+                            Ok(resp) => match resp {
+                                DaemonResponse::Ok => {}
+                                DaemonResponse::Error(error) => {
+                                    recipient.do_send(WsResponse(DaemonResponse::Error(error)));
+                                }
+                                DaemonResponse::Status(status) => {
+                                    recipient.do_send(WsResponse(DaemonResponse::Status(status)));
+                                }
+                            },
                             Err(error) => {
                                 recipient
                                     .do_send(WsResponse(DaemonResponse::Error(error.to_string())));
