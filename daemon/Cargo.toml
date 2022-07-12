@@ -55,6 +55,7 @@ name = "goxlr-utility"
 assets = [
     ["../target/release/goxlr-daemon", "usr/bin/", "755"],
     ["../target/release/goxlr-client", "usr/bin/", "755"],
+    ["../50-goxlr.rules", "etc/udev/rules.d/", "644"],
     ["../deployment/deb/goxlr-client.bash", "usr/share/bash-completion/completions/", "644"],
     ["../deployment/deb/goxlr-client.fish", "usr/share/fish/vendor_completions.d/", "644"],
     ["../deployment/deb/_goxlr-client", "usr/share/zsh/vendor-completions/", "644"],
