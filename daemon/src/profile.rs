@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Context, Result};
 use enum_map::EnumMap;
 use enumset::EnumSet;
-use goxlr_ipc::CoughButton;
+use goxlr_ipc::{ButtonLighting, CoughButton, FaderLighting, Lighting, TwoColours};
 use goxlr_profile_loader::components::colours::{
     Colour, ColourDisplay, ColourMap, ColourOffStyle, ColourState,
 };
@@ -28,6 +28,7 @@ use goxlr_types::{
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::colouring::ColourTargets;
 use log::error;
+use std::collections::HashMap;
 use std::fs::{create_dir_all, File};
 use std::io::{Cursor, Read, Seek};
 use std::path::Path;
@@ -326,6 +327,63 @@ impl ProfileAdapter {
 
     fn get_button_colour_map(&self, button: Buttons) -> &ColourMap {
         get_colour_map_from_button(self.profile.settings(), button)
+    }
+
+    pub fn get_lighting_ipc(&self, is_device_mini: bool) -> Lighting {
+        let mut fader_map: HashMap<FaderName, FaderLighting> = HashMap::new();
+        for fader in FaderName::iter() {
+            let colour_target = map_fader_to_colour_target(fader);
+            let colour_map = get_profile_colour_map(self.profile.settings(), colour_target);
+
+            // Set TwoColour as the default..
+            let mut fader_style = BasicColourDisplay::TwoColour;
+            if let Some(style) = colour_map.fader_display() {
+                fader_style = profile_to_standard_fader_display(*style);
+            }
+
+            // Insert the colours, pulling a default (black) if not found
+            fader_map.insert(
+                fader,
+                FaderLighting {
+                    style: fader_style,
+                    colours: TwoColours {
+                        colour_one: colour_map.colour_or_default(0).to_rgb(),
+                        colour_two: colour_map.colour_or_default(1).to_rgb(),
+                    },
+                },
+            );
+        }
+
+        let mut button_map: HashMap<ButtonColourTargets, ButtonLighting> = HashMap::new();
+
+        let buttons = if is_device_mini {
+            get_mini_colour_targets()
+        } else {
+            ButtonColourTargets::iter().collect()
+        };
+
+        for button in buttons {
+            let colour_target = standard_to_colour_target(button);
+            let colour_map = get_profile_colour_map(self.profile.settings(), colour_target);
+
+            let off_style = profile_to_standard_colour_off_style(*colour_map.get_off_style());
+
+            button_map.insert(
+                button,
+                ButtonLighting {
+                    off_style,
+                    colours: TwoColours {
+                        colour_one: colour_map.colour_or_default(0).to_rgb(),
+                        colour_two: colour_map.colour_or_default(1).to_rgb(),
+                    },
+                },
+            );
+        }
+
+        Lighting {
+            faders: fader_map,
+            buttons: button_map,
+        }
     }
 
     /** Regular Mute button handlers */
@@ -1226,6 +1284,14 @@ fn standard_to_profile_colour_off_style(value: BasicColourOffStyle) -> ColourOff
     }
 }
 
+fn profile_to_standard_colour_off_style(value: ColourOffStyle) -> BasicColourOffStyle {
+    match value {
+        ColourOffStyle::Dimmed => BasicColourOffStyle::Dimmed,
+        ColourOffStyle::Colour2 => BasicColourOffStyle::Colour2,
+        ColourOffStyle::DimmedColour2 => BasicColourOffStyle::DimmedColour2,
+    }
+}
+
 fn profile_to_standard_channel(value: FullChannelList) -> ChannelName {
     match value {
         FullChannelList::Mic => ChannelName::Mic,
@@ -1336,6 +1402,15 @@ fn map_button_to_colour_target(button: Buttons) -> ColourTargets {
         Buttons::SamplerBottomLeft => ColourTargets::SamplerBottomLeft,
         Buttons::SamplerBottomRight => ColourTargets::SamplerBottomRight,
         Buttons::SamplerClear => ColourTargets::SamplerClear,
+    }
+}
+
+fn map_fader_to_colour_target(fader: FaderName) -> ColourTargets {
+    match fader {
+        FaderName::A => ColourTargets::FadeMeter1,
+        FaderName::B => ColourTargets::FadeMeter2,
+        FaderName::C => ColourTargets::FadeMeter3,
+        FaderName::D => ColourTargets::FadeMeter4,
     }
 }
 
@@ -1479,6 +1554,17 @@ pub fn standard_to_colour_target(target: ButtonColourTargets) -> ColourTargets {
         ButtonColourTargets::SamplerBottomRight => ColourTargets::SamplerBottomRight,
         ButtonColourTargets::SamplerClear => ColourTargets::SamplerClear,
     }
+}
+
+pub fn get_mini_colour_targets() -> Vec<ButtonColourTargets> {
+    vec![
+        ButtonColourTargets::Fader1Mute,
+        ButtonColourTargets::Fader2Mute,
+        ButtonColourTargets::Fader3Mute,
+        ButtonColourTargets::Fader4Mute,
+        ButtonColourTargets::Bleep,
+        ButtonColourTargets::Cough,
+    ]
 }
 
 #[allow(clippy::comparison_chain)]

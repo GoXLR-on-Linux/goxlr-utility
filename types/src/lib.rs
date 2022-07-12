@@ -27,7 +27,7 @@ pub enum ChannelName {
     LineOut,
 }
 
-#[derive(Copy, Clone, Debug, Display, EnumIter, EnumCount, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Display, EnumIter, EnumCount, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum FaderName {
@@ -264,7 +264,7 @@ pub enum FaderDisplayStyle {
     GradientMeter,
 }
 
-#[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ButtonColourTargets {

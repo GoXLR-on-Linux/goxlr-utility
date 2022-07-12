@@ -82,7 +82,7 @@ async fn main() -> Result<()> {
     let _ = join!(usb_handle, communications_handle, http_server.stop(true));
 
     info!("Removing Socket");
-    fs::remove_file("/tmp/goxlr.socket")?;
+    remove_file("/tmp/goxlr.socket")?;
     shutdown.recv().await;
     Ok(())
 }

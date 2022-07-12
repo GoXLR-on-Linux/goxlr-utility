@@ -76,13 +76,13 @@ impl ColourMap {
 
         attr_key = format!("{}selected", &self.prefix);
         if attribute.name.local_name == attr_key {
-            self.selected = Option::Some(u8::from_str(attribute.value.as_str())?);
+            self.selected = Some(u8::from_str(attribute.value.as_str())?);
             return Ok(true);
         }
 
         attr_key = format!("{}velocity", &self.prefix);
         if attribute.name.local_name == attr_key {
-            self.velocity = Option::Some(i8::from_str(attribute.value.as_str())?);
+            self.velocity = Some(i8::from_str(attribute.value.as_str())?);
             return Ok(true);
         }
 
@@ -100,7 +100,7 @@ impl ColourMap {
 
         // This attribute is spelt wrong.. >:(
         if attribute.name.local_name == "colorGroup" {
-            self.colour_group = Option::Some(attribute.value.clone());
+            self.colour_group = Some(attribute.value.clone());
             return Ok(true);
         }
 
@@ -121,7 +121,7 @@ impl ColourMap {
                 .map(|s| usize::from_str(&s.to_string()))
                 .transpose()?
             {
-                color_list[index] = Option::Some(Colour::new(&attribute.value)?);
+                color_list[index] = Some(Colour::new(&attribute.value)?);
             }
 
             return Ok(true);
@@ -129,7 +129,7 @@ impl ColourMap {
 
         attr_key = format!("{}Display", &self.prefix);
         if attribute.name.local_name == attr_key {
-            self.colour_display = Option::Some(ColourDisplay::from_str(&attribute.value)?);
+            self.colour_display = Some(ColourDisplay::from_str(&attribute.value)?);
             return Ok(true);
         }
 
@@ -185,6 +185,17 @@ impl ColourMap {
             .as_ref()
             .unwrap()
     }
+
+    pub fn colour_or_default(&self, index: u8) -> &Colour {
+        if let Some(colour_list) = &self.colour_list {
+            if let Some(colour) = &colour_list[index as usize] {
+                return colour;
+            }
+        }
+
+        &DEFAULT_COLOUR
+    }
+
     pub fn get_off_style(&self) -> &ColourOffStyle {
         &self.off_style
     }
@@ -273,9 +284,19 @@ impl ColourMap {
     pub fn set_off_style(&mut self, off_style: ColourOffStyle) {
         self.off_style = off_style;
     }
+    pub fn fader_display(&self) -> &Option<ColourDisplay> {
+        &self.colour_display
+    }
 }
 
-#[derive(Debug, PartialEq, EnumString, Display)]
+const DEFAULT_COLOUR: Colour = Colour {
+    red: 0,
+    green: 0,
+    blue: 0,
+    alpha: 0,
+};
+
+#[derive(Debug, Copy, Clone, PartialEq, EnumString, Display)]
 pub enum ColourOffStyle {
     #[strum(to_string = "DIMMED")]
     Dimmed,
@@ -287,7 +308,7 @@ pub enum ColourOffStyle {
     DimmedColour2,
 }
 
-#[derive(Debug, PartialEq, EnumString, Display)]
+#[derive(Debug, Copy, Clone, PartialEq, EnumString, Display)]
 pub enum ColourDisplay {
     #[strum(to_string = "GRADIENT")]
     Gradient,
@@ -347,6 +368,10 @@ impl Colour {
             "{:02X}{:02X}{:02X}{:02X}",
             self.red, self.green, self.blue, self.alpha
         );
+    }
+
+    pub fn to_rgb(&self) -> String {
+        return format!("{:02X}{:02X}{:02X}", self.red, self.green, self.blue);
     }
 
     pub fn to_reverse_bytes(&self) -> [u8; 4] {

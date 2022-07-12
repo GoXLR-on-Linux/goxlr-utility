@@ -1,8 +1,8 @@
 use enumset::EnumSet;
 use goxlr_types::{
-    ChannelName, CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EqFrequencies,
-    FaderName, FirmwareVersions, GateTimes, InputDevice, MicrophoneType, MiniEqFrequencies,
-    MuteFunction, OutputDevice,
+    ButtonColourOffStyle, ButtonColourTargets, ChannelName, CompressorAttackTime, CompressorRatio,
+    CompressorReleaseTime, EqFrequencies, FaderDisplayStyle, FaderName, FirmwareVersions,
+    GateTimes, InputDevice, MicrophoneType, MiniEqFrequencies, MuteFunction, OutputDevice,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -26,6 +26,7 @@ pub struct MixerStatus {
     pub router_table: [[bool; OutputDevice::COUNT]; InputDevice::COUNT],
     pub cough_button: CoughButton,
     pub bleep_volume: i8,
+    pub lighting: Lighting,
     pub profile_name: String,
     pub mic_profile_name: String,
 }
@@ -113,6 +114,30 @@ pub struct Compressor {
     pub attack: CompressorAttackTime,
     pub release: CompressorReleaseTime,
     pub makeup_gain: u8,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Lighting {
+    pub faders: HashMap<FaderName, FaderLighting>,
+    pub buttons: HashMap<ButtonColourTargets, ButtonLighting>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ButtonLighting {
+    pub off_style: ButtonColourOffStyle,
+    pub colours: TwoColours,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FaderLighting {
+    pub style: FaderDisplayStyle,
+    pub colours: TwoColours,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TwoColours {
+    pub colour_one: String,
+    pub colour_two: String,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

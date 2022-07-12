@@ -15,7 +15,6 @@ use goxlr_types::{
     SampleBank, VersionNumber,
 };
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
-use goxlr_usb::channelstate::ChannelState;
 use goxlr_usb::channelstate::ChannelState::{Muted, Unmuted};
 use goxlr_usb::goxlr::GoXLR;
 use goxlr_usb::routing::{InputDevice, OutputDevice};
@@ -120,6 +119,9 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 equaliser_mini: self.mic_profile.equalizer_mini_ipc(),
                 compressor: self.mic_profile.compressor_ipc(),
             },
+            lighting: self
+                .profile
+                .get_lighting_ipc(self.hardware.device_type == DeviceType::Mini),
             profile_name: self.profile.name().to_owned(),
             mic_profile_name: self.mic_profile.name().to_owned(),
         }
