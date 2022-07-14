@@ -40,72 +40,45 @@ Once the daemon is running, you can run `goxlr-client` to configure the GoXLR at
 
 For an up-to-date list of command line arguments, try `goxlr-client --help`!
 
-```
-goxlr-client 0.1.0
-Nathan Adams <dinnerbone@dinnerbone.com>, Craig McLure <craig@mclure.net>, Lars Mühlbauer
-<lm41@dismail.de>
+
+<pre><font color="#4E9A06">goxlr-client</font> 0.1.0
+Nathan Adams &lt;dinnerbone@dinnerbone.com&gt;, Craig McLure &lt;craig@mclure.net&gt;, Lars Mühlbauer
+&lt;lm41@dismail.de&gt;
 Allows control of a TC-Helicon GoXLR or GoXLR Mini, by interacting with a running daemon.
 
-USAGE:
+<font color="#C4A000">USAGE:</font>
     goxlr-client [OPTIONS] [SUBCOMMAND]
 
-OPTIONS:
-        --device <DEVICE>    The specific device's serial number to execute commands on. This field
+<font color="#C4A000">OPTIONS:</font>
+        <font color="#4E9A06">--device</font> <font color="#4E9A06">&lt;DEVICE&gt;</font>    The specific device&apos;s serial number to execute commands on. This field
                              is optional if you have exactly one GoXLR, but required if you have
                              more
-        --status             Display the device information after any subcommands have been executed
-    -h, --help               Print help information
-    -V, --version            Print version information
+        <font color="#4E9A06">--status</font>             Display the device information after any subcommands have been executed
+        <font color="#4E9A06">--status-json</font>        Display device information as JSON after command..
+    <font color="#4E9A06">-h</font>, <font color="#4E9A06">--help</font>               Print help information
+    <font color="#4E9A06">-V</font>, <font color="#4E9A06">--version</font>            Print version information
 
-Profile Management:
-        --list-profiles                     List all profiles available for loading
-        --list-mic-profiles                 List all microphone profiles available for loading
-        --load-profile <PROFILE>            Load a GoXLR Profile
-        --load-mic-profile <MIC_PROFILE>    Load a GoXLR Microphone Profile
-        --save-profile                      Saves the current configuration to disk
-        --save-mic-profile                  Save the currently configured microphone profile to disk
-
-Fader controls:
-        --fader-a <FADER_A>    Assign fader A [possible values: mic, line-in, console, system, game,
-                               chat, sample, music, headphones, mic-monitor, line-out]
-        --fader-b <FADER_B>    Assign fader B [possible values: mic, line-in, console, system, game,
-                               chat, sample, music, headphones, mic-monitor, line-out]
-        --fader-c <FADER_C>    Assign fader C [possible values: mic, line-in, console, system, game,
-                               chat, sample, music, headphones, mic-monitor, line-out]
-        --fader-d <FADER_D>    Assign fader D [possible values: mic, line-in, console, system, game,
-                               chat, sample, music, headphones, mic-monitor, line-out]
-
-Channel volumes:
-        --mic-volume <MIC_VOLUME>                    Set Mic volume (0-255)
-        --line-in-volume <LINE_IN_VOLUME>            Set Line-In volume (0-255)
-        --console-volume <CONSOLE_VOLUME>            Set Console volume (0-255)
-        --system-volume <SYSTEM_VOLUME>              Set System volume (0-255)
-        --game-volume <GAME_VOLUME>                  Set Game volume (0-255)
-        --chat-volume <CHAT_VOLUME>                  Set Chat volume (0-255)
-        --sample-volume <SAMPLE_VOLUME>              Set Sample volume (0-255)
-        --music-volume <MUSIC_VOLUME>                Set Music volume (0-255)
-        --headphones-volume <HEADPHONES_VOLUME>      Set Headphones volume (0-255)
-        --mic-monitor-volume <MIC_MONITOR_VOLUME>    Set Mic-Monitor volume (0-255)
-        --line-out-volume <LINE_OUT_VOLUME>          Set Line-Out volume (0-255)
-
-Microphone controls:
-        --dynamic-gain <DYNAMIC_GAIN>
+<font color="#C4A000">Microphone controls:</font>
+        <font color="#4E9A06">--dynamic-gain</font> <font color="#4E9A06">&lt;DYNAMIC_GAIN&gt;</font>
             Set the gain of the plugged in dynamic (XLR) microphone. Value is in decibels and
             recommended to be lower than 72dB
 
-        --condenser-gain <CONDENSER_GAIN>
+        <font color="#4E9A06">--condenser-gain</font> <font color="#4E9A06">&lt;CONDENSER_GAIN&gt;</font>
             Set the gain of the plugged in condenser (XLR with phantom power) microphone. Value is
             in decibels and recommended to be lower than 72dB
 
-        --jack-gain <JACK_GAIN>
+        <font color="#4E9A06">--jack-gain</font> <font color="#4E9A06">&lt;JACK_GAIN&gt;</font>
             Set the gain of the plugged in jack (3.5mm) microphone. Value is in decibels and
             recommended to be lower than 72dB
 
-SUBCOMMANDS:
-    faders        Commands to manipulate the individual GoXLR Faders
-    faders-all    Commands to manipulate all GoXLR faders at once
-    router        Commands to manipulate the GoXLR Router
-    volume        Adjust Channel Volumes
-    help          Print this message or the help of the given subcommand(s)
+<font color="#C4A000">SUBCOMMANDS:</font>
+    <font color="#4E9A06">profiles</font>        Profile Settings
+    <font color="#4E9A06">microphone</font>      Adjust the microphone settings (Eq, Gate and Compressor)
+    <font color="#4E9A06">volume</font>          Adjust Channel Volumes
+    <font color="#4E9A06">bleep-volume</font>    Configure the Bleep Button
+    <font color="#4E9A06">faders</font>          Commands to manipulate the individual GoXLR Faders
+    <font color="#4E9A06">cough-button</font>    Commands for configuring the cough button
+    <font color="#4E9A06">router</font>          Commands to manipulate the GoXLR Router
+    <font color="#4E9A06">lighting</font>        Commands to control the GoXLR lighting
+    <font color="#4E9A06">help</font>            Print this message or the help of the given subcommand(s)</pre>
 
-```
