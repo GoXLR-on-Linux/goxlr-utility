@@ -110,10 +110,10 @@ SUBCOMMANDS:
 
 ```
 
-## Interacting with the GoXLR on Web-GUI (beta)
+## Web-GUI (beta)
 
-When daemon is runing, go to :
+⚠️ When the daemon is runing, it's loading a Web view at port 14564 .
+This Web-GUI is not functional right now.
 
 [http://localhost:14564/](http://localhost:14564/)
 
-![Beta interface](/docs/images/goxlr-web-ui.png)
