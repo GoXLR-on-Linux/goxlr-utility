@@ -65,6 +65,9 @@ pub enum GoXLRCommand {
     SetCompressorReleaseTime(CompressorReleaseTime),
     SetCompressorMakeupGain(u8),
 
+    // DeEss
+    SetDeeser(u8),
+
     // Colour Related Settings..
     SetFaderDisplayStyle(FaderName, FaderDisplayStyle),
     SetFaderColours(FaderName, String, String),

@@ -215,6 +215,12 @@ pub enum MicrophoneCommands {
         #[clap(subcommand)]
         command: CompressorCommands,
     },
+
+    /// Set the DeEss percentage
+    DeEss {
+        #[clap(parse(try_from_str=percent_value))]
+        level: u8,
+    },
 }
 
 #[derive(Subcommand, Debug)]

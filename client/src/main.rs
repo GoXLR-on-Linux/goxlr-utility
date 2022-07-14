@@ -147,6 +147,11 @@ async fn main() -> Result<()> {
                                 .await?;
                         }
                     },
+                    MicrophoneCommands::DeEss { level } => {
+                        client
+                            .command(&serial, GoXLRCommand::SetDeeser(*level))
+                            .await?;
+                    }
                 },
                 SubCommands::Faders { fader } => match fader {
                     FaderCommands::Channel { fader, channel } => {

@@ -21,11 +21,10 @@ pub struct MixerStatus {
     pub hardware: HardwareStatus,
     pub fader_status: [FaderStatus; 4],
     pub mic_status: MicSettings,
-    pub volumes: [u8; ChannelName::COUNT],
+    pub levels: Levels,
     pub router: [EnumSet<OutputDevice>; InputDevice::COUNT],
     pub router_table: [[bool; OutputDevice::COUNT]; InputDevice::COUNT],
     pub cough_button: CoughButton,
-    pub bleep_volume: i8,
     pub lighting: Lighting,
     pub profile_name: String,
     pub mic_profile_name: String,
@@ -37,11 +36,11 @@ impl MixerStatus {
     }
 
     pub fn get_channel_volume(&self, channel: ChannelName) -> u8 {
-        self.volumes[channel as usize]
+        self.levels.volumes[channel as usize]
     }
 
     pub fn set_channel_volume(&mut self, channel: ChannelName, volume: u8) {
-        self.volumes[channel as usize] = volume;
+        self.levels.volumes[channel as usize] = volume;
     }
 }
 
@@ -84,6 +83,13 @@ pub struct MicSettings {
     pub equaliser_mini: EqualiserMini,
     pub noise_gate: NoiseGate,
     pub compressor: Compressor,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Levels {
+    pub volumes: [u8; ChannelName::COUNT],
+    pub bleep: i8,
+    pub deess: u8,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

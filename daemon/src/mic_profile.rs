@@ -494,6 +494,10 @@ impl MicProfileAdapter {
         self.profile.compressor_mut().set_makeup_gain(value);
     }
 
+    pub fn set_deesser(&mut self, value: u8) {
+        self.profile.set_deess(value);
+    }
+
     /// The uber method, fetches the relevant setting from the profile and returns it..
     pub fn get_param_value(
         &self,
@@ -646,7 +650,7 @@ impl MicProfileAdapter {
             EffectKey::CompressorRelease => self.profile.compressor().release().into(),
             EffectKey::CompressorMakeUpGain => self.profile.compressor().makeup().into(),
 
-            EffectKey::DeEsser => self.get_deesser(),
+            EffectKey::DeEsser => self.profile.deess() as i32,
 
             EffectKey::ReverbAmount => main_profile.get_active_reverb_profile().amount().into(),
             EffectKey::ReverbDecay => main_profile.get_active_reverb_profile().decay().into(),
@@ -1029,7 +1033,7 @@ impl MicProfileAdapter {
         set
     }
 
-    pub fn get_deesser(&self) -> i32 {
-        self.profile.deess() as i32
+    pub fn get_deesser(&self) -> u8 {
+        self.profile.deess()
     }
 }

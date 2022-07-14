@@ -6,7 +6,9 @@ use anyhow::{anyhow, Result};
 use enum_map::EnumMap;
 use enumset::EnumSet;
 use futures::executor::block_on;
-use goxlr_ipc::{DeviceType, FaderStatus, GoXLRCommand, HardwareStatus, MicSettings, MixerStatus};
+use goxlr_ipc::{
+    DeviceType, FaderStatus, GoXLRCommand, HardwareStatus, Levels, MicSettings, MixerStatus,
+};
 use goxlr_profile_loader::components::mute::MuteFunction;
 use goxlr_profile_loader::SampleButtons;
 use goxlr_types::{
@@ -112,8 +114,11 @@ impl<'a, T: UsbContext> Device<'a, T> {
             hardware: self.hardware.clone(),
             fader_status: fader_map,
             cough_button: self.profile.get_cough_status(),
-            bleep_volume: self.get_bleep_volume(),
-            volumes: self.profile.get_volumes(),
+            levels: Levels {
+                volumes: self.profile.get_volumes(),
+                bleep: self.get_bleep_volume(),
+                deess: self.mic_profile.get_deesser(),
+            },
             router: self.profile.create_router(),
             router_table: self.profile.create_router_table(),
             mic_status: MicSettings {
@@ -926,6 +931,14 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 self.mic_profile.set_compressor_makeup(value);
                 self.apply_mic_params(HashSet::from([MicrophoneParamKey::CompressorMakeUpGain]))?;
                 self.apply_effects(HashSet::from([EffectKey::CompressorMakeUpGain]))?;
+            }
+
+            GoXLRCommand::SetDeeser(percentage) => {
+                if percentage > 100 {
+                    return Err(anyhow!("Deesser should be a percentage"));
+                }
+                self.mic_profile.set_deesser(percentage);
+                self.apply_effects(HashSet::from([EffectKey::DeEsser]))?;
             }
 
             // Colouring..

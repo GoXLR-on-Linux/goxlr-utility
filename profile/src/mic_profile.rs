@@ -175,4 +175,8 @@ impl MicProfileSettings {
     pub fn deess(&self) -> u8 {
         self.deess
     }
+
+    pub fn set_deess(&mut self, deess: u8) {
+        self.deess = deess;
+    }
 }
