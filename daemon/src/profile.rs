@@ -35,8 +35,8 @@ use std::path::Path;
 use strum::EnumCount;
 use strum::IntoEnumIterator;
 
-pub const DEFAULT_PROFILE_NAME: &str = "Default - Vaporwave";
-const DEFAULT_PROFILE: &[u8] = include_bytes!("../profiles/Default - Vaporwave.goxlr");
+pub const DEFAULT_PROFILE_NAME: &str = "DEFAULT";
+const DEFAULT_PROFILE: &[u8] = include_bytes!("../profiles/DEFAULT.goxlr");
 
 #[derive(Debug)]
 pub struct ProfileAdapter {
