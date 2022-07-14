@@ -12,7 +12,6 @@ use goxlr_types::{
 };
 use log::error;
 use std::collections::{HashMap, HashSet};
-use std::fs;
 use std::fs::{create_dir_all, File};
 use std::io::{Cursor, Read, Seek};
 use std::path::Path;

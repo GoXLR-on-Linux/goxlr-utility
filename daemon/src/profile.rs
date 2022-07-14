@@ -30,7 +30,6 @@ use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::colouring::ColourTargets;
 use log::error;
 use std::collections::HashMap;
-use std::fs;
 use std::fs::{create_dir_all, File};
 use std::io::{Cursor, Read, Seek};
 use std::path::Path;

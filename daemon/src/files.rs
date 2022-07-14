@@ -8,14 +8,16 @@ This has been created as a separate mod primarily because profile.rs is big enou
 secondly because it's managing different types of files
  */
 
-use crate::SettingsHandle;
-use anyhow::{anyhow, Context, Result};
-use futures::executor::block_on;
-use log::debug;
 use std::fs;
 use std::fs::File;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::{Duration, Instant};
+
+use anyhow::{anyhow, Result};
+use futures::executor::block_on;
+use log::debug;
+
+use crate::SettingsHandle;
 
 #[derive(Debug)]
 pub struct FileManager {
