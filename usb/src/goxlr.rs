@@ -12,7 +12,7 @@ use goxlr_types::{
     ChannelName, EffectKey, EncoderName, FaderName, FirmwareVersions, MicrophoneParamKey,
     MicrophoneType, VersionNumber,
 };
-use log::{debug, info};
+use log::{debug, info, warn};
 use rusb::Error::Pipe;
 use rusb::{
     Device, DeviceDescriptor, DeviceHandle, Direction, GlobalContext, Language, Recipient,
@@ -114,8 +114,15 @@ impl<T: UsbContext> GoXLR<T> {
             // Reset the device, so ALSA can pick it up again..
             goxlr.handle.reset()?;
 
-            // We'll error here and prompt the user to reboot, until we can sort this properly.
-            return Err(ConnectError::DeviceNeedsReboot);
+            // Reattempt the reset..
+            goxlr.write_control(1, 0, 0, &[])?;
+
+            warn!(
+                "Initialisation complete. If you are using the JACK script, you may need to reboot for audio to work."
+            );
+
+            // Pause for a second, as we can grab devices a little too quickly!
+            sleep(Duration::from_secs(1));
         }
 
         // Force command pipe activation in all cases.

@@ -11,9 +11,6 @@ pub enum ConnectError {
 
     #[error("Unable to Claim Interface")]
     DeviceNotClaimed,
-
-    #[error("GoXLR Initialised, please wait.. (You may need to reboot your computer)")]
-    DeviceNeedsReboot,
 }
 
 #[derive(thiserror::Error, Debug)]
