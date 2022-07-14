@@ -54,18 +54,23 @@ impl<'a, T: UsbContext> Device<'a, T> {
         mic_profile_directory: &Path,
         settings_handle: &'a SettingsHandle,
     ) -> Result<Self> {
+        let mut device_type = "";
+        if hardware.device_type == DeviceType::Mini {
+            device_type = " Mini";
+        }
+
+        let profile = profile_name
+            .clone()
+            .unwrap_or_else(|| "Default".to_string());
+        let mic_profile = mic_profile_name
+            .clone()
+            .unwrap_or_else(|| "Default".to_string());
+
         info!(
-            "Loading Profile: {}",
-            profile_name
-                .clone()
-                .unwrap_or_else(|| "Not Defined".to_string())
+            "Configuring GoXLR{}, Profile: {}, Mic Profile: {}",
+            device_type, profile, mic_profile
         );
-        info!(
-            "Loading Mic Profile: {}",
-            mic_profile_name
-                .clone()
-                .unwrap_or_else(|| "Not Defined".to_string())
-        );
+
         let profile = ProfileAdapter::from_named_or_default(profile_name, vec![profile_directory]);
         let mic_profile =
             MicProfileAdapter::from_named_or_default(mic_profile_name, vec![mic_profile_directory]);

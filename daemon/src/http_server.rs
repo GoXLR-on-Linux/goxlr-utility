@@ -13,7 +13,7 @@ use std::ops::DerefMut;
 
 use anyhow::{anyhow, Result};
 use futures::lock::Mutex;
-use log::{debug, warn};
+use log::{debug, info, warn};
 use strum::IntoEnumIterator;
 use tokio::sync::oneshot::Sender;
 
@@ -142,6 +142,12 @@ pub async fn launch_httpd(
     })
     .bind(("127.0.0.1", port))?
     .run();
+
+    info!(
+        "Started GoXLR configuration interface at http://127.0.0.1:{}/",
+        port
+    );
+
     let _ = handle_tx.send(server.handle());
     server.await?;
     Ok(())

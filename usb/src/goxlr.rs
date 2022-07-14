@@ -33,9 +33,6 @@ pub struct GoXLR<T: UsbContext> {
     device_is_claimed: bool,
 }
 
-// Todo: Be nicer about this..
-pub const SUPER_DEBUG: bool = false;
-
 pub const VID_GOXLR: u16 = 0x1220;
 pub const PID_GOXLR_MINI: u16 = 0x8fe4;
 pub const PID_GOXLR_FULL: u16 = 0x8fe0;
@@ -80,13 +77,6 @@ impl<T: UsbContext> GoXLR<T> {
         debug!("{:?}", handle.set_active_configuration(1));
         let device_is_claimed = handle.claim_interface(0).is_ok();
 
-        // let config = device.active_config_descriptor()?;
-        // for interface in config.interfaces() {
-        //     for descriptor in interface.descriptors() {
-        //         dbg!(descriptor);
-        //     }
-        // }
-
         let mut goxlr = Self {
             handle,
             device,
@@ -100,13 +90,9 @@ impl<T: UsbContext> GoXLR<T> {
         // Resets the state of the device (unconfirmed - Might just be the command id counter)
         let result = goxlr.write_control(1, 0, 0, &[]);
 
-        debug!("Activating Vendor Interface..");
-        // Activate the vendor pipe regardless..
-        goxlr.read_control(0, 0, 0, 24)?;
-
         if result == Err(Pipe) {
             // The GoXLR is not initialised, we need to fix that..
-            info!("Attempting to initialise device..");
+            info!("Found uninitialised GoXLR, attempting initialisation..");
             if device_is_claimed {
                 goxlr.handle.release_interface(0)?;
             }
@@ -116,16 +102,17 @@ impl<T: UsbContext> GoXLR<T> {
                 return Err(ConnectError::DeviceNotClaimed);
             }
 
+            debug!("Activating Vendor Interface...");
+            goxlr.read_control(0, 0, 0, 24)?;
+
             // Now activate audio..
+            debug!("Activating Audio...");
             goxlr.write_class_control(1, 0x0100, 0x2900, &[0x80, 0xbb, 0x00, 0x00])?;
 
             goxlr.handle.release_interface(0)?;
 
             // Reset the device, so ALSA can pick it up again..
             goxlr.handle.reset()?;
-
-            // Sleep for a second for things to reinitialise..
-            //thread::sleep(time::Duration::from_secs(2));
 
             // We'll error here and prompt the user to reboot, until we can sort this properly.
             return Err(ConnectError::DeviceNeedsReboot);
@@ -247,9 +234,6 @@ impl<T: UsbContext> GoXLR<T> {
         LittleEndian::write_u16(&mut full_request[6..8], command_index);
         full_request.extend(body);
 
-        if SUPER_DEBUG {
-            debug!("Sending Request.. for {:?}", command);
-        }
         self.write_control(2, 0, 0, &full_request)?;
 
         // The full fat GoXLR can handle requests incredibly quickly..
@@ -263,9 +247,6 @@ impl<T: UsbContext> GoXLR<T> {
         // Interrupt reading doesnt work, because we can't claim the interface.
         //self.await_interrupt(Duration::from_secs(2));
 
-        if SUPER_DEBUG {
-            debug!("Reading Response..");
-        }
         let mut response = vec![];
 
         for i in 0..20 {
