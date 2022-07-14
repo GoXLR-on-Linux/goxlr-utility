@@ -315,6 +315,15 @@ async fn main() -> Result<()> {
 
                 SubCommands::Profiles { command } => match command {
                     ProfileType::Device { command } => match command {
+                        ProfileAction::New { profile_name } => {
+                            client
+                                .command(
+                                    &serial,
+                                    GoXLRCommand::NewProfile(profile_name.to_string()),
+                                )
+                                .await
+                                .context("Unable to create new profile")?;
+                        }
                         ProfileAction::Load { profile_name } => {
                             client
                                 .command(
@@ -341,6 +350,15 @@ async fn main() -> Result<()> {
                         }
                     },
                     ProfileType::Microphone { command } => match command {
+                        ProfileAction::New { profile_name } => {
+                            client
+                                .command(
+                                    &serial,
+                                    GoXLRCommand::NewProfile(profile_name.to_string()),
+                                )
+                                .await
+                                .context("Unable to create new profile")?;
+                        }
                         ProfileAction::Load { profile_name } => {
                             client
                                 .command(

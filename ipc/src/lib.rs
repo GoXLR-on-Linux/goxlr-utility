@@ -77,10 +77,12 @@ pub enum GoXLRCommand {
     SetButtonGroupOffStyle(ButtonColourGroups, ButtonColourOffStyle),
 
     // Profile Handling..
+    NewProfile(String),
     LoadProfile(String),
     SaveProfile(),
     SaveProfileAs(String),
 
+    NewMicProfile(String),
     LoadMicProfile(String),
     SaveMicProfile(),
     SaveMicProfileAs(String),

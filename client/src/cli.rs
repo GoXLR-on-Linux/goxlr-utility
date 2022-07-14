@@ -168,6 +168,9 @@ pub enum ProfileType {
 #[clap(setting = AppSettings::DeriveDisplayOrder)]
 #[clap(setting = AppSettings::ArgRequiredElseHelp)]
 pub enum ProfileAction {
+    /// Create a new profile
+    New { profile_name: String },
+
     /// Load a profile by name
     Load {
         /// The profile name to load

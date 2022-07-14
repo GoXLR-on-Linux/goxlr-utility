@@ -977,6 +977,26 @@ impl<'a, T: UsbContext> Device<'a, T> {
             }
 
             // Profiles
+            GoXLRCommand::NewProfile(profile_name) => {
+                let profile_directory = self.settings.get_profile_directory().await;
+
+                // Do a new file verification check..
+                ProfileAdapter::can_create_new_file(profile_name.clone(), &profile_directory)?;
+
+                // Force load the default embedded profile..
+                self.profile = ProfileAdapter::default();
+                self.apply_profile()?;
+
+                // Save the profile under a new name (although, don't overwrite if exists!)
+                self.profile
+                    .write_profile(profile_name.clone(), &profile_directory, false)?;
+
+                // Save the profile in the settings
+                self.settings
+                    .set_device_profile_name(self.serial(), profile_name.as_str())
+                    .await;
+                self.settings.save().await;
+            }
             GoXLRCommand::LoadProfile(profile_name) => {
                 let profile_directory = self.settings.get_profile_directory().await;
                 self.profile = ProfileAdapter::from_named(profile_name, vec![&profile_directory])?;
@@ -997,12 +1017,41 @@ impl<'a, T: UsbContext> Device<'a, T> {
             }
             GoXLRCommand::SaveProfileAs(profile_name) => {
                 let profile_directory = self.settings.get_profile_directory().await;
+
+                // Do a new file verification check..
+                ProfileAdapter::can_create_new_file(profile_name.clone(), &profile_directory)?;
+
                 self.profile
                     .write_profile(profile_name.clone(), &profile_directory, false)?;
 
                 // Save the new name in the settings
                 self.settings
                     .set_device_profile_name(self.serial(), profile_name.as_str())
+                    .await;
+
+                self.settings.save().await;
+            }
+            GoXLRCommand::NewMicProfile(mic_profile_name) => {
+                let mic_profile_directory = self.settings.get_mic_profile_directory().await;
+
+                // Verify we can create this file..
+                MicProfileAdapter::can_create_new_file(
+                    mic_profile_name.clone(),
+                    &mic_profile_directory,
+                )?;
+
+                // As above, load the default profile, then save as a new profile.
+                self.mic_profile = MicProfileAdapter::default();
+
+                self.mic_profile.write_profile(
+                    mic_profile_name.clone(),
+                    &mic_profile_directory,
+                    false,
+                )?;
+
+                // Save the new name in the settings
+                self.settings
+                    .set_device_mic_profile_name(self.serial(), mic_profile_name.as_str())
                     .await;
 
                 self.settings.save().await;
@@ -1031,6 +1080,9 @@ impl<'a, T: UsbContext> Device<'a, T> {
             }
             GoXLRCommand::SaveMicProfileAs(profile_name) => {
                 let profile_directory = self.settings.get_mic_profile_directory().await;
+
+                MicProfileAdapter::can_create_new_file(profile_name.clone(), &profile_directory)?;
+
                 self.mic_profile
                     .write_profile(profile_name.clone(), &profile_directory, false)?;
 

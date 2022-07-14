@@ -9,9 +9,12 @@ secondly because it's managing different types of files
  */
 
 use crate::SettingsHandle;
+use anyhow::{anyhow, Context, Result};
 use futures::executor::block_on;
 use log::debug;
-use std::path::PathBuf;
+use std::fs;
+use std::fs::File;
+use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 #[derive(Debug)]
@@ -105,4 +108,18 @@ impl FileManager {
         );
         return vec![];
     }
+}
+
+pub fn can_create_new_file(path: PathBuf) -> Result<()> {
+    if path.exists() {
+        return Err(anyhow!("File already exists."));
+    }
+
+    // Attempt to create a file in the path, throw an error if fails..
+    File::create(&path)?;
+
+    // Remove the file again.
+    fs::remove_file(&path)?;
+
+    Ok(())
 }

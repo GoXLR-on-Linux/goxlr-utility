@@ -1,3 +1,4 @@
+use crate::files::can_create_new_file;
 use crate::profile::ProfileAdapter;
 use crate::SettingsHandle;
 use anyhow::{anyhow, Context, Result};
@@ -11,6 +12,7 @@ use goxlr_types::{
 };
 use log::error;
 use std::collections::{HashMap, HashSet};
+use std::fs;
 use std::fs::{create_dir_all, File};
 use std::io::{Cursor, Read, Seek};
 use std::path::Path;
@@ -76,6 +78,11 @@ impl MicProfileAdapter {
     pub fn from_reader<R: Read + Seek>(name: String, reader: R) -> Result<Self> {
         let profile = MicProfileSettings::load(reader)?;
         Ok(Self { name, profile })
+    }
+
+    pub fn can_create_new_file(name: String, directory: &Path) -> Result<()> {
+        let path = directory.join(format!("{}.goxlrMicProfile", name));
+        can_create_new_file(path)
     }
 
     pub fn write_profile(&mut self, name: String, directory: &Path, overwrite: bool) -> Result<()> {

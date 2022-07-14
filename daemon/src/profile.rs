@@ -1,3 +1,4 @@
+use crate::files::can_create_new_file;
 use anyhow::{anyhow, Context, Result};
 use enum_map::EnumMap;
 use enumset::EnumSet;
@@ -29,6 +30,7 @@ use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::colouring::ColourTargets;
 use log::error;
 use std::collections::HashMap;
+use std::fs;
 use std::fs::{create_dir_all, File};
 use std::io::{Cursor, Read, Seek};
 use std::path::Path;
@@ -92,6 +94,11 @@ impl ProfileAdapter {
     pub fn from_reader<R: Read + Seek>(name: String, reader: R) -> Result<Self> {
         let profile = Profile::load(reader)?;
         Ok(Self { name, profile })
+    }
+
+    pub fn can_create_new_file(name: String, directory: &Path) -> Result<()> {
+        let path = directory.join(format!("{}.goxlr", name));
+        can_create_new_file(path)
     }
 
     pub fn write_profile(&mut self, name: String, directory: &Path, overwrite: bool) -> Result<()> {
