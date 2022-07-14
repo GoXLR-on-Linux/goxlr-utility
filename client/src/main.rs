@@ -354,7 +354,7 @@ async fn main() -> Result<()> {
                             client
                                 .command(
                                     &serial,
-                                    GoXLRCommand::NewProfile(profile_name.to_string()),
+                                    GoXLRCommand::NewMicProfile(profile_name.to_string()),
                                 )
                                 .await
                                 .context("Unable to create new profile")?;
