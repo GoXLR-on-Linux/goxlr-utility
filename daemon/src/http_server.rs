@@ -106,8 +106,6 @@ pub async fn launch_httpd(
     let server = HttpServer::new(move || {
         let static_files = build_hashmap_from_included_dir(&WEB_CONTENT);
         let cors = Cors::default()
-            .allowed_origin("http://127.0.0.1")
-            .allowed_origin("http://localhost")
             .allowed_origin_fn(|origin, _req_head| {
                 origin.as_bytes().starts_with(b"http://127.0.0.1")
                     || origin.as_bytes().starts_with(b"http://localhost")
@@ -118,6 +116,7 @@ pub async fn launch_httpd(
         App::new()
             .wrap(cors)
             .app_data(Data::new(Mutex::new(usb_tx.clone())))
+            .service(execute_command)
             .service(get_devices)
             .service(set_volume)
             .service(get_devices)
@@ -166,6 +165,23 @@ async fn websocket(
         &req,
         stream,
     )
+}
+
+// So, fun note, according to the actix manual, web::Json uses serde_json to deserialise, good
+// news everybody! So do we.. :)
+#[post("/api/command")]
+async fn execute_command(
+    request: web::Json<DaemonRequest>,
+    usb_mutex: Data<Mutex<DeviceSender>>,
+) -> HttpResponse {
+    let mut guard = usb_mutex.lock().await;
+    let sender = guard.deref_mut();
+
+    // Errors propagate weirdly in the javascript world, so send all as OK, and handle there.
+    return match handle_packet(request.0, sender).await {
+        Ok(result) => HttpResponse::Ok().json(result),
+        Err(error) => HttpResponse::Ok().json(DaemonResponse::Error(error.to_string())),
+    };
 }
 
 #[get("/api/get-devices")]
