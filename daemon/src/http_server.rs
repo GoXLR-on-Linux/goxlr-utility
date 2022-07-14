@@ -98,7 +98,11 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for Websocket {
     }
 }
 
-pub async fn launch_httpd(usb_tx: DeviceSender, handle_tx: Sender<ServerHandle>) -> Result<()> {
+pub async fn launch_httpd(
+    usb_tx: DeviceSender,
+    handle_tx: Sender<ServerHandle>,
+    port: u16,
+) -> Result<()> {
     let server = HttpServer::new(move || {
         let static_files = build_hashmap_from_included_dir(&WEB_CONTENT);
         let cors = Cors::default()
@@ -136,7 +140,7 @@ pub async fn launch_httpd(usb_tx: DeviceSender, handle_tx: Sender<ServerHandle>)
             .service(websocket)
             .service(ResourceFiles::new("/", static_files))
     })
-    .bind(("127.0.0.1", 14564))?
+    .bind(("127.0.0.1", port))?
     .run();
     let _ = handle_tx.send(server.handle());
     server.await?;

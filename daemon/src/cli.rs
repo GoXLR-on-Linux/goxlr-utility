@@ -15,7 +15,11 @@ pub struct Cli {
 
     /// Disable the HTTP Server and Client Web UI
     #[clap(long)]
-    pub disable_http: bool,
+    pub http_disable: bool,
+
+    /// Define the port the HTTP Server should listen on
+    #[clap(long, default_value = "14564")]
+    pub http_port: u16,
 }
 
 fn default_config_location() -> PathBuf {

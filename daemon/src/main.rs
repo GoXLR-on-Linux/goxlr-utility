@@ -73,7 +73,7 @@ async fn main() -> Result<()> {
     ));
 
     let (httpd_tx, httpd_rx) = tokio::sync::oneshot::channel();
-    tokio::spawn(launch_httpd(usb_tx.clone(), httpd_tx));
+    tokio::spawn(launch_httpd(usb_tx.clone(), httpd_tx, args.http_port));
     let http_server = httpd_rx.await?;
 
     await_ctrl_c(shutdown.clone()).await;
