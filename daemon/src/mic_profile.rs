@@ -670,7 +670,10 @@ impl MicProfileAdapter {
             EffectKey::ReverbModDepth => {
                 main_profile.get_active_reverb_profile().mod_depth().into()
             }
-            EffectKey::ReverbStyle => *main_profile.get_active_reverb_profile().style() as i32,
+            EffectKey::ReverbType => main_profile
+                .get_active_reverb_profile()
+                .reverb_type()
+                .into(),
 
             EffectKey::EchoAmount => main_profile.get_active_echo_profile().amount().into(),
             EffectKey::EchoFeedback => main_profile
@@ -940,7 +943,7 @@ impl MicProfileAdapter {
         set.insert(EffectKey::ReverbDiffuse);
         set.insert(EffectKey::ReverbModSpeed);
         set.insert(EffectKey::ReverbModDepth);
-        set.insert(EffectKey::ReverbStyle);
+        set.insert(EffectKey::ReverbType);
 
         set
     }

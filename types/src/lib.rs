@@ -151,7 +151,7 @@ pub enum EffectKey {
     ReverbDiffuse = 0x0031,
     ReverbModSpeed = 0x0035,
     ReverbModDepth = 0x0036,
-    ReverbStyle = 0x002e,
+    ReverbType = 0x002e,
     EchoAmount = 0x0075,
     EchoFeedback = 0x0028,
     EchoTempo = 0x001f,
