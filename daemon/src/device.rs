@@ -1049,6 +1049,11 @@ impl<'a, T: UsbContext> Device<'a, T> {
 
                 self.settings.save().await;
             }
+            GoXLRCommand::DeleteProfile(profile_name) => {
+                let profile_directory = self.settings.get_profile_directory().await;
+                self.profile
+                    .delete_profile(profile_name.clone(), &profile_directory)?;
+            }
             GoXLRCommand::NewMicProfile(mic_profile_name) => {
                 let mic_profile_directory = self.settings.get_mic_profile_directory().await;
 
@@ -1110,6 +1115,11 @@ impl<'a, T: UsbContext> Device<'a, T> {
                     .await;
 
                 self.settings.save().await;
+            }
+            GoXLRCommand::DeleteMicProfile(profile_name) => {
+                let profile_directory = self.settings.get_mic_profile_directory().await;
+                self.mic_profile
+                    .delete_profile(profile_name.clone(), &profile_directory)?;
             }
         }
 

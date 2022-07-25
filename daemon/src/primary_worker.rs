@@ -6,8 +6,8 @@ use goxlr_ipc::{
     UsbProductInformation,
 };
 use goxlr_usb::goxlr::{GoXLR, PID_GOXLR_FULL, PID_GOXLR_MINI, VID_GOXLR};
+use goxlr_usb::rusb;
 use goxlr_usb::rusb::{DeviceDescriptor, GlobalContext};
-use goxlr_usb::{goxlr, rusb};
 use log::{error, info};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};

@@ -30,7 +30,7 @@ use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::colouring::ColourTargets;
 use log::error;
 use std::collections::HashMap;
-use std::fs::{create_dir_all, File};
+use std::fs::{create_dir_all, remove_file, File};
 use std::io::{Cursor, Read, Seek};
 use std::path::Path;
 use strum::EnumCount;
@@ -124,6 +124,14 @@ impl ProfileAdapter {
             self.name = name;
         }
 
+        Ok(())
+    }
+
+    pub fn delete_profile(&mut self, name: String, directory: &Path) -> Result<()> {
+        let path = directory.join(format!("{}.goxlr", name));
+        if path.is_file() {
+            remove_file(path)?;
+        }
         Ok(())
     }
 

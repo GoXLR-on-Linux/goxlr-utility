@@ -12,7 +12,7 @@ use goxlr_types::{
 };
 use log::error;
 use std::collections::{HashMap, HashSet};
-use std::fs::{create_dir_all, File};
+use std::fs::{create_dir_all, remove_file, File};
 use std::io::{Cursor, Read, Seek};
 use std::path::Path;
 use strum::IntoEnumIterator;
@@ -108,6 +108,14 @@ impl MicProfileAdapter {
             self.name = name;
         }
 
+        Ok(())
+    }
+
+    pub fn delete_profile(&mut self, name: String, directory: &Path) -> Result<()> {
+        let path = directory.join(format!("{}.goxlrMicProfile", name));
+        if path.is_file() {
+            remove_file(path)?;
+        }
         Ok(())
     }
 
