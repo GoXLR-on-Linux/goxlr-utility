@@ -18,6 +18,7 @@ pub use socket::*;
 pub enum DaemonRequest {
     Ping,
     GetStatus,
+    InvalidateCaches,
     Command(String, GoXLRCommand),
 }
 

@@ -48,6 +48,12 @@ impl FileManager {
         }
     }
 
+    pub fn invalidate_caches(&mut self) {
+        debug!("Invalidating File Caches..");
+        self.profiles = Default::default();
+        self.mic_profiles = Default::default();
+    }
+
     pub fn get_profiles(&mut self, settings: &SettingsHandle) -> Vec<String> {
         // There might be a nicer way to do this, which doesn't result in duplicating
         // code with different members..

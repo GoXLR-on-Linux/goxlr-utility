@@ -72,6 +72,15 @@ pub async fn handle_packet(
                 "Could not execute the command on the device task",
             )?))
         }
+        DaemonRequest::InvalidateCaches => {
+            let (tx, _rx) = oneshot::channel();
+            usb_tx
+                .send(DeviceCommand::InvalidateCaches(tx))
+                .await
+                .map_err(|e| anyhow!(e.to_string()))
+                .context("Could not communicate with the device task")?;
+            Ok(DaemonResponse::Ok)
+        }
         DaemonRequest::Command(serial, command) => {
             let (tx, rx) = oneshot::channel();
             usb_tx

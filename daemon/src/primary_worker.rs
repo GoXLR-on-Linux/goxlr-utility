@@ -2,7 +2,8 @@ use crate::device::Device;
 use crate::{FileManager, SettingsHandle, Shutdown};
 use anyhow::{anyhow, Result};
 use goxlr_ipc::{
-    DaemonStatus, DeviceType, Files, GoXLRCommand, HardwareStatus, Paths, UsbProductInformation,
+    DaemonResponse, DaemonStatus, DeviceType, Files, GoXLRCommand, HardwareStatus, Paths,
+    UsbProductInformation,
 };
 use goxlr_usb::goxlr::{GoXLR, PID_GOXLR_FULL, PID_GOXLR_MINI, VID_GOXLR};
 use goxlr_usb::rusb::{DeviceDescriptor, GlobalContext};
@@ -13,8 +14,12 @@ use std::time::{Duration, Instant};
 use tokio::sync::{mpsc, oneshot};
 use tokio::time::sleep;
 
+// Adding a third entry has tripped enum_variant_names, I'll probably need to rename
+// RunDeviceCommand, but that'll need to be in a separate commit, for now, suppress.
+#[allow(clippy::enum_variant_names)]
 pub enum DeviceCommand {
     SendDaemonStatus(oneshot::Sender<DaemonStatus>),
+    InvalidateCaches(oneshot::Sender<DaemonResponse>),
     RunDeviceCommand(String, GoXLRCommand, oneshot::Sender<Result<()>>),
 }
 
@@ -93,6 +98,10 @@ pub async fn handle_changes(
                         }
                         let _ = sender.send(status);
                     },
+                    DeviceCommand::InvalidateCaches(sender) => {
+                        file_manager.invalidate_caches();
+                        let _ = sender.send(DaemonResponse::Ok);
+                    }
                     DeviceCommand::RunDeviceCommand(serial, command, sender) => {
                         if let Some(device) = devices.get_mut(&serial) {
                             let _ = sender.send(device.perform_command(command).await);
@@ -147,8 +156,8 @@ async fn load_device(
     let mut device = GoXLR::from_device(device.open()?, descriptor)?;
     let descriptor = device.usb_device_descriptor();
     let device_type = match descriptor.product_id() {
-        goxlr::PID_GOXLR_FULL => DeviceType::Full,
-        goxlr::PID_GOXLR_MINI => DeviceType::Mini,
+        PID_GOXLR_FULL => DeviceType::Full,
+        PID_GOXLR_MINI => DeviceType::Mini,
         _ => DeviceType::Unknown,
     };
     let device_version = descriptor.device_version();
