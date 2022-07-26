@@ -2,27 +2,8 @@
 A tool to configure and use a TC-Helicon GoXLR or GoXLR Mini without requiring windows.
 
 # Project State
-As of version 0.2.0 the following features are fully supported:
-
-* Initialisation of Devices under Linux<sup>1</sup>
-* Mic and Main Profile Management (Load / Save / New)<sup>2</sup>
-* Microphone Selection and Gain
-* Fader Assignments
-* Fader Mute buttons (Mute channel, Mute to X, Press and Hold)
-* The 'Cough' Button (Hold / Toggle, Mute to X, Press and Hold)
-* Bleep Button Volume
-* Noise Gate and Compressor
-* Microphone Equalizer
-* Equalizer Fine Tune<sup>3</sup>
-* Audio Routing
-* Fader and Button colour configurations<sup>3</sup>
-
-<sup>1</sup> Depending on how your GoXLR works, this may require a reboot.  
-<sup>2</sup> Profiles are 'cross platform', so Windows profiles should work with the util, and vice versa  
-<sup>3</sup> Currently only configurable via the `goxlr-client`
-
-In addition, the Voice Effects panel of the Full GoXLR can be used if loading a pre-configured profile from Windows
-(currently not configurable outside of dial adjustments).
+For the current list of features that are supported, as well as what's still left to be done, checkout the 
+[Roadmap](ROADMAP.md) in this repository. 
 
 # Installation
 Currently, the goxlr-utility isn't available via any general distribution method. For now, it must be compiled from
