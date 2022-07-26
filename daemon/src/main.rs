@@ -16,6 +16,7 @@ use crate::http_server::launch_httpd;
 use crate::primary_worker::handle_changes;
 use crate::settings::SettingsHandle;
 use crate::shutdown::Shutdown;
+use actix_web::dev::ServerHandle;
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use communication::listen_for_connections;
@@ -66,28 +67,39 @@ async fn main() -> Result<()> {
         settings,
         file_manager,
     ));
+
     let communications_handle = tokio::spawn(listen_for_connections(
         listener,
         usb_tx.clone(),
         shutdown.clone(),
     ));
 
-    if args.http_enable_cors {
-        warn!("HTTP Cross Origin Requests enabled, this may be a security risk.");
+    let mut http_server: Option<ServerHandle> = None;
+    if !args.http_disable {
+        if args.http_enable_cors {
+            warn!("HTTP Cross Origin Requests enabled, this may be a security risk.");
+        }
+        let (httpd_tx, httpd_rx) = tokio::sync::oneshot::channel();
+        tokio::spawn(launch_httpd(
+            usb_tx.clone(),
+            httpd_tx,
+            args.http_port,
+            args.http_enable_cors,
+        ));
+        http_server = Some(httpd_rx.await?);
+    } else {
+        warn!("HTTP Server Disabled");
     }
-    let (httpd_tx, httpd_rx) = tokio::sync::oneshot::channel();
-    tokio::spawn(launch_httpd(
-        usb_tx.clone(),
-        httpd_tx,
-        args.http_port,
-        args.http_enable_cors,
-    ));
-    let http_server = httpd_rx.await?;
 
     await_ctrl_c(shutdown.clone()).await;
 
     info!("Shutting down daemon");
-    let _ = join!(usb_handle, communications_handle, http_server.stop(true));
+    if let Some(server) = http_server {
+        // We only need to Join on the HTTP Server if it exists..
+        let _ = join!(usb_handle, communications_handle, server.stop(true));
+    } else {
+        let _ = join!(usb_handle, communications_handle);
+    }
 
     info!("Removing Socket");
     remove_file("/tmp/goxlr.socket")?;
