@@ -2,8 +2,8 @@ use crate::device::Device;
 use crate::{FileManager, SettingsHandle, Shutdown};
 use anyhow::{anyhow, Result};
 use goxlr_ipc::{
-    DaemonResponse, DaemonStatus, DeviceType, Files, GoXLRCommand, HardwareStatus, Paths,
-    UsbProductInformation,
+    DaemonResponse, DaemonStatus, DeviceType, Files, GoXLRCommand, HardwareStatus, PathTypes,
+    Paths, UsbProductInformation,
 };
 use goxlr_usb::goxlr::{GoXLR, PID_GOXLR_FULL, PID_GOXLR_MINI, VID_GOXLR};
 use goxlr_usb::rusb;
@@ -20,6 +20,7 @@ use tokio::time::sleep;
 pub enum DeviceCommand {
     SendDaemonStatus(oneshot::Sender<DaemonStatus>),
     InvalidateCaches(oneshot::Sender<DaemonResponse>),
+    OpenPath(PathTypes, oneshot::Sender<DaemonResponse>),
     RunDeviceCommand(String, GoXLRCommand, oneshot::Sender<Result<()>>),
 }
 
@@ -101,6 +102,17 @@ pub async fn handle_changes(
                     DeviceCommand::InvalidateCaches(sender) => {
                         file_manager.invalidate_caches();
                         let _ = sender.send(DaemonResponse::Ok);
+                    }
+                    DeviceCommand::OpenPath(path_type, sender) => {
+                        let result = opener::open(match path_type {
+                            PathTypes::Profiles => settings.get_profile_directory().await,
+                            PathTypes::MicProfiles => settings.get_mic_profile_directory().await
+                        });
+                        if result.is_err() {
+                            let _ = sender.send(DaemonResponse::Error("Unable to Open".to_string()));
+                        } else {
+                            let _ = sender.send(DaemonResponse::Ok);
+                        }
                     }
                     DeviceCommand::RunDeviceCommand(serial, command, sender) => {
                         if let Some(device) = devices.get_mut(&serial) {

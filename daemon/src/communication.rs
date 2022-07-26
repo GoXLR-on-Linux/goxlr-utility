@@ -81,6 +81,15 @@ pub async fn handle_packet(
                 .context("Could not communicate with the device task")?;
             Ok(DaemonResponse::Ok)
         }
+        DaemonRequest::OpenPath(path_type) => {
+            let (tx, _rx) = oneshot::channel();
+            usb_tx
+                .send(DeviceCommand::OpenPath(path_type, tx))
+                .await
+                .map_err(|e| anyhow!(e.to_string()))
+                .context("Could not communicate with the device task")?;
+            Ok(DaemonResponse::Ok)
+        }
         DaemonRequest::Command(serial, command) => {
             let (tx, rx) = oneshot::channel();
             usb_tx

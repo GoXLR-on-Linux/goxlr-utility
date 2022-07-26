@@ -19,6 +19,7 @@ pub enum DaemonRequest {
     Ping,
     GetStatus,
     InvalidateCaches,
+    OpenPath(PathTypes),
     Command(String, GoXLRCommand),
 }
 
@@ -27,6 +28,12 @@ pub enum DaemonResponse {
     Ok,
     Error(String),
     Status(DaemonStatus),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum PathTypes {
+    Profiles,
+    MicProfiles,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
