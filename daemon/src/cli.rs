@@ -20,6 +20,10 @@ pub struct Cli {
     /// Define the port the HTTP Server should listen on
     #[clap(long, default_value = "14564")]
     pub http_port: u16,
+
+    /// Enable CORS on the HTTP Server to allow cross-origin communication
+    #[clap(long)]
+    pub http_enable_cors: bool,
 }
 
 fn default_config_location() -> PathBuf {

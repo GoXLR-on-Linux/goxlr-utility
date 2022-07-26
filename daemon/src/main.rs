@@ -72,8 +72,16 @@ async fn main() -> Result<()> {
         shutdown.clone(),
     ));
 
+    if args.http_enable_cors {
+        warn!("HTTP Cross Origin Requests enabled, this may be a security risk.");
+    }
     let (httpd_tx, httpd_rx) = tokio::sync::oneshot::channel();
-    tokio::spawn(launch_httpd(usb_tx.clone(), httpd_tx, args.http_port));
+    tokio::spawn(launch_httpd(
+        usb_tx.clone(),
+        httpd_tx,
+        args.http_port,
+        args.http_enable_cors,
+    ));
     let http_server = httpd_rx.await?;
 
     await_ctrl_c(shutdown.clone()).await;

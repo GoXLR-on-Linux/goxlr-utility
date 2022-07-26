@@ -7,6 +7,7 @@ use actix::{
 use actix_cors::Cors;
 use actix_plus_static_files::{build_hashmap_from_included_dir, include_dir, Dir, ResourceFiles};
 use actix_web::dev::ServerHandle;
+use actix_web::middleware::Condition;
 use actix_web::web::Data;
 use actix_web::{get, post, web, App, HttpRequest, HttpResponse, HttpServer};
 use actix_web_actors::ws;
@@ -97,6 +98,7 @@ pub async fn launch_httpd(
     usb_tx: DeviceSender,
     handle_tx: Sender<ServerHandle>,
     port: u16,
+    with_cors: bool,
 ) -> Result<()> {
     let server = HttpServer::new(move || {
         let static_files = build_hashmap_from_included_dir(&WEB_CONTENT);
@@ -107,9 +109,9 @@ pub async fn launch_httpd(
             })
             .allow_any_method()
             .allow_any_header()
-            .max_age(3600);
+            .max_age(300);
         App::new()
-            .wrap(cors)
+            .wrap(Condition::new(with_cors, cors))
             .app_data(Data::new(Mutex::new(usb_tx.clone())))
             .service(execute_command)
             .service(get_devices)
