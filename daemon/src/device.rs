@@ -1,7 +1,7 @@
 use crate::audio::AudioHandler;
 use crate::mic_profile::MicProfileAdapter;
 use crate::profile::{version_newer_or_equal_to, ProfileAdapter};
-use crate::SettingsHandle;
+use crate::{SettingsHandle, DISTRIBUTABLE_PROFILES};
 use anyhow::{anyhow, Result};
 use enum_map::EnumMap;
 use enumset::EnumSet;
@@ -73,7 +73,11 @@ impl<'a, T: UsbContext> Device<'a, T> {
             device_type, profile, mic_profile
         );
 
-        let profile = ProfileAdapter::from_named_or_default(profile_name, vec![profile_directory]);
+        let distrib_path = Path::new(DISTRIBUTABLE_PROFILES);
+        let profile = ProfileAdapter::from_named_or_default(
+            profile_name,
+            vec![distrib_path, profile_directory],
+        );
         let mic_profile =
             MicProfileAdapter::from_named_or_default(mic_profile_name, vec![mic_profile_directory]);
 
@@ -1017,7 +1021,12 @@ impl<'a, T: UsbContext> Device<'a, T> {
             }
             GoXLRCommand::LoadProfile(profile_name) => {
                 let profile_directory = self.settings.get_profile_directory().await;
-                self.profile = ProfileAdapter::from_named(profile_name, vec![&profile_directory])?;
+                let distrib_path = Path::new(DISTRIBUTABLE_PROFILES);
+
+                self.profile = ProfileAdapter::from_named(
+                    profile_name,
+                    vec![distrib_path, &profile_directory],
+                )?;
                 self.apply_profile()?;
                 self.settings
                     .set_device_profile_name(self.serial(), self.profile.name())

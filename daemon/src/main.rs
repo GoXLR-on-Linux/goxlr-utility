@@ -32,6 +32,9 @@ use tokio::net::{UnixListener, UnixStream};
 use tokio::sync::mpsc;
 use tokio::{join, signal};
 
+// This can probably go somewhere else, but for now..
+const DISTRIBUTABLE_PROFILES: &str = "/usr/share/goxlr/profiles/";
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let args: Cli = Cli::parse();

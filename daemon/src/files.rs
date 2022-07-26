@@ -10,14 +10,14 @@ secondly because it's managing different types of files
 
 use std::fs;
 use std::fs::File;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use anyhow::{anyhow, Result};
 use futures::executor::block_on;
 use log::debug;
 
-use crate::SettingsHandle;
+use crate::{SettingsHandle, DISTRIBUTABLE_PROFILES};
 
 #[derive(Debug)]
 pub struct FileManager {
@@ -64,7 +64,8 @@ impl FileManager {
         let path = block_on(settings.get_profile_directory());
         let extension = "goxlr";
 
-        self.profiles = self.get_file_list(path, extension);
+        let distrib_path = Path::new(DISTRIBUTABLE_PROFILES);
+        self.profiles = self.get_file_list(vec![distrib_path.to_path_buf(), path], extension);
         self.profiles.names.clone()
     }
 
@@ -76,16 +77,26 @@ impl FileManager {
         let path = block_on(settings.get_mic_profile_directory());
         let extension = "goxlrMicProfile";
 
-        self.mic_profiles = self.get_file_list(path, extension);
+        self.mic_profiles = self.get_file_list(vec![path], extension);
         self.mic_profiles.names.clone()
     }
 
-    fn get_file_list(&self, path: PathBuf, extension: &str) -> FileList {
+    fn get_file_list(&self, path: Vec<PathBuf>, extension: &str) -> FileList {
         // We need to refresh..
         FileList {
-            names: self.get_files_from_drive(path, extension),
+            names: self.get_files_from_paths(path, extension),
             timeout: Instant::now() + Duration::from_secs(5),
         }
+    }
+
+    fn get_files_from_paths(&self, paths: Vec<PathBuf>, extension: &str) -> Vec<String> {
+        let mut result = vec![];
+
+        for path in paths {
+            result.append(&mut self.get_files_from_drive(path, extension));
+        }
+
+        result
     }
 
     fn get_files_from_drive(&self, path: PathBuf, extension: &str) -> Vec<String> {
