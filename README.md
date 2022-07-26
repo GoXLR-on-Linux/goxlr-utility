@@ -1,12 +1,33 @@
-# GoXLR configuration utility
-A tool to configure a GoXLR without requiring a Windows VM.
+# GoXLR Configuration Utility
+A tool to configure and use a TC-Helicon GoXLR or GoXLR Mini without requiring windows.
 
-At this time, full device initialization is not possible on Linux. This utility still requires that you initialize on Windows, but allows you to configure it after the fact from within Linux.
+# Project State
+As of version 0.2.0 the following features are fully supported:
 
-# Warning
-This utility is currently not 'user ready', it's extremely rough around the edges and has very little interactivity. You're welcome to experiment with this if you're comfortable working with Rust, but please do not request support at this time.
+* Initialisation of Devices under Linux<sup>1</sup>
+* Mic and Main Profile Management (Load / Save / New)<sup>2</sup>
+* Microphone Selection and Gain
+* Fader Assignments
+* Fader Mute buttons (Mute channel, Mute to X, Press and Hold)
+* The 'Cough' Button (Hold / Toggle, Mute to X, Press and Hold)
+* Bleep Button Volume
+* Noise Gate and Compressor
+* Microphone Equalizer
+* Equalizer Fine Tune<sup>3</sup>
+* Audio Routing
+* Fader and Button colour configurations<sup>3</sup>
 
-This project is also not supported by, or affiliated in any way with, TC-Helicon. For the official GoXLR software, please refer to their website. 
+<sup>1</sup> Depending on how your GoXLR works, this may require a reboot.  
+<sup>2</sup> Profiles are 'cross platform', so Windows profiles should work with the util, and vice versa  
+<sup>3</sup> Currently only configurable via the `goxlr-client`
+
+In addition, the Voice Effects panel of the Full GoXLR can be used if loading a pre-configured profile from Windows
+(currently not configurable outside of dial adjustments).
+
+# Installation
+Currently, the goxlr-utility isn't available via any general distribution method. For now, it must be compiled from
+source. As the project develops this will likely change and precompiled binaries will be available to download with
+general releases. The following guide should get you started in getting the Utility functional on your system.
 
 ## Setting Permissions
 Copy `50-goxlr.rules` to `/etc/udev/rules.d/` and then reload with `sudo udevadm control --reload-rules`.
@@ -29,56 +50,36 @@ You can build with `cargo build`, or install the specific executables with:
 Tab-complete files for your terminal of choice will be available after building.
 
 ## Running the daemon
-You can start the daemon by executing `goxlr-daemon`.
+You can start the daemon by executing `goxlr-daemon`. The daemon has a couple of possible command line parameters which
+can be viewed using `goxlr-daemon --help`.
 
-Running the daemon as a service will be left as an exercise to the reader (we'll provide a systemd config later probably!).
+For the best experience, you should configure `goxlr-daemon` to automatically start on login, for information on how
+to achieve this, please consult your distributions' documentation.
 
 If the daemon can't connect to your GoXLR device, check your device permissions (see above!).
 
 ## Interacting with the GoXLR
-Once the daemon is running, you can run `goxlr-client` to configure the GoXLR at will from your terminal.
+There are two methods for communicating with the daemon and the GoXLR, `goxlr-client` (a command-line configuration
+utility), and the embedded [Web UI](https://github.com/GoXLR-on-Linux/goxlr-ui).
 
-For an up-to-date list of command line arguments, try `goxlr-client --help`!
+### goxlr-client
+The GoXLR Client allows for complete configuration of the GoXLR via the command line. This could be useful for
+situations where automation of commands and configurations are needed, or you simply don't like the provided UI!
 
+The option list for the CLI is pretty extensive, but reasonably well documented, all parameters, options and their
+descriptions can by found via `goxlr-client --help`
 
-<pre><font color="#4E9A06">goxlr-client</font> 0.1.0
-Nathan Adams &lt;dinnerbone@dinnerbone.com&gt;, Craig McLure &lt;craig@mclure.net&gt;, Lars Mühlbauer
-&lt;lm41@dismail.de&gt;
-Allows control of a TC-Helicon GoXLR or GoXLR Mini, by interacting with a running daemon.
+### Web UI
+Introduced in 0.2.0, the GoXLR daemon now has a web configuration utility available (by default) at 
+http://localhost:14564. It's been designed to behave as close to the Windows application as possibly, and as such
+should have a familiar design and work as you would expect it to.
 
-<font color="#C4A000">USAGE:</font>
-    goxlr-client [OPTIONS] [SUBCOMMAND]
+If you're not a fan of the WebUI, or would prefer to turn it off, you can start the `goxlr-daemon` process with the
+`--http-disable` flag
 
-<font color="#C4A000">OPTIONS:</font>
-        <font color="#4E9A06">--device</font> <font color="#4E9A06">&lt;DEVICE&gt;</font>    The specific device&apos;s serial number to execute commands on. This field
-                             is optional if you have exactly one GoXLR, but required if you have
-                             more
-        <font color="#4E9A06">--status</font>             Display the device information after any subcommands have been executed
-        <font color="#4E9A06">--status-json</font>        Display device information as JSON after command..
-    <font color="#4E9A06">-h</font>, <font color="#4E9A06">--help</font>               Print help information
-    <font color="#4E9A06">-V</font>, <font color="#4E9A06">--version</font>            Print version information
+The UI is still a heavy work in progress, if you'd like to assist, feel free to contribute to its 
+[Github Repo](https://github.com/GoXLR-on-Linux/goxlr-ui).
 
-<font color="#C4A000">Microphone controls:</font>
-        <font color="#4E9A06">--dynamic-gain</font> <font color="#4E9A06">&lt;DYNAMIC_GAIN&gt;</font>
-            Set the gain of the plugged in dynamic (XLR) microphone. Value is in decibels and
-            recommended to be lower than 72dB
-
-        <font color="#4E9A06">--condenser-gain</font> <font color="#4E9A06">&lt;CONDENSER_GAIN&gt;</font>
-            Set the gain of the plugged in condenser (XLR with phantom power) microphone. Value is
-            in decibels and recommended to be lower than 72dB
-
-        <font color="#4E9A06">--jack-gain</font> <font color="#4E9A06">&lt;JACK_GAIN&gt;</font>
-            Set the gain of the plugged in jack (3.5mm) microphone. Value is in decibels and
-            recommended to be lower than 72dB
-
-<font color="#C4A000">SUBCOMMANDS:</font>
-    <font color="#4E9A06">profiles</font>        Profile Settings
-    <font color="#4E9A06">microphone</font>      Adjust the microphone settings (Eq, Gate and Compressor)
-    <font color="#4E9A06">volume</font>          Adjust Channel Volumes
-    <font color="#4E9A06">bleep-volume</font>    Configure the Bleep Button
-    <font color="#4E9A06">faders</font>          Commands to manipulate the individual GoXLR Faders
-    <font color="#4E9A06">cough-button</font>    Commands for configuring the cough button
-    <font color="#4E9A06">router</font>          Commands to manipulate the GoXLR Router
-    <font color="#4E9A06">lighting</font>        Commands to control the GoXLR lighting
-    <font color="#4E9A06">help</font>            Print this message or the help of the given subcommand(s)</pre>
-
+# Disclaimer
+This project is also not supported by, or affiliated in any way with, TC-Helicon. For the official GoXLR software, 
+please refer to their website.
