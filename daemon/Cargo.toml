@@ -63,7 +63,13 @@ assets = [
     ["../deployment/deb/goxlr-daemon.bash", "usr/share/bash-completion/completions/", "644"],
     ["../deployment/deb/goxlr-daemon.fish", "usr/share/fish/vendor_completions.d/", "644"],
     ["../deployment/deb/_goxlr-daemon", "usr/share/zsh/vendor-completions/", "644"],
+
+    ["../ci/distrib/profiles/Default - Red.goxlr", "usr/share/goxlr/profiles/", "644"],
+    ["../ci/distrib/profiles/Default - Teal Blue.goxlr", "usr/share/goxlr/profiles/", "644"],
+    ["../ci/distrib/profiles/Default - Vaporwave.goxlr", "usr/share/goxlr/profiles/", "644"],
+    ["../ci/distrib/profiles/Sleep.goxlr", "usr/share/goxlr/profiles/", "644"],
 ]
+maintainer-scripts = "../ci/distrib/DEBIAN/"
 section = "sound"
 priority = "optional"
 extended-description = """\
