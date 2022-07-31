@@ -845,12 +845,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 self.apply_mic_params(HashSet::from([param]))?;
             }
             GoXLRCommand::SetEqMiniFreq(freq, value) => {
-                // TODO: Verify?
-                if !(300.0..=18000.0).contains(&value) {
-                    return Err(anyhow!("EQ Frequency should be between 300hz and 18khz"));
-                }
-
-                let param = self.mic_profile.set_mini_eq_freq(freq, value);
+                let param = self.mic_profile.set_mini_eq_freq(freq, value)?;
                 self.apply_mic_params(HashSet::from([param]))?;
             }
             GoXLRCommand::SetEqGain(gain, value) => {

@@ -421,31 +421,53 @@ impl MicProfileAdapter {
         }
     }
 
-    pub fn set_mini_eq_freq(&mut self, freq: MiniEqFrequencies, value: f32) -> MicrophoneParamKey {
+    pub fn set_mini_eq_freq(
+        &mut self,
+        freq: MiniEqFrequencies,
+        value: f32,
+    ) -> Result<MicrophoneParamKey> {
         return match freq {
             MiniEqFrequencies::Equalizer90Hz => {
+                if !(30.0..=90.0).contains(&value) {
+                    return Err(anyhow!("90Hz Frequency must be between 30.0 and 90.0"));
+                }
                 self.profile.equalizer_mini_mut().set_eq_90h_freq(value);
-                MicrophoneParamKey::Equalizer90HzFrequency
+                Ok(MicrophoneParamKey::Equalizer90HzFrequency)
             }
             MiniEqFrequencies::Equalizer250Hz => {
+                if !(100.0..=300.0).contains(&value) {
+                    return Err(anyhow!("250Hz Frequency must be between 100.0 and 300.0"));
+                }
                 self.profile.equalizer_mini_mut().set_eq_250h_freq(value);
-                MicrophoneParamKey::Equalizer250HzFrequency
+                Ok(MicrophoneParamKey::Equalizer250HzFrequency)
             }
             MiniEqFrequencies::Equalizer500Hz => {
+                if !(310.0..=800.0).contains(&value) {
+                    return Err(anyhow!("500Hz Frequency must be between 310.0 and 800.0"));
+                }
                 self.profile.equalizer_mini_mut().set_eq_500h_freq(value);
-                MicrophoneParamKey::Equalizer500HzFrequency
+                Ok(MicrophoneParamKey::Equalizer500HzFrequency)
             }
             MiniEqFrequencies::Equalizer1KHz => {
+                if !(800.0..=2500.0).contains(&value) {
+                    return Err(anyhow!("1KHz Frequency must be between 800.0 and 2500.0"));
+                }
                 self.profile.equalizer_mini_mut().set_eq_1k_freq(value);
-                MicrophoneParamKey::Equalizer1KHzFrequency
+                Ok(MicrophoneParamKey::Equalizer1KHzFrequency)
             }
             MiniEqFrequencies::Equalizer3KHz => {
+                if !(2600.0..=5000.0).contains(&value) {
+                    return Err(anyhow!("3KHz Frequency must be between 2600.0 and 5000.0"));
+                }
                 self.profile.equalizer_mini_mut().set_eq_3k_freq(value);
-                MicrophoneParamKey::Equalizer3KHzFrequency
+                Ok(MicrophoneParamKey::Equalizer3KHzFrequency)
             }
             MiniEqFrequencies::Equalizer8KHz => {
+                if !(5100.0..=18000.0).contains(&value) {
+                    return Err(anyhow!("8KHz Frequency must be between 5100.0 and 18000.0"));
+                }
                 self.profile.equalizer_mini_mut().set_eq_8k_freq(value);
-                MicrophoneParamKey::Equalizer8KHzFrequency
+                Ok(MicrophoneParamKey::Equalizer8KHzFrequency)
             }
         };
     }
