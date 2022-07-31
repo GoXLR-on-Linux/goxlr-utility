@@ -5,7 +5,6 @@ use crate::SettingsHandle;
 use anyhow::{anyhow, Result};
 use enum_map::EnumMap;
 use enumset::EnumSet;
-use futures::executor::block_on;
 use goxlr_ipc::{
     DeviceType, FaderStatus, GoXLRCommand, HardwareStatus, Levels, MicSettings, MixerStatus,
 };
@@ -116,7 +115,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
             cough_button: self.profile.get_cough_status(),
             levels: Levels {
                 volumes: self.profile.get_volumes(),
-                bleep: self.get_bleep_volume(),
+                bleep: self.mic_profile.bleep_level(),
                 deess: self.mic_profile.get_deesser(),
             },
             router: self.profile.create_router(),
@@ -810,13 +809,9 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 if volume < -34 || volume > 0 {
                     return Err(anyhow!("Mute volume must be between -34 and 0"));
                 }
-                self.settings
-                    .set_device_bleep_volume(self.serial(), volume)
-                    .await;
-                self.settings.save().await;
-
-                self.goxlr
-                    .set_effect_values(&[(EffectKey::BleepLevel, volume as i32)])?;
+                self.mic_profile.set_bleep_level(volume);
+                self.apply_effects(HashSet::from([EffectKey::BleepLevel]))?;
+                self.apply_mic_params(HashSet::from([MicrophoneParamKey::BleepLevel]))?;
             }
             GoXLRCommand::SetMicrophoneType(mic_type) => {
                 self.mic_profile.set_mic_type(mic_type);
@@ -1381,16 +1376,6 @@ impl<'a, T: UsbContext> Device<'a, T> {
         Ok(())
     }
 
-    fn get_bleep_volume(&self) -> i8 {
-        // This should be fast, block on the request..
-        let value = block_on(self.settings.get_device_bleep_volume(self.serial()));
-
-        if let Some(bleep) = value {
-            return bleep;
-        }
-        -14
-    }
-
     fn load_colour_map(&mut self) -> Result<()> {
         // The new colour format occurred on different firmware versions depending on device,
         // so do the check here.
@@ -1476,11 +1461,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
     fn apply_mic_params(&mut self, params: HashSet<MicrophoneParamKey>) -> Result<()> {
         let mut vec = Vec::new();
         for param in params {
-            vec.push((
-                param,
-                self.mic_profile
-                    .get_param_value(param, self.serial(), self.settings),
-            ));
+            vec.push((param, self.mic_profile.get_param_value(param)));
         }
         self.goxlr.set_mic_param(vec.as_slice())?;
         Ok(())
@@ -1491,12 +1472,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
         for effect in params {
             vec.push((
                 effect,
-                self.mic_profile.get_effect_value(
-                    effect,
-                    self.serial(),
-                    self.settings,
-                    self.profile(),
-                ),
+                self.mic_profile.get_effect_value(effect, self.profile()),
             ));
         }
 

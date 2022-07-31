@@ -113,7 +113,7 @@ pub enum EffectKey {
     GateAttenuation = 0x0015,
     GateAttack = 0x0016,
     GateRelease = 0x0017,
-    Unknown14b = 0x014b,
+    MicCompSelect = 0x014b,
     Equalizer31HzFrequency = 0x0126,
     Equalizer31HzGain = 0x0127,
     Equalizer63HzFrequency = 0x00f8,

@@ -94,11 +94,6 @@ impl SettingsHandle {
             .map(|d| d.mic_profile.clone())
     }
 
-    pub async fn get_device_bleep_volume(&self, device_serial: &str) -> Option<i8> {
-        let settings = self.settings.read().await;
-        settings.devices.get(device_serial).map(|d| d.bleep_volume)
-    }
-
     pub async fn set_device_profile_name(&self, device_serial: &str, profile_name: &str) {
         let mut settings = self.settings.write().await;
         let entry = settings
@@ -115,15 +110,6 @@ impl SettingsHandle {
             .entry(device_serial.to_owned())
             .or_insert_with(DeviceSettings::default);
         entry.mic_profile = mic_profile_name.to_owned();
-    }
-
-    pub async fn set_device_bleep_volume(&self, device_serial: &str, bleep_volume: i8) {
-        let mut settings = self.settings.write().await;
-        let entry = settings
-            .devices
-            .entry(device_serial.to_owned())
-            .or_insert_with(DeviceSettings::default);
-        entry.bleep_volume = bleep_volume;
     }
 }
 
@@ -178,7 +164,6 @@ impl Settings {
 struct DeviceSettings {
     profile: String,
     mic_profile: String,
-    bleep_volume: i8,
 }
 
 impl Default for DeviceSettings {
@@ -186,7 +171,6 @@ impl Default for DeviceSettings {
         DeviceSettings {
             profile: DEFAULT_PROFILE_NAME.to_owned(),
             mic_profile: DEFAULT_MIC_PROFILE_NAME.to_owned(),
-            bleep_volume: -20,
         }
     }
 }

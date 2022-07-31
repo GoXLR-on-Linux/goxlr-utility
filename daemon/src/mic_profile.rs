@@ -1,9 +1,7 @@
 use crate::files::{can_create_new_file, create_path};
 use crate::profile::ProfileAdapter;
-use crate::SettingsHandle;
 use anyhow::{anyhow, Context, Result};
 use byteorder::{ByteOrder, LittleEndian};
-use futures::executor::block_on;
 use goxlr_ipc::{Compressor, Equaliser, EqualiserMini, NoiseGate};
 use goxlr_profile_loader::mic_profile::MicProfileSettings;
 use goxlr_types::{
@@ -520,13 +518,16 @@ impl MicProfileAdapter {
         self.profile.set_deess(value);
     }
 
+    pub fn set_bleep_level(&mut self, value: i8) {
+        self.profile.set_bleep_level(value);
+    }
+
+    pub fn bleep_level(&self) -> i8 {
+        self.profile.bleep_level()
+    }
+
     /// The uber method, fetches the relevant setting from the profile and returns it..
-    pub fn get_param_value(
-        &self,
-        param: MicrophoneParamKey,
-        serial: &str,
-        settings: &SettingsHandle,
-    ) -> [u8; 4] {
+    pub fn get_param_value(&self, param: MicrophoneParamKey) -> [u8; 4] {
         match param {
             MicrophoneParamKey::MicType => {
                 let microphone_type: MicrophoneType = self.mic_type();
@@ -564,11 +565,7 @@ impl MicProfileAdapter {
             MicrophoneParamKey::CompressorMakeUpGain => {
                 self.u8_to_f32(self.profile.compressor().makeup())
             }
-            MicrophoneParamKey::BleepLevel => {
-                // Hopefully we can eventually move this to the profile, it's a little obnoxious right now!
-                let bleep_value = block_on(settings.get_device_bleep_volume(serial)).unwrap_or(-20);
-                self.calculate_bleep(bleep_value)
-            }
+            MicrophoneParamKey::BleepLevel => self.calculate_bleep(self.profile.bleep_level()),
             MicrophoneParamKey::Equalizer90HzFrequency => {
                 self.f32_to_f32(self.profile.equalizer_mini().eq_90h_freq())
             }
@@ -609,20 +606,13 @@ impl MicProfileAdapter {
     }
 
     fn calculate_bleep(&self, value: i8) -> [u8; 4] {
-        // TODO: Confirm the output here..
         let mut return_value = [0; 4];
         LittleEndian::write_f32(&mut return_value, value as f32 * 65536.0);
         return_value
     }
 
     /// This is going to require a CRAPLOAD of work to sort..
-    pub fn get_effect_value(
-        &self,
-        effect: EffectKey,
-        serial: &str,
-        settings: &SettingsHandle,
-        main_profile: &ProfileAdapter,
-    ) -> i32 {
+    pub fn get_effect_value(&self, effect: EffectKey, main_profile: &ProfileAdapter) -> i32 {
         match effect {
             EffectKey::DisableMic => {
                 // TODO: Actually use this..
@@ -631,10 +621,8 @@ impl MicProfileAdapter {
                 // need to correctly send this when the mic gets muted / unmuted.
                 0
             }
-            EffectKey::BleepLevel => block_on(settings.get_device_bleep_volume(serial))
-                .unwrap_or(-20)
-                .into(),
-            EffectKey::GateMode => 2, // Not a profile setting, hard coded in Windows
+            EffectKey::BleepLevel => self.profile.bleep_level().into(),
+            EffectKey::GateMode => self.profile.gate_mode().into(),
             EffectKey::GateEnabled => 1, // Used for 'Mic Testing' in the UI
             EffectKey::GateThreshold => self.profile.gate().threshold().into(),
             EffectKey::GateAttenuation => self
@@ -642,7 +630,7 @@ impl MicProfileAdapter {
                 .into(),
             EffectKey::GateAttack => self.profile.gate().attack().into(),
             EffectKey::GateRelease => self.profile.gate().release().into(),
-            EffectKey::Unknown14b => 0,
+            EffectKey::MicCompSelect => self.profile.comp_select().into(),
 
             EffectKey::Equalizer31HzFrequency => self.profile.equalizer().eq_31h_freq_as_goxlr(),
             EffectKey::Equalizer63HzFrequency => self.profile.equalizer().eq_63h_freq_as_goxlr(),
