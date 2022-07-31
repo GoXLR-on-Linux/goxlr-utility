@@ -13,7 +13,7 @@ general releases. The following guide should get you started in getting the Util
 ## Setting Permissions
 Copy `50-goxlr.rules` to `/etc/udev/rules.d/` and then reload with `sudo udevadm control --reload-rules`.
 
-You may need to unplug and replug the GoXLR afterwards, to allow the new permissions to take effect.
+You **will** need to unplug and replug the GoXLR afterwards, to allow the new permissions to take effect.
 
 ## Building from source
 ### Prerequisites
@@ -24,11 +24,12 @@ You may need to unplug and replug the GoXLR afterwards, to allow the new permiss
 - Have a GoXLR :)
 
 ### Building
-You can build with `cargo build`, or install the specific executables with:
+The easiest way to build is by using the following commands to compile and install the executables:
 - `cargo install --path daemon` for the daemon
 - `cargo install --path client` for the client to interact with the daemon
-
 Tab-complete files for your terminal of choice will be available after building.
+
+If you'd prefer not to install, you can use `cargo build` and access the binaries in the `target/` directory.
 
 ## Running the daemon
 You can start the daemon by executing `goxlr-daemon`. The daemon has a couple of possible command line parameters which
