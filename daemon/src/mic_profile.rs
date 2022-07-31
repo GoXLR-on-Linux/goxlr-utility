@@ -1,4 +1,4 @@
-use crate::files::can_create_new_file;
+use crate::files::{can_create_new_file, create_path};
 use crate::profile::ProfileAdapter;
 use crate::SettingsHandle;
 use anyhow::{anyhow, Context, Result};
@@ -12,7 +12,7 @@ use goxlr_types::{
 };
 use log::error;
 use std::collections::{HashMap, HashSet};
-use std::fs::{create_dir_all, remove_file, File};
+use std::fs::{remove_file, File};
 use std::io::{Cursor, Read, Seek};
 use std::path::Path;
 use strum::IntoEnumIterator;
@@ -86,15 +86,7 @@ impl MicProfileAdapter {
 
     pub fn write_profile(&mut self, name: String, directory: &Path, overwrite: bool) -> Result<()> {
         let path = directory.join(format!("{}.goxlrMicProfile", name));
-        if !directory.exists() {
-            // Attempt to create the profile directory..
-            if let Err(e) = create_dir_all(directory) {
-                return Err(e).context(format!(
-                    "Could not create mic profile directory at {}",
-                    directory.to_string_lossy()
-                ))?;
-            }
-        }
+        create_path(directory)?;
 
         if !overwrite && path.is_file() {
             return Err(anyhow!("Profile exists, will not overwrite"));
