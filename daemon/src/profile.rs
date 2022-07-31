@@ -66,7 +66,7 @@ impl ProfileAdapter {
 
             if path.is_file() {
                 let file = File::open(path).context("Couldn't open profile for reading")?;
-                return ProfileAdapter::from_reader(name, file).context("Couldn't read profile");
+                return ProfileAdapter::from_reader(name, file);
             }
             dir_list = format!("{}, {}", dir_list, directory.to_string_lossy());
         }
