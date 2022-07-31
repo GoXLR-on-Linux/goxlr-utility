@@ -897,12 +897,12 @@ impl<'a, T: UsbContext> Device<'a, T> {
 
             // Compressor
             GoXLRCommand::SetCompressorThreshold(value) => {
-                if value > 0 || value < -24 {
-                    return Err(anyhow!("Compressor Threshold must be between 0 and -24 dB"));
+                if value > 0 || value < -40 {
+                    return Err(anyhow!("Compressor Threshold must be between 0 and -40 dB"));
                 }
                 self.mic_profile.set_compressor_threshold(value);
-                self.apply_mic_params(HashSet::from([MicrophoneParamKey::CompressorMakeUpGain]))?;
-                self.apply_effects(HashSet::from([EffectKey::CompressorMakeUpGain]))?;
+                self.apply_mic_params(HashSet::from([MicrophoneParamKey::CompressorThreshold]))?;
+                self.apply_effects(HashSet::from([EffectKey::CompressorThreshold]))?;
             }
             GoXLRCommand::SetCompressorRatio(ratio) => {
                 self.mic_profile.set_compressor_ratio(ratio);
