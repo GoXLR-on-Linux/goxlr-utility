@@ -17,6 +17,9 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
+      - name: Version Output
+        run: 'echo "::set-output name=version::$(cargo pkgid -p goxlr-daemon | cut -d# -f2 | cut -d@ -f2)"'
+
       - id: version
         run: 'echo "::set-output name=version::$(cargo pkgid -p goxlr-daemon | cut -d# -f2 | cut -d@ -f2)"'
 
@@ -57,6 +60,8 @@ jobs:
       # Download the previously generated artifacts..
       - name: Download Artifacts
         uses: actions/download-artifact@v2
+
+      - name: List Downloaded Files..
         run: ls -lah
 
       # Create the Draft Release
