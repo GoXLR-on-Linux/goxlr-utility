@@ -72,5 +72,5 @@ jobs:
           prerelease: true
           fail_on_unmatched_files: true
           files: |
-            debian-artifact/goxlr-utility-${{ needs.get_version.outputs.version }}_amd64.deb
-            rpm-artifact/goxlr-utility-${{ needs.get_version.outputs.version }}-1_x86_64.rpm
+            ./debian-artifact/goxlr-utility_${{ needs.get_version.outputs.version }}_amd64.deb
+            ./rpm-artifact/goxlr-utility-${{ needs.get_version.outputs.version }}-1.x86_64.rpm
