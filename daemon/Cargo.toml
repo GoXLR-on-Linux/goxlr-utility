@@ -42,15 +42,6 @@ clap = { version = "3.0.0", features = ["derive"] }
 clap_complete = "3.0.0"
 directories = "4.0"
 
-# Enable debugging symbols, and disable optimisation..
-[profile.dev]
-opt-level = 0
-debug = true
-
-[profile.release]
-opt-level = 3
-debug = false
-
 [package.metadata.deb]
 name = "goxlr-utility"
 assets = [
