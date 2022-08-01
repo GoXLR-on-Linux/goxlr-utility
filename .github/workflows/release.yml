@@ -62,7 +62,7 @@ jobs:
         uses: actions/download-artifact@v2
 
       - name: List Downloaded Files..
-        run: ls -lah
+        run: ls -lahR
 
       # Create the Draft Release
       - name: Create Release
@@ -73,7 +73,7 @@ jobs:
           body: 'Put Changelog Here!'
           draft: true
           prerelease: true
-          fail_on_ummatched_files: true
+          fail_on_unmatched_files: true
           files: |
-            goxlr-utility-${{ needs.get_version.outputs.version }}_amd64.deb
-            goxlr-utility-${{ needs.get_version.outputs.version }}-1_x86_64.rpm
+            debian-artifact/goxlr-utility-${{ needs.get_version.outputs.version }}_amd64.deb
+            rpm-artifact/goxlr-utility-${{ needs.get_version.outputs.version }}-1_x86_64.rpm
