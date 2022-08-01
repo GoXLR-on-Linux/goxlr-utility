@@ -1,4 +1,4 @@
-use crate::files::can_create_new_file;
+use crate::files::{can_create_new_file, create_path};
 use anyhow::{anyhow, Context, Result};
 use enum_map::EnumMap;
 use enumset::EnumSet;
@@ -30,7 +30,7 @@ use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::colouring::ColourTargets;
 use log::error;
 use std::collections::HashMap;
-use std::fs::{create_dir_all, remove_file, File};
+use std::fs::{remove_file, File};
 use std::io::{Cursor, Read, Seek};
 use std::path::Path;
 use strum::EnumCount;
@@ -66,7 +66,7 @@ impl ProfileAdapter {
 
             if path.is_file() {
                 let file = File::open(path).context("Couldn't open profile for reading")?;
-                return ProfileAdapter::from_reader(name, file).context("Couldn't read profile");
+                return ProfileAdapter::from_reader(name, file);
             }
             dir_list = format!("{}, {}", dir_list, directory.to_string_lossy());
         }
@@ -102,15 +102,7 @@ impl ProfileAdapter {
 
     pub fn write_profile(&mut self, name: String, directory: &Path, overwrite: bool) -> Result<()> {
         let path = directory.join(format!("{}.goxlr", name));
-        if !directory.exists() {
-            // Attempt to create the profile directory..
-            if let Err(e) = create_dir_all(directory) {
-                return Err(e).context(format!(
-                    "Could not create profile directory at {}",
-                    directory.to_string_lossy()
-                ))?;
-            }
-        }
+        create_path(directory)?;
 
         if !overwrite && path.is_file() {
             return Err(anyhow!("Profile exists, will not overwrite"));

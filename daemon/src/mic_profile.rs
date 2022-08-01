@@ -1,9 +1,7 @@
-use crate::files::can_create_new_file;
+use crate::files::{can_create_new_file, create_path};
 use crate::profile::ProfileAdapter;
-use crate::SettingsHandle;
 use anyhow::{anyhow, Context, Result};
 use byteorder::{ByteOrder, LittleEndian};
-use futures::executor::block_on;
 use goxlr_ipc::{Compressor, Equaliser, EqualiserMini, NoiseGate};
 use goxlr_profile_loader::mic_profile::MicProfileSettings;
 use goxlr_types::{
@@ -12,7 +10,7 @@ use goxlr_types::{
 };
 use log::error;
 use std::collections::{HashMap, HashSet};
-use std::fs::{create_dir_all, remove_file, File};
+use std::fs::{remove_file, File};
 use std::io::{Cursor, Read, Seek};
 use std::path::Path;
 use strum::IntoEnumIterator;
@@ -86,15 +84,7 @@ impl MicProfileAdapter {
 
     pub fn write_profile(&mut self, name: String, directory: &Path, overwrite: bool) -> Result<()> {
         let path = directory.join(format!("{}.goxlrMicProfile", name));
-        if !directory.exists() {
-            // Attempt to create the profile directory..
-            if let Err(e) = create_dir_all(directory) {
-                return Err(e).context(format!(
-                    "Could not create mic profile directory at {}",
-                    directory.to_string_lossy()
-                ))?;
-            }
-        }
+        create_path(directory)?;
 
         if !overwrite && path.is_file() {
             return Err(anyhow!("Profile exists, will not overwrite"));
@@ -421,31 +411,53 @@ impl MicProfileAdapter {
         }
     }
 
-    pub fn set_mini_eq_freq(&mut self, freq: MiniEqFrequencies, value: f32) -> MicrophoneParamKey {
+    pub fn set_mini_eq_freq(
+        &mut self,
+        freq: MiniEqFrequencies,
+        value: f32,
+    ) -> Result<MicrophoneParamKey> {
         return match freq {
             MiniEqFrequencies::Equalizer90Hz => {
+                if !(30.0..=90.0).contains(&value) {
+                    return Err(anyhow!("90Hz Frequency must be between 30.0 and 90.0"));
+                }
                 self.profile.equalizer_mini_mut().set_eq_90h_freq(value);
-                MicrophoneParamKey::Equalizer90HzFrequency
+                Ok(MicrophoneParamKey::Equalizer90HzFrequency)
             }
             MiniEqFrequencies::Equalizer250Hz => {
+                if !(100.0..=300.0).contains(&value) {
+                    return Err(anyhow!("250Hz Frequency must be between 100.0 and 300.0"));
+                }
                 self.profile.equalizer_mini_mut().set_eq_250h_freq(value);
-                MicrophoneParamKey::Equalizer250HzFrequency
+                Ok(MicrophoneParamKey::Equalizer250HzFrequency)
             }
             MiniEqFrequencies::Equalizer500Hz => {
+                if !(310.0..=800.0).contains(&value) {
+                    return Err(anyhow!("500Hz Frequency must be between 310.0 and 800.0"));
+                }
                 self.profile.equalizer_mini_mut().set_eq_500h_freq(value);
-                MicrophoneParamKey::Equalizer500HzFrequency
+                Ok(MicrophoneParamKey::Equalizer500HzFrequency)
             }
             MiniEqFrequencies::Equalizer1KHz => {
+                if !(800.0..=2500.0).contains(&value) {
+                    return Err(anyhow!("1KHz Frequency must be between 800.0 and 2500.0"));
+                }
                 self.profile.equalizer_mini_mut().set_eq_1k_freq(value);
-                MicrophoneParamKey::Equalizer1KHzFrequency
+                Ok(MicrophoneParamKey::Equalizer1KHzFrequency)
             }
             MiniEqFrequencies::Equalizer3KHz => {
+                if !(2600.0..=5000.0).contains(&value) {
+                    return Err(anyhow!("3KHz Frequency must be between 2600.0 and 5000.0"));
+                }
                 self.profile.equalizer_mini_mut().set_eq_3k_freq(value);
-                MicrophoneParamKey::Equalizer3KHzFrequency
+                Ok(MicrophoneParamKey::Equalizer3KHzFrequency)
             }
             MiniEqFrequencies::Equalizer8KHz => {
+                if !(5100.0..=18000.0).contains(&value) {
+                    return Err(anyhow!("8KHz Frequency must be between 5100.0 and 18000.0"));
+                }
                 self.profile.equalizer_mini_mut().set_eq_8k_freq(value);
-                MicrophoneParamKey::Equalizer8KHzFrequency
+                Ok(MicrophoneParamKey::Equalizer8KHzFrequency)
             }
         };
     }
@@ -506,13 +518,16 @@ impl MicProfileAdapter {
         self.profile.set_deess(value);
     }
 
+    pub fn set_bleep_level(&mut self, value: i8) {
+        self.profile.set_bleep_level(value);
+    }
+
+    pub fn bleep_level(&self) -> i8 {
+        self.profile.bleep_level()
+    }
+
     /// The uber method, fetches the relevant setting from the profile and returns it..
-    pub fn get_param_value(
-        &self,
-        param: MicrophoneParamKey,
-        serial: &str,
-        settings: &SettingsHandle,
-    ) -> [u8; 4] {
+    pub fn get_param_value(&self, param: MicrophoneParamKey) -> [u8; 4] {
         match param {
             MicrophoneParamKey::MicType => {
                 let microphone_type: MicrophoneType = self.mic_type();
@@ -550,11 +565,7 @@ impl MicProfileAdapter {
             MicrophoneParamKey::CompressorMakeUpGain => {
                 self.u8_to_f32(self.profile.compressor().makeup())
             }
-            MicrophoneParamKey::BleepLevel => {
-                // Hopefully we can eventually move this to the profile, it's a little obnoxious right now!
-                let bleep_value = block_on(settings.get_device_bleep_volume(serial)).unwrap_or(-20);
-                self.calculate_bleep(bleep_value)
-            }
+            MicrophoneParamKey::BleepLevel => self.calculate_bleep(self.profile.bleep_level()),
             MicrophoneParamKey::Equalizer90HzFrequency => {
                 self.f32_to_f32(self.profile.equalizer_mini().eq_90h_freq())
             }
@@ -595,20 +606,13 @@ impl MicProfileAdapter {
     }
 
     fn calculate_bleep(&self, value: i8) -> [u8; 4] {
-        // TODO: Confirm the output here..
         let mut return_value = [0; 4];
         LittleEndian::write_f32(&mut return_value, value as f32 * 65536.0);
         return_value
     }
 
     /// This is going to require a CRAPLOAD of work to sort..
-    pub fn get_effect_value(
-        &self,
-        effect: EffectKey,
-        serial: &str,
-        settings: &SettingsHandle,
-        main_profile: &ProfileAdapter,
-    ) -> i32 {
+    pub fn get_effect_value(&self, effect: EffectKey, main_profile: &ProfileAdapter) -> i32 {
         match effect {
             EffectKey::DisableMic => {
                 // TODO: Actually use this..
@@ -617,10 +621,8 @@ impl MicProfileAdapter {
                 // need to correctly send this when the mic gets muted / unmuted.
                 0
             }
-            EffectKey::BleepLevel => block_on(settings.get_device_bleep_volume(serial))
-                .unwrap_or(-20)
-                .into(),
-            EffectKey::GateMode => 2, // Not a profile setting, hard coded in Windows
+            EffectKey::BleepLevel => self.profile.bleep_level().into(),
+            EffectKey::GateMode => self.profile.gate_mode().into(),
             EffectKey::GateEnabled => 1, // Used for 'Mic Testing' in the UI
             EffectKey::GateThreshold => self.profile.gate().threshold().into(),
             EffectKey::GateAttenuation => self
@@ -628,7 +630,7 @@ impl MicProfileAdapter {
                 .into(),
             EffectKey::GateAttack => self.profile.gate().attack().into(),
             EffectKey::GateRelease => self.profile.gate().release().into(),
-            EffectKey::Unknown14b => 0,
+            EffectKey::MicCompSelect => self.profile.comp_select().into(),
 
             EffectKey::Equalizer31HzFrequency => self.profile.equalizer().eq_31h_freq_as_goxlr(),
             EffectKey::Equalizer63HzFrequency => self.profile.equalizer().eq_63h_freq_as_goxlr(),

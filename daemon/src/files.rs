@@ -9,13 +9,13 @@ secondly because it's managing different types of files
  */
 
 use std::fs;
-use std::fs::File;
+use std::fs::{create_dir_all, File};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use futures::executor::block_on;
-use log::debug;
+use log::{debug, info, warn};
 
 use crate::{SettingsHandle, DISTRIBUTABLE_PROFILES};
 
@@ -100,6 +100,14 @@ impl FileManager {
     }
 
     fn get_files_from_drive(&self, path: PathBuf, extension: &str) -> Vec<String> {
+        if let Err(error) = create_path(&path) {
+            warn!(
+                "Unable to create path: {}: {}",
+                &path.to_string_lossy(),
+                error
+            );
+        }
+
         if let Ok(list) = path.read_dir() {
             return list
                 .filter_map(|entry| {
@@ -129,7 +137,26 @@ impl FileManager {
     }
 }
 
+pub fn create_path(path: &Path) -> Result<()> {
+    if !path.exists() {
+        // Attempt to create the profile directory..
+        if let Err(e) = create_dir_all(&path) {
+            return Err(e).context(format!(
+                "Could not create profile directory at {}",
+                &path.to_string_lossy()
+            ))?;
+        } else {
+            info!("Created Path: {}", path.to_string_lossy());
+        }
+    }
+    Ok(())
+}
+
 pub fn can_create_new_file(path: PathBuf) -> Result<()> {
+    if let Some(parent) = path.parent() {
+        create_path(parent)?;
+    }
+
     if path.exists() {
         return Err(anyhow!("File already exists."));
     }
