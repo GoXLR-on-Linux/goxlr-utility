@@ -2,6 +2,26 @@ name: Create Release Draft
 on: workflow_dispatch
 jobs:
 
-  # Run the Build and Test Stuff..
+  # Before we do anything, run the existing test suite..
   verify:
     uses: ./.github/workflows/build.yml
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - name: Install Cargo Deb
+        run: cargo install cargo-deb
+      - name: Install Cargo Generate RPM
+        run: cargo install cargo-generate-rpm
+      - name: Build deb File
+        run: ./ci/build-deb
+        shell: bash
+      - name: Build RPM File
+        run: ./ci/build-rpm
+        shell: bash
