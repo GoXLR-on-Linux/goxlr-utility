@@ -18,7 +18,7 @@ jobs:
           toolchain: stable
           override: true
       - name: Version Output
-        run: 'echo "::set-output name=version::$(cargo pkgid -p goxlr-daemon | cut -d# -f2 | cut -d@ -f2)"'
+        run: 'cargo pkgid -p goxlr-daemon'
 
       - id: version
         run: 'echo "::set-output name=version::$(cargo pkgid -p goxlr-daemon | cut -d# -f2 | cut -d@ -f2)"'
