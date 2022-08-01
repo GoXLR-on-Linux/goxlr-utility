@@ -4,7 +4,4 @@ jobs:
 
   # Run the Build and Test Stuff..
   verify:
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - uses: ./.github/workflows/build
+    uses: ./.github/workflows/build.yml
