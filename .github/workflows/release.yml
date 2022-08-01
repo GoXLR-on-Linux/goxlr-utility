@@ -17,7 +17,6 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-      - run: 'echo "::set-output name=version::$(cargo pkgid -p goxlr-daemon | cut -d# -f2 | cut -d@ -f2)"'
       - id: version
         run: 'echo "::set-output name=version::$(cargo pkgid -p goxlr-daemon | cut -d# -f2 | cut -d@ -f2)"'
 
