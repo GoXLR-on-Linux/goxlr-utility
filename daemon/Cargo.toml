@@ -79,6 +79,7 @@ A utility for monitoring and controlling a TC-Helicon GoXLR or GoXLR Mini.
 
 ## cargo generate-rpm support..
 [package.metadata.generate-rpm]
+name = "goxlr-utility"
 assets = [
     { source = "../target/release/goxlr-daemon", dest = "/usr/bin/goxlr-daemon", mode = "0755" },
     { source = "../target/release/goxlr-client", dest = "/usr/bin/goxlr-client", mode = "0755" },
