@@ -6,6 +6,21 @@ jobs:
   verify:
     uses: ./.github/workflows/build.yml
 
+  get_version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - run: 'echo "::set-output name=version::$(cargo pkgid -p goxlr-daemon | cut -d# -f2 | cut -d@ -f2)"'
+      - id: version
+        run: 'echo "::set-output name=version::$(cargo pkgid -p goxlr-daemon | cut -d# -f2 | cut -d@ -f2)"'
+
   build:
     needs: verify
     runs-on: ubuntu-latest
@@ -35,3 +50,26 @@ jobs:
         with:
           name: rpm-artifact
           path: ./target/generate-rpm/*.rpm
+
+  create_release_draft:
+    needs: [verify, get_version, build]
+    runs-on: ubuntu-latest
+    steps:
+      # Download the previously generated artifacts..
+      - name: Download Artifacts
+        uses: actions/download-artifact@v2
+        run: ls -lah
+
+      # Create the Draft Release
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ needs.get_version.outputs.version }}
+          tag_name: v${{ needs.get_version.outputs.version }}
+          body: 'Put Changelog Here!'
+          draft: true
+          prerelease: true
+          fail_on_ummatched_files: true
+          files: |
+            goxlr-utility-${{ needs.get_version.outputs.version }}_amd64.deb
+            goxlr-utility-${{ needs.get_version.outputs.version }}-1_x86_64.rpm
