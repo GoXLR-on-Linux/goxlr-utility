@@ -16,8 +16,22 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
+
       - name: Install cargo-deb and cargo-generate-rpm
         run: cargo install cargo-deb cargo-generate-rpm
+
       - name: Build Packages
         run: ./ci/build-packages
         shell: bash
+
+      - name: Upload DEB Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: debian-artifact
+          path: ./target/debian/*.deb
+
+      - name: Upload RPM Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: rpm-artifact
+          path: ./target/generate-rpm/*.rpm
