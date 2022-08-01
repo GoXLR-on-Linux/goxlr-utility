@@ -1,0 +1,76 @@
+name: Create Release Draft
+on: workflow_dispatch
+jobs:
+
+  # Before we do anything, run the existing test suite..
+  verify:
+    uses: ./.github/workflows/build.yml
+
+  get_version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - id: version
+        run: 'echo "::set-output name=version::$(cargo pkgid -p goxlr-daemon | cut -d@ -f2)"'
+
+  build:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Install cargo-deb and cargo-generate-rpm
+        run: cargo install cargo-deb cargo-generate-rpm
+
+      - name: Build Packages
+        run: ./ci/build-packages
+        shell: bash
+
+      - name: Upload DEB Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: debian-artifact
+          path: ./target/debian/*.deb
+
+      - name: Upload RPM Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: rpm-artifact
+          path: ./target/generate-rpm/*.rpm
+
+  create_release_draft:
+    needs: [verify, get_version, build]
+    runs-on: ubuntu-latest
+    steps:
+      # Download the previously generated artifacts..
+      - name: Download Artifacts
+        uses: actions/download-artifact@v2
+
+      - name: List Downloaded Files..
+        run: ls -lahR
+
+      # Create the Draft Release
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ needs.get_version.outputs.version }}
+          tag_name: v${{ needs.get_version.outputs.version }}
+          body: 'Put Changelog Here!'
+          draft: true
+          prerelease: true
+          fail_on_unmatched_files: true
+          files: |
+            ./debian-artifact/goxlr-utility_${{ needs.get_version.outputs.version }}_amd64.deb
+            ./rpm-artifact/goxlr-utility-${{ needs.get_version.outputs.version }}-1.x86_64.rpm

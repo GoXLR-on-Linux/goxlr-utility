@@ -28,7 +28,7 @@ use goxlr_types::{
 };
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::colouring::ColourTargets;
-use log::error;
+use log::{debug, error};
 use std::collections::HashMap;
 use std::fs::{remove_file, File};
 use std::io::{Cursor, Read, Seek};
@@ -65,6 +65,7 @@ impl ProfileAdapter {
             let path = directory.join(format!("{}.goxlr", name));
 
             if path.is_file() {
+                debug!("Loading Profile From {}", path.to_string_lossy());
                 let file = File::open(path).context("Couldn't open profile for reading")?;
                 return ProfileAdapter::from_reader(name, file);
             }
