@@ -42,15 +42,6 @@ clap = { version = "3.0.0", features = ["derive"] }
 clap_complete = "3.0.0"
 directories = "4.0"
 
-# Enable debugging symbols, and disable optimisation..
-[profile.dev]
-opt-level = 0
-debug = true
-
-[profile.release]
-opt-level = 3
-debug = false
-
 [package.metadata.deb]
 name = "goxlr-utility"
 assets = [
@@ -79,6 +70,7 @@ A utility for monitoring and controlling a TC-Helicon GoXLR or GoXLR Mini.
 
 ## cargo generate-rpm support..
 [package.metadata.generate-rpm]
+name = "goxlr-utility"
 assets = [
     { source = "../target/release/goxlr-daemon", dest = "/usr/bin/goxlr-daemon", mode = "0755" },
     { source = "../target/release/goxlr-client", dest = "/usr/bin/goxlr-client", mode = "0755" },

@@ -134,7 +134,7 @@ impl FileManager {
             "Path not found, or unable to read: {:?}",
             path.to_string_lossy()
         );
-        return HashSet::new();
+        HashSet::new()
     }
 }
 
