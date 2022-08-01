@@ -8,6 +8,7 @@ This has been created as a separate mod primarily because profile.rs is big enou
 secondly because it's managing different types of files
  */
 
+use std::collections::HashSet;
 use std::fs;
 use std::fs::{create_dir_all, File};
 use std::path::{Path, PathBuf};
@@ -27,7 +28,7 @@ pub struct FileManager {
 
 #[derive(Debug, Clone)]
 struct FileList {
-    names: Vec<String>,
+    names: HashSet<String>,
     timeout: Instant,
 }
 
@@ -35,7 +36,7 @@ impl Default for FileList {
     fn default() -> Self {
         Self {
             timeout: Instant::now(),
-            names: vec![],
+            names: HashSet::new(),
         }
     }
 }
@@ -54,7 +55,7 @@ impl FileManager {
         self.mic_profiles = Default::default();
     }
 
-    pub fn get_profiles(&mut self, settings: &SettingsHandle) -> Vec<String> {
+    pub fn get_profiles(&mut self, settings: &SettingsHandle) -> HashSet<String> {
         // There might be a nicer way to do this, which doesn't result in duplicating
         // code with different members..
         if self.profiles.timeout > Instant::now() {
@@ -69,7 +70,7 @@ impl FileManager {
         self.profiles.names.clone()
     }
 
-    pub fn get_mic_profiles(&mut self, settings: &SettingsHandle) -> Vec<String> {
+    pub fn get_mic_profiles(&mut self, settings: &SettingsHandle) -> HashSet<String> {
         if self.mic_profiles.timeout > Instant::now() {
             return self.mic_profiles.names.clone();
         }
@@ -89,17 +90,17 @@ impl FileManager {
         }
     }
 
-    fn get_files_from_paths(&self, paths: Vec<PathBuf>, extension: &str) -> Vec<String> {
-        let mut result = vec![];
+    fn get_files_from_paths(&self, paths: Vec<PathBuf>, extension: &str) -> HashSet<String> {
+        let mut result = HashSet::new();
 
         for path in paths {
-            result.append(&mut self.get_files_from_drive(path, extension));
+            result.extend(self.get_files_from_drive(path, extension));
         }
 
         result
     }
 
-    fn get_files_from_drive(&self, path: PathBuf, extension: &str) -> Vec<String> {
+    fn get_files_from_drive(&self, path: PathBuf, extension: &str) -> HashSet<String> {
         if let Err(error) = create_path(&path) {
             warn!(
                 "Unable to create path: {}: {}",
@@ -126,14 +127,14 @@ impl FileManager {
                         })
                     // Collect the result.
                 })
-                .collect::<Vec<String>>();
+                .collect::<HashSet<String>>();
         }
 
         debug!(
             "Path not found, or unable to read: {:?}",
             path.to_string_lossy()
         );
-        return vec![];
+        return HashSet::new();
     }
 }
 

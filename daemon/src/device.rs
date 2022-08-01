@@ -75,7 +75,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
         let distrib_path = Path::new(DISTRIBUTABLE_PROFILES);
         let profile = ProfileAdapter::from_named_or_default(
             profile_name,
-            vec![distrib_path, profile_directory],
+            vec![profile_directory, distrib_path],
         );
         let mic_profile =
             MicProfileAdapter::from_named_or_default(mic_profile_name, vec![mic_profile_directory]);
@@ -1015,7 +1015,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
 
                 self.profile = ProfileAdapter::from_named(
                     profile_name,
-                    vec![distrib_path, &profile_directory],
+                    vec![&profile_directory, distrib_path],
                 )?;
                 self.apply_profile()?;
                 self.settings

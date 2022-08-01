@@ -60,8 +60,6 @@ impl MicProfileSettings {
                         // Before we're done here, there's a single attribute that doesn't fit into
                         // any of the above categories, find it and handle it here..
                         for attr in &attributes {
-                            dbg!("{}", &attr.name.local_name);
-
                             if attr.name.local_name == "MIC_DEESS_AMOUNT" {
                                 deess = attr.value.parse::<c_float>()? as u8;
                                 continue;

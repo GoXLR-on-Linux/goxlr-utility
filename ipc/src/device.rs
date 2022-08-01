@@ -5,7 +5,7 @@ use goxlr_types::{
     GateTimes, InputDevice, MicrophoneType, MiniEqFrequencies, MuteFunction, OutputDevice,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use strum::EnumCount;
 
@@ -155,8 +155,8 @@ pub struct Paths {
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Files {
-    pub profiles: Vec<String>,
-    pub mic_profiles: Vec<String>,
+    pub profiles: HashSet<String>,
+    pub mic_profiles: HashSet<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
