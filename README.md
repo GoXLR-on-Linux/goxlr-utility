@@ -1,6 +1,9 @@
 # GoXLR Configuration Utility
 A tool to configure and use a TC-Helicon GoXLR or GoXLR Mini without requiring windows.
 
+This application assumes you have working audio with your GoXLR device, either out of the box, or via our install
+sript. Check out the main [GoXLR on Linux](https://github.com/GoXLR-on-Linux/goxlr-on-linux) repository for info.
+
 # Project State
 For the current list of features that are supported, as well as what's still left to be done, checkout the 
 [Roadmap](ROADMAP.md) in this repository. 
