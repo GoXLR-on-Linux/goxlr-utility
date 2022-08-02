@@ -18,9 +18,11 @@ The .rpm files have been tested on Fedora Workstation 36
 *Note*: Post install, you will need to unplug and replug your GoXLR into your computer, so that permissions are
 correctly applied.
 
-
 These packages may work on other Debian / RPM based flavours, feel free to try them, and if they work (or don't),
 please let us know!
+
+In addition, the GoXLR Utility is now available in the [Arch User Repository](https://aur.archlinux.org/packages/goxlr-utility)
+for use in Arch based distributions.
 
 If you require the utility to run on an unsupported platform, jump to Manual Compilation below.
 
