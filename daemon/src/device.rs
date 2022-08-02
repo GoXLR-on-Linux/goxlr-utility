@@ -1,11 +1,10 @@
 use crate::audio::AudioHandler;
 use crate::mic_profile::MicProfileAdapter;
 use crate::profile::{version_newer_or_equal_to, ProfileAdapter};
-use crate::SettingsHandle;
+use crate::{SettingsHandle, DISTRIBUTABLE_PROFILES};
 use anyhow::{anyhow, Result};
 use enum_map::EnumMap;
 use enumset::EnumSet;
-use futures::executor::block_on;
 use goxlr_ipc::{
     DeviceType, FaderStatus, GoXLRCommand, HardwareStatus, Levels, MicSettings, MixerStatus,
 };
@@ -73,7 +72,11 @@ impl<'a, T: UsbContext> Device<'a, T> {
             device_type, profile, mic_profile
         );
 
-        let profile = ProfileAdapter::from_named_or_default(profile_name, vec![profile_directory]);
+        let distrib_path = Path::new(DISTRIBUTABLE_PROFILES);
+        let profile = ProfileAdapter::from_named_or_default(
+            profile_name,
+            vec![profile_directory, distrib_path],
+        );
         let mic_profile =
             MicProfileAdapter::from_named_or_default(mic_profile_name, vec![mic_profile_directory]);
 
@@ -116,7 +119,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
             cough_button: self.profile.get_cough_status(),
             levels: Levels {
                 volumes: self.profile.get_volumes(),
-                bleep: self.get_bleep_volume(),
+                bleep: self.mic_profile.bleep_level(),
                 deess: self.mic_profile.get_deesser(),
             },
             router: self.profile.create_router(),
@@ -810,13 +813,9 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 if volume < -34 || volume > 0 {
                     return Err(anyhow!("Mute volume must be between -34 and 0"));
                 }
-                self.settings
-                    .set_device_bleep_volume(self.serial(), volume)
-                    .await;
-                self.settings.save().await;
-
-                self.goxlr
-                    .set_effect_values(&[(EffectKey::BleepLevel, volume as i32)])?;
+                self.mic_profile.set_bleep_level(volume);
+                self.apply_effects(HashSet::from([EffectKey::BleepLevel]))?;
+                self.apply_mic_params(HashSet::from([MicrophoneParamKey::BleepLevel]))?;
             }
             GoXLRCommand::SetMicrophoneType(mic_type) => {
                 self.mic_profile.set_mic_type(mic_type);
@@ -845,12 +844,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 self.apply_mic_params(HashSet::from([param]))?;
             }
             GoXLRCommand::SetEqMiniFreq(freq, value) => {
-                // TODO: Verify?
-                if !(300.0..=18000.0).contains(&value) {
-                    return Err(anyhow!("EQ Frequency should be between 300hz and 18khz"));
-                }
-
-                let param = self.mic_profile.set_mini_eq_freq(freq, value);
+                let param = self.mic_profile.set_mini_eq_freq(freq, value)?;
                 self.apply_mic_params(HashSet::from([param]))?;
             }
             GoXLRCommand::SetEqGain(gain, value) => {
@@ -902,12 +896,12 @@ impl<'a, T: UsbContext> Device<'a, T> {
 
             // Compressor
             GoXLRCommand::SetCompressorThreshold(value) => {
-                if value > 0 || value < -24 {
-                    return Err(anyhow!("Compressor Threshold must be between 0 and -24 dB"));
+                if value > 0 || value < -40 {
+                    return Err(anyhow!("Compressor Threshold must be between 0 and -40 dB"));
                 }
                 self.mic_profile.set_compressor_threshold(value);
-                self.apply_mic_params(HashSet::from([MicrophoneParamKey::CompressorMakeUpGain]))?;
-                self.apply_effects(HashSet::from([EffectKey::CompressorMakeUpGain]))?;
+                self.apply_mic_params(HashSet::from([MicrophoneParamKey::CompressorThreshold]))?;
+                self.apply_effects(HashSet::from([EffectKey::CompressorThreshold]))?;
             }
             GoXLRCommand::SetCompressorRatio(ratio) => {
                 self.mic_profile.set_compressor_ratio(ratio);
@@ -1017,7 +1011,12 @@ impl<'a, T: UsbContext> Device<'a, T> {
             }
             GoXLRCommand::LoadProfile(profile_name) => {
                 let profile_directory = self.settings.get_profile_directory().await;
-                self.profile = ProfileAdapter::from_named(profile_name, vec![&profile_directory])?;
+                let distrib_path = Path::new(DISTRIBUTABLE_PROFILES);
+
+                self.profile = ProfileAdapter::from_named(
+                    profile_name,
+                    vec![&profile_directory, distrib_path],
+                )?;
                 self.apply_profile()?;
                 self.settings
                     .set_device_profile_name(self.serial(), self.profile.name())
@@ -1386,16 +1385,6 @@ impl<'a, T: UsbContext> Device<'a, T> {
         Ok(())
     }
 
-    fn get_bleep_volume(&self) -> i8 {
-        // This should be fast, block on the request..
-        let value = block_on(self.settings.get_device_bleep_volume(self.serial()));
-
-        if let Some(bleep) = value {
-            return bleep;
-        }
-        -14
-    }
-
     fn load_colour_map(&mut self) -> Result<()> {
         // The new colour format occurred on different firmware versions depending on device,
         // so do the check here.
@@ -1481,11 +1470,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
     fn apply_mic_params(&mut self, params: HashSet<MicrophoneParamKey>) -> Result<()> {
         let mut vec = Vec::new();
         for param in params {
-            vec.push((
-                param,
-                self.mic_profile
-                    .get_param_value(param, self.serial(), self.settings),
-            ));
+            vec.push((param, self.mic_profile.get_param_value(param)));
         }
         self.goxlr.set_mic_param(vec.as_slice())?;
         Ok(())
@@ -1496,12 +1481,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
         for effect in params {
             vec.push((
                 effect,
-                self.mic_profile.get_effect_value(
-                    effect,
-                    self.serial(),
-                    self.settings,
-                    self.profile(),
-                ),
+                self.mic_profile.get_effect_value(effect, self.profile()),
             ));
         }
 

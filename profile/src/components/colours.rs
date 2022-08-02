@@ -169,7 +169,7 @@ impl ColourMap {
             for i in 0..3 {
                 if let Some(Some(colour)) = vector.get(i) {
                     key = format!("{}colour{}", self.prefix, i);
-                    attributes.insert(key, colour.to_rgba());
+                    attributes.insert(key, colour.to_argb());
                 }
             }
         }
@@ -341,32 +341,29 @@ pub struct Colour {
 }
 
 impl Colour {
-    pub fn new(rgba: &str) -> Result<Self, ParseError> {
-        // I'm pretty sure now that this is actually wrong, I'll need to do more profile tests to
-        // confirm, but I'm relatively sure the config format is ARGB and not RGBA, but because
-        // the ordering is correct despite naming being wrong, it works.
+    pub fn new(argb: &str) -> Result<Self, ParseError> {
+        // So, the profile stores colours as ARGB, and not RGBA, parse as such!
         Ok(Self {
-            red: u8::from_str_radix(&rgba[0..2], 16)?,
-            green: u8::from_str_radix(&rgba[2..4], 16)?,
-            blue: u8::from_str_radix(&rgba[4..6], 16)?,
-            alpha: u8::from_str_radix(&rgba[6..8], 16)?,
+            alpha: u8::from_str_radix(&argb[0..2], 16)?,
+            red: u8::from_str_radix(&argb[2..4], 16)?,
+            green: u8::from_str_radix(&argb[4..6], 16)?,
+            blue: u8::from_str_radix(&argb[6..8], 16)?,
         })
     }
 
-    // Until I test and fix the above issue, this methods creates based on an RGBA.
     pub fn fromrgb(rgb: &str) -> Result<Self, ParseError> {
         Ok(Self {
-            red: u8::from_str_radix("00", 16)?,
-            green: u8::from_str_radix(&rgb[0..2], 16)?,
-            blue: u8::from_str_radix(&rgb[2..4], 16)?,
-            alpha: u8::from_str_radix(&rgb[4..6], 16)?,
+            red: u8::from_str_radix(&rgb[0..2], 16)?,
+            green: u8::from_str_radix(&rgb[2..4], 16)?,
+            blue: u8::from_str_radix(&rgb[4..6], 16)?,
+            alpha: u8::from_str_radix("FF", 16)?,
         })
     }
 
-    pub fn to_rgba(&self) -> String {
+    pub fn to_argb(&self) -> String {
         return format!(
             "{:02X}{:02X}{:02X}{:02X}",
-            self.red, self.green, self.blue, self.alpha
+            self.alpha, self.red, self.green, self.blue
         );
     }
 
@@ -375,6 +372,6 @@ impl Colour {
     }
 
     pub fn to_reverse_bytes(&self) -> [u8; 4] {
-        [self.alpha, self.blue, self.green, self.red]
+        [self.blue, self.green, self.red, self.alpha]
     }
 }

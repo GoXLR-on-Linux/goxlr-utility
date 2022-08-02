@@ -22,6 +22,9 @@ pub struct MicProfileSettings {
     compressor: Compressor,
     gate: Gate,
     deess: u8,
+    bleep_level: i8,
+    gate_mode: u8,
+    comp_select: u8,
     mic_setup: MicSetup,
     ui_setup: UiSetup,
 }
@@ -35,6 +38,9 @@ impl MicProfileSettings {
         let mut compressor = Compressor::new();
         let mut gate = Gate::new();
         let mut deess = 0;
+        let mut bleep_level = -20;
+        let mut gate_mode = 2;
+        let mut comp_select = 1;
         let mut mic_setup = MicSetup::new();
         let mut ui_setup = UiSetup::new();
 
@@ -56,7 +62,19 @@ impl MicProfileSettings {
                         for attr in &attributes {
                             if attr.name.local_name == "MIC_DEESS_AMOUNT" {
                                 deess = attr.value.parse::<c_float>()? as u8;
-                                break;
+                                continue;
+                            }
+                            if attr.name.local_name == "BLEEP_LEVEL" {
+                                bleep_level = attr.value.parse::<c_float>()? as i8;
+                                continue;
+                            }
+                            if attr.name.local_name == "MIC_COMP_SELECT" {
+                                comp_select = attr.value.parse::<c_float>()? as u8;
+                                continue;
+                            }
+                            if attr.name.local_name == "MIC_GATE_MODE" {
+                                gate_mode = attr.value.parse::<c_float>()? as u8;
+                                continue;
                             }
                         }
 
@@ -93,6 +111,9 @@ impl MicProfileSettings {
             compressor,
             gate,
             deess,
+            bleep_level,
+            gate_mode,
+            comp_select,
             mic_setup,
             ui_setup,
         })
@@ -124,6 +145,12 @@ impl MicProfileSettings {
         self.compressor.write_compressor(&mut attributes);
         self.gate.write_gate(&mut attributes);
         attributes.insert("MIC_DEESS_AMOUNT".to_string(), format!("{}", self.deess));
+        attributes.insert(
+            "MIC_COMP_SELECT".to_string(),
+            format!("{}", self.comp_select),
+        );
+        attributes.insert("BLEEP_LEVEL".to_string(), format!("{}", self.bleep_level));
+        attributes.insert("MIC_GATE_MODE".to_string(), format!("{}", self.gate_mode));
 
         let mut element: StartElementBuilder = XmlWriterEvent::start_element("dspTreeMicProfile");
         for (key, value) in &attributes {
@@ -175,8 +202,28 @@ impl MicProfileSettings {
     pub fn deess(&self) -> u8 {
         self.deess
     }
-
     pub fn set_deess(&mut self, deess: u8) {
         self.deess = deess;
+    }
+
+    pub fn bleep_level(&self) -> i8 {
+        self.bleep_level
+    }
+    pub fn set_bleep_level(&mut self, bleep_level: i8) {
+        self.bleep_level = bleep_level;
+    }
+
+    pub fn gate_mode(&self) -> u8 {
+        self.gate_mode
+    }
+    pub fn set_gate_mode(&mut self, gate_mode: u8) {
+        self.gate_mode = gate_mode;
+    }
+
+    pub fn comp_select(&self) -> u8 {
+        self.comp_select
+    }
+    pub fn set_comp_select(&mut self, comp_select: u8) {
+        self.comp_select = comp_select;
     }
 }

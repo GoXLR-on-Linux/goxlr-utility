@@ -88,12 +88,11 @@ impl SampleBase {
 
         // Pull out any 'extra' attributes which may be useful..
         if let Some(value) = map.get("playbackMode") {
-            sample_stack.playback_mode =
-                Option::Some(PlaybackMode::from_usize(value.parse::<usize>()?));
+            sample_stack.playback_mode = Some(PlaybackMode::from_usize(value.parse::<usize>()?));
         }
 
         if let Some(value) = map.get("playOrder") {
-            sample_stack.play_order = Option::Some(PlayOrder::from_usize(value.parse::<usize>()?));
+            sample_stack.play_order = Some(PlayOrder::from_usize(value.parse::<usize>()?));
         }
 
         // Ok, somewhere in here we should have a key that tells us how many tracks are configured..
@@ -265,13 +264,18 @@ impl SampleStack {
 #[derive(Debug)]
 struct Track {
     track: String,
-    start_position: u8,
-    end_position: u8,
+    start_position: f32,
+    end_position: f32,
     normalized_gain: f64,
 }
 
 impl Track {
-    pub fn new(track: String, start_position: u8, end_position: u8, normalized_gain: f64) -> Self {
+    pub fn new(
+        track: String,
+        start_position: f32,
+        end_position: f32,
+        normalized_gain: f64,
+    ) -> Self {
         Self {
             track,
             start_position,

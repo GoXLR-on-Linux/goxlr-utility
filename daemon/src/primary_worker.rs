@@ -1,4 +1,5 @@
 use crate::device::Device;
+use crate::files::create_path;
 use crate::{FileManager, SettingsHandle, Shutdown};
 use anyhow::{anyhow, Result};
 use goxlr_ipc::{
@@ -8,7 +9,7 @@ use goxlr_ipc::{
 use goxlr_usb::goxlr::{GoXLR, PID_GOXLR_FULL, PID_GOXLR_MINI, VID_GOXLR};
 use goxlr_usb::rusb;
 use goxlr_usb::rusb::{DeviceDescriptor, GlobalContext};
-use log::{error, info};
+use log::{error, info, warn};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use tokio::sync::{mpsc, oneshot};
@@ -39,6 +40,19 @@ pub async fn handle_changes(
     let sleep_duration = Duration::from_millis(100);
     let mut devices = HashMap::new();
     let mut ignore_list = HashMap::new();
+
+    // Attempt to create the needed paths..
+    if let Err(error) = create_path(&settings.get_profile_directory().await) {
+        warn!("Unable to create profile directory: {}", error);
+    }
+
+    if let Err(error) = create_path(&settings.get_mic_profile_directory().await) {
+        warn!("Unable to create mic profile directory: {}", error);
+    }
+
+    if let Err(error) = create_path(&settings.get_samples_directory().await) {
+        warn!("Unable to create samples directory: {}", error);
+    }
 
     loop {
         tokio::select! {

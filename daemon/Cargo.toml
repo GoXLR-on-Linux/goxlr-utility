@@ -1,6 +1,6 @@
 [package]
 name = "goxlr-daemon"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 authors = ["Nathan Adams <dinnerbone@dinnerbone.com>", "Craig McLure <craig@mclure.net>", "Lars Mühlbauer <lm41@dismail.de>"]
 description = "Allows control of a TC-Helicon GoXLR or GoXLR Mini, by maintaining an interaction with it over USB in the background."
@@ -42,15 +42,6 @@ clap = { version = "3.0.0", features = ["derive"] }
 clap_complete = "3.0.0"
 directories = "4.0"
 
-# Enable debugging symbols, and disable optimisation..
-[profile.dev]
-opt-level = 0
-debug = true
-
-[profile.release]
-opt-level = 3
-debug = false
-
 [package.metadata.deb]
 name = "goxlr-utility"
 assets = [
@@ -63,9 +54,42 @@ assets = [
     ["../deployment/deb/goxlr-daemon.bash", "usr/share/bash-completion/completions/", "644"],
     ["../deployment/deb/goxlr-daemon.fish", "usr/share/fish/vendor_completions.d/", "644"],
     ["../deployment/deb/_goxlr-daemon", "usr/share/zsh/vendor-completions/", "644"],
+
+    ["../ci/distrib/profiles/Default - Red.goxlr", "usr/share/goxlr/profiles/", "644"],
+    ["../ci/distrib/profiles/Default - Teal Blue.goxlr", "usr/share/goxlr/profiles/", "644"],
+    ["../ci/distrib/profiles/Default - Vaporwave.goxlr", "usr/share/goxlr/profiles/", "644"],
+    ["../ci/distrib/profiles/Sleep.goxlr", "usr/share/goxlr/profiles/", "644"],
 ]
+maintainer-scripts = "../ci/distrib/DEBIAN/"
 section = "sound"
 priority = "optional"
+depends = "libusb-1.0-0,$auto"
 extended-description = """\
 A utility for monitoring and controlling a TC-Helicon GoXLR or GoXLR Mini.
+"""
+
+## cargo generate-rpm support..
+[package.metadata.generate-rpm]
+name = "goxlr-utility"
+assets = [
+    { source = "../target/release/goxlr-daemon", dest = "/usr/bin/goxlr-daemon", mode = "0755" },
+    { source = "../target/release/goxlr-client", dest = "/usr/bin/goxlr-client", mode = "0755" },
+    { source = "../50-goxlr.rules", dest = "/etc/udev/rules.d/50-goxlr.rules", mode = "0644" },
+    { source = "../deployment/deb/goxlr-client.bash", dest = "/usr/share/bash-completion/completions/goxlr-client.bash", mode = "0644" },
+    { source = "../deployment/deb/goxlr-client.fish", dest = "/usr/share/fish/vendor_completions.d/goxlr-client.fish", mode = "0644" },
+    { source = "../deployment/deb/_goxlr-client", dest = "/usr/share/zsh/vendor-completions/_goxlr-client", mode = "0644" },
+    { source = "../deployment/deb/goxlr-daemon.bash", dest = "/usr/share/bash-completion/completions/goxlr-daemon.bash", mode = "0644" },
+    { source = "../deployment/deb/goxlr-daemon.fish", dest = "/usr/share/fish/vendor_completions.d/goxlr-daemon.fish", mode = "0644" },
+    { source = "../deployment/deb/_goxlr-daemon", dest = "/usr/share/zsh/vendor-completions/_goxlr-daemon", mode = "0644" },
+
+    { source = "../ci/distrib/profiles/Default - Red.goxlr", dest = "/usr/share/goxlr/profiles/Default - Red.goxlr", mode = "0644" },
+    { source = "../ci/distrib/profiles/Default - Teal Blue.goxlr", dest = "/usr/share/goxlr/profiles/Default - Teal Blue.goxlr", mode = "0644" },
+    { source = "../ci/distrib/profiles/Default - Vaporwave.goxlr", dest = "/usr/share/goxlr/profiles/Default - Vaporwave.goxlr", mode = "0644" },
+    { source = "../ci/distrib/profiles/Sleep.goxlr", dest = "/usr/share/goxlr/profiles/Sleep.goxlr", mode = "0644" }
+]
+
+# Tiny scriptlet, should reload udevadm.
+post_install_script = """
+udevadm control --reload-rules
+echo "You may need to replug your GoXLR before running the Daemon"
 """
