@@ -24,7 +24,11 @@ please let us know!
 
 If you require the utility to run on an unsupported platform, jump to Manual Compilation below.
 
+# Usage
 ## Running the daemon
+The daemon is the 'brains' of the project, it's responsible for handling profiles, button presses, configuration and
+other changes. As such, it needs to be running at all times for the GoXLR to function.
+
 You can start the daemon by executing `goxlr-daemon`. The daemon has a couple of possible command line parameters which
 can be viewed using `goxlr-daemon --help`.
 
