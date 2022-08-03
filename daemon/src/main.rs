@@ -34,6 +34,7 @@ use tokio::{join, signal};
 
 // This can probably go somewhere else, but for now..
 const DISTRIBUTABLE_PROFILES: &str = "/usr/share/goxlr/profiles/";
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -54,6 +55,7 @@ async fn main() -> Result<()> {
     )])
     .context("Could not configure the logger")?;
 
+    info!("Starting GoXLR Daemon v{}", VERSION);
     let settings = SettingsHandle::load(args.config).await?;
     let listener = create_listener("/tmp/goxlr.socket").await?;
 
