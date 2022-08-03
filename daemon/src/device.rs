@@ -1,6 +1,6 @@
 use crate::audio::AudioHandler;
-use crate::mic_profile::MicProfileAdapter;
-use crate::profile::{version_newer_or_equal_to, ProfileAdapter};
+use crate::mic_profile::{MicProfileAdapter, DEFAULT_MIC_PROFILE_NAME};
+use crate::profile::{version_newer_or_equal_to, ProfileAdapter, DEFAULT_PROFILE_NAME};
 use crate::{SettingsHandle, DISTRIBUTABLE_PROFILES};
 use anyhow::{anyhow, Result};
 use enum_map::EnumMap;
@@ -62,10 +62,10 @@ impl<'a, T: UsbContext> Device<'a, T> {
 
         let profile = profile_name
             .clone()
-            .unwrap_or_else(|| "Default".to_string());
+            .unwrap_or_else(|| DEFAULT_PROFILE_NAME.to_string());
         let mic_profile = mic_profile_name
             .clone()
-            .unwrap_or_else(|| "Default".to_string());
+            .unwrap_or_else(|| DEFAULT_MIC_PROFILE_NAME.to_string());
 
         info!(
             "Configuring GoXLR{}, Profile: {}, Mic Profile: {}",
