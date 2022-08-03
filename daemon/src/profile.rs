@@ -73,6 +73,7 @@ impl ProfileAdapter {
         }
 
         if name == DEFAULT_PROFILE_NAME {
+            debug!("Loading Embedded Default Profile..");
             return Ok(ProfileAdapter::default());
         }
 
