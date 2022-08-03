@@ -5,6 +5,7 @@ use crate::microphone::equalizer_mini::EqualizerMini;
 use crate::microphone::gate::Gate;
 use crate::microphone::mic_setup::MicSetup;
 use crate::microphone::ui_setup::UiSetup;
+use log::debug;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Read, Write};
@@ -120,7 +121,7 @@ impl MicProfileSettings {
     }
 
     pub fn save(&self, path: impl AsRef<Path>) -> Result<(), SaveError> {
-        dbg!("Saving File: {}", &path.as_ref());
+        debug!("Saving File: {}", &path.as_ref().to_string_lossy());
 
         let out_file = File::create(path)?;
         self.write_to(out_file)?;

@@ -970,9 +970,11 @@ dependencies = [
 name = "goxlr-profile-loader"
 version = "0.3.0"
 dependencies = [
+ "anyhow",
  "byteorder",
  "enum-map",
  "enum-map-derive 0.8.0",
+ "log",
  "ritelinked",
  "strum",
  "thiserror",

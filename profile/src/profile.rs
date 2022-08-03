@@ -5,6 +5,7 @@ use std::process::exit;
 use std::str::FromStr;
 
 use enum_map::EnumMap;
+use log::{debug, error, warn};
 use strum::EnumProperty;
 use strum::IntoEnumIterator;
 use xml::reader::XmlEvent as XmlReaderEvent;
@@ -41,19 +42,25 @@ pub struct Profile {
 
 impl Profile {
     pub fn load<R: Read + std::io::Seek>(read: R) -> Result<Self, ParseError> {
+        debug!("Loading Profile Archive..");
+
         let mut archive = zip::ZipArchive::new(read)?;
 
         let mut scribbles: [Vec<u8>; 4] = Default::default();
 
+        debug!("Checking for Scribbles..");
         // Load the scribbles if they exist, store them in memory for later fuckery.
         for (i, scribble) in scribbles.iter_mut().enumerate() {
             let filename = format!("scribble{}.png", i + 1);
             if let Ok(mut file) = archive.by_name(filename.as_str()) {
+                debug!("Reading Scribble: {}", filename);
+
                 *scribble = vec![0; file.size() as usize];
                 file.read_exact(scribble)?;
             }
         }
 
+        debug!("Attempting to read profile.xml..");
         let settings = ProfileSettings::load(archive.by_name("profile.xml")?)?;
         Ok(Profile {
             settings,
@@ -63,7 +70,7 @@ impl Profile {
 
     // Ok, this is better.
     pub fn save(&self, path: impl AsRef<Path>) -> Result<(), SaveError> {
-        dbg!("Saving File: {}", &path.as_ref());
+        debug!("Saving File: {}", &path.as_ref().to_string_lossy());
 
         // Create a new ZipFile at the requested location
         let mut archive = zip::ZipWriter::new(File::create(path.as_ref())?);
@@ -123,6 +130,7 @@ pub struct ProfileSettings {
 
 impl ProfileSettings {
     pub fn load<R: Read>(read: R) -> Result<Self, ParseError> {
+        debug!("Preparing Structure..");
         let parser = EventReader::new(read);
 
         let mut root = RootElement::new();
@@ -160,13 +168,15 @@ impl ProfileSettings {
 
         let mut sampler_map: EnumMap<SampleButtons, Option<SampleBase>> = EnumMap::default();
 
-        let mut active_sample_button = Option::None;
+        let mut active_sample_button = None;
 
+        debug!("Parsing XML..");
         for e in parser {
             match e {
                 Ok(XmlReaderEvent::StartElement {
                     name, attributes, ..
                 }) => {
+                    debug!("Handling Tag: {}", name.local_name);
                     if name.local_name == "ValueTreeRoot" {
                         // This also handles <AppTree, due to a single shared value.
                         root.parse_root(&attributes)?;
@@ -405,7 +415,7 @@ impl ProfileSettings {
                     if name.local_name == "sampleTopLeft" {
                         let mut sampler = SampleBase::new("sampleTopLeft".to_string());
                         sampler.parse_sample_root(&attributes)?;
-                        sampler_map[TopLeft] = Option::Some(sampler);
+                        sampler_map[TopLeft] = Some(sampler);
                         active_sample_button = sampler_map[TopLeft].as_mut();
                         continue;
                     }
@@ -413,7 +423,7 @@ impl ProfileSettings {
                     if name.local_name == "sampleTopRight" {
                         let mut sampler = SampleBase::new("sampleTopRight".to_string());
                         sampler.parse_sample_root(&attributes)?;
-                        sampler_map[TopRight] = Option::Some(sampler);
+                        sampler_map[TopRight] = Some(sampler);
                         active_sample_button = sampler_map[TopRight].as_mut();
                         continue;
                     }
@@ -421,7 +431,7 @@ impl ProfileSettings {
                     if name.local_name == "sampleBottomLeft" {
                         let mut sampler = SampleBase::new("sampleBottomLeft".to_string());
                         sampler.parse_sample_root(&attributes)?;
-                        sampler_map[BottomLeft] = Option::Some(sampler);
+                        sampler_map[BottomLeft] = Some(sampler);
                         active_sample_button = sampler_map[BottomLeft].as_mut();
                         continue;
                     }
@@ -429,7 +439,7 @@ impl ProfileSettings {
                     if name.local_name == "sampleBottomRight" {
                         let mut sampler = SampleBase::new("sampleBottomRight".to_string());
                         sampler.parse_sample_root(&attributes)?;
-                        sampler_map[BottomRight] = Option::Some(sampler);
+                        sampler_map[BottomRight] = Some(sampler);
                         active_sample_button = sampler_map[BottomRight].as_mut();
                         continue;
                     }
@@ -437,7 +447,7 @@ impl ProfileSettings {
                     if name.local_name == "sampleClear" {
                         let mut sampler = SampleBase::new("sampleClear".to_string());
                         sampler.parse_sample_root(&attributes)?;
-                        sampler_map[Clear] = Option::Some(sampler);
+                        sampler_map[Clear] = Some(sampler);
                         active_sample_button = sampler_map[Clear].as_mut();
                         continue;
                     }
@@ -471,7 +481,7 @@ impl ProfileSettings {
                         continue;
                     }
 
-                    println!("Unhandled Tag: {}", name.local_name);
+                    warn!("Unhandled Tag: {}", name.local_name);
                 }
 
                 Ok(XmlReaderEvent::EndElement { name }) => {
@@ -483,11 +493,11 @@ impl ProfileSettings {
                         || name.local_name == "sampleBottomRight"
                         || name.local_name == "sampleClear"
                     {
-                        active_sample_button = Option::None;
+                        active_sample_button = None;
                     }
                 }
                 Err(e) => {
-                    println!("Error: {}", e);
+                    error!("Error: {}", e);
                     break;
                 }
                 _ => {}
@@ -523,7 +533,6 @@ impl ProfileSettings {
 
     pub fn write_to<W: Write>(&self, mut sink: W) -> Result<(), xml::writer::Error> {
         // Create the file, and the writer..
-
         let mut writer = EmitterConfig::new()
             .perform_indent(true)
             .write_document_declaration(true)
