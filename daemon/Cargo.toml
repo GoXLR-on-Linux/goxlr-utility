@@ -87,9 +87,14 @@ assets = [
     { source = "../ci/distrib/profiles/Default - Vaporwave.goxlr", dest = "/usr/share/goxlr/profiles/Default - Vaporwave.goxlr", mode = "0644" },
     { source = "../ci/distrib/profiles/Sleep.goxlr", dest = "/usr/share/goxlr/profiles/Sleep.goxlr", mode = "0644" }
 ]
+auto-req = "no"
 
 # Tiny scriptlet, should reload udevadm.
 post_install_script = """
 udevadm control --reload-rules
 echo "You may need to replug your GoXLR before running the Daemon"
 """
+
+[package.metadata.generate-rpm.requires]
+bzip2 = "*"
+libusb = "*"
