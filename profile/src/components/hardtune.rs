@@ -80,11 +80,7 @@ impl HardtuneEffectBase {
         let mut preset = HardTuneEffect::new();
         for attr in attributes {
             if attr.name.local_name == "hardtuneEffectstate" {
-                if attr.value == "1" {
-                    preset.state = true;
-                } else {
-                    preset.state = false
-                }
+                preset.state = matches!(attr.value.as_str(), "1");
                 continue;
             }
             if attr.name.local_name == "HARDTUNE_STYLE" {
