@@ -8,6 +8,8 @@ use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
+use anyhow::Result;
+
 use crate::components::colours::ColourMap;
 
 #[derive(thiserror::Error, Debug)]
@@ -51,7 +53,7 @@ impl MuteButton {
         }
     }
 
-    pub fn parse_button(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
+    pub fn parse_button(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
         for attr in attributes {
             if attr.name.local_name.ends_with("Function") {
                 let mut found = false;
@@ -84,9 +86,9 @@ impl MuteButton {
 
             if attr.name.local_name == "fromMuteAllFlag" {
                 if attr.value == "0" {
-                    self.from_mute_all = Option::Some(false);
+                    self.from_mute_all = Some(false);
                 } else {
-                    self.from_mute_all = Option::Some(true);
+                    self.from_mute_all = Some(true);
                 }
                 continue;
             }
@@ -100,10 +102,7 @@ impl MuteButton {
         Ok(())
     }
 
-    pub fn write_button<W: Write>(
-        &self,
-        writer: &mut EventWriter<&mut W>,
-    ) -> Result<(), xml::writer::Error> {
+    pub fn write_button<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
         let mut element: StartElementBuilder =
             XmlWriterEvent::start_element(self.element_name.as_str());
 
@@ -138,7 +137,6 @@ impl MuteButton {
     pub fn colour_map_mut(&mut self) -> &mut ColourMap {
         &mut self.colour_map
     }
-
     pub fn colour_map(&self) -> &ColourMap {
         &self.colour_map
     }
@@ -146,13 +144,13 @@ impl MuteButton {
     pub fn mute_function(&self) -> &MuteFunction {
         &self.mute_function
     }
-
     pub fn set_mute_function(&mut self, mute_function: MuteFunction) {
         self.mute_function = mute_function;
     }
 
-    pub fn set_previous_volume(&mut self, previous_volume: u8) {
+    pub fn set_previous_volume(&mut self, previous_volume: u8) -> Result<()> {
         self.previous_volume = previous_volume;
+        Ok(())
     }
     pub fn previous_volume(&self) -> u8 {
         self.previous_volume

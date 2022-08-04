@@ -9,6 +9,8 @@ use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
+use anyhow::Result;
+
 use crate::components::colours::ColourMap;
 use crate::components::megaphone::MegaphoneStyle::Megaphone;
 use crate::components::megaphone::Preset::{Preset1, Preset2, Preset3, Preset4, Preset5, Preset6};
@@ -49,10 +51,7 @@ impl MegaphoneEffectBase {
         }
     }
 
-    pub fn parse_megaphone_root(
-        &mut self,
-        attributes: &[OwnedAttribute],
-    ) -> Result<(), ParseError> {
+    pub fn parse_megaphone_root(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
         for attr in attributes {
             if !self.colour_map.read_colours(attr)? {
                 println!("[megaphoneEffect] Unparsed Attribute: {}", attr.name);
@@ -62,11 +61,7 @@ impl MegaphoneEffectBase {
         Ok(())
     }
 
-    pub fn parse_megaphone_preset(
-        &mut self,
-        id: u8,
-        attributes: &[OwnedAttribute],
-    ) -> Result<(), ParseError> {
+    pub fn parse_megaphone_preset(&mut self, id: u8, attributes: &[OwnedAttribute]) -> Result<()> {
         let mut preset = MegaphoneEffect::new();
         for attr in attributes {
             if attr.name.local_name == "megaphoneEffectstate" {
@@ -174,10 +169,7 @@ impl MegaphoneEffectBase {
         Ok(())
     }
 
-    pub fn write_megaphone<W: Write>(
-        &self,
-        writer: &mut EventWriter<&mut W>,
-    ) -> Result<(), xml::writer::Error> {
+    pub fn write_megaphone<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
         let mut element: StartElementBuilder = XmlWriterEvent::start_element("megaphoneEffect");
 
         let mut attributes: HashMap<String, String> = HashMap::default();
@@ -329,7 +321,7 @@ impl MegaphoneEffect {
     pub fn new() -> Self {
         Self {
             state: false,
-            style: MegaphoneStyle::Megaphone,
+            style: Megaphone,
             trans_dist_amt: 0,
             trans_hp: 0,
             trans_lp: 0,

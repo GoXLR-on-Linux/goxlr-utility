@@ -6,6 +6,8 @@ use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
+use anyhow::Result;
+
 use enum_map::Enum;
 use strum::{Display, EnumIter, EnumString};
 
@@ -46,7 +48,7 @@ impl SimpleElement {
         }
     }
 
-    pub fn parse_simple(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
+    pub fn parse_simple(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
         for attr in attributes {
             if !self.colour_map.read_colours(attr)? {
                 println!("[{}] Unparsed Attribute: {}", self.element_name, attr.name);
@@ -56,10 +58,7 @@ impl SimpleElement {
         Ok(())
     }
 
-    pub fn write_simple<W: Write>(
-        &self,
-        writer: &mut EventWriter<&mut W>,
-    ) -> Result<(), xml::writer::Error> {
+    pub fn write_simple<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
         let mut element: StartElementBuilder =
             XmlWriterEvent::start_element(self.element_name.as_str());
 
@@ -79,12 +78,11 @@ impl SimpleElement {
         &self.element_name
     }
 
-    pub fn colour_map_mut(&mut self) -> &mut ColourMap {
-        &mut self.colour_map
-    }
-
     pub fn colour_map(&self) -> &ColourMap {
         &self.colour_map
+    }
+    pub fn colour_map_mut(&mut self) -> &mut ColourMap {
+        &mut self.colour_map
     }
 }
 

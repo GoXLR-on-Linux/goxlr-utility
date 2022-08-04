@@ -9,6 +9,8 @@ use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
+use anyhow::{anyhow, Result};
+
 use crate::components::colours::ColourMap;
 use crate::components::megaphone::Preset;
 use crate::components::megaphone::Preset::{Preset1, Preset2, Preset3, Preset4, Preset5, Preset6};
@@ -51,7 +53,7 @@ impl GenderEncoderBase {
         }
     }
 
-    pub fn parse_gender_root(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
+    pub fn parse_gender_root(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
         for attr in attributes {
             if attr.name.local_name == "active_set" {
                 self.active_set = attr.value.parse()?;
@@ -213,8 +215,13 @@ impl GenderEncoder {
         self.knob_position
     }
 
-    pub fn set_knob_position(&mut self, knob_position: i8) {
+    pub fn set_knob_position(&mut self, knob_position: i8) -> Result<()> {
+        if !(-24..=24).contains(&knob_position) {
+            return Err(anyhow!("Gender Knob Position should be between -24 and 24"));
+        }
+
         self.knob_position = knob_position;
+        Ok(())
     }
 
     pub fn style(&self) -> &GenderStyle {

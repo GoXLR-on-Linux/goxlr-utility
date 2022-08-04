@@ -1,3 +1,4 @@
+use anyhow::{anyhow, Result};
 use std::collections::HashMap;
 use std::os::raw::c_float;
 use xml::attribute::OwnedAttribute;
@@ -40,7 +41,7 @@ impl Gate {
         }
     }
 
-    pub fn parse_gate(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
+    pub fn parse_gate(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
         for attr in attributes {
             if attr.name.local_name == "MIC_GATE_MACRO_AMOUNT" {
                 self.amount = attr.value.parse::<c_float>()? as u8;
@@ -48,32 +49,32 @@ impl Gate {
             }
 
             if attr.name.local_name == "MIC_GATE_THRESOLD" {
-                self.threshold = attr.value.parse::<c_float>()? as i8;
+                self.set_threshold(attr.value.parse::<c_float>()? as i8)?;
                 continue;
             }
 
             if attr.name.local_name == "MIC_GATE_ATTACK" {
-                self.attack = attr.value.parse::<c_float>()? as u8;
+                self.set_attack(attr.value.parse::<c_float>()? as u8)?;
                 continue;
             }
 
             if attr.name.local_name == "MIC_GATE_RELEASE" {
-                self.release = attr.value.parse::<c_float>()? as u8;
-                continue;
-            }
-
-            if attr.name.local_name == "MIC_GATE_ENABLE" {
-                if attr.value == "0" {
-                    self.enabled = false;
-                } else {
-                    self.enabled = true;
-                }
+                self.set_release(attr.value.parse::<c_float>()? as u8)?;
                 continue;
             }
 
             // Read and handle as a percentage.
             if attr.name.local_name == "MIC_GATE_ATTEN" {
-                self.attenuation = attr.value.parse::<c_float>()? as u8;
+                self.set_attenuation(attr.value.parse::<c_float>()? as u8)?;
+                continue;
+            }
+
+            if attr.name.local_name == "MIC_GATE_ENABLE" {
+                if attr.value == "0" {
+                    self.set_enabled(false)?;
+                } else {
+                    self.set_enabled(true)?;
+                }
                 continue;
             }
         }
@@ -122,22 +123,42 @@ impl Gate {
         self.attenuation
     }
 
-    pub fn set_amount(&mut self, amount: u8) {
+    pub fn set_amount(&mut self, amount: u8) -> Result<()> {
+        // TODO: Is amount actually amount? O_o
         self.amount = amount;
+        Ok(())
     }
-    pub fn set_threshold(&mut self, threshold: i8) {
+    pub fn set_threshold(&mut self, threshold: i8) -> Result<()> {
+        if !(-59..=0).contains(&threshold) {
+            return Err(anyhow!("Gate Threshold must be between -59 and 0"));
+        }
         self.threshold = threshold;
+        Ok(())
     }
-    pub fn set_attack(&mut self, attack: u8) {
+    pub fn set_attack(&mut self, attack: u8) -> Result<()> {
+        if attack > 45 {
+            return Err(anyhow!("Gate Attack must be 45 or less"));
+        }
         self.attack = attack;
+        Ok(())
     }
-    pub fn set_release(&mut self, release: u8) {
+    pub fn set_release(&mut self, release: u8) -> Result<()> {
+        if release > 45 {
+            return Err(anyhow!("Gate Release must be 45 or less"));
+        }
+
         self.release = release;
+        Ok(())
     }
-    pub fn set_enabled(&mut self, enabled: bool) {
+    pub fn set_enabled(&mut self, enabled: bool) -> Result<()> {
         self.enabled = enabled;
+        Ok(())
     }
-    pub fn set_attenuation(&mut self, attenuation: u8) {
+    pub fn set_attenuation(&mut self, attenuation: u8) -> Result<()> {
+        if attenuation > 100 {
+            return Err(anyhow!("Gate Attenuation must be a percentage"));
+        }
         self.attenuation = attenuation;
+        Ok(())
     }
 }

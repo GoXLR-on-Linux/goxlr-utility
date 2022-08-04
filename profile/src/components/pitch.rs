@@ -9,6 +9,8 @@ use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
+use anyhow::{anyhow, Result};
+
 use crate::components::colours::ColourMap;
 use crate::components::megaphone::Preset;
 use crate::components::megaphone::Preset::{Preset1, Preset2, Preset3, Preset4, Preset5, Preset6};
@@ -51,7 +53,7 @@ impl PitchEncoderBase {
         }
     }
 
-    pub fn parse_pitch_root(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
+    pub fn parse_pitch_root(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
         for attr in attributes {
             if attr.name.local_name == "active_set" {
                 self.active_set = attr.value.parse()?;
@@ -66,11 +68,7 @@ impl PitchEncoderBase {
         Ok(())
     }
 
-    pub fn parse_pitch_preset(
-        &mut self,
-        id: u8,
-        attributes: &[OwnedAttribute],
-    ) -> Result<(), ParseError> {
+    pub fn parse_pitch_preset(&mut self, id: u8, attributes: &[OwnedAttribute]) -> Result<()> {
         let mut preset = PitchEncoder::new();
         for attr in attributes {
             if attr.name.local_name == "PITCH_STYLE" {
@@ -98,7 +96,7 @@ impl PitchEncoderBase {
             }
 
             if attr.name.local_name == "PITCH_SHIFT_INST_RATIO" {
-                preset.inst_ratio = Option::Some(attr.value.parse::<c_float>()? as u8);
+                preset.inst_ratio = Some(attr.value.parse::<c_float>()? as u8);
                 continue;
             }
 
@@ -126,10 +124,7 @@ impl PitchEncoderBase {
         Ok(())
     }
 
-    pub fn write_pitch<W: Write>(
-        &self,
-        writer: &mut EventWriter<&mut W>,
-    ) -> Result<(), xml::writer::Error> {
+    pub fn write_pitch<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
         let mut element: StartElementBuilder = XmlWriterEvent::start_element("pitchEncoder");
 
         let mut attributes: HashMap<String, String> = HashMap::default();
@@ -226,8 +221,14 @@ impl PitchEncoder {
         self.knob_position
     }
 
-    pub fn set_knob_position(&mut self, knob_position: i8) {
+    pub fn set_knob_position(&mut self, knob_position: i8) -> Result<()> {
+        // This is technically settings dependant, but these are the max ranges
+        if !(-24..=24).contains(&knob_position) {
+            return Err(anyhow!("Pitch Knob Position should be between -24 and 24"));
+        }
+
         self.knob_position = knob_position;
+        Ok(())
     }
 
     pub fn style(&self) -> &PitchStyle {

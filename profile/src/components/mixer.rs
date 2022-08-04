@@ -8,6 +8,8 @@ use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
+use anyhow::Result;
+
 use crate::components::colours::ColourMap;
 
 #[derive(thiserror::Error, Debug)]
@@ -48,7 +50,7 @@ impl Mixers {
         }
     }
 
-    pub fn parse_mixers(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
+    pub fn parse_mixers(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
         for attr in attributes {
             if attr.name.local_name.ends_with("Level") {
                 let mut found = false;
@@ -111,10 +113,7 @@ impl Mixers {
         Ok(())
     }
 
-    pub fn write_mixers<W: Write>(
-        &self,
-        writer: &mut EventWriter<&mut W>,
-    ) -> Result<(), xml::writer::Error> {
+    pub fn write_mixers<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
         let mut element: StartElementBuilder = XmlWriterEvent::start_element("mixerTree");
 
         // Create the values..
@@ -164,8 +163,10 @@ impl Mixers {
         self.volume_table[channel]
     }
 
-    pub fn set_channel_volume(&mut self, channel: FullChannelList, volume: u8) {
+    pub fn set_channel_volume(&mut self, channel: FullChannelList, volume: u8) -> Result<()> {
+        // We don't need to validate this, a u8 is between 0 and 255 already :)
         self.volume_table[channel] = volume;
+        Ok(())
     }
 }
 

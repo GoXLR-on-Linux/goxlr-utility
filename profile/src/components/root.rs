@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::io::Write;
 
+use anyhow::Result;
+
 use xml::attribute::OwnedAttribute;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
@@ -48,7 +50,7 @@ impl RootElement {
         }
     }
 
-    pub fn parse_root(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
+    pub fn parse_root(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
         for attr in attributes {
             if attr.name.local_name == "version" {
                 self.version = attr.value.parse()?;
@@ -68,10 +70,7 @@ impl RootElement {
         Ok(())
     }
 
-    pub fn write_initial<W: Write>(
-        &self,
-        writer: &mut EventWriter<&mut W>,
-    ) -> Result<(), xml::writer::Error> {
+    pub fn write_initial<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
         let mut element: StartElementBuilder = XmlWriterEvent::start_element("ValueTreeRoot");
 
         // Create the hashmap of values..
@@ -90,10 +89,7 @@ impl RootElement {
         Ok(())
     }
 
-    pub fn write_final<W: Write>(
-        &self,
-        writer: &mut EventWriter<&mut W>,
-    ) -> Result<(), xml::writer::Error> {
+    pub fn write_final<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
         // The AppTree element seems to just be a tag containing the device id..
         let mut element: StartElementBuilder = XmlWriterEvent::start_element("AppTree");
 

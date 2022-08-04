@@ -6,6 +6,7 @@ use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
+use anyhow::Result;
 use strum::EnumProperty;
 
 use crate::components::colours::ColourMap;
@@ -48,7 +49,7 @@ impl Effects {
         }
     }
 
-    pub fn parse_effect(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
+    pub fn parse_effect(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
         for attr in attributes {
             if attr.name.local_name.ends_with("Name") {
                 self.name = attr.value.clone();
@@ -64,10 +65,7 @@ impl Effects {
         Ok(())
     }
 
-    pub fn write_effects<W: Write>(
-        &self,
-        writer: &mut EventWriter<&mut W>,
-    ) -> Result<(), xml::writer::Error> {
+    pub fn write_effects<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
         let mut element: StartElementBuilder =
             XmlWriterEvent::start_element(self.element_name.as_str());
 
@@ -89,7 +87,6 @@ impl Effects {
     pub fn colour_map(&self) -> &ColourMap {
         &self.colour_map
     }
-
     pub fn colour_map_mut(&mut self) -> &mut ColourMap {
         &mut self.colour_map
     }

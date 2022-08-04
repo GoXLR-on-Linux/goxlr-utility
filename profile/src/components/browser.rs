@@ -6,6 +6,8 @@ use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
+use anyhow::Result;
+
 use crate::components::colours::ColourMap;
 
 #[derive(thiserror::Error, Debug)]
@@ -53,7 +55,7 @@ impl BrowserPreviewTree {
         }
     }
 
-    pub fn parse_browser(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
+    pub fn parse_browser(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
         for attr in attributes {
             if attr.name.local_name == "playing" {
                 self.playing = attr.value.parse()?;
@@ -83,10 +85,7 @@ impl BrowserPreviewTree {
         Ok(())
     }
 
-    pub fn write_browser<W: Write>(
-        &self,
-        writer: &mut EventWriter<&mut W>,
-    ) -> Result<(), xml::writer::Error> {
+    pub fn write_browser<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
         let mut element: StartElementBuilder =
             XmlWriterEvent::start_element(self.element_name.as_str());
 

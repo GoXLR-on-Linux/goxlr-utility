@@ -9,6 +9,8 @@ use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
+use anyhow::{anyhow, Result};
+
 use crate::components::colours::ColourMap;
 use crate::components::megaphone::Preset;
 use crate::components::megaphone::Preset::{Preset1, Preset2, Preset3, Preset4, Preset5, Preset6};
@@ -52,7 +54,7 @@ impl ReverbEncoderBase {
         }
     }
 
-    pub fn parse_reverb_root(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
+    pub fn parse_reverb_root(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
         for attr in attributes {
             if attr.name.local_name == "active_set" {
                 self.active_set = attr.value.parse()?;
@@ -67,11 +69,7 @@ impl ReverbEncoderBase {
         Ok(())
     }
 
-    pub fn parse_reverb_preset(
-        &mut self,
-        id: u8,
-        attributes: &[OwnedAttribute],
-    ) -> Result<(), ParseError> {
+    pub fn parse_reverb_preset(&mut self, id: u8, attributes: &[OwnedAttribute]) -> Result<()> {
         let mut preset = ReverbEncoder::new();
         for attr in attributes {
             if attr.name.local_name == "REVERB_STYLE" {
@@ -85,7 +83,7 @@ impl ReverbEncoderBase {
             }
 
             if attr.name.local_name == "REVERB_KNOB_POSITION" {
-                preset.knob_position = attr.value.parse::<c_float>()? as i8;
+                preset.set_knob_position(attr.value.parse::<c_float>()? as i8)?;
                 continue;
             }
 
@@ -162,10 +160,7 @@ impl ReverbEncoderBase {
         Ok(())
     }
 
-    pub fn write_reverb<W: Write>(
-        &self,
-        writer: &mut EventWriter<&mut W>,
-    ) -> Result<(), xml::writer::Error> {
+    pub fn write_reverb<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
         let mut element: StartElementBuilder = XmlWriterEvent::start_element("reverbEncoder");
 
         let mut attributes: HashMap<String, String> = HashMap::default();
@@ -239,7 +234,6 @@ impl ReverbEncoderBase {
     pub fn colour_map(&self) -> &ColourMap {
         &self.colour_map
     }
-
     pub fn colour_map_mut(&mut self) -> &mut ColourMap {
         &mut self.colour_map
     }
@@ -247,7 +241,6 @@ impl ReverbEncoderBase {
     pub fn get_preset(&self, preset: Preset) -> &ReverbEncoder {
         &self.preset_map[preset]
     }
-
     pub fn get_preset_mut(&mut self, preset: Preset) -> &mut ReverbEncoder {
         &mut self.preset_map[preset]
     }
@@ -275,7 +268,7 @@ impl ReverbEncoder {
     pub fn new() -> Self {
         Self {
             knob_position: 0,
-            style: ReverbStyle::Library,
+            style: Library,
             reverb_type: 0,
             decay: 0,
             predelay: 0,
@@ -298,9 +291,13 @@ impl ReverbEncoder {
     pub fn knob_position(&self) -> i8 {
         self.knob_position
     }
+    pub fn set_knob_position(&mut self, knob_position: i8) -> Result<()> {
+        if !(0..=24).contains(&knob_position) {
+            return Err(anyhow!("Reverb Knob Position should be between 0 and 24"));
+        }
 
-    pub fn set_knob_position(&mut self, knob_position: i8) {
         self.knob_position = knob_position;
+        Ok(())
     }
 
     pub fn style(&self) -> &ReverbStyle {

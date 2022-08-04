@@ -7,6 +7,8 @@ use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
+use anyhow::Result;
+
 use crate::components::colours::ColourMap;
 use crate::components::scribble::ScribbleStyle::{Inverted, Normal};
 
@@ -70,12 +72,12 @@ impl Scribble {
             text_bottom_middle: "".to_string(),
             text_size: 0,
             alpha: 0.0,
-            style: ScribbleStyle::Normal,
+            style: Normal,
             bitmap_file: "".to_string(),
         }
     }
 
-    pub fn parse_scribble(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
+    pub fn parse_scribble(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
         for attr in attributes {
             if attr.name.local_name.ends_with("iconFile") {
                 self.icon_file = attr.value.clone();
@@ -125,10 +127,7 @@ impl Scribble {
         Ok(())
     }
 
-    pub fn write_scribble<W: Write>(
-        &self,
-        writer: &mut EventWriter<&mut W>,
-    ) -> Result<(), xml::writer::Error> {
+    pub fn write_scribble<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
         let mut element: StartElementBuilder =
             XmlWriterEvent::start_element(self.element_name.as_str());
 

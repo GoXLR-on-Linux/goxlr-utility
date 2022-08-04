@@ -1,3 +1,4 @@
+use anyhow::Result;
 use std::collections::HashMap;
 use std::io::Write;
 use xml::attribute::OwnedAttribute;
@@ -41,7 +42,7 @@ impl UiSetup {
         }
     }
 
-    pub fn parse_ui(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
+    pub fn parse_ui(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
         for attr in attributes {
             if attr.name.local_name == "eqAdvanced" {
                 if attr.value == "1" {
@@ -83,10 +84,7 @@ impl UiSetup {
         Ok(())
     }
 
-    pub fn write_ui<W: Write>(
-        &self,
-        writer: &mut EventWriter<&mut W>,
-    ) -> Result<(), xml::writer::Error> {
+    pub fn write_ui<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
         let mut element: StartElementBuilder =
             XmlWriterEvent::start_element("micProfileUIMicProfile");
 

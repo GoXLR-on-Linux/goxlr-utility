@@ -4,6 +4,7 @@ use std::path::Path;
 use std::process::exit;
 use std::str::FromStr;
 
+use anyhow::Result;
 use enum_map::EnumMap;
 use log::{debug, error, warn};
 use strum::EnumProperty;
@@ -30,7 +31,6 @@ use crate::components::root::RootElement;
 use crate::components::sample::SampleBase;
 use crate::components::scribble::Scribble;
 use crate::components::simple::{SimpleElement, SimpleElements};
-use crate::error::{ParseError, SaveError};
 use crate::SampleButtons;
 use crate::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
 
@@ -41,7 +41,7 @@ pub struct Profile {
 }
 
 impl Profile {
-    pub fn load<R: Read + std::io::Seek>(read: R) -> Result<Self, ParseError> {
+    pub fn load<R: Read + std::io::Seek>(read: R) -> Result<Self> {
         debug!("Loading Profile Archive..");
 
         let mut archive = zip::ZipArchive::new(read)?;
@@ -69,7 +69,7 @@ impl Profile {
     }
 
     // Ok, this is better.
-    pub fn save(&self, path: impl AsRef<Path>) -> Result<(), SaveError> {
+    pub fn save(&self, path: impl AsRef<Path>) -> Result<()> {
         debug!("Saving File: {}", &path.as_ref().to_string_lossy());
 
         // Create a new ZipFile at the requested location
@@ -129,7 +129,7 @@ pub struct ProfileSettings {
 }
 
 impl ProfileSettings {
-    pub fn load<R: Read>(read: R) -> Result<Self, ParseError> {
+    pub fn load<R: Read>(read: R) -> Result<Self> {
         debug!("Preparing Structure..");
         let parser = EventReader::new(read);
 
@@ -526,12 +526,12 @@ impl ProfileSettings {
         })
     }
 
-    pub fn write<P: AsRef<Path>>(&self, path: P) -> Result<(), xml::writer::Error> {
+    pub fn write<P: AsRef<Path>>(&self, path: P) -> Result<()> {
         let out_file = File::create(path)?;
         self.write_to(out_file)
     }
 
-    pub fn write_to<W: Write>(&self, mut sink: W) -> Result<(), xml::writer::Error> {
+    pub fn write_to<W: Write>(&self, mut sink: W) -> Result<()> {
         // Create the file, and the writer..
         let mut writer = EmitterConfig::new()
             .perform_indent(true)
