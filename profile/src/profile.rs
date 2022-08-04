@@ -31,8 +31,8 @@ use crate::components::root::RootElement;
 use crate::components::sample::SampleBase;
 use crate::components::scribble::Scribble;
 use crate::components::simple::{SimpleElement, SimpleElements};
-use crate::SampleButtons;
 use crate::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
+use crate::{Faders, SampleButtons};
 
 #[derive(Debug)]
 pub struct Profile {
@@ -113,10 +113,10 @@ pub struct ProfileSettings {
     mixer: Mixers,
     context: Context,
     mute_chat: MuteChat,
-    mute_buttons: Vec<MuteButton>,
-    faders: Vec<Fader>,
+    mute_buttons: EnumMap<Faders, Option<MuteButton>>,
+    faders: EnumMap<Faders, Option<Fader>>,
     effects: EnumMap<Preset, Option<Effects>>,
-    scribbles: Vec<Scribble>,
+    scribbles: EnumMap<Faders, Option<Scribble>>,
     sampler_map: EnumMap<SampleButtons, Option<SampleBase>>,
     simple_elements: EnumMap<SimpleElements, Option<SimpleElement>>,
     megaphone_effect: MegaphoneEffectBase,
@@ -140,20 +140,11 @@ impl ProfileSettings {
         let mut context = Context::new("selectedContext".to_string());
         let mut mute_chat = MuteChat::new("muteChat".to_string());
 
-        // A lot of these Vec's will need tidying up, some will work as EnumMap, or other such stuff..
-        // For now, all I'm doing is testing reading and writing, I'll do final structuing later.
-        let mut mute_buttons: Vec<MuteButton> = Vec::new();
-        mute_buttons.reserve_exact(4);
+        let mut mute_buttons: EnumMap<Faders, Option<MuteButton>> = EnumMap::default();
+        let mut faders: EnumMap<Faders, Option<Fader>> = EnumMap::default();
+        let mut scribbles: EnumMap<Faders, Option<Scribble>> = EnumMap::default();
 
-        let mut faders: Vec<Fader> = Vec::new();
-        faders.reserve_exact(4);
-
-        // let mut effects: Vec<Effects> = Vec::new();
-        // effects.reserve_exact(6);
         let mut effects: EnumMap<Preset, Option<Effects>> = EnumMap::default();
-
-        let mut scribbles: Vec<Scribble> = Vec::new();
-        scribbles.reserve_exact(4);
 
         let mut simple_elements: EnumMap<SimpleElements, Option<SimpleElement>> =
             Default::default();
@@ -228,7 +219,8 @@ impl ProfileSettings {
                         {
                             let mut mute_button = MuteButton::new(id);
                             mute_button.parse_button(&attributes)?;
-                            mute_buttons.insert(id as usize - 1, mute_button);
+                            mute_buttons[Faders::iter().nth((id - 1).into()).unwrap()] =
+                                Some(mute_button);
                             continue;
                         }
                     }
@@ -244,7 +236,7 @@ impl ProfileSettings {
                         {
                             let mut fader = Fader::new(id);
                             fader.parse_fader(&attributes)?;
-                            faders.insert(id as usize, fader);
+                            faders[Faders::iter().nth(id.into()).unwrap()] = Some(fader);
                             continue;
                         }
                     }
@@ -277,7 +269,8 @@ impl ProfileSettings {
                         {
                             let mut scribble = Scribble::new(id);
                             scribble.parse_scribble(&attributes)?;
-                            scribbles.insert(id as usize - 1, scribble);
+                            scribbles[Faders::iter().nth((id - 1).into()).unwrap()] =
+                                Some(scribble);
                             continue;
                         }
                     }
@@ -546,12 +539,16 @@ impl ProfileSettings {
         self.context.write_context(&mut writer)?;
         self.mute_chat.write_mute_chat(&mut writer)?;
 
-        for mute_button in self.mute_buttons.iter() {
-            mute_button.write_button(&mut writer)?;
+        for (_fader, mute_button) in self.mute_buttons.iter() {
+            if let Some(mute_button) = mute_button {
+                mute_button.write_button(&mut writer)?;
+            }
         }
 
-        for fader in self.faders.iter() {
-            fader.write_fader(&mut writer)?;
+        for (_fader, fader) in self.faders.iter() {
+            if let Some(fader) = fader {
+                fader.write_fader(&mut writer)?;
+            }
         }
 
         for (_key, value) in &self.effects {
@@ -560,8 +557,10 @@ impl ProfileSettings {
             }
         }
 
-        for scribble in self.scribbles.iter() {
-            scribble.write_scribble(&mut writer)?;
+        for (_fader, scribble) in self.scribbles.iter() {
+            if let Some(scribble) = scribble {
+                scribble.write_scribble(&mut writer)?;
+            }
         }
 
         self.megaphone_effect.write_megaphone(&mut writer)?;
@@ -600,40 +599,40 @@ impl ProfileSettings {
         &self.mixer
     }
 
-    pub fn faders(&mut self) -> &mut Vec<Fader> {
+    pub fn faders(&mut self) -> &mut EnumMap<Faders, Option<Fader>> {
         &mut self.faders
     }
 
-    pub fn fader_mut(&mut self, fader: usize) -> &mut Fader {
-        &mut self.faders[fader]
+    pub fn fader_mut(&mut self, fader: Faders) -> &mut Fader {
+        self.faders[fader].as_mut().unwrap()
     }
 
-    pub fn fader(&self, fader: usize) -> &Fader {
-        &self.faders[fader]
+    pub fn fader(&self, fader: Faders) -> &Fader {
+        self.faders[fader].as_ref().unwrap()
     }
 
-    pub fn mute_buttons(&mut self) -> &mut Vec<MuteButton> {
+    pub fn mute_buttons(&mut self) -> &mut EnumMap<Faders, Option<MuteButton>> {
         &mut self.mute_buttons
     }
 
-    pub fn mute_button_mut(&mut self, index: usize) -> &mut MuteButton {
-        &mut self.mute_buttons[index]
+    pub fn mute_button_mut(&mut self, fader: Faders) -> &mut MuteButton {
+        self.mute_buttons[fader].as_mut().unwrap()
     }
 
-    pub fn mute_button(&self, index: usize) -> &MuteButton {
-        &self.mute_buttons[index]
+    pub fn mute_button(&self, fader: Faders) -> &MuteButton {
+        self.mute_buttons[fader].as_ref().unwrap()
     }
 
-    pub fn scribbles(&mut self) -> &mut Vec<Scribble> {
+    pub fn scribbles(&mut self) -> &mut EnumMap<Faders, Option<Scribble>> {
         &mut self.scribbles
     }
 
-    pub fn scribble(&self, index: usize) -> &Scribble {
-        &self.scribbles[index]
+    pub fn scribble(&self, fader: Faders) -> &Scribble {
+        &self.scribbles[fader].as_ref().unwrap()
     }
 
-    pub fn scribble_mut(&mut self, index: usize) -> &mut Scribble {
-        &mut self.scribbles[index]
+    pub fn scribble_mut(&mut self, fader: Faders) -> &mut Scribble {
+        self.scribbles[fader].as_mut().unwrap()
     }
 
     pub fn effects(&self, effect: Preset) -> &Effects {

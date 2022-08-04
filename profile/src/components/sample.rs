@@ -257,18 +257,13 @@ impl SampleStack {
 #[derive(Debug)]
 struct Track {
     track: String,
-    start_position: f32,
-    end_position: f32,
+    start_position: u8,
+    end_position: u8,
     normalized_gain: f64,
 }
 
 impl Track {
-    pub fn new(
-        track: String,
-        start_position: f32,
-        end_position: f32,
-        normalized_gain: f64,
-    ) -> Self {
+    pub fn new(track: String, start_position: u8, end_position: u8, normalized_gain: f64) -> Self {
         Self {
             track,
             start_position,
