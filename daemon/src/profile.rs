@@ -19,8 +19,8 @@ use goxlr_profile_loader::components::robot::RobotEffect;
 use goxlr_profile_loader::components::sample::SampleBank;
 use goxlr_profile_loader::components::simple::SimpleElements;
 use goxlr_profile_loader::profile::{Profile, ProfileSettings};
-use goxlr_profile_loader::SampleButtons;
 use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
+use goxlr_profile_loader::{Faders, SampleButtons};
 use goxlr_types::{
     ButtonColourGroups, ButtonColourOffStyle as BasicColourOffStyle, ButtonColourTargets,
     ChannelName, EffectBankPresets, FaderDisplayStyle as BasicColourDisplay, FaderName,
@@ -194,27 +194,30 @@ impl ProfileAdapter {
     }
 
     pub fn get_fader_assignment(&self, fader: FaderName) -> ChannelName {
-        let fader = self.profile.settings().fader(fader as usize);
+        let fader = self
+            .profile
+            .settings()
+            .fader(standard_to_profile_fader(fader));
         profile_to_standard_channel(fader.channel())
     }
 
     pub fn set_fader_assignment(&mut self, fader: FaderName, channel: ChannelName) {
         self.profile
             .settings_mut()
-            .fader_mut(fader as usize)
+            .fader_mut(standard_to_profile_fader(fader))
             .set_channel(standard_to_profile_channel(channel));
     }
 
     pub fn switch_fader_assignment(&mut self, fader_one: FaderName, fader_two: FaderName) {
         // TODO: Scribble?
-        self.profile
-            .settings_mut()
-            .faders()
-            .swap(fader_one as usize, fader_two as usize);
-        self.profile
-            .settings_mut()
-            .mute_buttons()
-            .swap(fader_one as usize, fader_two as usize);
+        self.profile.settings_mut().faders().swap(
+            standard_to_profile_fader(fader_one),
+            standard_to_profile_fader(fader_two),
+        );
+        self.profile.settings_mut().mute_buttons().swap(
+            standard_to_profile_fader(fader_one),
+            standard_to_profile_fader(fader_two),
+        );
     }
 
     pub fn set_fader_display(
@@ -225,7 +228,7 @@ impl ProfileAdapter {
         let colours = self
             .profile
             .settings_mut()
-            .fader_mut(fader as usize)
+            .fader_mut(standard_to_profile_fader(fader))
             .colour_map_mut();
         colours.set_fader_display(standard_to_profile_fader_display(display))
     }
@@ -240,7 +243,7 @@ impl ProfileAdapter {
         let colours = self
             .profile
             .settings_mut()
-            .fader_mut(fader as usize)
+            .fader_mut(standard_to_profile_fader(fader))
             .colour_map_mut();
         colours.set_colour(0, Colour::fromrgb(top.as_str())?)?;
         colours.set_colour(1, Colour::fromrgb(bottom.as_str())?)?;
@@ -392,11 +395,15 @@ impl ProfileAdapter {
 
     /** Regular Mute button handlers */
     fn get_mute_button(&self, fader: FaderName) -> &MuteButton {
-        self.profile.settings().mute_button(fader as usize)
+        self.profile
+            .settings()
+            .mute_button(standard_to_profile_fader(fader))
     }
 
     fn get_mute_button_mut(&mut self, fader: FaderName) -> &mut MuteButton {
-        self.profile.settings_mut().mute_button_mut(fader as usize)
+        self.profile
+            .settings_mut()
+            .mute_button_mut(standard_to_profile_fader(fader))
     }
 
     pub fn get_mute_button_behaviour(&self, fader: FaderName) -> BasicMuteFunction {
@@ -563,7 +570,7 @@ impl ProfileAdapter {
     pub fn is_fader_gradient(&self, fader: FaderName) -> bool {
         self.profile
             .settings()
-            .fader(fader as usize)
+            .fader(standard_to_profile_fader(fader))
             .colour_map()
             .is_fader_gradient()
     }
@@ -571,7 +578,7 @@ impl ProfileAdapter {
     pub fn is_fader_meter(&self, fader: FaderName) -> bool {
         self.profile
             .settings()
-            .fader(fader as usize)
+            .fader(standard_to_profile_fader(fader))
             .colour_map()
             .is_fader_meter()
     }
@@ -1376,6 +1383,15 @@ fn standard_to_profile_preset(value: EffectBankPresets) -> Preset {
     }
 }
 
+fn standard_to_profile_fader(value: FaderName) -> Faders {
+    return match value {
+        FaderName::A => Faders::A,
+        FaderName::B => Faders::B,
+        FaderName::C => Faders::C,
+        FaderName::D => Faders::D,
+    };
+}
+
 fn get_colour_map_from_button(profile: &ProfileSettings, button: Buttons) -> &ColourMap {
     get_profile_colour_map(profile, map_button_to_colour_target(button))
 }
@@ -1420,10 +1436,10 @@ fn map_fader_to_colour_target(fader: FaderName) -> ColourTargets {
 
 fn get_profile_colour_map(profile: &ProfileSettings, colour_target: ColourTargets) -> &ColourMap {
     match colour_target {
-        ColourTargets::Fader1Mute => profile.mute_button(0).colour_map(),
-        ColourTargets::Fader2Mute => profile.mute_button(1).colour_map(),
-        ColourTargets::Fader3Mute => profile.mute_button(2).colour_map(),
-        ColourTargets::Fader4Mute => profile.mute_button(3).colour_map(),
+        ColourTargets::Fader1Mute => profile.mute_button(Faders::A).colour_map(),
+        ColourTargets::Fader2Mute => profile.mute_button(Faders::B).colour_map(),
+        ColourTargets::Fader3Mute => profile.mute_button(Faders::C).colour_map(),
+        ColourTargets::Fader4Mute => profile.mute_button(Faders::D).colour_map(),
         ColourTargets::Bleep => profile.simple_element(SimpleElements::Swear).colour_map(),
         ColourTargets::MicrophoneMute => profile.mute_chat().colour_map(),
         ColourTargets::EffectSelect1 => profile.effects(Preset::Preset1).colour_map(),
@@ -1450,14 +1466,14 @@ fn get_profile_colour_map(profile: &ProfileSettings, colour_target: ColourTarget
         ColourTargets::SamplerBottomLeft => profile.sample_button(BottomLeft).colour_map(),
         ColourTargets::SamplerBottomRight => profile.sample_button(BottomRight).colour_map(),
         ColourTargets::SamplerClear => profile.sample_button(Clear).colour_map(),
-        ColourTargets::FadeMeter1 => profile.fader(0).colour_map(),
-        ColourTargets::FadeMeter2 => profile.fader(1).colour_map(),
-        ColourTargets::FadeMeter3 => profile.fader(2).colour_map(),
-        ColourTargets::FadeMeter4 => profile.fader(3).colour_map(),
-        ColourTargets::Scribble1 => profile.scribble(0).colour_map(),
-        ColourTargets::Scribble2 => profile.scribble(1).colour_map(),
-        ColourTargets::Scribble3 => profile.scribble(2).colour_map(),
-        ColourTargets::Scribble4 => profile.scribble(3).colour_map(),
+        ColourTargets::FadeMeter1 => profile.fader(Faders::A).colour_map(),
+        ColourTargets::FadeMeter2 => profile.fader(Faders::B).colour_map(),
+        ColourTargets::FadeMeter3 => profile.fader(Faders::C).colour_map(),
+        ColourTargets::FadeMeter4 => profile.fader(Faders::D).colour_map(),
+        ColourTargets::Scribble1 => profile.scribble(Faders::A).colour_map(),
+        ColourTargets::Scribble2 => profile.scribble(Faders::B).colour_map(),
+        ColourTargets::Scribble3 => profile.scribble(Faders::C).colour_map(),
+        ColourTargets::Scribble4 => profile.scribble(Faders::D).colour_map(),
         ColourTargets::PitchEncoder => profile.pitch_encoder().colour_map(),
         ColourTargets::GenderEncoder => profile.gender_encoder().colour_map(),
         ColourTargets::ReverbEncoder => profile.reverb_encoder().colour_map(),
@@ -1474,10 +1490,10 @@ fn get_profile_colour_map_mut(
     colour_target: ColourTargets,
 ) -> &mut ColourMap {
     match colour_target {
-        ColourTargets::Fader1Mute => profile.mute_button_mut(0).colour_map_mut(),
-        ColourTargets::Fader2Mute => profile.mute_button_mut(1).colour_map_mut(),
-        ColourTargets::Fader3Mute => profile.mute_button_mut(2).colour_map_mut(),
-        ColourTargets::Fader4Mute => profile.mute_button_mut(3).colour_map_mut(),
+        ColourTargets::Fader1Mute => profile.mute_button_mut(Faders::A).colour_map_mut(),
+        ColourTargets::Fader2Mute => profile.mute_button_mut(Faders::B).colour_map_mut(),
+        ColourTargets::Fader3Mute => profile.mute_button_mut(Faders::C).colour_map_mut(),
+        ColourTargets::Fader4Mute => profile.mute_button_mut(Faders::D).colour_map_mut(),
         ColourTargets::Bleep => profile
             .simple_element_mut(SimpleElements::Swear)
             .colour_map_mut(),
@@ -1510,14 +1526,14 @@ fn get_profile_colour_map_mut(
             profile.sample_button_mut(BottomRight).colour_map_mut()
         }
         ColourTargets::SamplerClear => profile.sample_button_mut(Clear).colour_map_mut(),
-        ColourTargets::FadeMeter1 => profile.fader_mut(0).colour_map_mut(),
-        ColourTargets::FadeMeter2 => profile.fader_mut(1).colour_map_mut(),
-        ColourTargets::FadeMeter3 => profile.fader_mut(2).colour_map_mut(),
-        ColourTargets::FadeMeter4 => profile.fader_mut(3).colour_map_mut(),
-        ColourTargets::Scribble1 => profile.scribble_mut(0).colour_map_mut(),
-        ColourTargets::Scribble2 => profile.scribble_mut(1).colour_map_mut(),
-        ColourTargets::Scribble3 => profile.scribble_mut(2).colour_map_mut(),
-        ColourTargets::Scribble4 => profile.scribble_mut(3).colour_map_mut(),
+        ColourTargets::FadeMeter1 => profile.fader_mut(Faders::A).colour_map_mut(),
+        ColourTargets::FadeMeter2 => profile.fader_mut(Faders::B).colour_map_mut(),
+        ColourTargets::FadeMeter3 => profile.fader_mut(Faders::C).colour_map_mut(),
+        ColourTargets::FadeMeter4 => profile.fader_mut(Faders::D).colour_map_mut(),
+        ColourTargets::Scribble1 => profile.scribble_mut(Faders::A).colour_map_mut(),
+        ColourTargets::Scribble2 => profile.scribble_mut(Faders::B).colour_map_mut(),
+        ColourTargets::Scribble3 => profile.scribble_mut(Faders::C).colour_map_mut(),
+        ColourTargets::Scribble4 => profile.scribble_mut(Faders::D).colour_map_mut(),
         ColourTargets::PitchEncoder => profile.pitch_encoder_mut().colour_map_mut(),
         ColourTargets::GenderEncoder => profile.gender_encoder_mut().colour_map_mut(),
         ColourTargets::ReverbEncoder => profile.reverb_encoder_mut().colour_map_mut(),
