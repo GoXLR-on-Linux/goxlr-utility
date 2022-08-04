@@ -1437,6 +1437,10 @@ impl<'a, T: UsbContext> Device<'a, T> {
             self.apply_routing(input)?;
         }
 
+        if self.hardware.device_type == DeviceType::Full {
+            self.set_pitch_mode()?;
+        }
+
         Ok(())
     }
 
@@ -1504,7 +1508,6 @@ impl<'a, T: UsbContext> Device<'a, T> {
 
         if self.hardware.device_type == DeviceType::Full {
             self.load_effects()?;
-            self.set_pitch_mode()?;
         }
         Ok(())
     }
