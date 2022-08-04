@@ -2,6 +2,8 @@ use std::collections::HashMap;
 use std::os::raw::c_float;
 use xml::attribute::OwnedAttribute;
 
+use anyhow::{anyhow, Result};
+
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
 pub enum ParseError {
@@ -38,30 +40,30 @@ impl Compressor {
         }
     }
 
-    pub fn parse_compressor(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
+    pub fn parse_compressor(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
         for attr in attributes {
             if attr.name.local_name == "MIC_COMP_THRESHOLD" {
-                self.threshold = attr.value.parse::<c_float>()? as i8;
+                self.set_threshold(attr.value.parse::<c_float>()? as i8)?;
                 continue;
             }
 
             if attr.name.local_name == "MIC_COMP_RATIO" {
-                self.ratio = attr.value.parse::<c_float>()? as u8;
+                self.set_ratio(attr.value.parse::<c_float>()? as u8)?;
                 continue;
             }
 
             if attr.name.local_name == "MIC_COMP_ATTACK" {
-                self.attack = attr.value.parse::<c_float>()? as u8;
+                self.set_attack(attr.value.parse::<c_float>()? as u8)?;
                 continue;
             }
 
             if attr.name.local_name == "MIC_COMP_RELEASE" {
-                self.release = attr.value.parse::<c_float>()? as u8;
+                self.set_release(attr.value.parse::<c_float>()? as u8)?;
                 continue;
             }
 
             if attr.name.local_name == "MIC_COMP_MAKEUPGAIN" {
-                self.makeup_gain = attr.value.parse::<c_float>()? as u8;
+                self.set_makeup_gain(attr.value.parse::<c_float>()? as u8)?;
                 continue;
             }
         }
@@ -99,19 +101,42 @@ impl Compressor {
         self.makeup_gain
     }
 
-    pub fn set_threshold(&mut self, threshold: i8) {
+    // TODO: We should probably Enum some of these for clarity.
+    pub fn set_threshold(&mut self, threshold: i8) -> Result<()> {
+        if !(-40..=0).contains(&threshold) {
+            return Err(anyhow!("Compressor Threshold must be between -40 and 0 dB"));
+        }
+
         self.threshold = threshold;
+        Ok(())
     }
-    pub fn set_ratio(&mut self, ratio: u8) {
+
+    pub fn set_ratio(&mut self, ratio: u8) -> Result<()> {
+        if ratio > 14 {
+            return Err(anyhow!("Compressor Ratio should be between 0 and 14"));
+        }
         self.ratio = ratio;
+        Ok(())
     }
-    pub fn set_attack(&mut self, attack: u8) {
+    pub fn set_attack(&mut self, attack: u8) -> Result<()> {
+        if attack > 19 {
+            return Err(anyhow!("Compressor Attack should be between 0 and 19"));
+        }
         self.attack = attack;
+        Ok(())
     }
-    pub fn set_release(&mut self, release: u8) {
+    pub fn set_release(&mut self, release: u8) -> Result<()> {
+        if release > 19 {
+            return Err(anyhow!("Compressor Release should be between 0 and 19"));
+        }
         self.release = release;
+        Ok(())
     }
-    pub fn set_makeup_gain(&mut self, makeup_gain: u8) {
+    pub fn set_makeup_gain(&mut self, makeup_gain: u8) -> Result<()> {
+        if makeup_gain > 24 {
+            return Err(anyhow!("Makeup Gain should be between 0 and 24dB"));
+        }
         self.makeup_gain = makeup_gain;
+        Ok(())
     }
 }

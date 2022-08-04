@@ -2,6 +2,8 @@ use std::collections::HashMap;
 use std::io::Write;
 use std::str::FromStr;
 
+use anyhow::Result;
+
 use enum_map::Enum;
 use ritelinked::LinkedHashMap;
 use strum::{Display, EnumIter, EnumProperty, EnumString};
@@ -53,7 +55,7 @@ impl SampleBase {
         }
     }
 
-    pub fn parse_sample_root(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
+    pub fn parse_sample_root(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
         for attr in attributes {
             if attr.name.local_name.ends_with("state") && self.element_name != "sampleClear" {
                 if attr.value != "Empty" && attr.value != "Stopped" {
@@ -71,11 +73,7 @@ impl SampleBase {
         Ok(())
     }
 
-    pub fn parse_sample_stack(
-        &mut self,
-        id: char,
-        attributes: &[OwnedAttribute],
-    ) -> Result<(), ParseError> {
+    pub fn parse_sample_stack(&mut self, id: char, attributes: &[OwnedAttribute]) -> Result<()> {
         // The easiest way to handle this is to parse everything into key-value pairs, then try
         // to locate all the settings for each track inside it..
         let mut map: HashMap<String, String> = HashMap::default();
@@ -131,10 +129,7 @@ impl SampleBase {
         Ok(())
     }
 
-    pub fn write_sample<W: Write>(
-        &self,
-        writer: &mut EventWriter<&mut W>,
-    ) -> Result<(), xml::writer::Error> {
+    pub fn write_sample<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
         let mut element: StartElementBuilder =
             XmlWriterEvent::start_element(self.element_name.as_str());
 
@@ -220,7 +215,6 @@ impl SampleBase {
     pub fn colour_map(&self) -> &ColourMap {
         &self.colour_map
     }
-
     pub fn colour_map_mut(&mut self) -> &mut ColourMap {
         &mut self.colour_map
     }
@@ -255,7 +249,6 @@ impl SampleStack {
     pub fn get_sample_count(&self) -> usize {
         self.tracks.len()
     }
-
     pub fn get_first_sample_file(&self) -> String {
         self.tracks[0].track.to_string()
     }

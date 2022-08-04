@@ -1,10 +1,10 @@
-use crate::error::{ParseError, SaveError};
 use crate::microphone::compressor::Compressor;
 use crate::microphone::equalizer::Equalizer;
 use crate::microphone::equalizer_mini::EqualizerMini;
 use crate::microphone::gate::Gate;
 use crate::microphone::mic_setup::MicSetup;
 use crate::microphone::ui_setup::UiSetup;
+use anyhow::{anyhow, Result};
 use log::debug;
 use std::collections::HashMap;
 use std::fs::File;
@@ -31,7 +31,7 @@ pub struct MicProfileSettings {
 }
 
 impl MicProfileSettings {
-    pub fn load<R: Read>(read: R) -> Result<Self, ParseError> {
+    pub fn load<R: Read>(read: R) -> Result<Self> {
         let parser = EventReader::new(read);
 
         let mut equalizer = Equalizer::new();
@@ -120,7 +120,7 @@ impl MicProfileSettings {
         })
     }
 
-    pub fn save(&self, path: impl AsRef<Path>) -> Result<(), SaveError> {
+    pub fn save(&self, path: impl AsRef<Path>) -> Result<()> {
         debug!("Saving File: {}", &path.as_ref().to_string_lossy());
 
         let out_file = File::create(path)?;
@@ -129,7 +129,7 @@ impl MicProfileSettings {
         Ok(())
     }
 
-    pub fn write_to<W: Write>(&self, mut sink: W) -> Result<(), xml::writer::Error> {
+    pub fn write_to<W: Write>(&self, mut sink: W) -> Result<()> {
         // Create the file, and the writer..
         let mut writer = EmitterConfig::new()
             .perform_indent(true)
@@ -203,15 +203,23 @@ impl MicProfileSettings {
     pub fn deess(&self) -> u8 {
         self.deess
     }
-    pub fn set_deess(&mut self, deess: u8) {
+    pub fn set_deess(&mut self, deess: u8) -> Result<()> {
+        if deess > 100 {
+            return Err(anyhow!("De-Ess value must be a percentage"));
+        }
         self.deess = deess;
+        Ok(())
     }
 
     pub fn bleep_level(&self) -> i8 {
         self.bleep_level
     }
-    pub fn set_bleep_level(&mut self, bleep_level: i8) {
+    pub fn set_bleep_level(&mut self, bleep_level: i8) -> Result<()> {
+        if !(-34..=0).contains(&bleep_level) {
+            return Err(anyhow!("Bleep level should be between -34 and 0"));
+        }
         self.bleep_level = bleep_level;
+        Ok(())
     }
 
     pub fn gate_mode(&self) -> u8 {

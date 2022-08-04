@@ -9,6 +9,8 @@ use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
+use anyhow::Result;
+
 use crate::components::colours::ColourMap;
 use crate::components::megaphone::Preset;
 use crate::components::megaphone::Preset::{Preset1, Preset2, Preset3, Preset4, Preset5, Preset6};
@@ -50,7 +52,7 @@ impl RobotEffectBase {
         }
     }
 
-    pub fn parse_robot_root(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
+    pub fn parse_robot_root(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
         for attr in attributes {
             if !self.colour_map.read_colours(attr)? {
                 println!("[robotEffect] Unparsed Attribute: {}", attr.name);
@@ -60,11 +62,7 @@ impl RobotEffectBase {
         Ok(())
     }
 
-    pub fn parse_robot_preset(
-        &mut self,
-        id: u8,
-        attributes: &[OwnedAttribute],
-    ) -> Result<(), ParseError> {
+    pub fn parse_robot_preset(&mut self, id: u8, attributes: &[OwnedAttribute]) -> Result<()> {
         let mut preset = RobotEffect::new();
         for attr in attributes {
             if attr.name.local_name == "robotEffectstate" {
@@ -161,10 +159,7 @@ impl RobotEffectBase {
         Ok(())
     }
 
-    pub fn write_robot<W: Write>(
-        &self,
-        writer: &mut EventWriter<&mut W>,
-    ) -> Result<(), xml::writer::Error> {
+    pub fn write_robot<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
         let mut element: StartElementBuilder = XmlWriterEvent::start_element("robotEffect");
 
         let mut attributes: HashMap<String, String> = HashMap::default();
@@ -263,7 +258,6 @@ impl RobotEffectBase {
     pub fn colour_map(&self) -> &ColourMap {
         &self.colour_map
     }
-
     pub fn colour_map_mut(&mut self) -> &mut ColourMap {
         &mut self.colour_map
     }
@@ -271,7 +265,6 @@ impl RobotEffectBase {
     pub fn get_preset(&self, preset: Preset) -> &RobotEffect {
         &self.preset_map[preset]
     }
-
     pub fn get_preset_mut(&mut self, preset: Preset) -> &mut RobotEffect {
         &mut self.preset_map[preset]
     }
@@ -326,7 +319,6 @@ impl RobotEffect {
     pub fn state(&self) -> bool {
         self.state
     }
-
     pub fn set_state(&mut self, state: bool) {
         self.state = state;
     }

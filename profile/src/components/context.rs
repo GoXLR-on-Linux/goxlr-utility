@@ -9,6 +9,8 @@ use xml::EventWriter;
 use strum::EnumProperty;
 use strum::IntoEnumIterator;
 
+use anyhow::Result;
+
 use crate::components::colours::ColourMap;
 use crate::components::megaphone::Preset;
 use crate::components::sample::SampleBank;
@@ -58,7 +60,7 @@ impl Context {
         }
     }
 
-    pub fn parse_context(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
+    pub fn parse_context(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
         for attr in attributes {
             if attr.name.local_name == "numselected" {
                 self.selected = attr.value.parse()?;
@@ -102,10 +104,7 @@ impl Context {
         Ok(())
     }
 
-    pub fn write_context<W: Write>(
-        &self,
-        writer: &mut EventWriter<&mut W>,
-    ) -> Result<(), xml::writer::Error> {
+    pub fn write_context<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
         let mut element: StartElementBuilder =
             XmlWriterEvent::start_element(self.element_name.as_str());
 
