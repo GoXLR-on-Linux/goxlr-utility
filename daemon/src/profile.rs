@@ -756,6 +756,20 @@ impl ProfileAdapter {
             .set_knob_position(value)
     }
 
+    pub fn get_pitch_mode(&self) -> u8 {
+        self.profile
+            .settings()
+            .pitch_encoder()
+            .pitch_mode(self.is_hardtune_enabled())
+    }
+
+    pub fn get_pitch_resolution(&self) -> u8 {
+        self.profile.settings().pitch_encoder().pitch_resolution(
+            self.is_hardtune_pitch_enabled(),
+            self.get_active_pitch_profile(),
+        )
+    }
+
     pub fn get_active_pitch_profile(&self) -> &PitchEncoder {
         let current = self.profile.settings().context().selected_effects();
         self.profile.settings().pitch_encoder().get_preset(current)
