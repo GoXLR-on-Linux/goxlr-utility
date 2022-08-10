@@ -628,7 +628,7 @@ impl ProfileSettings {
     }
 
     pub fn scribble(&self, fader: Faders) -> &Scribble {
-        &self.scribbles[fader].as_ref().unwrap()
+        self.scribbles[fader].as_ref().unwrap()
     }
 
     pub fn scribble_mut(&mut self, fader: Faders) -> &mut Scribble {
