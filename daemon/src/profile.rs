@@ -29,6 +29,7 @@ use goxlr_types::{
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::colouring::ColourTargets;
 use log::{debug, error};
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fs::{remove_file, File};
 use std::io::{Cursor, Read, Seek};
@@ -1398,12 +1399,12 @@ fn standard_to_profile_preset(value: EffectBankPresets) -> Preset {
 }
 
 fn standard_to_profile_fader(value: FaderName) -> Faders {
-    return match value {
+    match value {
         FaderName::A => Faders::A,
         FaderName::B => Faders::B,
         FaderName::C => Faders::C,
         FaderName::D => Faders::D,
-    };
+    }
 }
 
 fn get_colour_map_from_button(profile: &ProfileSettings, button: Buttons) -> &ColourMap {
@@ -1601,24 +1602,23 @@ pub fn get_mini_colour_targets() -> Vec<ButtonColourTargets> {
     ]
 }
 
-#[allow(clippy::comparison_chain)]
 pub fn version_newer_or_equal_to(version: &VersionNumber, comparison: VersionNumber) -> bool {
-    if version.0 > comparison.0 {
-        return true;
-    } else if version.0 < comparison.0 {
-        return false;
+    match version.0.cmp(&comparison.0) {
+        Ordering::Greater => return true,
+        Ordering::Less => return false,
+        Ordering::Equal => {}
     }
 
-    if version.1 > comparison.1 {
-        return true;
-    } else if version.1 < comparison.1 {
-        return false;
+    match version.1.cmp(&comparison.1) {
+        Ordering::Greater => return true,
+        Ordering::Less => return false,
+        Ordering::Equal => {}
     }
 
-    if version.2 > comparison.2 {
-        return true;
-    } else if version.2 < comparison.2 {
-        return false;
+    match version.2.cmp(&comparison.2) {
+        Ordering::Greater => return true,
+        Ordering::Less => return false,
+        Ordering::Equal => {}
     }
 
     if version.3 >= comparison.3 {
