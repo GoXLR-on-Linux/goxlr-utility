@@ -195,6 +195,23 @@ impl PitchEncoderBase {
     pub fn get_preset_mut(&mut self, preset: Preset) -> &mut PitchEncoder {
         &mut self.preset_map[preset]
     }
+
+    pub fn pitch_mode(&self, hardtune_enabled: bool) -> u8 {
+        if hardtune_enabled {
+            return 3;
+        }
+        1
+    }
+
+    pub fn pitch_resolution(&self, hardtune_enabled: bool, encoder: &PitchEncoder) -> u8 {
+        if hardtune_enabled {
+            return match encoder.style {
+                PitchStyle::Narrow => 1,
+                PitchStyle::Wide => 2,
+            };
+        }
+        4
+    }
 }
 
 #[derive(Debug, Default)]
