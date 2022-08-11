@@ -449,7 +449,7 @@ pub enum CompressorRatio {
     Ratio64_0,
 }
 
-#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq)]
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize_repr, Deserialize_repr))]
 #[repr(u8)]
