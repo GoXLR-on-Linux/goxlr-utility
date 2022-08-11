@@ -382,7 +382,7 @@ pub enum EffectBankPresets {
     Preset6,
 }
 
-#[derive(Debug, Copy, Clone, Display, PartialEq)]
+#[derive(Debug, Copy, Clone, Display, PartialEq, Eq)]
 pub enum SampleBank {
     A,
     B,
@@ -427,7 +427,7 @@ of 0.1, and by the end it's hitting increments of 16 and 32.
 These enums are essentially the same maps, and use 'as usize' and strum::iter().nth to convert.
  */
 
-#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq)]
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize_repr, Deserialize_repr))]
 #[repr(u8)]
@@ -502,7 +502,7 @@ pub enum GateTimes {
     Gate2000ms,
 }
 
-#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq)]
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize_repr, Deserialize_repr))]
 #[repr(u8)]
@@ -530,7 +530,7 @@ pub enum CompressorAttackTime {
     Comp40ms,
 }
 
-#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq)]
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize_repr, Deserialize_repr))]
 #[repr(u8)]
