@@ -375,9 +375,9 @@ impl<T: UsbContext> GoXLR<T> {
     pub fn set_encoder_value(
         &mut self,
         encoder: EncoderName,
-        value: u8,
+        value: i8,
     ) -> Result<(), rusb::Error> {
-        self.request_data(Command::SetEncoderValue(encoder), &[value])?;
+        self.request_data(Command::SetEncoderValue(encoder), &[value as u8])?;
         Ok(())
     }
 
