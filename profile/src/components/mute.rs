@@ -158,7 +158,7 @@ impl MuteButton {
 }
 
 // MuteChat
-#[derive(Debug, Copy, Clone, Enum, EnumProperty, EnumIter, PartialEq)]
+#[derive(Debug, Copy, Clone, Enum, EnumProperty, EnumIter, PartialEq, Eq)]
 pub enum MuteFunction {
     #[strum(props(Value = "Mute All", uiIndex = "0"))]
     All,

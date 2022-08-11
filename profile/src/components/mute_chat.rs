@@ -217,7 +217,7 @@ impl MuteChat {
     }
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum CoughToggle {
     Hold,
     Toggle,

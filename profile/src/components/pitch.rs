@@ -335,7 +335,7 @@ impl PitchEncoder {
     }
 }
 
-#[derive(Debug, PartialEq, EnumIter, Enum, EnumProperty, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, EnumIter, Enum, EnumProperty, Copy, Clone)]
 pub enum PitchStyle {
     #[strum(props(uiIndex = "0"))]
     Narrow,

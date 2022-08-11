@@ -170,7 +170,7 @@ pub struct UsbProductInformation {
     pub address: u8,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum DeviceType {
     Unknown,
     Full,

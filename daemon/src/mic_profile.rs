@@ -208,7 +208,7 @@ impl MicProfileAdapter {
     }
 
     pub fn set_eq_gain(&mut self, gain: EqFrequencies, value: i8) -> Result<EffectKey> {
-        return match gain {
+        match gain {
             EqFrequencies::Equalizer31Hz => {
                 self.profile.equalizer_mut().set_eq_31h_gain(value)?;
                 Ok(EffectKey::Equalizer31HzGain)
@@ -249,7 +249,7 @@ impl MicProfileAdapter {
                 self.profile.equalizer_mut().set_eq_16k_gain(value)?;
                 Ok(EffectKey::Equalizer16KHzGain)
             }
-        };
+        }
     }
 
     pub fn get_eq_gain(&self, freq: EqFrequencies) -> i8 {
@@ -269,7 +269,7 @@ impl MicProfileAdapter {
     }
 
     pub fn set_eq_freq(&mut self, freq: EqFrequencies, value: f32) -> Result<EffectKey> {
-        return match freq {
+        match freq {
             EqFrequencies::Equalizer31Hz => {
                 self.profile.equalizer_mut().set_eq_31h_freq(value)?;
                 Ok(EffectKey::Equalizer31HzFrequency)
@@ -310,7 +310,7 @@ impl MicProfileAdapter {
                 self.profile.equalizer_mut().set_eq_16k_freq(value)?;
                 Ok(EffectKey::Equalizer16KHzFrequency)
             }
-        };
+        }
     }
 
     pub fn get_eq_freq(&self, freq: EqFrequencies) -> f32 {
@@ -334,7 +334,7 @@ impl MicProfileAdapter {
         gain: MiniEqFrequencies,
         value: i8,
     ) -> Result<MicrophoneParamKey> {
-        return match gain {
+        match gain {
             MiniEqFrequencies::Equalizer90Hz => {
                 self.profile.equalizer_mini_mut().set_eq_90h_gain(value)?;
                 Ok(MicrophoneParamKey::Equalizer90HzGain)
@@ -359,7 +359,7 @@ impl MicProfileAdapter {
                 self.profile.equalizer_mini_mut().set_eq_8k_gain(value)?;
                 Ok(MicrophoneParamKey::Equalizer8KHzGain)
             }
-        };
+        }
     }
 
     pub fn get_mini_eq_gain(&self, gain: MiniEqFrequencies) -> i8 {
@@ -379,7 +379,7 @@ impl MicProfileAdapter {
         freq: MiniEqFrequencies,
         value: f32,
     ) -> Result<MicrophoneParamKey> {
-        return match freq {
+        match freq {
             MiniEqFrequencies::Equalizer90Hz => {
                 self.profile.equalizer_mini_mut().set_eq_90h_freq(value)?;
                 Ok(MicrophoneParamKey::Equalizer90HzFrequency)
@@ -404,7 +404,7 @@ impl MicProfileAdapter {
                 self.profile.equalizer_mini_mut().set_eq_8k_freq(value)?;
                 Ok(MicrophoneParamKey::Equalizer8KHzFrequency)
             }
-        };
+        }
     }
 
     pub fn get_mini_eq_freq(&self, freq: MiniEqFrequencies) -> f32 {
