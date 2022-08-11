@@ -304,7 +304,7 @@ const DEFAULT_COLOUR: Colour = Colour {
     alpha: 0,
 };
 
-#[derive(Debug, Copy, Clone, PartialEq, EnumString, Display)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, EnumString, Display)]
 pub enum ColourOffStyle {
     #[strum(to_string = "DIMMED")]
     Dimmed,
@@ -316,7 +316,7 @@ pub enum ColourOffStyle {
     DimmedColour2,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, EnumString, Display)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, EnumString, Display)]
 pub enum ColourDisplay {
     #[strum(to_string = "GRADIENT")]
     Gradient,
@@ -331,7 +331,7 @@ pub enum ColourDisplay {
     TwoColour,
 }
 
-#[derive(Debug, EnumString, PartialEq, Display)]
+#[derive(Debug, EnumString, PartialEq, Eq, Display)]
 pub enum ColourState {
     #[strum(to_string = "0")]
     Off,
@@ -375,14 +375,14 @@ impl Colour {
     }
 
     pub fn to_argb(&self) -> String {
-        return format!(
+        format!(
             "{:02X}{:02X}{:02X}{:02X}",
             self.alpha, self.red, self.green, self.blue
-        );
+        )
     }
 
     pub fn to_rgb(&self) -> String {
-        return format!("{:02X}{:02X}{:02X}", self.red, self.green, self.blue);
+        format!("{:02X}{:02X}{:02X}", self.red, self.green, self.blue)
     }
 
     pub fn to_reverse_bytes(&self) -> [u8; 4] {

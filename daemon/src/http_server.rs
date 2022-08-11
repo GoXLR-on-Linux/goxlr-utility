@@ -157,10 +157,10 @@ async fn execute_command(
     let sender = guard.deref_mut();
 
     // Errors propagate weirdly in the javascript world, so send all as OK, and handle there.
-    return match handle_packet(request.0, sender).await {
+    match handle_packet(request.0, sender).await {
         Ok(result) => HttpResponse::Ok().json(result),
         Err(error) => HttpResponse::Ok().json(DaemonResponse::Error(error.to_string())),
-    };
+    }
 }
 
 #[get("/api/get-devices")]
@@ -179,8 +179,8 @@ async fn get_status(usb_tx: Data<Mutex<DeviceSender>>) -> Result<DaemonStatus> {
     let request = DaemonRequest::GetStatus;
 
     let result = handle_packet(request, sender).await?;
-    return match result {
+    match result {
         DaemonResponse::Status(status) => Ok(status),
         _ => Err(anyhow!("Unexpected Daemon Status Result: {:?}", result)),
-    };
+    }
 }

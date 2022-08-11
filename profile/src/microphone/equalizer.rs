@@ -451,7 +451,7 @@ impl Equalizer {
 }
 
 pub fn validate_gain(gain: i8) -> Result<()> {
-    if gain < -9 || gain > 9 {
+    if !(-9..=9).contains(&gain) {
         return Err(anyhow!("EQ Gain should be between -9 and 9"));
     }
     Ok(())
