@@ -13,7 +13,7 @@ use goxlr_profile_loader::components::megaphone::{MegaphoneEffect, Preset};
 use goxlr_profile_loader::components::mixer::{FullChannelList, InputChannels, OutputChannels};
 use goxlr_profile_loader::components::mute::{MuteButton, MuteFunction};
 use goxlr_profile_loader::components::mute_chat::{CoughToggle, MuteChat};
-use goxlr_profile_loader::components::pitch::{PitchEncoder, PitchStyle};
+use goxlr_profile_loader::components::pitch::PitchEncoder;
 use goxlr_profile_loader::components::reverb::ReverbEncoder;
 use goxlr_profile_loader::components::robot::RobotEffect;
 use goxlr_profile_loader::components::sample::SampleBank;
@@ -712,7 +712,6 @@ impl ProfileAdapter {
             .hardtune_effect()
             .get_preset(current)
             .state();
-
         self.profile
             .settings_mut()
             .hardtune_effect_mut()
@@ -739,36 +738,39 @@ impl ProfileAdapter {
             .set_state_on(state)
     }
 
-    pub fn get_pitch_value(&self) -> i8 {
-        let current = self.profile.settings().context().selected_effects();
-        self.profile
-            .settings()
-            .pitch_encoder()
-            .get_preset(current)
-            .knob_position()
+    pub fn get_pitch_knob_position(&self) -> i8 {
+        self.get_active_pitch_profile()
+            .knob_position(self.is_hardtune_enabled(true))
     }
 
-    pub fn set_pitch_value(&mut self, value: i8) -> Result<()> {
+    pub fn get_pitch_encoder_position(&self) -> i8 {
+        self.get_active_pitch_profile()
+            .get_encoder_position(self.is_hardtune_enabled(true))
+    }
+
+    pub fn calculate_pitch_knob_position(&self, value: i8) -> i8 {
+        self.get_active_pitch_profile()
+            .calculate_encoder_value(value, self.is_hardtune_enabled(true))
+    }
+
+    pub fn set_pitch_knob_position(&mut self, value: i8) -> Result<()> {
+        let hardtune_enabled = self.is_hardtune_enabled(true);
         let current = self.profile.settings().context().selected_effects();
         self.profile
             .settings_mut()
             .pitch_encoder_mut()
             .get_preset_mut(current)
-            .set_knob_position(value)
+            .set_knob_position(value, hardtune_enabled)
     }
 
     pub fn get_pitch_mode(&self) -> u8 {
-        self.profile
-            .settings()
-            .pitch_encoder()
-            .pitch_mode(self.is_hardtune_enabled())
+        self.get_active_pitch_profile()
+            .pitch_mode(self.is_hardtune_enabled(true))
     }
 
     pub fn get_pitch_resolution(&self) -> u8 {
-        self.profile.settings().pitch_encoder().pitch_resolution(
-            self.is_hardtune_pitch_enabled(),
-            self.get_active_pitch_profile(),
-        )
+        self.get_active_pitch_profile()
+            .pitch_resolution(self.is_hardtune_enabled(true))
     }
 
     pub fn get_active_pitch_profile(&self) -> &PitchEncoder {
@@ -887,24 +889,6 @@ impl ProfileAdapter {
         }
     }
 
-    pub fn is_hardtune_pitch_enabled(&self) -> bool {
-        self.profile
-            .settings()
-            .hardtune_effect()
-            .colour_map()
-            .get_state()
-    }
-
-    pub fn is_pitch_narrow(&self) -> bool {
-        let current = self.profile.settings().context().selected_effects();
-        self.profile
-            .settings()
-            .pitch_encoder()
-            .get_preset(current)
-            .style()
-            == &PitchStyle::Narrow
-    }
-
     pub fn is_fx_enabled(&self) -> bool {
         self.profile
             .settings()
@@ -935,8 +919,8 @@ impl ProfileAdapter {
             .get_state()
     }
 
-    pub fn is_hardtune_enabled(&self) -> bool {
-        if !self.is_fx_enabled() {
+    pub fn is_hardtune_enabled(&self, ignore_fx_state: bool) -> bool {
+        if !ignore_fx_state && !self.is_fx_enabled() {
             return false;
         }
         self.profile

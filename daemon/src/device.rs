@@ -661,6 +661,12 @@ impl<'a, T: UsbContext> Device<'a, T> {
         self.profile.toggle_hardtune()?;
         self.apply_effects(HashSet::from([EffectKey::HardTuneEnabled]))?;
         self.set_pitch_mode()?;
+
+        // When changing the Hard Tune amount, we need to update the pitch encoder..
+        let pitch = self.profile.get_pitch_encoder_position();
+        self.goxlr.set_encoder_value(EncoderName::Pitch, pitch)?;
+        self.profile.set_pitch_knob_position(pitch)?;
+        self.apply_effects(HashSet::from([EffectKey::PitchAmount]))?;
         Ok(())
     }
 
@@ -723,22 +729,16 @@ impl<'a, T: UsbContext> Device<'a, T> {
     fn update_encoders_to(&mut self, encoders: [i8; 4]) -> Result<()> {
         // Ok, this is funky, due to the way pitch works, the encoder 'value' doesn't match
         // the profile value if hardtune is enabled, so we'll pre-emptively calculate pitch here..
-        let mut pitch_value = encoders[0];
-        if self.profile.is_hardtune_pitch_enabled() {
-            pitch_value *= 12;
-        } else if self.profile.is_pitch_narrow() {
-            pitch_value /= 2;
-        }
-
-        if pitch_value != self.profile.get_pitch_value() {
+        if self.profile.calculate_pitch_knob_position(encoders[0])
+            != self.profile.get_pitch_knob_position()
+        {
             debug!(
                 "Updating PITCH value from {} to {} as human moved the dial",
-                self.profile.get_pitch_value(),
-                pitch_value
+                self.profile.get_pitch_knob_position(),
+                encoders[0]
             );
 
-            // Ok, if hard tune is enabled, multiply this value by 12..
-            self.profile.set_pitch_value(pitch_value)?;
+            self.profile.set_pitch_knob_position(encoders[0])?;
             self.apply_effects(HashSet::from([EffectKey::PitchAmount]))?;
         }
 
@@ -1514,21 +1514,17 @@ impl<'a, T: UsbContext> Device<'a, T> {
 
     fn load_effects(&mut self) -> Result<()> {
         // For now, we'll simply set the knob positions, more to come!
-        let mut value = self.profile.get_pitch_value();
-        self.goxlr
-            .set_encoder_value(EncoderName::Pitch, value as u8)?;
+        let mut value = self.profile.get_pitch_encoder_position();
+        self.goxlr.set_encoder_value(EncoderName::Pitch, value)?;
 
         value = self.profile.get_echo_value();
-        self.goxlr
-            .set_encoder_value(EncoderName::Echo, value as u8)?;
+        self.goxlr.set_encoder_value(EncoderName::Echo, value)?;
 
         value = self.profile.get_gender_value();
-        self.goxlr
-            .set_encoder_value(EncoderName::Gender, value as u8)?;
+        self.goxlr.set_encoder_value(EncoderName::Gender, value)?;
 
         value = self.profile.get_reverb_value();
-        self.goxlr
-            .set_encoder_value(EncoderName::Reverb, value as u8)?;
+        self.goxlr.set_encoder_value(EncoderName::Reverb, value)?;
 
         Ok(())
     }

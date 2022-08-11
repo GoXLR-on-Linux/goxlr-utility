@@ -195,23 +195,6 @@ impl PitchEncoderBase {
     pub fn get_preset_mut(&mut self, preset: Preset) -> &mut PitchEncoder {
         &mut self.preset_map[preset]
     }
-
-    pub fn pitch_mode(&self, hardtune_enabled: bool) -> u8 {
-        if hardtune_enabled {
-            return 3;
-        }
-        1
-    }
-
-    pub fn pitch_resolution(&self, hardtune_enabled: bool, encoder: &PitchEncoder) -> u8 {
-        if hardtune_enabled {
-            return match encoder.style {
-                PitchStyle::Narrow => 1,
-                PitchStyle::Wide => 2,
-            };
-        }
-        4
-    }
 }
 
 #[derive(Debug, Default)]
@@ -234,18 +217,84 @@ impl PitchEncoder {
         }
     }
 
-    pub fn knob_position(&self) -> i8 {
-        self.knob_position
+    pub fn knob_position(&self, hardtune_enabled: bool) -> i8 {
+        // The 'knob position' isn't technically accurate, it's a value not the position of the knob
+        // so do the calculations here..
+        if hardtune_enabled {
+            return match self.style {
+                PitchStyle::Narrow => self.knob_position / 12,
+                PitchStyle::Wide => self.knob_position / 12,
+            };
+        }
+
+        match self.style {
+            PitchStyle::Narrow => self.knob_position * 2,
+            PitchStyle::Wide => self.knob_position,
+        }
     }
 
-    pub fn set_knob_position(&mut self, knob_position: i8) -> Result<()> {
+    pub fn set_knob_position(&mut self, knob_position: i8, hardtune_enabled: bool) -> Result<()> {
+        // So this is kinda weird, the 'knob position' stores the actual value, and not
+        // the knob position, so we have to do a lot of extra checking here..
+        if hardtune_enabled {
+            match self.style {
+                PitchStyle::Narrow => {
+                    if !(-1..=1).contains(&knob_position) {
+                        return Err(anyhow!(
+                            "Pitch knob should be between -1 and 1 (Hardtune: Enabled, Style: Narrow)",
+                        ));
+                    }
+                    self.knob_position = knob_position * 12;
+                }
+                PitchStyle::Wide => {
+                    if !(-2..=2).contains(&knob_position) {
+                        return Err(anyhow!(
+                            "Pitch knob should be between -2 and 2 (Hardtune: Enabled, Style: Wide)",
+                        ));
+                    }
+                    self.knob_position = knob_position * 12;
+                }
+            };
+            return Ok(());
+        }
+
         // This is technically settings dependant, but these are the max ranges
         if !(-24..=24).contains(&knob_position) {
             return Err(anyhow!("Pitch Knob Position should be between -24 and 24"));
         }
 
-        self.knob_position = knob_position;
+        match self.style {
+            PitchStyle::Narrow => self.knob_position = knob_position / 2,
+            PitchStyle::Wide => self.knob_position = knob_position,
+        }
         Ok(())
+    }
+
+    // We pass in an encoder value, do any needed rounding, then return (currently only applicable
+    // for PitchStyle::Narrow with hardtune disabled..
+    pub fn calculate_encoder_value(&self, value: i8, hardtune_enabled: bool) -> i8 {
+        if hardtune_enabled {
+            return value;
+        }
+        match self.style {
+            PitchStyle::Narrow => (value / 2) * 2,
+            PitchStyle::Wide => value,
+        }
+    }
+
+    pub fn get_encoder_position(&self, hardtune_enabled: bool) -> i8 {
+        if !hardtune_enabled {
+            return match self.style {
+                PitchStyle::Narrow => self.knob_position * 2,
+                PitchStyle::Wide => self.knob_position,
+            };
+        }
+
+        (self.knob_position as f32 / 12_f32).round() as i8
+    }
+
+    pub fn get_pitch_value(&self) -> i8 {
+        self.knob_position
     }
 
     pub fn style(&self) -> &PitchStyle {
@@ -266,6 +315,23 @@ impl PitchEncoder {
             return value;
         }
         0
+    }
+
+    pub fn pitch_mode(&self, hardtune_enabled: bool) -> u8 {
+        if hardtune_enabled {
+            return 3;
+        }
+        1
+    }
+
+    pub fn pitch_resolution(&self, hardtune_enabled: bool) -> u8 {
+        if !hardtune_enabled {
+            return 4;
+        }
+        match self.style {
+            PitchStyle::Narrow => 1,
+            PitchStyle::Wide => 2,
+        }
     }
 }
 

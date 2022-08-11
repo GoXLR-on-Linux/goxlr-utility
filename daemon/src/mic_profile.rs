@@ -657,7 +657,7 @@ impl MicProfileAdapter {
 
             EffectKey::PitchAmount => main_profile
                 .get_active_pitch_profile()
-                .knob_position()
+                .get_pitch_value()
                 .into(),
             EffectKey::PitchThreshold => main_profile.get_active_pitch_profile().threshold().into(),
             EffectKey::PitchCharacter => main_profile
@@ -790,7 +790,7 @@ impl MicProfileAdapter {
 
             EffectKey::RobotEnabled => main_profile.is_robot_enabled().into(),
             EffectKey::MegaphoneEnabled => main_profile.is_megaphone_enabled().into(),
-            EffectKey::HardTuneEnabled => main_profile.is_hardtune_enabled().into(),
+            EffectKey::HardTuneEnabled => main_profile.is_hardtune_enabled(false).into(),
 
             // Encoders are always enabled when FX is enabled..
             EffectKey::Encoder1Enabled => main_profile.is_fx_enabled().into(),
