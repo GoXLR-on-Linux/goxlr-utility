@@ -1,3 +1,4 @@
+use anyhow::{anyhow, Result};
 use std::collections::HashMap;
 use std::io::Write;
 use std::str::FromStr;
@@ -39,25 +40,25 @@ impl MicSetup {
         }
     }
 
-    pub fn parse_config(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
+    pub fn parse_config(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
         for attr in attributes {
             if attr.name.local_name == "MIC_TYPE" {
-                self.mic_type = u8::from_str(attr.value.as_str())?;
+                self.set_mic_type(u8::from_str(attr.value.as_str())?)?;
                 continue;
             }
 
             if attr.name.local_name == "DYNAMIC_MIC_GAIN" {
-                self.dynamic_mic_gain = (u32::from_str(attr.value.as_str())? / 65536) as u16;
+                self.set_dynamic_mic_gain((u32::from_str(attr.value.as_str())? / 65536) as u16)?;
                 continue;
             }
 
             if attr.name.local_name == "CONDENSER_MIC_GAIN" {
-                self.condenser_mic_gain = (u32::from_str(attr.value.as_str())? / 65536) as u16;
+                self.set_condenser_mic_gain((u32::from_str(attr.value.as_str())? / 65536) as u16)?;
                 continue;
             }
 
             if attr.name.local_name == "TRS_MIC_GAIN" {
-                self.trs_mic_gain = (u32::from_str(attr.value.as_str())? / 65536) as u16;
+                self.set_trs_mic_gain((u32::from_str(attr.value.as_str())? / 65536) as u16)?;
                 continue;
             }
         }
@@ -65,10 +66,7 @@ impl MicSetup {
         Ok(())
     }
 
-    pub fn write_config<W: Write>(
-        &self,
-        writer: &mut EventWriter<&mut W>,
-    ) -> Result<(), xml::writer::Error> {
+    pub fn write_config<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
         let mut element: StartElementBuilder = XmlWriterEvent::start_element("setupTreeMicProfile");
 
         let mut attributes: HashMap<String, String> = HashMap::default();
@@ -111,17 +109,36 @@ impl MicSetup {
         self.trs_mic_gain
     }
 
-    pub fn set_mic_type(&mut self, mic_type: u8) {
+    // TODO: Enum this.
+    pub fn set_mic_type(&mut self, mic_type: u8) -> Result<()> {
+        if mic_type > 2 {
+            return Err(anyhow!("Mic Type should be between 0 and 2"));
+        }
         self.mic_type = mic_type;
+        Ok(())
     }
 
-    pub fn set_dynamic_mic_gain(&mut self, dynamic_mic_gain: u16) {
+    pub fn set_dynamic_mic_gain(&mut self, dynamic_mic_gain: u16) -> Result<()> {
+        if dynamic_mic_gain > 72 {
+            return Err(anyhow!("Gain should be between 0 and 72dB"));
+        }
         self.dynamic_mic_gain = dynamic_mic_gain;
+        Ok(())
     }
-    pub fn set_condenser_mic_gain(&mut self, condenser_mic_gain: u16) {
+    pub fn set_condenser_mic_gain(&mut self, condenser_mic_gain: u16) -> Result<()> {
+        if condenser_mic_gain > 72 {
+            return Err(anyhow!("Gain should be between 0 and 72dB"));
+        }
+
         self.condenser_mic_gain = condenser_mic_gain;
+        Ok(())
     }
-    pub fn set_trs_mic_gain(&mut self, trs_mic_gain: u16) {
+    pub fn set_trs_mic_gain(&mut self, trs_mic_gain: u16) -> Result<()> {
+        if trs_mic_gain > 72 {
+            return Err(anyhow!("Gain should be between 0 and 72dB"));
+        }
+
         self.trs_mic_gain = trs_mic_gain;
+        Ok(())
     }
 }

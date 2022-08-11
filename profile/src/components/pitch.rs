@@ -9,6 +9,8 @@ use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
+use anyhow::{anyhow, Result};
+
 use crate::components::colours::ColourMap;
 use crate::components::megaphone::Preset;
 use crate::components::megaphone::Preset::{Preset1, Preset2, Preset3, Preset4, Preset5, Preset6};
@@ -51,7 +53,7 @@ impl PitchEncoderBase {
         }
     }
 
-    pub fn parse_pitch_root(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
+    pub fn parse_pitch_root(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
         for attr in attributes {
             if attr.name.local_name == "active_set" {
                 self.active_set = attr.value.parse()?;
@@ -66,11 +68,7 @@ impl PitchEncoderBase {
         Ok(())
     }
 
-    pub fn parse_pitch_preset(
-        &mut self,
-        id: u8,
-        attributes: &[OwnedAttribute],
-    ) -> Result<(), ParseError> {
+    pub fn parse_pitch_preset(&mut self, id: u8, attributes: &[OwnedAttribute]) -> Result<()> {
         let mut preset = PitchEncoder::new();
         for attr in attributes {
             if attr.name.local_name == "PITCH_STYLE" {
@@ -98,7 +96,7 @@ impl PitchEncoderBase {
             }
 
             if attr.name.local_name == "PITCH_SHIFT_INST_RATIO" {
-                preset.inst_ratio = Option::Some(attr.value.parse::<c_float>()? as u8);
+                preset.inst_ratio = Some(attr.value.parse::<c_float>()? as u8);
                 continue;
             }
 
@@ -126,10 +124,7 @@ impl PitchEncoderBase {
         Ok(())
     }
 
-    pub fn write_pitch<W: Write>(
-        &self,
-        writer: &mut EventWriter<&mut W>,
-    ) -> Result<(), xml::writer::Error> {
+    pub fn write_pitch<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
         let mut element: StartElementBuilder = XmlWriterEvent::start_element("pitchEncoder");
 
         let mut attributes: HashMap<String, String> = HashMap::default();
@@ -222,12 +217,84 @@ impl PitchEncoder {
         }
     }
 
-    pub fn knob_position(&self) -> i8 {
-        self.knob_position
+    pub fn knob_position(&self, hardtune_enabled: bool) -> i8 {
+        // The 'knob position' isn't technically accurate, it's a value not the position of the knob
+        // so do the calculations here..
+        if hardtune_enabled {
+            return match self.style {
+                PitchStyle::Narrow => self.knob_position / 12,
+                PitchStyle::Wide => self.knob_position / 12,
+            };
+        }
+
+        match self.style {
+            PitchStyle::Narrow => self.knob_position * 2,
+            PitchStyle::Wide => self.knob_position,
+        }
     }
 
-    pub fn set_knob_position(&mut self, knob_position: i8) {
-        self.knob_position = knob_position;
+    pub fn set_knob_position(&mut self, knob_position: i8, hardtune_enabled: bool) -> Result<()> {
+        // So this is kinda weird, the 'knob position' stores the actual value, and not
+        // the knob position, so we have to do a lot of extra checking here..
+        if hardtune_enabled {
+            match self.style {
+                PitchStyle::Narrow => {
+                    if !(-1..=1).contains(&knob_position) {
+                        return Err(anyhow!(
+                            "Pitch knob should be between -1 and 1 (Hardtune: Enabled, Style: Narrow)",
+                        ));
+                    }
+                    self.knob_position = knob_position * 12;
+                }
+                PitchStyle::Wide => {
+                    if !(-2..=2).contains(&knob_position) {
+                        return Err(anyhow!(
+                            "Pitch knob should be between -2 and 2 (Hardtune: Enabled, Style: Wide)",
+                        ));
+                    }
+                    self.knob_position = knob_position * 12;
+                }
+            };
+            return Ok(());
+        }
+
+        // This is technically settings dependant, but these are the max ranges
+        if !(-24..=24).contains(&knob_position) {
+            return Err(anyhow!("Pitch Knob Position should be between -24 and 24"));
+        }
+
+        match self.style {
+            PitchStyle::Narrow => self.knob_position = knob_position / 2,
+            PitchStyle::Wide => self.knob_position = knob_position,
+        }
+        Ok(())
+    }
+
+    // We pass in an encoder value, do any needed rounding, then return (currently only applicable
+    // for PitchStyle::Narrow with hardtune disabled..
+    pub fn calculate_encoder_value(&self, value: i8, hardtune_enabled: bool) -> i8 {
+        if hardtune_enabled {
+            return value;
+        }
+        match self.style {
+            PitchStyle::Narrow => (value / 2) * 2,
+            PitchStyle::Wide => value,
+        }
+    }
+
+    pub fn get_encoder_position(&self, hardtune_enabled: bool) -> i8 {
+        if !hardtune_enabled {
+            return match self.style {
+                PitchStyle::Narrow => self.knob_position * 2,
+                PitchStyle::Wide => self.knob_position,
+            };
+        }
+
+        (self.knob_position as f32 / 12_f32).round() as i8
+    }
+
+    pub fn get_pitch_value(&self) -> i8 {
+        self.knob_position
     }
 
     pub fn style(&self) -> &PitchStyle {
@@ -249,9 +316,26 @@ impl PitchEncoder {
         }
         0
     }
+
+    pub fn pitch_mode(&self, hardtune_enabled: bool) -> u8 {
+        if hardtune_enabled {
+            return 3;
+        }
+        1
+    }
+
+    pub fn pitch_resolution(&self, hardtune_enabled: bool) -> u8 {
+        if !hardtune_enabled {
+            return 4;
+        }
+        match self.style {
+            PitchStyle::Narrow => 1,
+            PitchStyle::Wide => 2,
+        }
+    }
 }
 
-#[derive(Debug, PartialEq, EnumIter, Enum, EnumProperty, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, EnumIter, Enum, EnumProperty, Copy, Clone)]
 pub enum PitchStyle {
     #[strum(props(uiIndex = "0"))]
     Narrow,

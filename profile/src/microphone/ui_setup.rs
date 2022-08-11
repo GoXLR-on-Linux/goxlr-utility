@@ -1,3 +1,4 @@
+use anyhow::Result;
 use std::collections::HashMap;
 use std::io::Write;
 use xml::attribute::OwnedAttribute;
@@ -41,41 +42,25 @@ impl UiSetup {
         }
     }
 
-    pub fn parse_ui(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
+    pub fn parse_ui(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
         for attr in attributes {
             if attr.name.local_name == "eqAdvanced" {
-                if attr.value == "1" {
-                    self.eq_advanced = true;
-                } else {
-                    self.eq_advanced = false;
-                }
+                self.eq_advanced = matches!(attr.value.as_str(), "1");
                 continue;
             }
 
             if attr.name.local_name == "compAdvanced" {
-                if attr.value == "1" {
-                    self.comp_advanced = true;
-                } else {
-                    self.comp_advanced = false;
-                }
+                self.comp_advanced = matches!(attr.value.as_str(), "1");
                 continue;
             }
 
             if attr.name.local_name == "gateAdvanced" {
-                if attr.value == "1" {
-                    self.gate_advanced = true;
-                } else {
-                    self.gate_advanced = false;
-                }
+                self.gate_advanced = matches!(attr.value.as_str(), "1");
                 continue;
             }
 
             if attr.name.local_name == "eqFineTuneEnabled" {
-                if attr.value == "1" {
-                    self.eq_fine_tune = true;
-                } else {
-                    self.eq_fine_tune = false;
-                }
+                self.eq_fine_tune = matches!(attr.value.as_str(), "1");
                 continue;
             }
         }
@@ -83,10 +68,7 @@ impl UiSetup {
         Ok(())
     }
 
-    pub fn write_ui<W: Write>(
-        &self,
-        writer: &mut EventWriter<&mut W>,
-    ) -> Result<(), xml::writer::Error> {
+    pub fn write_ui<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
         let mut element: StartElementBuilder =
             XmlWriterEvent::start_element("micProfileUIMicProfile");
 

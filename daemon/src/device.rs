@@ -1,6 +1,6 @@
 use crate::audio::AudioHandler;
-use crate::mic_profile::MicProfileAdapter;
-use crate::profile::{version_newer_or_equal_to, ProfileAdapter};
+use crate::mic_profile::{MicProfileAdapter, DEFAULT_MIC_PROFILE_NAME};
+use crate::profile::{version_newer_or_equal_to, ProfileAdapter, DEFAULT_PROFILE_NAME};
 use crate::{SettingsHandle, DISTRIBUTABLE_PROFILES};
 use anyhow::{anyhow, Result};
 use enum_map::EnumMap;
@@ -62,10 +62,10 @@ impl<'a, T: UsbContext> Device<'a, T> {
 
         let profile = profile_name
             .clone()
-            .unwrap_or_else(|| "Default".to_string());
+            .unwrap_or_else(|| DEFAULT_PROFILE_NAME.to_string());
         let mic_profile = mic_profile_name
             .clone()
-            .unwrap_or_else(|| "Default".to_string());
+            .unwrap_or_else(|| DEFAULT_MIC_PROFILE_NAME.to_string());
 
         info!(
             "Configuring GoXLR{}, Profile: {}, Mic Profile: {}",
@@ -159,7 +159,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
         }
 
         if let Ok(state) = self.goxlr.get_button_states() {
-            self.update_volumes_to(state.volumes);
+            self.update_volumes_to(state.volumes)?;
             self.update_encoders_to(state.encoders)?;
 
             let pressed_buttons = state.pressed.difference(self.last_buttons);
@@ -377,18 +377,18 @@ impl<'a, T: UsbContext> Device<'a, T> {
             }
 
             self.profile
-                .set_mute_button_previous_volume(fader, current_volume);
+                .set_mute_button_previous_volume(fader, current_volume)?;
 
             self.goxlr.set_volume(channel, 0)?;
             self.goxlr.set_channel_state(channel, Muted)?;
 
-            self.profile.set_mute_button_on(fader, true);
+            self.profile.set_mute_button_on(fader, true)?;
 
             if held {
-                self.profile.set_mute_button_blink(fader, true);
+                self.profile.set_mute_button_blink(fader, true)?;
             }
 
-            self.profile.set_channel_volume(channel, 0);
+            self.profile.set_channel_volume(channel, 0)?;
 
             return Ok(());
         }
@@ -396,14 +396,14 @@ impl<'a, T: UsbContext> Device<'a, T> {
         // Button has been pressed, and we're already in some kind of muted state..
         if !held && muted_to_x {
             // Disable the lighting regardless of action
-            self.profile.set_mute_button_on(fader, false);
-            self.profile.set_mute_button_blink(fader, false);
+            self.profile.set_mute_button_on(fader, false)?;
+            self.profile.set_mute_button_blink(fader, false)?;
 
             if muted_to_all || mute_function == MuteFunction::All {
                 let previous_volume = self.profile.get_mute_button_previous_volume(fader);
 
                 self.goxlr.set_volume(channel, previous_volume)?;
-                self.profile.set_channel_volume(channel, previous_volume);
+                self.profile.set_channel_volume(channel, previous_volume)?;
 
                 if channel != ChannelName::Mic
                     || (channel == ChannelName::Mic && !self.mic_muted_by_cough())
@@ -419,7 +419,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
 
         if !held && !muted_to_x && mute_function != MuteFunction::All {
             // Mute channel to X via transient routing table update
-            self.profile.set_mute_button_on(fader, true);
+            self.profile.set_mute_button_on(fader, true)?;
             if basic_input.is_some() {
                 self.apply_routing(basic_input.unwrap())?;
             }
@@ -553,12 +553,12 @@ impl<'a, T: UsbContext> Device<'a, T> {
 
     async fn handle_swear_button(&mut self, press: bool) -> Result<()> {
         // Pretty simple, turn the light on when pressed, off when released..
-        self.profile.set_swear_button_on(press);
+        self.profile.set_swear_button_on(press)?;
         Ok(())
     }
 
     async fn load_sample_bank(&mut self, bank: SampleBank) -> Result<()> {
-        self.profile.load_sample_bank(bank);
+        self.profile.load_sample_bank(bank)?;
 
         Ok(())
     }
@@ -592,7 +592,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
         debug!("Attempting to play: {}", sample_path.to_string_lossy());
         let audio_handler = self.audio_handler.as_mut().unwrap();
         audio_handler.play_for_button(button, sample_path.to_str().unwrap().to_string())?;
-        self.profile.set_sample_button_state(button, true);
+        self.profile.set_sample_button_state(button, true)?;
 
         Ok(())
     }
@@ -613,7 +613,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 .is_sample_playing(button);
 
             if self.profile.is_sample_active(button) && !playing {
-                self.profile.set_sample_button_state(button, false);
+                self.profile.set_sample_button_state(button, false)?;
                 changed = true;
             }
         }
@@ -626,7 +626,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
     }
 
     async fn load_effect_bank(&mut self, preset: EffectBankPresets) -> Result<()> {
-        self.profile.load_effect_bank(preset);
+        self.profile.load_effect_bank(preset)?;
         self.load_effects()?;
         self.set_pitch_mode()?;
 
@@ -646,26 +646,32 @@ impl<'a, T: UsbContext> Device<'a, T> {
     }
 
     async fn toggle_megaphone(&mut self) -> Result<()> {
-        self.profile.toggle_megaphone();
+        self.profile.toggle_megaphone()?;
         self.apply_effects(HashSet::from([EffectKey::MegaphoneEnabled]))?;
         Ok(())
     }
 
     async fn toggle_robot(&mut self) -> Result<()> {
-        self.profile.toggle_robot();
+        self.profile.toggle_robot()?;
         self.apply_effects(HashSet::from([EffectKey::RobotEnabled]))?;
         Ok(())
     }
 
     async fn toggle_hardtune(&mut self) -> Result<()> {
-        self.profile.toggle_hardtune();
+        self.profile.toggle_hardtune()?;
         self.apply_effects(HashSet::from([EffectKey::HardTuneEnabled]))?;
         self.set_pitch_mode()?;
+
+        // When changing the Hard Tune amount, we need to update the pitch encoder..
+        let pitch = self.profile.get_pitch_encoder_position();
+        self.goxlr.set_encoder_value(EncoderName::Pitch, pitch)?;
+        self.profile.set_pitch_knob_position(pitch)?;
+        self.apply_effects(HashSet::from([EffectKey::PitchAmount]))?;
         Ok(())
     }
 
     async fn toggle_effects(&mut self) -> Result<()> {
-        self.profile.toggle_effects();
+        self.profile.toggle_effects()?;
 
         // When this changes, we need to update all the 'Enabled' keys..
         let mut key_updates = HashSet::new();
@@ -703,7 +709,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
         muted_to_all || (muted_to_x && mute_function == MuteFunction::All)
     }
 
-    fn update_volumes_to(&mut self, volumes: [u8; 4]) {
+    fn update_volumes_to(&mut self, volumes: [u8; 4]) -> Result<()> {
         for fader in FaderName::iter() {
             let channel = self.profile.get_fader_assignment(fader);
             let old_volume = self.profile.get_channel_volume(channel);
@@ -714,30 +720,25 @@ impl<'a, T: UsbContext> Device<'a, T> {
                     "Updating {} volume from {} to {} as a human moved the fader",
                     channel, old_volume, new_volume
                 );
-                self.profile.set_channel_volume(channel, new_volume);
+                self.profile.set_channel_volume(channel, new_volume)?;
             }
         }
+        Ok(())
     }
 
     fn update_encoders_to(&mut self, encoders: [i8; 4]) -> Result<()> {
         // Ok, this is funky, due to the way pitch works, the encoder 'value' doesn't match
         // the profile value if hardtune is enabled, so we'll pre-emptively calculate pitch here..
-        let mut pitch_value = encoders[0];
-        if self.profile.is_hardtune_pitch_enabled() {
-            pitch_value *= 12;
-        } else if self.profile.is_pitch_narrow() {
-            pitch_value /= 2;
-        }
-
-        if pitch_value != self.profile.get_pitch_value() {
+        if self.profile.calculate_pitch_knob_position(encoders[0])
+            != self.profile.get_pitch_knob_position()
+        {
             debug!(
                 "Updating PITCH value from {} to {} as human moved the dial",
-                self.profile.get_pitch_value(),
-                pitch_value
+                self.profile.get_pitch_knob_position(),
+                encoders[0]
             );
 
-            // Ok, if hard tune is enabled, multiply this value by 12..
-            self.profile.set_pitch_value(pitch_value);
+            self.profile.set_pitch_knob_position(encoders[0])?;
             self.apply_effects(HashSet::from([EffectKey::PitchAmount]))?;
         }
 
@@ -747,7 +748,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 self.profile.get_gender_value(),
                 encoders[1]
             );
-            self.profile.set_gender_value(encoders[1]);
+            self.profile.set_gender_value(encoders[1])?;
             self.apply_effects(HashSet::from([EffectKey::GenderAmount]))?;
         }
 
@@ -757,7 +758,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 self.profile.get_reverb_value(),
                 encoders[2]
             );
-            self.profile.set_reverb_value(encoders[2]);
+            self.profile.set_reverb_value(encoders[2])?;
             self.apply_effects(HashSet::from([EffectKey::ReverbAmount]))?;
         }
 
@@ -767,7 +768,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 self.profile.get_echo_value(),
                 encoders[3]
             );
-            self.profile.set_echo_value(encoders[3]);
+            self.profile.set_echo_value(encoders[3])?;
             self.apply_effects(HashSet::from([EffectKey::EchoAmount]))?;
         }
 
@@ -792,7 +793,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
 
             GoXLRCommand::SetVolume(channel, volume) => {
                 self.goxlr.set_volume(channel, volume)?;
-                self.profile.set_channel_volume(channel, volume);
+                self.profile.set_channel_volume(channel, volume)?;
             }
 
             GoXLRCommand::SetCoughMuteFunction(mute_function) => {
@@ -810,20 +811,17 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 self.profile.set_chat_mute_button_is_held(is_hold);
             }
             GoXLRCommand::SetSwearButtonVolume(volume) => {
-                if volume < -34 || volume > 0 {
-                    return Err(anyhow!("Mute volume must be between -34 and 0"));
-                }
-                self.mic_profile.set_bleep_level(volume);
+                self.mic_profile.set_bleep_level(volume)?;
                 self.apply_effects(HashSet::from([EffectKey::BleepLevel]))?;
                 self.apply_mic_params(HashSet::from([MicrophoneParamKey::BleepLevel]))?;
             }
             GoXLRCommand::SetMicrophoneType(mic_type) => {
-                self.mic_profile.set_mic_type(mic_type);
+                self.mic_profile.set_mic_type(mic_type)?;
                 self.apply_mic_gain()?;
             }
             GoXLRCommand::SetMicrophoneGain(mic_type, gain) => {
-                self.mic_profile.set_mic_type(mic_type);
-                self.mic_profile.set_mic_gain(mic_type, gain);
+                self.mic_profile.set_mic_type(mic_type)?;
+                self.mic_profile.set_mic_gain(mic_type, gain)?;
                 self.apply_mic_gain()?;
             }
             GoXLRCommand::SetRouter(input, output, enabled) => {
@@ -836,11 +834,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
 
             // Equaliser
             GoXLRCommand::SetEqMiniGain(gain, value) => {
-                if value < -9 || value > 9 {
-                    return Err(anyhow!("Gain volume should be between -9 and 9 dB"));
-                }
-
-                let param = self.mic_profile.set_mini_eq_gain(gain, value);
+                let param = self.mic_profile.set_mini_eq_gain(gain, value)?;
                 self.apply_mic_params(HashSet::from([param]))?;
             }
             GoXLRCommand::SetEqMiniFreq(freq, value) => {
@@ -848,11 +842,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 self.apply_mic_params(HashSet::from([param]))?;
             }
             GoXLRCommand::SetEqGain(gain, value) => {
-                if value < -9 || value > 9 {
-                    return Err(anyhow!("Gain volume should be between -9 and 9 dB"));
-                }
-
-                let param = self.mic_profile.set_eq_gain(gain, value);
+                let param = self.mic_profile.set_eq_gain(gain, value)?;
                 self.apply_effects(HashSet::from([param]))?;
             }
             GoXLRCommand::SetEqFreq(freq, value) => {
@@ -860,35 +850,29 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 self.apply_effects(HashSet::from([param]))?;
             }
             GoXLRCommand::SetGateThreshold(value) => {
-                if value > 0 || value < -59 {
-                    return Err(anyhow!("Threshold should be between 0 and -59dB"));
-                }
-                self.mic_profile.set_gate_threshold(value);
+                self.mic_profile.set_gate_threshold(value)?;
                 self.apply_mic_params(HashSet::from([MicrophoneParamKey::GateThreshold]))?;
                 self.apply_effects(HashSet::from([EffectKey::GateThreshold]))?;
             }
 
             // Noise Gate
             GoXLRCommand::SetGateAttenuation(percentage) => {
-                if percentage > 100 {
-                    return Err(anyhow!("Attentuation should be a percentage"));
-                }
-                self.mic_profile.set_gate_attenuation(percentage);
+                self.mic_profile.set_gate_attenuation(percentage)?;
                 self.apply_mic_params(HashSet::from([MicrophoneParamKey::GateAttenuation]))?;
                 self.apply_effects(HashSet::from([EffectKey::GateAttenuation]))?;
             }
             GoXLRCommand::SetGateAttack(attack_time) => {
-                self.mic_profile.set_gate_attack(attack_time);
+                self.mic_profile.set_gate_attack(attack_time)?;
                 self.apply_mic_params(HashSet::from([MicrophoneParamKey::GateAttack]))?;
                 self.apply_effects(HashSet::from([EffectKey::GateAttack]))?;
             }
             GoXLRCommand::SetGateRelease(release_time) => {
-                self.mic_profile.set_gate_release(release_time);
+                self.mic_profile.set_gate_release(release_time)?;
                 self.apply_mic_params(HashSet::from([MicrophoneParamKey::GateRelease]))?;
                 self.apply_effects(HashSet::from([EffectKey::GateRelease]))?;
             }
             GoXLRCommand::SetGateActive(active) => {
-                self.mic_profile.set_gate_active(active);
+                self.mic_profile.set_gate_active(active)?;
 
                 // GateEnabled appears to only be an effect key.
                 self.apply_effects(HashSet::from([EffectKey::GateEnabled]))?;
@@ -896,48 +880,39 @@ impl<'a, T: UsbContext> Device<'a, T> {
 
             // Compressor
             GoXLRCommand::SetCompressorThreshold(value) => {
-                if value > 0 || value < -40 {
-                    return Err(anyhow!("Compressor Threshold must be between 0 and -40 dB"));
-                }
-                self.mic_profile.set_compressor_threshold(value);
+                self.mic_profile.set_compressor_threshold(value)?;
                 self.apply_mic_params(HashSet::from([MicrophoneParamKey::CompressorThreshold]))?;
                 self.apply_effects(HashSet::from([EffectKey::CompressorThreshold]))?;
             }
             GoXLRCommand::SetCompressorRatio(ratio) => {
-                self.mic_profile.set_compressor_ratio(ratio);
+                self.mic_profile.set_compressor_ratio(ratio)?;
                 self.apply_mic_params(HashSet::from([MicrophoneParamKey::CompressorRatio]))?;
                 self.apply_effects(HashSet::from([EffectKey::CompressorRatio]))?;
             }
             GoXLRCommand::SetCompressorAttack(value) => {
-                self.mic_profile.set_compressor_attack(value);
+                self.mic_profile.set_compressor_attack(value)?;
                 self.apply_mic_params(HashSet::from([MicrophoneParamKey::CompressorAttack]))?;
                 self.apply_effects(HashSet::from([EffectKey::CompressorAttack]))?;
             }
             GoXLRCommand::SetCompressorReleaseTime(value) => {
-                self.mic_profile.set_compressor_release(value);
+                self.mic_profile.set_compressor_release(value)?;
                 self.apply_mic_params(HashSet::from([MicrophoneParamKey::CompressorRelease]))?;
                 self.apply_effects(HashSet::from([EffectKey::CompressorRelease]))?;
             }
             GoXLRCommand::SetCompressorMakeupGain(value) => {
-                if value > 24 {
-                    return Err(anyhow!("Makeup Gain should be between 0 and 24dB"));
-                }
-                self.mic_profile.set_compressor_makeup(value);
+                self.mic_profile.set_compressor_makeup(value)?;
                 self.apply_mic_params(HashSet::from([MicrophoneParamKey::CompressorMakeUpGain]))?;
                 self.apply_effects(HashSet::from([EffectKey::CompressorMakeUpGain]))?;
             }
 
             GoXLRCommand::SetDeeser(percentage) => {
-                if percentage > 100 {
-                    return Err(anyhow!("Deesser should be a percentage"));
-                }
-                self.mic_profile.set_deesser(percentage);
+                self.mic_profile.set_deesser(percentage)?;
                 self.apply_effects(HashSet::from([EffectKey::DeEsser]))?;
             }
 
             // Colouring..
             GoXLRCommand::SetFaderDisplayStyle(fader, display) => {
-                self.profile.set_fader_display(fader, display);
+                self.profile.set_fader_display(fader, display)?;
                 self.set_fader_display_from_profile(fader)?;
             }
             GoXLRCommand::SetFaderColours(fader, top, bottom) => {
@@ -957,7 +932,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
             }
             GoXLRCommand::SetAllFaderDisplayStyle(display_style) => {
                 for fader in FaderName::iter() {
-                    self.profile.set_fader_display(fader, display_style);
+                    self.profile.set_fader_display(fader, display_style)?;
                 }
                 self.load_colour_map()?;
             }
@@ -970,7 +945,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 self.update_button_states()?;
             }
             GoXLRCommand::SetButtonOffStyle(target, off_style) => {
-                self.profile.set_button_off_style(target, off_style);
+                self.profile.set_button_off_style(target, off_style)?;
 
                 self.load_colour_map()?;
                 self.update_button_states()?;
@@ -983,7 +958,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 self.update_button_states()?;
             }
             GoXLRCommand::SetButtonGroupOffStyle(target, off_style) => {
-                self.profile.set_group_button_off_style(target, off_style);
+                self.profile.set_group_button_off_style(target, off_style)?;
                 self.load_colour_map()?;
                 self.update_button_states()?;
             }
@@ -1301,7 +1276,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
         if new_channel == self.profile.get_fader_assignment(fader) {
             // We don't need to do anything at all in theory, set the fader anyway..
             if new_channel == ChannelName::Mic {
-                self.profile.set_mic_fader_id(fader as u8);
+                self.profile.set_mic_fader(fader)?;
             }
 
             self.goxlr.set_fader(fader, new_channel)?;
@@ -1332,7 +1307,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
 
             // Check to see if we are dispatching of the mic channel, if so set the id.
             if existing_channel == ChannelName::Mic {
-                self.profile.set_mic_fader_id(4);
+                self.profile.clear_mic_fader();
             }
 
             // Now set the new fader..
@@ -1352,11 +1327,11 @@ impl<'a, T: UsbContext> Device<'a, T> {
 
         // Are either of the moves being done by the mic channel?
         if new_channel == ChannelName::Mic {
-            self.profile.set_mic_fader_id(fader as u8);
+            self.profile.set_mic_fader(fader)?;
         }
 
         if existing_channel == ChannelName::Mic {
-            self.profile.set_mic_fader_id(fader_to_switch as u8);
+            self.profile.set_mic_fader(fader_to_switch)?;
         }
 
         // Now switch the faders on the GoXLR..
@@ -1462,6 +1437,10 @@ impl<'a, T: UsbContext> Device<'a, T> {
             self.apply_routing(input)?;
         }
 
+        if self.hardware.device_type == DeviceType::Full {
+            self.set_pitch_mode()?;
+        }
+
         Ok(())
     }
 
@@ -1529,28 +1508,23 @@ impl<'a, T: UsbContext> Device<'a, T> {
 
         if self.hardware.device_type == DeviceType::Full {
             self.load_effects()?;
-            self.set_pitch_mode()?;
         }
         Ok(())
     }
 
     fn load_effects(&mut self) -> Result<()> {
         // For now, we'll simply set the knob positions, more to come!
-        let mut value = self.profile.get_pitch_value();
-        self.goxlr
-            .set_encoder_value(EncoderName::Pitch, value as u8)?;
+        let mut value = self.profile.get_pitch_encoder_position();
+        self.goxlr.set_encoder_value(EncoderName::Pitch, value)?;
 
         value = self.profile.get_echo_value();
-        self.goxlr
-            .set_encoder_value(EncoderName::Echo, value as u8)?;
+        self.goxlr.set_encoder_value(EncoderName::Echo, value)?;
 
         value = self.profile.get_gender_value();
-        self.goxlr
-            .set_encoder_value(EncoderName::Gender, value as u8)?;
+        self.goxlr.set_encoder_value(EncoderName::Gender, value)?;
 
         value = self.profile.get_reverb_value();
-        self.goxlr
-            .set_encoder_value(EncoderName::Reverb, value as u8)?;
+        self.goxlr.set_encoder_value(EncoderName::Reverb, value)?;
 
         Ok(())
     }
@@ -1561,16 +1535,11 @@ impl<'a, T: UsbContext> Device<'a, T> {
             return Ok(());
         }
 
-        if self.profile.is_hardtune_pitch_enabled() {
-            if self.profile.is_pitch_narrow() {
-                self.goxlr.set_encoder_mode(EncoderName::Pitch, 3, 1)?;
-            } else {
-                self.goxlr.set_encoder_mode(EncoderName::Pitch, 3, 2)?;
-            }
-        } else {
-            self.goxlr.set_encoder_mode(EncoderName::Pitch, 1, 4)?;
-        }
-
+        self.goxlr.set_encoder_mode(
+            EncoderName::Pitch,
+            self.profile.get_pitch_mode(),
+            self.profile.get_pitch_resolution(),
+        )?;
         Ok(())
     }
 

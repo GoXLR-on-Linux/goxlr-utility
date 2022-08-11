@@ -10,9 +10,11 @@ use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
+use anyhow::Result;
+
 use crate::components::colours::ColourMap;
-use crate::components::hardtune::HardtuneSource::All;
-use crate::components::hardtune::HardtuneStyle::Normal;
+use crate::components::hardtune::HardTuneSource::All;
+use crate::components::hardtune::HardTuneStyle::Normal;
 use crate::components::megaphone::Preset;
 use crate::components::megaphone::Preset::{Preset1, Preset2, Preset3, Preset4, Preset5, Preset6};
 
@@ -40,8 +42,8 @@ pub enum ParseError {
 #[derive(Debug)]
 pub struct HardtuneEffectBase {
     colour_map: ColourMap,
-    preset_map: EnumMap<Preset, HardtuneEffect>,
-    source: HardtuneSource,
+    preset_map: EnumMap<Preset, HardTuneEffect>,
+    source: HardTuneSource,
 }
 
 impl HardtuneEffectBase {
@@ -54,11 +56,11 @@ impl HardtuneEffectBase {
         }
     }
 
-    pub fn parse_hardtune_root(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
+    pub fn parse_hardtune_root(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
         for attr in attributes {
             // I honestly have no idea why this lives here :D
             if attr.name.local_name == "HARDTUNE_SOURCE" {
-                self.source = HardtuneSource::from_str(&attr.value)?;
+                self.source = HardTuneSource::from_str(&attr.value)?;
                 continue;
             }
 
@@ -75,18 +77,14 @@ impl HardtuneEffectBase {
         id: u8,
         attributes: &[OwnedAttribute],
     ) -> Result<(), ParseError> {
-        let mut preset = HardtuneEffect::new();
+        let mut preset = HardTuneEffect::new();
         for attr in attributes {
             if attr.name.local_name == "hardtuneEffectstate" {
-                if attr.value == "1" {
-                    preset.state = true;
-                } else {
-                    preset.state = false
-                }
+                preset.state = matches!(attr.value.as_str(), "1");
                 continue;
             }
             if attr.name.local_name == "HARDTUNE_STYLE" {
-                for style in HardtuneStyle::iter() {
+                for style in HardTuneStyle::iter() {
                     if style.get_str("uiIndex").unwrap() == attr.value {
                         preset.style = style;
                         break;
@@ -96,7 +94,7 @@ impl HardtuneEffectBase {
             }
 
             if attr.name.local_name == "HARDTUNE_KEYSOURCE" {
-                preset.keysource = attr.value.parse::<c_float>()? as u8;
+                preset.key_source = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
             if attr.name.local_name == "HARDTUNE_AMOUNT" {
@@ -120,12 +118,12 @@ impl HardtuneEffectBase {
                 continue;
             }
             if attr.name.local_name == "HARDTUNE_SOURCE" {
-                preset.source = Option::Some(HardtuneSource::from_str(&attr.value)?);
+                preset.source = Some(HardTuneSource::from_str(&attr.value)?);
                 continue;
             }
 
             println!(
-                "[HardtuneEffect] Unparsed Child Attribute: {}",
+                "[HardTuneEffect] Unparsed Child Attribute: {}",
                 &attr.name.local_name
             );
         }
@@ -187,7 +185,7 @@ impl HardtuneEffectBase {
             );
             sub_attributes.insert(
                 "HARDTUNE_KEYSOURCE".to_string(),
-                format!("{}", value.keysource),
+                format!("{}", value.key_source),
             );
             sub_attributes.insert("HARDTUNE_AMOUNT".to_string(), format!("{}", value.amount));
             sub_attributes.insert("HARDTUNE_WINDOW".to_string(), format!("{}", value.window));
@@ -223,36 +221,36 @@ impl HardtuneEffectBase {
         &mut self.colour_map
     }
 
-    pub fn get_preset(&self, preset: Preset) -> &HardtuneEffect {
+    pub fn get_preset(&self, preset: Preset) -> &HardTuneEffect {
         &self.preset_map[preset]
     }
 
-    pub fn get_preset_mut(&mut self, preset: Preset) -> &mut HardtuneEffect {
+    pub fn get_preset_mut(&mut self, preset: Preset) -> &mut HardTuneEffect {
         &mut self.preset_map[preset]
     }
 }
 
 #[derive(Debug, Default)]
-pub struct HardtuneEffect {
+pub struct HardTuneEffect {
     // State here determines if the hardtune is on or off when this preset is loaded.
     state: bool,
 
-    style: HardtuneStyle,
-    keysource: u8,
+    style: HardTuneStyle,
+    key_source: u8,
     amount: u8,
     window: u8,
     rate: u8,
     scale: u8,
     pitch_amt: u8,
-    source: Option<HardtuneSource>,
+    source: Option<HardTuneSource>,
 }
 
-impl HardtuneEffect {
+impl HardTuneEffect {
     pub fn new() -> Self {
         Self {
             state: false,
             style: Default::default(),
-            keysource: 0,
+            key_source: 0,
             amount: 0,
             window: 0,
             rate: 0,
@@ -270,11 +268,11 @@ impl HardtuneEffect {
         self.state = state;
     }
 
-    pub fn style(&self) -> &HardtuneStyle {
+    pub fn style(&self) -> &HardTuneStyle {
         &self.style
     }
-    pub fn keysource(&self) -> u8 {
-        self.keysource
+    pub fn key_source(&self) -> u8 {
+        self.key_source
     }
     pub fn amount(&self) -> u8 {
         self.amount
@@ -291,20 +289,20 @@ impl HardtuneEffect {
     pub fn pitch_amt(&self) -> u8 {
         self.pitch_amt
     }
-    pub fn source(&self) -> &Option<HardtuneSource> {
+    pub fn source(&self) -> &Option<HardTuneSource> {
         &self.source
     }
 
-    pub fn get_source(&self) -> HardtuneSource {
+    pub fn get_source(&self) -> HardTuneSource {
         if let Some(source) = self.source {
             return source;
         }
-        HardtuneSource::All
+        All
     }
 }
 
 #[derive(Debug, EnumIter, EnumProperty)]
-pub enum HardtuneStyle {
+pub enum HardTuneStyle {
     #[strum(props(uiIndex = "0"))]
     Normal,
 
@@ -315,14 +313,14 @@ pub enum HardtuneStyle {
     Hard,
 }
 
-impl Default for HardtuneStyle {
+impl Default for HardTuneStyle {
     fn default() -> Self {
         Normal
     }
 }
 
-#[derive(Debug, Display, EnumString, PartialEq, Copy, Clone)]
-pub enum HardtuneSource {
+#[derive(Debug, Display, EnumString, PartialEq, Eq, Copy, Clone)]
+pub enum HardTuneSource {
     #[strum(to_string = "ALL")]
     All,
 
@@ -336,7 +334,7 @@ pub enum HardtuneSource {
     LineIn,
 }
 
-impl Default for HardtuneSource {
+impl Default for HardTuneSource {
     fn default() -> Self {
         All
     }

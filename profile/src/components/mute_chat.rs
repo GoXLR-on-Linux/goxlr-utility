@@ -8,6 +8,8 @@ use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
+use anyhow::{anyhow, Result};
+
 use crate::components::colours::{ColourMap, ColourState};
 use crate::components::mute::MuteFunction;
 use crate::components::mute_chat::CoughToggle::Hold;
@@ -55,13 +57,13 @@ impl MuteChat {
             colour_map: ColourMap::new(colour_map),
             mic_fader_id: 4,
             blink: ColourState::Off,
-            cough_behaviour: CoughToggle::Hold,
+            cough_behaviour: Hold,
             cough_mute_source: MuteFunction::All,
             cough_button_on: false,
         }
     }
 
-    pub fn parse_mute_chat(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
+    pub fn parse_mute_chat(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
         for attr in attributes {
             if attr.name.local_name == "micIsAnActiveFader" {
                 self.mic_fader_id = attr.value.parse()?;
@@ -70,7 +72,7 @@ impl MuteChat {
 
             if attr.name.local_name == "coughButtonToggleSetting" {
                 self.cough_behaviour = if attr.value == "0" {
-                    CoughToggle::Hold
+                    Hold
                 } else {
                     CoughToggle::Toggle
                 };
@@ -100,10 +102,7 @@ impl MuteChat {
         Ok(())
     }
 
-    pub fn write_mute_chat<W: Write>(
-        &self,
-        writer: &mut EventWriter<&mut W>,
-    ) -> Result<(), xml::writer::Error> {
+    pub fn write_mute_chat<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
         let mut element: StartElementBuilder =
             XmlWriterEvent::start_element(self.element_name.as_str());
 
@@ -200,8 +199,17 @@ impl MuteChat {
         self.cough_button_on
     }
 
-    pub fn set_mic_fader_id(&mut self, mic_fader_id: u8) {
+    pub fn set_mic_fader_id(&mut self, mic_fader_id: u8) -> Result<()> {
+        if !(0..=4).contains(&mic_fader_id) {
+            return Err(anyhow!("Mic Fader id should be between 0 and 4"));
+        }
+
         self.mic_fader_id = mic_fader_id;
+        Ok(())
+    }
+
+    pub fn clear_mic_fader_id(&mut self) {
+        self.mic_fader_id = 4;
     }
 
     pub fn set_cough_behaviour(&mut self, cough_behaviour: CoughToggle) {
@@ -209,7 +217,7 @@ impl MuteChat {
     }
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum CoughToggle {
     Hold,
     Toggle,

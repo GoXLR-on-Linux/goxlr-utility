@@ -15,3 +15,11 @@ pub enum SampleButtons {
     BottomRight,
     Clear,
 }
+
+#[derive(Debug, Enum, EnumIter, Copy, Clone, PartialEq, Eq, Hash)]
+pub enum Faders {
+    A,
+    B,
+    C,
+    D,
+}

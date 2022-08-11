@@ -1,3 +1,4 @@
+use anyhow::{anyhow, Result};
 use std::collections::HashMap;
 use std::str::FromStr;
 
@@ -66,11 +67,11 @@ impl ColourMap {
         }
     }
 
-    pub fn read_colours(&mut self, attribute: &OwnedAttribute) -> Result<bool, ParseError> {
+    pub fn read_colours(&mut self, attribute: &OwnedAttribute) -> Result<bool> {
         let mut attr_key = format!("{}offStyle", &self.prefix);
 
         if attribute.name.local_name == attr_key {
-            self.off_style = ColourOffStyle::from_str(&attribute.value)?;
+            self.set_off_style(ColourOffStyle::from_str(&attribute.value)?)?;
             return Ok(true);
         }
 
@@ -88,13 +89,13 @@ impl ColourMap {
 
         attr_key = format!("{}state", &self.prefix);
         if attribute.name.local_name == attr_key {
-            self.state = Some(ColourState::from_str(&attribute.value)?);
+            self.set_state(Some(ColourState::from_str(&attribute.value)?))?;
             return Ok(true);
         }
 
         attr_key = format!("{}blink", &self.prefix);
         if attribute.name.local_name == attr_key {
-            self.blink = Some(ColourState::from_str(&attribute.value)?);
+            self.set_blink(Some(ColourState::from_str(&attribute.value)?))?;
             return Ok(true);
         }
 
@@ -129,7 +130,7 @@ impl ColourMap {
 
         attr_key = format!("{}Display", &self.prefix);
         if attribute.name.local_name == attr_key {
-            self.colour_display = Some(ColourDisplay::from_str(&attribute.value)?);
+            self.set_fader_display(ColourDisplay::from_str(&attribute.value)?)?;
             return Ok(true);
         }
 
@@ -229,8 +230,9 @@ impl ColourMap {
         false
     }
 
-    pub fn set_fader_display(&mut self, display: ColourDisplay) {
+    pub fn set_fader_display(&mut self, display: ColourDisplay) -> Result<()> {
         self.colour_display = Some(display);
+        Ok(())
     }
 
     pub fn state(&self) -> &Option<ColourState> {
@@ -247,30 +249,34 @@ impl ColourMap {
         &self.blink
     }
 
-    pub fn set_state(&mut self, state: Option<ColourState>) {
+    pub fn set_state(&mut self, state: Option<ColourState>) -> Result<()> {
         self.state = state;
+        Ok(())
     }
-    pub fn set_state_on(&mut self, on: bool) {
+    pub fn set_state_on(&mut self, on: bool) -> Result<()> {
         if on {
             self.state = Some(ColourState::On);
         } else {
             self.state = Some(ColourState::Off);
         }
+        Ok(())
     }
 
-    pub fn set_blink(&mut self, blink: Option<ColourState>) {
+    pub fn set_blink(&mut self, blink: Option<ColourState>) -> Result<()> {
         self.blink = blink;
+        Ok(())
     }
 
-    pub fn set_blink_on(&mut self, on: bool) {
+    pub fn set_blink_on(&mut self, on: bool) -> Result<()> {
         if on {
             self.blink = Some(ColourState::On);
         } else {
             self.blink = Some(ColourState::Off);
         }
+        Ok(())
     }
 
-    pub fn set_colour(&mut self, index: usize, input: Colour) {
+    pub fn set_colour(&mut self, index: usize, input: Colour) -> Result<()> {
         if let Some(colour) = &mut self.colour_list {
             colour[index] = Some(input);
         } else {
@@ -280,9 +286,11 @@ impl ColourMap {
             default[index] = Some(input);
             self.colour_list = Some(default);
         }
+        Ok(())
     }
-    pub fn set_off_style(&mut self, off_style: ColourOffStyle) {
+    pub fn set_off_style(&mut self, off_style: ColourOffStyle) -> Result<()> {
         self.off_style = off_style;
+        Ok(())
     }
     pub fn fader_display(&self) -> &Option<ColourDisplay> {
         &self.colour_display
@@ -296,7 +304,7 @@ const DEFAULT_COLOUR: Colour = Colour {
     alpha: 0,
 };
 
-#[derive(Debug, Copy, Clone, PartialEq, EnumString, Display)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, EnumString, Display)]
 pub enum ColourOffStyle {
     #[strum(to_string = "DIMMED")]
     Dimmed,
@@ -308,7 +316,7 @@ pub enum ColourOffStyle {
     DimmedColour2,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, EnumString, Display)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, EnumString, Display)]
 pub enum ColourDisplay {
     #[strum(to_string = "GRADIENT")]
     Gradient,
@@ -323,7 +331,7 @@ pub enum ColourDisplay {
     TwoColour,
 }
 
-#[derive(Debug, EnumString, PartialEq, Display)]
+#[derive(Debug, EnumString, PartialEq, Eq, Display)]
 pub enum ColourState {
     #[strum(to_string = "0")]
     Off,
@@ -341,8 +349,10 @@ pub struct Colour {
 }
 
 impl Colour {
-    pub fn new(argb: &str) -> Result<Self, ParseError> {
-        // So, the profile stores colours as ARGB, and not RGBA, parse as such!
+    pub fn new(argb: &str) -> Result<Self> {
+        if argb.len() != 8 {
+            return Err(anyhow!("Expected Length: 8 (AARRGGBB), Got: {}", argb));
+        }
         Ok(Self {
             alpha: u8::from_str_radix(&argb[0..2], 16)?,
             red: u8::from_str_radix(&argb[2..4], 16)?,
@@ -351,7 +361,11 @@ impl Colour {
         })
     }
 
-    pub fn fromrgb(rgb: &str) -> Result<Self, ParseError> {
+    pub fn fromrgb(rgb: &str) -> Result<Self> {
+        if rgb.len() != 6 {
+            return Err(anyhow!("Expected Length: 6 (RRGGBB), Got: {}", rgb));
+        }
+
         Ok(Self {
             red: u8::from_str_radix(&rgb[0..2], 16)?,
             green: u8::from_str_radix(&rgb[2..4], 16)?,
@@ -361,14 +375,14 @@ impl Colour {
     }
 
     pub fn to_argb(&self) -> String {
-        return format!(
+        format!(
             "{:02X}{:02X}{:02X}{:02X}",
             self.alpha, self.red, self.green, self.blue
-        );
+        )
     }
 
     pub fn to_rgb(&self) -> String {
-        return format!("{:02X}{:02X}{:02X}", self.red, self.green, self.blue);
+        format!("{:02X}{:02X}{:02X}", self.red, self.green, self.blue)
     }
 
     pub fn to_reverse_bytes(&self) -> [u8; 4] {

@@ -130,15 +130,21 @@ impl FileManager {
                 .collect::<HashSet<String>>();
         }
 
-        debug!(
-            "Path not found, or unable to read: {:?}",
-            path.to_string_lossy()
-        );
+        if path != Path::new(DISTRIBUTABLE_PROFILES) {
+            debug!(
+                "Path not found, or unable to read: {:?}",
+                path.to_string_lossy()
+            );
+        }
+
         HashSet::new()
     }
 }
 
 pub fn create_path(path: &Path) -> Result<()> {
+    if path == Path::new(DISTRIBUTABLE_PROFILES) {
+        return Ok(());
+    }
     if !path.exists() {
         // Attempt to create the profile directory..
         if let Err(e) = create_dir_all(&path) {

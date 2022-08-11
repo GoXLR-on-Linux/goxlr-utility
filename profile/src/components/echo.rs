@@ -9,6 +9,8 @@ use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
+use anyhow::{anyhow, Result};
+
 use crate::components::colours::ColourMap;
 use crate::components::megaphone::Preset;
 use crate::components::megaphone::Preset::{Preset1, Preset2, Preset3, Preset4, Preset5, Preset6};
@@ -51,7 +53,7 @@ impl EchoEncoderBase {
         }
     }
 
-    pub fn parse_echo_root(&mut self, attributes: &[OwnedAttribute]) -> Result<(), ParseError> {
+    pub fn parse_echo_root(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
         for attr in attributes {
             if attr.name.local_name == "active_set" {
                 self.active_set = attr.value.parse()?;
@@ -66,11 +68,7 @@ impl EchoEncoderBase {
         Ok(())
     }
 
-    pub fn parse_echo_preset(
-        &mut self,
-        id: u8,
-        attributes: &[OwnedAttribute],
-    ) -> Result<(), ParseError> {
+    pub fn parse_echo_preset(&mut self, id: u8, attributes: &[OwnedAttribute]) -> Result<()> {
         let mut preset = EchoEncoder::new();
         for attr in attributes {
             if attr.name.local_name == "DELAY_STYLE" {
@@ -84,7 +82,7 @@ impl EchoEncoderBase {
             }
 
             if attr.name.local_name == "DELAY_KNOB_POSITION" {
-                preset.knob_position = attr.value.parse::<c_float>()? as i8;
+                preset.set_knob_position(attr.value.parse::<c_float>()? as i8)?;
                 continue;
             }
 
@@ -161,10 +159,7 @@ impl EchoEncoderBase {
         Ok(())
     }
 
-    pub fn write_echo<W: Write>(
-        &self,
-        writer: &mut EventWriter<&mut W>,
-    ) -> Result<(), xml::writer::Error> {
+    pub fn write_echo<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
         let mut element: StartElementBuilder = XmlWriterEvent::start_element("echoEncoder");
 
         let mut attributes: HashMap<String, String> = HashMap::default();
@@ -292,9 +287,13 @@ impl EchoEncoder {
     pub fn knob_position(&self) -> i8 {
         self.knob_position
     }
+    pub fn set_knob_position(&mut self, knob_position: i8) -> Result<()> {
+        if !(0..=24).contains(&knob_position) {
+            return Err(anyhow!("Echo Knob Position should be between 0 and 24"));
+        }
 
-    pub fn set_knob_position(&mut self, knob_position: i8) {
         self.knob_position = knob_position;
+        Ok(())
     }
 
     pub fn style(&self) -> &EchoStyle {

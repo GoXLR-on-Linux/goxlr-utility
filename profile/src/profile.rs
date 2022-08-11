@@ -4,7 +4,9 @@ use std::path::Path;
 use std::process::exit;
 use std::str::FromStr;
 
+use anyhow::Result;
 use enum_map::EnumMap;
+use log::{debug, error, warn};
 use strum::EnumProperty;
 use strum::IntoEnumIterator;
 use xml::reader::XmlEvent as XmlReaderEvent;
@@ -29,9 +31,8 @@ use crate::components::root::RootElement;
 use crate::components::sample::SampleBase;
 use crate::components::scribble::Scribble;
 use crate::components::simple::{SimpleElement, SimpleElements};
-use crate::error::{ParseError, SaveError};
-use crate::SampleButtons;
 use crate::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
+use crate::{Faders, SampleButtons};
 
 #[derive(Debug)]
 pub struct Profile {
@@ -40,20 +41,26 @@ pub struct Profile {
 }
 
 impl Profile {
-    pub fn load<R: Read + std::io::Seek>(read: R) -> Result<Self, ParseError> {
+    pub fn load<R: Read + std::io::Seek>(read: R) -> Result<Self> {
+        debug!("Loading Profile Archive..");
+
         let mut archive = zip::ZipArchive::new(read)?;
 
         let mut scribbles: [Vec<u8>; 4] = Default::default();
 
+        debug!("Checking for Scribbles..");
         // Load the scribbles if they exist, store them in memory for later fuckery.
         for (i, scribble) in scribbles.iter_mut().enumerate() {
             let filename = format!("scribble{}.png", i + 1);
             if let Ok(mut file) = archive.by_name(filename.as_str()) {
+                debug!("Reading Scribble: {}", filename);
+
                 *scribble = vec![0; file.size() as usize];
                 file.read_exact(scribble)?;
             }
         }
 
+        debug!("Attempting to read profile.xml..");
         let settings = ProfileSettings::load(archive.by_name("profile.xml")?)?;
         Ok(Profile {
             settings,
@@ -62,8 +69,8 @@ impl Profile {
     }
 
     // Ok, this is better.
-    pub fn save(&self, path: impl AsRef<Path>) -> Result<(), SaveError> {
-        dbg!("Saving File: {}", &path.as_ref());
+    pub fn save(&self, path: impl AsRef<Path>) -> Result<()> {
+        debug!("Saving File: {}", &path.as_ref().to_string_lossy());
 
         // Create a new ZipFile at the requested location
         let mut archive = zip::ZipWriter::new(File::create(path.as_ref())?);
@@ -106,10 +113,10 @@ pub struct ProfileSettings {
     mixer: Mixers,
     context: Context,
     mute_chat: MuteChat,
-    mute_buttons: Vec<MuteButton>,
-    faders: Vec<Fader>,
+    mute_buttons: EnumMap<Faders, Option<MuteButton>>,
+    faders: EnumMap<Faders, Option<Fader>>,
     effects: EnumMap<Preset, Option<Effects>>,
-    scribbles: Vec<Scribble>,
+    scribbles: EnumMap<Faders, Option<Scribble>>,
     sampler_map: EnumMap<SampleButtons, Option<SampleBase>>,
     simple_elements: EnumMap<SimpleElements, Option<SimpleElement>>,
     megaphone_effect: MegaphoneEffectBase,
@@ -122,7 +129,8 @@ pub struct ProfileSettings {
 }
 
 impl ProfileSettings {
-    pub fn load<R: Read>(read: R) -> Result<Self, ParseError> {
+    pub fn load<R: Read>(read: R) -> Result<Self> {
+        debug!("Preparing Structure..");
         let parser = EventReader::new(read);
 
         let mut root = RootElement::new();
@@ -132,20 +140,11 @@ impl ProfileSettings {
         let mut context = Context::new("selectedContext".to_string());
         let mut mute_chat = MuteChat::new("muteChat".to_string());
 
-        // A lot of these Vec's will need tidying up, some will work as EnumMap, or other such stuff..
-        // For now, all I'm doing is testing reading and writing, I'll do final structuing later.
-        let mut mute_buttons: Vec<MuteButton> = Vec::new();
-        mute_buttons.reserve_exact(4);
+        let mut mute_buttons: EnumMap<Faders, Option<MuteButton>> = EnumMap::default();
+        let mut faders: EnumMap<Faders, Option<Fader>> = EnumMap::default();
+        let mut scribbles: EnumMap<Faders, Option<Scribble>> = EnumMap::default();
 
-        let mut faders: Vec<Fader> = Vec::new();
-        faders.reserve_exact(4);
-
-        // let mut effects: Vec<Effects> = Vec::new();
-        // effects.reserve_exact(6);
         let mut effects: EnumMap<Preset, Option<Effects>> = EnumMap::default();
-
-        let mut scribbles: Vec<Scribble> = Vec::new();
-        scribbles.reserve_exact(4);
 
         let mut simple_elements: EnumMap<SimpleElements, Option<SimpleElement>> =
             Default::default();
@@ -160,13 +159,15 @@ impl ProfileSettings {
 
         let mut sampler_map: EnumMap<SampleButtons, Option<SampleBase>> = EnumMap::default();
 
-        let mut active_sample_button = Option::None;
+        let mut active_sample_button = None;
 
+        debug!("Parsing XML..");
         for e in parser {
             match e {
                 Ok(XmlReaderEvent::StartElement {
                     name, attributes, ..
                 }) => {
+                    debug!("Handling Tag: {}", name.local_name);
                     if name.local_name == "ValueTreeRoot" {
                         // This also handles <AppTree, due to a single shared value.
                         root.parse_root(&attributes)?;
@@ -218,7 +219,8 @@ impl ProfileSettings {
                         {
                             let mut mute_button = MuteButton::new(id);
                             mute_button.parse_button(&attributes)?;
-                            mute_buttons.insert(id as usize - 1, mute_button);
+                            mute_buttons[Faders::iter().nth((id - 1).into()).unwrap()] =
+                                Some(mute_button);
                             continue;
                         }
                     }
@@ -234,7 +236,7 @@ impl ProfileSettings {
                         {
                             let mut fader = Fader::new(id);
                             fader.parse_fader(&attributes)?;
-                            faders.insert(id as usize, fader);
+                            faders[Faders::iter().nth(id.into()).unwrap()] = Some(fader);
                             continue;
                         }
                     }
@@ -267,7 +269,8 @@ impl ProfileSettings {
                         {
                             let mut scribble = Scribble::new(id);
                             scribble.parse_scribble(&attributes)?;
-                            scribbles.insert(id as usize - 1, scribble);
+                            scribbles[Faders::iter().nth((id - 1).into()).unwrap()] =
+                                Some(scribble);
                             continue;
                         }
                     }
@@ -405,7 +408,7 @@ impl ProfileSettings {
                     if name.local_name == "sampleTopLeft" {
                         let mut sampler = SampleBase::new("sampleTopLeft".to_string());
                         sampler.parse_sample_root(&attributes)?;
-                        sampler_map[TopLeft] = Option::Some(sampler);
+                        sampler_map[TopLeft] = Some(sampler);
                         active_sample_button = sampler_map[TopLeft].as_mut();
                         continue;
                     }
@@ -413,7 +416,7 @@ impl ProfileSettings {
                     if name.local_name == "sampleTopRight" {
                         let mut sampler = SampleBase::new("sampleTopRight".to_string());
                         sampler.parse_sample_root(&attributes)?;
-                        sampler_map[TopRight] = Option::Some(sampler);
+                        sampler_map[TopRight] = Some(sampler);
                         active_sample_button = sampler_map[TopRight].as_mut();
                         continue;
                     }
@@ -421,7 +424,7 @@ impl ProfileSettings {
                     if name.local_name == "sampleBottomLeft" {
                         let mut sampler = SampleBase::new("sampleBottomLeft".to_string());
                         sampler.parse_sample_root(&attributes)?;
-                        sampler_map[BottomLeft] = Option::Some(sampler);
+                        sampler_map[BottomLeft] = Some(sampler);
                         active_sample_button = sampler_map[BottomLeft].as_mut();
                         continue;
                     }
@@ -429,7 +432,7 @@ impl ProfileSettings {
                     if name.local_name == "sampleBottomRight" {
                         let mut sampler = SampleBase::new("sampleBottomRight".to_string());
                         sampler.parse_sample_root(&attributes)?;
-                        sampler_map[BottomRight] = Option::Some(sampler);
+                        sampler_map[BottomRight] = Some(sampler);
                         active_sample_button = sampler_map[BottomRight].as_mut();
                         continue;
                     }
@@ -437,7 +440,7 @@ impl ProfileSettings {
                     if name.local_name == "sampleClear" {
                         let mut sampler = SampleBase::new("sampleClear".to_string());
                         sampler.parse_sample_root(&attributes)?;
-                        sampler_map[Clear] = Option::Some(sampler);
+                        sampler_map[Clear] = Some(sampler);
                         active_sample_button = sampler_map[Clear].as_mut();
                         continue;
                     }
@@ -471,7 +474,7 @@ impl ProfileSettings {
                         continue;
                     }
 
-                    println!("Unhandled Tag: {}", name.local_name);
+                    warn!("Unhandled Tag: {}", name.local_name);
                 }
 
                 Ok(XmlReaderEvent::EndElement { name }) => {
@@ -483,11 +486,11 @@ impl ProfileSettings {
                         || name.local_name == "sampleBottomRight"
                         || name.local_name == "sampleClear"
                     {
-                        active_sample_button = Option::None;
+                        active_sample_button = None;
                     }
                 }
                 Err(e) => {
-                    println!("Error: {}", e);
+                    error!("Error: {}", e);
                     break;
                 }
                 _ => {}
@@ -516,14 +519,13 @@ impl ProfileSettings {
         })
     }
 
-    pub fn write<P: AsRef<Path>>(&self, path: P) -> Result<(), xml::writer::Error> {
+    pub fn write<P: AsRef<Path>>(&self, path: P) -> Result<()> {
         let out_file = File::create(path)?;
         self.write_to(out_file)
     }
 
-    pub fn write_to<W: Write>(&self, mut sink: W) -> Result<(), xml::writer::Error> {
+    pub fn write_to<W: Write>(&self, mut sink: W) -> Result<()> {
         // Create the file, and the writer..
-
         let mut writer = EmitterConfig::new()
             .perform_indent(true)
             .write_document_declaration(true)
@@ -537,12 +539,16 @@ impl ProfileSettings {
         self.context.write_context(&mut writer)?;
         self.mute_chat.write_mute_chat(&mut writer)?;
 
-        for mute_button in self.mute_buttons.iter() {
-            mute_button.write_button(&mut writer)?;
+        for (_fader, mute_button) in self.mute_buttons.iter() {
+            if let Some(mute_button) = mute_button {
+                mute_button.write_button(&mut writer)?;
+            }
         }
 
-        for fader in self.faders.iter() {
-            fader.write_fader(&mut writer)?;
+        for (_fader, fader) in self.faders.iter() {
+            if let Some(fader) = fader {
+                fader.write_fader(&mut writer)?;
+            }
         }
 
         for (_key, value) in &self.effects {
@@ -551,8 +557,10 @@ impl ProfileSettings {
             }
         }
 
-        for scribble in self.scribbles.iter() {
-            scribble.write_scribble(&mut writer)?;
+        for (_fader, scribble) in self.scribbles.iter() {
+            if let Some(scribble) = scribble {
+                scribble.write_scribble(&mut writer)?;
+            }
         }
 
         self.megaphone_effect.write_megaphone(&mut writer)?;
@@ -591,40 +599,40 @@ impl ProfileSettings {
         &self.mixer
     }
 
-    pub fn faders(&mut self) -> &mut Vec<Fader> {
+    pub fn faders(&mut self) -> &mut EnumMap<Faders, Option<Fader>> {
         &mut self.faders
     }
 
-    pub fn fader_mut(&mut self, fader: usize) -> &mut Fader {
-        &mut self.faders[fader]
+    pub fn fader_mut(&mut self, fader: Faders) -> &mut Fader {
+        self.faders[fader].as_mut().unwrap()
     }
 
-    pub fn fader(&self, fader: usize) -> &Fader {
-        &self.faders[fader]
+    pub fn fader(&self, fader: Faders) -> &Fader {
+        self.faders[fader].as_ref().unwrap()
     }
 
-    pub fn mute_buttons(&mut self) -> &mut Vec<MuteButton> {
+    pub fn mute_buttons(&mut self) -> &mut EnumMap<Faders, Option<MuteButton>> {
         &mut self.mute_buttons
     }
 
-    pub fn mute_button_mut(&mut self, index: usize) -> &mut MuteButton {
-        &mut self.mute_buttons[index]
+    pub fn mute_button_mut(&mut self, fader: Faders) -> &mut MuteButton {
+        self.mute_buttons[fader].as_mut().unwrap()
     }
 
-    pub fn mute_button(&self, index: usize) -> &MuteButton {
-        &self.mute_buttons[index]
+    pub fn mute_button(&self, fader: Faders) -> &MuteButton {
+        self.mute_buttons[fader].as_ref().unwrap()
     }
 
-    pub fn scribbles(&mut self) -> &mut Vec<Scribble> {
+    pub fn scribbles(&mut self) -> &mut EnumMap<Faders, Option<Scribble>> {
         &mut self.scribbles
     }
 
-    pub fn scribble(&self, index: usize) -> &Scribble {
-        &self.scribbles[index]
+    pub fn scribble(&self, fader: Faders) -> &Scribble {
+        self.scribbles[fader].as_ref().unwrap()
     }
 
-    pub fn scribble_mut(&mut self, index: usize) -> &mut Scribble {
-        &mut self.scribbles[index]
+    pub fn scribble_mut(&mut self, fader: Faders) -> &mut Scribble {
+        self.scribbles[fader].as_mut().unwrap()
     }
 
     pub fn effects(&self, effect: Preset) -> &Effects {

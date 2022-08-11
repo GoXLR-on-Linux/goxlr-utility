@@ -8,19 +8,19 @@ use goxlr_profile_loader::components::colours::{
 };
 use goxlr_profile_loader::components::echo::EchoEncoder;
 use goxlr_profile_loader::components::gender::GenderEncoder;
-use goxlr_profile_loader::components::hardtune::{HardtuneEffect, HardtuneSource};
+use goxlr_profile_loader::components::hardtune::{HardTuneEffect, HardTuneSource};
 use goxlr_profile_loader::components::megaphone::{MegaphoneEffect, Preset};
 use goxlr_profile_loader::components::mixer::{FullChannelList, InputChannels, OutputChannels};
 use goxlr_profile_loader::components::mute::{MuteButton, MuteFunction};
 use goxlr_profile_loader::components::mute_chat::{CoughToggle, MuteChat};
-use goxlr_profile_loader::components::pitch::{PitchEncoder, PitchStyle};
+use goxlr_profile_loader::components::pitch::PitchEncoder;
 use goxlr_profile_loader::components::reverb::ReverbEncoder;
 use goxlr_profile_loader::components::robot::RobotEffect;
 use goxlr_profile_loader::components::sample::SampleBank;
 use goxlr_profile_loader::components::simple::SimpleElements;
 use goxlr_profile_loader::profile::{Profile, ProfileSettings};
-use goxlr_profile_loader::SampleButtons;
 use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
+use goxlr_profile_loader::{Faders, SampleButtons};
 use goxlr_types::{
     ButtonColourGroups, ButtonColourOffStyle as BasicColourOffStyle, ButtonColourTargets,
     ChannelName, EffectBankPresets, FaderDisplayStyle as BasicColourDisplay, FaderName,
@@ -29,6 +29,7 @@ use goxlr_types::{
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::colouring::ColourTargets;
 use log::{debug, error};
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fs::{remove_file, File};
 use std::io::{Cursor, Read, Seek};
@@ -73,6 +74,7 @@ impl ProfileAdapter {
         }
 
         if name == DEFAULT_PROFILE_NAME {
+            debug!("Loading Embedded Default Profile..");
             return Ok(ProfileAdapter::default());
         }
 
@@ -193,36 +195,43 @@ impl ProfileAdapter {
     }
 
     pub fn get_fader_assignment(&self, fader: FaderName) -> ChannelName {
-        let fader = self.profile.settings().fader(fader as usize);
+        let fader = self
+            .profile
+            .settings()
+            .fader(standard_to_profile_fader(fader));
         profile_to_standard_channel(fader.channel())
     }
 
     pub fn set_fader_assignment(&mut self, fader: FaderName, channel: ChannelName) {
         self.profile
             .settings_mut()
-            .fader_mut(fader as usize)
+            .fader_mut(standard_to_profile_fader(fader))
             .set_channel(standard_to_profile_channel(channel));
     }
 
     pub fn switch_fader_assignment(&mut self, fader_one: FaderName, fader_two: FaderName) {
         // TODO: Scribble?
-        self.profile
-            .settings_mut()
-            .faders()
-            .swap(fader_one as usize, fader_two as usize);
-        self.profile
-            .settings_mut()
-            .mute_buttons()
-            .swap(fader_one as usize, fader_two as usize);
+        self.profile.settings_mut().faders().swap(
+            standard_to_profile_fader(fader_one),
+            standard_to_profile_fader(fader_two),
+        );
+        self.profile.settings_mut().mute_buttons().swap(
+            standard_to_profile_fader(fader_one),
+            standard_to_profile_fader(fader_two),
+        );
     }
 
-    pub fn set_fader_display(&mut self, fader: FaderName, display: BasicColourDisplay) {
+    pub fn set_fader_display(
+        &mut self,
+        fader: FaderName,
+        display: BasicColourDisplay,
+    ) -> Result<()> {
         let colours = self
             .profile
             .settings_mut()
-            .fader_mut(fader as usize)
+            .fader_mut(standard_to_profile_fader(fader))
             .colour_map_mut();
-        colours.set_fader_display(standard_to_profile_fader_display(display));
+        colours.set_fader_display(standard_to_profile_fader_display(display))
     }
 
     // We have a return type here, as there's string parsing involved..
@@ -235,18 +244,10 @@ impl ProfileAdapter {
         let colours = self
             .profile
             .settings_mut()
-            .fader_mut(fader as usize)
+            .fader_mut(standard_to_profile_fader(fader))
             .colour_map_mut();
-        if top.len() != 6 || bottom.len() != 6 {
-            return Err(anyhow!(
-                "Expected Length: 6 (RRGGBB), Top: {}, Bottom: {}",
-                top.len(),
-                bottom.len()
-            ));
-        }
-
-        colours.set_colour(0, Colour::fromrgb(top.as_str())?);
-        colours.set_colour(1, Colour::fromrgb(bottom.as_str())?);
+        colours.set_colour(0, Colour::fromrgb(top.as_str())?)?;
+        colours.set_colour(1, Colour::fromrgb(bottom.as_str())?)?;
         Ok(())
     }
 
@@ -266,11 +267,11 @@ impl ProfileAdapter {
         volumes
     }
 
-    pub fn set_channel_volume(&mut self, channel: ChannelName, volume: u8) {
+    pub fn set_channel_volume(&mut self, channel: ChannelName, volume: u8) -> Result<()> {
         self.profile
             .settings_mut()
             .mixer_mut()
-            .set_channel_volume(standard_to_profile_channel(channel), volume);
+            .set_channel_volume(standard_to_profile_channel(channel), volume)
     }
 
     pub fn get_colour_map(&self, use_format_1_3_40: bool) -> [u8; 520] {
@@ -395,11 +396,15 @@ impl ProfileAdapter {
 
     /** Regular Mute button handlers */
     fn get_mute_button(&self, fader: FaderName) -> &MuteButton {
-        self.profile.settings().mute_button(fader as usize)
+        self.profile
+            .settings()
+            .mute_button(standard_to_profile_fader(fader))
     }
 
     fn get_mute_button_mut(&mut self, fader: FaderName) -> &mut MuteButton {
-        self.profile.settings_mut().mute_button_mut(fader as usize)
+        self.profile
+            .settings_mut()
+            .mute_button_mut(standard_to_profile_fader(fader))
     }
 
     pub fn get_mute_button_behaviour(&self, fader: FaderName) -> BasicMuteFunction {
@@ -428,20 +433,20 @@ impl ProfileAdapter {
         self.get_mute_button(fader).previous_volume()
     }
 
-    pub fn set_mute_button_previous_volume(&mut self, fader: FaderName, volume: u8) {
-        self.get_mute_button_mut(fader).set_previous_volume(volume);
+    pub fn set_mute_button_previous_volume(&mut self, fader: FaderName, volume: u8) -> Result<()> {
+        self.get_mute_button_mut(fader).set_previous_volume(volume)
     }
 
-    pub fn set_mute_button_on(&mut self, fader: FaderName, on: bool) {
+    pub fn set_mute_button_on(&mut self, fader: FaderName, on: bool) -> Result<()> {
         self.get_mute_button_mut(fader)
             .colour_map_mut()
-            .set_state_on(on);
+            .set_state_on(on)
     }
 
-    pub fn set_mute_button_blink(&mut self, fader: FaderName, on: bool) {
+    pub fn set_mute_button_blink(&mut self, fader: FaderName, on: bool) -> Result<()> {
         self.get_mute_button_mut(fader)
             .colour_map_mut()
-            .set_blink_on(on);
+            .set_blink_on(on)
     }
 
     /** 'Cough' / Mute Chat Button handlers.. */
@@ -539,13 +544,21 @@ impl ProfileAdapter {
         self.profile.settings().mute_chat().mic_fader_id()
     }
 
-    pub fn set_mic_fader_id(&mut self, id: u8) {
+    pub fn set_mic_fader(&mut self, fader: FaderName) -> Result<()> {
         self.profile
             .settings_mut()
             .mute_chat_mut()
-            .set_mic_fader_id(id);
+            .set_mic_fader_id(fader as u8)
     }
 
+    pub fn clear_mic_fader(&mut self) {
+        self.profile
+            .settings_mut()
+            .mute_chat_mut()
+            .clear_mic_fader_id();
+    }
+
+    // TODO: This can probably be cleaned with EnumIter
     pub fn fader_from_id(&self, fader: u8) -> FaderName {
         match fader {
             0 => FaderName::A,
@@ -558,7 +571,7 @@ impl ProfileAdapter {
     pub fn is_fader_gradient(&self, fader: FaderName) -> bool {
         self.profile
             .settings()
-            .fader(fader as usize)
+            .fader(standard_to_profile_fader(fader))
             .colour_map()
             .is_fader_gradient()
     }
@@ -566,23 +579,23 @@ impl ProfileAdapter {
     pub fn is_fader_meter(&self, fader: FaderName) -> bool {
         self.profile
             .settings()
-            .fader(fader as usize)
+            .fader(standard_to_profile_fader(fader))
             .colour_map()
             .is_fader_meter()
     }
 
     /** Bleep Button **/
-    pub fn set_swear_button_on(&mut self, on: bool) {
+    pub fn set_swear_button_on(&mut self, on: bool) -> Result<()> {
         // Get the colour map for the bleep button..
         self.profile
             .settings_mut()
             .simple_element_mut(SimpleElements::Swear)
             .colour_map_mut()
-            .set_state_on(on);
+            .set_state_on(on)
     }
 
     /** Effects Bank Behaviours **/
-    pub fn load_effect_bank(&mut self, preset: EffectBankPresets) {
+    pub fn load_effect_bank(&mut self, preset: EffectBankPresets) -> Result<()> {
         let preset = standard_to_profile_preset(preset);
         let current = self.profile.settings().context().selected_effects();
 
@@ -597,7 +610,7 @@ impl ProfileAdapter {
             .settings_mut()
             .effects_mut(current)
             .colour_map_mut()
-            .set_state_on(false);
+            .set_state_on(false)?;
 
         // Now we need to go through all the buttons, and set their new colour state..
         let state = self
@@ -610,7 +623,7 @@ impl ProfileAdapter {
             .settings_mut()
             .robot_effect_mut()
             .colour_map_mut()
-            .set_state_on(state);
+            .set_state_on(state)?;
 
         let state = self
             .profile
@@ -622,7 +635,7 @@ impl ProfileAdapter {
             .settings_mut()
             .megaphone_effect_mut()
             .colour_map_mut()
-            .set_state_on(state);
+            .set_state_on(state)?;
 
         let state = self
             .profile
@@ -634,17 +647,19 @@ impl ProfileAdapter {
             .settings_mut()
             .hardtune_effect_mut()
             .colour_map_mut()
-            .set_state_on(state);
+            .set_state_on(state)?;
 
         // Set the new button 'On'
         self.profile
             .settings_mut()
             .effects_mut(preset)
             .colour_map_mut()
-            .set_state_on(true);
+            .set_state_on(true)?;
+
+        Ok(())
     }
 
-    pub fn toggle_megaphone(&mut self) {
+    pub fn toggle_megaphone(&mut self) -> Result<()> {
         let current = self.profile.settings().context().selected_effects();
 
         let new_state = !self
@@ -663,10 +678,10 @@ impl ProfileAdapter {
             .settings_mut()
             .megaphone_effect_mut()
             .colour_map_mut()
-            .set_state_on(new_state);
+            .set_state_on(new_state)
     }
 
-    pub fn toggle_robot(&mut self) {
+    pub fn toggle_robot(&mut self) -> Result<()> {
         let current = self.profile.settings().context().selected_effects();
 
         let new_state = !self
@@ -685,10 +700,10 @@ impl ProfileAdapter {
             .settings_mut()
             .robot_effect_mut()
             .colour_map_mut()
-            .set_state_on(new_state);
+            .set_state_on(new_state)
     }
 
-    pub fn toggle_hardtune(&mut self) {
+    pub fn toggle_hardtune(&mut self) -> Result<()> {
         let current = self.profile.settings().context().selected_effects();
 
         let new_state = !self
@@ -697,7 +712,6 @@ impl ProfileAdapter {
             .hardtune_effect()
             .get_preset(current)
             .state();
-
         self.profile
             .settings_mut()
             .hardtune_effect_mut()
@@ -707,10 +721,10 @@ impl ProfileAdapter {
             .settings_mut()
             .hardtune_effect_mut()
             .colour_map_mut()
-            .set_state_on(new_state);
+            .set_state_on(new_state)
     }
 
-    pub fn toggle_effects(&mut self) {
+    pub fn toggle_effects(&mut self) -> Result<()> {
         let state = !self
             .profile
             .settings()
@@ -721,25 +735,42 @@ impl ProfileAdapter {
             .settings_mut()
             .simple_element_mut(SimpleElements::FxClear)
             .colour_map_mut()
-            .set_state_on(state);
+            .set_state_on(state)
     }
 
-    pub fn get_pitch_value(&self) -> i8 {
-        let current = self.profile.settings().context().selected_effects();
-        self.profile
-            .settings()
-            .pitch_encoder()
-            .get_preset(current)
-            .knob_position()
+    pub fn get_pitch_knob_position(&self) -> i8 {
+        self.get_active_pitch_profile()
+            .knob_position(self.is_hardtune_enabled(true))
     }
 
-    pub fn set_pitch_value(&mut self, value: i8) {
+    pub fn get_pitch_encoder_position(&self) -> i8 {
+        self.get_active_pitch_profile()
+            .get_encoder_position(self.is_hardtune_enabled(true))
+    }
+
+    pub fn calculate_pitch_knob_position(&self, value: i8) -> i8 {
+        self.get_active_pitch_profile()
+            .calculate_encoder_value(value, self.is_hardtune_enabled(true))
+    }
+
+    pub fn set_pitch_knob_position(&mut self, value: i8) -> Result<()> {
+        let hardtune_enabled = self.is_hardtune_enabled(true);
         let current = self.profile.settings().context().selected_effects();
         self.profile
             .settings_mut()
             .pitch_encoder_mut()
             .get_preset_mut(current)
-            .set_knob_position(value)
+            .set_knob_position(value, hardtune_enabled)
+    }
+
+    pub fn get_pitch_mode(&self) -> u8 {
+        self.get_active_pitch_profile()
+            .pitch_mode(self.is_hardtune_enabled(true))
+    }
+
+    pub fn get_pitch_resolution(&self) -> u8 {
+        self.get_active_pitch_profile()
+            .pitch_resolution(self.is_hardtune_enabled(true))
     }
 
     pub fn get_active_pitch_profile(&self) -> &PitchEncoder {
@@ -756,7 +787,7 @@ impl ProfileAdapter {
             .knob_position()
     }
 
-    pub fn set_gender_value(&mut self, value: i8) {
+    pub fn set_gender_value(&mut self, value: i8) -> Result<()> {
         let current = self.profile.settings().context().selected_effects();
         self.profile
             .settings_mut()
@@ -779,7 +810,7 @@ impl ProfileAdapter {
             .knob_position()
     }
 
-    pub fn set_reverb_value(&mut self, value: i8) {
+    pub fn set_reverb_value(&mut self, value: i8) -> Result<()> {
         let current = self.profile.settings().context().selected_effects();
         self.profile
             .settings_mut()
@@ -802,7 +833,7 @@ impl ProfileAdapter {
             .knob_position()
     }
 
-    pub fn set_echo_value(&mut self, value: i8) {
+    pub fn set_echo_value(&mut self, value: i8) -> Result<()> {
         let current = self.profile.settings().context().selected_effects();
         self.profile
             .settings_mut()
@@ -829,7 +860,7 @@ impl ProfileAdapter {
         self.profile.settings().robot_effect().get_preset(current)
     }
 
-    pub fn get_active_hardtune_profile(&self) -> &HardtuneEffect {
+    pub fn get_active_hardtune_profile(&self) -> &HardTuneEffect {
         let current = self.profile.settings().context().selected_effects();
         self.profile
             .settings()
@@ -839,7 +870,7 @@ impl ProfileAdapter {
 
     pub fn is_active_hardtune_source_all(&self) -> bool {
         if let Some(source) = self.get_active_hardtune_profile().source() {
-            return source == &HardtuneSource::All;
+            return source == &HardTuneSource::All;
         }
 
         // If it's not set, assume default behaviour of 'All'
@@ -849,31 +880,13 @@ impl ProfileAdapter {
     pub fn get_active_hardtune_source(&self) -> InputDevice {
         let source = self.get_active_hardtune_profile().source();
         match source.unwrap() {
-            HardtuneSource::Music => InputDevice::Music,
-            HardtuneSource::Game => InputDevice::Game,
-            HardtuneSource::LineIn => InputDevice::LineIn,
+            HardTuneSource::Music => InputDevice::Music,
+            HardTuneSource::Game => InputDevice::Game,
+            HardTuneSource::LineIn => InputDevice::LineIn,
 
             // This should never really be called when Source is All, return a default.
-            HardtuneSource::All => InputDevice::Music,
+            HardTuneSource::All => InputDevice::Music,
         }
-    }
-
-    pub fn is_hardtune_pitch_enabled(&self) -> bool {
-        self.profile
-            .settings()
-            .hardtune_effect()
-            .colour_map()
-            .get_state()
-    }
-
-    pub fn is_pitch_narrow(&self) -> bool {
-        let current = self.profile.settings().context().selected_effects();
-        self.profile
-            .settings()
-            .pitch_encoder()
-            .get_preset(current)
-            .style()
-            == &PitchStyle::Narrow
     }
 
     pub fn is_fx_enabled(&self) -> bool {
@@ -906,8 +919,8 @@ impl ProfileAdapter {
             .get_state()
     }
 
-    pub fn is_hardtune_enabled(&self) -> bool {
-        if !self.is_fx_enabled() {
+    pub fn is_hardtune_enabled(&self, ignore_fx_state: bool) -> bool {
+        if !ignore_fx_state && !self.is_fx_enabled() {
             return false;
         }
         self.profile
@@ -918,7 +931,7 @@ impl ProfileAdapter {
     }
 
     /** Sampler Related **/
-    pub fn load_sample_bank(&mut self, bank: goxlr_types::SampleBank) {
+    pub fn load_sample_bank(&mut self, bank: goxlr_types::SampleBank) -> Result<()> {
         let bank = standard_to_profile_sample_bank(bank);
         let current = self.profile.settings().context().selected_sample();
 
@@ -933,7 +946,7 @@ impl ProfileAdapter {
             .settings_mut()
             .simple_element_mut(sample_bank_to_simple_element(current))
             .colour_map_mut()
-            .set_state_on(false);
+            .set_state_on(false)?;
 
         // TODO: When loading a bank, we should check for the existence of samples
         // If they're missing, remove them from the stack.
@@ -943,7 +956,9 @@ impl ProfileAdapter {
             .settings_mut()
             .simple_element_mut(sample_bank_to_simple_element(bank))
             .colour_map_mut()
-            .set_state_on(true);
+            .set_state_on(true)?;
+
+        Ok(())
     }
 
     pub fn current_sample_bank_has_samples(&self, button: SampleButtons) -> bool {
@@ -979,12 +994,12 @@ impl ProfileAdapter {
             .get_state()
     }
 
-    pub fn set_sample_button_state(&mut self, button: SampleButtons, state: bool) {
+    pub fn set_sample_button_state(&mut self, button: SampleButtons, state: bool) -> Result<()> {
         self.profile
             .settings_mut()
             .sample_button_mut(button)
             .colour_map_mut()
-            .set_state_on(state);
+            .set_state_on(state)
     }
 
     /** Colour Changing Code **/
@@ -997,23 +1012,10 @@ impl ProfileAdapter {
         let colour_target = standard_to_colour_target(target);
         let colours = get_profile_colour_map_mut(self.profile.settings_mut(), colour_target);
 
-        if colour_one.len() != 6 {
-            return Err(anyhow!(
-                "Expected Length: 6 (RRGGBB), Colour One: {}",
-                colour_one.len()
-            ));
-        }
-
+        colours.set_colour(0, Colour::fromrgb(colour_one.as_str())?)?;
         if let Some(two) = colour_two {
-            if two.len() != 6 {
-                return Err(anyhow!(
-                    "Expected Length: 6 (RRGGBB), Colour Two: {}",
-                    two.len()
-                ));
-            }
-            colours.set_colour(1, Colour::fromrgb(two.as_str())?);
+            colours.set_colour(1, Colour::fromrgb(two.as_str())?)?;
         }
-        colours.set_colour(0, Colour::fromrgb(colour_one.as_str())?);
         Ok(())
     }
 
@@ -1021,10 +1023,10 @@ impl ProfileAdapter {
         &mut self,
         target: ButtonColourTargets,
         off_style: BasicColourOffStyle,
-    ) {
+    ) -> Result<()> {
         let colour_target = standard_to_colour_target(target);
         get_profile_colour_map_mut(self.profile.settings_mut(), colour_target)
-            .set_off_style(standard_to_profile_colour_off_style(off_style));
+            .set_off_style(standard_to_profile_colour_off_style(off_style))
     }
 
     // TODO: We can probably do better with grouping these so they can be reused.
@@ -1142,35 +1144,36 @@ impl ProfileAdapter {
         &mut self,
         target: ButtonColourGroups,
         off_style: BasicColourOffStyle,
-    ) {
+    ) -> Result<()> {
         match target {
             ButtonColourGroups::FaderMute => {
-                self.set_button_off_style(ButtonColourTargets::Fader1Mute, off_style);
-                self.set_button_off_style(ButtonColourTargets::Fader2Mute, off_style);
-                self.set_button_off_style(ButtonColourTargets::Fader3Mute, off_style);
-                self.set_button_off_style(ButtonColourTargets::Fader4Mute, off_style);
+                self.set_button_off_style(ButtonColourTargets::Fader1Mute, off_style)?;
+                self.set_button_off_style(ButtonColourTargets::Fader2Mute, off_style)?;
+                self.set_button_off_style(ButtonColourTargets::Fader3Mute, off_style)?;
+                self.set_button_off_style(ButtonColourTargets::Fader4Mute, off_style)?;
             }
             ButtonColourGroups::EffectSelector => {
-                self.set_button_off_style(ButtonColourTargets::EffectSelect1, off_style);
-                self.set_button_off_style(ButtonColourTargets::EffectSelect2, off_style);
-                self.set_button_off_style(ButtonColourTargets::EffectSelect3, off_style);
-                self.set_button_off_style(ButtonColourTargets::EffectSelect4, off_style);
-                self.set_button_off_style(ButtonColourTargets::EffectSelect5, off_style);
-                self.set_button_off_style(ButtonColourTargets::EffectSelect6, off_style);
+                self.set_button_off_style(ButtonColourTargets::EffectSelect1, off_style)?;
+                self.set_button_off_style(ButtonColourTargets::EffectSelect2, off_style)?;
+                self.set_button_off_style(ButtonColourTargets::EffectSelect3, off_style)?;
+                self.set_button_off_style(ButtonColourTargets::EffectSelect4, off_style)?;
+                self.set_button_off_style(ButtonColourTargets::EffectSelect5, off_style)?;
+                self.set_button_off_style(ButtonColourTargets::EffectSelect6, off_style)?;
             }
             ButtonColourGroups::SampleBankSelector => {
-                self.set_button_off_style(ButtonColourTargets::SamplerSelectA, off_style);
-                self.set_button_off_style(ButtonColourTargets::SamplerSelectB, off_style);
-                self.set_button_off_style(ButtonColourTargets::SamplerSelectC, off_style);
+                self.set_button_off_style(ButtonColourTargets::SamplerSelectA, off_style)?;
+                self.set_button_off_style(ButtonColourTargets::SamplerSelectB, off_style)?;
+                self.set_button_off_style(ButtonColourTargets::SamplerSelectC, off_style)?;
             }
             ButtonColourGroups::SamplerButtons => {
-                self.set_button_off_style(ButtonColourTargets::SamplerTopLeft, off_style);
-                self.set_button_off_style(ButtonColourTargets::SamplerTopRight, off_style);
-                self.set_button_off_style(ButtonColourTargets::SamplerBottomLeft, off_style);
-                self.set_button_off_style(ButtonColourTargets::SamplerBottomRight, off_style);
-                self.set_button_off_style(ButtonColourTargets::SamplerClear, off_style);
+                self.set_button_off_style(ButtonColourTargets::SamplerTopLeft, off_style)?;
+                self.set_button_off_style(ButtonColourTargets::SamplerTopRight, off_style)?;
+                self.set_button_off_style(ButtonColourTargets::SamplerBottomLeft, off_style)?;
+                self.set_button_off_style(ButtonColourTargets::SamplerBottomRight, off_style)?;
+                self.set_button_off_style(ButtonColourTargets::SamplerClear, off_style)?;
             }
         }
+        Ok(())
     }
 
     /** Generic Stuff **/
@@ -1379,6 +1382,15 @@ fn standard_to_profile_preset(value: EffectBankPresets) -> Preset {
     }
 }
 
+fn standard_to_profile_fader(value: FaderName) -> Faders {
+    match value {
+        FaderName::A => Faders::A,
+        FaderName::B => Faders::B,
+        FaderName::C => Faders::C,
+        FaderName::D => Faders::D,
+    }
+}
+
 fn get_colour_map_from_button(profile: &ProfileSettings, button: Buttons) -> &ColourMap {
     get_profile_colour_map(profile, map_button_to_colour_target(button))
 }
@@ -1423,10 +1435,10 @@ fn map_fader_to_colour_target(fader: FaderName) -> ColourTargets {
 
 fn get_profile_colour_map(profile: &ProfileSettings, colour_target: ColourTargets) -> &ColourMap {
     match colour_target {
-        ColourTargets::Fader1Mute => profile.mute_button(0).colour_map(),
-        ColourTargets::Fader2Mute => profile.mute_button(1).colour_map(),
-        ColourTargets::Fader3Mute => profile.mute_button(2).colour_map(),
-        ColourTargets::Fader4Mute => profile.mute_button(3).colour_map(),
+        ColourTargets::Fader1Mute => profile.mute_button(Faders::A).colour_map(),
+        ColourTargets::Fader2Mute => profile.mute_button(Faders::B).colour_map(),
+        ColourTargets::Fader3Mute => profile.mute_button(Faders::C).colour_map(),
+        ColourTargets::Fader4Mute => profile.mute_button(Faders::D).colour_map(),
         ColourTargets::Bleep => profile.simple_element(SimpleElements::Swear).colour_map(),
         ColourTargets::MicrophoneMute => profile.mute_chat().colour_map(),
         ColourTargets::EffectSelect1 => profile.effects(Preset::Preset1).colour_map(),
@@ -1453,14 +1465,14 @@ fn get_profile_colour_map(profile: &ProfileSettings, colour_target: ColourTarget
         ColourTargets::SamplerBottomLeft => profile.sample_button(BottomLeft).colour_map(),
         ColourTargets::SamplerBottomRight => profile.sample_button(BottomRight).colour_map(),
         ColourTargets::SamplerClear => profile.sample_button(Clear).colour_map(),
-        ColourTargets::FadeMeter1 => profile.fader(0).colour_map(),
-        ColourTargets::FadeMeter2 => profile.fader(1).colour_map(),
-        ColourTargets::FadeMeter3 => profile.fader(2).colour_map(),
-        ColourTargets::FadeMeter4 => profile.fader(3).colour_map(),
-        ColourTargets::Scribble1 => profile.scribble(0).colour_map(),
-        ColourTargets::Scribble2 => profile.scribble(1).colour_map(),
-        ColourTargets::Scribble3 => profile.scribble(2).colour_map(),
-        ColourTargets::Scribble4 => profile.scribble(3).colour_map(),
+        ColourTargets::FadeMeter1 => profile.fader(Faders::A).colour_map(),
+        ColourTargets::FadeMeter2 => profile.fader(Faders::B).colour_map(),
+        ColourTargets::FadeMeter3 => profile.fader(Faders::C).colour_map(),
+        ColourTargets::FadeMeter4 => profile.fader(Faders::D).colour_map(),
+        ColourTargets::Scribble1 => profile.scribble(Faders::A).colour_map(),
+        ColourTargets::Scribble2 => profile.scribble(Faders::B).colour_map(),
+        ColourTargets::Scribble3 => profile.scribble(Faders::C).colour_map(),
+        ColourTargets::Scribble4 => profile.scribble(Faders::D).colour_map(),
         ColourTargets::PitchEncoder => profile.pitch_encoder().colour_map(),
         ColourTargets::GenderEncoder => profile.gender_encoder().colour_map(),
         ColourTargets::ReverbEncoder => profile.reverb_encoder().colour_map(),
@@ -1477,10 +1489,10 @@ fn get_profile_colour_map_mut(
     colour_target: ColourTargets,
 ) -> &mut ColourMap {
     match colour_target {
-        ColourTargets::Fader1Mute => profile.mute_button_mut(0).colour_map_mut(),
-        ColourTargets::Fader2Mute => profile.mute_button_mut(1).colour_map_mut(),
-        ColourTargets::Fader3Mute => profile.mute_button_mut(2).colour_map_mut(),
-        ColourTargets::Fader4Mute => profile.mute_button_mut(3).colour_map_mut(),
+        ColourTargets::Fader1Mute => profile.mute_button_mut(Faders::A).colour_map_mut(),
+        ColourTargets::Fader2Mute => profile.mute_button_mut(Faders::B).colour_map_mut(),
+        ColourTargets::Fader3Mute => profile.mute_button_mut(Faders::C).colour_map_mut(),
+        ColourTargets::Fader4Mute => profile.mute_button_mut(Faders::D).colour_map_mut(),
         ColourTargets::Bleep => profile
             .simple_element_mut(SimpleElements::Swear)
             .colour_map_mut(),
@@ -1513,14 +1525,14 @@ fn get_profile_colour_map_mut(
             profile.sample_button_mut(BottomRight).colour_map_mut()
         }
         ColourTargets::SamplerClear => profile.sample_button_mut(Clear).colour_map_mut(),
-        ColourTargets::FadeMeter1 => profile.fader_mut(0).colour_map_mut(),
-        ColourTargets::FadeMeter2 => profile.fader_mut(1).colour_map_mut(),
-        ColourTargets::FadeMeter3 => profile.fader_mut(2).colour_map_mut(),
-        ColourTargets::FadeMeter4 => profile.fader_mut(3).colour_map_mut(),
-        ColourTargets::Scribble1 => profile.scribble_mut(0).colour_map_mut(),
-        ColourTargets::Scribble2 => profile.scribble_mut(1).colour_map_mut(),
-        ColourTargets::Scribble3 => profile.scribble_mut(2).colour_map_mut(),
-        ColourTargets::Scribble4 => profile.scribble_mut(3).colour_map_mut(),
+        ColourTargets::FadeMeter1 => profile.fader_mut(Faders::A).colour_map_mut(),
+        ColourTargets::FadeMeter2 => profile.fader_mut(Faders::B).colour_map_mut(),
+        ColourTargets::FadeMeter3 => profile.fader_mut(Faders::C).colour_map_mut(),
+        ColourTargets::FadeMeter4 => profile.fader_mut(Faders::D).colour_map_mut(),
+        ColourTargets::Scribble1 => profile.scribble_mut(Faders::A).colour_map_mut(),
+        ColourTargets::Scribble2 => profile.scribble_mut(Faders::B).colour_map_mut(),
+        ColourTargets::Scribble3 => profile.scribble_mut(Faders::C).colour_map_mut(),
+        ColourTargets::Scribble4 => profile.scribble_mut(Faders::D).colour_map_mut(),
         ColourTargets::PitchEncoder => profile.pitch_encoder_mut().colour_map_mut(),
         ColourTargets::GenderEncoder => profile.gender_encoder_mut().colour_map_mut(),
         ColourTargets::ReverbEncoder => profile.reverb_encoder_mut().colour_map_mut(),
@@ -1574,24 +1586,23 @@ pub fn get_mini_colour_targets() -> Vec<ButtonColourTargets> {
     ]
 }
 
-#[allow(clippy::comparison_chain)]
 pub fn version_newer_or_equal_to(version: &VersionNumber, comparison: VersionNumber) -> bool {
-    if version.0 > comparison.0 {
-        return true;
-    } else if version.0 < comparison.0 {
-        return false;
+    match version.0.cmp(&comparison.0) {
+        Ordering::Greater => return true,
+        Ordering::Less => return false,
+        Ordering::Equal => {}
     }
 
-    if version.1 > comparison.1 {
-        return true;
-    } else if version.1 < comparison.1 {
-        return false;
+    match version.1.cmp(&comparison.1) {
+        Ordering::Greater => return true,
+        Ordering::Less => return false,
+        Ordering::Equal => {}
     }
 
-    if version.2 > comparison.2 {
-        return true;
-    } else if version.2 < comparison.2 {
-        return false;
+    match version.2.cmp(&comparison.2) {
+        Ordering::Greater => return true,
+        Ordering::Less => return false,
+        Ordering::Equal => {}
     }
 
     if version.3 >= comparison.3 {
