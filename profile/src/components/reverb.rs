@@ -256,8 +256,8 @@ impl ReverbEncoderBase {
 pub struct ReverbEncoder {
     knob_position: i8,
     style: ReverbStyle,
-    reverb_type: u8, // I have no idea what this maps too..
-    decay: u16,      // Reaches 290 when set to max.
+    reverb_type: u8,
+    decay: u16, // Reaches 290 when set to max.
     pre_delay: u8,
     diffuse: i8,
     lo_color: i8,
@@ -267,7 +267,7 @@ pub struct ReverbEncoder {
     mod_depth: i8,
     early_level: i8,
     tail_level: i8,
-    dry_level: i8,
+    dry_level: i8, // Dry level exists in the config, but is never sent?
 }
 
 impl ReverbEncoder {
@@ -309,9 +309,32 @@ impl ReverbEncoder {
     pub fn style(&self) -> &ReverbStyle {
         &self.style
     }
+    pub fn set_style(&mut self, style: ReverbStyle) -> Result<()> {
+        self.style = style;
+
+        let preset = ReverbPreset::get_preset(style);
+        self.set_reverb_type(preset.reverb_type);
+        self.set_decay_value(preset.decay);
+        self.set_predelay(preset.pre_delay)?;
+        self.set_diffuse(preset.diffuse)?;
+        self.set_lo_color(preset.lo_color)?;
+        self.set_hi_color(preset.hi_color)?;
+        self.set_hi_factor(preset.hi_factor)?;
+        self.set_mod_speed(preset.mod_speed)?;
+        self.set_mod_depth(preset.mod_depth)?;
+        self.set_early_level(preset.early_level)?;
+        self.set_tail_level(preset.tail_level)?;
+
+        Ok(())
+    }
+
     pub fn reverb_type(&self) -> u8 {
         self.reverb_type
     }
+    fn set_reverb_type(&mut self, value: u8) {
+        self.reverb_type = value;
+    }
+
     pub fn decay(&self) -> u16 {
         self.decay
     }
@@ -342,6 +365,9 @@ impl ReverbEncoder {
         // And done?
         Ok(())
     }
+    fn set_decay_value(&mut self, value: u16) {
+        self.decay = value;
+    }
 
     pub fn predelay(&self) -> u8 {
         self.pre_delay
@@ -368,7 +394,7 @@ impl ReverbEncoder {
     pub fn locolor(&self) -> i8 {
         self.lo_color
     }
-    pub fn set_locolor(&mut self, value: i8) -> Result<()> {
+    pub fn set_lo_color(&mut self, value: i8) -> Result<()> {
         if !(-50..=50).contains(&value) {
             return Err(anyhow!("LoColour should be between -50 and 50"));
         }
@@ -379,7 +405,7 @@ impl ReverbEncoder {
     pub fn hicolor(&self) -> i8 {
         self.hi_color
     }
-    pub fn set_hicolor(&mut self, value: i8) -> Result<()> {
+    pub fn set_hi_color(&mut self, value: i8) -> Result<()> {
         if !(-50..=50).contains(&value) {
             return Err(anyhow!("HiColour should be between -50 and 50"));
         }
@@ -390,7 +416,7 @@ impl ReverbEncoder {
     pub fn hifactor(&self) -> i8 {
         self.hi_factor
     }
-    pub fn set_hifactor(&mut self, value: i8) -> Result<()> {
+    pub fn set_hi_factor(&mut self, value: i8) -> Result<()> {
         if !(-25..=25).contains(&value) {
             return Err(anyhow!("HiFactor should be between -25 and 25"));
         }
@@ -446,11 +472,6 @@ impl ReverbEncoder {
     pub fn dry_level(&self) -> i8 {
         self.dry_level
     }
-
-    #[allow(dead_code)]
-    fn set_dry_level(&mut self, value: i8) {
-        self.dry_level = value;
-    }
 }
 
 #[derive(Debug, EnumIter, Enum, EnumProperty, Copy, Clone)]
@@ -480,4 +501,101 @@ impl Default for ReverbStyle {
     }
 }
 
-// TODO: Presets
+struct ReverbPreset {
+    reverb_type: u8,
+    decay: u16,
+    pre_delay: u8,
+    diffuse: i8,
+    lo_color: i8,
+    hi_color: i8,
+    hi_factor: i8,
+    mod_speed: i8,
+    mod_depth: i8,
+    early_level: i8,
+    tail_level: i8,
+}
+
+impl ReverbPreset {
+    fn get_preset(style: ReverbStyle) -> ReverbPreset {
+        match style {
+            Library => ReverbPreset {
+                reverb_type: 9,
+                decay: 77,
+                pre_delay: 0,
+                diffuse: 0,
+                lo_color: 0,
+                hi_color: -32,
+                hi_factor: -6,
+                mod_speed: 0,
+                mod_depth: 0,
+                early_level: -1,
+                tail_level: 0,
+            },
+            ReverbStyle::DarkBloom => ReverbPreset {
+                reverb_type: 5,
+                decay: 96,
+                pre_delay: 0,
+                diffuse: -50,
+                lo_color: 0,
+                hi_color: -50,
+                hi_factor: -25,
+                mod_speed: -25,
+                mod_depth: -25,
+                early_level: -25,
+                tail_level: 0,
+            },
+            ReverbStyle::MusicClub => ReverbPreset {
+                reverb_type: 12,
+                decay: 106,
+                pre_delay: 15,
+                diffuse: 0,
+                lo_color: 0,
+                hi_color: 0,
+                hi_factor: 0,
+                mod_speed: 0,
+                mod_depth: 0,
+                early_level: 0,
+                tail_level: 0,
+            },
+            ReverbStyle::RealPlate => ReverbPreset {
+                reverb_type: 9,
+                decay: 115,
+                pre_delay: 15,
+                diffuse: 0,
+                lo_color: 21,
+                hi_color: -17,
+                hi_factor: -22,
+                mod_speed: -3,
+                mod_depth: 8,
+                early_level: 0,
+                tail_level: 0,
+            },
+            ReverbStyle::Chapel => ReverbPreset {
+                reverb_type: 0,
+                decay: 118,
+                pre_delay: 15,
+                diffuse: 0,
+                lo_color: -23,
+                hi_color: -35,
+                hi_factor: 13,
+                mod_speed: 0,
+                mod_depth: 0,
+                early_level: -25,
+                tail_level: 0,
+            },
+            ReverbStyle::HockeyArena => ReverbPreset {
+                reverb_type: 1,
+                decay: 150,
+                pre_delay: 100,
+                diffuse: 0,
+                lo_color: 10,
+                hi_color: -39,
+                hi_factor: 21,
+                mod_speed: -3,
+                mod_depth: 21,
+                early_level: 0,
+                tail_level: 0,
+            },
+        }
+    }
+}
