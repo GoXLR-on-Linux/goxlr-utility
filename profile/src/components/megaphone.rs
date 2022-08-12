@@ -9,7 +9,7 @@ use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 
 use crate::components::colours::ColourMap;
 use crate::components::megaphone::MegaphoneStyle::Megaphone;
@@ -347,47 +347,132 @@ impl MegaphoneEffect {
     pub fn style(&self) -> &MegaphoneStyle {
         &self.style
     }
+    pub fn set_style(&mut self, style: MegaphoneStyle) -> Result<()> {
+        self.style = style;
+
+        let preset = MegaphonePreset::get_preset(style);
+        self.set_trans_dist_amt(preset.trans_dist_amt)?;
+        self.set_trans_hp(preset.trans_hp);
+        self.set_trans_lp(preset.trans_lp);
+        self.set_trans_pregain(preset.trans_pregain);
+        self.set_trans_postgain(preset.trans_postgain)?;
+        self.set_trans_dist_type(preset.trans_dist_type);
+        self.set_trans_presence_gain(preset.trans_presence_gain);
+        self.set_trans_presence_fc(preset.trans_presence_fc);
+        self.set_trans_presence_bw(preset.trans_presence_bw);
+        self.set_trans_beatbox_enabled(preset.trans_beatbox_enabled);
+        self.set_trans_filter_control(preset.trans_filter_control);
+        self.set_trans_filter(preset.trans_filter);
+        self.set_trans_drive_pot_gain_comp_mid(preset.trans_drive_pot_gain_comp_mid);
+        self.set_trans_drive_pot_gain_comp_max(preset.trans_drive_pot_gain_comp_max);
+
+        Ok(())
+    }
+
     pub fn trans_dist_amt(&self) -> u8 {
         self.trans_dist_amt
     }
+    pub fn set_trans_dist_amt(&mut self, value: u8) -> Result<()> {
+        if value > 100 {
+            return Err(anyhow!("Amount should be a percentage"));
+        }
+        self.trans_dist_amt = value;
+        Ok(())
+    }
+
     pub fn trans_hp(&self) -> u8 {
         self.trans_hp
     }
+    fn set_trans_hp(&mut self, trans_hp: u8) {
+        self.trans_hp = trans_hp;
+    }
+
     pub fn trans_lp(&self) -> u8 {
         self.trans_lp
     }
+    fn set_trans_lp(&mut self, trans_lp: u8) {
+        self.trans_lp = trans_lp;
+    }
+
     pub fn trans_pregain(&self) -> u8 {
         self.trans_pregain
     }
+    fn set_trans_pregain(&mut self, trans_pregain: u8) {
+        self.trans_pregain = trans_pregain;
+    }
+
     pub fn trans_postgain(&self) -> i8 {
         self.trans_postgain
     }
+    pub fn set_trans_postgain(&mut self, trans_postgain: i8) -> Result<()> {
+        if !(-20..=20).contains(&trans_postgain) {
+            return Err(anyhow!("Post Gain should be between -20 and 20"));
+        }
+        self.trans_postgain = trans_postgain;
+        Ok(())
+    }
+
     pub fn trans_dist_type(&self) -> u8 {
         self.trans_dist_type
     }
+    fn set_trans_dist_type(&mut self, trans_dist_type: u8) {
+        self.trans_dist_type = trans_dist_type;
+    }
+
     pub fn trans_presence_gain(&self) -> u8 {
         self.trans_presence_gain
     }
+    fn set_trans_presence_gain(&mut self, trans_presence_gain: u8) {
+        self.trans_presence_gain = trans_presence_gain;
+    }
+
     pub fn trans_presence_fc(&self) -> u8 {
         self.trans_presence_fc
     }
+    fn set_trans_presence_fc(&mut self, trans_presence_fc: u8) {
+        self.trans_presence_fc = trans_presence_fc;
+    }
+
     pub fn trans_presence_bw(&self) -> u8 {
         self.trans_presence_bw
     }
+    fn set_trans_presence_bw(&mut self, trans_presence_bw: u8) {
+        self.trans_presence_bw = trans_presence_bw;
+    }
+
     pub fn trans_beatbox_enabled(&self) -> bool {
         self.trans_beatbox_enabled
     }
+    fn set_trans_beatbox_enabled(&mut self, trans_beatbox_enabled: bool) {
+        self.trans_beatbox_enabled = trans_beatbox_enabled;
+    }
+
     pub fn trans_filter_control(&self) -> u8 {
         self.trans_filter_control
     }
+    fn set_trans_filter_control(&mut self, trans_filter_control: u8) {
+        self.trans_filter_control = trans_filter_control;
+    }
+
     pub fn trans_filter(&self) -> u8 {
         self.trans_filter
     }
+    fn set_trans_filter(&mut self, trans_filter: u8) {
+        self.trans_filter = trans_filter;
+    }
+
     pub fn trans_drive_pot_gain_comp_mid(&self) -> u8 {
         self.trans_drive_pot_gain_comp_mid
     }
+    fn set_trans_drive_pot_gain_comp_mid(&mut self, trans_drive_pot_gain_comp_mid: u8) {
+        self.trans_drive_pot_gain_comp_mid = trans_drive_pot_gain_comp_mid;
+    }
+
     pub fn trans_drive_pot_gain_comp_max(&self) -> u8 {
         self.trans_drive_pot_gain_comp_max
+    }
+    fn set_trans_drive_pot_gain_comp_max(&mut self, trans_drive_pot_gain_comp_max: u8) {
+        self.trans_drive_pot_gain_comp_max = trans_drive_pot_gain_comp_max;
     }
 }
 
@@ -415,5 +500,125 @@ pub enum MegaphoneStyle {
 impl Default for MegaphoneStyle {
     fn default() -> Self {
         Megaphone
+    }
+}
+
+struct MegaphonePreset {
+    trans_dist_amt: u8,
+    trans_hp: u8,
+    trans_lp: u8,
+    trans_pregain: u8,
+    trans_postgain: i8,
+    trans_dist_type: u8,
+    trans_presence_gain: u8,
+    trans_presence_fc: u8,
+    trans_presence_bw: u8,
+    trans_beatbox_enabled: bool,
+    trans_filter_control: u8,
+    trans_filter: u8,
+    trans_drive_pot_gain_comp_mid: u8,
+    trans_drive_pot_gain_comp_max: u8,
+}
+
+impl MegaphonePreset {
+    fn get_preset(style: MegaphoneStyle) -> MegaphonePreset {
+        match style {
+            Megaphone => MegaphonePreset {
+                trans_dist_amt: 0,
+                trans_hp: 120,
+                trans_lp: 200,
+                trans_pregain: 0,
+                trans_postgain: 2,
+                trans_dist_type: 6,
+                trans_presence_gain: 8,
+                trans_presence_fc: 135,
+                trans_presence_bw: 7,
+                trans_beatbox_enabled: false,
+                trans_filter_control: 2,
+                trans_filter: 59,
+                trans_drive_pot_gain_comp_mid: 0,
+                trans_drive_pot_gain_comp_max: 0,
+            },
+            MegaphoneStyle::Radio => MegaphonePreset {
+                trans_dist_amt: 30,
+                trans_hp: 110,
+                trans_lp: 190,
+                trans_pregain: 0,
+                trans_postgain: 2,
+                trans_dist_type: 4,
+                trans_presence_gain: 7,
+                trans_presence_fc: 160,
+                trans_presence_bw: 5,
+                trans_beatbox_enabled: false,
+                trans_filter_control: 1,
+                trans_filter: 59,
+                trans_drive_pot_gain_comp_mid: 0,
+                trans_drive_pot_gain_comp_max: 5,
+            },
+            MegaphoneStyle::OnThePhone => MegaphonePreset {
+                trans_dist_amt: 50,
+                trans_hp: 50,
+                trans_lp: 238,
+                trans_pregain: 0,
+                trans_postgain: 0,
+                trans_dist_type: 12,
+                trans_presence_gain: 10,
+                trans_presence_fc: 160,
+                trans_presence_bw: 5,
+                trans_beatbox_enabled: false,
+                trans_filter_control: 3,
+                trans_filter: 0,
+                trans_drive_pot_gain_comp_mid: 0,
+                trans_drive_pot_gain_comp_max: 0,
+            },
+            MegaphoneStyle::Overdrive => MegaphonePreset {
+                trans_dist_amt: 50,
+                trans_hp: 50,
+                trans_lp: 238,
+                trans_pregain: 0,
+                trans_postgain: 2,
+                trans_dist_type: 1,
+                trans_presence_gain: 0,
+                trans_presence_fc: 168,
+                trans_presence_bw: 8,
+                trans_beatbox_enabled: false,
+                trans_filter_control: 1,
+                trans_filter: 100,
+                trans_drive_pot_gain_comp_mid: 1,
+                trans_drive_pot_gain_comp_max: 25,
+            },
+            MegaphoneStyle::BuzzCut => MegaphonePreset {
+                trans_dist_amt: 50,
+                trans_hp: 50,
+                trans_lp: 238,
+                trans_pregain: 0,
+                trans_postgain: 2,
+                trans_dist_type: 9,
+                trans_presence_gain: 5,
+                trans_presence_fc: 174,
+                trans_presence_bw: 4,
+                trans_beatbox_enabled: false,
+                trans_filter_control: 3,
+                trans_filter: 100,
+                trans_drive_pot_gain_comp_mid: 1,
+                trans_drive_pot_gain_comp_max: 8,
+            },
+            MegaphoneStyle::Tweed => MegaphonePreset {
+                trans_dist_amt: 20,
+                trans_hp: 78,
+                trans_lp: 192,
+                trans_pregain: 10,
+                trans_postgain: 2,
+                trans_dist_type: 13,
+                trans_presence_gain: 0,
+                trans_presence_fc: 168,
+                trans_presence_bw: 8,
+                trans_beatbox_enabled: false,
+                trans_filter_control: 3,
+                trans_filter: 59,
+                trans_drive_pot_gain_comp_mid: 3,
+                trans_drive_pot_gain_comp_max: 4,
+            },
+        }
     }
 }
