@@ -10,7 +10,7 @@ use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 
 use crate::components::colours::ColourMap;
 use crate::components::hardtune::HardTuneSource::All;
@@ -102,7 +102,7 @@ impl HardtuneEffectBase {
                 continue;
             }
             if attr.name.local_name == "HARDTUNE_WINDOW" {
-                preset.window = attr.value.parse::<c_float>()? as u8;
+                preset.window = attr.value.parse::<c_float>()? as u16;
                 continue;
             }
             if attr.name.local_name == "HARDTUNE_RATE" {
@@ -238,7 +238,7 @@ pub struct HardTuneEffect {
     style: HardTuneStyle,
     key_source: u8,
     amount: u8,
-    window: u8,
+    window: u16,
     rate: u8,
     scale: u8,
     pitch_amt: u8,
@@ -263,7 +263,6 @@ impl HardTuneEffect {
     pub fn state(&self) -> bool {
         self.state
     }
-
     pub fn set_state(&mut self, state: bool) {
         self.state = state;
     }
@@ -271,26 +270,82 @@ impl HardTuneEffect {
     pub fn style(&self) -> &HardTuneStyle {
         &self.style
     }
+    pub fn set_style(&mut self, style: HardTuneStyle) -> Result<()> {
+        self.style = style;
+
+        let preset = HardtunePreset::get_preset(style);
+        self.set_amount(preset.amount)?;
+        self.set_window(preset.window)?;
+        self.set_rate(preset.rate)?;
+        self.set_scale(preset.scale);
+        self.set_pitch_amt(preset.pitch_amt)?;
+
+        Ok(())
+    }
+
     pub fn key_source(&self) -> u8 {
         self.key_source
     }
+    fn set_key_source(&mut self, value: u8) {
+        self.key_source = value;
+    }
+
     pub fn amount(&self) -> u8 {
         self.amount
     }
-    pub fn window(&self) -> u8 {
+    pub fn set_amount(&mut self, value: u8) -> Result<()> {
+        if value > 100 {
+            return Err(anyhow!("Amount should be a percentage"));
+        }
+        self.amount = value;
+        Ok(())
+    }
+
+    pub fn window(&self) -> u16 {
         self.window
     }
+    pub fn set_window(&mut self, value: u16) -> Result<()> {
+        if value > 600 {
+            return Err(anyhow!("Window should be between 0 and 600"));
+        }
+        self.window = value;
+        Ok(())
+    }
+
     pub fn rate(&self) -> u8 {
         self.rate
     }
+    pub fn set_rate(&mut self, value: u8) -> Result<()> {
+        if value > 100 {
+            return Err(anyhow!("Rate should be a percentage"));
+        }
+        self.rate = value;
+        Ok(())
+    }
+
     pub fn scale(&self) -> u8 {
         self.scale
     }
+    fn set_scale(&mut self, value: u8) {
+        self.scale = value;
+    }
+
     pub fn pitch_amt(&self) -> u8 {
         self.pitch_amt
     }
+    fn set_pitch_amt(&mut self, value: u8) -> Result<()> {
+        if value != 0 {
+            return Err(anyhow!("Hardtune Pitch Amt should be 0.."));
+        }
+        self.pitch_amt = value;
+        Ok(())
+    }
+
     pub fn source(&self) -> &Option<HardTuneSource> {
         &self.source
+    }
+    pub fn set_source(&mut self, source: HardTuneSource) {
+        self.source = Some(source);
     }
 
     pub fn get_source(&self) -> HardTuneSource {
@@ -301,7 +356,7 @@ impl HardTuneEffect {
     }
 }
 
-#[derive(Debug, EnumIter, EnumProperty)]
+#[derive(Debug, EnumIter, EnumProperty, Clone, Copy)]
 pub enum HardTuneStyle {
     #[strum(props(uiIndex = "0"))]
     Normal,
@@ -337,5 +392,41 @@ pub enum HardTuneSource {
 impl Default for HardTuneSource {
     fn default() -> Self {
         All
+    }
+}
+
+struct HardtunePreset {
+    amount: u8,
+    window: u16,
+    rate: u8,
+    scale: u8,
+    pitch_amt: u8,
+}
+
+impl HardtunePreset {
+    fn get_preset(style: HardTuneStyle) -> HardtunePreset {
+        match style {
+            Normal => HardtunePreset {
+                amount: 70,
+                window: 20,
+                rate: 20,
+                scale: 5,
+                pitch_amt: 0,
+            },
+            HardTuneStyle::Medium => HardtunePreset {
+                amount: 53,
+                window: 20,
+                rate: 99,
+                scale: 5,
+                pitch_amt: 0,
+            },
+            HardTuneStyle::Hard => HardtunePreset {
+                amount: 100,
+                window: 60,
+                rate: 100,
+                scale: 5,
+                pitch_amt: 0,
+            },
+        }
     }
 }
