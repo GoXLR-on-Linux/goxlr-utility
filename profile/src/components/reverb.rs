@@ -192,11 +192,17 @@ impl ReverbEncoderBase {
             );
             sub_attributes.insert("REVERB_TYPE".to_string(), format!("{}", value.reverb_type));
             sub_attributes.insert("REVERB_DECAY".to_string(), format!("{}", value.decay));
-            sub_attributes.insert("REVERB_PREDELAY".to_string(), format!("{}", value.predelay));
+            sub_attributes.insert(
+                "REVERB_PREDELAY".to_string(),
+                format!("{}", value.pre_delay),
+            );
             sub_attributes.insert("REVERB_DIFFUSE".to_string(), format!("{}", value.diffuse));
-            sub_attributes.insert("REVERB_LOCOLOR".to_string(), format!("{}", value.locolor));
-            sub_attributes.insert("REVERB_HICOLOR".to_string(), format!("{}", value.hicolor));
-            sub_attributes.insert("REVERB_HIFACTOR".to_string(), format!("{}", value.hifactor));
+            sub_attributes.insert("REVERB_LOCOLOR".to_string(), format!("{}", value.lo_color));
+            sub_attributes.insert("REVERB_HICOLOR".to_string(), format!("{}", value.hi_color));
+            sub_attributes.insert(
+                "REVERB_HIFACTOR".to_string(),
+                format!("{}", value.hi_factor),
+            );
             sub_attributes.insert(
                 "REVERB_MODSPEED".to_string(),
                 format!("{}", value.mod_speed),
@@ -440,6 +446,8 @@ impl ReverbEncoder {
     pub fn dry_level(&self) -> i8 {
         self.dry_level
     }
+
+    #[allow(dead_code)]
     fn set_dry_level(&mut self, value: i8) {
         self.dry_level = value;
     }
