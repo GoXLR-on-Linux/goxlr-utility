@@ -12,9 +12,9 @@ use xml::EventWriter;
 use anyhow::Result;
 
 use crate::components::colours::ColourMap;
-use crate::components::megaphone::Preset;
-use crate::components::megaphone::Preset::{Preset1, Preset2, Preset3, Preset4, Preset5, Preset6};
 use crate::components::robot::RobotStyle::Robot1;
+use crate::Preset;
+use crate::Preset::{Preset1, Preset2, Preset3, Preset4, Preset5, Preset6};
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::io::Write;
 use std::os::raw::c_float;
 
-use enum_map::{Enum, EnumMap};
+use enum_map::EnumMap;
 use strum::{EnumIter, EnumProperty, IntoEnumIterator};
 use xml::attribute::OwnedAttribute;
 use xml::writer::events::StartElementBuilder;
@@ -13,7 +13,8 @@ use anyhow::Result;
 
 use crate::components::colours::ColourMap;
 use crate::components::megaphone::MegaphoneStyle::Megaphone;
-use crate::components::megaphone::Preset::{Preset1, Preset2, Preset3, Preset4, Preset5, Preset6};
+use crate::Preset;
+use crate::Preset::{Preset1, Preset2, Preset3, Preset4, Preset5, Preset6};
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -415,33 +416,4 @@ impl Default for MegaphoneStyle {
     fn default() -> Self {
         Megaphone
     }
-}
-
-// TODO: Move this.
-// In addition, 'contextTitle' refers to how this is represented in the <selectedContext tag
-#[derive(Debug, EnumIter, Enum, EnumProperty, Copy, Clone)]
-pub enum Preset {
-    #[strum(props(tagSuffix = "preset1", contextTitle = "effects1"))]
-    #[strum(to_string = "PRESET_1")]
-    Preset1,
-
-    #[strum(props(tagSuffix = "preset2", contextTitle = "effects2"))]
-    #[strum(to_string = "PRESET_2")]
-    Preset2,
-
-    #[strum(props(tagSuffix = "preset3", contextTitle = "effects3"))]
-    #[strum(to_string = "PRESET_3")]
-    Preset3,
-
-    #[strum(props(tagSuffix = "preset4", contextTitle = "effects4"))]
-    #[strum(to_string = "PRESET_4")]
-    Preset4,
-
-    #[strum(props(tagSuffix = "preset5", contextTitle = "effects5"))]
-    #[strum(to_string = "PRESET_5")]
-    Preset5,
-
-    #[strum(props(tagSuffix = "preset6", contextTitle = "effects6"))]
-    #[strum(to_string = "PRESET_6")]
-    Preset6,
 }

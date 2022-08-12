@@ -12,8 +12,8 @@ use strum::IntoEnumIterator;
 use anyhow::Result;
 
 use crate::components::colours::ColourMap;
-use crate::components::megaphone::Preset;
 use crate::components::sample::SampleBank;
+use crate::Preset;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]

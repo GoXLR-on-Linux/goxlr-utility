@@ -15,8 +15,8 @@ use anyhow::{anyhow, Result};
 use crate::components::colours::ColourMap;
 use crate::components::hardtune::HardTuneSource::All;
 use crate::components::hardtune::HardTuneStyle::Normal;
-use crate::components::megaphone::Preset;
-use crate::components::megaphone::Preset::{Preset1, Preset2, Preset3, Preset4, Preset5, Preset6};
+use crate::Preset;
+use crate::Preset::{Preset1, Preset2, Preset3, Preset4, Preset5, Preset6};
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -285,9 +285,6 @@ impl HardTuneEffect {
 
     pub fn key_source(&self) -> u8 {
         self.key_source
-    }
-    fn set_key_source(&mut self, value: u8) {
-        self.key_source = value;
     }
 
     pub fn amount(&self) -> u8 {

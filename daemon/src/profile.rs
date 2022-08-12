@@ -9,7 +9,7 @@ use goxlr_profile_loader::components::colours::{
 use goxlr_profile_loader::components::echo::EchoEncoder;
 use goxlr_profile_loader::components::gender::GenderEncoder;
 use goxlr_profile_loader::components::hardtune::{HardTuneEffect, HardTuneSource};
-use goxlr_profile_loader::components::megaphone::{MegaphoneEffect, Preset};
+use goxlr_profile_loader::components::megaphone::MegaphoneEffect;
 use goxlr_profile_loader::components::mixer::{FullChannelList, InputChannels, OutputChannels};
 use goxlr_profile_loader::components::mute::{MuteButton, MuteFunction};
 use goxlr_profile_loader::components::mute_chat::{CoughToggle, MuteChat};
@@ -20,7 +20,7 @@ use goxlr_profile_loader::components::sample::SampleBank;
 use goxlr_profile_loader::components::simple::SimpleElements;
 use goxlr_profile_loader::profile::{Profile, ProfileSettings};
 use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
-use goxlr_profile_loader::{Faders, SampleButtons};
+use goxlr_profile_loader::{Faders, Preset, SampleButtons};
 use goxlr_types::{
     ButtonColourGroups, ButtonColourOffStyle as BasicColourOffStyle, ButtonColourTargets,
     ChannelName, EffectBankPresets, FaderDisplayStyle as BasicColourDisplay, FaderName,

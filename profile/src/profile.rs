@@ -20,7 +20,7 @@ use crate::components::effects::Effects;
 use crate::components::fader::Fader;
 use crate::components::gender::GenderEncoderBase;
 use crate::components::hardtune::HardtuneEffectBase;
-use crate::components::megaphone::{MegaphoneEffectBase, Preset};
+use crate::components::megaphone::MegaphoneEffectBase;
 use crate::components::mixer::Mixers;
 use crate::components::mute::MuteButton;
 use crate::components::mute_chat::MuteChat;
@@ -32,7 +32,7 @@ use crate::components::sample::SampleBase;
 use crate::components::scribble::Scribble;
 use crate::components::simple::{SimpleElement, SimpleElements};
 use crate::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
-use crate::{Faders, SampleButtons};
+use crate::{Faders, Preset, SampleButtons};
 
 #[derive(Debug)]
 pub struct Profile {
