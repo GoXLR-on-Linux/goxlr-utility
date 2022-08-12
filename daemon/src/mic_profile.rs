@@ -615,9 +615,15 @@ impl MicProfileAdapter {
                 .into(),
             EffectKey::ReverbTailLevel => 0, // Always 0 from the Windows UI
             EffectKey::ReverbPredelay => main_profile.get_active_reverb_profile().predelay().into(),
-            EffectKey::ReverbLoColor => main_profile.get_active_reverb_profile().locolor().into(),
-            EffectKey::ReverbHiColor => main_profile.get_active_reverb_profile().hicolor().into(),
-            EffectKey::ReverbHiFactor => main_profile.get_active_reverb_profile().hifactor().into(),
+            EffectKey::ReverbLowColor => {
+                main_profile.get_active_reverb_profile().low_color().into()
+            }
+            EffectKey::ReverbHighColor => {
+                main_profile.get_active_reverb_profile().high_color().into()
+            }
+            EffectKey::ReverbHighFactor => {
+                main_profile.get_active_reverb_profile().hifactor().into()
+            }
             EffectKey::ReverbDiffuse => main_profile.get_active_reverb_profile().diffuse().into(),
             EffectKey::ReverbModSpeed => {
                 main_profile.get_active_reverb_profile().mod_speed().into()
@@ -892,9 +898,9 @@ impl MicProfileAdapter {
         set.insert(EffectKey::ReverbEarlyLevel);
         set.insert(EffectKey::ReverbTailLevel);
         set.insert(EffectKey::ReverbPredelay);
-        set.insert(EffectKey::ReverbLoColor);
-        set.insert(EffectKey::ReverbHiColor);
-        set.insert(EffectKey::ReverbHiFactor);
+        set.insert(EffectKey::ReverbLowColor);
+        set.insert(EffectKey::ReverbHighColor);
+        set.insert(EffectKey::ReverbHighFactor);
         set.insert(EffectKey::ReverbDiffuse);
         set.insert(EffectKey::ReverbModSpeed);
         set.insert(EffectKey::ReverbModDepth);

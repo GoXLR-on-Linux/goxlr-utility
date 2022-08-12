@@ -104,15 +104,15 @@ impl ReverbEncoderBase {
                 continue;
             }
             if attr.name.local_name == "REVERB_LOCOLOR" {
-                preset.lo_color = attr.value.parse::<c_float>()? as i8;
+                preset.low_color = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
             if attr.name.local_name == "REVERB_HICOLOR" {
-                preset.hi_color = attr.value.parse::<c_float>()? as i8;
+                preset.high_color = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
             if attr.name.local_name == "REVERB_HIFACTOR" {
-                preset.hi_factor = attr.value.parse::<c_float>()? as i8;
+                preset.high_factor = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
             if attr.name.local_name == "REVERB_MODSPEED" {
@@ -197,11 +197,14 @@ impl ReverbEncoderBase {
                 format!("{}", value.pre_delay),
             );
             sub_attributes.insert("REVERB_DIFFUSE".to_string(), format!("{}", value.diffuse));
-            sub_attributes.insert("REVERB_LOCOLOR".to_string(), format!("{}", value.lo_color));
-            sub_attributes.insert("REVERB_HICOLOR".to_string(), format!("{}", value.hi_color));
+            sub_attributes.insert("REVERB_LOCOLOR".to_string(), format!("{}", value.low_color));
+            sub_attributes.insert(
+                "REVERB_HICOLOR".to_string(),
+                format!("{}", value.high_color),
+            );
             sub_attributes.insert(
                 "REVERB_HIFACTOR".to_string(),
-                format!("{}", value.hi_factor),
+                format!("{}", value.high_factor),
             );
             sub_attributes.insert(
                 "REVERB_MODSPEED".to_string(),
@@ -260,9 +263,9 @@ pub struct ReverbEncoder {
     decay: u16, // Reaches 290 when set to max.
     pre_delay: u8,
     diffuse: i8,
-    lo_color: i8,
-    hi_color: i8,
-    hi_factor: i8,
+    low_color: i8,
+    high_color: i8,
+    high_factor: i8,
     mod_speed: i8,
     mod_depth: i8,
     early_level: i8,
@@ -279,9 +282,9 @@ impl ReverbEncoder {
             decay: 0,
             pre_delay: 0,
             diffuse: 0,
-            lo_color: 0,
-            hi_color: 0,
-            hi_factor: 0,
+            low_color: 0,
+            high_color: 0,
+            high_factor: 0,
             mod_speed: 0,
             mod_depth: 0,
             early_level: 0,
@@ -317,9 +320,9 @@ impl ReverbEncoder {
         self.set_decay_value(preset.decay);
         self.set_predelay(preset.pre_delay)?;
         self.set_diffuse(preset.diffuse)?;
-        self.set_lo_color(preset.lo_color)?;
-        self.set_hi_color(preset.hi_color)?;
-        self.set_hi_factor(preset.hi_factor)?;
+        self.set_low_color(preset.low_color)?;
+        self.set_hi_color(preset.high_color)?;
+        self.set_hi_factor(preset.high_factor)?;
         self.set_mod_speed(preset.mod_speed)?;
         self.set_mod_depth(preset.mod_depth)?;
         self.set_early_level(preset.early_level)?;
@@ -391,36 +394,36 @@ impl ReverbEncoder {
         Ok(())
     }
 
-    pub fn locolor(&self) -> i8 {
-        self.lo_color
+    pub fn low_color(&self) -> i8 {
+        self.low_color
     }
-    pub fn set_lo_color(&mut self, value: i8) -> Result<()> {
+    pub fn set_low_color(&mut self, value: i8) -> Result<()> {
         if !(-50..=50).contains(&value) {
             return Err(anyhow!("LoColour should be between -50 and 50"));
         }
-        self.lo_color = value;
+        self.low_color = value;
         Ok(())
     }
 
-    pub fn hicolor(&self) -> i8 {
-        self.hi_color
+    pub fn high_color(&self) -> i8 {
+        self.high_color
     }
     pub fn set_hi_color(&mut self, value: i8) -> Result<()> {
         if !(-50..=50).contains(&value) {
             return Err(anyhow!("HiColour should be between -50 and 50"));
         }
-        self.hi_color = value;
+        self.high_color = value;
         Ok(())
     }
 
     pub fn hifactor(&self) -> i8 {
-        self.hi_factor
+        self.high_factor
     }
     pub fn set_hi_factor(&mut self, value: i8) -> Result<()> {
         if !(-25..=25).contains(&value) {
             return Err(anyhow!("HiFactor should be between -25 and 25"));
         }
-        self.hi_factor = value;
+        self.high_factor = value;
         Ok(())
     }
 
@@ -506,9 +509,9 @@ struct ReverbPreset {
     decay: u16,
     pre_delay: u8,
     diffuse: i8,
-    lo_color: i8,
-    hi_color: i8,
-    hi_factor: i8,
+    low_color: i8,
+    high_color: i8,
+    high_factor: i8,
     mod_speed: i8,
     mod_depth: i8,
     early_level: i8,
@@ -523,9 +526,9 @@ impl ReverbPreset {
                 decay: 77,
                 pre_delay: 0,
                 diffuse: 0,
-                lo_color: 0,
-                hi_color: -32,
-                hi_factor: -6,
+                low_color: 0,
+                high_color: -32,
+                high_factor: -6,
                 mod_speed: 0,
                 mod_depth: 0,
                 early_level: -1,
@@ -536,9 +539,9 @@ impl ReverbPreset {
                 decay: 96,
                 pre_delay: 0,
                 diffuse: -50,
-                lo_color: 0,
-                hi_color: -50,
-                hi_factor: -25,
+                low_color: 0,
+                high_color: -50,
+                high_factor: -25,
                 mod_speed: -25,
                 mod_depth: -25,
                 early_level: -25,
@@ -549,9 +552,9 @@ impl ReverbPreset {
                 decay: 106,
                 pre_delay: 15,
                 diffuse: 0,
-                lo_color: 0,
-                hi_color: 0,
-                hi_factor: 0,
+                low_color: 0,
+                high_color: 0,
+                high_factor: 0,
                 mod_speed: 0,
                 mod_depth: 0,
                 early_level: 0,
@@ -562,9 +565,9 @@ impl ReverbPreset {
                 decay: 115,
                 pre_delay: 15,
                 diffuse: 0,
-                lo_color: 21,
-                hi_color: -17,
-                hi_factor: -22,
+                low_color: 21,
+                high_color: -17,
+                high_factor: -22,
                 mod_speed: -3,
                 mod_depth: 8,
                 early_level: 0,
@@ -575,9 +578,9 @@ impl ReverbPreset {
                 decay: 118,
                 pre_delay: 15,
                 diffuse: 0,
-                lo_color: -23,
-                hi_color: -35,
-                hi_factor: 13,
+                low_color: -23,
+                high_color: -35,
+                high_factor: 13,
                 mod_speed: 0,
                 mod_depth: 0,
                 early_level: -25,
@@ -588,9 +591,9 @@ impl ReverbPreset {
                 decay: 150,
                 pre_delay: 100,
                 diffuse: 0,
-                lo_color: 10,
-                hi_color: -39,
-                hi_factor: 21,
+                low_color: 10,
+                high_color: -39,
+                high_factor: 21,
                 mod_speed: -3,
                 mod_depth: 21,
                 early_level: 0,

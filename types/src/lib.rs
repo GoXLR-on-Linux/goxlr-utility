@@ -145,9 +145,9 @@ pub enum EffectKey {
     ReverbEarlyLevel = 0x0037,
     ReverbTailLevel = 0x0039, // Always sent as 0.
     ReverbPredelay = 0x0030,
-    ReverbLoColor = 0x0032,
-    ReverbHiColor = 0x0033,
-    ReverbHiFactor = 0x0034,
+    ReverbLowColor = 0x0032,
+    ReverbHighColor = 0x0033,
+    ReverbHighFactor = 0x0034,
     ReverbDiffuse = 0x0031,
     ReverbModSpeed = 0x0035,
     ReverbModDepth = 0x0036,
