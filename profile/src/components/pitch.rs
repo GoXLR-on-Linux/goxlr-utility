@@ -301,15 +301,26 @@ impl PitchEncoder {
         &self.style
     }
 
+    // TODO: Range is dynamically generated, based on Style (12 or 24)
     pub fn range(&self) -> u8 {
         self.range
     }
+
+    // TODO: Work out how this is changed and set.
     pub fn threshold(&self) -> i8 {
         self.threshold
     }
     pub fn inst_ratio(&self) -> Option<u8> {
         self.inst_ratio
     }
+    pub fn set_inst_ratio(&mut self, value: u8) -> Result<()> {
+        if value > 100 {
+            return Err(anyhow!("Character should be a percentage"));
+        }
+        self.inst_ratio = Some(value);
+        Ok(())
+    }
+
     pub fn inst_ratio_value(&self) -> u8 {
         if let Some(value) = self.inst_ratio {
             return value;

@@ -339,7 +339,6 @@ impl MegaphoneEffect {
     pub fn state(&self) -> bool {
         self.state
     }
-
     pub fn set_state(&mut self, state: bool) {
         self.state = state;
     }
