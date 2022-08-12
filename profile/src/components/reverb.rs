@@ -96,7 +96,7 @@ impl ReverbEncoderBase {
                 continue;
             }
             if attr.name.local_name == "REVERB_PREDELAY" {
-                preset.predelay = attr.value.parse::<c_float>()? as u8;
+                preset.pre_delay = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
             if attr.name.local_name == "REVERB_DIFFUSE" {
@@ -104,15 +104,15 @@ impl ReverbEncoderBase {
                 continue;
             }
             if attr.name.local_name == "REVERB_LOCOLOR" {
-                preset.locolor = attr.value.parse::<c_float>()? as i8;
+                preset.lo_color = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
             if attr.name.local_name == "REVERB_HICOLOR" {
-                preset.hicolor = attr.value.parse::<c_float>()? as i8;
+                preset.hi_color = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
             if attr.name.local_name == "REVERB_HIFACTOR" {
-                preset.hifactor = attr.value.parse::<c_float>()? as i8;
+                preset.hi_factor = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
             if attr.name.local_name == "REVERB_MODSPEED" {
@@ -252,11 +252,11 @@ pub struct ReverbEncoder {
     style: ReverbStyle,
     reverb_type: u8, // I have no idea what this maps too..
     decay: u16,      // Reaches 290 when set to max.
-    predelay: u8,
+    pre_delay: u8,
     diffuse: i8,
-    locolor: i8,
-    hicolor: i8,
-    hifactor: i8,
+    lo_color: i8,
+    hi_color: i8,
+    hi_factor: i8,
     mod_speed: i8,
     mod_depth: i8,
     early_level: i8,
@@ -271,11 +271,11 @@ impl ReverbEncoder {
             style: Library,
             reverb_type: 0,
             decay: 0,
-            predelay: 0,
+            pre_delay: 0,
             diffuse: 0,
-            locolor: 0,
-            hicolor: 0,
-            hifactor: 0,
+            lo_color: 0,
+            hi_color: 0,
+            hi_factor: 0,
             mod_speed: 0,
             mod_depth: 0,
             early_level: 0,
@@ -309,35 +309,139 @@ impl ReverbEncoder {
     pub fn decay(&self) -> u16 {
         self.decay
     }
-    pub fn predelay(&self) -> u8 {
-        self.predelay
+    pub fn set_decay(&mut self, milliseconds: u16) -> Result<()> {
+        // We're going to handle the conversion here directly..
+        if milliseconds > 20000 {
+            return Err(anyhow!("Decay should be below 20000 milliseconds"));
+        }
+
+        // For everything below 1000ms, the division is ms / 10..
+        if milliseconds <= 1000 {
+            self.decay = milliseconds / 10;
+            return Ok(());
+        }
+
+        // Once we pass 1000, all additions are value / 100
+        let base = 100;
+
+        // Remove the first second from the value..
+        let current = milliseconds - 1000;
+
+        // Divide anything remaining by 100..
+        let addition = current / 100;
+
+        // Add it onto the 100 base..
+        self.decay = base + addition;
+
+        // And done?
+        Ok(())
     }
+
+    pub fn predelay(&self) -> u8 {
+        self.pre_delay
+    }
+    pub fn set_predelay(&mut self, value: u8) -> Result<()> {
+        if value > 100 {
+            return Err(anyhow!("Predelay must be between 0 and 100ms"));
+        }
+        self.pre_delay = value;
+        Ok(())
+    }
+
     pub fn diffuse(&self) -> i8 {
         self.diffuse
     }
+    pub fn set_diffuse(&mut self, value: i8) -> Result<()> {
+        if !(-50..=50).contains(&value) {
+            return Err(anyhow!("Diffuse should be between -50 and 50"));
+        }
+        self.diffuse = value;
+        Ok(())
+    }
+
     pub fn locolor(&self) -> i8 {
-        self.locolor
+        self.lo_color
     }
+    pub fn set_locolor(&mut self, value: i8) -> Result<()> {
+        if !(-50..=50).contains(&value) {
+            return Err(anyhow!("LoColour should be between -50 and 50"));
+        }
+        self.lo_color = value;
+        Ok(())
+    }
+
     pub fn hicolor(&self) -> i8 {
-        self.hicolor
+        self.hi_color
     }
+    pub fn set_hicolor(&mut self, value: i8) -> Result<()> {
+        if !(-50..=50).contains(&value) {
+            return Err(anyhow!("HiColour should be between -50 and 50"));
+        }
+        self.hi_color = value;
+        Ok(())
+    }
+
     pub fn hifactor(&self) -> i8 {
-        self.hifactor
+        self.hi_factor
     }
+    pub fn set_hifactor(&mut self, value: i8) -> Result<()> {
+        if !(-25..=25).contains(&value) {
+            return Err(anyhow!("HiFactor should be between -25 and 25"));
+        }
+        self.hi_factor = value;
+        Ok(())
+    }
+
     pub fn mod_speed(&self) -> i8 {
         self.mod_speed
     }
+    pub fn set_mod_speed(&mut self, value: i8) -> Result<()> {
+        if !(-25..=25).contains(&value) {
+            return Err(anyhow!("Mod Speed should be between -25 and 25"));
+        }
+        self.mod_speed = value;
+        Ok(())
+    }
+
     pub fn mod_depth(&self) -> i8 {
         self.mod_depth
     }
+    pub fn set_mod_depth(&mut self, value: i8) -> Result<()> {
+        if !(-25..=25).contains(&value) {
+            return Err(anyhow!("Mod Depth should be between -25 and 25"));
+        }
+        self.mod_depth = value;
+        Ok(())
+    }
+
     pub fn early_level(&self) -> i8 {
         self.early_level
     }
+    pub fn set_early_level(&mut self, value: i8) -> Result<()> {
+        if !(-25..=0).contains(&value) {
+            return Err(anyhow!("Early Level should be between -25 and 0"));
+        }
+        self.early_level = value;
+        Ok(())
+    }
+
     pub fn tail_level(&self) -> i8 {
+        // This value is never actually sent to the GoXLR, but is stored in config.
         self.tail_level
     }
+    pub fn set_tail_level(&mut self, value: i8) -> Result<()> {
+        if !(-25..=0).contains(&value) {
+            return Err(anyhow!("Tail Level should be between -25 and 0"));
+        }
+        self.early_level = value;
+        Ok(())
+    }
+
     pub fn dry_level(&self) -> i8 {
         self.dry_level
+    }
+    fn set_dry_level(&mut self, value: i8) {
+        self.dry_level = value;
     }
 }
 
@@ -367,3 +471,5 @@ impl Default for ReverbStyle {
         Library
     }
 }
+
+// TODO: Presets
