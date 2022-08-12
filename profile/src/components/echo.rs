@@ -299,45 +299,155 @@ impl EchoEncoder {
     pub fn style(&self) -> &EchoStyle {
         &self.style
     }
+    pub fn set_style(&mut self, style: EchoStyle) -> Result<()> {
+        self.style = style;
+
+        // Load a preset and set variables..
+        let preset = EchoPreset::get_preset(style);
+        self.set_source(preset.source);
+        self.set_div_l(preset.div_l);
+        self.set_div_r(preset.div_r);
+        self.set_feedback_left(preset.feedback_left)?;
+        self.set_feedback_right(preset.feedback_right)?;
+        self.set_xfb_l_to_r(preset.xfb_l_to_r)?;
+        self.set_xfb_r_to_l(preset.xfb_r_to_l)?;
+        self.set_filter_style(preset.filter_style);
+        if let Some(time_left) = preset.time_left {
+            self.set_time_left(time_left)?;
+        }
+        if let Some(time_right) = preset.time_right {
+            self.set_time_right(time_right)?;
+        }
+
+        Ok(())
+    }
+
     pub fn source(&self) -> u8 {
         self.source
     }
+    fn set_source(&mut self, source: u8) {
+        self.source = source;
+    }
+
     pub fn div_l(&self) -> u8 {
         self.div_l
+    }
+    fn set_div_l(&mut self, value: u8) {
+        self.div_l = value;
     }
     pub fn div_r(&self) -> u8 {
         self.div_r
     }
+    fn set_div_r(&mut self, value: u8) {
+        self.div_r = value;
+    }
+
     pub fn feedback_left(&self) -> u8 {
         self.feedback_left
     }
+    pub fn set_feedback_left(&mut self, value: u8) -> Result<()> {
+        if value > 100 {
+            return Err(anyhow!("Feedback Left should be a percentage"));
+        }
+        self.feedback_left = value;
+        Ok(())
+    }
+
     pub fn feedback_right(&self) -> u8 {
         self.feedback_right
+    }
+    pub fn set_feedback_right(&mut self, value: u8) -> Result<()> {
+        if value > 100 {
+            return Err(anyhow!("Feedback Right should be a percentage"));
+        }
+        self.feedback_right = value;
+        Ok(())
     }
     pub fn feedback_control(&self) -> u8 {
         self.feedback_control
     }
+    pub fn set_feedback(&mut self, value: u8) -> Result<()> {
+        if value > 100 {
+            return Err(anyhow!("Feedback should be a percentage"));
+        }
+        self.feedback_control = value;
+        Ok(())
+    }
     pub fn xfb_l_to_r(&self) -> u8 {
         self.xfb_l_to_r
     }
+    pub fn set_xfb_l_to_r(&mut self, value: u8) -> Result<()> {
+        if value > 100 {
+            return Err(anyhow!("XFB L to R should be a percentage"));
+        }
+        self.xfb_l_to_r = value;
+        Ok(())
+    }
+
     pub fn xfb_r_to_l(&self) -> u8 {
         self.xfb_r_to_l
     }
+    pub fn set_xfb_r_to_l(&mut self, value: u8) -> Result<()> {
+        if value > 100 {
+            return Err(anyhow!("XFB R to L should be a percentage"));
+        }
+        self.xfb_r_to_l = value;
+        Ok(())
+    }
+
     pub fn filter_style(&self) -> u8 {
         self.filter_style
     }
+    fn set_filter_style(&mut self, value: u8) {
+        self.filter_style = value;
+    }
+
     pub fn time_left(&self) -> u16 {
         self.time_left
     }
+    pub fn set_time_left(&mut self, value: u16) -> Result<()> {
+        if value > 2500 {
+            return Err(anyhow!("Delay Left should be below 2500"));
+        }
+        if self.style != EchoStyle::ClassicSlap {
+            return Err(anyhow!("Delay can only be set if Style is ClassicSlap"));
+        }
+
+        self.time_left = value;
+        Ok(())
+    }
+
     pub fn time_right(&self) -> u16 {
         self.time_right
     }
+    pub fn set_time_right(&mut self, value: u16) -> Result<()> {
+        if value > 2500 {
+            return Err(anyhow!("Delay Right should be below 2500"));
+        }
+        if self.style != EchoStyle::ClassicSlap {
+            return Err(anyhow!("Delay can only be set if Style is ClassicSlap"));
+        }
+
+        self.time_left = value;
+        Ok(())
+    }
+
     pub fn tempo(&self) -> u16 {
         self.tempo
     }
+    pub fn set_tempo(&mut self, value: u16) -> Result<()> {
+        if !(45..=300).contains(&value) {
+            return Err(anyhow!("Tempo must be between 45 and 300"));
+        }
+        if self.style == EchoStyle::ClassicSlap {
+            return Err(anyhow!("Tempo cannot be set if Style is ClassicSlap"));
+        }
+        self.tempo = value;
+        Ok(())
+    }
 }
 
-#[derive(Debug, EnumIter, Enum, EnumProperty)]
+#[derive(Debug, EnumIter, Enum, EnumProperty, Eq, PartialEq, Clone, Copy)]
 pub enum EchoStyle {
     #[strum(props(uiIndex = "0"))]
     #[strum(to_string = "QUARTER")]
@@ -367,5 +477,104 @@ pub enum EchoStyle {
 impl Default for EchoStyle {
     fn default() -> Self {
         EchoStyle::Quarter
+    }
+}
+
+struct EchoPreset {
+    source: u8,
+    div_l: u8,
+    div_r: u8,
+    feedback_left: u8,
+    feedback_right: u8,
+    feedback_control: u8,
+    xfb_l_to_r: u8,
+    xfb_r_to_l: u8,
+    filter_style: u8,
+    time_left: Option<u16>,
+    time_right: Option<u16>,
+}
+
+impl EchoPreset {
+    fn get_preset(style: EchoStyle) -> EchoPreset {
+        match style {
+            EchoStyle::Quarter => EchoPreset {
+                source: 1,
+                div_l: 9,
+                div_r: 9,
+                feedback_left: 50,
+                feedback_right: 50,
+                feedback_control: 30,
+                xfb_l_to_r: 0,
+                xfb_r_to_l: 0,
+                filter_style: 0,
+                time_left: None,
+                time_right: None,
+            },
+            EchoStyle::Eighth => EchoPreset {
+                source: 1,
+                div_l: 12,
+                div_r: 12,
+                feedback_left: 50,
+                feedback_right: 50,
+                feedback_control: 30,
+                xfb_l_to_r: 0,
+                xfb_r_to_l: 0,
+                filter_style: 0,
+                time_left: None,
+                time_right: None,
+            },
+            EchoStyle::Triplet => EchoPreset {
+                source: 1,
+                div_l: 13,
+                div_r: 13,
+                feedback_left: 50,
+                feedback_right: 50,
+                feedback_control: 30,
+                xfb_l_to_r: 0,
+                xfb_r_to_l: 0,
+                filter_style: 0,
+                time_left: None,
+                time_right: None,
+            },
+            EchoStyle::PingPong => EchoPreset {
+                source: 1,
+                div_l: 10,
+                div_r: 13,
+                feedback_left: 50,
+                feedback_right: 0,
+                feedback_control: 30,
+                xfb_l_to_r: 100,
+                xfb_r_to_l: 0,
+                filter_style: 0,
+                time_left: None,
+                time_right: None,
+            },
+            EchoStyle::ClassicSlap => EchoPreset {
+                source: 0,
+                div_l: 18,
+                div_r: 18,
+                feedback_left: 50,
+                feedback_right: 50,
+                feedback_control: 0,
+                xfb_l_to_r: 110,
+                xfb_r_to_l: 110,
+                filter_style: 0,
+                time_left: Some(110),
+                time_right: Some(110),
+            },
+            EchoStyle::MultiTap => EchoPreset {
+                source: 1,
+                div_l: 9,
+                div_r: 11,
+                feedback_left: 25,
+                feedback_right: 50,
+                feedback_control: 30,
+                xfb_l_to_r: 0,
+                xfb_r_to_l: 0,
+                filter_style: 0,
+                time_left: None,
+                time_right: None,
+            },
+        }
     }
 }
