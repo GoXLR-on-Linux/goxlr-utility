@@ -309,6 +309,7 @@ impl EchoEncoder {
         self.set_div_r(preset.div_r);
         self.set_feedback_left(preset.feedback_left)?;
         self.set_feedback_right(preset.feedback_right)?;
+        self.set_feedback(preset.feedback_control)?;
         self.set_xfb_l_to_r(preset.xfb_l_to_r)?;
         self.set_xfb_r_to_l(preset.xfb_r_to_l)?;
         self.set_filter_style(preset.filter_style);
