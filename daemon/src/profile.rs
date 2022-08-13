@@ -2,20 +2,23 @@ use crate::files::{can_create_new_file, create_path};
 use anyhow::{anyhow, Context, Result};
 use enum_map::EnumMap;
 use enumset::EnumSet;
-use goxlr_ipc::{ButtonLighting, CoughButton, FaderLighting, Lighting, TwoColours};
+use goxlr_ipc::{
+    ButtonLighting, CoughButton, Echo, Effects, FaderLighting, Gender, HardTune, Lighting,
+    Megaphone, Pitch, Reverb, Robot, TwoColours,
+};
 use goxlr_profile_loader::components::colours::{
     Colour, ColourDisplay, ColourMap, ColourOffStyle, ColourState,
 };
-use goxlr_profile_loader::components::echo::EchoEncoder;
-use goxlr_profile_loader::components::gender::GenderEncoder;
-use goxlr_profile_loader::components::hardtune::{HardTuneEffect, HardTuneSource};
-use goxlr_profile_loader::components::megaphone::MegaphoneEffect;
+use goxlr_profile_loader::components::echo::{EchoEncoder, EchoStyle};
+use goxlr_profile_loader::components::gender::{GenderEncoder, GenderStyle};
+use goxlr_profile_loader::components::hardtune::{HardTuneEffect, HardTuneSource, HardTuneStyle};
+use goxlr_profile_loader::components::megaphone::{MegaphoneEffect, MegaphoneStyle};
 use goxlr_profile_loader::components::mixer::{FullChannelList, InputChannels, OutputChannels};
 use goxlr_profile_loader::components::mute::{MuteButton, MuteFunction};
 use goxlr_profile_loader::components::mute_chat::{CoughToggle, MuteChat};
-use goxlr_profile_loader::components::pitch::PitchEncoder;
-use goxlr_profile_loader::components::reverb::ReverbEncoder;
-use goxlr_profile_loader::components::robot::RobotEffect;
+use goxlr_profile_loader::components::pitch::{PitchEncoder, PitchStyle};
+use goxlr_profile_loader::components::reverb::{ReverbEncoder, ReverbStyle};
+use goxlr_profile_loader::components::robot::{RobotEffect, RobotStyle};
 use goxlr_profile_loader::components::sample::SampleBank;
 use goxlr_profile_loader::components::simple::SimpleElements;
 use goxlr_profile_loader::profile::{Profile, ProfileSettings};
@@ -392,6 +395,94 @@ impl ProfileAdapter {
             faders: fader_map,
             buttons: button_map,
         }
+    }
+
+    pub fn get_effects_ipc(&self, is_device_mini: bool) -> Option<Effects> {
+        // There's no point returning effects for a Mini, it doesn't support them!
+        if is_device_mini {
+            return None;
+        }
+
+        let reverb = Reverb {
+            style: profile_to_standard_reverb_style(self.get_active_reverb_profile().style()),
+            amount: self.get_active_reverb_profile().amount(),
+            decay: self.get_active_reverb_profile().decay(),
+            early_level: self.get_active_reverb_profile().early_level(),
+            tail_level: self.get_active_reverb_profile().tail_level(),
+            pre_delay: self.get_active_reverb_profile().predelay(),
+            lo_colour: self.get_active_reverb_profile().low_color(),
+            hi_colour: self.get_active_reverb_profile().high_color(),
+            hi_factor: self.get_active_reverb_profile().hifactor(),
+            diffuse: self.get_active_reverb_profile().diffuse(),
+            mod_speed: self.get_active_reverb_profile().mod_speed(),
+            mod_depth: self.get_active_reverb_profile().mod_depth(),
+        };
+
+        let echo = Echo {
+            style: profile_to_standard_echo_style(self.get_active_echo_profile().style()),
+            amount: self.get_active_echo_profile().amount(),
+            feedback: self.get_active_echo_profile().feedback_control(),
+            tempo: self.get_active_echo_profile().tempo(),
+            delay_left: self.get_active_echo_profile().time_left(),
+            delay_right: self.get_active_echo_profile().time_right(),
+            feedback_left: self.get_active_echo_profile().feedback_left(),
+            feedback_right: self.get_active_echo_profile().feedback_right(),
+            feedback_xfb_l_to_r: self.get_active_echo_profile().xfb_l_to_r(),
+            feedback_xfb_r_to_l: self.get_active_echo_profile().xfb_r_to_l(),
+        };
+
+        let pitch = Pitch {
+            style: profile_to_standard_pitch_style(self.get_active_pitch_profile().style()),
+            amount: self
+                .get_active_pitch_profile()
+                .knob_position(self.is_hardtune_enabled(true)),
+            character: self.get_active_pitch_profile().inst_ratio_value(),
+        };
+
+        let gender = Gender {
+            style: profile_to_standard_gender_style(self.get_active_gender_profile().style()),
+            amount: self.get_active_gender_profile().amount(),
+        };
+
+        let megaphone = Megaphone {
+            style: profile_to_standard_megaphone_style(self.get_active_megaphone_profile().style()),
+            amount: self.get_active_megaphone_profile().trans_dist_amt(),
+            post_gain: self.get_active_megaphone_profile().trans_postgain(),
+        };
+
+        let robot = Robot {
+            style: profile_to_standard_robot_style(self.get_active_robot_profile().style()),
+            low_gain: self.get_active_robot_profile().vocoder_low_gain(),
+            low_freq: self.get_active_robot_profile().vocoder_low_freq(),
+            low_width: self.get_active_robot_profile().vocoder_low_bw(),
+            mid_gain: self.get_active_robot_profile().vocoder_mid_gain(),
+            mid_freq: self.get_active_robot_profile().vocoder_mid_freq(),
+            mid_width: self.get_active_robot_profile().vocoder_mid_bw(),
+            high_gain: self.get_active_robot_profile().vocoder_high_gain(),
+            high_freq: self.get_active_robot_profile().vocoder_high_freq(),
+            high_width: self.get_active_robot_profile().vocoder_high_bw(),
+            waveform: self.get_active_robot_profile().synthosc_waveform(),
+            pulse_width: self.get_active_robot_profile().synthosc_pulse_width(),
+            threshold: self.get_active_robot_profile().vocoder_gate_threshold(),
+            dry_mix: self.get_active_robot_profile().dry_mix(),
+        };
+
+        let hard_tune = HardTune {
+            style: profile_to_standard_hard_tune_style(self.get_active_hardtune_profile().style()),
+            amount: self.get_active_hardtune_profile().amount(),
+            rate: self.get_active_hardtune_profile().rate(),
+            window: self.get_active_hardtune_profile().window(),
+        };
+
+        Some(Effects {
+            reverb,
+            echo,
+            pitch,
+            gender,
+            megaphone,
+            robot,
+            hard_tune,
+        })
     }
 
     /** Regular Mute button handlers */
@@ -1585,6 +1676,141 @@ pub fn get_mini_colour_targets() -> Vec<ButtonColourTargets> {
         ButtonColourTargets::Bleep,
         ButtonColourTargets::Cough,
     ]
+}
+
+#[allow(dead_code)]
+fn standard_to_profile_reverb_style(style: goxlr_types::ReverbStyle) -> ReverbStyle {
+    match style {
+        goxlr_types::ReverbStyle::Library => ReverbStyle::Library,
+        goxlr_types::ReverbStyle::DarkBloom => ReverbStyle::DarkBloom,
+        goxlr_types::ReverbStyle::MusicClub => ReverbStyle::MusicClub,
+        goxlr_types::ReverbStyle::RealPlate => ReverbStyle::RealPlate,
+        goxlr_types::ReverbStyle::Chapel => ReverbStyle::Chapel,
+        goxlr_types::ReverbStyle::HockeyArena => ReverbStyle::HockeyArena,
+    }
+}
+
+fn profile_to_standard_reverb_style(style: &ReverbStyle) -> goxlr_types::ReverbStyle {
+    match style {
+        ReverbStyle::Library => goxlr_types::ReverbStyle::Library,
+        ReverbStyle::DarkBloom => goxlr_types::ReverbStyle::DarkBloom,
+        ReverbStyle::MusicClub => goxlr_types::ReverbStyle::MusicClub,
+        ReverbStyle::RealPlate => goxlr_types::ReverbStyle::RealPlate,
+        ReverbStyle::Chapel => goxlr_types::ReverbStyle::Chapel,
+        ReverbStyle::HockeyArena => goxlr_types::ReverbStyle::HockeyArena,
+    }
+}
+
+#[allow(dead_code)]
+fn standard_to_profile_echo_style(style: goxlr_types::EchoStyle) -> EchoStyle {
+    match style {
+        goxlr_types::EchoStyle::Quarter => EchoStyle::Quarter,
+        goxlr_types::EchoStyle::Eighth => EchoStyle::Eighth,
+        goxlr_types::EchoStyle::Triplet => EchoStyle::Triplet,
+        goxlr_types::EchoStyle::PingPong => EchoStyle::PingPong,
+        goxlr_types::EchoStyle::ClassicSlap => EchoStyle::ClassicSlap,
+        goxlr_types::EchoStyle::MultiTap => EchoStyle::MultiTap,
+    }
+}
+
+fn profile_to_standard_echo_style(style: &EchoStyle) -> goxlr_types::EchoStyle {
+    match style {
+        EchoStyle::Quarter => goxlr_types::EchoStyle::Quarter,
+        EchoStyle::Eighth => goxlr_types::EchoStyle::Eighth,
+        EchoStyle::Triplet => goxlr_types::EchoStyle::Triplet,
+        EchoStyle::PingPong => goxlr_types::EchoStyle::PingPong,
+        EchoStyle::ClassicSlap => goxlr_types::EchoStyle::ClassicSlap,
+        EchoStyle::MultiTap => goxlr_types::EchoStyle::MultiTap,
+    }
+}
+
+#[allow(dead_code)]
+fn standard_to_profile_pitch_style(style: goxlr_types::PitchStyle) -> PitchStyle {
+    match style {
+        goxlr_types::PitchStyle::Narrow => PitchStyle::Narrow,
+        goxlr_types::PitchStyle::Wide => PitchStyle::Wide,
+    }
+}
+
+fn profile_to_standard_pitch_style(style: &PitchStyle) -> goxlr_types::PitchStyle {
+    match style {
+        PitchStyle::Narrow => goxlr_types::PitchStyle::Narrow,
+        PitchStyle::Wide => goxlr_types::PitchStyle::Wide,
+    }
+}
+
+#[allow(dead_code)]
+fn standard_to_profile_gender_style(style: goxlr_types::GenderStyle) -> GenderStyle {
+    match style {
+        goxlr_types::GenderStyle::Narrow => GenderStyle::Narrow,
+        goxlr_types::GenderStyle::Medium => GenderStyle::Medium,
+        goxlr_types::GenderStyle::Wide => GenderStyle::Wide,
+    }
+}
+
+fn profile_to_standard_gender_style(style: &GenderStyle) -> goxlr_types::GenderStyle {
+    match style {
+        GenderStyle::Narrow => goxlr_types::GenderStyle::Narrow,
+        GenderStyle::Medium => goxlr_types::GenderStyle::Medium,
+        GenderStyle::Wide => goxlr_types::GenderStyle::Wide,
+    }
+}
+
+#[allow(dead_code)]
+fn standard_to_profile_megaphone_style(style: goxlr_types::MegaphoneStyle) -> MegaphoneStyle {
+    match style {
+        goxlr_types::MegaphoneStyle::Megaphone => MegaphoneStyle::Megaphone,
+        goxlr_types::MegaphoneStyle::Radio => MegaphoneStyle::Radio,
+        goxlr_types::MegaphoneStyle::OnThePhone => MegaphoneStyle::OnThePhone,
+        goxlr_types::MegaphoneStyle::Overdrive => MegaphoneStyle::Overdrive,
+        goxlr_types::MegaphoneStyle::BuzzCut => MegaphoneStyle::BuzzCut,
+        goxlr_types::MegaphoneStyle::Tweed => MegaphoneStyle::Tweed,
+    }
+}
+
+fn profile_to_standard_megaphone_style(style: &MegaphoneStyle) -> goxlr_types::MegaphoneStyle {
+    match style {
+        MegaphoneStyle::Megaphone => goxlr_types::MegaphoneStyle::Megaphone,
+        MegaphoneStyle::Radio => goxlr_types::MegaphoneStyle::Radio,
+        MegaphoneStyle::OnThePhone => goxlr_types::MegaphoneStyle::OnThePhone,
+        MegaphoneStyle::Overdrive => goxlr_types::MegaphoneStyle::Overdrive,
+        MegaphoneStyle::BuzzCut => goxlr_types::MegaphoneStyle::BuzzCut,
+        MegaphoneStyle::Tweed => goxlr_types::MegaphoneStyle::Tweed,
+    }
+}
+
+#[allow(dead_code)]
+fn standard_to_profile_robot_style(style: goxlr_types::RobotStyle) -> RobotStyle {
+    match style {
+        goxlr_types::RobotStyle::Robot1 => RobotStyle::Robot1,
+        goxlr_types::RobotStyle::Robot2 => RobotStyle::Robot2,
+        goxlr_types::RobotStyle::Robot3 => RobotStyle::Robot3,
+    }
+}
+
+fn profile_to_standard_robot_style(style: &RobotStyle) -> goxlr_types::RobotStyle {
+    match style {
+        RobotStyle::Robot1 => goxlr_types::RobotStyle::Robot1,
+        RobotStyle::Robot2 => goxlr_types::RobotStyle::Robot2,
+        RobotStyle::Robot3 => goxlr_types::RobotStyle::Robot3,
+    }
+}
+
+#[allow(dead_code)]
+fn standard_to_profile_hard_tune_style(style: goxlr_types::HardTuneStyle) -> HardTuneStyle {
+    match style {
+        goxlr_types::HardTuneStyle::Neutral => HardTuneStyle::Neutral,
+        goxlr_types::HardTuneStyle::Medium => HardTuneStyle::Medium,
+        goxlr_types::HardTuneStyle::Hard => HardTuneStyle::Hard,
+    }
+}
+
+fn profile_to_standard_hard_tune_style(style: &HardTuneStyle) -> goxlr_types::HardTuneStyle {
+    match style {
+        HardTuneStyle::Neutral => goxlr_types::HardTuneStyle::Neutral,
+        HardTuneStyle::Medium => goxlr_types::HardTuneStyle::Medium,
+        HardTuneStyle::Hard => goxlr_types::HardTuneStyle::Hard,
+    }
 }
 
 pub fn version_newer_or_equal_to(version: &VersionNumber, comparison: VersionNumber) -> bool {

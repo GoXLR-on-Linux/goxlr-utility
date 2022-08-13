@@ -151,89 +151,89 @@ pub struct TwoColours {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Effects {
-    reverb: Reverb,
-    echo: Echo,
-    pitch: Pitch,
-    gender: Gender,
-    megaphone: Megaphone,
-    robot: Robot,
-    hard_tune: HardTune,
+    pub reverb: Reverb,
+    pub echo: Echo,
+    pub pitch: Pitch,
+    pub gender: Gender,
+    pub megaphone: Megaphone,
+    pub robot: Robot,
+    pub hard_tune: HardTune,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Reverb {
-    style: ReverbStyle,
-    amount: u8,
-    decay: u16,
-    early_level: i8,
-    tail_level: i8,
-    pre_delay: u8,
-    lo_colour: i8,
-    hi_colour: i8,
-    hi_factor: i8,
-    diffuse: i8,
-    mod_speed: i8,
-    mod_depth: i8,
+    pub style: ReverbStyle,
+    pub amount: i8,
+    pub decay: u16,
+    pub early_level: i8,
+    pub tail_level: i8,
+    pub pre_delay: u8,
+    pub lo_colour: i8,
+    pub hi_colour: i8,
+    pub hi_factor: i8,
+    pub diffuse: i8,
+    pub mod_speed: i8,
+    pub mod_depth: i8,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Echo {
-    style: EchoStyle,
-    amount: u8,
-    feedback: u8,
-    tempo: u16,
-    delay_left: u16,
-    delay_right: u16,
-    feedback_left: u8,
-    feedback_right: u8,
-    feedback_xfb_l_to_r: u8,
-    feedback_xfb_r_to_l: u8,
+    pub style: EchoStyle,
+    pub amount: i8,
+    pub feedback: u8,
+    pub tempo: u16,
+    pub delay_left: u16,
+    pub delay_right: u16,
+    pub feedback_left: u8,
+    pub feedback_right: u8,
+    pub feedback_xfb_l_to_r: u8,
+    pub feedback_xfb_r_to_l: u8,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Pitch {
-    style: PitchStyle,
-    amount: i8,
-    character: u8,
+    pub style: PitchStyle,
+    pub amount: i8,
+    pub character: u8,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Gender {
-    style: GenderStyle,
-    amount: i8,
+    pub style: GenderStyle,
+    pub amount: i8,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Megaphone {
-    style: MegaphoneStyle,
-    amount: u8,
-    post_gain: i8,
+    pub style: MegaphoneStyle,
+    pub amount: u8,
+    pub post_gain: i8,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Robot {
-    style: RobotStyle,
-    low_gain: i8,
-    low_freq: u8,
-    low_width: u8,
-    mid_gain: i8,
-    mid_freq: u8,
-    mid_width: u8,
-    high_gain: i8,
-    high_freq: u8,
-    high_width: u8,
-    waveform: u8,
-    pulse_width: u8,
-    threshold: i8,
-    dry_mix: i8,
+    pub style: RobotStyle,
+    pub low_gain: i8,
+    pub low_freq: u8,
+    pub low_width: u8,
+    pub mid_gain: i8,
+    pub mid_freq: u8,
+    pub mid_width: u8,
+    pub high_gain: i8,
+    pub high_freq: u8,
+    pub high_width: u8,
+    pub waveform: u8,
+    pub pulse_width: u8,
+    pub threshold: i8,
+    pub dry_mix: i8,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HardTune {
-    style: HardTuneStyle,
-    amount: u8,
-    rate: u8,
-    window: u16,
+    pub style: HardTuneStyle,
+    pub amount: u8,
+    pub rate: u8,
+    pub window: u16,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
