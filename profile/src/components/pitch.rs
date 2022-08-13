@@ -300,6 +300,9 @@ impl PitchEncoder {
     pub fn style(&self) -> &PitchStyle {
         &self.style
     }
+    pub fn set_style(&mut self, style: PitchStyle) {
+        self.style = style;
+    }
 
     // TODO: Range is dynamically generated, based on Style (12 or 24)
     pub fn range(&self) -> u8 {

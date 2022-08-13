@@ -623,6 +623,15 @@ pub enum RobotStyle {
 #[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum RobotRange {
+    Low,
+    Medium,
+    High,
+}
+
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum HardTuneStyle {
     Neutral,
     Medium,

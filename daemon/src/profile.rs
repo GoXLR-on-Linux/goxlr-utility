@@ -1,7 +1,16 @@
-use crate::files::{can_create_new_file, create_path};
+use std::cmp::Ordering;
+use std::collections::HashMap;
+use std::fs::{remove_file, File};
+use std::io::{Cursor, Read, Seek};
+use std::path::Path;
+
 use anyhow::{anyhow, Context, Result};
 use enum_map::EnumMap;
 use enumset::EnumSet;
+use log::{debug, error};
+use strum::EnumCount;
+use strum::IntoEnumIterator;
+
 use goxlr_ipc::{
     ButtonLighting, CoughButton, Echo, Effects, FaderLighting, Gender, HardTune, Lighting,
     Megaphone, Pitch, Reverb, Robot, TwoColours,
@@ -31,14 +40,8 @@ use goxlr_types::{
 };
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::colouring::ColourTargets;
-use log::{debug, error};
-use std::cmp::Ordering;
-use std::collections::HashMap;
-use std::fs::{remove_file, File};
-use std::io::{Cursor, Read, Seek};
-use std::path::Path;
-use strum::EnumCount;
-use strum::IntoEnumIterator;
+
+use crate::files::{can_create_new_file, create_path};
 
 pub const DEFAULT_PROFILE_NAME: &str = "DEFAULT";
 const DEFAULT_PROFILE: &[u8] = include_bytes!("../profiles/DEFAULT.goxlr");
@@ -854,6 +857,12 @@ impl ProfileAdapter {
             .set_knob_position(value, hardtune_enabled)
     }
 
+    pub fn set_pitch_style(&mut self, style: goxlr_types::PitchStyle) -> Result<()> {
+        self.get_active_pitch_profile_mut()
+            .set_style(standard_to_profile_pitch_style(style));
+        Ok(())
+    }
+
     pub fn get_pitch_mode(&self) -> u8 {
         self.get_active_pitch_profile()
             .pitch_mode(self.is_hardtune_enabled(true))
@@ -867,6 +876,14 @@ impl ProfileAdapter {
     pub fn get_active_pitch_profile(&self) -> &PitchEncoder {
         let current = self.profile.settings().context().selected_effects();
         self.profile.settings().pitch_encoder().get_preset(current)
+    }
+
+    pub fn get_active_pitch_profile_mut(&mut self) -> &mut PitchEncoder {
+        let current = self.profile.settings().context().selected_effects();
+        self.profile
+            .settings_mut()
+            .pitch_encoder_mut()
+            .get_preset_mut(current)
     }
 
     pub fn get_gender_value(&self) -> i8 {
@@ -887,9 +904,23 @@ impl ProfileAdapter {
             .set_knob_position(value)
     }
 
+    pub fn set_gender_style(&mut self, style: goxlr_types::GenderStyle) -> Result<()> {
+        self.get_active_gender_profile_mut()
+            .set_style(standard_to_profile_gender_style(style));
+        Ok(())
+    }
+
     pub fn get_active_gender_profile(&self) -> &GenderEncoder {
         let current = self.profile.settings().context().selected_effects();
         self.profile.settings().gender_encoder().get_preset(current)
+    }
+
+    pub fn get_active_gender_profile_mut(&mut self) -> &mut GenderEncoder {
+        let current = self.profile.settings().context().selected_effects();
+        self.profile
+            .settings_mut()
+            .gender_encoder_mut()
+            .get_preset_mut(current)
     }
 
     pub fn get_reverb_value(&self) -> i8 {
@@ -910,9 +941,23 @@ impl ProfileAdapter {
             .set_knob_position(value)
     }
 
+    pub fn set_reverb_style(&mut self, style: goxlr_types::ReverbStyle) -> Result<()> {
+        self.get_active_reverb_profile_mut()
+            .set_style(standard_to_profile_reverb_style(style))?;
+        Ok(())
+    }
+
     pub fn get_active_reverb_profile(&self) -> &ReverbEncoder {
         let current = self.profile.settings().context().selected_effects();
         self.profile.settings().reverb_encoder().get_preset(current)
+    }
+
+    pub fn get_active_reverb_profile_mut(&mut self) -> &mut ReverbEncoder {
+        let current = self.profile.settings().context().selected_effects();
+        self.profile
+            .settings_mut()
+            .reverb_encoder_mut()
+            .get_preset_mut(current)
     }
 
     pub fn get_echo_value(&self) -> i8 {
@@ -933,9 +978,29 @@ impl ProfileAdapter {
             .set_knob_position(value)
     }
 
+    pub fn set_echo_style(&mut self, style: goxlr_types::EchoStyle) -> Result<()> {
+        self.get_active_echo_profile_mut()
+            .set_style(standard_to_profile_echo_style(style))?;
+        Ok(())
+    }
+
     pub fn get_active_echo_profile(&self) -> &EchoEncoder {
         let current = self.profile.settings().context().selected_effects();
         self.profile.settings().echo_encoder().get_preset(current)
+    }
+
+    pub fn get_active_echo_profile_mut(&mut self) -> &mut EchoEncoder {
+        let current = self.profile.settings().context().selected_effects();
+        self.profile
+            .settings_mut()
+            .echo_encoder_mut()
+            .get_preset_mut(current)
+    }
+
+    pub fn set_megaphone_style(&mut self, style: goxlr_types::MegaphoneStyle) -> Result<()> {
+        self.get_active_megaphone_profile_mut()
+            .set_style(standard_to_profile_megaphone_style(style))?;
+        Ok(())
     }
 
     pub fn get_active_megaphone_profile(&self) -> &MegaphoneEffect {
@@ -946,9 +1011,37 @@ impl ProfileAdapter {
             .get_preset(current)
     }
 
+    pub fn get_active_megaphone_profile_mut(&mut self) -> &mut MegaphoneEffect {
+        let current = self.profile.settings().context().selected_effects();
+        self.profile
+            .settings_mut()
+            .megaphone_effect_mut()
+            .get_preset_mut(current)
+    }
+
+    pub fn set_robot_style(&mut self, style: goxlr_types::RobotStyle) -> Result<()> {
+        self.get_active_robot_profile_mut()
+            .set_style(standard_to_profile_robot_style(style))?;
+        Ok(())
+    }
+
     pub fn get_active_robot_profile(&self) -> &RobotEffect {
         let current = self.profile.settings().context().selected_effects();
         self.profile.settings().robot_effect().get_preset(current)
+    }
+
+    pub fn get_active_robot_profile_mut(&mut self) -> &mut RobotEffect {
+        let current = self.profile.settings().context().selected_effects();
+        self.profile
+            .settings_mut()
+            .robot_effect_mut()
+            .get_preset_mut(current)
+    }
+
+    pub fn set_hardtune_style(&mut self, style: goxlr_types::HardTuneStyle) -> Result<()> {
+        self.get_active_hardtune_profile_mut()
+            .set_style(standard_to_profile_hard_tune_style(style))?;
+        Ok(())
     }
 
     pub fn get_active_hardtune_profile(&self) -> &HardTuneEffect {
@@ -957,6 +1050,14 @@ impl ProfileAdapter {
             .settings()
             .hardtune_effect()
             .get_preset(current)
+    }
+
+    pub fn get_active_hardtune_profile_mut(&mut self) -> &mut HardTuneEffect {
+        let current = self.profile.settings().context().selected_effects();
+        self.profile
+            .settings_mut()
+            .hardtune_effect_mut()
+            .get_preset_mut(current)
     }
 
     pub fn is_active_hardtune_source_all(&self) -> bool {

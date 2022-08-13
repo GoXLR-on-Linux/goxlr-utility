@@ -8,9 +8,10 @@ mod socket;
 pub use device::*;
 use goxlr_types::{
     ButtonColourGroups, ButtonColourOffStyle, ButtonColourTargets, ChannelName,
-    CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EqFrequencies, FaderDisplayStyle,
-    FaderName, GateTimes, InputDevice, MicrophoneType, MiniEqFrequencies, MuteFunction,
-    OutputDevice,
+    CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EchoStyle, EqFrequencies,
+    FaderDisplayStyle, FaderName, GateTimes, GenderStyle, HardTuneStyle, InputDevice,
+    MegaphoneStyle, MicrophoneType, MiniEqFrequencies, MuteFunction, OutputDevice, PitchStyle,
+    ReverbStyle, RobotRange, RobotStyle,
 };
 pub use socket::*;
 
@@ -86,6 +87,63 @@ pub enum GoXLRCommand {
     SetButtonOffStyle(ButtonColourTargets, ButtonColourOffStyle),
     SetButtonGroupColours(ButtonColourGroups, String, Option<String>),
     SetButtonGroupOffStyle(ButtonColourGroups, ButtonColourOffStyle),
+
+    // Effect Related Settings..
+    // Reverb
+    SetReverbStyle(ReverbStyle),
+    SetReverbAmount(i8),
+    SetReverbDecay(u16),
+    SetReverbEarlyLevel(i8),
+    SetReverbTailLevel(i8),
+    SetReverbPreDelay(u8),
+    SetReverbLowColour(i8),
+    SetReverbHighColour(i8),
+    SetReverbHighFactor(i8),
+    SetReverbDiffuse(i8),
+    SetReverbModSpeed(i8),
+    SetReverbModDepth(i8),
+
+    // Echo..
+    SetEchoStyle(EchoStyle),
+    SetEchoAmount(i8),
+    SetEchoFeedback(u8),
+    SetEchoTempo(u16),
+    SetEchoDelayLeft(u16),
+    SetEchoDelayRight(u16),
+    SetEchoFeedbackLeft(u8),
+    SetEchoFeedbackRight(u8),
+    SetEchoFeedbackXFBLtoR(u8),
+    SetEchoFeedbackXFBRtoL(u8),
+
+    // Pitch
+    SetPitchStyle(PitchStyle),
+    SetPitchAmount(i8),
+    SetPitchCharacter(u8),
+
+    // Gender
+    SetGenderStyle(GenderStyle),
+    SetGenderAmount(i8),
+
+    // Megaphone
+    SetMegaphoneStyle(MegaphoneStyle),
+    SetMegaphoneAmount(u8),
+    SetMegaphonePostGain(i8),
+
+    // Robot
+    SetRobotStyle(RobotStyle),
+    SetRobotGain(RobotRange, i8),
+    SetRobotFreq(RobotRange, u8),
+    SetRobotWidth(RobotRange, u8),
+    SetRobotWaveform(u8),
+    SetRobotPulseWidth(u8),
+    SetRobotThreshold(i8),
+    SetRobotDryMix(i8),
+
+    // Hardtune
+    SetHardTuneStyle(HardTuneStyle),
+    SetHardTuneAmount(u8),
+    SetHardTuneRate(u8),
+    SetHardTuneWindow(u16),
 
     // Profile Handling..
     NewProfile(String),
