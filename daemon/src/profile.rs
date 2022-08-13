@@ -883,6 +883,7 @@ impl ProfileAdapter {
             HardTuneSource::Music => InputDevice::Music,
             HardTuneSource::Game => InputDevice::Game,
             HardTuneSource::LineIn => InputDevice::LineIn,
+            HardTuneSource::System => InputDevice::System,
 
             // This should never really be called when Source is All, return a default.
             HardTuneSource::All => InputDevice::Music,

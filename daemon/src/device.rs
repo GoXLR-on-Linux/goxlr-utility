@@ -135,6 +135,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
             lighting: self
                 .profile
                 .get_lighting_ipc(self.hardware.device_type == DeviceType::Mini),
+            effects: None,
             profile_name: self.profile.name().to_owned(),
             mic_profile_name: self.mic_profile.name().to_owned(),
         }

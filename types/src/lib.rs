@@ -558,8 +558,9 @@ pub enum CompressorReleaseTime {
     Comp3000ms,
 }
 
-#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq)]
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ReverbStyle {
     Library,
     DarkBloom,
@@ -569,6 +570,9 @@ pub enum ReverbStyle {
     HockeyArena,
 }
 
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum EchoStyle {
     Quarter,
     Eighth,
@@ -578,17 +582,26 @@ pub enum EchoStyle {
     MultiTap,
 }
 
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum PitchStyle {
     Narrow,
     Wide,
 }
 
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum GenderStyle {
     Narrow,
     Medium,
     Wide,
 }
 
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum MegaphoneStyle {
     Megaphone,
     Radio,
@@ -598,18 +611,27 @@ pub enum MegaphoneStyle {
     Tweed,
 }
 
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum RobotStyle {
     Robot1,
     Robot2,
     Robot3,
 }
 
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum HardTuneStyle {
     Natural,
     Medium,
     Hard,
 }
 
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum HardTuneSource {
     All,
     Music,
