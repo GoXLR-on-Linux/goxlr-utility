@@ -1239,6 +1239,10 @@ impl<'a, T: UsbContext> Device<'a, T> {
                     .set_window(value)?;
                 self.apply_effects(HashSet::from([EffectKey::HardTuneWindow]))?;
             }
+            GoXLRCommand::SetHardTuneSource(value) => {
+                self.profile.set_hardtune_source(value)?;
+                self.apply_effects(HashSet::from([EffectKey::HardTuneKeySource]))?;
+            }
 
             // Profiles
             GoXLRCommand::NewProfile(profile_name) => {

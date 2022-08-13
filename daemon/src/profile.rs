@@ -1044,6 +1044,12 @@ impl ProfileAdapter {
         Ok(())
     }
 
+    pub fn set_hardtune_source(&mut self, source: goxlr_types::HardTuneSource) -> Result<()> {
+        self.get_active_hardtune_profile_mut()
+            .set_source(standard_to_profile_hard_tune_source(source));
+        Ok(())
+    }
+
     pub fn get_active_hardtune_profile(&self) -> &HardTuneEffect {
         let current = self.profile.settings().context().selected_effects();
         self.profile
@@ -1911,6 +1917,26 @@ fn profile_to_standard_hard_tune_style(style: &HardTuneStyle) -> goxlr_types::Ha
         HardTuneStyle::Neutral => goxlr_types::HardTuneStyle::Neutral,
         HardTuneStyle::Medium => goxlr_types::HardTuneStyle::Medium,
         HardTuneStyle::Hard => goxlr_types::HardTuneStyle::Hard,
+    }
+}
+
+fn standard_to_profile_hard_tune_source(source: goxlr_types::HardTuneSource) -> HardTuneSource {
+    match source {
+        goxlr_types::HardTuneSource::All => HardTuneSource::All,
+        goxlr_types::HardTuneSource::Music => HardTuneSource::Music,
+        goxlr_types::HardTuneSource::Game => HardTuneSource::Game,
+        goxlr_types::HardTuneSource::LineIn => HardTuneSource::LineIn,
+        goxlr_types::HardTuneSource::System => HardTuneSource::System,
+    }
+}
+
+fn profile_to_standard_hard_tune_source(source: &HardTuneSource) -> goxlr_types::HardTuneSource {
+    match source {
+        HardTuneSource::All => goxlr_types::HardTuneSource::All,
+        HardTuneSource::Music => goxlr_types::HardTuneSource::Music,
+        HardTuneSource::Game => goxlr_types::HardTuneSource::Game,
+        HardTuneSource::LineIn => goxlr_types::HardTuneSource::LineIn,
+        HardTuneSource::System => goxlr_types::HardTuneSource::System,
     }
 }
 
