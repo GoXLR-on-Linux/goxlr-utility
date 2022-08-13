@@ -557,3 +557,63 @@ pub enum CompressorReleaseTime {
     Comp2000ms,
     Comp3000ms,
 }
+
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+pub enum ReverbStyle {
+    Library,
+    DarkBloom,
+    MusicClub,
+    RealPlate,
+    Chapel,
+    HockeyArena,
+}
+
+pub enum EchoStyle {
+    Quarter,
+    Eighth,
+    Triplet,
+    PingPong,
+    ClassicSlap,
+    MultiTap,
+}
+
+pub enum PitchStyle {
+    Narrow,
+    Wide,
+}
+
+pub enum GenderStyle {
+    Narrow,
+    Medium,
+    Wide,
+}
+
+pub enum MegaphoneStyle {
+    Megaphone,
+    Radio,
+    OnThePhone,
+    Overdrive,
+    BuzzCut,
+    Tweed,
+}
+
+pub enum RobotStyle {
+    Robot1,
+    Robot2,
+    Robot3,
+}
+
+pub enum HardTuneStyle {
+    Natural,
+    Medium,
+    Hard,
+}
+
+pub enum HardTuneSource {
+    All,
+    Music,
+    Game,
+    LineIn,
+    System,
+}

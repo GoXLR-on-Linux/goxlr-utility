@@ -384,6 +384,9 @@ pub enum HardTuneSource {
 
     #[strum(to_string = "LINEIN")]
     LineIn,
+
+    #[strum(to_string = "SYSTEM")]
+    System,
 }
 
 impl Default for HardTuneSource {

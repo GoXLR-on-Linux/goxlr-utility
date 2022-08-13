@@ -227,6 +227,9 @@ impl GenderEncoder {
     pub fn style(&self) -> &GenderStyle {
         &self.style
     }
+    pub fn set_style(&mut self, style: GenderStyle) {
+        self.style = style;
+    }
     pub fn range(&self) -> u8 {
         self.range
     }
