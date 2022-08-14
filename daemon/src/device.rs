@@ -1144,7 +1144,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 self.profile
                     .get_active_megaphone_profile_mut()
                     .set_trans_postgain(value)?;
-                self.apply_effects(HashSet::from([EffectKey::MegaphoneAmount]))?;
+                self.apply_effects(HashSet::from([EffectKey::MegaphonePostGain]))?;
             }
 
             // Robot
