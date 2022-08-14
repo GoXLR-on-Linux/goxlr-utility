@@ -794,8 +794,8 @@ impl MicProfileAdapter {
             EffectKey::RobotDryMix => main_profile.get_active_robot_profile().dry_mix().into(),
             EffectKey::RobotStyle => *main_profile.get_active_robot_profile().style() as i32,
 
-            EffectKey::RobotEnabled => main_profile.is_robot_enabled().into(),
-            EffectKey::MegaphoneEnabled => main_profile.is_megaphone_enabled().into(),
+            EffectKey::RobotEnabled => main_profile.is_robot_enabled(false).into(),
+            EffectKey::MegaphoneEnabled => main_profile.is_megaphone_enabled(false).into(),
             EffectKey::HardTuneEnabled => main_profile.is_hardtune_enabled(false).into(),
 
             // Encoders are always enabled when FX is enabled..

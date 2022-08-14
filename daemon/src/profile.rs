@@ -1876,7 +1876,7 @@ fn standard_to_profile_megaphone_style(style: goxlr_types::MegaphoneStyle) -> Me
         goxlr_types::MegaphoneStyle::Radio => MegaphoneStyle::Radio,
         goxlr_types::MegaphoneStyle::OnThePhone => MegaphoneStyle::OnThePhone,
         goxlr_types::MegaphoneStyle::Overdrive => MegaphoneStyle::Overdrive,
-        goxlr_types::MegaphoneStyle::BuzzCut => MegaphoneStyle::BuzzCut,
+        goxlr_types::MegaphoneStyle::BuzzCutt => MegaphoneStyle::BuzzCutt,
         goxlr_types::MegaphoneStyle::Tweed => MegaphoneStyle::Tweed,
     }
 }
@@ -1887,7 +1887,7 @@ fn profile_to_standard_megaphone_style(style: &MegaphoneStyle) -> goxlr_types::M
         MegaphoneStyle::Radio => goxlr_types::MegaphoneStyle::Radio,
         MegaphoneStyle::OnThePhone => goxlr_types::MegaphoneStyle::OnThePhone,
         MegaphoneStyle::Overdrive => goxlr_types::MegaphoneStyle::Overdrive,
-        MegaphoneStyle::BuzzCut => goxlr_types::MegaphoneStyle::BuzzCut,
+        MegaphoneStyle::BuzzCutt => goxlr_types::MegaphoneStyle::BuzzCutt,
         MegaphoneStyle::Tweed => goxlr_types::MegaphoneStyle::Tweed,
     }
 }

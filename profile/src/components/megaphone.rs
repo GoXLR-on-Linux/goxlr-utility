@@ -490,7 +490,7 @@ pub enum MegaphoneStyle {
     Overdrive,
 
     #[strum(props(uiIndex = "4"))]
-    BuzzCut,
+    BuzzCutt,
 
     #[strum(props(uiIndex = "5"))]
     Tweed,
@@ -586,7 +586,7 @@ impl MegaphonePreset {
                 trans_drive_pot_gain_comp_mid: 1,
                 trans_drive_pot_gain_comp_max: 25,
             },
-            MegaphoneStyle::BuzzCut => MegaphonePreset {
+            MegaphoneStyle::BuzzCutt => MegaphonePreset {
                 trans_dist_amt: 50,
                 trans_hp: 50,
                 trans_lp: 238,

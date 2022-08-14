@@ -607,7 +607,7 @@ pub enum MegaphoneStyle {
     Radio,
     OnThePhone,
     Overdrive,
-    BuzzCut,
+    BuzzCutt,
     Tweed,
 }
 
