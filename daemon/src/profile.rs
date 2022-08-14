@@ -1909,7 +1909,7 @@ fn profile_to_standard_robot_style(style: &RobotStyle) -> goxlr_types::RobotStyl
 #[allow(dead_code)]
 fn standard_to_profile_hard_tune_style(style: goxlr_types::HardTuneStyle) -> HardTuneStyle {
     match style {
-        goxlr_types::HardTuneStyle::Neutral => HardTuneStyle::Neutral,
+        goxlr_types::HardTuneStyle::Natural => HardTuneStyle::Natural,
         goxlr_types::HardTuneStyle::Medium => HardTuneStyle::Medium,
         goxlr_types::HardTuneStyle::Hard => HardTuneStyle::Hard,
     }
@@ -1917,7 +1917,7 @@ fn standard_to_profile_hard_tune_style(style: goxlr_types::HardTuneStyle) -> Har
 
 fn profile_to_standard_hard_tune_style(style: &HardTuneStyle) -> goxlr_types::HardTuneStyle {
     match style {
-        HardTuneStyle::Neutral => goxlr_types::HardTuneStyle::Neutral,
+        HardTuneStyle::Natural => goxlr_types::HardTuneStyle::Natural,
         HardTuneStyle::Medium => goxlr_types::HardTuneStyle::Medium,
         HardTuneStyle::Hard => goxlr_types::HardTuneStyle::Hard,
     }

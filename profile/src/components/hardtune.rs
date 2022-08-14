@@ -14,7 +14,7 @@ use anyhow::{anyhow, Result};
 
 use crate::components::colours::ColourMap;
 use crate::components::hardtune::HardTuneSource::All;
-use crate::components::hardtune::HardTuneStyle::Neutral;
+use crate::components::hardtune::HardTuneStyle::Natural;
 use crate::Preset;
 use crate::Preset::{Preset1, Preset2, Preset3, Preset4, Preset5, Preset6};
 
@@ -362,7 +362,7 @@ impl HardTuneEffect {
 #[derive(Debug, EnumIter, EnumProperty, Clone, Copy)]
 pub enum HardTuneStyle {
     #[strum(props(uiIndex = "0"))]
-    Neutral,
+    Natural,
 
     #[strum(props(uiIndex = "1"))]
     Medium,
@@ -373,7 +373,7 @@ pub enum HardTuneStyle {
 
 impl Default for HardTuneStyle {
     fn default() -> Self {
-        Neutral
+        Natural
     }
 }
 
@@ -412,7 +412,7 @@ struct HardtunePreset {
 impl HardtunePreset {
     fn get_preset(style: HardTuneStyle) -> HardtunePreset {
         match style {
-            Neutral => HardtunePreset {
+            Natural => HardtunePreset {
                 amount: 70,
                 window: 20,
                 rate: 20,

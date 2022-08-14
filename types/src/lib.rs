@@ -633,7 +633,7 @@ pub enum RobotRange {
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum HardTuneStyle {
-    Neutral,
+    Natural,
     Medium,
     Hard,
 }
