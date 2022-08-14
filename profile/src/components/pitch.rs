@@ -328,7 +328,8 @@ impl PitchEncoder {
         if let Some(value) = self.inst_ratio {
             return value;
         }
-        0
+        // According to Windows, the Default is 75..
+        75
     }
 
     pub fn pitch_mode(&self, hardtune_enabled: bool) -> u8 {
