@@ -163,7 +163,7 @@ pub struct Effects {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Reverb {
     pub style: ReverbStyle,
-    pub amount: i8,
+    pub amount: u8,
     pub decay: u16,
     pub early_level: i8,
     pub tail_level: i8,

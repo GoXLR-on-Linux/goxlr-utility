@@ -408,7 +408,7 @@ impl ProfileAdapter {
 
         let reverb = Reverb {
             style: profile_to_standard_reverb_style(self.get_active_reverb_profile().style()),
-            amount: self.get_active_reverb_profile().amount(),
+            amount: self.get_active_reverb_profile().get_percentage_amount(),
             decay: self.get_active_reverb_profile().decay(),
             early_level: self.get_active_reverb_profile().early_level(),
             tail_level: self.get_active_reverb_profile().tail_level(),

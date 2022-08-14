@@ -296,6 +296,10 @@ impl ReverbEncoder {
     pub fn amount(&self) -> i8 {
         ((36 * self.knob_position as i32) / 24 - 36) as i8
     }
+    pub fn get_percentage_amount(&self) -> u8 {
+        // Knob Position and Amount are two very different things, so is percentage :)
+        ((self.knob_position as u16 * 100) / 24) as u8
+    }
 
     pub fn knob_position(&self) -> i8 {
         self.knob_position
