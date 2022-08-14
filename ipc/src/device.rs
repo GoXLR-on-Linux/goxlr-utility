@@ -179,7 +179,7 @@ pub struct Reverb {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Echo {
     pub style: EchoStyle,
-    pub amount: i8,
+    pub amount: u8,
     pub feedback: u8,
     pub tempo: u16,
     pub delay_left: u16,

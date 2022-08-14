@@ -423,7 +423,7 @@ impl ProfileAdapter {
 
         let echo = Echo {
             style: profile_to_standard_echo_style(self.get_active_echo_profile().style()),
-            amount: self.get_active_echo_profile().amount(),
+            amount: self.get_active_echo_profile().get_percentage_amount(),
             feedback: self.get_active_echo_profile().feedback_control(),
             tempo: self.get_active_echo_profile().tempo(),
             delay_left: self.get_active_echo_profile().time_left(),
