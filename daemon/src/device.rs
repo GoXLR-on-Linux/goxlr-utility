@@ -936,8 +936,8 @@ impl<'a, T: UsbContext> Device<'a, T> {
             GoXLRCommand::SetAllFaderDisplayStyle(display_style) => {
                 for fader in FaderName::iter() {
                     self.profile.set_fader_display(fader, display_style)?;
+                    self.set_fader_display_from_profile(fader)?;
                 }
-                self.load_colour_map()?;
             }
             GoXLRCommand::SetButtonColours(target, colour, colour2) => {
                 self.profile
