@@ -1155,41 +1155,53 @@ impl<'a, T: UsbContext> Device<'a, T> {
             GoXLRCommand::SetRobotGain(range, value) => {
                 let profile = self.profile.get_active_robot_profile_mut();
                 match range {
-                    RobotRange::Low => profile.set_vocoder_low_gain(value)?,
-                    RobotRange::Medium => profile.set_vocoder_mid_gain(value)?,
-                    RobotRange::High => profile.set_vocoder_high_gain(value)?,
+                    RobotRange::Low => {
+                        profile.set_vocoder_low_gain(value)?;
+                        self.apply_effects(HashSet::from([EffectKey::RobotLowGain]))?;
+                    }
+                    RobotRange::Medium => {
+                        profile.set_vocoder_mid_gain(value)?;
+                        self.apply_effects(HashSet::from([EffectKey::RobotMidGain]))?;
+                    }
+                    RobotRange::High => {
+                        profile.set_vocoder_high_gain(value)?;
+                        self.apply_effects(HashSet::from([EffectKey::RobotHiGain]))?;
+                    }
                 }
-                self.apply_effects(HashSet::from([
-                    EffectKey::RobotLowGain,
-                    EffectKey::RobotMidGain,
-                    EffectKey::RobotHiGain,
-                ]))?;
             }
             GoXLRCommand::SetRobotFreq(range, value) => {
                 let profile = self.profile.get_active_robot_profile_mut();
                 match range {
-                    RobotRange::Low => profile.set_vocoder_low_freq(value)?,
-                    RobotRange::Medium => profile.set_vocoder_mid_freq(value)?,
-                    RobotRange::High => profile.set_vocoder_high_freq(value)?,
+                    RobotRange::Low => {
+                        profile.set_vocoder_low_freq(value)?;
+                        self.apply_effects(HashSet::from([EffectKey::RobotLowFreq]))?;
+                    }
+                    RobotRange::Medium => {
+                        profile.set_vocoder_mid_freq(value)?;
+                        self.apply_effects(HashSet::from([EffectKey::RobotMidFreq]))?;
+                    }
+                    RobotRange::High => {
+                        profile.set_vocoder_high_freq(value)?;
+                        self.apply_effects(HashSet::from([EffectKey::RobotHiFreq]))?;
+                    }
                 }
-                self.apply_effects(HashSet::from([
-                    EffectKey::RobotLowFreq,
-                    EffectKey::RobotMidFreq,
-                    EffectKey::RobotHiFreq,
-                ]))?;
             }
             GoXLRCommand::SetRobotWidth(range, value) => {
                 let profile = self.profile.get_active_robot_profile_mut();
                 match range {
-                    RobotRange::Low => profile.set_vocoder_low_bw(value)?,
-                    RobotRange::Medium => profile.set_vocoder_mid_bw(value)?,
-                    RobotRange::High => profile.set_vocoder_high_bw(value)?,
+                    RobotRange::Low => {
+                        profile.set_vocoder_low_bw(value)?;
+                        self.apply_effects(HashSet::from([EffectKey::RobotLowWidth]))?;
+                    }
+                    RobotRange::Medium => {
+                        profile.set_vocoder_mid_bw(value)?;
+                        self.apply_effects(HashSet::from([EffectKey::RobotMidWidth]))?;
+                    }
+                    RobotRange::High => {
+                        profile.set_vocoder_high_bw(value)?;
+                        self.apply_effects(HashSet::from([EffectKey::RobotHiWidth]))?;
+                    }
                 }
-                self.apply_effects(HashSet::from([
-                    EffectKey::RobotLowWidth,
-                    EffectKey::RobotMidWidth,
-                    EffectKey::RobotHiWidth,
-                ]))?;
             }
             GoXLRCommand::SetRobotWaveform(value) => {
                 self.profile
@@ -1240,6 +1252,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 self.apply_effects(HashSet::from([EffectKey::HardTuneWindow]))?;
             }
             GoXLRCommand::SetHardTuneSource(value) => {
+                // TODO: This needs to trigger a routing update, HardTuneKeySource does nothing.
                 self.profile.set_hardtune_source(value)?;
                 self.apply_effects(HashSet::from([EffectKey::HardTuneKeySource]))?;
             }
