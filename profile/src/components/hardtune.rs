@@ -341,6 +341,12 @@ impl HardTuneEffect {
     pub fn source(&self) -> &Option<HardTuneSource> {
         &self.source
     }
+    pub fn get_source_value(&self) -> HardTuneSource {
+        if let Some(source) = self.source {
+            return source;
+        }
+        All
+    }
     pub fn set_source(&mut self, source: HardTuneSource) {
         self.source = Some(source);
     }

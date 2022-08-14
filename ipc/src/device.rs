@@ -2,9 +2,9 @@ use enumset::EnumSet;
 use goxlr_types::{
     ButtonColourOffStyle, ButtonColourTargets, ChannelName, CompressorAttackTime, CompressorRatio,
     CompressorReleaseTime, EchoStyle, EqFrequencies, FaderDisplayStyle, FaderName,
-    FirmwareVersions, GateTimes, GenderStyle, HardTuneStyle, InputDevice, MegaphoneStyle,
-    MicrophoneType, MiniEqFrequencies, MuteFunction, OutputDevice, PitchStyle, ReverbStyle,
-    RobotStyle,
+    FirmwareVersions, GateTimes, GenderStyle, HardTuneSource, HardTuneStyle, InputDevice,
+    MegaphoneStyle, MicrophoneType, MiniEqFrequencies, MuteFunction, OutputDevice, PitchStyle,
+    ReverbStyle, RobotStyle,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -234,6 +234,7 @@ pub struct HardTune {
     pub amount: u8,
     pub rate: u8,
     pub window: u16,
+    pub source: HardTuneSource,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

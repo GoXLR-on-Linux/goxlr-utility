@@ -475,6 +475,9 @@ impl ProfileAdapter {
             amount: self.get_active_hardtune_profile().amount(),
             rate: self.get_active_hardtune_profile().rate(),
             window: self.get_active_hardtune_profile().window(),
+            source: profile_to_standard_hard_tune_source(
+                &self.get_active_hardtune_profile().get_source_value(),
+            ),
         };
 
         Some(Effects {
