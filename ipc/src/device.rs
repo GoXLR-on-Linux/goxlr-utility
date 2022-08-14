@@ -205,6 +205,7 @@ pub struct Gender {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Megaphone {
+    pub is_enabled: bool,
     pub style: MegaphoneStyle,
     pub amount: u8,
     pub post_gain: i8,
@@ -212,6 +213,7 @@ pub struct Megaphone {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Robot {
+    pub is_enabled: bool,
     pub style: RobotStyle,
     pub low_gain: i8,
     pub low_freq: u8,
@@ -230,6 +232,7 @@ pub struct Robot {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HardTune {
+    pub is_enabled: bool,
     pub style: HardTuneStyle,
     pub amount: u8,
     pub rate: u8,

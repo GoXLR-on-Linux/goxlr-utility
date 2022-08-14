@@ -448,12 +448,14 @@ impl ProfileAdapter {
         };
 
         let megaphone = Megaphone {
+            is_enabled: self.is_megaphone_enabled(true),
             style: profile_to_standard_megaphone_style(self.get_active_megaphone_profile().style()),
             amount: self.get_active_megaphone_profile().trans_dist_amt(),
             post_gain: self.get_active_megaphone_profile().trans_postgain(),
         };
 
         let robot = Robot {
+            is_enabled: self.is_robot_enabled(true),
             style: profile_to_standard_robot_style(self.get_active_robot_profile().style()),
             low_gain: self.get_active_robot_profile().vocoder_low_gain(),
             low_freq: self.get_active_robot_profile().vocoder_low_freq(),
@@ -471,6 +473,7 @@ impl ProfileAdapter {
         };
 
         let hard_tune = HardTune {
+            is_enabled: self.is_hardtune_enabled(true),
             style: profile_to_standard_hard_tune_style(self.get_active_hardtune_profile().style()),
             amount: self.get_active_hardtune_profile().amount(),
             rate: self.get_active_hardtune_profile().rate(),
@@ -1099,8 +1102,8 @@ impl ProfileAdapter {
             .get_state()
     }
 
-    pub fn is_megaphone_enabled(&self) -> bool {
-        if !self.is_fx_enabled() {
+    pub fn is_megaphone_enabled(&self, ignore_fx_state: bool) -> bool {
+        if !ignore_fx_state && !self.is_fx_enabled() {
             return false;
         }
         self.profile
@@ -1110,8 +1113,8 @@ impl ProfileAdapter {
             .get_state()
     }
 
-    pub fn is_robot_enabled(&self) -> bool {
-        if !self.is_fx_enabled() {
+    pub fn is_robot_enabled(&self, ignore_fx_state: bool) -> bool {
+        if !ignore_fx_state && !self.is_fx_enabled() {
             return false;
         }
         self.profile
