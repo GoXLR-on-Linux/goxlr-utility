@@ -227,7 +227,7 @@ impl GenderEncoder {
             GenderStyle::Medium => {
                 if !(-25..=25).contains(&amount) {
                     return Err(anyhow!(
-                        "Amount should be between -12 and 12 (Style: Narrow)"
+                        "Amount should be between -25 and 25 (Style: Medium)"
                     ));
                 }
                 let base = amount as i32 + 25;
@@ -237,9 +237,7 @@ impl GenderEncoder {
             }
             GenderStyle::Wide => {
                 if !(-50..=50).contains(&amount) {
-                    return Err(anyhow!(
-                        "Amount should be between -12 and 12 (Style: Narrow)"
-                    ));
+                    return Err(anyhow!("Amount should be between -50 and 50 (Style: Wide)"));
                 }
                 let base = amount as i32 + 50;
                 let percent = base * 48 / 100;
