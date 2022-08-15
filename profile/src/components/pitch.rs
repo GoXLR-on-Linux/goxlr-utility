@@ -301,6 +301,18 @@ impl PitchEncoder {
         &self.style
     }
     pub fn set_style(&mut self, style: PitchStyle) {
+        // We need to update the knob value when we switch styles..
+        if self.style == style {
+            return;
+        }
+
+        // If hard tune is enabled, there's a risk of going from 12 to 6, but ultimately
+        // the Daemon will fix that during the next poll.
+        if self.style == PitchStyle::Wide && style == PitchStyle::Narrow {
+            self.knob_position /= 2;
+        } else {
+            self.knob_position *= 2;
+        }
         self.style = style;
     }
 

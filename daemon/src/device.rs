@@ -1101,14 +1101,22 @@ impl<'a, T: UsbContext> Device<'a, T> {
             // Pitch
             GoXLRCommand::SetPitchStyle(value) => {
                 self.profile.set_pitch_style(value)?;
+                self.set_pitch_mode()?;
 
-                // TODO: Changes to the style change the encoder, handle this!
+                // Force set the encoder position, when going from Wide -> Narrow, the encoder
+                // will still return it's 'Wide' value during polls which error out otherwise.
+                let value = self.profile.get_pitch_encoder_position();
+                self.goxlr.set_encoder_value(EncoderName::Pitch, value)?;
             }
             GoXLRCommand::SetPitchAmount(value) => {
                 let hard_tune_enabled = self.profile.is_hardtune_enabled(true);
                 self.profile
                     .get_active_pitch_profile_mut()
                     .set_knob_position(value, hard_tune_enabled)?;
+
+                let value = self.profile.get_pitch_encoder_position();
+                self.goxlr.set_encoder_value(EncoderName::Pitch, value)?;
+
                 self.apply_effects(HashSet::from([EffectKey::PitchAmount]))?;
             }
             GoXLRCommand::SetPitchCharacter(value) => {
