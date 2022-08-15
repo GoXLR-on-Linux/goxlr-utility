@@ -91,7 +91,7 @@ pub enum GoXLRCommand {
     // Effect Related Settings..
     // Reverb
     SetReverbStyle(ReverbStyle),
-    SetReverbAmount(i8),
+    SetReverbAmount(u8),
     SetReverbDecay(u16),
     SetReverbEarlyLevel(i8),
     SetReverbTailLevel(i8),

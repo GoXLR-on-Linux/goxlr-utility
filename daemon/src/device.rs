@@ -974,7 +974,11 @@ impl<'a, T: UsbContext> Device<'a, T> {
             GoXLRCommand::SetReverbAmount(amount) => {
                 self.profile
                     .get_active_reverb_profile_mut()
-                    .set_knob_position(amount)?;
+                    .set_percentage_amount(amount)?;
+
+                let encoder_value = self.profile.get_reverb_value();
+                self.goxlr
+                    .set_encoder_value(EncoderName::Reverb, encoder_value)?;
                 self.apply_effects(HashSet::from([EffectKey::ReverbAmount]))?;
             }
             GoXLRCommand::SetReverbDecay(value) => {

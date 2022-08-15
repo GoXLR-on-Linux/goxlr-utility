@@ -296,9 +296,18 @@ impl ReverbEncoder {
     pub fn amount(&self) -> i8 {
         ((36 * self.knob_position as i32) / 24 - 36) as i8
     }
+    
+    // TODO: As with echo, we probably shouldn't do this!
     pub fn get_percentage_amount(&self) -> u8 {
         // Knob Position and Amount are two very different things, so is percentage :)
         ((self.knob_position as u16 * 100) / 24) as u8
+    }
+    pub fn set_percentage_amount(&mut self, percentage: u8) -> Result<()> {
+        if percentage > 100 {
+            return Err(anyhow!("Value must be a percentage"));
+        }
+        self.set_knob_position(((percentage as i16 * 24) / 100) as i8)?;
+        Ok(())        
     }
 
     pub fn knob_position(&self) -> i8 {
