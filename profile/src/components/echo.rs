@@ -433,7 +433,7 @@ impl EchoEncoder {
             return Err(anyhow!("Delay can only be set if Style is ClassicSlap"));
         }
 
-        self.time_left = value;
+        self.time_right = value;
         Ok(())
     }
 
