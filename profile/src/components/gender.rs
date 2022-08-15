@@ -219,7 +219,7 @@ impl GenderEncoder {
                         "Amount should be between -12 and 12 (Style: Narrow)"
                     ));
                 }
-                let base = (amount as i32 + 12_i32) as i32;
+                let base = amount as i32 + 12;
                 let percent = base * 48 / 24;
                 self.knob_position = (percent - 24) as i8;
                 Ok(())
@@ -230,7 +230,7 @@ impl GenderEncoder {
                         "Amount should be between -12 and 12 (Style: Narrow)"
                     ));
                 }
-                let base = (amount as i32 + 25_i32) as i32;
+                let base = amount as i32 + 25;
                 let percent = base * 48 / 50;
                 self.knob_position = (percent - 24) as i8;
                 Ok(())
@@ -241,7 +241,7 @@ impl GenderEncoder {
                         "Amount should be between -12 and 12 (Style: Narrow)"
                     ));
                 }
-                let base = (amount as i32 + 50_i32) as i32;
+                let base = amount as i32 + 50;
                 let percent = base * 48 / 100;
                 self.knob_position = (percent - 24) as i8;
                 Ok(())
