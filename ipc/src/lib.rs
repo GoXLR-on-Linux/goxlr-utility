@@ -105,7 +105,7 @@ pub enum GoXLRCommand {
 
     // Echo..
     SetEchoStyle(EchoStyle),
-    SetEchoAmount(i8),
+    SetEchoAmount(u8),
     SetEchoFeedback(u8),
     SetEchoTempo(u16),
     SetEchoDelayLeft(u16),

@@ -288,6 +288,15 @@ impl EchoEncoder {
         ((self.knob_position as u16 * 100) / 24) as u8
     }
 
+    // TODO: This should probably be handled by UIs like basically everything else!
+    pub fn set_percentage_value(&mut self, percentage: u8) -> Result<()> {
+        if percentage > 100 {
+            return Err(anyhow!("Value must be a percentage"));
+        }
+        self.set_knob_position(((percentage as i16 * 24) / 100) as i8)?;
+        Ok(())
+    }
+
     pub fn knob_position(&self) -> i8 {
         self.knob_position
     }

@@ -1046,7 +1046,12 @@ impl<'a, T: UsbContext> Device<'a, T> {
             GoXLRCommand::SetEchoAmount(value) => {
                 self.profile
                     .get_active_echo_profile_mut()
-                    .set_knob_position(value)?;
+                    .set_percentage_value(value)?;
+
+                let encoder_value = self.profile.get_echo_value();
+                self.goxlr
+                    .set_encoder_value(EncoderName::Echo, encoder_value)?;
+
                 self.apply_effects(HashSet::from([EffectKey::EchoAmount]))?;
             }
             GoXLRCommand::SetEchoFeedback(value) => {
