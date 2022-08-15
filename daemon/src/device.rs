@@ -1126,7 +1126,9 @@ impl<'a, T: UsbContext> Device<'a, T> {
             GoXLRCommand::SetGenderAmount(value) => {
                 self.profile
                     .get_active_gender_profile_mut()
-                    .set_knob_position(value)?;
+                    .set_amount(value)?;
+                let value = self.profile.get_gender_value();
+                self.goxlr.set_encoder_value(EncoderName::Gender, value)?;
                 self.apply_effects(HashSet::from([EffectKey::GenderAmount]))?;
             }
 

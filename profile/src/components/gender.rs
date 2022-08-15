@@ -211,6 +211,44 @@ impl GenderEncoder {
         }
     }
 
+    pub fn set_amount(&mut self, amount: i8) -> Result<()> {
+        match self.style {
+            GenderStyle::Narrow => {
+                if !(-12..=12).contains(&amount) {
+                    return Err(anyhow!(
+                        "Amount should be between -12 and 12 (Style: Narrow)"
+                    ));
+                }
+                let base = (amount as i32 + 12_i32) as i32;
+                let percent = base * 48 / 24;
+                self.knob_position = (percent - 24) as i8;
+                Ok(())
+            }
+            GenderStyle::Medium => {
+                if !(-25..=25).contains(&amount) {
+                    return Err(anyhow!(
+                        "Amount should be between -12 and 12 (Style: Narrow)"
+                    ));
+                }
+                let base = (amount as i32 + 25_i32) as i32;
+                let percent = base * 48 / 50;
+                self.knob_position = (percent - 24) as i8;
+                Ok(())
+            }
+            GenderStyle::Wide => {
+                if !(-50..=50).contains(&amount) {
+                    return Err(anyhow!(
+                        "Amount should be between -12 and 12 (Style: Narrow)"
+                    ));
+                }
+                let base = (amount as i32 + 50_i32) as i32;
+                let percent = base * 48 / 100;
+                self.knob_position = (percent - 24) as i8;
+                Ok(())
+            }
+        }
+    }
+
     pub fn knob_position(&self) -> i8 {
         self.knob_position
     }
