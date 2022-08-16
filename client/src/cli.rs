@@ -679,7 +679,7 @@ pub enum Reverb {
     },
 
     /// Set the Reverb Amount
-    Amount { amount: i8 },
+    Amount { amount: u8 },
 
     /// Set the Reverb Decay
     Decay { decay: u16 },
@@ -722,8 +722,8 @@ pub enum Echo {
         style: EchoStyle,
     },
 
-    /// Set the Echo Amount
-    Amount { amount: i8 },
+    /// Set the Echo Amount (Percentage)
+    Amount { amount: u8 },
 
     /// Set the Echo Feedback Level
     Feedback { feedback: u8 },
