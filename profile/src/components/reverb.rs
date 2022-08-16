@@ -296,7 +296,7 @@ impl ReverbEncoder {
     pub fn amount(&self) -> i8 {
         ((36 * self.knob_position as i32) / 24 - 36) as i8
     }
-    
+
     // TODO: As with echo, we probably shouldn't do this!
     pub fn get_percentage_amount(&self) -> u8 {
         // Knob Position and Amount are two very different things, so is percentage :)
@@ -307,7 +307,7 @@ impl ReverbEncoder {
             return Err(anyhow!("Value must be a percentage"));
         }
         self.set_knob_position(((percentage as i16 * 24) / 100) as i8)?;
-        Ok(())        
+        Ok(())
     }
 
     pub fn knob_position(&self) -> i8 {
@@ -481,7 +481,7 @@ impl ReverbEncoder {
         if !(-25..=0).contains(&value) {
             return Err(anyhow!("Tail Level should be between -25 and 0"));
         }
-        self.early_level = value;
+        self.tail_level = value;
         Ok(())
     }
 
