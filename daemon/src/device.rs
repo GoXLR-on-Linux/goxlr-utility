@@ -984,7 +984,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
             GoXLRCommand::SetReverbDecay(value) => {
                 self.profile
                     .get_active_reverb_profile_mut()
-                    .set_decay(value)?;
+                    .set_decay_millis(value)?;
                 self.apply_effects(HashSet::from([EffectKey::ReverbDecay]))?;
             }
             GoXLRCommand::SetReverbEarlyLevel(value) => {

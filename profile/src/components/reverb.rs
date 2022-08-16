@@ -330,7 +330,7 @@ impl ReverbEncoder {
 
         let preset = ReverbPreset::get_preset(style);
         self.set_reverb_type(preset.reverb_type);
-        self.set_decay_value(preset.decay);
+        self.set_decay(preset.decay);
         self.set_predelay(preset.pre_delay)?;
         self.set_diffuse(preset.diffuse)?;
         self.set_low_color(preset.low_color)?;
@@ -354,7 +354,22 @@ impl ReverbEncoder {
     pub fn decay(&self) -> u16 {
         self.decay
     }
-    pub fn set_decay(&mut self, milliseconds: u16) -> Result<()> {
+    fn set_decay(&mut self, value: u16) {
+        self.decay = value;
+    }
+
+    pub fn get_decay_millis(&self) -> u16 {
+        let decay = self.decay;
+        if decay <= 100 {
+            return decay * 10;
+        }
+
+        let base = 1000;
+        let current = decay - 100;
+        let addition = current * 100;
+        base + addition
+    }
+    pub fn set_decay_millis(&mut self, milliseconds: u16) -> Result<()> {
         // We're going to handle the conversion here directly..
         if milliseconds > 20000 {
             return Err(anyhow!("Decay should be below 20000 milliseconds"));
@@ -380,9 +395,6 @@ impl ReverbEncoder {
 
         // And done?
         Ok(())
-    }
-    fn set_decay_value(&mut self, value: u16) {
-        self.decay = value;
     }
 
     pub fn predelay(&self) -> u8 {
