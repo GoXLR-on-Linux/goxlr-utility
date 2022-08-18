@@ -340,10 +340,16 @@ impl<T: UsbContext> GoXLR<T> {
     }
 
     pub fn get_serial_number(&mut self) -> Result<(String, String), CommandError> {
+        debug!("----------------------------------------------------------------");
+        debug!("Attempting to Fetch Device Serial Number..");
+
         let result = self.request_data(
             Command::GetHardwareInfo(HardwareInfoCommand::SerialNumber),
             &[],
         )?;
+
+        debug!("Received Vec Response:");
+        debug!("{:?}", result);
 
         let serial_slice = &result[..24];
         let serial_len = serial_slice
@@ -358,6 +364,8 @@ impl<T: UsbContext> GoXLR<T> {
             .position(|&c| c == 0)
             .unwrap_or(date_slice.len()) as usize;
         let manufacture_date = String::from_utf8_lossy(&date_slice[..date_len]).to_string();
+
+        debug!("----------------------------------------------------------------");
         Ok((serial_number, manufacture_date))
     }
 
