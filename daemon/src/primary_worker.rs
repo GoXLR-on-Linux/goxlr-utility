@@ -9,7 +9,7 @@ use goxlr_ipc::{
 use goxlr_usb::goxlr::{GoXLR, PID_GOXLR_FULL, PID_GOXLR_MINI, VID_GOXLR};
 use goxlr_usb::rusb;
 use goxlr_usb::rusb::{DeviceDescriptor, GlobalContext};
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use tokio::sync::{mpsc, oneshot};
@@ -61,7 +61,7 @@ pub async fn handle_changes(
                     if let Some((device, descriptor)) = find_new_device(&devices, &ignore_list) {
                     let bus_number = device.bus_number();
                     let address = device.address();
-                        match load_device(device, descriptor, &settings).await {
+                        match load_device(device, descriptor, devices.len(), &settings).await {
                             Ok(device) => {
                                 devices.insert(device.serial().to_owned(), device);
                             }
@@ -177,6 +177,7 @@ fn find_new_device(
 async fn load_device(
     device: rusb::Device<GlobalContext>,
     descriptor: DeviceDescriptor,
+    existing_device_count: usize,
     settings: &SettingsHandle,
 ) -> Result<Device<'_, GlobalContext>> {
     let mut device = GoXLR::from_device(device.open()?, descriptor)?;
@@ -197,7 +198,12 @@ async fn load_device(
         address: device.usb_address(),
         version,
     };
-    let (serial_number, manufactured_date) = device.get_serial_number()?;
+    let (mut serial_number, manufactured_date) = device.get_serial_number()?;
+    if serial_number.is_empty() {
+        debug!("Serial Number not Found");
+        serial_number = format!("UNKNOWN-SN-{}", existing_device_count);
+    }
+
     let hardware = HardwareStatus {
         versions: device.get_firmware_version()?,
         serial_number: serial_number.clone(),
