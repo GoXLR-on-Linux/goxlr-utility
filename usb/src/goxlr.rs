@@ -365,7 +365,13 @@ impl<T: UsbContext> GoXLR<T> {
             .unwrap_or(date_slice.len()) as usize;
         let manufacture_date = String::from_utf8_lossy(&date_slice[..date_len]).to_string();
 
+        debug!("Attempting pull from SystemInfo..");
+        let result =
+            self.request_data(Command::SystemInfo(SystemInfoCommand::FirmwareVersion), &[])?;
+        debug!("{:?}", String::from_utf8_lossy(&result));
+
         debug!("----------------------------------------------------------------");
+
         Ok((serial_number, manufacture_date))
     }
 
