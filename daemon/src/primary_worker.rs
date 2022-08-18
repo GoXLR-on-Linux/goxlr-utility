@@ -9,7 +9,7 @@ use goxlr_ipc::{
 use goxlr_usb::goxlr::{GoXLR, PID_GOXLR_FULL, PID_GOXLR_MINI, VID_GOXLR};
 use goxlr_usb::rusb;
 use goxlr_usb::rusb::{DeviceDescriptor, GlobalContext};
-use log::{debug, error, info, warn};
+use log::{error, info, warn};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use tokio::sync::{mpsc, oneshot};
@@ -59,9 +59,10 @@ pub async fn handle_changes(
             () = sleep(sleep_duration) => {
                 if loop_count == detect_count {
                     if let Some((device, descriptor)) = find_new_device(&devices, &ignore_list) {
+                    let existing_serials: Vec<String> = get_all_serials(&devices);
                     let bus_number = device.bus_number();
                     let address = device.address();
-                        match load_device(device, descriptor, devices.len(), &settings).await {
+                        match load_device(device, descriptor, existing_serials, &settings).await {
                             Ok(device) => {
                                 devices.insert(device.serial().to_owned(), device);
                             }
@@ -174,10 +175,20 @@ fn find_new_device(
     None
 }
 
+fn get_all_serials(existing_devices: &HashMap<String, Device<GlobalContext>>) -> Vec<String> {
+    let mut serials: Vec<String> = vec![];
+
+    for device in existing_devices {
+        serials.push(device.0.clone());
+    }
+
+    serials
+}
+
 async fn load_device(
     device: rusb::Device<GlobalContext>,
     descriptor: DeviceDescriptor,
-    existing_device_count: usize,
+    existing_serials: Vec<String>,
     settings: &SettingsHandle,
 ) -> Result<Device<'_, GlobalContext>> {
     let mut device = GoXLR::from_device(device.open()?, descriptor)?;
@@ -200,8 +211,17 @@ async fn load_device(
     };
     let (mut serial_number, manufactured_date) = device.get_serial_number()?;
     if serial_number.is_empty() {
-        debug!("Serial Number not Found");
-        serial_number = format!("UNKNOWN-SN-{}", existing_device_count);
+        let mut serial = String::from("");
+        for i in 0..=24 {
+            serial = format!("UNKNOWN-SN-{}", i);
+            if !existing_serials.contains(&serial) {
+                break;
+            }
+        }
+
+        warn!("This GoXLR isn't reporting a serial number, this may cause issues if you're running with multiple devices.");
+        serial_number = serial;
+        warn!("Generated Internal Serial Number: {}", serial_number);
     }
 
     let hardware = HardwareStatus {
