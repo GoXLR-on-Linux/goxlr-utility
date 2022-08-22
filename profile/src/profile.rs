@@ -286,6 +286,7 @@ impl ProfileSettings {
                     if name.local_name.starts_with("megaphoneEffectpreset") {
                         if let Ok(preset) = ProfileSettings::parse_preset(name.local_name.clone()) {
                             megaphone_effect.parse_megaphone_preset(preset, &attributes)?;
+                            continue;
                         }
                     }
 
@@ -297,6 +298,7 @@ impl ProfileSettings {
                     if name.local_name.starts_with("robotEffectpreset") {
                         if let Ok(preset) = ProfileSettings::parse_preset(name.local_name.clone()) {
                             robot_effect.parse_robot_preset(preset, &attributes)?;
+                            continue;
                         }
                     }
 
@@ -308,6 +310,7 @@ impl ProfileSettings {
                     if name.local_name.starts_with("hardtuneEffectpreset") {
                         if let Ok(preset) = ProfileSettings::parse_preset(name.local_name.clone()) {
                             hardtune_effect.parse_hardtune_preset(preset, &attributes)?;
+                            continue;
                         }
                     }
 
@@ -319,6 +322,7 @@ impl ProfileSettings {
                     if name.local_name.starts_with("reverbEncoderpreset") {
                         if let Ok(preset) = ProfileSettings::parse_preset(name.local_name.clone()) {
                             reverb_encoder.parse_reverb_preset(preset, &attributes)?;
+                            continue;
                         }
                     }
 
@@ -330,6 +334,7 @@ impl ProfileSettings {
                     if name.local_name.starts_with("echoEncoderpreset") {
                         if let Ok(preset) = ProfileSettings::parse_preset(name.local_name.clone()) {
                             echo_encoder.parse_echo_preset(preset, &attributes)?;
+                            continue;
                         }
                     }
 
@@ -341,6 +346,7 @@ impl ProfileSettings {
                     if name.local_name.starts_with("pitchEncoderpreset") {
                         if let Ok(preset) = ProfileSettings::parse_preset(name.local_name.clone()) {
                             pitch_encoder.parse_pitch_preset(preset, &attributes)?;
+                            continue;
                         }
                     }
 
@@ -352,6 +358,7 @@ impl ProfileSettings {
                     if name.local_name.starts_with("genderEncoderpreset") {
                         if let Ok(preset) = ProfileSettings::parse_preset(name.local_name.clone()) {
                             gender_encoder.parse_gender_preset(preset, &attributes)?;
+                            continue;
                         }
                     }
 
