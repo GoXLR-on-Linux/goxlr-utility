@@ -335,7 +335,11 @@ impl ProfileAdapter {
                 .colour(0)
                 .to_reverse_bytes();
         } else {
-            [00, 00, 00, 00]
+            // For buttons without samples, we simply use colour1 (this gets configured when
+            // loading the bank)..
+            return get_profile_colour_map(self.profile.settings(), target)
+                .colour_or_default(1)
+                .to_reverse_bytes();
         }
     }
 
@@ -381,6 +385,8 @@ impl ProfileAdapter {
             let colour_map = get_profile_colour_map(self.profile.settings(), colour_target);
 
             let off_style = profile_to_standard_colour_off_style(*colour_map.get_off_style());
+
+            // TODO: Sampler Buttons are technically three colours!
 
             button_map.insert(
                 button,
@@ -1146,22 +1152,42 @@ impl ProfileAdapter {
             .context_mut()
             .set_selected_sample(bank);
 
-        // Disable the 'on' state of the existing bank..
-        self.profile
-            .settings_mut()
-            .simple_element_mut(sample_bank_to_simple_element(current))
-            .colour_map_mut()
-            .set_state_on(false)?;
+        // Turn off existing bank..
+        get_profile_colour_map_mut(
+            self.profile.settings_mut(),
+            map_sample_bank_to_colour_target(current),
+        )
+        .set_state_on(false)?;
+
+        // Turn on New Bank..
+        get_profile_colour_map_mut(
+            self.profile.settings_mut(),
+            map_sample_bank_to_colour_target(bank),
+        )
+        .set_state_on(true)?;
+
+        // When loading a bank, the colour settings from the SampleBank button get migrated
+        // across to the sample buttons, which are then used to display (it's a little convoluted!)
+        let colour_map = get_profile_colour_map(
+            self.profile.settings_mut(),
+            map_sample_bank_to_colour_target(bank),
+        );
+
+        let on_colour = Colour::from(colour_map.colour_or_default(0));
+        let off_colour = Colour::from(colour_map.colour_or_default(2));
+
+        for sample in get_sampler_colour_targets() {
+            let map = get_profile_colour_map_mut(
+                self.profile.settings_mut(),
+                standard_to_colour_target(sample),
+            );
+
+            map.set_colour(0, Colour::from(&on_colour))?;
+            map.set_colour(1, Colour::from(&off_colour))?;
+        }
 
         // TODO: When loading a bank, we should check for the existence of samples
         // If they're missing, remove them from the stack.
-
-        // Set the 'on' state for the new bank..
-        self.profile
-            .settings_mut()
-            .simple_element_mut(sample_bank_to_simple_element(bank))
-            .colour_map_mut()
-            .set_state_on(true)?;
 
         Ok(())
     }
@@ -1638,6 +1664,14 @@ fn map_fader_to_colour_target(fader: FaderName) -> ColourTargets {
     }
 }
 
+fn map_sample_bank_to_colour_target(bank: SampleBank) -> ColourTargets {
+    match bank {
+        SampleBank::A => ColourTargets::SamplerSelectA,
+        SampleBank::B => ColourTargets::SamplerSelectB,
+        SampleBank::C => ColourTargets::SamplerSelectC,
+    }
+}
+
 fn get_profile_colour_map(profile: &ProfileSettings, colour_target: ColourTargets) -> &ColourMap {
     match colour_target {
         ColourTargets::Fader1Mute => profile.mute_button(Faders::A).colour_map(),
@@ -1788,6 +1822,16 @@ pub fn get_mini_colour_targets() -> Vec<ButtonColourTargets> {
         ButtonColourTargets::Fader4Mute,
         ButtonColourTargets::Bleep,
         ButtonColourTargets::Cough,
+    ]
+}
+
+pub fn get_sampler_colour_targets() -> Vec<ButtonColourTargets> {
+    vec![
+        ButtonColourTargets::SamplerTopLeft,
+        ButtonColourTargets::SamplerTopRight,
+        ButtonColourTargets::SamplerBottomLeft,
+        ButtonColourTargets::SamplerBottomRight,
+        ButtonColourTargets::SamplerClear,
     ]
 }
 
