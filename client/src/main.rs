@@ -392,6 +392,13 @@ async fn main() -> Result<()> {
                     },
                 },
                 SubCommands::Effects { command } => match command {
+                    EffectsCommands::LoadEffectPreset { name } => {
+                        client
+                            .command(&serial, GoXLRCommand::LoadEffectPreset(name.to_string()))
+                            .await
+                            .context("Unable to Load Preset")?;
+                    }
+
                     EffectsCommands::SetActivePreset { preset } => {
                         client
                             .command(&serial, GoXLRCommand::SetActiveEffectPreset(*preset))

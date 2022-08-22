@@ -102,6 +102,7 @@ pub async fn handle_changes(
                                 profile_directory: settings.get_profile_directory().await,
                                 mic_profile_directory: settings.get_mic_profile_directory().await,
                                 samples_directory: settings.get_samples_directory().await,
+                                presets_directory: settings.get_presets_directory().await,
                             },
                             files: Files {
                                 profiles: file_manager.get_profiles(&settings),

@@ -18,7 +18,7 @@ use anyhow::{anyhow, Context, Result};
 use futures::executor::block_on;
 use log::{debug, info, warn};
 
-use crate::{SettingsHandle, DISTRIBUTABLE_PROFILES};
+use crate::{SettingsHandle, DISTRIBUTABLE_ROOT};
 
 #[derive(Debug)]
 pub struct FileManager {
@@ -65,8 +65,8 @@ impl FileManager {
         let path = block_on(settings.get_profile_directory());
         let extension = "goxlr";
 
-        let distrib_path = Path::new(DISTRIBUTABLE_PROFILES);
-        self.profiles = self.get_file_list(vec![distrib_path.to_path_buf(), path], extension);
+        let distrib_path = Path::new(DISTRIBUTABLE_ROOT).join("profiles/");
+        self.profiles = self.get_file_list(vec![distrib_path, path], extension);
         self.profiles.names.clone()
     }
 
@@ -130,7 +130,7 @@ impl FileManager {
                 .collect::<HashSet<String>>();
         }
 
-        if path != Path::new(DISTRIBUTABLE_PROFILES) {
+        if path != Path::new(DISTRIBUTABLE_ROOT).join("profiles/") {
             debug!(
                 "Path not found, or unable to read: {:?}",
                 path.to_string_lossy()
@@ -142,7 +142,7 @@ impl FileManager {
 }
 
 pub fn create_path(path: &Path) -> Result<()> {
-    if path == Path::new(DISTRIBUTABLE_PROFILES) {
+    if path == Path::new(DISTRIBUTABLE_ROOT).join("profiles/") {
         return Ok(());
     }
     if !path.exists() {

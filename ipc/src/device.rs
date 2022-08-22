@@ -252,6 +252,7 @@ pub struct Paths {
     pub profile_directory: PathBuf,
     pub mic_profile_directory: PathBuf,
     pub samples_directory: PathBuf,
+    pub presets_directory: PathBuf,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

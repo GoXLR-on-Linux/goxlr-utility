@@ -33,7 +33,7 @@ use tokio::sync::mpsc;
 use tokio::{join, signal};
 
 // This can probably go somewhere else, but for now..
-const DISTRIBUTABLE_PROFILES: &str = "/usr/share/goxlr/profiles/";
+const DISTRIBUTABLE_ROOT: &str = "/usr/share/goxlr/";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[tokio::main]

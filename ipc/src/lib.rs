@@ -24,7 +24,9 @@ pub enum DaemonRequest {
     Command(String, GoXLRCommand),
 }
 
+// TODO: Check this..
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(clippy::large_enum_variant)]
 pub enum DaemonResponse {
     Ok,
     Error(String),
@@ -89,6 +91,7 @@ pub enum GoXLRCommand {
     SetButtonGroupOffStyle(ButtonColourGroups, ButtonColourOffStyle),
 
     // Effect Related Settings..
+    LoadEffectPreset(String),
     SetActiveEffectPreset(EffectBankPresets),
 
     // Reverb

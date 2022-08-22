@@ -1,7 +1,7 @@
 use crate::audio::AudioHandler;
 use crate::mic_profile::{MicProfileAdapter, DEFAULT_MIC_PROFILE_NAME};
 use crate::profile::{version_newer_or_equal_to, ProfileAdapter, DEFAULT_PROFILE_NAME};
-use crate::{SettingsHandle, DISTRIBUTABLE_PROFILES};
+use crate::{SettingsHandle, DISTRIBUTABLE_ROOT};
 use anyhow::{anyhow, Result};
 use enum_map::EnumMap;
 use enumset::EnumSet;
@@ -72,10 +72,10 @@ impl<'a, T: UsbContext> Device<'a, T> {
             device_type, profile, mic_profile
         );
 
-        let distrib_path = Path::new(DISTRIBUTABLE_PROFILES);
+        let distrib_path = Path::new(DISTRIBUTABLE_ROOT).join("profiles/");
         let profile = ProfileAdapter::from_named_or_default(
             profile_name,
-            vec![profile_directory, distrib_path],
+            vec![profile_directory, &distrib_path],
         );
         let mic_profile =
             MicProfileAdapter::from_named_or_default(mic_profile_name, vec![mic_profile_directory]);
@@ -972,6 +972,21 @@ impl<'a, T: UsbContext> Device<'a, T> {
             }
 
             // Effects
+            GoXLRCommand::LoadEffectPreset(name) => {
+                let presets_directory = self.settings.get_presets_directory().await;
+                let distrib_path = Path::new(DISTRIBUTABLE_ROOT).join("presets/");
+
+                self.profile
+                    .load_preset(name, vec![&presets_directory, &distrib_path])?;
+
+                let current_effect_bank = self.profile.get_active_effect_bank();
+
+                // Force a reload of this effect bank..
+                // TODO: This is slightly sloppy, as it will make unneeded changes.
+                // TODO: Loading a profile should be separate from an 'event'.
+                self.load_effect_bank(current_effect_bank).await?;
+            }
+
             GoXLRCommand::SetActiveEffectPreset(preset) => {
                 // Welp, this one is simple :)
                 self.load_effect_bank(preset).await?;
@@ -1311,11 +1326,11 @@ impl<'a, T: UsbContext> Device<'a, T> {
             }
             GoXLRCommand::LoadProfile(profile_name) => {
                 let profile_directory = self.settings.get_profile_directory().await;
-                let distrib_path = Path::new(DISTRIBUTABLE_PROFILES);
+                let distrib_path = Path::new(DISTRIBUTABLE_ROOT).join("profiles/");
 
                 self.profile = ProfileAdapter::from_named(
                     profile_name,
-                    vec![&profile_directory, distrib_path],
+                    vec![&profile_directory, &distrib_path],
                 )?;
                 self.apply_profile()?;
                 self.settings
@@ -1762,10 +1777,6 @@ impl<'a, T: UsbContext> Device<'a, T> {
             self.apply_routing(input)?;
         }
 
-        if self.hardware.device_type == DeviceType::Full {
-            self.set_pitch_mode()?;
-        }
-
         Ok(())
     }
 
@@ -1832,6 +1843,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
         self.apply_effects(keys)?;
 
         if self.hardware.device_type == DeviceType::Full {
+            self.set_pitch_mode()?;
             self.load_effects()?;
         }
         Ok(())

@@ -140,6 +140,30 @@ impl ProfileAdapter {
         &self.name
     }
 
+    pub fn load_preset(&mut self, name: String, directories: Vec<&Path>) -> Result<()> {
+        let mut dir_list = "".to_string();
+
+        // Loop through the provided directories, and try to find the preset..
+        for directory in directories {
+            let path = directory.join(format!("{}.preset", name));
+
+            if path.is_file() {
+                debug!("Loading Preset From {}", path.to_string_lossy());
+                let file = File::open(path).context("Couldn't open preset for reading")?;
+
+                self.profile.settings_mut().load_preset(file)?;
+                return Ok(());
+            }
+            dir_list = format!("{}, {}", dir_list, directory.to_string_lossy());
+        }
+
+        Err(anyhow!(
+            "Preset {} does not exist inside {:?}",
+            name,
+            dir_list
+        ))
+    }
+
     pub fn create_router(&self) -> [EnumSet<OutputDevice>; InputDevice::COUNT] {
         let mut router = [EnumSet::empty(); InputDevice::COUNT];
 
@@ -728,6 +752,11 @@ impl ProfileAdapter {
     }
 
     /** Effects Bank Behaviours **/
+    pub fn get_active_effect_bank(&mut self) -> EffectBankPresets {
+        let current = self.profile.settings().context().selected_effects();
+        profile_to_standard_preset(current)
+    }
+
     pub fn load_effect_bank(&mut self, preset: EffectBankPresets) -> Result<()> {
         let preset = standard_to_profile_preset(preset);
         let current = self.profile.settings().context().selected_effects();

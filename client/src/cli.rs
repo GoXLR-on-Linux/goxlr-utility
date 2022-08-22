@@ -637,6 +637,10 @@ pub enum AllFaderCommands {
 #[clap(setting = AppSettings::DeriveDisplayOrder)]
 #[clap(setting = AppSettings::ArgRequiredElseHelp)]
 pub enum EffectsCommands {
+    LoadEffectPreset {
+        name: String,
+    },
+
     SetActivePreset {
         #[clap(arg_enum)]
         preset: EffectBankPresets,

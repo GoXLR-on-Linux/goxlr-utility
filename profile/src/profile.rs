@@ -499,8 +499,7 @@ impl ProfileSettings {
                         for attribute in attributes {
                             if attribute.name.local_name == "name" {
                                 read_top = true;
-                                self.effects_mut(current)
-                                    .set_name(attribute.name.local_name.clone());
+                                self.effects_mut(current).set_name(attribute.value.clone());
                                 break;
                             }
                         }

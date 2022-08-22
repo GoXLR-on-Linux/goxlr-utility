@@ -890,6 +890,20 @@ impl MicProfileAdapter {
         keys
     }
 
+    #[allow(dead_code)]
+    pub fn get_all_effect_keys(&self) -> HashSet<EffectKey> {
+        let mut keys = HashSet::new();
+        keys.extend(self.get_reverb_keyset());
+        keys.extend(self.get_echo_keyset());
+        keys.extend(self.get_pitch_keyset());
+        keys.extend(self.get_gender_keyset());
+        keys.extend(self.get_megaphone_keyset());
+        keys.extend(self.get_robot_keyset());
+        keys.extend(self.get_hardtune_keyset());
+
+        keys
+    }
+
     // These are specific Group Key sets, useful for applying a specific effect at once.
     pub fn get_reverb_keyset(&self) -> HashSet<EffectKey> {
         let mut set = HashSet::new();
