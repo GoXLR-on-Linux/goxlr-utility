@@ -80,8 +80,13 @@ impl<'a, T: UsbContext> Device<'a, T> {
         let mic_profile =
             MicProfileAdapter::from_named_or_default(mic_profile_name, vec![mic_profile_directory]);
 
+        let audio_loader = AudioHandler::new();
+        if let Err(e) = &audio_loader {
+            error!("Error Running Script: {}", e);
+        }
+
         let mut audio_handler = None;
-        if let Ok(audio) = AudioHandler::new() {
+        if let Ok(audio) = audio_loader {
             audio_handler = Some(audio);
         }
 
