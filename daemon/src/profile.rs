@@ -1590,6 +1590,7 @@ fn standard_to_profile_sample_bank(bank: goxlr_types::SampleBank) -> SampleBank 
     }
 }
 
+#[allow(dead_code)]
 fn sample_bank_to_simple_element(bank: SampleBank) -> SimpleElements {
     match bank {
         SampleBank::A => SimpleElements::SampleBankA,
