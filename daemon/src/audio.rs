@@ -67,7 +67,18 @@ impl AudioHandler {
                 "Unable to find sample output device, Sampler Disabled."
             ));
         }
-        let output_device = String::from_utf8(sampler_out.stdout)?;
+
+        debug!("Sampler Output Device Check Returned OK");
+
+        let output_device: String;
+        if let Ok(device) = String::from_utf8(sampler_out.stdout) {
+            output_device = device;
+        } else {
+            error!("Unable to parse String from UTF-8");
+            return Err(anyhow!("Unable to parse UTF-8"));
+        }
+
+        //let output_device = String::from_utf8(sampler_out.stdout)?;
         let output_device = output_device.trim().to_string();
         debug!("Found output Device: {}", output_device);
 
