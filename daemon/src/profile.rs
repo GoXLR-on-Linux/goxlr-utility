@@ -382,6 +382,7 @@ impl ProfileAdapter {
 
         let mut ignore_buttons = vec![];
         ignore_buttons.append(&mut get_sampler_colour_targets());
+        ignore_buttons.append(&mut get_sampler_selector_colour_targets());
 
         for button in buttons {
             if ignore_buttons.contains(&button) {
@@ -1839,6 +1840,14 @@ pub fn get_sampler_colour_targets() -> Vec<ButtonColourTargets> {
         ButtonColourTargets::SamplerBottomLeft,
         ButtonColourTargets::SamplerBottomRight,
         ButtonColourTargets::SamplerClear,
+    ]
+}
+
+pub fn get_sampler_selector_colour_targets() -> Vec<ButtonColourTargets> {
+    vec![
+        ButtonColourTargets::SamplerSelectA,
+        ButtonColourTargets::SamplerSelectB,
+        ButtonColourTargets::SamplerSelectC,
     ]
 }
 
