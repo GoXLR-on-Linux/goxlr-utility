@@ -374,6 +374,15 @@ impl Colour {
         })
     }
 
+    pub fn from(colour: &Colour) -> Self {
+        Self {
+            red: colour.red,
+            green: colour.green,
+            blue: colour.blue,
+            alpha: colour.alpha,
+        }
+    }
+
     pub fn to_argb(&self) -> String {
         format!(
             "{:02X}{:02X}{:02X}{:02X}",
