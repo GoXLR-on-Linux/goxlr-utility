@@ -259,6 +259,7 @@ pub struct Paths {
 pub struct Files {
     pub profiles: HashSet<String>,
     pub mic_profiles: HashSet<String>,
+    pub presets: HashSet<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

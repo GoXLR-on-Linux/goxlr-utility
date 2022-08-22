@@ -24,6 +24,7 @@ use crate::{SettingsHandle, DISTRIBUTABLE_ROOT};
 pub struct FileManager {
     profiles: FileList,
     mic_profiles: FileList,
+    presets: FileList,
 }
 
 #[derive(Debug, Clone)]
@@ -46,6 +47,7 @@ impl FileManager {
         Self {
             profiles: Default::default(),
             mic_profiles: Default::default(),
+            presets: Default::default(),
         }
     }
 
@@ -53,6 +55,7 @@ impl FileManager {
         debug!("Invalidating File Caches..");
         self.profiles = Default::default();
         self.mic_profiles = Default::default();
+        self.presets = Default::default();
     }
 
     pub fn get_profiles(&mut self, settings: &SettingsHandle) -> HashSet<String> {
@@ -80,6 +83,20 @@ impl FileManager {
 
         self.mic_profiles = self.get_file_list(vec![path], extension);
         self.mic_profiles.names.clone()
+    }
+
+    pub fn get_presets(&mut self, settings: &SettingsHandle) -> HashSet<String> {
+        if self.presets.timeout > Instant::now() {
+            return self.presets.names.clone();
+        }
+
+        let path = block_on(settings.get_presets_directory());
+        let distrib_path = Path::new(DISTRIBUTABLE_ROOT).join("presets/");
+
+        let extension = "preset";
+
+        self.presets = self.get_file_list(vec![path, distrib_path], extension);
+        self.presets.names.clone()
     }
 
     fn get_file_list(&self, path: Vec<PathBuf>, extension: &str) -> FileList {

@@ -107,6 +107,7 @@ pub async fn handle_changes(
                             files: Files {
                                 profiles: file_manager.get_profiles(&settings),
                                 mic_profiles: file_manager.get_mic_profiles(&settings),
+                                presets: file_manager.get_presets(&settings),
                             },
                             ..Default::default()
                         };
