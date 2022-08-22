@@ -94,4 +94,7 @@ impl Effects {
     pub fn name(&self) -> &str {
         &self.name
     }
+    pub fn set_name(&mut self, name: String) {
+        self.name = name;
+    }
 }

@@ -470,6 +470,72 @@ impl ProfileSettings {
         })
     }
 
+    pub fn load_preset<R: Read>(&mut self, read: R) -> Result<()> {
+        // So, in principle here, all we need to do is loop over the tags, check on the
+        // tag name, and load it directly into the relevant effect. This should force a
+        // replace of the current effect, and bam, done.
+
+        // Firstly, we need the current preset to overwrite.
+        let current = self.context().selected_effects();
+
+        // Create the parser..
+        let parser = EventReader::new(read);
+
+        let mut read_top = false;
+        for e in parser {
+            match e {
+                Ok(XmlReaderEvent::StartElement {
+                    name, attributes, ..
+                }) => {
+                    if !read_top {
+                        // This is the first 'Start Element', which will be the top level element.
+                        for attribute in attributes {
+                            if attribute.name.local_name == "name" {
+                                read_top = true;
+                                self.effects_mut(current)
+                                    .set_name(attribute.name.local_name.clone());
+                                break;
+                            }
+                        }
+
+                        if !read_top {
+                            return Err(anyhow!("Preset Name not Found, cannot proceed."));
+                        }
+                        continue;
+                    }
+
+                    match name.local_name.as_str() {
+                        "reverbEncoder" => self
+                            .reverb_encoder
+                            .parse_reverb_preset(current, &attributes)?,
+                        "echoEncoder" => {
+                            self.echo_encoder.parse_echo_preset(current, &attributes)?
+                        }
+                        "pitchEncoder" => self
+                            .pitch_encoder
+                            .parse_pitch_preset(current, &attributes)?,
+                        "genderEncoder" => self
+                            .gender_encoder
+                            .parse_gender_preset(current, &attributes)?,
+                        "megaphoneEffect" => self
+                            .megaphone_effect
+                            .parse_megaphone_preset(current, &attributes)?,
+                        "robotEffect" => {
+                            self.robot_effect.parse_robot_preset(current, &attributes)?
+                        }
+                        "hardtuneEffect" => self
+                            .hardtune_effect
+                            .parse_hardtune_preset(current, &attributes)?,
+                        _ => warn!("Unexpected Start Tag {}", name.local_name),
+                    }
+                }
+                Err(error) => error!("Error Occurred: {}", error),
+                _ => {}
+            }
+        }
+        Ok(())
+    }
+
     pub fn write<P: AsRef<Path>>(&self, path: P) -> Result<()> {
         let out_file = File::create(path)?;
         self.write_to(out_file)
