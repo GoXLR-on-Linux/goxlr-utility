@@ -57,8 +57,7 @@ impl AudioHandler {
             .arg("get-output-device")
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
-            .output()
-            .expect("Unable to Execute Script");
+            .output()?;
 
         if !sampler_out.status.success() {
             error!("{}", String::from_utf8(sampler_out.stderr)?);
@@ -68,28 +67,17 @@ impl AudioHandler {
             ));
         }
 
-        debug!("Sampler Output Device Check Returned OK");
-
-        let output_device: String;
-        if let Ok(device) = String::from_utf8(sampler_out.stdout) {
-            output_device = device;
-        } else {
-            error!("Unable to parse String from UTF-8");
-            return Err(anyhow!("Unable to parse UTF-8"));
-        }
-
-        //let output_device = String::from_utf8(sampler_out.stdout)?;
+        let output_device = String::from_utf8(sampler_out.stdout)?;
         let output_device = output_device.trim().to_string();
         debug!("Found output Device: {}", output_device);
 
-        // Now get the recorder
+        // Now get the recorder..
         debug!("Attempting to find Sampler Input Device..");
         let sampler_in = Command::new(script)
             .arg("get-input-device")
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
-            .output()
-            .expect("Unable to Execute Script");
+            .output()?;
 
         let mut input_device = None;
         if !sampler_in.status.success() {
@@ -143,8 +131,7 @@ impl AudioHandler {
             .arg("play-file")
             .arg(&self.output_device)
             .arg(file)
-            .spawn()
-            .expect("Unable to run script");
+            .spawn()?;
 
         self.active_streams.insert(button, command);
         Ok(())
