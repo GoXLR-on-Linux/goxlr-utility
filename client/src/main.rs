@@ -392,6 +392,12 @@ async fn main() -> Result<()> {
                     },
                 },
                 SubCommands::Effects { command } => match command {
+                    EffectsCommands::SetActivePreset { preset } => {
+                        client
+                            .command(&serial, GoXLRCommand::SetActiveEffectPreset(*preset))
+                            .await
+                            .context("Unable to set the Active Preset")?;
+                    }
                     EffectsCommands::Reverb { command } => match command {
                         Reverb::Style { style } => {
                             client

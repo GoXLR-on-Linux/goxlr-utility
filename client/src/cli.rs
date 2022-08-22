@@ -1,10 +1,10 @@
 use clap::{AppSettings, Args, Parser, Subcommand};
 use goxlr_types::{
     ButtonColourGroups, ButtonColourOffStyle, ButtonColourTargets, ChannelName,
-    CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EchoStyle, EqFrequencies,
-    FaderDisplayStyle, FaderName, GateTimes, GenderStyle, HardTuneSource, HardTuneStyle,
-    InputDevice, MegaphoneStyle, MiniEqFrequencies, MuteFunction, OutputDevice, PitchStyle,
-    ReverbStyle, RobotRange, RobotStyle,
+    CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EchoStyle, EffectBankPresets,
+    EqFrequencies, FaderDisplayStyle, FaderName, GateTimes, GenderStyle, HardTuneSource,
+    HardTuneStyle, InputDevice, MegaphoneStyle, MiniEqFrequencies, MuteFunction, OutputDevice,
+    PitchStyle, ReverbStyle, RobotRange, RobotStyle,
 };
 use std::str::FromStr;
 
@@ -637,6 +637,11 @@ pub enum AllFaderCommands {
 #[clap(setting = AppSettings::DeriveDisplayOrder)]
 #[clap(setting = AppSettings::ArgRequiredElseHelp)]
 pub enum EffectsCommands {
+    SetActivePreset {
+        #[clap(arg_enum)]
+        preset: EffectBankPresets,
+    },
+
     Reverb {
         #[clap(subcommand)]
         command: Reverb,

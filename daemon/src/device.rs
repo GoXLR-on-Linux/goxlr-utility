@@ -971,6 +971,13 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 self.update_button_states()?;
             }
 
+            // Effects
+            GoXLRCommand::SetActiveEffectPreset(preset) => {
+                // Welp, this one is simple :)
+                self.load_effect_bank(preset).await?;
+                self.update_button_states()?;
+            }
+
             // Reverb
             GoXLRCommand::SetReverbStyle(style) => {
                 self.profile.set_reverb_style(style)?;

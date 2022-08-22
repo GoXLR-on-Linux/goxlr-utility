@@ -8,10 +8,10 @@ mod socket;
 pub use device::*;
 use goxlr_types::{
     ButtonColourGroups, ButtonColourOffStyle, ButtonColourTargets, ChannelName,
-    CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EchoStyle, EqFrequencies,
-    FaderDisplayStyle, FaderName, GateTimes, GenderStyle, HardTuneSource, HardTuneStyle,
-    InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies, MuteFunction, OutputDevice,
-    PitchStyle, ReverbStyle, RobotRange, RobotStyle,
+    CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EchoStyle, EffectBankPresets,
+    EqFrequencies, FaderDisplayStyle, FaderName, GateTimes, GenderStyle, HardTuneSource,
+    HardTuneStyle, InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies, MuteFunction,
+    OutputDevice, PitchStyle, ReverbStyle, RobotRange, RobotStyle,
 };
 pub use socket::*;
 
@@ -89,6 +89,8 @@ pub enum GoXLRCommand {
     SetButtonGroupOffStyle(ButtonColourGroups, ButtonColourOffStyle),
 
     // Effect Related Settings..
+    SetActiveEffectPreset(EffectBankPresets),
+
     // Reverb
     SetReverbStyle(ReverbStyle),
     SetReverbAmount(u8),
