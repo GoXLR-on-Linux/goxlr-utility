@@ -35,7 +35,7 @@ actix = "0.13"
 actix-web-actors = "4.1"
 actix-web = "4.1"
 actix-cors = "0.6.1"
-actix-plus-static-files = {git = "https://github.com/john01dav/actix-plus", commit = "4f7837c0d3d413bf82d7906b33abb7801340c063"}
+actix-plus-static-files = {git = "https://github.com/john01dav/actix-plus", rev = "4f7837c0d3d413bf82d7906b33abb7801340c063"}
 
 [build-dependencies]
 clap = { version = "3.0.0", features = ["derive"] }

@@ -108,7 +108,7 @@ dependencies = [
 [[package]]
 name = "actix-plus-static-files"
 version = "0.2.0"
-source = "git+https://github.com/john01dav/actix-plus#4f7837c0d3d413bf82d7906b33abb7801340c063"
+source = "git+https://github.com/john01dav/actix-plus?rev=4f7837c0d3d413bf82d7906b33abb7801340c063#4f7837c0d3d413bf82d7906b33abb7801340c063"
 dependencies = [
  "actix-service",
  "actix-web",
