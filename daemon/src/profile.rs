@@ -380,7 +380,14 @@ impl ProfileAdapter {
             ButtonColourTargets::iter().collect()
         };
 
+        let mut ignore_buttons = vec![];
+        ignore_buttons.append(&mut get_sampler_colour_targets());
+
         for button in buttons {
+            if ignore_buttons.contains(&button) {
+                continue;
+            }
+
             let colour_target = standard_to_colour_target(button);
             let colour_map = get_profile_colour_map(self.profile.settings(), colour_target);
 
