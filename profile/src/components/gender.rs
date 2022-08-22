@@ -13,7 +13,6 @@ use anyhow::{anyhow, Result};
 
 use crate::components::colours::ColourMap;
 use crate::Preset;
-use crate::Preset::{Preset1, Preset2, Preset3, Preset4, Preset5, Preset6};
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -70,7 +69,7 @@ impl GenderEncoderBase {
 
     pub fn parse_gender_preset(
         &mut self,
-        id: u8,
+        preset_enum: Preset,
         attributes: &[OwnedAttribute],
     ) -> Result<(), ParseError> {
         let mut preset = GenderEncoder::new();
@@ -101,21 +100,7 @@ impl GenderEncoderBase {
             );
         }
 
-        // Ok, we should be able to store this now..
-        if id == 1 {
-            self.preset_map[Preset1] = preset;
-        } else if id == 2 {
-            self.preset_map[Preset2] = preset;
-        } else if id == 3 {
-            self.preset_map[Preset3] = preset;
-        } else if id == 4 {
-            self.preset_map[Preset4] = preset;
-        } else if id == 5 {
-            self.preset_map[Preset5] = preset;
-        } else if id == 6 {
-            self.preset_map[Preset6] = preset;
-        }
-
+        self.preset_map[preset_enum] = preset;
         Ok(())
     }
 

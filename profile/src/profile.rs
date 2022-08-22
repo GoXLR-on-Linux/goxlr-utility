@@ -4,7 +4,7 @@ use std::path::Path;
 use std::process::exit;
 use std::str::FromStr;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use enum_map::EnumMap;
 use log::{debug, error, warn};
 use strum::EnumProperty;
@@ -284,15 +284,8 @@ impl ProfileSettings {
                     // tracking the opening and closing of tags except when writing, so we'll continue treating the reading
                     // as if it were a very flat structure.
                     if name.local_name.starts_with("megaphoneEffectpreset") {
-                        if let Some(id) = name
-                            .local_name
-                            .chars()
-                            .last()
-                            .map(|s| u8::from_str(&s.to_string()))
-                            .transpose()?
-                        {
-                            megaphone_effect.parse_megaphone_preset(id, &attributes)?;
-                            continue;
+                        if let Ok(preset) = ProfileSettings::parse_preset(name.local_name.clone()) {
+                            megaphone_effect.parse_megaphone_preset(preset, &attributes)?;
                         }
                     }
 
@@ -302,15 +295,8 @@ impl ProfileSettings {
                     }
 
                     if name.local_name.starts_with("robotEffectpreset") {
-                        if let Some(id) = name
-                            .local_name
-                            .chars()
-                            .last()
-                            .map(|s| u8::from_str(&s.to_string()))
-                            .transpose()?
-                        {
-                            robot_effect.parse_robot_preset(id, &attributes)?;
-                            continue;
+                        if let Ok(preset) = ProfileSettings::parse_preset(name.local_name.clone()) {
+                            robot_effect.parse_robot_preset(preset, &attributes)?;
                         }
                     }
 
@@ -320,15 +306,8 @@ impl ProfileSettings {
                     }
 
                     if name.local_name.starts_with("hardtuneEffectpreset") {
-                        if let Some(id) = name
-                            .local_name
-                            .chars()
-                            .last()
-                            .map(|s| u8::from_str(&s.to_string()))
-                            .transpose()?
-                        {
-                            hardtune_effect.parse_hardtune_preset(id, &attributes)?;
-                            continue;
+                        if let Ok(preset) = ProfileSettings::parse_preset(name.local_name.clone()) {
+                            hardtune_effect.parse_hardtune_preset(preset, &attributes)?;
                         }
                     }
 
@@ -338,15 +317,8 @@ impl ProfileSettings {
                     }
 
                     if name.local_name.starts_with("reverbEncoderpreset") {
-                        if let Some(id) = name
-                            .local_name
-                            .chars()
-                            .last()
-                            .map(|s| u8::from_str(&s.to_string()))
-                            .transpose()?
-                        {
-                            reverb_encoder.parse_reverb_preset(id, &attributes)?;
-                            continue;
+                        if let Ok(preset) = ProfileSettings::parse_preset(name.local_name.clone()) {
+                            reverb_encoder.parse_reverb_preset(preset, &attributes)?;
                         }
                     }
 
@@ -356,15 +328,8 @@ impl ProfileSettings {
                     }
 
                     if name.local_name.starts_with("echoEncoderpreset") {
-                        if let Some(id) = name
-                            .local_name
-                            .chars()
-                            .last()
-                            .map(|s| u8::from_str(&s.to_string()))
-                            .transpose()?
-                        {
-                            echo_encoder.parse_echo_preset(id, &attributes)?;
-                            continue;
+                        if let Ok(preset) = ProfileSettings::parse_preset(name.local_name.clone()) {
+                            echo_encoder.parse_echo_preset(preset, &attributes)?;
                         }
                     }
 
@@ -374,15 +339,8 @@ impl ProfileSettings {
                     }
 
                     if name.local_name.starts_with("pitchEncoderpreset") {
-                        if let Some(id) = name
-                            .local_name
-                            .chars()
-                            .last()
-                            .map(|s| u8::from_str(&s.to_string()))
-                            .transpose()?
-                        {
-                            pitch_encoder.parse_pitch_preset(id, &attributes)?;
-                            continue;
+                        if let Ok(preset) = ProfileSettings::parse_preset(name.local_name.clone()) {
+                            pitch_encoder.parse_pitch_preset(preset, &attributes)?;
                         }
                     }
 
@@ -392,15 +350,8 @@ impl ProfileSettings {
                     }
 
                     if name.local_name.starts_with("genderEncoderpreset") {
-                        if let Some(id) = name
-                            .local_name
-                            .chars()
-                            .last()
-                            .map(|s| u8::from_str(&s.to_string()))
-                            .transpose()?
-                        {
-                            gender_encoder.parse_gender_preset(id, &attributes)?;
-                            continue;
+                        if let Ok(preset) = ProfileSettings::parse_preset(name.local_name.clone()) {
+                            gender_encoder.parse_gender_preset(preset, &attributes)?;
                         }
                     }
 
@@ -589,6 +540,20 @@ impl ProfileSettings {
         self.root.write_final(&mut writer)?;
 
         Ok(())
+    }
+
+    pub fn parse_preset(key: String) -> Result<Preset> {
+        if let Some(id) = key
+            .chars()
+            .last()
+            .map(|s| u8::from_str(&s.to_string()))
+            .transpose()?
+        {
+            if let Some(preset) = Preset::iter().nth((id - 1) as usize) {
+                return Ok(preset);
+            }
+        }
+        Err(anyhow!("Unable to Parse Preset from Number"))
     }
 
     pub fn mixer_mut(&mut self) -> &mut Mixers {

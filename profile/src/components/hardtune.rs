@@ -16,7 +16,6 @@ use crate::components::colours::ColourMap;
 use crate::components::hardtune::HardTuneSource::All;
 use crate::components::hardtune::HardTuneStyle::Natural;
 use crate::Preset;
-use crate::Preset::{Preset1, Preset2, Preset3, Preset4, Preset5, Preset6};
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -74,9 +73,9 @@ impl HardtuneEffectBase {
 
     pub fn parse_hardtune_preset(
         &mut self,
-        id: u8,
+        preset_enum: Preset,
         attributes: &[OwnedAttribute],
-    ) -> Result<(), ParseError> {
+    ) -> Result<()> {
         let mut preset = HardTuneEffect::new();
         for attr in attributes {
             if attr.name.local_name == "hardtuneEffectstate" {
@@ -128,21 +127,7 @@ impl HardtuneEffectBase {
             );
         }
 
-        // Ok, we should be able to store this now..
-        if id == 1 {
-            self.preset_map[Preset1] = preset;
-        } else if id == 2 {
-            self.preset_map[Preset2] = preset;
-        } else if id == 3 {
-            self.preset_map[Preset3] = preset;
-        } else if id == 4 {
-            self.preset_map[Preset4] = preset;
-        } else if id == 5 {
-            self.preset_map[Preset5] = preset;
-        } else if id == 6 {
-            self.preset_map[Preset6] = preset;
-        }
-
+        self.preset_map[preset_enum] = preset;
         Ok(())
     }
 
