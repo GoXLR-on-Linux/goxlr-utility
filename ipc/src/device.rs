@@ -1,10 +1,10 @@
 use enumset::EnumSet;
 use goxlr_types::{
     ButtonColourOffStyle, ButtonColourTargets, ChannelName, CompressorAttackTime, CompressorRatio,
-    CompressorReleaseTime, EchoStyle, EqFrequencies, FaderDisplayStyle, FaderName,
-    FirmwareVersions, GateTimes, GenderStyle, HardTuneSource, HardTuneStyle, InputDevice,
-    MegaphoneStyle, MicrophoneType, MiniEqFrequencies, MuteFunction, OutputDevice, PitchStyle,
-    ReverbStyle, RobotStyle,
+    CompressorReleaseTime, EchoStyle, EffectBankPresets, EqFrequencies, FaderDisplayStyle,
+    FaderName, FirmwareVersions, GateTimes, GenderStyle, HardTuneSource, HardTuneStyle,
+    InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies, MuteFunction, OutputDevice,
+    PitchStyle, ReverbStyle, RobotStyle,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -151,6 +151,13 @@ pub struct TwoColours {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Effects {
+    pub active_preset: EffectBankPresets,
+    pub preset_names: HashMap<EffectBankPresets, String>,
+    pub current: ActiveEffects,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActiveEffects {
     pub reverb: Reverb,
     pub echo: Echo,
     pub pitch: Pitch,

@@ -90,4 +90,8 @@ impl Effects {
     pub fn colour_map_mut(&mut self) -> &mut ColourMap {
         &mut self.colour_map
     }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
 }

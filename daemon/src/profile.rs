@@ -12,8 +12,8 @@ use strum::EnumCount;
 use strum::IntoEnumIterator;
 
 use goxlr_ipc::{
-    ButtonLighting, CoughButton, Echo, Effects, FaderLighting, Gender, HardTune, Lighting,
-    Megaphone, Pitch, Reverb, Robot, TwoColours,
+    ActiveEffects, ButtonLighting, CoughButton, Echo, Effects, FaderLighting, Gender, HardTune,
+    Lighting, Megaphone, Pitch, Reverb, Robot, TwoColours,
 };
 use goxlr_profile_loader::components::colours::{
     Colour, ColourDisplay, ColourMap, ColourOffStyle, ColourState,
@@ -420,6 +420,21 @@ impl ProfileAdapter {
             return None;
         }
 
+        // Current Preset
+        let active_preset =
+            profile_to_standard_preset(self.profile.settings().context().selected_effects());
+        let mut preset_names = HashMap::new();
+        for preset in EffectBankPresets::iter() {
+            preset_names.insert(
+                preset,
+                self.profile
+                    .settings()
+                    .effects(standard_to_profile_preset(preset))
+                    .name()
+                    .to_string(),
+            );
+        }
+
         let reverb = Reverb {
             style: profile_to_standard_reverb_style(self.get_active_reverb_profile().style()),
             amount: self.get_active_reverb_profile().get_percentage_amount(),
@@ -498,13 +513,17 @@ impl ProfileAdapter {
         };
 
         Some(Effects {
-            reverb,
-            echo,
-            pitch,
-            gender,
-            megaphone,
-            robot,
-            hard_tune,
+            active_preset,
+            preset_names,
+            current: ActiveEffects {
+                reverb,
+                echo,
+                pitch,
+                gender,
+                megaphone,
+                robot,
+                hard_tune,
+            },
         })
     }
 
