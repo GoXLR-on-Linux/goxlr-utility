@@ -603,8 +603,14 @@ impl<'a, T: UsbContext> Device<'a, T> {
 
         debug!("Attempting to play: {}", sample_path.to_string_lossy());
         let audio_handler = self.audio_handler.as_mut().unwrap();
-        audio_handler.play_for_button(button, sample_path.to_str().unwrap().to_string())?;
-        self.profile.set_sample_button_state(button, true)?;
+        let result =
+            audio_handler.play_for_button(button, sample_path.to_str().unwrap().to_string());
+
+        if result.is_ok() {
+            self.profile.set_sample_button_state(button, true)?;
+        } else {
+            error!("{}", result.err().unwrap());
+        }
 
         Ok(())
     }
