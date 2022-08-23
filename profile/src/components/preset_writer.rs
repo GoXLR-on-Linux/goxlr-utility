@@ -36,6 +36,7 @@ impl PresetWriter {
         }
 
         writer.write(element)?;
+        writer.write(XmlEvent::end_element())?;
         Ok(())
     }
 
