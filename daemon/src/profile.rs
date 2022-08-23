@@ -1125,6 +1125,10 @@ impl ProfileAdapter {
         Ok(())
     }
 
+    pub fn get_hardtune_source(&self) -> goxlr_types::HardTuneSource {
+        profile_to_standard_hard_tune_source(&self.get_active_hardtune_profile().get_source_value())
+    }
+
     pub fn get_active_hardtune_profile(&self) -> &HardTuneEffect {
         let current = self.profile.settings().context().selected_effects();
         self.profile

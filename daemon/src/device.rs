@@ -11,7 +11,7 @@ use goxlr_ipc::{
 use goxlr_profile_loader::components::mute::MuteFunction;
 use goxlr_profile_loader::SampleButtons;
 use goxlr_types::{
-    ChannelName, EffectBankPresets, EffectKey, EncoderName, FaderName,
+    ChannelName, EffectBankPresets, EffectKey, EncoderName, FaderName, HardTuneSource,
     InputDevice as BasicInputDevice, MicrophoneParamKey, OutputDevice as BasicOutputDevice,
     RobotRange, SampleBank, VersionNumber,
 };
@@ -1332,8 +1332,31 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 self.apply_effects(HashSet::from([EffectKey::HardTuneWindow]))?;
             }
             GoXLRCommand::SetHardTuneSource(value) => {
-                // TODO: This needs to trigger a routing update, HardTuneKeySource does nothing.
-                self.profile.set_hardtune_source(value)?;
+                if self.profile.get_hardtune_source() == value {
+                    // Do nothing, we're already there.
+                    return Ok(());
+                }
+
+                // We need to update the Routing table to reflect this change..
+                if value == HardTuneSource::All || self.profile.is_active_hardtune_source_all() {
+                    self.profile.set_hardtune_source(value)?;
+
+                    // One way or another, we need to update all the inputs..
+                    self.apply_routing(BasicInputDevice::Music)?;
+                    self.apply_routing(BasicInputDevice::Game)?;
+                    self.apply_routing(BasicInputDevice::LineIn)?;
+                    self.apply_routing(BasicInputDevice::System)?;
+                } else {
+                    let current = self.profile.get_active_hardtune_source();
+                    self.profile.set_hardtune_source(value)?;
+                    let new = self.profile.get_active_hardtune_source();
+
+                    // Remove from current, add to New.
+                    self.apply_routing(current)?;
+                    self.apply_routing(new)?;
+                }
+
+                // TODO: Check this..
                 self.apply_effects(HashSet::from([EffectKey::HardTuneKeySource]))?;
             }
 
@@ -1519,6 +1542,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 | BasicInputDevice::Game
                 | BasicInputDevice::LineIn
                 | BasicInputDevice::System => {
+                    debug!("Light HardTune Enabled for Channel: {:?}", input);
                     left[hardtune_position] = 0x04;
                     right[hardtune_position] = 0x04;
                 }
@@ -1527,6 +1551,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
         } else {
             // We need to match only against a specific target..
             if input == self.profile.get_active_hardtune_source() {
+                debug!("Hard HardTune Enabled for Channel: {:?}", input);
                 left[hardtune_position] = 0x10;
                 right[hardtune_position] = 0x10;
             }
