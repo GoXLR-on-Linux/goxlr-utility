@@ -147,7 +147,7 @@ impl FileManager {
                 .collect::<HashSet<String>>();
         }
 
-        if path != Path::new(DISTRIBUTABLE_ROOT).join("profiles/") {
+        if !path.starts_with(Path::new(DISTRIBUTABLE_ROOT)) {
             debug!(
                 "Path not found, or unable to read: {:?}",
                 path.to_string_lossy()

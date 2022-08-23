@@ -643,6 +643,7 @@ pub enum EffectsCommands {
     RenameActivePreset {
         name: String,
     },
+    SaveActivePreset,
     SetActivePreset {
         #[clap(arg_enum)]
         preset: EffectBankPresets,

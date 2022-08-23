@@ -989,6 +989,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 // TODO: This is slightly sloppy, as it will make unneeded changes.
                 // TODO: Loading a profile should be separate from an 'event'.
                 self.load_effect_bank(current_effect_bank).await?;
+                self.update_button_states()?;
             }
 
             GoXLRCommand::SetActiveEffectPreset(preset) => {
@@ -1009,6 +1010,21 @@ impl<'a, T: UsbContext> Device<'a, T> {
                     .settings_mut()
                     .effects_mut(current_bank)
                     .set_name(name)?;
+            }
+
+            GoXLRCommand::SaveActivePreset() => {
+                let preset_directory = self.settings.get_presets_directory().await;
+                let current = self
+                    .profile
+                    .profile()
+                    .settings()
+                    .context()
+                    .selected_effects();
+                let mut name =
+                    String::from(self.profile.profile().settings().effects(current).name());
+                name = name.replace(' ', "_");
+
+                self.profile.write_preset(name, &preset_directory)?;
             }
 
             // Reverb

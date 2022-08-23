@@ -25,6 +25,7 @@ use crate::components::mixer::Mixers;
 use crate::components::mute::MuteButton;
 use crate::components::mute_chat::MuteChat;
 use crate::components::pitch::PitchEncoderBase;
+use crate::components::preset_writer::PresetWriter;
 use crate::components::reverb::ReverbEncoderBase;
 use crate::components::robot::RobotEffectBase;
 use crate::components::root::RootElement;
@@ -90,6 +91,11 @@ impl Profile {
         }
         archive.finish()?;
 
+        Ok(())
+    }
+
+    pub fn save_preset(&self, path: impl AsRef<Path>) -> Result<()> {
+        self.settings.write_preset(path)?;
         Ok(())
     }
 
@@ -612,6 +618,66 @@ impl ProfileSettings {
         // Finalise the XML..
         self.root.write_final(&mut writer)?;
 
+        Ok(())
+    }
+
+    pub fn write_preset<P: AsRef<Path>>(&self, path: P) -> Result<()> {
+        let out_file = File::create(path)?;
+        self.write_preset_to(out_file)
+    }
+
+    pub fn write_preset_to<W: Write>(&self, mut sink: W) -> Result<()> {
+        let mut writer = EmitterConfig::new()
+            .perform_indent(true)
+            .write_document_declaration(true)
+            .create_writer(&mut sink);
+
+        let current = self.context().selected_effects();
+        let preset_writer = PresetWriter::new(String::from(self.effects(current).name()));
+        preset_writer.write_initial(&mut writer)?;
+        preset_writer.write_tag(
+            &mut writer,
+            "reverbEncoder",
+            self.reverb_encoder.get_preset_attributes(current),
+        )?;
+
+        preset_writer.write_tag(
+            &mut writer,
+            "echoEncoder",
+            self.echo_encoder.get_preset_attributes(current),
+        )?;
+
+        preset_writer.write_tag(
+            &mut writer,
+            "pitchEncoder",
+            self.pitch_encoder.get_preset_attributes(current),
+        )?;
+
+        preset_writer.write_tag(
+            &mut writer,
+            "genderEncoder",
+            self.gender_encoder.get_preset_attributes(current),
+        )?;
+
+        preset_writer.write_tag(
+            &mut writer,
+            "megaphoneEffect",
+            self.megaphone_effect.get_preset_attributes(current),
+        )?;
+
+        preset_writer.write_tag(
+            &mut writer,
+            "robotEffect",
+            self.robot_effect.get_preset_attributes(current),
+        )?;
+
+        preset_writer.write_tag(
+            &mut writer,
+            "hardtuneEffect",
+            self.hardtune_effect.get_preset_attributes(current),
+        )?;
+
+        preset_writer.write_final(&mut writer)?;
         Ok(())
     }
 

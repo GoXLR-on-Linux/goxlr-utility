@@ -128,6 +128,13 @@ impl ProfileAdapter {
         Ok(())
     }
 
+    pub fn write_preset(&mut self, name: String, directory: &Path) -> Result<()> {
+        let path = directory.join(format!("{}.preset", name));
+        create_path(directory)?;
+        self.profile.save_preset(path)?;
+        Ok(())
+    }
+
     pub fn delete_profile(&mut self, name: String, directory: &Path) -> Result<()> {
         let path = directory.join(format!("{}.goxlr", name));
         if path.is_file() {

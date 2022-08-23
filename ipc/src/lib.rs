@@ -37,6 +37,7 @@ pub enum DaemonResponse {
 pub enum PathTypes {
     Profiles,
     MicProfiles,
+    Presets,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -94,6 +95,7 @@ pub enum GoXLRCommand {
     LoadEffectPreset(String),
     SetActiveEffectPreset(EffectBankPresets),
     RenameActivePreset(String),
+    SaveActivePreset(),
 
     // Reverb
     SetReverbStyle(ReverbStyle),

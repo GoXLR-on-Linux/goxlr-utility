@@ -123,7 +123,8 @@ pub async fn handle_changes(
                     DeviceCommand::OpenPath(path_type, sender) => {
                         let result = opener::open(match path_type {
                             PathTypes::Profiles => settings.get_profile_directory().await,
-                            PathTypes::MicProfiles => settings.get_mic_profile_directory().await
+                            PathTypes::MicProfiles => settings.get_mic_profile_directory().await,
+                            PathTypes::Presets => settings.get_presets_directory().await
                         });
                         if result.is_err() {
                             let _ = sender.send(DaemonResponse::Error("Unable to Open".to_string()));
