@@ -159,16 +159,13 @@ impl FileManager {
 }
 
 pub fn create_path(path: &Path) -> Result<()> {
-    if path == Path::new(DISTRIBUTABLE_ROOT).join("profiles/") {
+    if path.starts_with(Path::new(DISTRIBUTABLE_ROOT)) {
         return Ok(());
     }
     if !path.exists() {
         // Attempt to create the profile directory..
         if let Err(e) = create_dir_all(&path) {
-            return Err(e).context(format!(
-                "Could not create profile directory at {}",
-                &path.to_string_lossy()
-            ))?;
+            return Err(e).context(format!("Could not create path {}", &path.to_string_lossy()))?;
         } else {
             info!("Created Path: {}", path.to_string_lossy());
         }
