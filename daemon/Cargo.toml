@@ -11,15 +11,15 @@ categories = ["hardware-support", "command-line-utilities"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-goxlr-usb = {path = "../usb" }
-goxlr-ipc = {path = "../ipc" }
-goxlr-types = {path = "../types" }
-goxlr-profile-loader = {path = "../profile" }
+goxlr-usb = { path = "../usb" }
+goxlr-ipc = { path = "../ipc" }
+goxlr-types = { path = "../types" }
+goxlr-profile-loader = { path = "../profile" }
 simplelog = "0.11.1"
-tokio = {version = "1.0", features=["full"]}
+tokio = { version = "1.0", features = ["full"] }
 log = "0.4.14"
 anyhow = "1.0"
-strum = { version = "0.23"}
+strum = { version = "0.23" }
 enumset = "1.0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0" }
@@ -29,14 +29,14 @@ enum-map = "2.1.0"
 futures = "0.3.21"
 clap = { version = "3.0.0", features = ["derive"] }
 opener = "0.5.0"
-nix = "0.25.0"
+nix = { version = "0.25.0", features = ["user"] }
 
 ## HTTPd Server
 actix = "0.13"
 actix-web-actors = "4.1"
 actix-web = "4.1"
 actix-cors = "0.6.1"
-actix-plus-static-files = {git = "https://github.com/john01dav/actix-plus", rev = "4f7837c0d3d413bf82d7906b33abb7801340c063"}
+actix-plus-static-files = { git = "https://github.com/john01dav/actix-plus", rev = "4f7837c0d3d413bf82d7906b33abb7801340c063" }
 
 [build-dependencies]
 clap = { version = "3.0.0", features = ["derive"] }
@@ -55,7 +55,6 @@ assets = [
     ["../deployment/deb/goxlr-daemon.bash", "usr/share/bash-completion/completions/", "644"],
     ["../deployment/deb/goxlr-daemon.fish", "usr/share/fish/vendor_completions.d/", "644"],
     ["../deployment/deb/_goxlr-daemon", "usr/share/zsh/vendor-completions/", "644"],
-
     ["../ci/distrib/profiles/Default - Red.goxlr", "usr/share/goxlr/profiles/", "644"],
     ["../ci/distrib/profiles/Default - Teal Blue.goxlr", "usr/share/goxlr/profiles/", "644"],
     ["../ci/distrib/profiles/Default - Vaporwave.goxlr", "usr/share/goxlr/profiles/", "644"],
@@ -82,7 +81,6 @@ assets = [
     { source = "../deployment/deb/goxlr-daemon.bash", dest = "/usr/share/bash-completion/completions/goxlr-daemon.bash", mode = "0644" },
     { source = "../deployment/deb/goxlr-daemon.fish", dest = "/usr/share/fish/vendor_completions.d/goxlr-daemon.fish", mode = "0644" },
     { source = "../deployment/deb/_goxlr-daemon", dest = "/usr/share/zsh/vendor-completions/_goxlr-daemon", mode = "0644" },
-
     { source = "../ci/distrib/profiles/Default - Red.goxlr", dest = "/usr/share/goxlr/profiles/Default - Red.goxlr", mode = "0644" },
     { source = "../ci/distrib/profiles/Default - Teal Blue.goxlr", dest = "/usr/share/goxlr/profiles/Default - Teal Blue.goxlr", mode = "0644" },
     { source = "../ci/distrib/profiles/Default - Vaporwave.goxlr", dest = "/usr/share/goxlr/profiles/Default - Vaporwave.goxlr", mode = "0644" },
