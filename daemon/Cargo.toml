@@ -28,8 +28,8 @@ byteorder = "1"
 enum-map = "2.1.0"
 futures = "0.3.21"
 clap = { version = "3.0.0", features = ["derive"] }
-opener = "0.5.0"
 nix = { version = "0.25.0", features = ["user"] }
+opener = "0.5.0"
 
 ## HTTPd Server
 actix = "0.13"

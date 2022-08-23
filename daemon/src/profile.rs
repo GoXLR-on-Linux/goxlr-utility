@@ -1486,6 +1486,14 @@ impl ProfileAdapter {
             ColourOffStyle::DimmedColour2 => ButtonStates::DimmedColour2,
         };
     }
+
+    pub fn profile(&self) -> &Profile {
+        &self.profile
+    }
+
+    pub fn profile_mut(&mut self) -> &mut Profile {
+        &mut self.profile
+    }
 }
 
 fn profile_to_standard_input(value: InputChannels) -> InputDevice {

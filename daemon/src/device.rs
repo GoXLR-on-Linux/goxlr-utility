@@ -997,6 +997,20 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 self.update_button_states()?;
             }
 
+            GoXLRCommand::RenameActivePreset(name) => {
+                let current_bank = self
+                    .profile
+                    .profile()
+                    .settings()
+                    .context()
+                    .selected_effects();
+                self.profile
+                    .profile_mut()
+                    .settings_mut()
+                    .effects_mut(current_bank)
+                    .set_name(name)?;
+            }
+
             // Reverb
             GoXLRCommand::SetReverbStyle(style) => {
                 self.profile.set_reverb_style(style)?;

@@ -93,6 +93,7 @@ pub enum GoXLRCommand {
     // Effect Related Settings..
     LoadEffectPreset(String),
     SetActiveEffectPreset(EffectBankPresets),
+    RenameActivePreset(String),
 
     // Reverb
     SetReverbStyle(ReverbStyle),

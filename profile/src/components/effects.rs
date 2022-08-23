@@ -6,7 +6,7 @@ use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use strum::EnumProperty;
 
 use crate::components::colours::ColourMap;
@@ -94,7 +94,22 @@ impl Effects {
     pub fn name(&self) -> &str {
         &self.name
     }
-    pub fn set_name(&mut self, name: String) {
-        self.name = name;
+    pub fn set_name(&mut self, name: String) -> Result<()> {
+        // This is an artificial limit by me here..
+        if name.len() > 32 {
+            return Err(anyhow!("Name must be less than 32 characters"));
+        }
+
+        if !name
+            .chars()
+            .all(|x| x.is_alphanumeric() || x.is_whitespace())
+        {
+            return Err(anyhow!("Name must be alpha-numeric"));
+        }
+
+        // Trim any whitespaces..
+        self.name = name.trim().to_string();
+
+        Ok(())
     }
 }

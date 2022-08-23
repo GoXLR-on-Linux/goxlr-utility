@@ -405,6 +405,14 @@ async fn main() -> Result<()> {
                             .await
                             .context("Unable to set the Active Preset")?;
                     }
+
+                    EffectsCommands::RenameActivePreset { name } => {
+                        client
+                            .command(&serial, GoXLRCommand::RenameActivePreset(name.to_string()))
+                            .await
+                            .context("Unable to Rename Preset")?;
+                    }
+
                     EffectsCommands::Reverb { command } => match command {
                         Reverb::Style { style } => {
                             client

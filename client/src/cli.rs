@@ -640,12 +640,13 @@ pub enum EffectsCommands {
     LoadEffectPreset {
         name: String,
     },
-
+    RenameActivePreset {
+        name: String,
+    },
     SetActivePreset {
         #[clap(arg_enum)]
         preset: EffectBankPresets,
     },
-
     Reverb {
         #[clap(subcommand)]
         command: Reverb,
