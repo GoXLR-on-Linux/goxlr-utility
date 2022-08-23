@@ -128,34 +128,12 @@ impl PitchEncoderBase {
         writer.write(element)?;
 
         // Because all of these are seemingly 'guaranteed' to exist, we can straight dump..
-        for (key, value) in &self.preset_map {
-            let mut sub_attributes: HashMap<String, String> = HashMap::default();
-
-            let tag_name = format!("pitchEncoder{}", key.get_str("tagSuffix").unwrap());
+        for preset in Preset::iter() {
+            let tag_name = format!("pitchEncoder{}", preset.get_str("tagSuffix").unwrap());
             let mut sub_element: StartElementBuilder =
                 XmlWriterEvent::start_element(tag_name.as_str());
 
-            sub_attributes.insert(
-                "PITCH_KNOB_POSITION".to_string(),
-                format!("{}", value.knob_position),
-            );
-            sub_attributes.insert(
-                "PITCH_STYLE".to_string(),
-                value.style.get_str("uiIndex").unwrap().to_string(),
-            );
-            sub_attributes.insert("PITCH_RANGE".to_string(), format!("{}", value.range));
-            sub_attributes.insert(
-                "PITCH_SHIFT_THRESHOLD".to_string(),
-                format!("{}", value.threshold),
-            );
-
-            if let Some(inst_ratio) = value.inst_ratio {
-                sub_attributes.insert(
-                    "PITCH_SHIFT_INST_RATIO".to_string(),
-                    format!("{}", inst_ratio),
-                );
-            }
-
+            let sub_attributes = self.get_preset_attributes(preset);
             for (key, value) in &sub_attributes {
                 sub_element = sub_element.attr(key.as_str(), value.as_str());
             }
@@ -167,6 +145,34 @@ impl PitchEncoderBase {
         // Finally, close the 'main' tag.
         writer.write(XmlWriterEvent::end_element())?;
         Ok(())
+    }
+
+    pub fn get_preset_attributes(&self, preset: Preset) -> HashMap<String, String> {
+        let mut attributes = HashMap::new();
+        let value = &self.preset_map[preset];
+
+        attributes.insert(
+            "PITCH_KNOB_POSITION".to_string(),
+            format!("{}", value.knob_position),
+        );
+        attributes.insert(
+            "PITCH_STYLE".to_string(),
+            value.style.get_str("uiIndex").unwrap().to_string(),
+        );
+        attributes.insert("PITCH_RANGE".to_string(), format!("{}", value.range));
+        attributes.insert(
+            "PITCH_SHIFT_THRESHOLD".to_string(),
+            format!("{}", value.threshold),
+        );
+
+        if let Some(inst_ratio) = value.inst_ratio {
+            attributes.insert(
+                "PITCH_SHIFT_INST_RATIO".to_string(),
+                format!("{}", inst_ratio),
+            );
+        }
+
+        attributes
     }
 
     pub fn colour_map(&self) -> &ColourMap {

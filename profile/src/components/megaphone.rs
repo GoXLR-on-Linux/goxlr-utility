@@ -168,80 +168,12 @@ impl MegaphoneEffectBase {
         writer.write(element)?;
 
         // Because all of these are seemingly 'guaranteed' to exist, we can straight dump..
-        for (key, value) in &self.preset_map {
-            let mut sub_attributes: HashMap<String, String> = HashMap::default();
-
-            let tag_name = format!("megaphoneEffect{}", key.get_str("tagSuffix").unwrap());
+        for preset in Preset::iter() {
+            let tag_name = format!("megaphoneEffect{}", preset.get_str("tagSuffix").unwrap());
             let mut sub_element: StartElementBuilder =
                 XmlWriterEvent::start_element(tag_name.as_str());
 
-            sub_attributes.insert(
-                "megaphoneEffectstate".to_string(),
-                if value.state {
-                    "1".to_string()
-                } else {
-                    "0".to_string()
-                },
-            );
-            sub_attributes.insert(
-                "MEGAPHONE_STYLE".to_string(),
-                value.style.get_str("uiIndex").unwrap().to_string(),
-            );
-            sub_attributes.insert(
-                "TRANS_DIST_AMT".to_string(),
-                format!("{}", value.trans_dist_amt),
-            );
-            sub_attributes.insert("TRANS_HP".to_string(), format!("{}", value.trans_hp));
-            sub_attributes.insert("TRANS_LP".to_string(), format!("{}", value.trans_lp));
-            sub_attributes.insert(
-                "TRANS_PREGAIN".to_string(),
-                format!("{}", value.trans_pregain),
-            );
-            sub_attributes.insert(
-                "TRANS_POSTGAIN".to_string(),
-                format!("{}", value.trans_postgain),
-            );
-            sub_attributes.insert(
-                "TRANS_DIST_TYPE".to_string(),
-                format!("{}", value.trans_dist_type),
-            );
-            sub_attributes.insert(
-                "TRANS_PRESENCE_GAIN".to_string(),
-                format!("{}", value.trans_presence_gain),
-            );
-            sub_attributes.insert(
-                "TRANS_PRESENCE_FC".to_string(),
-                format!("{}", value.trans_presence_fc),
-            );
-            sub_attributes.insert(
-                "TRANS_PRESENCE_BW".to_string(),
-                format!("{}", value.trans_presence_bw),
-            );
-            sub_attributes.insert(
-                "TRANS_BEATBOX_ENABLE".to_string(),
-                if value.trans_beatbox_enabled {
-                    "1".to_string()
-                } else {
-                    "0".to_string()
-                },
-            );
-            sub_attributes.insert(
-                "TRANS_FILTER_CONTROL".to_string(),
-                format!("{}", value.trans_filter_control),
-            );
-            sub_attributes.insert(
-                "TRANS_FILTER".to_string(),
-                format!("{}", value.trans_filter),
-            );
-            sub_attributes.insert(
-                "TRANS_DRIVE_POT_GAIN_COMP_MID".to_string(),
-                format!("{}", value.trans_drive_pot_gain_comp_mid),
-            );
-            sub_attributes.insert(
-                "TRANS_DRIVE_POT_GAIN_COMP_MAX".to_string(),
-                format!("{}", value.trans_drive_pot_gain_comp_max),
-            );
-
+            let sub_attributes = self.get_preset_attributes(preset);
             for (key, value) in &sub_attributes {
                 sub_element = sub_element.attr(key.as_str(), value.as_str());
             }
@@ -253,6 +185,80 @@ impl MegaphoneEffectBase {
         // Finally, close the 'main' tag.
         writer.write(XmlWriterEvent::end_element())?;
         Ok(())
+    }
+
+    pub fn get_preset_attributes(&self, preset: Preset) -> HashMap<String, String> {
+        let mut attributes = HashMap::new();
+        let value = &self.preset_map[preset];
+
+        attributes.insert(
+            "megaphoneEffectstate".to_string(),
+            if value.state {
+                "1".to_string()
+            } else {
+                "0".to_string()
+            },
+        );
+        attributes.insert(
+            "MEGAPHONE_STYLE".to_string(),
+            value.style.get_str("uiIndex").unwrap().to_string(),
+        );
+        attributes.insert(
+            "TRANS_DIST_AMT".to_string(),
+            format!("{}", value.trans_dist_amt),
+        );
+        attributes.insert("TRANS_HP".to_string(), format!("{}", value.trans_hp));
+        attributes.insert("TRANS_LP".to_string(), format!("{}", value.trans_lp));
+        attributes.insert(
+            "TRANS_PREGAIN".to_string(),
+            format!("{}", value.trans_pregain),
+        );
+        attributes.insert(
+            "TRANS_POSTGAIN".to_string(),
+            format!("{}", value.trans_postgain),
+        );
+        attributes.insert(
+            "TRANS_DIST_TYPE".to_string(),
+            format!("{}", value.trans_dist_type),
+        );
+        attributes.insert(
+            "TRANS_PRESENCE_GAIN".to_string(),
+            format!("{}", value.trans_presence_gain),
+        );
+        attributes.insert(
+            "TRANS_PRESENCE_FC".to_string(),
+            format!("{}", value.trans_presence_fc),
+        );
+        attributes.insert(
+            "TRANS_PRESENCE_BW".to_string(),
+            format!("{}", value.trans_presence_bw),
+        );
+        attributes.insert(
+            "TRANS_BEATBOX_ENABLE".to_string(),
+            if value.trans_beatbox_enabled {
+                "1".to_string()
+            } else {
+                "0".to_string()
+            },
+        );
+        attributes.insert(
+            "TRANS_FILTER_CONTROL".to_string(),
+            format!("{}", value.trans_filter_control),
+        );
+        attributes.insert(
+            "TRANS_FILTER".to_string(),
+            format!("{}", value.trans_filter),
+        );
+        attributes.insert(
+            "TRANS_DRIVE_POT_GAIN_COMP_MID".to_string(),
+            format!("{}", value.trans_drive_pot_gain_comp_mid),
+        );
+        attributes.insert(
+            "TRANS_DRIVE_POT_GAIN_COMP_MAX".to_string(),
+            format!("{}", value.trans_drive_pot_gain_comp_max),
+        );
+
+        attributes
     }
 
     pub fn colour_map(&self) -> &ColourMap {

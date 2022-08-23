@@ -149,42 +149,12 @@ impl HardtuneEffectBase {
         writer.write(element)?;
 
         // Because all of these are seemingly 'guaranteed' to exist, we can straight dump..
-        for (key, value) in &self.preset_map {
-            let mut sub_attributes: HashMap<String, String> = HashMap::default();
-
-            let tag_name = format!("hardtuneEffect{}", key.get_str("tagSuffix").unwrap());
+        for preset in Preset::iter() {
+            let tag_name = format!("hardtuneEffect{}", preset.get_str("tagSuffix").unwrap());
             let mut sub_element: StartElementBuilder =
                 XmlWriterEvent::start_element(tag_name.as_str());
 
-            sub_attributes.insert(
-                "hardtuneEffectstate".to_string(),
-                if value.state {
-                    "1".to_string()
-                } else {
-                    "0".to_string()
-                },
-            );
-            sub_attributes.insert(
-                "HARDTUNE_STYLE".to_string(),
-                value.style.get_str("uiIndex").unwrap().to_string(),
-            );
-            sub_attributes.insert(
-                "HARDTUNE_KEYSOURCE".to_string(),
-                format!("{}", value.key_source),
-            );
-            sub_attributes.insert("HARDTUNE_AMOUNT".to_string(), format!("{}", value.amount));
-            sub_attributes.insert("HARDTUNE_WINDOW".to_string(), format!("{}", value.window));
-            sub_attributes.insert("HARDTUNE_RATE".to_string(), format!("{}", value.rate));
-            sub_attributes.insert("HARDTUNE_SCALE".to_string(), format!("{}", value.scale));
-            sub_attributes.insert(
-                "HARDTUNE_PITCH_AMT".to_string(),
-                format!("{}", value.pitch_amt),
-            );
-
-            if let Some(source) = &value.source {
-                sub_attributes.insert("HARDTUNE_SOURCE".to_string(), source.to_string());
-            }
-
+            let sub_attributes = self.get_preset_attributes(preset);
             for (key, value) in &sub_attributes {
                 sub_element = sub_element.attr(key.as_str(), value.as_str());
             }
@@ -196,6 +166,42 @@ impl HardtuneEffectBase {
         // Finally, close the 'main' tag.
         writer.write(XmlWriterEvent::end_element())?;
         Ok(())
+    }
+
+    pub fn get_preset_attributes(&self, preset: Preset) -> HashMap<String, String> {
+        let mut attributes = HashMap::new();
+        let value = &self.preset_map[preset];
+
+        attributes.insert(
+            "hardtuneEffectstate".to_string(),
+            if value.state {
+                "1".to_string()
+            } else {
+                "0".to_string()
+            },
+        );
+        attributes.insert(
+            "HARDTUNE_STYLE".to_string(),
+            value.style.get_str("uiIndex").unwrap().to_string(),
+        );
+        attributes.insert(
+            "HARDTUNE_KEYSOURCE".to_string(),
+            format!("{}", value.key_source),
+        );
+        attributes.insert("HARDTUNE_AMOUNT".to_string(), format!("{}", value.amount));
+        attributes.insert("HARDTUNE_WINDOW".to_string(), format!("{}", value.window));
+        attributes.insert("HARDTUNE_RATE".to_string(), format!("{}", value.rate));
+        attributes.insert("HARDTUNE_SCALE".to_string(), format!("{}", value.scale));
+        attributes.insert(
+            "HARDTUNE_PITCH_AMT".to_string(),
+            format!("{}", value.pitch_amt),
+        );
+
+        if let Some(source) = &value.source {
+            attributes.insert("HARDTUNE_SOURCE".to_string(), source.to_string());
+        }
+
+        attributes
     }
 
     pub fn colour_map(&self) -> &ColourMap {

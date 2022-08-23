@@ -164,43 +164,12 @@ impl EchoEncoderBase {
         writer.write(element)?;
 
         // Because all of these are seemingly 'guaranteed' to exist, we can straight dump..
-        for (key, value) in &self.preset_map {
-            let mut sub_attributes: HashMap<String, String> = HashMap::default();
-
-            let tag_name = format!("echoEncoder{}", key.get_str("tagSuffix").unwrap());
+        for preset in Preset::iter() {
+            let tag_name = format!("echoEncoder{}", preset.get_str("tagSuffix").unwrap());
             let mut sub_element: StartElementBuilder =
                 XmlWriterEvent::start_element(tag_name.as_str());
 
-            sub_attributes.insert(
-                "DELAY_KNOB_POSITION".to_string(),
-                format!("{}", value.knob_position),
-            );
-            sub_attributes.insert(
-                "DELAY_STYLE".to_string(),
-                value.style.get_str("uiIndex").unwrap().to_string(),
-            );
-            sub_attributes.insert("DELAY_SOURCE".to_string(), format!("{}", value.source));
-            sub_attributes.insert("DELAY_DIV_L".to_string(), format!("{}", value.div_l));
-            sub_attributes.insert("DELAY_DIV_R".to_string(), format!("{}", value.div_r));
-            sub_attributes.insert("DELAY_FB_L".to_string(), format!("{}", value.feedback_left));
-            sub_attributes.insert(
-                "DELAY_FB_R".to_string(),
-                format!("{}", value.feedback_right),
-            );
-            sub_attributes.insert("DELAY_XFB_L_R".to_string(), format!("{}", value.xfb_l_to_r));
-            sub_attributes.insert("DELAY_XFB_R_L".to_string(), format!("{}", value.xfb_r_to_l));
-            sub_attributes.insert(
-                "DELAY_FB_CONTROL".to_string(),
-                format!("{}", value.feedback_control),
-            );
-            sub_attributes.insert(
-                "DELAY_FILTER_STYLE".to_string(),
-                format!("{}", value.filter_style),
-            );
-            sub_attributes.insert("DELAY_TIME_L".to_string(), format!("{}", value.time_left));
-            sub_attributes.insert("DELAY_TIME_R".to_string(), format!("{}", value.time_right));
-            sub_attributes.insert("DELAY_TEMPO".to_string(), format!("{}", value.tempo));
-
+            let sub_attributes = self.get_preset_attributes(preset);
             for (key, value) in &sub_attributes {
                 sub_element = sub_element.attr(key.as_str(), value.as_str());
             }
@@ -213,6 +182,43 @@ impl EchoEncoderBase {
         writer.write(XmlWriterEvent::end_element())?;
 
         Ok(())
+    }
+
+    pub fn get_preset_attributes(&self, preset: Preset) -> HashMap<String, String> {
+        let mut attributes = HashMap::new();
+        let value = &self.preset_map[preset];
+
+        attributes.insert(
+            "DELAY_KNOB_POSITION".to_string(),
+            format!("{}", value.knob_position),
+        );
+        attributes.insert(
+            "DELAY_STYLE".to_string(),
+            value.style.get_str("uiIndex").unwrap().to_string(),
+        );
+        attributes.insert("DELAY_SOURCE".to_string(), format!("{}", value.source));
+        attributes.insert("DELAY_DIV_L".to_string(), format!("{}", value.div_l));
+        attributes.insert("DELAY_DIV_R".to_string(), format!("{}", value.div_r));
+        attributes.insert("DELAY_FB_L".to_string(), format!("{}", value.feedback_left));
+        attributes.insert(
+            "DELAY_FB_R".to_string(),
+            format!("{}", value.feedback_right),
+        );
+        attributes.insert("DELAY_XFB_L_R".to_string(), format!("{}", value.xfb_l_to_r));
+        attributes.insert("DELAY_XFB_R_L".to_string(), format!("{}", value.xfb_r_to_l));
+        attributes.insert(
+            "DELAY_FB_CONTROL".to_string(),
+            format!("{}", value.feedback_control),
+        );
+        attributes.insert(
+            "DELAY_FILTER_STYLE".to_string(),
+            format!("{}", value.filter_style),
+        );
+        attributes.insert("DELAY_TIME_L".to_string(), format!("{}", value.time_left));
+        attributes.insert("DELAY_TIME_R".to_string(), format!("{}", value.time_right));
+        attributes.insert("DELAY_TEMPO".to_string(), format!("{}", value.tempo));
+
+        attributes
     }
 
     pub fn colour_map(&self) -> &ColourMap {

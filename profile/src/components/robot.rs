@@ -158,75 +158,12 @@ impl RobotEffectBase {
         writer.write(element)?;
 
         // Because all of these are seemingly 'guaranteed' to exist, we can straight dump..
-        for (key, value) in &self.preset_map {
-            let mut sub_attributes: HashMap<String, String> = HashMap::default();
-
-            let tag_name = format!("robotEffect{}", key.get_str("tagSuffix").unwrap());
+        for preset in Preset::iter() {
+            let tag_name = format!("robotEffect{}", preset.get_str("tagSuffix").unwrap());
             let mut sub_element: StartElementBuilder =
                 XmlWriterEvent::start_element(tag_name.as_str());
 
-            sub_attributes.insert(
-                "robotEffectstate".to_string(),
-                if value.state {
-                    "1".to_string()
-                } else {
-                    "0".to_string()
-                },
-            );
-            sub_attributes.insert(
-                "ROBOT_STYLE".to_string(),
-                value.style.get_str("uiIndex").unwrap().to_string(),
-            );
-            sub_attributes.insert(
-                "ROBOT_SYNTHOSC_PULSEWIDTH".to_string(),
-                format!("{}", value.synthosc_pulse_width),
-            );
-            sub_attributes.insert(
-                "ROBOT_SYNTHOSC_WAVEFORM".to_string(),
-                format!("{}", value.synthosc_waveform),
-            );
-            sub_attributes.insert(
-                "ROBOT_VOCODER_GATE_THRESHOLD".to_string(),
-                format!("{}", value.vocoder_gate_threshold),
-            );
-            sub_attributes.insert("ROBOT_DRY_MIX".to_string(), format!("{}", value.dry_mix));
-            sub_attributes.insert(
-                "ROBOT_VOCODER_LOW_FREQ".to_string(),
-                format!("{}", value.vocoder_low_freq),
-            );
-            sub_attributes.insert(
-                "ROBOT_VOCODER_LOW_GAIN".to_string(),
-                format!("{}", value.vocoder_low_gain),
-            );
-            sub_attributes.insert(
-                "ROBOT_VOCODER_LOW_BW".to_string(),
-                format!("{}", value.vocoder_low_bw),
-            );
-            sub_attributes.insert(
-                "ROBOT_VOCODER_MID_FREQ".to_string(),
-                format!("{}", value.vocoder_mid_freq),
-            );
-            sub_attributes.insert(
-                "ROBOT_VOCODER_MID_GAIN".to_string(),
-                format!("{}", value.vocoder_mid_gain),
-            );
-            sub_attributes.insert(
-                "ROBOT_VOCODER_MID_BW".to_string(),
-                format!("{}", value.vocoder_mid_bw),
-            );
-            sub_attributes.insert(
-                "ROBOT_VOCODER_HIGH_FREQ".to_string(),
-                format!("{}", value.vocoder_high_freq),
-            );
-            sub_attributes.insert(
-                "ROBOT_VOCODER_HIGH_GAIN".to_string(),
-                format!("{}", value.vocoder_high_gain),
-            );
-            sub_attributes.insert(
-                "ROBOT_VOCODER_HIGH_BW".to_string(),
-                format!("{}", value.vocoder_high_bw),
-            );
-
+            let sub_attributes = self.get_preset_attributes(preset);
             for (key, value) in &sub_attributes {
                 sub_element = sub_element.attr(key.as_str(), value.as_str());
             }
@@ -238,6 +175,75 @@ impl RobotEffectBase {
         // Finally, close the 'main' tag.
         writer.write(XmlWriterEvent::end_element())?;
         Ok(())
+    }
+
+    pub fn get_preset_attributes(&self, preset: Preset) -> HashMap<String, String> {
+        let mut attributes = HashMap::new();
+        let value = &self.preset_map[preset];
+
+        attributes.insert(
+            "robotEffectstate".to_string(),
+            if value.state {
+                "1".to_string()
+            } else {
+                "0".to_string()
+            },
+        );
+        attributes.insert(
+            "ROBOT_STYLE".to_string(),
+            value.style.get_str("uiIndex").unwrap().to_string(),
+        );
+        attributes.insert(
+            "ROBOT_SYNTHOSC_PULSEWIDTH".to_string(),
+            format!("{}", value.synthosc_pulse_width),
+        );
+        attributes.insert(
+            "ROBOT_SYNTHOSC_WAVEFORM".to_string(),
+            format!("{}", value.synthosc_waveform),
+        );
+        attributes.insert(
+            "ROBOT_VOCODER_GATE_THRESHOLD".to_string(),
+            format!("{}", value.vocoder_gate_threshold),
+        );
+        attributes.insert("ROBOT_DRY_MIX".to_string(), format!("{}", value.dry_mix));
+        attributes.insert(
+            "ROBOT_VOCODER_LOW_FREQ".to_string(),
+            format!("{}", value.vocoder_low_freq),
+        );
+        attributes.insert(
+            "ROBOT_VOCODER_LOW_GAIN".to_string(),
+            format!("{}", value.vocoder_low_gain),
+        );
+        attributes.insert(
+            "ROBOT_VOCODER_LOW_BW".to_string(),
+            format!("{}", value.vocoder_low_bw),
+        );
+        attributes.insert(
+            "ROBOT_VOCODER_MID_FREQ".to_string(),
+            format!("{}", value.vocoder_mid_freq),
+        );
+        attributes.insert(
+            "ROBOT_VOCODER_MID_GAIN".to_string(),
+            format!("{}", value.vocoder_mid_gain),
+        );
+        attributes.insert(
+            "ROBOT_VOCODER_MID_BW".to_string(),
+            format!("{}", value.vocoder_mid_bw),
+        );
+        attributes.insert(
+            "ROBOT_VOCODER_HIGH_FREQ".to_string(),
+            format!("{}", value.vocoder_high_freq),
+        );
+        attributes.insert(
+            "ROBOT_VOCODER_HIGH_GAIN".to_string(),
+            format!("{}", value.vocoder_high_gain),
+        );
+        attributes.insert(
+            "ROBOT_VOCODER_HIGH_BW".to_string(),
+            format!("{}", value.vocoder_high_bw),
+        );
+
+        attributes
     }
 
     pub fn colour_map(&self) -> &ColourMap {

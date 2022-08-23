@@ -165,58 +165,12 @@ impl ReverbEncoderBase {
         writer.write(element)?;
 
         // Because all of these are seemingly 'guaranteed' to exist, we can straight dump..
-        for (key, value) in &self.preset_map {
-            let mut sub_attributes: HashMap<String, String> = HashMap::default();
-
-            let tag_name = format!("reverbEncoder{}", key.get_str("tagSuffix").unwrap());
+        for preset in Preset::iter() {
+            let tag_name = format!("reverbEncoder{}", preset.get_str("tagSuffix").unwrap());
             let mut sub_element: StartElementBuilder =
                 XmlWriterEvent::start_element(tag_name.as_str());
 
-            sub_attributes.insert(
-                "REVERB_KNOB_POSITION".to_string(),
-                format!("{}", value.knob_position),
-            );
-            sub_attributes.insert(
-                "REVERB_STYLE".to_string(),
-                value.style.get_str("uiIndex").unwrap().to_string(),
-            );
-            sub_attributes.insert("REVERB_TYPE".to_string(), format!("{}", value.reverb_type));
-            sub_attributes.insert("REVERB_DECAY".to_string(), format!("{}", value.decay));
-            sub_attributes.insert(
-                "REVERB_PREDELAY".to_string(),
-                format!("{}", value.pre_delay),
-            );
-            sub_attributes.insert("REVERB_DIFFUSE".to_string(), format!("{}", value.diffuse));
-            sub_attributes.insert("REVERB_LOCOLOR".to_string(), format!("{}", value.low_color));
-            sub_attributes.insert(
-                "REVERB_HICOLOR".to_string(),
-                format!("{}", value.high_color),
-            );
-            sub_attributes.insert(
-                "REVERB_HIFACTOR".to_string(),
-                format!("{}", value.high_factor),
-            );
-            sub_attributes.insert(
-                "REVERB_MODSPEED".to_string(),
-                format!("{}", value.mod_speed),
-            );
-            sub_attributes.insert(
-                "REVERB_MODDEPTH".to_string(),
-                format!("{}", value.mod_depth),
-            );
-            sub_attributes.insert(
-                "REVERB_EARLYLEVEL".to_string(),
-                format!("{}", value.early_level),
-            );
-            sub_attributes.insert(
-                "REVERB_TAILLEVEL".to_string(),
-                format!("{}", value.tail_level),
-            );
-            sub_attributes.insert(
-                "REVERB_DRYLEVEL".to_string(),
-                format!("{}", value.dry_level),
-            );
-
+            let sub_attributes = self.get_preset_attributes(preset);
             for (key, value) in &sub_attributes {
                 sub_element = sub_element.attr(key.as_str(), value.as_str());
             }
@@ -228,6 +182,58 @@ impl ReverbEncoderBase {
         // Finally, close the 'main' tag.
         writer.write(XmlWriterEvent::end_element())?;
         Ok(())
+    }
+
+    pub fn get_preset_attributes(&self, preset: Preset) -> HashMap<String, String> {
+        let mut attributes = HashMap::new();
+        let value = &self.preset_map[preset];
+
+        attributes.insert(
+            "REVERB_KNOB_POSITION".to_string(),
+            format!("{}", value.knob_position),
+        );
+        attributes.insert(
+            "REVERB_STYLE".to_string(),
+            value.style.get_str("uiIndex").unwrap().to_string(),
+        );
+        attributes.insert("REVERB_TYPE".to_string(), format!("{}", value.reverb_type));
+        attributes.insert("REVERB_DECAY".to_string(), format!("{}", value.decay));
+        attributes.insert(
+            "REVERB_PREDELAY".to_string(),
+            format!("{}", value.pre_delay),
+        );
+        attributes.insert("REVERB_DIFFUSE".to_string(), format!("{}", value.diffuse));
+        attributes.insert("REVERB_LOCOLOR".to_string(), format!("{}", value.low_color));
+        attributes.insert(
+            "REVERB_HICOLOR".to_string(),
+            format!("{}", value.high_color),
+        );
+        attributes.insert(
+            "REVERB_HIFACTOR".to_string(),
+            format!("{}", value.high_factor),
+        );
+        attributes.insert(
+            "REVERB_MODSPEED".to_string(),
+            format!("{}", value.mod_speed),
+        );
+        attributes.insert(
+            "REVERB_MODDEPTH".to_string(),
+            format!("{}", value.mod_depth),
+        );
+        attributes.insert(
+            "REVERB_EARLYLEVEL".to_string(),
+            format!("{}", value.early_level),
+        );
+        attributes.insert(
+            "REVERB_TAILLEVEL".to_string(),
+            format!("{}", value.tail_level),
+        );
+        attributes.insert(
+            "REVERB_DRYLEVEL".to_string(),
+            format!("{}", value.dry_level),
+        );
+
+        attributes
     }
 
     pub fn colour_map(&self) -> &ColourMap {
