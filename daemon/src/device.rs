@@ -81,12 +81,16 @@ impl<'a, T: UsbContext> Device<'a, T> {
             MicProfileAdapter::from_named_or_default(mic_profile_name, vec![mic_profile_directory]);
 
         let audio_loader = AudioHandler::new();
+        debug!("Created Audio Handler..");
+        debug!("{:?}", audio_loader);
+
         if let Err(e) = &audio_loader {
             error!("Error Running Script: {}", e);
         }
 
         let mut audio_handler = None;
         if let Ok(audio) = audio_loader {
+            debug!("Audio Handler Loaded OK..");
             audio_handler = Some(audio);
         }
 

@@ -58,16 +58,22 @@ impl AudioHandler {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .output()?;
+        debug!("Command Executed, Checking Output..");
 
         if !sampler_out.status.success() {
+            debug!("Command Failed.");
             error!("{}", String::from_utf8(sampler_out.stderr)?);
             error!("Unable to find sample output device, Sampler Disabled.");
             return Err(anyhow!(
                 "Unable to find sample output device, Sampler Disabled."
             ));
         }
+        debug!("Command Was Success, parsing STDOUT");
 
         let output_device = String::from_utf8(sampler_out.stdout)?;
+        debug!("STDOUT: {}", output_device);
+        debug!("Trimming Output..");
+
         let output_device = output_device.trim().to_string();
         debug!("Found output Device: {}", output_device);
 
