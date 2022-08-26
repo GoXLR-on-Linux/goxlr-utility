@@ -960,6 +960,7 @@ impl MicProfileAdapter {
 
     pub fn get_megaphone_keyset(&self) -> HashSet<EffectKey> {
         let mut set = HashSet::new();
+        set.insert(EffectKey::MegaphoneEnabled);
         set.insert(EffectKey::MegaphoneAmount);
         set.insert(EffectKey::MegaphonePostGain);
         set.insert(EffectKey::MegaphoneStyle);
@@ -981,6 +982,7 @@ impl MicProfileAdapter {
 
     pub fn get_robot_keyset(&self) -> HashSet<EffectKey> {
         let mut set = HashSet::new();
+        set.insert(EffectKey::RobotEnabled);
         set.insert(EffectKey::RobotLowGain);
         set.insert(EffectKey::RobotLowFreq);
         set.insert(EffectKey::RobotLowWidth);
@@ -1001,6 +1003,7 @@ impl MicProfileAdapter {
 
     pub fn get_hardtune_keyset(&self) -> HashSet<EffectKey> {
         let mut set = HashSet::new();
+        set.insert(EffectKey::HardTuneEnabled);
         set.insert(EffectKey::HardTuneAmount);
         set.insert(EffectKey::HardTuneKeySource);
         set.insert(EffectKey::HardTuneScale);
