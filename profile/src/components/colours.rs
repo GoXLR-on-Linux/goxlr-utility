@@ -138,26 +138,34 @@ impl ColourMap {
     }
 
     pub fn write_colours(&self, attributes: &mut HashMap<String, String>) {
+        self.write_colours_with_prefix(self.prefix.clone(), attributes)
+    }
+
+    pub fn write_colours_with_prefix(
+        &self,
+        prefix: String,
+        attributes: &mut HashMap<String, String>,
+    ) {
         // Add the 'OffStyle'
-        let mut key = format!("{}offStyle", self.prefix);
+        let mut key = format!("{}offStyle", prefix);
         attributes.insert(key, self.off_style.to_string());
 
         if let Some(selected) = self.selected {
-            attributes.insert(format!("{}selected", self.prefix), format!("{}", selected));
+            attributes.insert(format!("{}selected", prefix), format!("{}", selected));
         }
 
         if let Some(velocity) = &self.velocity {
-            key = format!("{}velocity", self.prefix);
+            key = format!("{}velocity", prefix);
             attributes.insert(key, format!("{}", velocity));
         }
 
         if let Some(state) = &self.state {
-            key = format!("{}state", self.prefix);
+            key = format!("{}state", prefix);
             attributes.insert(key, state.to_string());
         }
 
         if let Some(blink) = &self.blink {
-            key = format!("{}blink", self.prefix);
+            key = format!("{}blink", prefix);
             attributes.insert(key, blink.to_string());
         }
 
@@ -169,14 +177,14 @@ impl ColourMap {
         if let Some(vector) = &self.colour_list {
             for i in 0..3 {
                 if let Some(Some(colour)) = vector.get(i) {
-                    key = format!("{}colour{}", self.prefix, i);
+                    key = format!("{}colour{}", prefix, i);
                     attributes.insert(key, colour.to_argb());
                 }
             }
         }
 
         if let Some(colour_display) = &self.colour_display {
-            key = format!("{}Display", self.prefix);
+            key = format!("{}Display", prefix);
             attributes.insert(key, colour_display.to_string());
         }
     }

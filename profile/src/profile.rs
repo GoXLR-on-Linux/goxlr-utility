@@ -569,15 +569,17 @@ impl ProfileSettings {
         self.context.write_context(&mut writer)?;
         self.mute_chat.write_mute_chat(&mut writer)?;
 
-        for (_fader, mute_button) in self.mute_buttons.iter() {
+        for (faders, mute_button) in self.mute_buttons.iter() {
             if let Some(mute_button) = mute_button {
-                mute_button.write_button(&mut writer)?;
+                let element_name = format!("mute{}", (faders as u8) + 1);
+                mute_button.write_button(element_name, &mut writer)?;
             }
         }
 
-        for (_fader, fader) in self.faders.iter() {
+        for (faders, fader) in self.faders.iter() {
             if let Some(fader) = fader {
-                fader.write_fader(&mut writer)?;
+                let element_name = format!("FaderMeter{}", faders as u8);
+                fader.write_fader(element_name, &mut writer)?;
             }
         }
 

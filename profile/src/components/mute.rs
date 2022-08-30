@@ -30,7 +30,6 @@ pub enum ParseError {
 
 #[derive(Debug)]
 pub struct MuteButton {
-    element_name: String,
     colour_map: ColourMap,
     mute_function: MuteFunction,
     previous_volume: u8,
@@ -42,10 +41,8 @@ pub struct MuteButton {
 
 impl MuteButton {
     pub fn new(id: u8) -> Self {
-        let element_name = format!("mute{}", id);
         let colour_prefix = format!("mute{}", id);
         Self {
-            element_name,
             colour_map: ColourMap::new(colour_prefix),
             mute_function: MuteFunction::All,
             previous_volume: 0,
@@ -102,17 +99,20 @@ impl MuteButton {
         Ok(())
     }
 
-    pub fn write_button<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
-        let mut element: StartElementBuilder =
-            XmlWriterEvent::start_element(self.element_name.as_str());
+    pub fn write_button<W: Write>(
+        &self,
+        element_name: String,
+        writer: &mut EventWriter<&mut W>,
+    ) -> Result<()> {
+        let mut element: StartElementBuilder = XmlWriterEvent::start_element(element_name.as_str());
 
         let mut attributes: HashMap<String, String> = HashMap::default();
         attributes.insert(
-            format!("{}Function", self.element_name),
+            format!("{}Function", element_name),
             self.mute_function.get_str("Value").unwrap().to_string(),
         );
         attributes.insert(
-            format!("{}prevLevel", self.element_name),
+            format!("{}prevLevel", element_name),
             format!("{}", self.previous_volume),
         );
 
@@ -123,7 +123,8 @@ impl MuteButton {
             );
         }
 
-        self.colour_map.write_colours(&mut attributes);
+        self.colour_map
+            .write_colours_with_prefix(element_name.clone(), &mut attributes);
 
         for (key, value) in &attributes {
             element = element.attr(key.as_str(), value.as_str());
