@@ -936,6 +936,7 @@ dependencies = [
  "log",
  "nix",
  "opener",
+ "ritelinked",
  "serde",
  "serde_json",
  "simplelog",
