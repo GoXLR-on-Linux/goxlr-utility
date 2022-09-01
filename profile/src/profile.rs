@@ -4,7 +4,7 @@ use std::path::Path;
 use std::process::exit;
 use std::str::FromStr;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use enum_map::EnumMap;
 use log::{debug, error, warn};
 use strum::EnumProperty;
@@ -20,11 +20,12 @@ use crate::components::effects::Effects;
 use crate::components::fader::Fader;
 use crate::components::gender::GenderEncoderBase;
 use crate::components::hardtune::HardtuneEffectBase;
-use crate::components::megaphone::{MegaphoneEffectBase, Preset};
+use crate::components::megaphone::MegaphoneEffectBase;
 use crate::components::mixer::Mixers;
 use crate::components::mute::MuteButton;
 use crate::components::mute_chat::MuteChat;
 use crate::components::pitch::PitchEncoderBase;
+use crate::components::preset_writer::PresetWriter;
 use crate::components::reverb::ReverbEncoderBase;
 use crate::components::robot::RobotEffectBase;
 use crate::components::root::RootElement;
@@ -32,7 +33,7 @@ use crate::components::sample::SampleBase;
 use crate::components::scribble::Scribble;
 use crate::components::simple::{SimpleElement, SimpleElements};
 use crate::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
-use crate::{Faders, SampleButtons};
+use crate::{Faders, Preset, SampleButtons};
 
 #[derive(Debug)]
 pub struct Profile {
@@ -90,6 +91,11 @@ impl Profile {
         }
         archive.finish()?;
 
+        Ok(())
+    }
+
+    pub fn save_preset(&self, path: impl AsRef<Path>) -> Result<()> {
+        self.settings.write_preset(path)?;
         Ok(())
     }
 
@@ -284,14 +290,8 @@ impl ProfileSettings {
                     // tracking the opening and closing of tags except when writing, so we'll continue treating the reading
                     // as if it were a very flat structure.
                     if name.local_name.starts_with("megaphoneEffectpreset") {
-                        if let Some(id) = name
-                            .local_name
-                            .chars()
-                            .last()
-                            .map(|s| u8::from_str(&s.to_string()))
-                            .transpose()?
-                        {
-                            megaphone_effect.parse_megaphone_preset(id, &attributes)?;
+                        if let Ok(preset) = ProfileSettings::parse_preset(name.local_name.clone()) {
+                            megaphone_effect.parse_megaphone_preset(preset, &attributes)?;
                             continue;
                         }
                     }
@@ -302,14 +302,8 @@ impl ProfileSettings {
                     }
 
                     if name.local_name.starts_with("robotEffectpreset") {
-                        if let Some(id) = name
-                            .local_name
-                            .chars()
-                            .last()
-                            .map(|s| u8::from_str(&s.to_string()))
-                            .transpose()?
-                        {
-                            robot_effect.parse_robot_preset(id, &attributes)?;
+                        if let Ok(preset) = ProfileSettings::parse_preset(name.local_name.clone()) {
+                            robot_effect.parse_robot_preset(preset, &attributes)?;
                             continue;
                         }
                     }
@@ -320,14 +314,8 @@ impl ProfileSettings {
                     }
 
                     if name.local_name.starts_with("hardtuneEffectpreset") {
-                        if let Some(id) = name
-                            .local_name
-                            .chars()
-                            .last()
-                            .map(|s| u8::from_str(&s.to_string()))
-                            .transpose()?
-                        {
-                            hardtune_effect.parse_hardtune_preset(id, &attributes)?;
+                        if let Ok(preset) = ProfileSettings::parse_preset(name.local_name.clone()) {
+                            hardtune_effect.parse_hardtune_preset(preset, &attributes)?;
                             continue;
                         }
                     }
@@ -338,14 +326,8 @@ impl ProfileSettings {
                     }
 
                     if name.local_name.starts_with("reverbEncoderpreset") {
-                        if let Some(id) = name
-                            .local_name
-                            .chars()
-                            .last()
-                            .map(|s| u8::from_str(&s.to_string()))
-                            .transpose()?
-                        {
-                            reverb_encoder.parse_reverb_preset(id, &attributes)?;
+                        if let Ok(preset) = ProfileSettings::parse_preset(name.local_name.clone()) {
+                            reverb_encoder.parse_reverb_preset(preset, &attributes)?;
                             continue;
                         }
                     }
@@ -356,14 +338,8 @@ impl ProfileSettings {
                     }
 
                     if name.local_name.starts_with("echoEncoderpreset") {
-                        if let Some(id) = name
-                            .local_name
-                            .chars()
-                            .last()
-                            .map(|s| u8::from_str(&s.to_string()))
-                            .transpose()?
-                        {
-                            echo_encoder.parse_echo_preset(id, &attributes)?;
+                        if let Ok(preset) = ProfileSettings::parse_preset(name.local_name.clone()) {
+                            echo_encoder.parse_echo_preset(preset, &attributes)?;
                             continue;
                         }
                     }
@@ -374,14 +350,8 @@ impl ProfileSettings {
                     }
 
                     if name.local_name.starts_with("pitchEncoderpreset") {
-                        if let Some(id) = name
-                            .local_name
-                            .chars()
-                            .last()
-                            .map(|s| u8::from_str(&s.to_string()))
-                            .transpose()?
-                        {
-                            pitch_encoder.parse_pitch_preset(id, &attributes)?;
+                        if let Ok(preset) = ProfileSettings::parse_preset(name.local_name.clone()) {
+                            pitch_encoder.parse_pitch_preset(preset, &attributes)?;
                             continue;
                         }
                     }
@@ -392,14 +362,8 @@ impl ProfileSettings {
                     }
 
                     if name.local_name.starts_with("genderEncoderpreset") {
-                        if let Some(id) = name
-                            .local_name
-                            .chars()
-                            .last()
-                            .map(|s| u8::from_str(&s.to_string()))
-                            .transpose()?
-                        {
-                            gender_encoder.parse_gender_preset(id, &attributes)?;
+                        if let Ok(preset) = ProfileSettings::parse_preset(name.local_name.clone()) {
+                            gender_encoder.parse_gender_preset(preset, &attributes)?;
                             continue;
                         }
                     }
@@ -519,6 +483,72 @@ impl ProfileSettings {
         })
     }
 
+    pub fn load_preset<R: Read>(&mut self, read: R) -> Result<()> {
+        // So, in principle here, all we need to do is loop over the tags, check on the
+        // tag name, and load it directly into the relevant effect. This should force a
+        // replace of the current effect, and bam, done.
+
+        // Firstly, we need the current preset to overwrite.
+        let current = self.context().selected_effects();
+
+        // Create the parser..
+        let parser = EventReader::new(read);
+
+        let mut read_top = false;
+        for e in parser {
+            match e {
+                Ok(XmlReaderEvent::StartElement {
+                    name, attributes, ..
+                }) => {
+                    if !read_top {
+                        // This is the first 'Start Element', which will be the top level element.
+                        for attribute in attributes {
+                            if attribute.name.local_name == "name" {
+                                read_top = true;
+                                self.effects_mut(current)
+                                    .set_name(attribute.value.clone())?;
+                                break;
+                            }
+                        }
+
+                        if !read_top {
+                            return Err(anyhow!("Preset Name not Found, cannot proceed."));
+                        }
+                        continue;
+                    }
+
+                    match name.local_name.as_str() {
+                        "reverbEncoder" => self
+                            .reverb_encoder
+                            .parse_reverb_preset(current, &attributes)?,
+                        "echoEncoder" => {
+                            self.echo_encoder.parse_echo_preset(current, &attributes)?
+                        }
+                        "pitchEncoder" => self
+                            .pitch_encoder
+                            .parse_pitch_preset(current, &attributes)?,
+                        "genderEncoder" => self
+                            .gender_encoder
+                            .parse_gender_preset(current, &attributes)?,
+                        "megaphoneEffect" => self
+                            .megaphone_effect
+                            .parse_megaphone_preset(current, &attributes)?,
+                        "robotEffect" => {
+                            self.robot_effect.parse_robot_preset(current, &attributes)?
+                        }
+                        "hardtuneEffect" => self
+                            .hardtune_effect
+                            .parse_hardtune_preset(current, &attributes)?,
+                        _ => warn!("Unexpected Start Tag {}", name.local_name),
+                    }
+                }
+                Err(error) => error!("Error Occurred: {}", error),
+                _ => {}
+            }
+        }
+        Ok(())
+    }
+
     pub fn write<P: AsRef<Path>>(&self, path: P) -> Result<()> {
         let out_file = File::create(path)?;
         self.write_to(out_file)
@@ -539,15 +569,17 @@ impl ProfileSettings {
         self.context.write_context(&mut writer)?;
         self.mute_chat.write_mute_chat(&mut writer)?;
 
-        for (_fader, mute_button) in self.mute_buttons.iter() {
+        for (faders, mute_button) in self.mute_buttons.iter() {
             if let Some(mute_button) = mute_button {
-                mute_button.write_button(&mut writer)?;
+                let element_name = format!("mute{}", (faders as u8) + 1);
+                mute_button.write_button(element_name, &mut writer)?;
             }
         }
 
-        for (_fader, fader) in self.faders.iter() {
+        for (faders, fader) in self.faders.iter() {
             if let Some(fader) = fader {
-                fader.write_fader(&mut writer)?;
+                let element_name = format!("FaderMeter{}", faders as u8);
+                fader.write_fader(element_name, &mut writer)?;
             }
         }
 
@@ -589,6 +621,80 @@ impl ProfileSettings {
         self.root.write_final(&mut writer)?;
 
         Ok(())
+    }
+
+    pub fn write_preset<P: AsRef<Path>>(&self, path: P) -> Result<()> {
+        let out_file = File::create(path)?;
+        self.write_preset_to(out_file)
+    }
+
+    pub fn write_preset_to<W: Write>(&self, mut sink: W) -> Result<()> {
+        let mut writer = EmitterConfig::new()
+            .perform_indent(true)
+            .write_document_declaration(true)
+            .create_writer(&mut sink);
+
+        let current = self.context().selected_effects();
+        let preset_writer = PresetWriter::new(String::from(self.effects(current).name()));
+        preset_writer.write_initial(&mut writer)?;
+        preset_writer.write_tag(
+            &mut writer,
+            "reverbEncoder",
+            self.reverb_encoder.get_preset_attributes(current),
+        )?;
+
+        preset_writer.write_tag(
+            &mut writer,
+            "echoEncoder",
+            self.echo_encoder.get_preset_attributes(current),
+        )?;
+
+        preset_writer.write_tag(
+            &mut writer,
+            "pitchEncoder",
+            self.pitch_encoder.get_preset_attributes(current),
+        )?;
+
+        preset_writer.write_tag(
+            &mut writer,
+            "genderEncoder",
+            self.gender_encoder.get_preset_attributes(current),
+        )?;
+
+        preset_writer.write_tag(
+            &mut writer,
+            "megaphoneEffect",
+            self.megaphone_effect.get_preset_attributes(current),
+        )?;
+
+        preset_writer.write_tag(
+            &mut writer,
+            "robotEffect",
+            self.robot_effect.get_preset_attributes(current),
+        )?;
+
+        preset_writer.write_tag(
+            &mut writer,
+            "hardtuneEffect",
+            self.hardtune_effect.get_preset_attributes(current),
+        )?;
+
+        preset_writer.write_final(&mut writer)?;
+        Ok(())
+    }
+
+    pub fn parse_preset(key: String) -> Result<Preset> {
+        if let Some(id) = key
+            .chars()
+            .last()
+            .map(|s| u8::from_str(&s.to_string()))
+            .transpose()?
+        {
+            if let Some(preset) = Preset::iter().nth((id - 1) as usize) {
+                return Ok(preset);
+            }
+        }
+        Err(anyhow!("Unable to Parse Preset from Number"))
     }
 
     pub fn mixer_mut(&mut self) -> &mut Mixers {

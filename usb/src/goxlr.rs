@@ -358,6 +358,7 @@ impl<T: UsbContext> GoXLR<T> {
             .position(|&c| c == 0)
             .unwrap_or(date_slice.len()) as usize;
         let manufacture_date = String::from_utf8_lossy(&date_slice[..date_len]).to_string();
+
         Ok((serial_number, manufacture_date))
     }
 

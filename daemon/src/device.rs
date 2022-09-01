@@ -1,30 +1,34 @@
-use crate::audio::AudioHandler;
-use crate::mic_profile::{MicProfileAdapter, DEFAULT_MIC_PROFILE_NAME};
-use crate::profile::{version_newer_or_equal_to, ProfileAdapter, DEFAULT_PROFILE_NAME};
-use crate::{SettingsHandle, DISTRIBUTABLE_PROFILES};
+use std::collections::HashSet;
+use std::path::Path;
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use anyhow::{anyhow, Result};
 use enum_map::EnumMap;
 use enumset::EnumSet;
+use log::{debug, error, info};
+use ritelinked::LinkedHashSet;
+use strum::IntoEnumIterator;
+
 use goxlr_ipc::{
     DeviceType, FaderStatus, GoXLRCommand, HardwareStatus, Levels, MicSettings, MixerStatus,
 };
 use goxlr_profile_loader::components::mute::MuteFunction;
 use goxlr_profile_loader::SampleButtons;
 use goxlr_types::{
-    ChannelName, EffectBankPresets, EffectKey, EncoderName, FaderName,
+    ChannelName, EffectBankPresets, EffectKey, EncoderName, FaderName, HardTuneSource,
     InputDevice as BasicInputDevice, MicrophoneParamKey, OutputDevice as BasicOutputDevice,
-    SampleBank, VersionNumber,
+    RobotRange, SampleBank, VersionNumber,
 };
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::channelstate::ChannelState::{Muted, Unmuted};
 use goxlr_usb::goxlr::GoXLR;
 use goxlr_usb::routing::{InputDevice, OutputDevice};
 use goxlr_usb::rusb::UsbContext;
-use log::{debug, error, info};
-use std::collections::HashSet;
-use std::path::Path;
-use std::time::{SystemTime, UNIX_EPOCH};
-use strum::IntoEnumIterator;
+
+use crate::audio::AudioHandler;
+use crate::mic_profile::{MicProfileAdapter, DEFAULT_MIC_PROFILE_NAME};
+use crate::profile::{version_newer_or_equal_to, ProfileAdapter, DEFAULT_PROFILE_NAME};
+use crate::{SettingsHandle, DISTRIBUTABLE_ROOT};
 
 #[derive(Debug)]
 pub struct Device<'a, T: UsbContext> {
@@ -72,16 +76,25 @@ impl<'a, T: UsbContext> Device<'a, T> {
             device_type, profile, mic_profile
         );
 
-        let distrib_path = Path::new(DISTRIBUTABLE_PROFILES);
+        let distrib_path = Path::new(DISTRIBUTABLE_ROOT).join("profiles/");
         let profile = ProfileAdapter::from_named_or_default(
             profile_name,
-            vec![profile_directory, distrib_path],
+            vec![profile_directory, &distrib_path],
         );
         let mic_profile =
             MicProfileAdapter::from_named_or_default(mic_profile_name, vec![mic_profile_directory]);
 
+        let audio_loader = AudioHandler::new();
+        debug!("Created Audio Handler..");
+        debug!("{:?}", audio_loader);
+
+        if let Err(e) = &audio_loader {
+            error!("Error Running Script: {}", e);
+        }
+
         let mut audio_handler = None;
-        if let Ok(audio) = AudioHandler::new() {
+        if let Ok(audio) = audio_loader {
+            debug!("Audio Handler Loaded OK..");
             audio_handler = Some(audio);
         }
 
@@ -135,6 +148,9 @@ impl<'a, T: UsbContext> Device<'a, T> {
             lighting: self
                 .profile
                 .get_lighting_ipc(self.hardware.device_type == DeviceType::Mini),
+            effects: self
+                .profile
+                .get_effects_ipc(self.hardware.device_type == DeviceType::Mini),
             profile_name: self.profile.name().to_owned(),
             mic_profile_name: self.mic_profile.name().to_owned(),
         }
@@ -591,8 +607,14 @@ impl<'a, T: UsbContext> Device<'a, T> {
 
         debug!("Attempting to play: {}", sample_path.to_string_lossy());
         let audio_handler = self.audio_handler.as_mut().unwrap();
-        audio_handler.play_for_button(button, sample_path.to_str().unwrap().to_string())?;
-        self.profile.set_sample_button_state(button, true)?;
+        let result =
+            audio_handler.play_for_button(button, sample_path.to_str().unwrap().to_string());
+
+        if result.is_ok() {
+            self.profile.set_sample_button_state(button, true)?;
+        } else {
+            error!("{}", result.err().unwrap());
+        }
 
         Ok(())
     }
@@ -630,43 +652,39 @@ impl<'a, T: UsbContext> Device<'a, T> {
         self.load_effects()?;
         self.set_pitch_mode()?;
 
-        // Configure the various parts..
-        let mut keyset = HashSet::new();
-        keyset.extend(self.mic_profile.get_reverb_keyset());
-        keyset.extend(self.mic_profile.get_echo_keyset());
-        keyset.extend(self.mic_profile.get_pitch_keyset());
-        keyset.extend(self.mic_profile.get_gender_keyset());
-        keyset.extend(self.mic_profile.get_megaphone_keyset());
-        keyset.extend(self.mic_profile.get_robot_keyset());
-        keyset.extend(self.mic_profile.get_hardtune_keyset());
-
-        self.apply_effects(keyset)?;
+        self.apply_effects(self.mic_profile.get_reverb_keyset())?;
+        self.apply_effects(self.mic_profile.get_megaphone_keyset())?;
+        self.apply_effects(self.mic_profile.get_robot_keyset())?;
+        self.apply_effects(self.mic_profile.get_hardtune_keyset())?;
+        self.apply_effects(self.mic_profile.get_echo_keyset())?;
+        self.apply_effects(self.mic_profile.get_pitch_keyset())?;
+        self.apply_effects(self.mic_profile.get_gender_keyset())?;
 
         Ok(())
     }
 
     async fn toggle_megaphone(&mut self) -> Result<()> {
         self.profile.toggle_megaphone()?;
-        self.apply_effects(HashSet::from([EffectKey::MegaphoneEnabled]))?;
+        self.apply_effects(LinkedHashSet::from_iter([EffectKey::MegaphoneEnabled]))?;
         Ok(())
     }
 
     async fn toggle_robot(&mut self) -> Result<()> {
         self.profile.toggle_robot()?;
-        self.apply_effects(HashSet::from([EffectKey::RobotEnabled]))?;
+        self.apply_effects(LinkedHashSet::from_iter([EffectKey::RobotEnabled]))?;
         Ok(())
     }
 
     async fn toggle_hardtune(&mut self) -> Result<()> {
         self.profile.toggle_hardtune()?;
-        self.apply_effects(HashSet::from([EffectKey::HardTuneEnabled]))?;
+        self.apply_effects(LinkedHashSet::from_iter([EffectKey::HardTuneEnabled]))?;
         self.set_pitch_mode()?;
 
         // When changing the Hard Tune amount, we need to update the pitch encoder..
         let pitch = self.profile.get_pitch_encoder_position();
         self.goxlr.set_encoder_value(EncoderName::Pitch, pitch)?;
         self.profile.set_pitch_knob_position(pitch)?;
-        self.apply_effects(HashSet::from([EffectKey::PitchAmount]))?;
+        self.apply_effects(LinkedHashSet::from_iter([EffectKey::PitchAmount]))?;
         Ok(())
     }
 
@@ -674,7 +692,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
         self.profile.toggle_effects()?;
 
         // When this changes, we need to update all the 'Enabled' keys..
-        let mut key_updates = HashSet::new();
+        let mut key_updates = LinkedHashSet::new();
         key_updates.insert(EffectKey::Encoder1Enabled);
         key_updates.insert(EffectKey::Encoder2Enabled);
         key_updates.insert(EffectKey::Encoder3Enabled);
@@ -739,7 +757,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
             );
 
             self.profile.set_pitch_knob_position(encoders[0])?;
-            self.apply_effects(HashSet::from([EffectKey::PitchAmount]))?;
+            self.apply_effects(LinkedHashSet::from_iter([EffectKey::PitchAmount]))?;
         }
 
         if encoders[1] != self.profile.get_gender_value() {
@@ -749,7 +767,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 encoders[1]
             );
             self.profile.set_gender_value(encoders[1])?;
-            self.apply_effects(HashSet::from([EffectKey::GenderAmount]))?;
+            self.apply_effects(LinkedHashSet::from_iter([EffectKey::GenderAmount]))?;
         }
 
         if encoders[2] != self.profile.get_reverb_value() {
@@ -759,7 +777,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 encoders[2]
             );
             self.profile.set_reverb_value(encoders[2])?;
-            self.apply_effects(HashSet::from([EffectKey::ReverbAmount]))?;
+            self.apply_effects(LinkedHashSet::from_iter([EffectKey::ReverbAmount]))?;
         }
 
         if encoders[3] != self.profile.get_echo_value() {
@@ -769,7 +787,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 encoders[3]
             );
             self.profile.set_echo_value(encoders[3])?;
-            self.apply_effects(HashSet::from([EffectKey::EchoAmount]))?;
+            self.apply_effects(LinkedHashSet::from_iter([EffectKey::EchoAmount]))?;
         }
 
         Ok(())
@@ -812,7 +830,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
             }
             GoXLRCommand::SetSwearButtonVolume(volume) => {
                 self.mic_profile.set_bleep_level(volume)?;
-                self.apply_effects(HashSet::from([EffectKey::BleepLevel]))?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::BleepLevel]))?;
                 self.apply_mic_params(HashSet::from([MicrophoneParamKey::BleepLevel]))?;
             }
             GoXLRCommand::SetMicrophoneType(mic_type) => {
@@ -843,71 +861,71 @@ impl<'a, T: UsbContext> Device<'a, T> {
             }
             GoXLRCommand::SetEqGain(gain, value) => {
                 let param = self.mic_profile.set_eq_gain(gain, value)?;
-                self.apply_effects(HashSet::from([param]))?;
+                self.apply_effects(LinkedHashSet::from_iter([param]))?;
             }
             GoXLRCommand::SetEqFreq(freq, value) => {
                 let param = self.mic_profile.set_eq_freq(freq, value)?;
-                self.apply_effects(HashSet::from([param]))?;
+                self.apply_effects(LinkedHashSet::from_iter([param]))?;
             }
             GoXLRCommand::SetGateThreshold(value) => {
                 self.mic_profile.set_gate_threshold(value)?;
                 self.apply_mic_params(HashSet::from([MicrophoneParamKey::GateThreshold]))?;
-                self.apply_effects(HashSet::from([EffectKey::GateThreshold]))?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::GateThreshold]))?;
             }
 
             // Noise Gate
             GoXLRCommand::SetGateAttenuation(percentage) => {
                 self.mic_profile.set_gate_attenuation(percentage)?;
                 self.apply_mic_params(HashSet::from([MicrophoneParamKey::GateAttenuation]))?;
-                self.apply_effects(HashSet::from([EffectKey::GateAttenuation]))?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::GateAttenuation]))?;
             }
             GoXLRCommand::SetGateAttack(attack_time) => {
                 self.mic_profile.set_gate_attack(attack_time)?;
                 self.apply_mic_params(HashSet::from([MicrophoneParamKey::GateAttack]))?;
-                self.apply_effects(HashSet::from([EffectKey::GateAttack]))?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::GateAttack]))?;
             }
             GoXLRCommand::SetGateRelease(release_time) => {
                 self.mic_profile.set_gate_release(release_time)?;
                 self.apply_mic_params(HashSet::from([MicrophoneParamKey::GateRelease]))?;
-                self.apply_effects(HashSet::from([EffectKey::GateRelease]))?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::GateRelease]))?;
             }
             GoXLRCommand::SetGateActive(active) => {
                 self.mic_profile.set_gate_active(active)?;
 
                 // GateEnabled appears to only be an effect key.
-                self.apply_effects(HashSet::from([EffectKey::GateEnabled]))?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::GateEnabled]))?;
             }
 
             // Compressor
             GoXLRCommand::SetCompressorThreshold(value) => {
                 self.mic_profile.set_compressor_threshold(value)?;
                 self.apply_mic_params(HashSet::from([MicrophoneParamKey::CompressorThreshold]))?;
-                self.apply_effects(HashSet::from([EffectKey::CompressorThreshold]))?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::CompressorThreshold]))?;
             }
             GoXLRCommand::SetCompressorRatio(ratio) => {
                 self.mic_profile.set_compressor_ratio(ratio)?;
                 self.apply_mic_params(HashSet::from([MicrophoneParamKey::CompressorRatio]))?;
-                self.apply_effects(HashSet::from([EffectKey::CompressorRatio]))?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::CompressorRatio]))?;
             }
             GoXLRCommand::SetCompressorAttack(value) => {
                 self.mic_profile.set_compressor_attack(value)?;
                 self.apply_mic_params(HashSet::from([MicrophoneParamKey::CompressorAttack]))?;
-                self.apply_effects(HashSet::from([EffectKey::CompressorAttack]))?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::CompressorAttack]))?;
             }
             GoXLRCommand::SetCompressorReleaseTime(value) => {
                 self.mic_profile.set_compressor_release(value)?;
                 self.apply_mic_params(HashSet::from([MicrophoneParamKey::CompressorRelease]))?;
-                self.apply_effects(HashSet::from([EffectKey::CompressorRelease]))?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::CompressorRelease]))?;
             }
             GoXLRCommand::SetCompressorMakeupGain(value) => {
                 self.mic_profile.set_compressor_makeup(value)?;
                 self.apply_mic_params(HashSet::from([MicrophoneParamKey::CompressorMakeUpGain]))?;
-                self.apply_effects(HashSet::from([EffectKey::CompressorMakeUpGain]))?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::CompressorMakeUpGain]))?;
             }
 
             GoXLRCommand::SetDeeser(percentage) => {
                 self.mic_profile.set_deesser(percentage)?;
-                self.apply_effects(HashSet::from([EffectKey::DeEsser]))?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::DeEsser]))?;
             }
 
             // Colouring..
@@ -933,8 +951,8 @@ impl<'a, T: UsbContext> Device<'a, T> {
             GoXLRCommand::SetAllFaderDisplayStyle(display_style) => {
                 for fader in FaderName::iter() {
                     self.profile.set_fader_display(fader, display_style)?;
+                    self.set_fader_display_from_profile(fader)?;
                 }
-                self.load_colour_map()?;
             }
             GoXLRCommand::SetButtonColours(target, colour, colour2) => {
                 self.profile
@@ -963,6 +981,391 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 self.update_button_states()?;
             }
 
+            // Effects
+            GoXLRCommand::LoadEffectPreset(name) => {
+                let presets_directory = self.settings.get_presets_directory().await;
+                let distrib_path = Path::new(DISTRIBUTABLE_ROOT).join("presets/");
+
+                self.profile
+                    .load_preset(name, vec![&presets_directory, &distrib_path])?;
+
+                let current_effect_bank = self.profile.get_active_effect_bank();
+
+                // Force a reload of this effect bank..
+                // TODO: This is slightly sloppy, as it will make unneeded changes.
+                // TODO: Loading a profile should be separate from an 'event'.
+                self.load_effect_bank(current_effect_bank).await?;
+                self.update_button_states()?;
+            }
+
+            GoXLRCommand::SetActiveEffectPreset(preset) => {
+                // Welp, this one is simple :)
+                self.load_effect_bank(preset).await?;
+                self.update_button_states()?;
+            }
+
+            GoXLRCommand::RenameActivePreset(name) => {
+                let current_bank = self
+                    .profile
+                    .profile()
+                    .settings()
+                    .context()
+                    .selected_effects();
+                self.profile
+                    .profile_mut()
+                    .settings_mut()
+                    .effects_mut(current_bank)
+                    .set_name(name)?;
+            }
+
+            GoXLRCommand::SaveActivePreset() => {
+                let preset_directory = self.settings.get_presets_directory().await;
+                let current = self
+                    .profile
+                    .profile()
+                    .settings()
+                    .context()
+                    .selected_effects();
+                let mut name =
+                    String::from(self.profile.profile().settings().effects(current).name());
+                name = name.replace(' ', "_");
+
+                self.profile.write_preset(name, &preset_directory)?;
+            }
+
+            // Reverb
+            GoXLRCommand::SetReverbStyle(style) => {
+                self.profile.set_reverb_style(style)?;
+                self.apply_effects(self.mic_profile.get_reverb_keyset())?;
+            }
+            GoXLRCommand::SetReverbAmount(amount) => {
+                self.profile
+                    .get_active_reverb_profile_mut()
+                    .set_percentage_amount(amount)?;
+
+                let encoder_value = self.profile.get_reverb_value();
+                self.goxlr
+                    .set_encoder_value(EncoderName::Reverb, encoder_value)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::ReverbAmount]))?;
+            }
+            GoXLRCommand::SetReverbDecay(value) => {
+                self.profile
+                    .get_active_reverb_profile_mut()
+                    .set_decay_millis(value)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::ReverbDecay]))?;
+            }
+            GoXLRCommand::SetReverbEarlyLevel(value) => {
+                self.profile
+                    .get_active_reverb_profile_mut()
+                    .set_early_level(value)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::ReverbEarlyLevel]))?;
+            }
+            GoXLRCommand::SetReverbTailLevel(value) => {
+                self.profile
+                    .get_active_reverb_profile_mut()
+                    .set_tail_level(value)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::ReverbTailLevel]))?;
+            }
+            GoXLRCommand::SetReverbPreDelay(value) => {
+                self.profile
+                    .get_active_reverb_profile_mut()
+                    .set_predelay(value)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::ReverbPredelay]))?;
+            }
+            GoXLRCommand::SetReverbLowColour(value) => {
+                self.profile
+                    .get_active_reverb_profile_mut()
+                    .set_low_color(value)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::ReverbLowColor]))?;
+            }
+            GoXLRCommand::SetReverbHighColour(value) => {
+                self.profile
+                    .get_active_reverb_profile_mut()
+                    .set_hi_color(value)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::ReverbHighColor]))?;
+            }
+            GoXLRCommand::SetReverbHighFactor(value) => {
+                self.profile
+                    .get_active_reverb_profile_mut()
+                    .set_hi_factor(value)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::ReverbHighFactor]))?;
+            }
+            GoXLRCommand::SetReverbDiffuse(value) => {
+                self.profile
+                    .get_active_reverb_profile_mut()
+                    .set_diffuse(value)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::ReverbDiffuse]))?;
+            }
+            GoXLRCommand::SetReverbModSpeed(value) => {
+                self.profile
+                    .get_active_reverb_profile_mut()
+                    .set_mod_speed(value)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::ReverbModSpeed]))?;
+            }
+            GoXLRCommand::SetReverbModDepth(value) => {
+                self.profile
+                    .get_active_reverb_profile_mut()
+                    .set_mod_depth(value)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::ReverbModDepth]))?;
+            }
+
+            // Echo..
+            GoXLRCommand::SetEchoStyle(value) => {
+                self.profile.set_echo_style(value)?;
+                self.apply_effects(self.mic_profile.get_echo_keyset())?;
+            }
+            GoXLRCommand::SetEchoAmount(value) => {
+                self.profile
+                    .get_active_echo_profile_mut()
+                    .set_percentage_value(value)?;
+
+                let encoder_value = self.profile.get_echo_value();
+                self.goxlr
+                    .set_encoder_value(EncoderName::Echo, encoder_value)?;
+
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::EchoAmount]))?;
+            }
+            GoXLRCommand::SetEchoFeedback(value) => {
+                self.profile
+                    .get_active_echo_profile_mut()
+                    .set_feedback(value)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::EchoFeedback]))?;
+            }
+            GoXLRCommand::SetEchoTempo(value) => {
+                self.profile
+                    .get_active_echo_profile_mut()
+                    .set_tempo(value)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::EchoTempo]))?;
+            }
+            GoXLRCommand::SetEchoDelayLeft(value) => {
+                self.profile
+                    .get_active_echo_profile_mut()
+                    .set_time_left(value)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::EchoDelayL]))?;
+            }
+            GoXLRCommand::SetEchoDelayRight(value) => {
+                self.profile
+                    .get_active_echo_profile_mut()
+                    .set_time_right(value)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::EchoDelayR]))?;
+            }
+            GoXLRCommand::SetEchoFeedbackLeft(value) => {
+                self.profile
+                    .get_active_echo_profile_mut()
+                    .set_feedback_left(value)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::EchoFeedbackL]))?;
+            }
+            GoXLRCommand::SetEchoFeedbackRight(value) => {
+                self.profile
+                    .get_active_echo_profile_mut()
+                    .set_feedback_right(value)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::EchoFeedbackR]))?;
+            }
+            GoXLRCommand::SetEchoFeedbackXFBRtoL(value) => {
+                self.profile
+                    .get_active_echo_profile_mut()
+                    .set_xfb_r_to_l(value)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::EchoXFBRtoL]))?;
+            }
+            GoXLRCommand::SetEchoFeedbackXFBLtoR(value) => {
+                self.profile
+                    .get_active_echo_profile_mut()
+                    .set_xfb_l_to_r(value)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::EchoXFBLtoR]))?;
+            }
+
+            // Pitch
+            GoXLRCommand::SetPitchStyle(value) => {
+                self.profile.set_pitch_style(value)?;
+                self.set_pitch_mode()?;
+
+                // Force set the encoder position, when going from Wide -> Narrow, the encoder
+                // will still return it's 'Wide' value during polls which error out otherwise.
+                let value = self.profile.get_pitch_encoder_position();
+                self.goxlr.set_encoder_value(EncoderName::Pitch, value)?;
+            }
+            GoXLRCommand::SetPitchAmount(value) => {
+                let hard_tune_enabled = self.profile.is_hardtune_enabled(true);
+                self.profile
+                    .get_active_pitch_profile_mut()
+                    .set_knob_position(value, hard_tune_enabled)?;
+
+                let value = self.profile.get_pitch_encoder_position();
+                self.goxlr.set_encoder_value(EncoderName::Pitch, value)?;
+
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::PitchAmount]))?;
+            }
+            GoXLRCommand::SetPitchCharacter(value) => {
+                self.profile
+                    .get_active_pitch_profile_mut()
+                    .set_inst_ratio(value)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::PitchCharacter]))?;
+            }
+
+            // Gender
+            GoXLRCommand::SetGenderStyle(value) => {
+                self.profile.set_gender_style(value)?;
+                self.apply_effects(self.mic_profile.get_gender_keyset())?;
+            }
+            GoXLRCommand::SetGenderAmount(value) => {
+                self.profile
+                    .get_active_gender_profile_mut()
+                    .set_amount(value)?;
+                let value = self.profile.get_gender_value();
+                self.goxlr.set_encoder_value(EncoderName::Gender, value)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::GenderAmount]))?;
+            }
+
+            GoXLRCommand::SetMegaphoneStyle(value) => {
+                self.profile.set_megaphone_style(value)?;
+                self.apply_effects(self.mic_profile.get_megaphone_keyset())?;
+            }
+            GoXLRCommand::SetMegaphoneAmount(value) => {
+                self.profile
+                    .get_active_megaphone_profile_mut()
+                    .set_trans_dist_amt(value)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::MegaphoneAmount]))?;
+            }
+            GoXLRCommand::SetMegaphonePostGain(value) => {
+                self.profile
+                    .get_active_megaphone_profile_mut()
+                    .set_trans_postgain(value)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::MegaphonePostGain]))?;
+            }
+
+            // Robot
+            GoXLRCommand::SetRobotStyle(value) => {
+                self.profile.set_robot_style(value)?;
+                self.apply_effects(self.mic_profile.get_robot_keyset())?;
+            }
+            GoXLRCommand::SetRobotGain(range, value) => {
+                let profile = self.profile.get_active_robot_profile_mut();
+                match range {
+                    RobotRange::Low => {
+                        profile.set_vocoder_low_gain(value)?;
+                        self.apply_effects(LinkedHashSet::from_iter([EffectKey::RobotLowGain]))?;
+                    }
+                    RobotRange::Medium => {
+                        profile.set_vocoder_mid_gain(value)?;
+                        self.apply_effects(LinkedHashSet::from_iter([EffectKey::RobotMidGain]))?;
+                    }
+                    RobotRange::High => {
+                        profile.set_vocoder_high_gain(value)?;
+                        self.apply_effects(LinkedHashSet::from_iter([EffectKey::RobotHiGain]))?;
+                    }
+                }
+            }
+            GoXLRCommand::SetRobotFreq(range, value) => {
+                let profile = self.profile.get_active_robot_profile_mut();
+                match range {
+                    RobotRange::Low => {
+                        profile.set_vocoder_low_freq(value)?;
+                        self.apply_effects(LinkedHashSet::from_iter([EffectKey::RobotLowFreq]))?;
+                    }
+                    RobotRange::Medium => {
+                        profile.set_vocoder_mid_freq(value)?;
+                        self.apply_effects(LinkedHashSet::from_iter([EffectKey::RobotMidFreq]))?;
+                    }
+                    RobotRange::High => {
+                        profile.set_vocoder_high_freq(value)?;
+                        self.apply_effects(LinkedHashSet::from_iter([EffectKey::RobotHiFreq]))?;
+                    }
+                }
+            }
+            GoXLRCommand::SetRobotWidth(range, value) => {
+                let profile = self.profile.get_active_robot_profile_mut();
+                match range {
+                    RobotRange::Low => {
+                        profile.set_vocoder_low_bw(value)?;
+                        self.apply_effects(LinkedHashSet::from_iter([EffectKey::RobotLowWidth]))?;
+                    }
+                    RobotRange::Medium => {
+                        profile.set_vocoder_mid_bw(value)?;
+                        self.apply_effects(LinkedHashSet::from_iter([EffectKey::RobotMidWidth]))?;
+                    }
+                    RobotRange::High => {
+                        profile.set_vocoder_high_bw(value)?;
+                        self.apply_effects(LinkedHashSet::from_iter([EffectKey::RobotHiWidth]))?;
+                    }
+                }
+            }
+            GoXLRCommand::SetRobotWaveform(value) => {
+                self.profile
+                    .get_active_robot_profile_mut()
+                    .set_synthosc_waveform(value)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::RobotWaveform]))?;
+            }
+            GoXLRCommand::SetRobotPulseWidth(value) => {
+                self.profile
+                    .get_active_robot_profile_mut()
+                    .set_synthosc_pulse_width(value)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::RobotPulseWidth]))?;
+            }
+            GoXLRCommand::SetRobotThreshold(value) => {
+                self.profile
+                    .get_active_robot_profile_mut()
+                    .set_vocoder_gate_threshold(value)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::RobotThreshold]))?;
+            }
+            GoXLRCommand::SetRobotDryMix(value) => {
+                self.profile
+                    .get_active_robot_profile_mut()
+                    .set_dry_mix(value)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::RobotDryMix]))?;
+            }
+
+            // Hard Tune
+            GoXLRCommand::SetHardTuneStyle(value) => {
+                self.profile.set_hardtune_style(value)?;
+                self.apply_effects(self.mic_profile.get_hardtune_keyset())?;
+            }
+            GoXLRCommand::SetHardTuneAmount(value) => {
+                self.profile
+                    .get_active_hardtune_profile_mut()
+                    .set_amount(value)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::HardTuneAmount]))?;
+            }
+            GoXLRCommand::SetHardTuneRate(value) => {
+                self.profile
+                    .get_active_hardtune_profile_mut()
+                    .set_rate(value)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::HardTuneRate]))?;
+            }
+            GoXLRCommand::SetHardTuneWindow(value) => {
+                self.profile
+                    .get_active_hardtune_profile_mut()
+                    .set_window(value)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::HardTuneWindow]))?;
+            }
+            GoXLRCommand::SetHardTuneSource(value) => {
+                if self.profile.get_hardtune_source() == value {
+                    // Do nothing, we're already there.
+                    return Ok(());
+                }
+
+                // We need to update the Routing table to reflect this change..
+                if value == HardTuneSource::All || self.profile.is_active_hardtune_source_all() {
+                    self.profile.set_hardtune_source(value)?;
+
+                    // One way or another, we need to update all the inputs..
+                    self.apply_routing(BasicInputDevice::Music)?;
+                    self.apply_routing(BasicInputDevice::Game)?;
+                    self.apply_routing(BasicInputDevice::LineIn)?;
+                    self.apply_routing(BasicInputDevice::System)?;
+                } else {
+                    let current = self.profile.get_active_hardtune_source();
+                    self.profile.set_hardtune_source(value)?;
+                    let new = self.profile.get_active_hardtune_source();
+
+                    // Remove from current, add to New.
+                    self.apply_routing(current)?;
+                    self.apply_routing(new)?;
+                }
+
+                // TODO: Check this..
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::HardTuneKeySource]))?;
+            }
+
             // Profiles
             GoXLRCommand::NewProfile(profile_name) => {
                 let profile_directory = self.settings.get_profile_directory().await;
@@ -986,11 +1389,11 @@ impl<'a, T: UsbContext> Device<'a, T> {
             }
             GoXLRCommand::LoadProfile(profile_name) => {
                 let profile_directory = self.settings.get_profile_directory().await;
-                let distrib_path = Path::new(DISTRIBUTABLE_PROFILES);
+                let distrib_path = Path::new(DISTRIBUTABLE_ROOT).join("profiles/");
 
                 self.profile = ProfileAdapter::from_named(
                     profile_name,
-                    vec![&profile_directory, distrib_path],
+                    vec![&profile_directory, &distrib_path],
                 )?;
                 self.apply_profile()?;
                 self.settings
@@ -1145,6 +1548,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 | BasicInputDevice::Game
                 | BasicInputDevice::LineIn
                 | BasicInputDevice::System => {
+                    debug!("Light HardTune Enabled for Channel: {:?}", input);
                     left[hardtune_position] = 0x04;
                     right[hardtune_position] = 0x04;
                 }
@@ -1153,6 +1557,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
         } else {
             // We need to match only against a specific target..
             if input == self.profile.get_active_hardtune_source() {
+                debug!("Hard HardTune Enabled for Channel: {:?}", input);
                 left[hardtune_position] = 0x10;
                 right[hardtune_position] = 0x10;
             }
@@ -1437,10 +1842,6 @@ impl<'a, T: UsbContext> Device<'a, T> {
             self.apply_routing(input)?;
         }
 
-        if self.hardware.device_type == DeviceType::Full {
-            self.set_pitch_mode()?;
-        }
-
         Ok(())
     }
 
@@ -1455,7 +1856,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
         Ok(())
     }
 
-    fn apply_effects(&mut self, params: HashSet<EffectKey>) -> Result<()> {
+    fn apply_effects(&mut self, params: LinkedHashSet<EffectKey>) -> Result<()> {
         let mut vec = Vec::new();
         for effect in params {
             vec.push((
@@ -1494,10 +1895,9 @@ impl<'a, T: UsbContext> Device<'a, T> {
         keys.remove(&MicrophoneParamKey::CondenserGain);
         keys.remove(&MicrophoneParamKey::JackGain);
         keys.insert(self.mic_profile.mic_type().get_gain_param());
-
         self.apply_mic_params(keys)?;
 
-        let mut keys = HashSet::new();
+        let mut keys = LinkedHashSet::new();
         keys.extend(self.mic_profile.get_common_keys());
 
         if self.hardware.device_type == DeviceType::Full {
@@ -1507,6 +1907,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
         self.apply_effects(keys)?;
 
         if self.hardware.device_type == DeviceType::Full {
+            self.set_pitch_mode()?;
             self.load_effects()?;
         }
         Ok(())

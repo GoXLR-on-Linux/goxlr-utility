@@ -12,8 +12,7 @@ use xml::EventWriter;
 use anyhow::{anyhow, Result};
 
 use crate::components::colours::ColourMap;
-use crate::components::megaphone::Preset;
-use crate::components::megaphone::Preset::{Preset1, Preset2, Preset3, Preset4, Preset5, Preset6};
+use crate::Preset;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -68,7 +67,11 @@ impl PitchEncoderBase {
         Ok(())
     }
 
-    pub fn parse_pitch_preset(&mut self, id: u8, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_pitch_preset(
+        &mut self,
+        preset_enum: Preset,
+        attributes: &[OwnedAttribute],
+    ) -> Result<()> {
         let mut preset = PitchEncoder::new();
         for attr in attributes {
             if attr.name.local_name == "PITCH_STYLE" {
@@ -106,21 +109,7 @@ impl PitchEncoderBase {
             );
         }
 
-        // Ok, we should be able to store this now..
-        if id == 1 {
-            self.preset_map[Preset1] = preset;
-        } else if id == 2 {
-            self.preset_map[Preset2] = preset;
-        } else if id == 3 {
-            self.preset_map[Preset3] = preset;
-        } else if id == 4 {
-            self.preset_map[Preset4] = preset;
-        } else if id == 5 {
-            self.preset_map[Preset5] = preset;
-        } else if id == 6 {
-            self.preset_map[Preset6] = preset;
-        }
-
+        self.preset_map[preset_enum] = preset;
         Ok(())
     }
 
@@ -139,34 +128,12 @@ impl PitchEncoderBase {
         writer.write(element)?;
 
         // Because all of these are seemingly 'guaranteed' to exist, we can straight dump..
-        for (key, value) in &self.preset_map {
-            let mut sub_attributes: HashMap<String, String> = HashMap::default();
-
-            let tag_name = format!("pitchEncoder{}", key.get_str("tagSuffix").unwrap());
+        for preset in Preset::iter() {
+            let tag_name = format!("pitchEncoder{}", preset.get_str("tagSuffix").unwrap());
             let mut sub_element: StartElementBuilder =
                 XmlWriterEvent::start_element(tag_name.as_str());
 
-            sub_attributes.insert(
-                "PITCH_KNOB_POSITION".to_string(),
-                format!("{}", value.knob_position),
-            );
-            sub_attributes.insert(
-                "PITCH_STYLE".to_string(),
-                value.style.get_str("uiIndex").unwrap().to_string(),
-            );
-            sub_attributes.insert("PITCH_RANGE".to_string(), format!("{}", value.range));
-            sub_attributes.insert(
-                "PITCH_SHIFT_THRESHOLD".to_string(),
-                format!("{}", value.threshold),
-            );
-
-            if let Some(inst_ratio) = value.inst_ratio {
-                sub_attributes.insert(
-                    "PITCH_SHIFT_INST_RATIO".to_string(),
-                    format!("{}", inst_ratio),
-                );
-            }
-
+            let sub_attributes = self.get_preset_attributes(preset);
             for (key, value) in &sub_attributes {
                 sub_element = sub_element.attr(key.as_str(), value.as_str());
             }
@@ -178,6 +145,34 @@ impl PitchEncoderBase {
         // Finally, close the 'main' tag.
         writer.write(XmlWriterEvent::end_element())?;
         Ok(())
+    }
+
+    pub fn get_preset_attributes(&self, preset: Preset) -> HashMap<String, String> {
+        let mut attributes = HashMap::new();
+        let value = &self.preset_map[preset];
+
+        attributes.insert(
+            "PITCH_KNOB_POSITION".to_string(),
+            format!("{}", value.knob_position),
+        );
+        attributes.insert(
+            "PITCH_STYLE".to_string(),
+            value.style.get_str("uiIndex").unwrap().to_string(),
+        );
+        attributes.insert("PITCH_RANGE".to_string(), format!("{}", value.range));
+        attributes.insert(
+            "PITCH_SHIFT_THRESHOLD".to_string(),
+            format!("{}", value.threshold),
+        );
+
+        if let Some(inst_ratio) = value.inst_ratio {
+            attributes.insert(
+                "PITCH_SHIFT_INST_RATIO".to_string(),
+                format!("{}", inst_ratio),
+            );
+        }
+
+        attributes
     }
 
     pub fn colour_map(&self) -> &ColourMap {
@@ -300,21 +295,48 @@ impl PitchEncoder {
     pub fn style(&self) -> &PitchStyle {
         &self.style
     }
+    pub fn set_style(&mut self, style: PitchStyle) {
+        // We need to update the knob value when we switch styles..
+        if self.style == style {
+            return;
+        }
 
+        // If hard tune is enabled, there's a risk of going from 12 to 6, but ultimately
+        // the Daemon will fix that during the next poll.
+        if self.style == PitchStyle::Wide && style == PitchStyle::Narrow {
+            self.knob_position /= 2;
+        } else {
+            self.knob_position *= 2;
+        }
+        self.style = style;
+    }
+
+    // TODO: Range is dynamically generated, based on Style (12 or 24)
     pub fn range(&self) -> u8 {
         self.range
     }
+
+    // TODO: Work out how this is changed and set.
     pub fn threshold(&self) -> i8 {
         self.threshold
     }
     pub fn inst_ratio(&self) -> Option<u8> {
         self.inst_ratio
     }
+    pub fn set_inst_ratio(&mut self, value: u8) -> Result<()> {
+        if value > 100 {
+            return Err(anyhow!("Character should be a percentage"));
+        }
+        self.inst_ratio = Some(value);
+        Ok(())
+    }
+
     pub fn inst_ratio_value(&self) -> u8 {
         if let Some(value) = self.inst_ratio {
             return value;
         }
-        0
+        // According to Windows, the Default is 75..
+        75
     }
 
     pub fn pitch_mode(&self, hardtune_enabled: bool) -> u8 {

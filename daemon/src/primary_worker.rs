@@ -59,9 +59,10 @@ pub async fn handle_changes(
             () = sleep(sleep_duration) => {
                 if loop_count == detect_count {
                     if let Some((device, descriptor)) = find_new_device(&devices, &ignore_list) {
+                    let existing_serials: Vec<String> = get_all_serials(&devices);
                     let bus_number = device.bus_number();
                     let address = device.address();
-                        match load_device(device, descriptor, &settings).await {
+                        match load_device(device, descriptor, existing_serials, &settings).await {
                             Ok(device) => {
                                 devices.insert(device.serial().to_owned(), device);
                             }
@@ -101,10 +102,12 @@ pub async fn handle_changes(
                                 profile_directory: settings.get_profile_directory().await,
                                 mic_profile_directory: settings.get_mic_profile_directory().await,
                                 samples_directory: settings.get_samples_directory().await,
+                                presets_directory: settings.get_presets_directory().await,
                             },
                             files: Files {
                                 profiles: file_manager.get_profiles(&settings),
                                 mic_profiles: file_manager.get_mic_profiles(&settings),
+                                presets: file_manager.get_presets(&settings),
                             },
                             ..Default::default()
                         };
@@ -120,7 +123,8 @@ pub async fn handle_changes(
                     DeviceCommand::OpenPath(path_type, sender) => {
                         let result = opener::open(match path_type {
                             PathTypes::Profiles => settings.get_profile_directory().await,
-                            PathTypes::MicProfiles => settings.get_mic_profile_directory().await
+                            PathTypes::MicProfiles => settings.get_mic_profile_directory().await,
+                            PathTypes::Presets => settings.get_presets_directory().await
                         });
                         if result.is_err() {
                             let _ = sender.send(DaemonResponse::Error("Unable to Open".to_string()));
@@ -174,9 +178,20 @@ fn find_new_device(
     None
 }
 
+fn get_all_serials(existing_devices: &HashMap<String, Device<GlobalContext>>) -> Vec<String> {
+    let mut serials: Vec<String> = vec![];
+
+    for device in existing_devices {
+        serials.push(device.0.clone());
+    }
+
+    serials
+}
+
 async fn load_device(
     device: rusb::Device<GlobalContext>,
     descriptor: DeviceDescriptor,
+    existing_serials: Vec<String>,
     settings: &SettingsHandle,
 ) -> Result<Device<'_, GlobalContext>> {
     let mut device = GoXLR::from_device(device.open()?, descriptor)?;
@@ -197,7 +212,21 @@ async fn load_device(
         address: device.usb_address(),
         version,
     };
-    let (serial_number, manufactured_date) = device.get_serial_number()?;
+    let (mut serial_number, manufactured_date) = device.get_serial_number()?;
+    if serial_number.is_empty() {
+        let mut serial = String::from("");
+        for i in 0..=24 {
+            serial = format!("UNKNOWN-SN-{}", i);
+            if !existing_serials.contains(&serial) {
+                break;
+            }
+        }
+
+        warn!("This GoXLR isn't reporting a serial number, this may cause issues if you're running with multiple devices.");
+        serial_number = serial;
+        warn!("Generated Internal Serial Number: {}", serial_number);
+    }
+
     let hardware = HardwareStatus {
         versions: device.get_firmware_version()?,
         serial_number: serial_number.clone(),

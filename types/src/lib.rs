@@ -145,9 +145,9 @@ pub enum EffectKey {
     ReverbEarlyLevel = 0x0037,
     ReverbTailLevel = 0x0039, // Always sent as 0.
     ReverbPredelay = 0x0030,
-    ReverbLoColor = 0x0032,
-    ReverbHiColor = 0x0033,
-    ReverbHiFactor = 0x0034,
+    ReverbLowColor = 0x0032,
+    ReverbHighColor = 0x0033,
+    ReverbHighFactor = 0x0034,
     ReverbDiffuse = 0x0031,
     ReverbModSpeed = 0x0035,
     ReverbModDepth = 0x0036,
@@ -370,7 +370,7 @@ impl MicrophoneType {
     }
 }
 
-#[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum EffectBankPresets {
@@ -556,4 +556,95 @@ pub enum CompressorReleaseTime {
     Comp1500ms,
     Comp2000ms,
     Comp3000ms,
+}
+
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum ReverbStyle {
+    Library,
+    DarkBloom,
+    MusicClub,
+    RealPlate,
+    Chapel,
+    HockeyArena,
+}
+
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum EchoStyle {
+    Quarter,
+    Eighth,
+    Triplet,
+    PingPong,
+    ClassicSlap,
+    MultiTap,
+}
+
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum PitchStyle {
+    Narrow,
+    Wide,
+}
+
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum GenderStyle {
+    Narrow,
+    Medium,
+    Wide,
+}
+
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum MegaphoneStyle {
+    Megaphone,
+    Radio,
+    OnThePhone,
+    Overdrive,
+    BuzzCutt,
+    Tweed,
+}
+
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum RobotStyle {
+    Robot1,
+    Robot2,
+    Robot3,
+}
+
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum RobotRange {
+    Low,
+    Medium,
+    High,
+}
+
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum HardTuneStyle {
+    Natural,
+    Medium,
+    Hard,
+}
+
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum HardTuneSource {
+    All,
+    Music,
+    Game,
+    LineIn,
+    System,
 }

@@ -11,6 +11,7 @@ pub mod mixer;
 pub mod mute;
 pub mod mute_chat;
 pub mod pitch;
+pub mod preset_writer;
 pub mod reverb;
 pub mod robot;
 pub mod root;

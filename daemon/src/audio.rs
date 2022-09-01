@@ -5,12 +5,15 @@ use log::{debug, error};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
+use std::time::{Duration, Instant};
 
 #[derive(Debug)]
 pub struct AudioHandler {
     script_path: PathBuf,
-    output_device: String,
+    output_device: Option<String>,
     _input_device: Option<String>,
+
+    last_device_check: Instant,
 
     active_streams: HashMap<SampleButtons, Child>,
 }
@@ -40,7 +43,6 @@ impl AudioHandler {
 
         // This is temporary, just grab the script in the dev directory.
         if !script_path.exists() {
-            error!("Unable to locate GoXLR Audio Script, Sampler Disabled.");
             return Err(anyhow!(
                 "Unable to locate GoXLR Audio Script, Sampler Disabled."
             ));
@@ -50,53 +52,40 @@ impl AudioHandler {
             script_path.to_string_lossy()
         );
 
-        let script = script_path.to_str().expect("Unable to get the Script Path");
+        let mut handler = Self {
+            script_path,
+            output_device: None,
+            _input_device: None,
 
-        debug!("Attempting to find Sample Output Device..");
-        let sampler_out = Command::new(script)
-            .arg("get-output-device")
+            last_device_check: Instant::now(),
+            active_streams: HashMap::new(),
+        };
+
+        handler.output_device = handler.find_device("get-output-device")?;
+        handler._input_device = handler.find_device("get-input-device")?;
+
+        Ok(handler)
+    }
+
+    fn find_device(&self, arg: &str) -> Result<Option<String>> {
+        debug!("Attempting to Find Device..");
+        let command = Command::new(&self.script_path)
+            .arg(arg)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
-            .output()
-            .expect("Unable to Execute Script");
-
-        if !sampler_out.status.success() {
-            error!("{}", String::from_utf8(sampler_out.stderr)?);
-            error!("Unable to find sample output device, Sampler Disabled.");
-            return Err(anyhow!(
-                "Unable to find sample output device, Sampler Disabled."
-            ));
-        }
-        let output_device = String::from_utf8(sampler_out.stdout)?;
-        let output_device = output_device.trim().to_string();
-        debug!("Found output Device: {}", output_device);
-
-        // Now get the recorder
-        debug!("Attempting to find Sampler Input Device..");
-        let sampler_in = Command::new(script)
-            .arg("get-input-device")
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .output()
-            .expect("Unable to Execute Script");
+            .output()?;
 
         let mut input_device = None;
-        if !sampler_in.status.success() {
-            error!("{}", String::from_utf8(sampler_in.stderr)?);
-            error!("Unable to find sample capture device, Sample recording disabled.");
-        } else {
-            let found = String::from_utf8(sampler_in.stdout)?;
+        if command.status.success() {
+            let found = String::from_utf8(command.stdout)?;
             input_device = Some(found.trim().to_string());
-            debug!("Found input Device: {}", found.trim());
+            debug!("Found Device: {}", found.trim());
+        } else {
+            error!("Script Says: {}", String::from_utf8(command.stderr)?.trim());
+            error!("Unable to find sample device, will retry in 10 seconds");
         }
 
-        Ok(Self {
-            script_path,
-            output_device,
-            _input_device: input_device,
-
-            active_streams: HashMap::new(),
-        })
+        Ok(input_device)
     }
 
     pub fn check_playing(&mut self) {
@@ -128,14 +117,25 @@ impl AudioHandler {
     }
 
     pub fn play_for_button(&mut self, button: SampleButtons, file: String) -> Result<()> {
-        let command = Command::new(self.get_script())
-            .arg("play-file")
-            .arg(&self.output_device)
-            .arg(file)
-            .spawn()
-            .expect("Unable to run script");
+        if self.output_device.is_none()
+            && (self.last_device_check + Duration::from_secs(5)) < Instant::now()
+        {
+            // Perform a re-check, to see if the devices have become available..
+            self.output_device = self.find_device("get-output-device")?;
+            self.last_device_check = Instant::now();
+        }
 
-        self.active_streams.insert(button, command);
+        if let Some(output_device) = &self.output_device {
+            let command = Command::new(self.get_script())
+                .arg("play-file")
+                .arg(output_device)
+                .arg(file)
+                .spawn()?;
+            self.active_streams.insert(button, command);
+        } else {
+            return Err(anyhow!("Unable to play Sample, Output device not found"));
+        }
+
         Ok(())
     }
 

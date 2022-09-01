@@ -9,6 +9,7 @@ use goxlr_types::{
     GateTimes, MicrophoneParamKey, MicrophoneType, MiniEqFrequencies,
 };
 use log::error;
+use ritelinked::LinkedHashSet;
 use std::collections::{HashMap, HashSet};
 use std::fs::{remove_file, File};
 use std::io::{Cursor, Read, Seek};
@@ -615,9 +616,15 @@ impl MicProfileAdapter {
                 .into(),
             EffectKey::ReverbTailLevel => 0, // Always 0 from the Windows UI
             EffectKey::ReverbPredelay => main_profile.get_active_reverb_profile().predelay().into(),
-            EffectKey::ReverbLoColor => main_profile.get_active_reverb_profile().locolor().into(),
-            EffectKey::ReverbHiColor => main_profile.get_active_reverb_profile().hicolor().into(),
-            EffectKey::ReverbHiFactor => main_profile.get_active_reverb_profile().hifactor().into(),
+            EffectKey::ReverbLowColor => {
+                main_profile.get_active_reverb_profile().low_color().into()
+            }
+            EffectKey::ReverbHighColor => {
+                main_profile.get_active_reverb_profile().high_color().into()
+            }
+            EffectKey::ReverbHighFactor => {
+                main_profile.get_active_reverb_profile().hifactor().into()
+            }
             EffectKey::ReverbDiffuse => main_profile.get_active_reverb_profile().diffuse().into(),
             EffectKey::ReverbModSpeed => {
                 main_profile.get_active_reverb_profile().mod_speed().into()
@@ -788,8 +795,8 @@ impl MicProfileAdapter {
             EffectKey::RobotDryMix => main_profile.get_active_robot_profile().dry_mix().into(),
             EffectKey::RobotStyle => *main_profile.get_active_robot_profile().style() as i32,
 
-            EffectKey::RobotEnabled => main_profile.is_robot_enabled().into(),
-            EffectKey::MegaphoneEnabled => main_profile.is_megaphone_enabled().into(),
+            EffectKey::RobotEnabled => main_profile.is_robot_enabled(false).into(),
+            EffectKey::MegaphoneEnabled => main_profile.is_megaphone_enabled(false).into(),
             EffectKey::HardTuneEnabled => main_profile.is_hardtune_enabled(false).into(),
 
             // Encoders are always enabled when FX is enabled..
@@ -885,67 +892,68 @@ impl MicProfileAdapter {
     }
 
     // These are specific Group Key sets, useful for applying a specific effect at once.
-    pub fn get_reverb_keyset(&self) -> HashSet<EffectKey> {
-        let mut set = HashSet::new();
+    pub fn get_reverb_keyset(&self) -> LinkedHashSet<EffectKey> {
+        let mut set = LinkedHashSet::new();
         set.insert(EffectKey::ReverbAmount);
+        set.insert(EffectKey::ReverbType);
         set.insert(EffectKey::ReverbDecay);
-        set.insert(EffectKey::ReverbEarlyLevel);
-        set.insert(EffectKey::ReverbTailLevel);
         set.insert(EffectKey::ReverbPredelay);
-        set.insert(EffectKey::ReverbLoColor);
-        set.insert(EffectKey::ReverbHiColor);
-        set.insert(EffectKey::ReverbHiFactor);
         set.insert(EffectKey::ReverbDiffuse);
+        set.insert(EffectKey::ReverbLowColor);
+        set.insert(EffectKey::ReverbHighColor);
+        set.insert(EffectKey::ReverbHighFactor);
         set.insert(EffectKey::ReverbModSpeed);
         set.insert(EffectKey::ReverbModDepth);
-        set.insert(EffectKey::ReverbType);
+        set.insert(EffectKey::ReverbEarlyLevel);
+        set.insert(EffectKey::ReverbTailLevel);
 
         set
     }
 
-    pub fn get_echo_keyset(&self) -> HashSet<EffectKey> {
-        let mut set = HashSet::new();
+    pub fn get_echo_keyset(&self) -> LinkedHashSet<EffectKey> {
+        let mut set = LinkedHashSet::new();
         set.insert(EffectKey::EchoAmount);
-        set.insert(EffectKey::EchoFeedback);
-        set.insert(EffectKey::EchoTempo);
-        set.insert(EffectKey::EchoDelayL);
-        set.insert(EffectKey::EchoDelayR);
+        set.insert(EffectKey::EchoSource);
+        set.insert(EffectKey::EchoDivL);
+        set.insert(EffectKey::EchoDivR);
         set.insert(EffectKey::EchoFeedbackL);
         set.insert(EffectKey::EchoFeedbackR);
         set.insert(EffectKey::EchoXFBLtoR);
         set.insert(EffectKey::EchoXFBRtoL);
-        set.insert(EffectKey::EchoSource);
-        set.insert(EffectKey::EchoDivL);
-        set.insert(EffectKey::EchoDivR);
+        set.insert(EffectKey::EchoFeedback);
         set.insert(EffectKey::EchoFilterStyle);
+        set.insert(EffectKey::EchoTempo);
+        set.insert(EffectKey::EchoDelayL);
+        set.insert(EffectKey::EchoDelayR);
 
         set
     }
 
-    pub fn get_pitch_keyset(&self) -> HashSet<EffectKey> {
-        let mut set = HashSet::new();
+    pub fn get_pitch_keyset(&self) -> LinkedHashSet<EffectKey> {
+        let mut set = LinkedHashSet::new();
         set.insert(EffectKey::PitchAmount);
-        set.insert(EffectKey::PitchThreshold);
         set.insert(EffectKey::PitchCharacter);
+        set.insert(EffectKey::PitchThreshold);
 
         set
     }
 
-    pub fn get_gender_keyset(&self) -> HashSet<EffectKey> {
-        let mut set = HashSet::new();
+    pub fn get_gender_keyset(&self) -> LinkedHashSet<EffectKey> {
+        let mut set = LinkedHashSet::new();
         set.insert(EffectKey::GenderAmount);
 
         set
     }
 
-    pub fn get_megaphone_keyset(&self) -> HashSet<EffectKey> {
-        let mut set = HashSet::new();
-        set.insert(EffectKey::MegaphoneAmount);
-        set.insert(EffectKey::MegaphonePostGain);
+    pub fn get_megaphone_keyset(&self) -> LinkedHashSet<EffectKey> {
+        let mut set = LinkedHashSet::new();
+        set.insert(EffectKey::MegaphoneEnabled);
         set.insert(EffectKey::MegaphoneStyle);
+        set.insert(EffectKey::MegaphoneAmount);
         set.insert(EffectKey::MegaphoneHP);
         set.insert(EffectKey::MegaphoneLP);
         set.insert(EffectKey::MegaphonePreGain);
+        set.insert(EffectKey::MegaphonePostGain);
         set.insert(EffectKey::MegaphoneDistType);
         set.insert(EffectKey::MegaphonePresenceGain);
         set.insert(EffectKey::MegaphonePresenceFC);
@@ -959,34 +967,36 @@ impl MicProfileAdapter {
         set
     }
 
-    pub fn get_robot_keyset(&self) -> HashSet<EffectKey> {
-        let mut set = HashSet::new();
-        set.insert(EffectKey::RobotLowGain);
-        set.insert(EffectKey::RobotLowFreq);
-        set.insert(EffectKey::RobotLowWidth);
-        set.insert(EffectKey::RobotMidGain);
-        set.insert(EffectKey::RobotMidFreq);
-        set.insert(EffectKey::RobotMidWidth);
-        set.insert(EffectKey::RobotHiGain);
-        set.insert(EffectKey::RobotHiFreq);
-        set.insert(EffectKey::RobotHiWidth);
-        set.insert(EffectKey::RobotWaveform);
+    pub fn get_robot_keyset(&self) -> LinkedHashSet<EffectKey> {
+        let mut set = LinkedHashSet::new();
+        set.insert(EffectKey::RobotEnabled);
         set.insert(EffectKey::RobotPulseWidth);
+        set.insert(EffectKey::RobotWaveform);
         set.insert(EffectKey::RobotThreshold);
         set.insert(EffectKey::RobotDryMix);
+        set.insert(EffectKey::RobotLowFreq);
+        set.insert(EffectKey::RobotLowGain);
+        set.insert(EffectKey::RobotLowWidth);
+        set.insert(EffectKey::RobotMidFreq);
+        set.insert(EffectKey::RobotMidGain);
+        set.insert(EffectKey::RobotMidWidth);
+        set.insert(EffectKey::RobotHiFreq);
+        set.insert(EffectKey::RobotHiGain);
+        set.insert(EffectKey::RobotHiWidth);
         set.insert(EffectKey::RobotStyle);
 
         set
     }
 
-    pub fn get_hardtune_keyset(&self) -> HashSet<EffectKey> {
-        let mut set = HashSet::new();
-        set.insert(EffectKey::HardTuneAmount);
+    pub fn get_hardtune_keyset(&self) -> LinkedHashSet<EffectKey> {
+        let mut set = LinkedHashSet::new();
+        set.insert(EffectKey::HardTuneEnabled);
         set.insert(EffectKey::HardTuneKeySource);
+        set.insert(EffectKey::HardTuneAmount);
+        set.insert(EffectKey::HardTuneWindow);
+        set.insert(EffectKey::HardTuneRate);
         set.insert(EffectKey::HardTuneScale);
         set.insert(EffectKey::HardTunePitchAmount);
-        set.insert(EffectKey::HardTuneRate);
-        set.insert(EffectKey::HardTuneWindow);
 
         set
     }

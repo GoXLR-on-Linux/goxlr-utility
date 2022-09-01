@@ -12,8 +12,7 @@ use xml::EventWriter;
 use anyhow::{anyhow, Result};
 
 use crate::components::colours::ColourMap;
-use crate::components::megaphone::Preset;
-use crate::components::megaphone::Preset::{Preset1, Preset2, Preset3, Preset4, Preset5, Preset6};
+use crate::Preset;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -70,7 +69,7 @@ impl GenderEncoderBase {
 
     pub fn parse_gender_preset(
         &mut self,
-        id: u8,
+        preset_enum: Preset,
         attributes: &[OwnedAttribute],
     ) -> Result<(), ParseError> {
         let mut preset = GenderEncoder::new();
@@ -101,21 +100,7 @@ impl GenderEncoderBase {
             );
         }
 
-        // Ok, we should be able to store this now..
-        if id == 1 {
-            self.preset_map[Preset1] = preset;
-        } else if id == 2 {
-            self.preset_map[Preset2] = preset;
-        } else if id == 3 {
-            self.preset_map[Preset3] = preset;
-        } else if id == 4 {
-            self.preset_map[Preset4] = preset;
-        } else if id == 5 {
-            self.preset_map[Preset5] = preset;
-        } else if id == 6 {
-            self.preset_map[Preset6] = preset;
-        }
-
+        self.preset_map[preset_enum] = preset;
         Ok(())
     }
 
@@ -137,23 +122,12 @@ impl GenderEncoderBase {
         writer.write(element)?;
 
         // Because all of these are seemingly 'guaranteed' to exist, we can straight dump..
-        for (key, value) in &self.preset_map {
-            let mut sub_attributes: HashMap<String, String> = HashMap::default();
-
-            let tag_name = format!("genderEncoder{}", key.get_str("tagSuffix").unwrap());
+        for preset in Preset::iter() {
+            let tag_name = format!("genderEncoder{}", preset.get_str("tagSuffix").unwrap());
             let mut sub_element: StartElementBuilder =
                 XmlWriterEvent::start_element(tag_name.as_str());
 
-            sub_attributes.insert(
-                "GENDER_KNOB_POSITION".to_string(),
-                format!("{}", value.knob_position),
-            );
-            sub_attributes.insert(
-                "GENDER_STYLE".to_string(),
-                value.style.get_str("uiIndex").unwrap().to_string(),
-            );
-            sub_attributes.insert("GENDER_RANGE".to_string(), format!("{}", value.range));
-
+            let sub_attributes = self.get_preset_attributes(preset);
             for (key, value) in &sub_attributes {
                 sub_element = sub_element.attr(key.as_str(), value.as_str());
             }
@@ -165,6 +139,23 @@ impl GenderEncoderBase {
         // Finally, close the 'main' tag.
         writer.write(XmlWriterEvent::end_element())?;
         Ok(())
+    }
+
+    pub fn get_preset_attributes(&self, preset: Preset) -> HashMap<String, String> {
+        let mut attributes = HashMap::new();
+        let value = &self.preset_map[preset];
+
+        attributes.insert(
+            "GENDER_KNOB_POSITION".to_string(),
+            format!("{}", value.knob_position),
+        );
+        attributes.insert(
+            "GENDER_STYLE".to_string(),
+            value.style.get_str("uiIndex").unwrap().to_string(),
+        );
+        attributes.insert("GENDER_RANGE".to_string(), format!("{}", value.range));
+
+        attributes
     }
 
     pub fn colour_map(&self) -> &ColourMap {
@@ -211,6 +202,42 @@ impl GenderEncoder {
         }
     }
 
+    pub fn set_amount(&mut self, amount: i8) -> Result<()> {
+        match self.style {
+            GenderStyle::Narrow => {
+                if !(-12..=12).contains(&amount) {
+                    return Err(anyhow!(
+                        "Amount should be between -12 and 12 (Style: Narrow)"
+                    ));
+                }
+                let base = amount as i32 + 12;
+                let percent = base * 48 / 24;
+                self.knob_position = (percent - 24) as i8;
+                Ok(())
+            }
+            GenderStyle::Medium => {
+                if !(-25..=25).contains(&amount) {
+                    return Err(anyhow!(
+                        "Amount should be between -25 and 25 (Style: Medium)"
+                    ));
+                }
+                let base = amount as i32 + 25;
+                let percent = base * 48 / 50;
+                self.knob_position = (percent - 24) as i8;
+                Ok(())
+            }
+            GenderStyle::Wide => {
+                if !(-50..=50).contains(&amount) {
+                    return Err(anyhow!("Amount should be between -50 and 50 (Style: Wide)"));
+                }
+                let base = amount as i32 + 50;
+                let percent = base * 48 / 100;
+                self.knob_position = (percent - 24) as i8;
+                Ok(())
+            }
+        }
+    }
+
     pub fn knob_position(&self) -> i8 {
         self.knob_position
     }
@@ -226,6 +253,9 @@ impl GenderEncoder {
 
     pub fn style(&self) -> &GenderStyle {
         &self.style
+    }
+    pub fn set_style(&mut self, style: GenderStyle) {
+        self.style = style;
     }
     pub fn range(&self) -> u8 {
         self.range

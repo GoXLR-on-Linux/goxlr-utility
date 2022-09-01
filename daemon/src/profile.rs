@@ -1,26 +1,38 @@
-use crate::files::{can_create_new_file, create_path};
+use std::cmp::Ordering;
+use std::collections::HashMap;
+use std::fs::{remove_file, File};
+use std::io::{Cursor, Read, Seek};
+use std::path::Path;
+
 use anyhow::{anyhow, Context, Result};
 use enum_map::EnumMap;
 use enumset::EnumSet;
-use goxlr_ipc::{ButtonLighting, CoughButton, FaderLighting, Lighting, TwoColours};
+use log::{debug, error};
+use strum::EnumCount;
+use strum::IntoEnumIterator;
+
+use goxlr_ipc::{
+    ActiveEffects, ButtonLighting, CoughButton, Echo, Effects, FaderLighting, Gender, HardTune,
+    Lighting, Megaphone, Pitch, Reverb, Robot, TwoColours,
+};
 use goxlr_profile_loader::components::colours::{
     Colour, ColourDisplay, ColourMap, ColourOffStyle, ColourState,
 };
-use goxlr_profile_loader::components::echo::EchoEncoder;
-use goxlr_profile_loader::components::gender::GenderEncoder;
-use goxlr_profile_loader::components::hardtune::{HardTuneEffect, HardTuneSource};
-use goxlr_profile_loader::components::megaphone::{MegaphoneEffect, Preset};
+use goxlr_profile_loader::components::echo::{EchoEncoder, EchoStyle};
+use goxlr_profile_loader::components::gender::{GenderEncoder, GenderStyle};
+use goxlr_profile_loader::components::hardtune::{HardTuneEffect, HardTuneSource, HardTuneStyle};
+use goxlr_profile_loader::components::megaphone::{MegaphoneEffect, MegaphoneStyle};
 use goxlr_profile_loader::components::mixer::{FullChannelList, InputChannels, OutputChannels};
 use goxlr_profile_loader::components::mute::{MuteButton, MuteFunction};
 use goxlr_profile_loader::components::mute_chat::{CoughToggle, MuteChat};
-use goxlr_profile_loader::components::pitch::PitchEncoder;
-use goxlr_profile_loader::components::reverb::ReverbEncoder;
-use goxlr_profile_loader::components::robot::RobotEffect;
+use goxlr_profile_loader::components::pitch::{PitchEncoder, PitchStyle};
+use goxlr_profile_loader::components::reverb::{ReverbEncoder, ReverbStyle};
+use goxlr_profile_loader::components::robot::{RobotEffect, RobotStyle};
 use goxlr_profile_loader::components::sample::SampleBank;
 use goxlr_profile_loader::components::simple::SimpleElements;
 use goxlr_profile_loader::profile::{Profile, ProfileSettings};
 use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
-use goxlr_profile_loader::{Faders, SampleButtons};
+use goxlr_profile_loader::{Faders, Preset, SampleButtons};
 use goxlr_types::{
     ButtonColourGroups, ButtonColourOffStyle as BasicColourOffStyle, ButtonColourTargets,
     ChannelName, EffectBankPresets, FaderDisplayStyle as BasicColourDisplay, FaderName,
@@ -28,14 +40,8 @@ use goxlr_types::{
 };
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::colouring::ColourTargets;
-use log::{debug, error};
-use std::cmp::Ordering;
-use std::collections::HashMap;
-use std::fs::{remove_file, File};
-use std::io::{Cursor, Read, Seek};
-use std::path::Path;
-use strum::EnumCount;
-use strum::IntoEnumIterator;
+
+use crate::files::{can_create_new_file, create_path};
 
 pub const DEFAULT_PROFILE_NAME: &str = "DEFAULT";
 const DEFAULT_PROFILE: &[u8] = include_bytes!("../profiles/DEFAULT.goxlr");
@@ -122,6 +128,13 @@ impl ProfileAdapter {
         Ok(())
     }
 
+    pub fn write_preset(&mut self, name: String, directory: &Path) -> Result<()> {
+        let path = directory.join(format!("{}.preset", name));
+        create_path(directory)?;
+        self.profile.save_preset(path)?;
+        Ok(())
+    }
+
     pub fn delete_profile(&mut self, name: String, directory: &Path) -> Result<()> {
         let path = directory.join(format!("{}.goxlr", name));
         if path.is_file() {
@@ -132,6 +145,30 @@ impl ProfileAdapter {
 
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    pub fn load_preset(&mut self, name: String, directories: Vec<&Path>) -> Result<()> {
+        let mut dir_list = "".to_string();
+
+        // Loop through the provided directories, and try to find the preset..
+        for directory in directories {
+            let path = directory.join(format!("{}.preset", name));
+
+            if path.is_file() {
+                debug!("Loading Preset From {}", path.to_string_lossy());
+                let file = File::open(path).context("Couldn't open preset for reading")?;
+
+                self.profile.settings_mut().load_preset(file)?;
+                return Ok(());
+            }
+            dir_list = format!("{}, {}", dir_list, directory.to_string_lossy());
+        }
+
+        Err(anyhow!(
+            "Preset {} does not exist inside {:?}",
+            name,
+            dir_list
+        ))
     }
 
     pub fn create_router(&self) -> [EnumSet<OutputDevice>; InputDevice::COUNT] {
@@ -329,7 +366,11 @@ impl ProfileAdapter {
                 .colour(0)
                 .to_reverse_bytes();
         } else {
-            [00, 00, 00, 00]
+            // For buttons without samples, we simply use colour1 (this gets configured when
+            // loading the bank)..
+            return get_profile_colour_map(self.profile.settings(), target)
+                .colour_or_default(1)
+                .to_reverse_bytes();
         }
     }
 
@@ -370,11 +411,21 @@ impl ProfileAdapter {
             ButtonColourTargets::iter().collect()
         };
 
+        let mut ignore_buttons = vec![];
+        ignore_buttons.append(&mut get_sampler_colour_targets());
+        ignore_buttons.append(&mut get_sampler_selector_colour_targets());
+
         for button in buttons {
+            if ignore_buttons.contains(&button) {
+                continue;
+            }
+
             let colour_target = standard_to_colour_target(button);
             let colour_map = get_profile_colour_map(self.profile.settings(), colour_target);
 
             let off_style = profile_to_standard_colour_off_style(*colour_map.get_off_style());
+
+            // TODO: Sampler Buttons are technically three colours!
 
             button_map.insert(
                 button,
@@ -392,6 +443,119 @@ impl ProfileAdapter {
             faders: fader_map,
             buttons: button_map,
         }
+    }
+
+    pub fn get_effects_ipc(&self, is_device_mini: bool) -> Option<Effects> {
+        // There's no point returning effects for a Mini, it doesn't support them!
+        if is_device_mini {
+            return None;
+        }
+
+        // Current Preset
+        let active_preset =
+            profile_to_standard_preset(self.profile.settings().context().selected_effects());
+        let mut preset_names = HashMap::new();
+        for preset in EffectBankPresets::iter() {
+            preset_names.insert(
+                preset,
+                self.profile
+                    .settings()
+                    .effects(standard_to_profile_preset(preset))
+                    .name()
+                    .to_string(),
+            );
+        }
+
+        let reverb = Reverb {
+            style: profile_to_standard_reverb_style(self.get_active_reverb_profile().style()),
+            amount: self.get_active_reverb_profile().get_percentage_amount(),
+            decay: self.get_active_reverb_profile().get_decay_millis(),
+            early_level: self.get_active_reverb_profile().early_level(),
+            tail_level: self.get_active_reverb_profile().tail_level(),
+            pre_delay: self.get_active_reverb_profile().predelay(),
+            lo_colour: self.get_active_reverb_profile().low_color(),
+            hi_colour: self.get_active_reverb_profile().high_color(),
+            hi_factor: self.get_active_reverb_profile().hifactor(),
+            diffuse: self.get_active_reverb_profile().diffuse(),
+            mod_speed: self.get_active_reverb_profile().mod_speed(),
+            mod_depth: self.get_active_reverb_profile().mod_depth(),
+        };
+
+        let echo = Echo {
+            style: profile_to_standard_echo_style(self.get_active_echo_profile().style()),
+            amount: self.get_active_echo_profile().get_percentage_amount(),
+            feedback: self.get_active_echo_profile().feedback_control(),
+            tempo: self.get_active_echo_profile().tempo(),
+            delay_left: self.get_active_echo_profile().time_left(),
+            delay_right: self.get_active_echo_profile().time_right(),
+            feedback_left: self.get_active_echo_profile().feedback_left(),
+            feedback_right: self.get_active_echo_profile().feedback_right(),
+            feedback_xfb_l_to_r: self.get_active_echo_profile().xfb_l_to_r(),
+            feedback_xfb_r_to_l: self.get_active_echo_profile().xfb_r_to_l(),
+        };
+
+        let pitch = Pitch {
+            style: profile_to_standard_pitch_style(self.get_active_pitch_profile().style()),
+            amount: self
+                .get_active_pitch_profile()
+                .knob_position(self.is_hardtune_enabled(true)),
+            character: self.get_active_pitch_profile().inst_ratio_value(),
+        };
+
+        let gender = Gender {
+            style: profile_to_standard_gender_style(self.get_active_gender_profile().style()),
+            amount: self.get_active_gender_profile().amount(),
+        };
+
+        let megaphone = Megaphone {
+            is_enabled: self.is_megaphone_enabled(true),
+            style: profile_to_standard_megaphone_style(self.get_active_megaphone_profile().style()),
+            amount: self.get_active_megaphone_profile().trans_dist_amt(),
+            post_gain: self.get_active_megaphone_profile().trans_postgain(),
+        };
+
+        let robot = Robot {
+            is_enabled: self.is_robot_enabled(true),
+            style: profile_to_standard_robot_style(self.get_active_robot_profile().style()),
+            low_gain: self.get_active_robot_profile().vocoder_low_gain(),
+            low_freq: self.get_active_robot_profile().vocoder_low_freq(),
+            low_width: self.get_active_robot_profile().vocoder_low_bw(),
+            mid_gain: self.get_active_robot_profile().vocoder_mid_gain(),
+            mid_freq: self.get_active_robot_profile().vocoder_mid_freq(),
+            mid_width: self.get_active_robot_profile().vocoder_mid_bw(),
+            high_gain: self.get_active_robot_profile().vocoder_high_gain(),
+            high_freq: self.get_active_robot_profile().vocoder_high_freq(),
+            high_width: self.get_active_robot_profile().vocoder_high_bw(),
+            waveform: self.get_active_robot_profile().synthosc_waveform(),
+            pulse_width: self.get_active_robot_profile().synthosc_pulse_width(),
+            threshold: self.get_active_robot_profile().vocoder_gate_threshold(),
+            dry_mix: self.get_active_robot_profile().dry_mix(),
+        };
+
+        let hard_tune = HardTune {
+            is_enabled: self.is_hardtune_enabled(true),
+            style: profile_to_standard_hard_tune_style(self.get_active_hardtune_profile().style()),
+            amount: self.get_active_hardtune_profile().amount(),
+            rate: self.get_active_hardtune_profile().rate(),
+            window: self.get_active_hardtune_profile().window(),
+            source: profile_to_standard_hard_tune_source(
+                &self.get_active_hardtune_profile().get_source_value(),
+            ),
+        };
+
+        Some(Effects {
+            active_preset,
+            preset_names,
+            current: ActiveEffects {
+                reverb,
+                echo,
+                pitch,
+                gender,
+                megaphone,
+                robot,
+                hard_tune,
+            },
+        })
     }
 
     /** Regular Mute button handlers */
@@ -595,6 +759,11 @@ impl ProfileAdapter {
     }
 
     /** Effects Bank Behaviours **/
+    pub fn get_active_effect_bank(&mut self) -> EffectBankPresets {
+        let current = self.profile.settings().context().selected_effects();
+        profile_to_standard_preset(current)
+    }
+
     pub fn load_effect_bank(&mut self, preset: EffectBankPresets) -> Result<()> {
         let preset = standard_to_profile_preset(preset);
         let current = self.profile.settings().context().selected_effects();
@@ -763,6 +932,12 @@ impl ProfileAdapter {
             .set_knob_position(value, hardtune_enabled)
     }
 
+    pub fn set_pitch_style(&mut self, style: goxlr_types::PitchStyle) -> Result<()> {
+        self.get_active_pitch_profile_mut()
+            .set_style(standard_to_profile_pitch_style(style));
+        Ok(())
+    }
+
     pub fn get_pitch_mode(&self) -> u8 {
         self.get_active_pitch_profile()
             .pitch_mode(self.is_hardtune_enabled(true))
@@ -776,6 +951,14 @@ impl ProfileAdapter {
     pub fn get_active_pitch_profile(&self) -> &PitchEncoder {
         let current = self.profile.settings().context().selected_effects();
         self.profile.settings().pitch_encoder().get_preset(current)
+    }
+
+    pub fn get_active_pitch_profile_mut(&mut self) -> &mut PitchEncoder {
+        let current = self.profile.settings().context().selected_effects();
+        self.profile
+            .settings_mut()
+            .pitch_encoder_mut()
+            .get_preset_mut(current)
     }
 
     pub fn get_gender_value(&self) -> i8 {
@@ -796,9 +979,23 @@ impl ProfileAdapter {
             .set_knob_position(value)
     }
 
+    pub fn set_gender_style(&mut self, style: goxlr_types::GenderStyle) -> Result<()> {
+        self.get_active_gender_profile_mut()
+            .set_style(standard_to_profile_gender_style(style));
+        Ok(())
+    }
+
     pub fn get_active_gender_profile(&self) -> &GenderEncoder {
         let current = self.profile.settings().context().selected_effects();
         self.profile.settings().gender_encoder().get_preset(current)
+    }
+
+    pub fn get_active_gender_profile_mut(&mut self) -> &mut GenderEncoder {
+        let current = self.profile.settings().context().selected_effects();
+        self.profile
+            .settings_mut()
+            .gender_encoder_mut()
+            .get_preset_mut(current)
     }
 
     pub fn get_reverb_value(&self) -> i8 {
@@ -819,9 +1016,23 @@ impl ProfileAdapter {
             .set_knob_position(value)
     }
 
+    pub fn set_reverb_style(&mut self, style: goxlr_types::ReverbStyle) -> Result<()> {
+        self.get_active_reverb_profile_mut()
+            .set_style(standard_to_profile_reverb_style(style))?;
+        Ok(())
+    }
+
     pub fn get_active_reverb_profile(&self) -> &ReverbEncoder {
         let current = self.profile.settings().context().selected_effects();
         self.profile.settings().reverb_encoder().get_preset(current)
+    }
+
+    pub fn get_active_reverb_profile_mut(&mut self) -> &mut ReverbEncoder {
+        let current = self.profile.settings().context().selected_effects();
+        self.profile
+            .settings_mut()
+            .reverb_encoder_mut()
+            .get_preset_mut(current)
     }
 
     pub fn get_echo_value(&self) -> i8 {
@@ -842,9 +1053,29 @@ impl ProfileAdapter {
             .set_knob_position(value)
     }
 
+    pub fn set_echo_style(&mut self, style: goxlr_types::EchoStyle) -> Result<()> {
+        self.get_active_echo_profile_mut()
+            .set_style(standard_to_profile_echo_style(style))?;
+        Ok(())
+    }
+
     pub fn get_active_echo_profile(&self) -> &EchoEncoder {
         let current = self.profile.settings().context().selected_effects();
         self.profile.settings().echo_encoder().get_preset(current)
+    }
+
+    pub fn get_active_echo_profile_mut(&mut self) -> &mut EchoEncoder {
+        let current = self.profile.settings().context().selected_effects();
+        self.profile
+            .settings_mut()
+            .echo_encoder_mut()
+            .get_preset_mut(current)
+    }
+
+    pub fn set_megaphone_style(&mut self, style: goxlr_types::MegaphoneStyle) -> Result<()> {
+        self.get_active_megaphone_profile_mut()
+            .set_style(standard_to_profile_megaphone_style(style))?;
+        Ok(())
     }
 
     pub fn get_active_megaphone_profile(&self) -> &MegaphoneEffect {
@@ -855,9 +1086,47 @@ impl ProfileAdapter {
             .get_preset(current)
     }
 
+    pub fn get_active_megaphone_profile_mut(&mut self) -> &mut MegaphoneEffect {
+        let current = self.profile.settings().context().selected_effects();
+        self.profile
+            .settings_mut()
+            .megaphone_effect_mut()
+            .get_preset_mut(current)
+    }
+
+    pub fn set_robot_style(&mut self, style: goxlr_types::RobotStyle) -> Result<()> {
+        self.get_active_robot_profile_mut()
+            .set_style(standard_to_profile_robot_style(style))?;
+        Ok(())
+    }
+
     pub fn get_active_robot_profile(&self) -> &RobotEffect {
         let current = self.profile.settings().context().selected_effects();
         self.profile.settings().robot_effect().get_preset(current)
+    }
+
+    pub fn get_active_robot_profile_mut(&mut self) -> &mut RobotEffect {
+        let current = self.profile.settings().context().selected_effects();
+        self.profile
+            .settings_mut()
+            .robot_effect_mut()
+            .get_preset_mut(current)
+    }
+
+    pub fn set_hardtune_style(&mut self, style: goxlr_types::HardTuneStyle) -> Result<()> {
+        self.get_active_hardtune_profile_mut()
+            .set_style(standard_to_profile_hard_tune_style(style))?;
+        Ok(())
+    }
+
+    pub fn set_hardtune_source(&mut self, source: goxlr_types::HardTuneSource) -> Result<()> {
+        self.get_active_hardtune_profile_mut()
+            .set_source(standard_to_profile_hard_tune_source(source));
+        Ok(())
+    }
+
+    pub fn get_hardtune_source(&self) -> goxlr_types::HardTuneSource {
+        profile_to_standard_hard_tune_source(&self.get_active_hardtune_profile().get_source_value())
     }
 
     pub fn get_active_hardtune_profile(&self) -> &HardTuneEffect {
@@ -866,6 +1135,14 @@ impl ProfileAdapter {
             .settings()
             .hardtune_effect()
             .get_preset(current)
+    }
+
+    pub fn get_active_hardtune_profile_mut(&mut self) -> &mut HardTuneEffect {
+        let current = self.profile.settings().context().selected_effects();
+        self.profile
+            .settings_mut()
+            .hardtune_effect_mut()
+            .get_preset_mut(current)
     }
 
     pub fn is_active_hardtune_source_all(&self) -> bool {
@@ -883,6 +1160,7 @@ impl ProfileAdapter {
             HardTuneSource::Music => InputDevice::Music,
             HardTuneSource::Game => InputDevice::Game,
             HardTuneSource::LineIn => InputDevice::LineIn,
+            HardTuneSource::System => InputDevice::System,
 
             // This should never really be called when Source is All, return a default.
             HardTuneSource::All => InputDevice::Music,
@@ -897,8 +1175,8 @@ impl ProfileAdapter {
             .get_state()
     }
 
-    pub fn is_megaphone_enabled(&self) -> bool {
-        if !self.is_fx_enabled() {
+    pub fn is_megaphone_enabled(&self, ignore_fx_state: bool) -> bool {
+        if !ignore_fx_state && !self.is_fx_enabled() {
             return false;
         }
         self.profile
@@ -908,8 +1186,8 @@ impl ProfileAdapter {
             .get_state()
     }
 
-    pub fn is_robot_enabled(&self) -> bool {
-        if !self.is_fx_enabled() {
+    pub fn is_robot_enabled(&self, ignore_fx_state: bool) -> bool {
+        if !ignore_fx_state && !self.is_fx_enabled() {
             return false;
         }
         self.profile
@@ -941,22 +1219,42 @@ impl ProfileAdapter {
             .context_mut()
             .set_selected_sample(bank);
 
-        // Disable the 'on' state of the existing bank..
-        self.profile
-            .settings_mut()
-            .simple_element_mut(sample_bank_to_simple_element(current))
-            .colour_map_mut()
-            .set_state_on(false)?;
+        // Turn off existing bank..
+        get_profile_colour_map_mut(
+            self.profile.settings_mut(),
+            map_sample_bank_to_colour_target(current),
+        )
+        .set_state_on(false)?;
+
+        // Turn on New Bank..
+        get_profile_colour_map_mut(
+            self.profile.settings_mut(),
+            map_sample_bank_to_colour_target(bank),
+        )
+        .set_state_on(true)?;
+
+        // When loading a bank, the colour settings from the SampleBank button get migrated
+        // across to the sample buttons, which are then used to display (it's a little convoluted!)
+        let colour_map = get_profile_colour_map(
+            self.profile.settings_mut(),
+            map_sample_bank_to_colour_target(bank),
+        );
+
+        let on_colour = Colour::from(colour_map.colour_or_default(0));
+        let off_colour = Colour::from(colour_map.colour_or_default(2));
+
+        for sample in get_sampler_colour_targets() {
+            let map = get_profile_colour_map_mut(
+                self.profile.settings_mut(),
+                standard_to_colour_target(sample),
+            );
+
+            map.set_colour(0, Colour::from(&on_colour))?;
+            map.set_colour(1, Colour::from(&off_colour))?;
+        }
 
         // TODO: When loading a bank, we should check for the existence of samples
         // If they're missing, remove them from the stack.
-
-        // Set the 'on' state for the new bank..
-        self.profile
-            .settings_mut()
-            .simple_element_mut(sample_bank_to_simple_element(bank))
-            .colour_map_mut()
-            .set_state_on(true)?;
 
         Ok(())
     }
@@ -1199,6 +1497,14 @@ impl ProfileAdapter {
             ColourOffStyle::DimmedColour2 => ButtonStates::DimmedColour2,
         };
     }
+
+    pub fn profile(&self) -> &Profile {
+        &self.profile
+    }
+
+    pub fn profile_mut(&mut self) -> &mut Profile {
+        &mut self.profile
+    }
 }
 
 fn profile_to_standard_input(value: InputChannels) -> InputDevice {
@@ -1351,6 +1657,7 @@ fn standard_to_profile_sample_bank(bank: goxlr_types::SampleBank) -> SampleBank 
     }
 }
 
+#[allow(dead_code)]
 fn sample_bank_to_simple_element(bank: SampleBank) -> SimpleElements {
     match bank {
         SampleBank::A => SimpleElements::SampleBankA,
@@ -1430,6 +1737,14 @@ fn map_fader_to_colour_target(fader: FaderName) -> ColourTargets {
         FaderName::B => ColourTargets::FadeMeter2,
         FaderName::C => ColourTargets::FadeMeter3,
         FaderName::D => ColourTargets::FadeMeter4,
+    }
+}
+
+fn map_sample_bank_to_colour_target(bank: SampleBank) -> ColourTargets {
+    match bank {
+        SampleBank::A => ColourTargets::SamplerSelectA,
+        SampleBank::B => ColourTargets::SamplerSelectB,
+        SampleBank::C => ColourTargets::SamplerSelectC,
     }
 }
 
@@ -1584,6 +1899,179 @@ pub fn get_mini_colour_targets() -> Vec<ButtonColourTargets> {
         ButtonColourTargets::Bleep,
         ButtonColourTargets::Cough,
     ]
+}
+
+pub fn get_sampler_colour_targets() -> Vec<ButtonColourTargets> {
+    vec![
+        ButtonColourTargets::SamplerTopLeft,
+        ButtonColourTargets::SamplerTopRight,
+        ButtonColourTargets::SamplerBottomLeft,
+        ButtonColourTargets::SamplerBottomRight,
+        ButtonColourTargets::SamplerClear,
+    ]
+}
+
+pub fn get_sampler_selector_colour_targets() -> Vec<ButtonColourTargets> {
+    vec![
+        ButtonColourTargets::SamplerSelectA,
+        ButtonColourTargets::SamplerSelectB,
+        ButtonColourTargets::SamplerSelectC,
+    ]
+}
+
+#[allow(dead_code)]
+fn standard_to_profile_reverb_style(style: goxlr_types::ReverbStyle) -> ReverbStyle {
+    match style {
+        goxlr_types::ReverbStyle::Library => ReverbStyle::Library,
+        goxlr_types::ReverbStyle::DarkBloom => ReverbStyle::DarkBloom,
+        goxlr_types::ReverbStyle::MusicClub => ReverbStyle::MusicClub,
+        goxlr_types::ReverbStyle::RealPlate => ReverbStyle::RealPlate,
+        goxlr_types::ReverbStyle::Chapel => ReverbStyle::Chapel,
+        goxlr_types::ReverbStyle::HockeyArena => ReverbStyle::HockeyArena,
+    }
+}
+
+fn profile_to_standard_reverb_style(style: &ReverbStyle) -> goxlr_types::ReverbStyle {
+    match style {
+        ReverbStyle::Library => goxlr_types::ReverbStyle::Library,
+        ReverbStyle::DarkBloom => goxlr_types::ReverbStyle::DarkBloom,
+        ReverbStyle::MusicClub => goxlr_types::ReverbStyle::MusicClub,
+        ReverbStyle::RealPlate => goxlr_types::ReverbStyle::RealPlate,
+        ReverbStyle::Chapel => goxlr_types::ReverbStyle::Chapel,
+        ReverbStyle::HockeyArena => goxlr_types::ReverbStyle::HockeyArena,
+    }
+}
+
+#[allow(dead_code)]
+fn standard_to_profile_echo_style(style: goxlr_types::EchoStyle) -> EchoStyle {
+    match style {
+        goxlr_types::EchoStyle::Quarter => EchoStyle::Quarter,
+        goxlr_types::EchoStyle::Eighth => EchoStyle::Eighth,
+        goxlr_types::EchoStyle::Triplet => EchoStyle::Triplet,
+        goxlr_types::EchoStyle::PingPong => EchoStyle::PingPong,
+        goxlr_types::EchoStyle::ClassicSlap => EchoStyle::ClassicSlap,
+        goxlr_types::EchoStyle::MultiTap => EchoStyle::MultiTap,
+    }
+}
+
+fn profile_to_standard_echo_style(style: &EchoStyle) -> goxlr_types::EchoStyle {
+    match style {
+        EchoStyle::Quarter => goxlr_types::EchoStyle::Quarter,
+        EchoStyle::Eighth => goxlr_types::EchoStyle::Eighth,
+        EchoStyle::Triplet => goxlr_types::EchoStyle::Triplet,
+        EchoStyle::PingPong => goxlr_types::EchoStyle::PingPong,
+        EchoStyle::ClassicSlap => goxlr_types::EchoStyle::ClassicSlap,
+        EchoStyle::MultiTap => goxlr_types::EchoStyle::MultiTap,
+    }
+}
+
+#[allow(dead_code)]
+fn standard_to_profile_pitch_style(style: goxlr_types::PitchStyle) -> PitchStyle {
+    match style {
+        goxlr_types::PitchStyle::Narrow => PitchStyle::Narrow,
+        goxlr_types::PitchStyle::Wide => PitchStyle::Wide,
+    }
+}
+
+fn profile_to_standard_pitch_style(style: &PitchStyle) -> goxlr_types::PitchStyle {
+    match style {
+        PitchStyle::Narrow => goxlr_types::PitchStyle::Narrow,
+        PitchStyle::Wide => goxlr_types::PitchStyle::Wide,
+    }
+}
+
+#[allow(dead_code)]
+fn standard_to_profile_gender_style(style: goxlr_types::GenderStyle) -> GenderStyle {
+    match style {
+        goxlr_types::GenderStyle::Narrow => GenderStyle::Narrow,
+        goxlr_types::GenderStyle::Medium => GenderStyle::Medium,
+        goxlr_types::GenderStyle::Wide => GenderStyle::Wide,
+    }
+}
+
+fn profile_to_standard_gender_style(style: &GenderStyle) -> goxlr_types::GenderStyle {
+    match style {
+        GenderStyle::Narrow => goxlr_types::GenderStyle::Narrow,
+        GenderStyle::Medium => goxlr_types::GenderStyle::Medium,
+        GenderStyle::Wide => goxlr_types::GenderStyle::Wide,
+    }
+}
+
+#[allow(dead_code)]
+fn standard_to_profile_megaphone_style(style: goxlr_types::MegaphoneStyle) -> MegaphoneStyle {
+    match style {
+        goxlr_types::MegaphoneStyle::Megaphone => MegaphoneStyle::Megaphone,
+        goxlr_types::MegaphoneStyle::Radio => MegaphoneStyle::Radio,
+        goxlr_types::MegaphoneStyle::OnThePhone => MegaphoneStyle::OnThePhone,
+        goxlr_types::MegaphoneStyle::Overdrive => MegaphoneStyle::Overdrive,
+        goxlr_types::MegaphoneStyle::BuzzCutt => MegaphoneStyle::BuzzCutt,
+        goxlr_types::MegaphoneStyle::Tweed => MegaphoneStyle::Tweed,
+    }
+}
+
+fn profile_to_standard_megaphone_style(style: &MegaphoneStyle) -> goxlr_types::MegaphoneStyle {
+    match style {
+        MegaphoneStyle::Megaphone => goxlr_types::MegaphoneStyle::Megaphone,
+        MegaphoneStyle::Radio => goxlr_types::MegaphoneStyle::Radio,
+        MegaphoneStyle::OnThePhone => goxlr_types::MegaphoneStyle::OnThePhone,
+        MegaphoneStyle::Overdrive => goxlr_types::MegaphoneStyle::Overdrive,
+        MegaphoneStyle::BuzzCutt => goxlr_types::MegaphoneStyle::BuzzCutt,
+        MegaphoneStyle::Tweed => goxlr_types::MegaphoneStyle::Tweed,
+    }
+}
+
+#[allow(dead_code)]
+fn standard_to_profile_robot_style(style: goxlr_types::RobotStyle) -> RobotStyle {
+    match style {
+        goxlr_types::RobotStyle::Robot1 => RobotStyle::Robot1,
+        goxlr_types::RobotStyle::Robot2 => RobotStyle::Robot2,
+        goxlr_types::RobotStyle::Robot3 => RobotStyle::Robot3,
+    }
+}
+
+fn profile_to_standard_robot_style(style: &RobotStyle) -> goxlr_types::RobotStyle {
+    match style {
+        RobotStyle::Robot1 => goxlr_types::RobotStyle::Robot1,
+        RobotStyle::Robot2 => goxlr_types::RobotStyle::Robot2,
+        RobotStyle::Robot3 => goxlr_types::RobotStyle::Robot3,
+    }
+}
+
+#[allow(dead_code)]
+fn standard_to_profile_hard_tune_style(style: goxlr_types::HardTuneStyle) -> HardTuneStyle {
+    match style {
+        goxlr_types::HardTuneStyle::Natural => HardTuneStyle::Natural,
+        goxlr_types::HardTuneStyle::Medium => HardTuneStyle::Medium,
+        goxlr_types::HardTuneStyle::Hard => HardTuneStyle::Hard,
+    }
+}
+
+fn profile_to_standard_hard_tune_style(style: &HardTuneStyle) -> goxlr_types::HardTuneStyle {
+    match style {
+        HardTuneStyle::Natural => goxlr_types::HardTuneStyle::Natural,
+        HardTuneStyle::Medium => goxlr_types::HardTuneStyle::Medium,
+        HardTuneStyle::Hard => goxlr_types::HardTuneStyle::Hard,
+    }
+}
+
+fn standard_to_profile_hard_tune_source(source: goxlr_types::HardTuneSource) -> HardTuneSource {
+    match source {
+        goxlr_types::HardTuneSource::All => HardTuneSource::All,
+        goxlr_types::HardTuneSource::Music => HardTuneSource::Music,
+        goxlr_types::HardTuneSource::Game => HardTuneSource::Game,
+        goxlr_types::HardTuneSource::LineIn => HardTuneSource::LineIn,
+        goxlr_types::HardTuneSource::System => HardTuneSource::System,
+    }
+}
+
+fn profile_to_standard_hard_tune_source(source: &HardTuneSource) -> goxlr_types::HardTuneSource {
+    match source {
+        HardTuneSource::All => goxlr_types::HardTuneSource::All,
+        HardTuneSource::Music => goxlr_types::HardTuneSource::Music,
+        HardTuneSource::Game => goxlr_types::HardTuneSource::Game,
+        HardTuneSource::LineIn => goxlr_types::HardTuneSource::LineIn,
+        HardTuneSource::System => goxlr_types::HardTuneSource::System,
+    }
 }
 
 pub fn version_newer_or_equal_to(version: &VersionNumber, comparison: VersionNumber) -> bool {

@@ -30,17 +30,14 @@ pub enum ParseError {
 
 #[derive(Debug)]
 pub struct Fader {
-    element_name: String,
     colour_map: ColourMap,
     channel: FullChannelList,
 }
 
 impl Fader {
     pub fn new(id: u8) -> Self {
-        let element_name = format!("FaderMeter{}", id);
         let colour_map = format!("FaderMeter{}", id);
         Self {
-            element_name,
             colour_map: ColourMap::new(colour_map),
             channel: FullChannelList::Mic,
         }
@@ -75,17 +72,21 @@ impl Fader {
         Ok(())
     }
 
-    pub fn write_fader<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
-        let mut element: StartElementBuilder =
-            XmlWriterEvent::start_element(self.element_name.as_str());
+    pub fn write_fader<W: Write>(
+        &self,
+        element_name: String,
+        writer: &mut EventWriter<&mut W>,
+    ) -> Result<()> {
+        let mut element: StartElementBuilder = XmlWriterEvent::start_element(element_name.as_str());
 
         let mut attributes: HashMap<String, String> = HashMap::default();
         attributes.insert(
-            format!("{}listIndex", self.element_name),
+            format!("{}listIndex", element_name),
             self.channel.get_str("faderIndex").unwrap().to_string(),
         );
 
-        self.colour_map.write_colours(&mut attributes);
+        self.colour_map
+            .write_colours_with_prefix(element_name.clone(), &mut attributes);
 
         for (key, value) in &attributes {
             element = element.attr(key.as_str(), value.as_str());

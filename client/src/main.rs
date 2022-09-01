@@ -3,9 +3,10 @@ mod microphone;
 
 use crate::cli::{
     ButtonGroupLightingCommands, ButtonLightingCommands, CompressorCommands, CoughButtonBehaviours,
-    EqualiserCommands, EqualiserMiniCommands, FaderCommands, FaderLightingCommands,
-    FadersAllLightingCommands, LightingCommands, MicrophoneCommands, NoiseGateCommands,
-    ProfileAction, ProfileType, SubCommands,
+    Echo, EffectsCommands, EqualiserCommands, EqualiserMiniCommands, FaderCommands,
+    FaderLightingCommands, FadersAllLightingCommands, Gender, HardTune, LightingCommands,
+    Megaphone, MicrophoneCommands, NoiseGateCommands, Pitch, ProfileAction, ProfileType, Reverb,
+    Robot, SubCommands,
 };
 use crate::microphone::apply_microphone_controls;
 use anyhow::{anyhow, Context, Result};
@@ -387,6 +388,296 @@ async fn main() -> Result<()> {
                                 )
                                 .await
                                 .context("Unable to Save Microphone Profile")?;
+                        }
+                    },
+                },
+                SubCommands::Effects { command } => match command {
+                    EffectsCommands::LoadEffectPreset { name } => {
+                        client
+                            .command(&serial, GoXLRCommand::LoadEffectPreset(name.to_string()))
+                            .await
+                            .context("Unable to Load Preset")?;
+                    }
+
+                    EffectsCommands::SetActivePreset { preset } => {
+                        client
+                            .command(&serial, GoXLRCommand::SetActiveEffectPreset(*preset))
+                            .await
+                            .context("Unable to set the Active Preset")?;
+                    }
+
+                    EffectsCommands::RenameActivePreset { name } => {
+                        client
+                            .command(&serial, GoXLRCommand::RenameActivePreset(name.to_string()))
+                            .await
+                            .context("Unable to Rename Preset")?;
+                    }
+
+                    EffectsCommands::SaveActivePreset => {
+                        client
+                            .command(&serial, GoXLRCommand::SaveActivePreset())
+                            .await
+                            .context("Unable to Save Preset")?;
+                    }
+
+                    EffectsCommands::Reverb { command } => match command {
+                        Reverb::Style { style } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetReverbStyle(*style))
+                                .await
+                                .context("Unable to Set Reverb Style")?;
+                        }
+                        Reverb::Amount { amount } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetReverbAmount(*amount))
+                                .await
+                                .context("Unable to Set Reverb Amount")?;
+                        }
+                        Reverb::Decay { decay } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetReverbDecay(*decay))
+                                .await
+                                .context("Unable to Set Reverb Amount")?;
+                        }
+                        Reverb::EarlyLevel { level } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetReverbEarlyLevel(*level))
+                                .await
+                                .context("Unable to Set Reverb Early Level")?;
+                        }
+                        Reverb::TailLevel { level } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetReverbTailLevel(*level))
+                                .await
+                                .context("Unable to Set Reverb Tail Level")?;
+                        }
+                        Reverb::PreDelay { delay } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetReverbPreDelay(*delay))
+                                .await
+                                .context("Unable to Set Reverb Delay")?;
+                        }
+                        Reverb::LowColour { colour } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetReverbLowColour(*colour))
+                                .await
+                                .context("Unable to Set Reverb Low Colour")?;
+                        }
+                        Reverb::HighColour { colour } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetReverbHighColour(*colour))
+                                .await
+                                .context("Unable to Set Reverb High Colour")?;
+                        }
+                        Reverb::HighFactor { factor } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetReverbHighFactor(*factor))
+                                .await
+                                .context("Unable to Set Reverb High Factor")?;
+                        }
+                        Reverb::Diffuse { diffuse } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetReverbDiffuse(*diffuse))
+                                .await
+                                .context("Unable to Set Reverb Diffuse")?;
+                        }
+                        Reverb::ModSpeed { speed } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetReverbModSpeed(*speed))
+                                .await
+                                .context("Unable to Set Reverb Mod Speed")?;
+                        }
+                        Reverb::ModDepth { depth } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetReverbModDepth(*depth))
+                                .await
+                                .context("Unable to Set Reverb Mod Depth")?;
+                        }
+                    },
+                    EffectsCommands::Echo { command } => match command {
+                        Echo::Style { style } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetEchoStyle(*style))
+                                .await
+                                .context("Unable to Set Echo Style")?;
+                        }
+                        Echo::Amount { amount } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetEchoAmount(*amount))
+                                .await
+                                .context("Unable to Set Echo Amount")?;
+                        }
+                        Echo::Feedback { feedback } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetEchoFeedback(*feedback))
+                                .await
+                                .context("Unable to Set Echo Feedback")?;
+                        }
+                        Echo::Tempo { tempo } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetEchoTempo(*tempo))
+                                .await
+                                .context("Unable to Set Echo Tempo")?;
+                        }
+                        Echo::DelayLeft { delay } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetEchoDelayLeft(*delay))
+                                .await
+                                .context("Unable to Set Echo Delay Left")?;
+                        }
+                        Echo::DelayRight { delay } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetEchoDelayRight(*delay))
+                                .await
+                                .context("Unable to Set Echo Delay Right")?;
+                        }
+                        Echo::FeedbackXFBLtoR { feedback } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetEchoFeedbackXFBLtoR(*feedback))
+                                .await
+                                .context("Unable to Set Echo Feedback XFB L to R")?;
+                        }
+                        Echo::FeedbackXFBRtoL { feedback } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetEchoFeedbackXFBRtoL(*feedback))
+                                .await
+                                .context("Unable to Set Echo Feedback XFB R to L")?;
+                        }
+                    },
+                    EffectsCommands::Pitch { command } => match command {
+                        Pitch::Style { style } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetPitchStyle(*style))
+                                .await
+                                .context("Unable to Set Pitch Style")?;
+                        }
+                        Pitch::Amount { amount } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetPitchAmount(*amount))
+                                .await
+                                .context("Unable to Set Pitch Amount")?;
+                        }
+                        Pitch::Character { character } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetPitchCharacter(*character))
+                                .await
+                                .context("Unable to Set Pitch Character")?;
+                        }
+                    },
+                    EffectsCommands::Gender { command } => match command {
+                        Gender::Style { style } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetGenderStyle(*style))
+                                .await
+                                .context("Unable to Set Gender Style")?;
+                        }
+                        Gender::Amount { amount } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetGenderAmount(*amount))
+                                .await
+                                .context("Unable to Set Gender Amount")?;
+                        }
+                    },
+                    EffectsCommands::Megaphone { command } => match command {
+                        Megaphone::Style { style } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetMegaphoneStyle(*style))
+                                .await
+                                .context("Unable to Set Megaphone Style")?;
+                        }
+                        Megaphone::Amount { amount } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetMegaphoneAmount(*amount))
+                                .await
+                                .context("Unable to Set Megaphone Amount")?;
+                        }
+                        Megaphone::PostGain { gain } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetMegaphonePostGain(*gain))
+                                .await
+                                .context("Unable to Set Megaphone Post-Gain")?;
+                        }
+                    },
+                    EffectsCommands::Robot { command } => match command {
+                        Robot::Style { style } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetRobotStyle(*style))
+                                .await
+                                .context("Unable to set Robot Style")?;
+                        }
+                        Robot::Gain { range, gain } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetRobotGain(*range, *gain))
+                                .await
+                                .context("Unable to set Robot Gain")?;
+                        }
+                        Robot::Frequency { range, frequency } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetRobotFreq(*range, *frequency))
+                                .await
+                                .context("Unable to set Robot Frequency")?;
+                        }
+                        Robot::Bandwidth { range, bandwidth } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetRobotWidth(*range, *bandwidth))
+                                .await
+                                .context("Unable to set Robot Bandwidth")?;
+                        }
+                        Robot::WaveForm { waveform } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetRobotWaveform(*waveform))
+                                .await
+                                .context("Unable to set Robot Wave Form")?;
+                        }
+                        Robot::PulseWidth { width } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetRobotPulseWidth(*width))
+                                .await
+                                .context("Unable to set Robot Pulse Width")?;
+                        }
+                        Robot::Threshold { threshold } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetRobotThreshold(*threshold))
+                                .await
+                                .context("Unable to set Robot Threshold")?;
+                        }
+                        Robot::DryMix { dry_mix } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetRobotDryMix(*dry_mix))
+                                .await
+                                .context("Unable to set Robot Dry Mix")?;
+                        }
+                    },
+                    EffectsCommands::HardTune { command } => match command {
+                        HardTune::Style { style } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetHardTuneStyle(*style))
+                                .await
+                                .context("Unable to set HardTune Style")?;
+                        }
+                        HardTune::Amount { amount } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetHardTuneAmount(*amount))
+                                .await
+                                .context("Unable to set HardTune Amount")?;
+                        }
+                        HardTune::Rate { rate } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetHardTuneRate(*rate))
+                                .await
+                                .context("Unable to set HardTune Rate")?;
+                        }
+                        HardTune::Window { window } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetHardTuneWindow(*window))
+                                .await
+                                .context("Unable to set HardTune Window")?;
+                        }
+                        HardTune::Source { source } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetHardTuneSource(*source))
+                                .await
+                                .context("Unable to set HardTune Source")?;
                         }
                     },
                 },

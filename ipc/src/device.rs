@@ -1,8 +1,10 @@
 use enumset::EnumSet;
 use goxlr_types::{
     ButtonColourOffStyle, ButtonColourTargets, ChannelName, CompressorAttackTime, CompressorRatio,
-    CompressorReleaseTime, EqFrequencies, FaderDisplayStyle, FaderName, FirmwareVersions,
-    GateTimes, InputDevice, MicrophoneType, MiniEqFrequencies, MuteFunction, OutputDevice,
+    CompressorReleaseTime, EchoStyle, EffectBankPresets, EqFrequencies, FaderDisplayStyle,
+    FaderName, FirmwareVersions, GateTimes, GenderStyle, HardTuneSource, HardTuneStyle,
+    InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies, MuteFunction, OutputDevice,
+    PitchStyle, ReverbStyle, RobotStyle,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -26,6 +28,7 @@ pub struct MixerStatus {
     pub router_table: [[bool; OutputDevice::COUNT]; InputDevice::COUNT],
     pub cough_button: CoughButton,
     pub lighting: Lighting,
+    pub effects: Option<Effects>,
     pub profile_name: String,
     pub mic_profile_name: String,
 }
@@ -146,17 +149,117 @@ pub struct TwoColours {
     pub colour_two: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Effects {
+    pub active_preset: EffectBankPresets,
+    pub preset_names: HashMap<EffectBankPresets, String>,
+    pub current: ActiveEffects,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActiveEffects {
+    pub reverb: Reverb,
+    pub echo: Echo,
+    pub pitch: Pitch,
+    pub gender: Gender,
+    pub megaphone: Megaphone,
+    pub robot: Robot,
+    pub hard_tune: HardTune,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Reverb {
+    pub style: ReverbStyle,
+    pub amount: u8,
+    pub decay: u16,
+    pub early_level: i8,
+    pub tail_level: i8,
+    pub pre_delay: u8,
+    pub lo_colour: i8,
+    pub hi_colour: i8,
+    pub hi_factor: i8,
+    pub diffuse: i8,
+    pub mod_speed: i8,
+    pub mod_depth: i8,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Echo {
+    pub style: EchoStyle,
+    pub amount: u8,
+    pub feedback: u8,
+    pub tempo: u16,
+    pub delay_left: u16,
+    pub delay_right: u16,
+    pub feedback_left: u8,
+    pub feedback_right: u8,
+    pub feedback_xfb_l_to_r: u8,
+    pub feedback_xfb_r_to_l: u8,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Pitch {
+    pub style: PitchStyle,
+    pub amount: i8,
+    pub character: u8,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Gender {
+    pub style: GenderStyle,
+    pub amount: i8,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Megaphone {
+    pub is_enabled: bool,
+    pub style: MegaphoneStyle,
+    pub amount: u8,
+    pub post_gain: i8,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Robot {
+    pub is_enabled: bool,
+    pub style: RobotStyle,
+    pub low_gain: i8,
+    pub low_freq: u8,
+    pub low_width: u8,
+    pub mid_gain: i8,
+    pub mid_freq: u8,
+    pub mid_width: u8,
+    pub high_gain: i8,
+    pub high_freq: u8,
+    pub high_width: u8,
+    pub waveform: u8,
+    pub pulse_width: u8,
+    pub threshold: i8,
+    pub dry_mix: i8,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HardTune {
+    pub is_enabled: bool,
+    pub style: HardTuneStyle,
+    pub amount: u8,
+    pub rate: u8,
+    pub window: u16,
+    pub source: HardTuneSource,
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Paths {
     pub profile_directory: PathBuf,
     pub mic_profile_directory: PathBuf,
     pub samples_directory: PathBuf,
+    pub presets_directory: PathBuf,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Files {
     pub profiles: HashSet<String>,
     pub mic_profiles: HashSet<String>,
+    pub presets: HashSet<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

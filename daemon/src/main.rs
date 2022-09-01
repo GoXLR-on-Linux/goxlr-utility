@@ -22,7 +22,8 @@ use clap::Parser;
 use communication::listen_for_connections;
 use goxlr_ipc::Socket;
 use goxlr_ipc::{DaemonRequest, DaemonResponse};
-use log::{info, warn};
+use log::{error, info, warn};
+use nix::unistd::Uid;
 use simplelog::{ColorChoice, CombinedLogger, Config, TermLogger, TerminalMode};
 use std::fs;
 use std::fs::remove_file;
@@ -33,7 +34,7 @@ use tokio::sync::mpsc;
 use tokio::{join, signal};
 
 // This can probably go somewhere else, but for now..
-const DISTRIBUTABLE_PROFILES: &str = "/usr/share/goxlr/profiles/";
+const DISTRIBUTABLE_ROOT: &str = "/usr/share/goxlr/";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[tokio::main]
@@ -54,6 +55,20 @@ async fn main() -> Result<()> {
         ColorChoice::Auto,
     )])
     .context("Could not configure the logger")?;
+
+    if Uid::effective().is_root() {
+        if args.force_root {
+            error!("GoXLR Utility running as root, this is generally considered bad.");
+        } else {
+            error!("The GoXLR Utility Daemon is not designed to be run as root, and should run");
+            error!("as the current active user. If you're having problems with permissions,");
+            error!("please consult the 'Permissions' section of the README. Running as root");
+            error!("*WILL* cause issues with the sampler, and may pose a security threat.");
+            error!("");
+            error!("To override this message, please start with --force-root");
+            std::process::exit(-1);
+        }
+    }
 
     info!("Starting GoXLR Daemon v{}", VERSION);
     let settings = SettingsHandle::load(args.config).await?;

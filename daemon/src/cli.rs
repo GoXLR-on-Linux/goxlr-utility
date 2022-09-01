@@ -24,6 +24,10 @@ pub struct Cli {
     /// Enable CORS on the HTTP Server to allow cross-origin communication
     #[clap(long)]
     pub http_enable_cors: bool,
+
+    /// Force Run the Daemon as Root
+    #[clap(long)]
+    pub force_root: bool,
 }
 
 fn default_config_location() -> PathBuf {

@@ -1,12 +1,12 @@
 use clap::{AppSettings, Args, Parser, Subcommand};
 use goxlr_types::{
     ButtonColourGroups, ButtonColourOffStyle, ButtonColourTargets, ChannelName,
-    CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EqFrequencies, FaderDisplayStyle,
-    FaderName, GateTimes, InputDevice, MiniEqFrequencies, MuteFunction, OutputDevice,
+    CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EchoStyle, EffectBankPresets,
+    EqFrequencies, FaderDisplayStyle, FaderName, GateTimes, GenderStyle, HardTuneSource,
+    HardTuneStyle, InputDevice, MegaphoneStyle, MiniEqFrequencies, MuteFunction, OutputDevice,
+    PitchStyle, ReverbStyle, RobotRange, RobotStyle,
 };
 use std::str::FromStr;
-
-// TODO: Likely going to shuffle this to use subcommands rather than parameters..
 
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]
@@ -115,6 +115,12 @@ pub enum SubCommands {
     Lighting {
         #[clap(subcommand)]
         command: LightingCommands,
+    },
+
+    /// Commands to Control the Effects Panel
+    Effects {
+        #[clap(subcommand)]
+        command: EffectsCommands,
     },
 }
 
@@ -624,5 +630,249 @@ pub enum AllFaderCommands {
 
         /// The secondary button colour [RRGGBB]
         colour_two: Option<String>,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+#[clap(setting = AppSettings::DeriveDisplayOrder)]
+#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+pub enum EffectsCommands {
+    LoadEffectPreset {
+        name: String,
+    },
+    RenameActivePreset {
+        name: String,
+    },
+    SaveActivePreset,
+    SetActivePreset {
+        #[clap(arg_enum)]
+        preset: EffectBankPresets,
+    },
+    Reverb {
+        #[clap(subcommand)]
+        command: Reverb,
+    },
+    Echo {
+        #[clap(subcommand)]
+        command: Echo,
+    },
+    Pitch {
+        #[clap(subcommand)]
+        command: Pitch,
+    },
+    Gender {
+        #[clap(subcommand)]
+        command: Gender,
+    },
+    Megaphone {
+        #[clap(subcommand)]
+        command: Megaphone,
+    },
+    Robot {
+        #[clap(subcommand)]
+        command: Robot,
+    },
+    HardTune {
+        #[clap(subcommand)]
+        command: HardTune,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+#[clap(setting = AppSettings::DeriveDisplayOrder)]
+#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+pub enum Reverb {
+    /// Set the Reverb Style
+    Style {
+        /// The Style to Set
+        #[clap(arg_enum)]
+        style: ReverbStyle,
+    },
+
+    /// Set the Reverb Amount
+    Amount { amount: u8 },
+
+    /// Set the Reverb Decay
+    Decay { decay: u16 },
+
+    /// Set the Reverb Early Level
+    EarlyLevel { level: i8 },
+
+    /// Set the Reverb Tail Level
+    TailLevel { level: i8 },
+
+    /// Set the Reverb Pre-Delay
+    PreDelay { delay: u8 },
+
+    /// Set the Reverb Low 'Colour'
+    LowColour { colour: i8 },
+
+    /// Set the Reverb High 'Colour'
+    HighColour { colour: i8 },
+
+    /// Set the Reverb High Factor
+    HighFactor { factor: i8 },
+
+    /// Set the Reverb Diffuse Level
+    Diffuse { diffuse: i8 },
+
+    /// Set the Reverb Mod Speed
+    ModSpeed { speed: i8 },
+
+    /// Set the Reverb Mod Depth
+    ModDepth { depth: i8 },
+}
+
+#[derive(Subcommand, Debug)]
+#[clap(setting = AppSettings::DeriveDisplayOrder)]
+#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+pub enum Echo {
+    /// Set the Echo Style
+    Style {
+        #[clap(arg_enum)]
+        style: EchoStyle,
+    },
+
+    /// Set the Echo Amount (Percentage)
+    Amount { amount: u8 },
+
+    /// Set the Echo Feedback Level
+    Feedback { feedback: u8 },
+
+    /// Set the Echo Tempo (only valid if 'Style' is 'ClassicSlap')
+    Tempo { tempo: u16 },
+
+    /// Set the Reverb Left Delay (only valid if 'Style' is not 'ClassicSlap')
+    DelayLeft { delay: u16 },
+
+    /// Set the Reverb Right Delay (only valid if 'Style' is not 'ClassicSlap')
+    DelayRight { delay: u16 },
+
+    /// Set the Echo XFB from Left to Right
+    FeedbackXFBLtoR { feedback: u8 },
+
+    /// Set the Echo XFB from Right to Left
+    FeedbackXFBRtoL { feedback: u8 },
+}
+
+#[derive(Subcommand, Debug)]
+#[clap(setting = AppSettings::DeriveDisplayOrder)]
+#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+pub enum Pitch {
+    /// Set the Pitch Style
+    Style {
+        #[clap(arg_enum)]
+        style: PitchStyle,
+    },
+
+    /// Set the pitch Amount
+    Amount { amount: i8 },
+
+    /// Set the Pitch Character
+    Character { character: u8 },
+}
+
+#[derive(Subcommand, Debug)]
+#[clap(setting = AppSettings::DeriveDisplayOrder)]
+#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+pub enum Gender {
+    Style {
+        #[clap(arg_enum)]
+        style: GenderStyle,
+    },
+    Amount {
+        amount: i8,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+#[clap(setting = AppSettings::DeriveDisplayOrder)]
+#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+pub enum Megaphone {
+    /// Set the Megaphone Style
+    Style {
+        #[clap(arg_enum)]
+        style: MegaphoneStyle,
+    },
+
+    /// Set the Megaphone Amount
+    Amount { amount: u8 },
+
+    /// Set the Post Processing Gain
+    PostGain { gain: i8 },
+}
+
+#[derive(Subcommand, Debug)]
+#[clap(setting = AppSettings::DeriveDisplayOrder)]
+#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+pub enum Robot {
+    /// Set the Robot Style
+    Style {
+        #[clap(arg_enum)]
+        style: RobotStyle,
+    },
+
+    /// Sets the Robot Gain
+    Gain {
+        /// The Gain Range
+        #[clap(arg_enum)]
+        range: RobotRange,
+
+        /// The Gain Value
+        gain: i8,
+    },
+
+    /// Sets the Robot Frequency
+    Frequency {
+        /// The Frequency Range
+        #[clap(arg_enum)]
+        range: RobotRange,
+        /// The frequency Value
+        frequency: u8,
+    },
+    /// Sets the Robot Bandwidth
+    Bandwidth {
+        /// The Bandwidth Range
+        #[clap(arg_enum)]
+        range: RobotRange,
+        /// The Bandwidth Value
+        bandwidth: u8,
+    },
+    /// Sets the Robot Waveform
+    WaveForm { waveform: u8 },
+
+    /// Sets the Robot Pulse Width
+    PulseWidth { width: u8 },
+
+    /// Sets the Robot Activation Threshold
+    Threshold { threshold: i8 },
+
+    /// Sets the Robot Dry Mix
+    DryMix { dry_mix: i8 },
+}
+
+#[derive(Subcommand, Debug)]
+#[clap(setting = AppSettings::DeriveDisplayOrder)]
+#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+pub enum HardTune {
+    /// Sets the Hard Tune Style    
+    Style {
+        #[clap(arg_enum)]
+        style: HardTuneStyle,
+    },
+
+    /// Sets the Hard Tune Amount
+    Amount { amount: u8 },
+
+    /// Sets the Hard Tune Rate
+    Rate { rate: u8 },
+
+    /// Sets the Hard Tune Window
+    Window { window: u16 },
+
+    /// Sets the Hard Tune Source
+    Source {
+        #[clap(arg_enum)]
+        source: HardTuneSource,
     },
 }

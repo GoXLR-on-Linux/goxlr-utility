@@ -2,18 +2,18 @@ use std::collections::HashMap;
 use std::io::Write;
 use std::os::raw::c_float;
 
-use enum_map::{Enum, EnumMap};
+use enum_map::EnumMap;
 use strum::{EnumIter, EnumProperty, IntoEnumIterator};
 use xml::attribute::OwnedAttribute;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 
 use crate::components::colours::ColourMap;
 use crate::components::megaphone::MegaphoneStyle::Megaphone;
-use crate::components::megaphone::Preset::{Preset1, Preset2, Preset3, Preset4, Preset5, Preset6};
+use crate::Preset;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -61,7 +61,11 @@ impl MegaphoneEffectBase {
         Ok(())
     }
 
-    pub fn parse_megaphone_preset(&mut self, id: u8, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_megaphone_preset(
+        &mut self,
+        preset_enum: Preset,
+        attributes: &[OwnedAttribute],
+    ) -> Result<()> {
         let mut preset = MegaphoneEffect::new();
         for attr in attributes {
             if attr.name.local_name == "megaphoneEffectstate" {
@@ -146,22 +150,7 @@ impl MegaphoneEffectBase {
                 &attr.name.local_name
             );
         }
-
-        // Ok, we should be able to store this now..
-        if id == 1 {
-            self.preset_map[Preset1] = preset;
-        } else if id == 2 {
-            self.preset_map[Preset2] = preset;
-        } else if id == 3 {
-            self.preset_map[Preset3] = preset;
-        } else if id == 4 {
-            self.preset_map[Preset4] = preset;
-        } else if id == 5 {
-            self.preset_map[Preset5] = preset;
-        } else if id == 6 {
-            self.preset_map[Preset6] = preset;
-        }
-
+        self.preset_map[preset_enum] = preset;
         Ok(())
     }
 
@@ -179,80 +168,12 @@ impl MegaphoneEffectBase {
         writer.write(element)?;
 
         // Because all of these are seemingly 'guaranteed' to exist, we can straight dump..
-        for (key, value) in &self.preset_map {
-            let mut sub_attributes: HashMap<String, String> = HashMap::default();
-
-            let tag_name = format!("megaphoneEffect{}", key.get_str("tagSuffix").unwrap());
+        for preset in Preset::iter() {
+            let tag_name = format!("megaphoneEffect{}", preset.get_str("tagSuffix").unwrap());
             let mut sub_element: StartElementBuilder =
                 XmlWriterEvent::start_element(tag_name.as_str());
 
-            sub_attributes.insert(
-                "megaphoneEffectstate".to_string(),
-                if value.state {
-                    "1".to_string()
-                } else {
-                    "0".to_string()
-                },
-            );
-            sub_attributes.insert(
-                "MEGAPHONE_STYLE".to_string(),
-                value.style.get_str("uiIndex").unwrap().to_string(),
-            );
-            sub_attributes.insert(
-                "TRANS_DIST_AMT".to_string(),
-                format!("{}", value.trans_dist_amt),
-            );
-            sub_attributes.insert("TRANS_HP".to_string(), format!("{}", value.trans_hp));
-            sub_attributes.insert("TRANS_LP".to_string(), format!("{}", value.trans_lp));
-            sub_attributes.insert(
-                "TRANS_PREGAIN".to_string(),
-                format!("{}", value.trans_pregain),
-            );
-            sub_attributes.insert(
-                "TRANS_POSTGAIN".to_string(),
-                format!("{}", value.trans_postgain),
-            );
-            sub_attributes.insert(
-                "TRANS_DIST_TYPE".to_string(),
-                format!("{}", value.trans_dist_type),
-            );
-            sub_attributes.insert(
-                "TRANS_PRESENCE_GAIN".to_string(),
-                format!("{}", value.trans_presence_gain),
-            );
-            sub_attributes.insert(
-                "TRANS_PRESENCE_FC".to_string(),
-                format!("{}", value.trans_presence_fc),
-            );
-            sub_attributes.insert(
-                "TRANS_PRESENCE_BW".to_string(),
-                format!("{}", value.trans_presence_bw),
-            );
-            sub_attributes.insert(
-                "TRANS_BEATBOX_ENABLE".to_string(),
-                if value.trans_beatbox_enabled {
-                    "1".to_string()
-                } else {
-                    "0".to_string()
-                },
-            );
-            sub_attributes.insert(
-                "TRANS_FILTER_CONTROL".to_string(),
-                format!("{}", value.trans_filter_control),
-            );
-            sub_attributes.insert(
-                "TRANS_FILTER".to_string(),
-                format!("{}", value.trans_filter),
-            );
-            sub_attributes.insert(
-                "TRANS_DRIVE_POT_GAIN_COMP_MID".to_string(),
-                format!("{}", value.trans_drive_pot_gain_comp_mid),
-            );
-            sub_attributes.insert(
-                "TRANS_DRIVE_POT_GAIN_COMP_MAX".to_string(),
-                format!("{}", value.trans_drive_pot_gain_comp_max),
-            );
-
+            let sub_attributes = self.get_preset_attributes(preset);
             for (key, value) in &sub_attributes {
                 sub_element = sub_element.attr(key.as_str(), value.as_str());
             }
@@ -264,6 +185,80 @@ impl MegaphoneEffectBase {
         // Finally, close the 'main' tag.
         writer.write(XmlWriterEvent::end_element())?;
         Ok(())
+    }
+
+    pub fn get_preset_attributes(&self, preset: Preset) -> HashMap<String, String> {
+        let mut attributes = HashMap::new();
+        let value = &self.preset_map[preset];
+
+        attributes.insert(
+            "megaphoneEffectstate".to_string(),
+            if value.state {
+                "1".to_string()
+            } else {
+                "0".to_string()
+            },
+        );
+        attributes.insert(
+            "MEGAPHONE_STYLE".to_string(),
+            value.style.get_str("uiIndex").unwrap().to_string(),
+        );
+        attributes.insert(
+            "TRANS_DIST_AMT".to_string(),
+            format!("{}", value.trans_dist_amt),
+        );
+        attributes.insert("TRANS_HP".to_string(), format!("{}", value.trans_hp));
+        attributes.insert("TRANS_LP".to_string(), format!("{}", value.trans_lp));
+        attributes.insert(
+            "TRANS_PREGAIN".to_string(),
+            format!("{}", value.trans_pregain),
+        );
+        attributes.insert(
+            "TRANS_POSTGAIN".to_string(),
+            format!("{}", value.trans_postgain),
+        );
+        attributes.insert(
+            "TRANS_DIST_TYPE".to_string(),
+            format!("{}", value.trans_dist_type),
+        );
+        attributes.insert(
+            "TRANS_PRESENCE_GAIN".to_string(),
+            format!("{}", value.trans_presence_gain),
+        );
+        attributes.insert(
+            "TRANS_PRESENCE_FC".to_string(),
+            format!("{}", value.trans_presence_fc),
+        );
+        attributes.insert(
+            "TRANS_PRESENCE_BW".to_string(),
+            format!("{}", value.trans_presence_bw),
+        );
+        attributes.insert(
+            "TRANS_BEATBOX_ENABLE".to_string(),
+            if value.trans_beatbox_enabled {
+                "1".to_string()
+            } else {
+                "0".to_string()
+            },
+        );
+        attributes.insert(
+            "TRANS_FILTER_CONTROL".to_string(),
+            format!("{}", value.trans_filter_control),
+        );
+        attributes.insert(
+            "TRANS_FILTER".to_string(),
+            format!("{}", value.trans_filter),
+        );
+        attributes.insert(
+            "TRANS_DRIVE_POT_GAIN_COMP_MID".to_string(),
+            format!("{}", value.trans_drive_pot_gain_comp_mid),
+        );
+        attributes.insert(
+            "TRANS_DRIVE_POT_GAIN_COMP_MAX".to_string(),
+            format!("{}", value.trans_drive_pot_gain_comp_max),
+        );
+
+        attributes
     }
 
     pub fn colour_map(&self) -> &ColourMap {
@@ -338,7 +333,6 @@ impl MegaphoneEffect {
     pub fn state(&self) -> bool {
         self.state
     }
-
     pub fn set_state(&mut self, state: bool) {
         self.state = state;
     }
@@ -346,47 +340,132 @@ impl MegaphoneEffect {
     pub fn style(&self) -> &MegaphoneStyle {
         &self.style
     }
+    pub fn set_style(&mut self, style: MegaphoneStyle) -> Result<()> {
+        self.style = style;
+
+        let preset = MegaphonePreset::get_preset(style);
+        self.set_trans_dist_amt(preset.trans_dist_amt)?;
+        self.set_trans_hp(preset.trans_hp);
+        self.set_trans_lp(preset.trans_lp);
+        self.set_trans_pregain(preset.trans_pregain);
+        self.set_trans_postgain(preset.trans_postgain)?;
+        self.set_trans_dist_type(preset.trans_dist_type);
+        self.set_trans_presence_gain(preset.trans_presence_gain);
+        self.set_trans_presence_fc(preset.trans_presence_fc);
+        self.set_trans_presence_bw(preset.trans_presence_bw);
+        self.set_trans_beatbox_enabled(preset.trans_beatbox_enabled);
+        self.set_trans_filter_control(preset.trans_filter_control);
+        self.set_trans_filter(preset.trans_filter);
+        self.set_trans_drive_pot_gain_comp_mid(preset.trans_drive_pot_gain_comp_mid);
+        self.set_trans_drive_pot_gain_comp_max(preset.trans_drive_pot_gain_comp_max);
+
+        Ok(())
+    }
+
     pub fn trans_dist_amt(&self) -> u8 {
         self.trans_dist_amt
     }
+    pub fn set_trans_dist_amt(&mut self, value: u8) -> Result<()> {
+        if value > 100 {
+            return Err(anyhow!("Amount should be a percentage"));
+        }
+        self.trans_dist_amt = value;
+        Ok(())
+    }
+
     pub fn trans_hp(&self) -> u8 {
         self.trans_hp
     }
+    fn set_trans_hp(&mut self, trans_hp: u8) {
+        self.trans_hp = trans_hp;
+    }
+
     pub fn trans_lp(&self) -> u8 {
         self.trans_lp
     }
+    fn set_trans_lp(&mut self, trans_lp: u8) {
+        self.trans_lp = trans_lp;
+    }
+
     pub fn trans_pregain(&self) -> u8 {
         self.trans_pregain
     }
+    fn set_trans_pregain(&mut self, trans_pregain: u8) {
+        self.trans_pregain = trans_pregain;
+    }
+
     pub fn trans_postgain(&self) -> i8 {
         self.trans_postgain
     }
+    pub fn set_trans_postgain(&mut self, trans_postgain: i8) -> Result<()> {
+        if !(-20..=20).contains(&trans_postgain) {
+            return Err(anyhow!("Post Gain should be between -20 and 20"));
+        }
+        self.trans_postgain = trans_postgain;
+        Ok(())
+    }
+
     pub fn trans_dist_type(&self) -> u8 {
         self.trans_dist_type
     }
+    fn set_trans_dist_type(&mut self, trans_dist_type: u8) {
+        self.trans_dist_type = trans_dist_type;
+    }
+
     pub fn trans_presence_gain(&self) -> u8 {
         self.trans_presence_gain
     }
+    fn set_trans_presence_gain(&mut self, trans_presence_gain: u8) {
+        self.trans_presence_gain = trans_presence_gain;
+    }
+
     pub fn trans_presence_fc(&self) -> u8 {
         self.trans_presence_fc
     }
+    fn set_trans_presence_fc(&mut self, trans_presence_fc: u8) {
+        self.trans_presence_fc = trans_presence_fc;
+    }
+
     pub fn trans_presence_bw(&self) -> u8 {
         self.trans_presence_bw
     }
+    fn set_trans_presence_bw(&mut self, trans_presence_bw: u8) {
+        self.trans_presence_bw = trans_presence_bw;
+    }
+
     pub fn trans_beatbox_enabled(&self) -> bool {
         self.trans_beatbox_enabled
     }
+    fn set_trans_beatbox_enabled(&mut self, trans_beatbox_enabled: bool) {
+        self.trans_beatbox_enabled = trans_beatbox_enabled;
+    }
+
     pub fn trans_filter_control(&self) -> u8 {
         self.trans_filter_control
     }
+    fn set_trans_filter_control(&mut self, trans_filter_control: u8) {
+        self.trans_filter_control = trans_filter_control;
+    }
+
     pub fn trans_filter(&self) -> u8 {
         self.trans_filter
     }
+    fn set_trans_filter(&mut self, trans_filter: u8) {
+        self.trans_filter = trans_filter;
+    }
+
     pub fn trans_drive_pot_gain_comp_mid(&self) -> u8 {
         self.trans_drive_pot_gain_comp_mid
     }
+    fn set_trans_drive_pot_gain_comp_mid(&mut self, trans_drive_pot_gain_comp_mid: u8) {
+        self.trans_drive_pot_gain_comp_mid = trans_drive_pot_gain_comp_mid;
+    }
+
     pub fn trans_drive_pot_gain_comp_max(&self) -> u8 {
         self.trans_drive_pot_gain_comp_max
+    }
+    fn set_trans_drive_pot_gain_comp_max(&mut self, trans_drive_pot_gain_comp_max: u8) {
+        self.trans_drive_pot_gain_comp_max = trans_drive_pot_gain_comp_max;
     }
 }
 
@@ -405,7 +484,7 @@ pub enum MegaphoneStyle {
     Overdrive,
 
     #[strum(props(uiIndex = "4"))]
-    BuzzCut,
+    BuzzCutt,
 
     #[strum(props(uiIndex = "5"))]
     Tweed,
@@ -417,31 +496,122 @@ impl Default for MegaphoneStyle {
     }
 }
 
-// TODO: Move this.
-// In addition, 'contextTitle' refers to how this is represented in the <selectedContext tag
-#[derive(Debug, EnumIter, Enum, EnumProperty, Copy, Clone)]
-pub enum Preset {
-    #[strum(props(tagSuffix = "preset1", contextTitle = "effects1"))]
-    #[strum(to_string = "PRESET_1")]
-    Preset1,
+struct MegaphonePreset {
+    trans_dist_amt: u8,
+    trans_hp: u8,
+    trans_lp: u8,
+    trans_pregain: u8,
+    trans_postgain: i8,
+    trans_dist_type: u8,
+    trans_presence_gain: u8,
+    trans_presence_fc: u8,
+    trans_presence_bw: u8,
+    trans_beatbox_enabled: bool,
+    trans_filter_control: u8,
+    trans_filter: u8,
+    trans_drive_pot_gain_comp_mid: u8,
+    trans_drive_pot_gain_comp_max: u8,
+}
 
-    #[strum(props(tagSuffix = "preset2", contextTitle = "effects2"))]
-    #[strum(to_string = "PRESET_2")]
-    Preset2,
-
-    #[strum(props(tagSuffix = "preset3", contextTitle = "effects3"))]
-    #[strum(to_string = "PRESET_3")]
-    Preset3,
-
-    #[strum(props(tagSuffix = "preset4", contextTitle = "effects4"))]
-    #[strum(to_string = "PRESET_4")]
-    Preset4,
-
-    #[strum(props(tagSuffix = "preset5", contextTitle = "effects5"))]
-    #[strum(to_string = "PRESET_5")]
-    Preset5,
-
-    #[strum(props(tagSuffix = "preset6", contextTitle = "effects6"))]
-    #[strum(to_string = "PRESET_6")]
-    Preset6,
+impl MegaphonePreset {
+    fn get_preset(style: MegaphoneStyle) -> MegaphonePreset {
+        match style {
+            Megaphone => MegaphonePreset {
+                trans_dist_amt: 0,
+                trans_hp: 120,
+                trans_lp: 200,
+                trans_pregain: 0,
+                trans_postgain: 2,
+                trans_dist_type: 6,
+                trans_presence_gain: 8,
+                trans_presence_fc: 135,
+                trans_presence_bw: 7,
+                trans_beatbox_enabled: false,
+                trans_filter_control: 2,
+                trans_filter: 59,
+                trans_drive_pot_gain_comp_mid: 0,
+                trans_drive_pot_gain_comp_max: 0,
+            },
+            MegaphoneStyle::Radio => MegaphonePreset {
+                trans_dist_amt: 30,
+                trans_hp: 110,
+                trans_lp: 190,
+                trans_pregain: 0,
+                trans_postgain: 2,
+                trans_dist_type: 4,
+                trans_presence_gain: 7,
+                trans_presence_fc: 160,
+                trans_presence_bw: 5,
+                trans_beatbox_enabled: false,
+                trans_filter_control: 1,
+                trans_filter: 59,
+                trans_drive_pot_gain_comp_mid: 0,
+                trans_drive_pot_gain_comp_max: 5,
+            },
+            MegaphoneStyle::OnThePhone => MegaphonePreset {
+                trans_dist_amt: 50,
+                trans_hp: 50,
+                trans_lp: 238,
+                trans_pregain: 0,
+                trans_postgain: 0,
+                trans_dist_type: 12,
+                trans_presence_gain: 10,
+                trans_presence_fc: 160,
+                trans_presence_bw: 5,
+                trans_beatbox_enabled: false,
+                trans_filter_control: 3,
+                trans_filter: 0,
+                trans_drive_pot_gain_comp_mid: 0,
+                trans_drive_pot_gain_comp_max: 0,
+            },
+            MegaphoneStyle::Overdrive => MegaphonePreset {
+                trans_dist_amt: 50,
+                trans_hp: 50,
+                trans_lp: 238,
+                trans_pregain: 0,
+                trans_postgain: 2,
+                trans_dist_type: 1,
+                trans_presence_gain: 0,
+                trans_presence_fc: 168,
+                trans_presence_bw: 8,
+                trans_beatbox_enabled: false,
+                trans_filter_control: 1,
+                trans_filter: 100,
+                trans_drive_pot_gain_comp_mid: 1,
+                trans_drive_pot_gain_comp_max: 25,
+            },
+            MegaphoneStyle::BuzzCutt => MegaphonePreset {
+                trans_dist_amt: 50,
+                trans_hp: 50,
+                trans_lp: 238,
+                trans_pregain: 0,
+                trans_postgain: 2,
+                trans_dist_type: 9,
+                trans_presence_gain: 5,
+                trans_presence_fc: 174,
+                trans_presence_bw: 4,
+                trans_beatbox_enabled: false,
+                trans_filter_control: 3,
+                trans_filter: 100,
+                trans_drive_pot_gain_comp_mid: 1,
+                trans_drive_pot_gain_comp_max: 8,
+            },
+            MegaphoneStyle::Tweed => MegaphonePreset {
+                trans_dist_amt: 20,
+                trans_hp: 78,
+                trans_lp: 192,
+                trans_pregain: 10,
+                trans_postgain: 2,
+                trans_dist_type: 13,
+                trans_presence_gain: 0,
+                trans_presence_fc: 168,
+                trans_presence_bw: 8,
+                trans_beatbox_enabled: false,
+                trans_filter_control: 3,
+                trans_filter: 59,
+                trans_drive_pot_gain_comp_mid: 3,
+                trans_drive_pot_gain_comp_max: 4,
+            },
+        }
+    }
 }
