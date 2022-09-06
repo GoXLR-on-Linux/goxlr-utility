@@ -15,7 +15,7 @@ use goxlr_types::{
 use log::{debug, info, trace, warn};
 use rusb::Error::Pipe;
 use rusb::{
-    Device, DeviceDescriptor, DeviceHandle, Direction, Error, GlobalContext, Language, Recipient,
+    Device, DeviceDescriptor, DeviceHandle, Direction, GlobalContext, Language, Recipient,
     RequestType, UsbContext,
 };
 use std::io::{Cursor, Write};
@@ -265,7 +265,7 @@ impl<T: UsbContext> GoXLR<T> {
             trace!("Loop Attempt {}", i);
             let response_value = self.read_control(3, 0, 0, 1040);
             trace!("Response is Error: {}", response_value.is_err());
-            if self.response_requires_retry(&response_value) {
+            if response_value == Err(Pipe) {
                 if i < 20 {
                     debug!("Response not arrived yet for {:?}, sleeping and retrying (Attempt {} of 20)", command, i + 1);
                     sleep(sleep_time);
@@ -302,24 +302,6 @@ impl<T: UsbContext> GoXLR<T> {
         }
 
         Ok(response)
-    }
-
-    #[cfg(not(target_os = "macos"))]
-    fn response_requires_retry(&self, response: &Result<Vec<u8>, Error>) -> bool {
-        response == &Err(Pipe)
-    }
-
-    #[cfg(target_os = "macos")]
-    fn response_requires_retry(&self, response: &Result<Vec<u8>, Error>) -> bool {
-        if response == &Err(Pipe) {
-            return true;
-        }
-
-        if let Ok(response_vec) = response {
-            return response_vec.iter().all(|&f| f == 0);
-        }
-
-        false
     }
 
     pub fn supports_dcp_category(&mut self, category: DCPCategory) -> Result<bool, rusb::Error> {
