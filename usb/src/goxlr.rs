@@ -273,7 +273,7 @@ impl<T: UsbContext> GoXLR<T> {
             }
             if response_value.is_err() {
                 let err = response_value.err().unwrap();
-                debug!("Error Occured during packet read: {}", err);
+                debug!("Error Occurred during packet read: {}", err);
                 return Err(err);
             }
 
@@ -551,11 +551,18 @@ impl<T: UsbContext> GoXLR<T> {
         )
     }
 
-    pub fn is_connected(&self) -> bool {
+    pub fn is_connected(&mut self) -> bool {
         let active_configuration = self.handle.active_configuration();
         if active_configuration.is_ok() {
             debug!("Active Configuration: {}", active_configuration.unwrap());
-            return true;
+
+            // Attempt a Command Index reset..
+            if self.request_data(Command::ResetCommandIndex, &[]).is_ok() {
+                return true;
+            }
+
+            debug!("Active Configuration Returning, but not handling requests, assume dead.");
+            return false;
         }
         debug!("Command Failed, assuming Unplugged");
         false

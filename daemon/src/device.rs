@@ -1951,7 +1951,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
             .as_millis()
     }
 
-    pub fn is_connected(&self) -> bool {
+    pub fn is_connected(&mut self) -> bool {
         self.goxlr.is_connected()
     }
 }
