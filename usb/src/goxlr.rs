@@ -12,7 +12,7 @@ use goxlr_types::{
     ChannelName, EffectKey, EncoderName, FaderName, FirmwareVersions, MicrophoneParamKey,
     MicrophoneType, VersionNumber,
 };
-use log::{debug, info, warn};
+use log::{debug, info, trace, warn};
 use rusb::Error::Pipe;
 use rusb::{
     Device, DeviceDescriptor, DeviceHandle, Direction, GlobalContext, Language, Recipient,
@@ -244,8 +244,10 @@ impl<T: UsbContext> GoXLR<T> {
         LittleEndian::write_u16(&mut full_request[6..8], command_index);
         full_request.extend(body);
 
+        trace!("Sending Command.. {:?}", &full_request);
         self.write_control(2, 0, 0, &full_request)?;
 
+        trace!("Awaiting Response..");
         // The full fat GoXLR can handle requests incredibly quickly..
         let mut sleep_time = Duration::from_millis(3);
         if self.device_descriptor.product_id() == PID_GOXLR_MINI {
@@ -260,7 +262,9 @@ impl<T: UsbContext> GoXLR<T> {
         let mut response = vec![];
 
         for i in 0..20 {
+            trace!("Loop Attempt {}", i);
             let response_value = self.read_control(3, 0, 0, 1040);
+            trace!("Response is Error: {}", response_value.is_err());
             if response_value == Err(Pipe) {
                 if i < 20 {
                     debug!("Response not arrived yet for {:?}, sleeping and retrying (Attempt {} of 20)", command, i + 1);
@@ -281,6 +285,15 @@ impl<T: UsbContext> GoXLR<T> {
             response = response_header.split_off(16);
             let response_length = LittleEndian::read_u16(&response_header[4..6]);
             let response_command_index = LittleEndian::read_u16(&response_header[6..8]);
+
+            if response_command_index != command_index {
+                debug!("Mismatched Command Indexes..");
+                debug!(
+                    "Expected {}, received: {}",
+                    command_index, response_command_index
+                );
+                debug!("Full Response: {:?}", response_header);
+            }
 
             debug_assert!(response.len() == response_length as usize);
             debug_assert!(response_command_index == command_index);
