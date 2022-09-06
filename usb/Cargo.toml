@@ -12,7 +12,7 @@ categories = ["hardware-support", "api-bindings"]
 
 [dependencies]
 goxlr-types = {path = "../types"}
-rusb = "0.9"
+rusb = "0.9.1"
 thiserror = "1.0"
 byteorder = "1"
 log = "0.4.14"
