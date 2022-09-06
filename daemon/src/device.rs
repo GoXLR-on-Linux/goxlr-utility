@@ -174,54 +174,53 @@ impl<'a, T: UsbContext> Device<'a, T> {
             self.sync_sample_lighting().await?;
         }
 
-        if let Ok(state) = self.goxlr.get_button_states() {
-            self.update_volumes_to(state.volumes)?;
-            self.update_encoders_to(state.encoders)?;
+        let state = self.goxlr.get_button_states()?;
+        self.update_volumes_to(state.volumes)?;
+        self.update_encoders_to(state.encoders)?;
 
-            let pressed_buttons = state.pressed.difference(self.last_buttons);
-            for button in pressed_buttons {
-                // This is a new press, store it in the states..
-                self.button_states[button] = ButtonState {
-                    press_time: self.get_epoch_ms(),
-                    hold_handled: false,
-                };
+        let pressed_buttons = state.pressed.difference(self.last_buttons);
+        for button in pressed_buttons {
+            // This is a new press, store it in the states..
+            self.button_states[button] = ButtonState {
+                press_time: self.get_epoch_ms(),
+                hold_handled: false,
+            };
 
-                if let Err(error) = self.on_button_down(button).await {
-                    error!("{}", error);
-                }
+            if let Err(error) = self.on_button_down(button).await {
+                error!("{}", error);
             }
-
-            let released_buttons = self.last_buttons.difference(state.pressed);
-            for button in released_buttons {
-                let button_state = self.button_states[button];
-
-                // Output errors, but don't throw them up the stack!
-                if let Err(error) = self.on_button_up(button, &button_state).await {
-                    error!("{}", error);
-                }
-
-                self.button_states[button] = ButtonState {
-                    press_time: 0,
-                    hold_handled: false,
-                }
-            }
-
-            // Finally, iterate over our existing button states, and see if any have been
-            // pressed for more than half a second and not handled.
-            for button in state.pressed {
-                if !self.button_states[button].hold_handled {
-                    let now = self.get_epoch_ms();
-                    if (now - self.button_states[button].press_time) > 500 {
-                        if let Err(error) = self.on_button_hold(button).await {
-                            error!("{}", error);
-                        }
-                        self.button_states[button].hold_handled = true;
-                    }
-                }
-            }
-
-            self.last_buttons = state.pressed;
         }
+
+        let released_buttons = self.last_buttons.difference(state.pressed);
+        for button in released_buttons {
+            let button_state = self.button_states[button];
+
+            // Output errors, but don't throw them up the stack!
+            if let Err(error) = self.on_button_up(button, &button_state).await {
+                error!("{}", error);
+            }
+
+            self.button_states[button] = ButtonState {
+                press_time: 0,
+                hold_handled: false,
+            }
+        }
+
+        // Finally, iterate over our existing button states, and see if any have been
+        // pressed for more than half a second and not handled.
+        for button in state.pressed {
+            if !self.button_states[button].hold_handled {
+                let now = self.get_epoch_ms();
+                if (now - self.button_states[button].press_time) > 500 {
+                    if let Err(error) = self.on_button_hold(button).await {
+                        error!("{}", error);
+                    }
+                    self.button_states[button].hold_handled = true;
+                }
+            }
+        }
+
+        self.last_buttons = state.pressed;
 
         Ok(())
     }
