@@ -12,7 +12,7 @@ use goxlr_types::{
     ChannelName, EffectKey, EncoderName, FaderName, FirmwareVersions, MicrophoneParamKey,
     MicrophoneType, VersionNumber,
 };
-use log::{debug, info, trace, warn};
+use log::{debug, info, warn};
 use rusb::Error::Pipe;
 use rusb::{
     Device, DeviceDescriptor, DeviceHandle, Direction, GlobalContext, Language, Recipient,
@@ -244,10 +244,8 @@ impl<T: UsbContext> GoXLR<T> {
         LittleEndian::write_u16(&mut full_request[6..8], command_index);
         full_request.extend(body);
 
-        trace!("Sending Command.. {:?}", &full_request);
         self.write_control(2, 0, 0, &full_request)?;
 
-        trace!("Awaiting Response..");
         // The full fat GoXLR can handle requests incredibly quickly..
         let mut sleep_time = Duration::from_millis(3);
         if self.device_descriptor.product_id() == PID_GOXLR_MINI {
@@ -262,9 +260,7 @@ impl<T: UsbContext> GoXLR<T> {
         let mut response = vec![];
 
         for i in 0..20 {
-            trace!("Loop Attempt {}", i);
             let response_value = self.read_control(3, 0, 0, 1040);
-            trace!("Response is Error: {}", response_value.is_err());
             if response_value == Err(Pipe) {
                 if i < 20 {
                     debug!("Response not arrived yet for {:?}, sleeping and retrying (Attempt {} of 20)", command, i + 1);
@@ -292,7 +288,9 @@ impl<T: UsbContext> GoXLR<T> {
                     "Expected {}, received: {}",
                     command_index, response_command_index
                 );
-                debug!("Full Response: {:?}", response_header);
+                debug!("Full Request: {:?}", full_request);
+                debug!("Response Header: {:?}", response_header);
+                debug!("Response Body: {:?}", response);
             }
 
             debug_assert!(response.len() == response_length as usize);
@@ -564,20 +562,24 @@ impl<T: UsbContext> GoXLR<T> {
         )
     }
 
+    #[cfg(not(target_os = "macos"))]
+    pub fn is_connected(&mut self) -> bool {
+        self.handle.active_configuration().is_ok()
+    }
+
+    /// MacOS has an odd condition where it can still return a 'valid' active configuration
+    /// even when the device is unplugged, rather than a LIBUSB_ error.
+    ///
+    /// In order to verify the state, under MacOS we'll attempt to perform a ResetIndex command
+    /// if active_configuration returns a valid response. If that command fails, assume the
+    /// device is gone.
+    #[cfg(target_os = "macos")]
     pub fn is_connected(&mut self) -> bool {
         let active_configuration = self.handle.active_configuration();
         if active_configuration.is_ok() {
-            debug!("Active Configuration: {}", active_configuration.unwrap());
-
             // Attempt a Command Index reset..
-            if self.request_data(Command::ResetCommandIndex, &[]).is_ok() {
-                return true;
-            }
-
-            debug!("Active Configuration Returning, but not handling requests, assume dead.");
-            return false;
+            return self.request_data(Command::ResetCommandIndex, &[]).is_ok();
         }
-        debug!("Command Failed, assuming Unplugged");
         false
     }
 }
