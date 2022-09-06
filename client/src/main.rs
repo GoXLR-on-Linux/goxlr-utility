@@ -34,6 +34,8 @@ async fn main() -> Result<()> {
 
     let serial = if let Some(serial) = &cli.device {
         serial.to_owned()
+    } else if client.status().mixers.is_empty() {
+        return Err(anyhow!("No GoXLR Devices are Connected."));
     } else if client.status().mixers.len() == 1 {
         client.status().mixers.keys().next().unwrap().to_owned()
     } else {
