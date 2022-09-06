@@ -552,6 +552,12 @@ impl<T: UsbContext> GoXLR<T> {
     }
 
     pub fn is_connected(&self) -> bool {
-        self.handle.active_configuration().is_ok()
+        let active_configuration = self.handle.active_configuration();
+        if active_configuration.is_ok() {
+            debug!("Active Configuration: {}", active_configuration.unwrap());
+            return true;
+        }
+        debug!("Command Failed, assuming Unplugged");
+        false
     }
 }
