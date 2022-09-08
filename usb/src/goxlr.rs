@@ -229,6 +229,15 @@ impl<T: UsbContext> GoXLR<T> {
     }
 
     pub fn request_data(&mut self, command: Command, body: &[u8]) -> Result<Vec<u8>, rusb::Error> {
+        self.perform_request(command, body, false)
+    }
+
+    fn perform_request(
+        &mut self,
+        command: Command,
+        body: &[u8],
+        is_retry: bool,
+    ) -> Result<Vec<u8>, rusb::Error> {
         if command == Command::ResetCommandIndex {
             self.command_count = 0;
         } else {
@@ -291,11 +300,17 @@ impl<T: UsbContext> GoXLR<T> {
                 debug!("Full Request: {:?}", full_request);
                 debug!("Response Header: {:?}", response_header);
                 debug!("Response Body: {:?}", response);
+
+                return if is_retry {
+                    debug!("Command has failed a second time, returning Error");
+                    Err(rusb::Error::Other)
+                } else {
+                    debug!("Attempting Retry on Command..");
+                    self.perform_request(command, body, true)
+                };
             }
 
             debug_assert!(response.len() == response_length as usize);
-            debug_assert!(response_command_index == command_index);
-
             break;
         }
 
