@@ -296,11 +296,13 @@ impl<T: UsbContext> GoXLR<T> {
                 return if !is_retry {
                     trace!("Received: {:?}", response_header);
                     debug!("Command Desync Detected, correcting..");
+                    self.command_count = 0;
                     let _ = self.perform_request(Command::ResetCommandIndex, &[], true)?;
 
                     debug!("Retrying Command..");
                     self.perform_request(command, body, true)
                 } else {
+                    trace!("Received: {:?}", response_header);
                     debug!("Command Already Retried, Failing.");
                     Err(rusb::Error::Other)
                 };
