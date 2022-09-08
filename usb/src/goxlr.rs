@@ -291,6 +291,20 @@ impl<T: UsbContext> GoXLR<T> {
             let response_length = LittleEndian::read_u16(&response_header[4..6]);
             let response_command_index = LittleEndian::read_u16(&response_header[6..8]);
 
+            // Check for possible desyncs..
+            if response_header.iter().all(|&f| f == 0) {
+                return if !is_retry {
+                    debug!("Command Desync Detected, correcting..");
+                    let _ = self.request_data(Command::ResetCommandIndex, &[])?;
+
+                    debug!("Retrying Command..");
+                    self.perform_request(command, body, true)
+                } else {
+                    debug!("Command Already Retried, Failing.");
+                    Err(rusb::Error::Other)
+                };
+            }
+
             if response_command_index != command_index {
                 debug!("Mismatched Command Indexes..");
                 debug!(
@@ -301,13 +315,7 @@ impl<T: UsbContext> GoXLR<T> {
                 debug!("Response Header: {:?}", response_header);
                 debug!("Response Body: {:?}", response);
 
-                return if is_retry {
-                    debug!("Command has failed a second time, returning Error");
-                    Err(rusb::Error::Other)
-                } else {
-                    debug!("Attempting Retry on Command..");
-                    self.perform_request(command, body, true)
-                };
+                return Err(rusb::Error::Other);
             }
 
             debug_assert!(response.len() == response_length as usize);
