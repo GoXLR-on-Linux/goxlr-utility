@@ -3,7 +3,7 @@ use rusb::Direction::{In, Out};
 use rusb::Error::Pipe;
 use rusb::Recipient::Interface;
 use rusb::RequestType::{Class, Vendor};
-use rusb::{Device, DeviceHandle, GlobalContext, UsbContext};
+use rusb::{Device, DeviceHandle, Direction, GlobalContext, Recipient, RequestType, UsbContext};
 use std::time::Duration;
 
 pub const VID_GOXLR: u16 = 0x1220;
@@ -69,6 +69,22 @@ fn find_devices() {
                                     }
                                 }
                             } else {
+                                // We need to read the last command out the buffer..
+                                let mut buf = vec![0; 1040];
+
+                                let _ = handle.read_control(
+                                    rusb::request_type(
+                                        Direction::In,
+                                        RequestType::Vendor,
+                                        Recipient::Interface,
+                                    ),
+                                    3,
+                                    0,
+                                    0,
+                                    &mut buf,
+                                    Duration::from_secs(1),
+                                );
+
                                 println!("Device {} already initialised", device_address(&device));
                             }
                         }
