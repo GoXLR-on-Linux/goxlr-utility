@@ -1,5 +1,6 @@
 use crate::buttonstate::{ButtonStates, Buttons, CurrentButtonStates};
 use crate::channelstate::ChannelState;
+use crate::commands::Command::ResetCommandIndex;
 use crate::commands::SystemInfoCommand;
 use crate::commands::SystemInfoCommand::SupportsDCPCategory;
 use crate::commands::{Command, HardwareInfoCommand};
@@ -292,7 +293,7 @@ impl<T: UsbContext> GoXLR<T> {
             let response_command_index = LittleEndian::read_u16(&response_header[6..8]);
 
             // Check for possible desyncs..
-            if response_header.iter().all(|&f| f == 0) {
+            if command != ResetCommandIndex && response_header.iter().all(|&f| f == 0) {
                 return if !is_retry {
                     trace!("Received: {:?}", response_header);
                     debug!("Command Desync Detected, correcting..");
