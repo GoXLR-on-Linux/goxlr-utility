@@ -601,10 +601,17 @@ impl<T: UsbContext> GoXLR<T> {
     /// device is gone.
     #[cfg(target_os = "macos")]
     pub fn is_connected(&mut self) -> bool {
+        debug!("Checking Disconnect for device: {:?}", self.device);
         let active_configuration = self.handle.active_configuration();
         if active_configuration.is_ok() {
-            // Attempt a Command Index reset..
-            return self.request_data(Command::ResetCommandIndex, &[]).is_ok();
+            let result = self.request_data(Command::ResetCommandIndex, &[]);
+            return if result.is_err() {
+                debug!("Device {:?} is still connected", self.device);
+                true
+            } else {
+                debug!("Device {:?} has been disconnected", self.device);
+                false
+            };
         }
         false
     }
