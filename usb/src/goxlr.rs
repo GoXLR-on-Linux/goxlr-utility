@@ -12,7 +12,7 @@ use goxlr_types::{
     ChannelName, EffectKey, EncoderName, FaderName, FirmwareVersions, MicrophoneParamKey,
     MicrophoneType, VersionNumber,
 };
-use log::{debug, info, warn};
+use log::{debug, info, trace, warn};
 use rusb::Error::Pipe;
 use rusb::{
     Device, DeviceDescriptor, DeviceHandle, Direction, GlobalContext, Language, Recipient,
@@ -294,8 +294,9 @@ impl<T: UsbContext> GoXLR<T> {
             // Check for possible desyncs..
             if response_header.iter().all(|&f| f == 0) {
                 return if !is_retry {
+                    trace!("Received: {:?}", response_header);
                     debug!("Command Desync Detected, correcting..");
-                    let _ = self.request_data(Command::ResetCommandIndex, &[])?;
+                    let _ = self.perform_request(Command::ResetCommandIndex, &[], true)?;
 
                     debug!("Retrying Command..");
                     self.perform_request(command, body, true)
