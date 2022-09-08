@@ -605,7 +605,7 @@ impl<T: UsbContext> GoXLR<T> {
         let active_configuration = self.handle.active_configuration();
         if active_configuration.is_ok() {
             let result = self.request_data(Command::ResetCommandIndex, &[]);
-            return if result.is_err() {
+            return if result.is_ok() {
                 debug!("Device {:?} is still connected", self.device);
                 true
             } else {
