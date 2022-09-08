@@ -1,6 +1,5 @@
 use crate::buttonstate::{ButtonStates, Buttons, CurrentButtonStates};
 use crate::channelstate::ChannelState;
-use crate::commands::Command::ResetCommandIndex;
 use crate::commands::SystemInfoCommand;
 use crate::commands::SystemInfoCommand::SupportsDCPCategory;
 use crate::commands::{Command, HardwareInfoCommand};
@@ -292,23 +291,6 @@ impl<T: UsbContext> GoXLR<T> {
             let response_length = LittleEndian::read_u16(&response_header[4..6]);
             let response_command_index = LittleEndian::read_u16(&response_header[6..8]);
 
-            // Check for possible desyncs..
-            if command != ResetCommandIndex && response_header.iter().all(|&f| f == 0) {
-                return if !is_retry {
-                    trace!("Received: {:?}", response_header);
-                    debug!("Command Desync Detected, correcting..");
-                    self.command_count = 0;
-                    let _ = self.perform_request(Command::ResetCommandIndex, &[], true)?;
-
-                    debug!("Retrying Command..");
-                    self.perform_request(command, body, true)
-                } else {
-                    trace!("Received: {:?}", response_header);
-                    debug!("Command Already Retried, Failing.");
-                    Err(rusb::Error::Other)
-                };
-            }
-
             if response_command_index != command_index {
                 debug!("Mismatched Command Indexes..");
                 debug!(
@@ -319,7 +301,16 @@ impl<T: UsbContext> GoXLR<T> {
                 debug!("Response Header: {:?}", response_header);
                 debug!("Response Body: {:?}", response);
 
-                return Err(rusb::Error::Other);
+                return if !is_retry {
+                    debug!("Attempting Resync and Retry");
+                    let _ = self.perform_request(Command::ResetCommandIndex, &[], true)?;
+
+                    debug!("Resync complete, retrying Command..");
+                    self.perform_request(command, body, true)
+                } else {
+                    debug!("Resync Failed, Throwing Error..");
+                    Err(rusb::Error::Other)
+                };
             }
 
             debug_assert!(response.len() == response_length as usize);
