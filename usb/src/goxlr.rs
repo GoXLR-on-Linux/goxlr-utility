@@ -289,7 +289,10 @@ impl<T: UsbContext> GoXLR<T> {
 
             let mut response_header = response_value.unwrap();
             if response_header.len() < 16 {
-                error!("Invalid Response received from the GoXLR");
+                error!(
+                    "Invalid Response received from the GoXLR, Expected: 16, Received: {}",
+                    response_header.len()
+                );
                 return Err(Pipe);
             }
 
