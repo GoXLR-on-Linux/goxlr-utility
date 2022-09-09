@@ -12,7 +12,7 @@ use goxlr_types::{
     ChannelName, EffectKey, EncoderName, FaderName, FirmwareVersions, MicrophoneParamKey,
     MicrophoneType, VersionNumber,
 };
-use log::{debug, info, warn};
+use log::{debug, error, info, warn};
 use rusb::Error::Pipe;
 use rusb::{
     Device, DeviceDescriptor, DeviceHandle, Direction, GlobalContext, Language, Recipient,
@@ -246,6 +246,7 @@ impl<T: UsbContext> GoXLR<T> {
             }
             self.command_count += 1;
         }
+
         let command_index = self.command_count;
         let mut full_request = vec![0; 16];
         LittleEndian::write_u32(&mut full_request[0..4], command.command_id());
@@ -287,6 +288,11 @@ impl<T: UsbContext> GoXLR<T> {
             }
 
             let mut response_header = response_value.unwrap();
+            if response_header.len() < 16 {
+                error!("Invalid Response received from the GoXLR");
+                return Err(Pipe);
+            }
+
             response = response_header.split_off(16);
             let response_length = LittleEndian::read_u16(&response_header[4..6]);
             let response_command_index = LittleEndian::read_u16(&response_header[6..8]);
