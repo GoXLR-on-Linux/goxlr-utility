@@ -580,18 +580,6 @@ impl<T: UsbContext> GoXLR<T> {
         )
     }
 
-    #[cfg(not(target_os = "macos"))]
-    pub fn is_connected(&mut self) -> bool {
-        self.handle.active_configuration().is_ok()
-    }
-
-    /// MacOS has an odd condition where it can still return a 'valid' active configuration
-    /// even when the device is unplugged, rather than a LIBUSB_ error.
-    ///
-    /// In order to verify the state, under MacOS we'll attempt to perform a ResetIndex command
-    /// if active_configuration returns a valid response. If that command fails, assume the
-    /// device is gone.
-    #[cfg(target_os = "macos")]
     pub fn is_connected(&mut self) -> bool {
         debug!("Checking Disconnect for device: {:?}", self.device);
         let active_configuration = self.handle.active_configuration();
