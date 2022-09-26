@@ -36,7 +36,8 @@ use goxlr_profile_loader::{Faders, Preset, SampleButtons};
 use goxlr_types::{
     ButtonColourGroups, ButtonColourOffStyle as BasicColourOffStyle, ButtonColourTargets,
     ChannelName, EffectBankPresets, FaderDisplayStyle as BasicColourDisplay, FaderName,
-    InputDevice, MuteFunction as BasicMuteFunction, OutputDevice, VersionNumber,
+    InputDevice, MuteFunction as BasicMuteFunction, OutputDevice, SimpleColourTargets,
+    VersionNumber,
 };
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::colouring::ColourTargets;
@@ -439,24 +440,28 @@ impl ProfileAdapter {
             );
         }
 
-        let global_colour = get_profile_colour_map(self.profile.settings(), ColourTargets::Global)
-            .colour_or_default(0)
-            .to_rgb();
+        let mut simple_map: HashMap<SimpleColourTargets, OneColour> = HashMap::new();
+        let ignore_mini_colours = get_scribble_colour_targets();
+        for colour in SimpleColourTargets::iter() {
+            if is_device_mini && ignore_mini_colours.contains(&colour) {
+                continue;
+            }
 
-        let accent_colour = get_profile_colour_map(self.profile.settings(), ColourTargets::LogoX)
-            .colour_or_default(0)
-            .to_rgb();
+            let colour_target = standard_to_profile_simple_colour(colour);
+            let colour_map = get_profile_colour_map(self.profile.settings(), colour_target);
+
+            simple_map.insert(
+                colour,
+                OneColour {
+                    colour_one: colour_map.colour_or_default(0).to_rgb(),
+                },
+            );
+        }
 
         Lighting {
             faders: fader_map,
             buttons: button_map,
-
-            global: OneColour {
-                colour_one: global_colour,
-            },
-            accent: OneColour {
-                colour_one: accent_colour,
-            },
+            simple: simple_map,
         }
     }
 
@@ -1931,6 +1936,26 @@ pub fn get_sampler_selector_colour_targets() -> Vec<ButtonColourTargets> {
         ButtonColourTargets::SamplerSelectA,
         ButtonColourTargets::SamplerSelectB,
         ButtonColourTargets::SamplerSelectC,
+    ]
+}
+
+pub fn standard_to_profile_simple_colour(target: SimpleColourTargets) -> ColourTargets {
+    match target {
+        SimpleColourTargets::Global => ColourTargets::Global,
+        SimpleColourTargets::Accent => ColourTargets::LogoX,
+        SimpleColourTargets::Scribble1 => ColourTargets::Scribble1,
+        SimpleColourTargets::Scribble2 => ColourTargets::Scribble2,
+        SimpleColourTargets::Scribble3 => ColourTargets::Scribble3,
+        SimpleColourTargets::Scribble4 => ColourTargets::Scribble4,
+    }
+}
+
+pub fn get_scribble_colour_targets() -> Vec<SimpleColourTargets> {
+    vec![
+        SimpleColourTargets::Scribble1,
+        SimpleColourTargets::Scribble2,
+        SimpleColourTargets::Scribble3,
+        SimpleColourTargets::Scribble4,
     ]
 }
 

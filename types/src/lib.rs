@@ -301,6 +301,28 @@ pub enum ButtonColourTargets {
     SamplerClear,
 }
 
+#[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "clap", derive(clap::ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum SimpleColourTargets {
+    Global,
+    Accent,
+    Scribble1,
+    Scribble2,
+    Scribble3,
+    Scribble4,
+}
+
+#[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "clap", derive(clap::ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum EncoderColourTargets {
+    Reverb,
+    Pitch,
+    Echo,
+    Gender,
+}
+
 #[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -318,21 +340,6 @@ pub enum ButtonColourOffStyle {
     Dimmed,
     Colour2,
     DimmedColour2,
-}
-
-pub enum SimpleColourTargets {
-    Global,
-    Scribble1,
-    Scribble2,
-    Scribble3,
-    Scribble4,
-}
-
-pub enum EncoderColourTargets {
-    Reverb,
-    Pitch,
-    Echo,
-    Gender,
 }
 
 // MuteChat
