@@ -36,8 +36,8 @@ use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLef
 use goxlr_profile_loader::{Faders, Preset, SampleButtons};
 use goxlr_types::{
     ButtonColourGroups, ButtonColourOffStyle as BasicColourOffStyle, ButtonColourTargets,
-    ChannelName, EffectBankPresets, FaderDisplayStyle as BasicColourDisplay, FaderName,
-    InputDevice, MuteFunction as BasicMuteFunction, OutputDevice, SamplerColourTargets,
+    ChannelName, EffectBankPresets, EncoderColourTargets, FaderDisplayStyle as BasicColourDisplay,
+    FaderName, InputDevice, MuteFunction as BasicMuteFunction, OutputDevice, SamplerColourTargets,
     SimpleColourTargets, VersionNumber,
 };
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
@@ -459,6 +459,26 @@ impl ProfileAdapter {
             );
         }
 
+        // Encoder Settings..
+        let mut encoder_map: HashMap<EncoderColourTargets, ThreeColours> = HashMap::new();
+        for colour in EncoderColourTargets::iter() {
+            if is_device_mini {
+                continue;
+            }
+
+            let colour_target = standard_to_profile_encoder_colour(colour);
+            let colour_map = get_profile_colour_map(self.profile.settings(), colour_target);
+
+            encoder_map.insert(
+                colour,
+                ThreeColours {
+                    colour_one: colour_map.colour_or_default(0).to_rgb(),
+                    colour_two: colour_map.colour_or_default(1).to_rgb(),
+                    colour_three: colour_map.colour_or_default(2).to_rgb(),
+                },
+            );
+        }
+
         let mut sampler_map = HashMap::new();
         for colour in SamplerColourTargets::iter() {
             if is_device_mini {
@@ -487,6 +507,7 @@ impl ProfileAdapter {
             buttons: button_map,
             simple: simple_map,
             sampler: sampler_map,
+            encoders: encoder_map,
         }
     }
 
@@ -1984,6 +2005,15 @@ pub fn standard_to_profile_simple_colour(target: SimpleColourTargets) -> ColourT
         SimpleColourTargets::Scribble2 => ColourTargets::Scribble2,
         SimpleColourTargets::Scribble3 => ColourTargets::Scribble3,
         SimpleColourTargets::Scribble4 => ColourTargets::Scribble4,
+    }
+}
+
+pub fn standard_to_profile_encoder_colour(target: EncoderColourTargets) -> ColourTargets {
+    match target {
+        EncoderColourTargets::Reverb => ColourTargets::ReverbEncoder,
+        EncoderColourTargets::Pitch => ColourTargets::PitchEncoder,
+        EncoderColourTargets::Echo => ColourTargets::EchoEncoder,
+        EncoderColourTargets::Gender => ColourTargets::GenderEncoder,
     }
 }
 
