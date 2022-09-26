@@ -129,6 +129,8 @@ pub struct Compressor {
 pub struct Lighting {
     pub faders: HashMap<FaderName, FaderLighting>,
     pub buttons: HashMap<ButtonColourTargets, ButtonLighting>,
+    pub global: OneColour,
+    pub accent: OneColour,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -144,9 +146,21 @@ pub struct FaderLighting {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OneColour {
+    pub colour_one: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TwoColours {
     pub colour_one: String,
     pub colour_two: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ThreeColours {
+    pub colour_one: String,
+    pub colour_two: String,
+    pub colour_three: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

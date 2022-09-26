@@ -13,7 +13,7 @@ use strum::IntoEnumIterator;
 
 use goxlr_ipc::{
     ActiveEffects, ButtonLighting, CoughButton, Echo, Effects, FaderLighting, Gender, HardTune,
-    Lighting, Megaphone, Pitch, Reverb, Robot, TwoColours,
+    Lighting, Megaphone, OneColour, Pitch, Reverb, Robot, TwoColours,
 };
 use goxlr_profile_loader::components::colours::{
     Colour, ColourDisplay, ColourMap, ColourOffStyle, ColourState,
@@ -439,9 +439,24 @@ impl ProfileAdapter {
             );
         }
 
+        let global_colour = get_profile_colour_map(self.profile.settings(), ColourTargets::Global)
+            .colour_or_default(0)
+            .to_rgb();
+
+        let accent_colour = get_profile_colour_map(self.profile.settings(), ColourTargets::LogoX)
+            .colour_or_default(0)
+            .to_rgb();
+
         Lighting {
             faders: fader_map,
             buttons: button_map,
+
+            global: OneColour {
+                colour_one: global_colour,
+            },
+            accent: OneColour {
+                colour_one: accent_colour,
+            },
         }
     }
 
