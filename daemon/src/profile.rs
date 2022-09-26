@@ -1337,6 +1337,18 @@ impl ProfileAdapter {
         Ok(())
     }
 
+    pub fn set_simple_colours(
+        &mut self,
+        target: SimpleColourTargets,
+        colour_one: String,
+    ) -> Result<()> {
+        let colour_target = standard_to_profile_simple_colour(target);
+        let colours = get_profile_colour_map_mut(self.profile.settings_mut(), colour_target);
+
+        colours.set_colour(0, Colour::fromrgb(colour_one.as_str())?)?;
+        Ok(())
+    }
+
     pub fn set_button_off_style(
         &mut self,
         target: ButtonColourTargets,

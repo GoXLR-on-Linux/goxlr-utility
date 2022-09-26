@@ -4,7 +4,7 @@ use goxlr_types::{
     CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EchoStyle, EffectBankPresets,
     EqFrequencies, FaderDisplayStyle, FaderName, GateTimes, GenderStyle, HardTuneSource,
     HardTuneStyle, InputDevice, MegaphoneStyle, MiniEqFrequencies, MuteFunction, OutputDevice,
-    PitchStyle, ReverbStyle, RobotRange, RobotStyle,
+    PitchStyle, ReverbStyle, RobotRange, RobotStyle, SimpleColourTargets,
 };
 use std::str::FromStr;
 
@@ -494,6 +494,12 @@ pub enum LightingCommands {
     ButtonGroup {
         #[clap(subcommand)]
         command: ButtonGroupLightingCommands,
+    },
+
+    SimpleColour {
+        #[clap(arg_enum)]
+        target: SimpleColourTargets,
+        colour: String,
     },
 }
 

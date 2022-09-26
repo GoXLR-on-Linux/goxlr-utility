@@ -319,6 +319,14 @@ async fn main() -> Result<()> {
                                 .await?;
                         }
                     },
+                    LightingCommands::SimpleColour { target, colour } => {
+                        client
+                            .command(
+                                &serial,
+                                GoXLRCommand::SetSimpleColour(*target, colour.clone()),
+                            )
+                            .await?;
+                    }
                 },
 
                 SubCommands::Profiles { command } => match command {
