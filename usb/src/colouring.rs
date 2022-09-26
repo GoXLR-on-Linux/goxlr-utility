@@ -56,7 +56,7 @@ pub enum ColourTargets {
     ReverbEncoder,
     EchoEncoder,
 
-    // I believe this is referred to as 'Global' in the UI
+    // LogoX is known as 'Accent' in the Windows UI
     LogoX,
     Global,
 }
