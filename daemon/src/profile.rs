@@ -13,7 +13,8 @@ use strum::IntoEnumIterator;
 
 use goxlr_ipc::{
     ActiveEffects, ButtonLighting, CoughButton, Echo, Effects, FaderLighting, Gender, HardTune,
-    Lighting, Megaphone, OneColour, Pitch, Reverb, Robot, TwoColours,
+    Lighting, Megaphone, OneColour, Pitch, Reverb, Robot, SamplerLighting, ThreeColours,
+    TwoColours,
 };
 use goxlr_profile_loader::components::colours::{
     Colour, ColourDisplay, ColourMap, ColourOffStyle, ColourState,
@@ -36,8 +37,8 @@ use goxlr_profile_loader::{Faders, Preset, SampleButtons};
 use goxlr_types::{
     ButtonColourGroups, ButtonColourOffStyle as BasicColourOffStyle, ButtonColourTargets,
     ChannelName, EffectBankPresets, FaderDisplayStyle as BasicColourDisplay, FaderName,
-    InputDevice, MuteFunction as BasicMuteFunction, OutputDevice, SimpleColourTargets,
-    VersionNumber,
+    InputDevice, MuteFunction as BasicMuteFunction, OutputDevice, SamplerColourTargets,
+    SimpleColourTargets, VersionNumber,
 };
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::colouring::ColourTargets;
@@ -458,10 +459,34 @@ impl ProfileAdapter {
             );
         }
 
+        let mut sampler_map = HashMap::new();
+        for colour in SamplerColourTargets::iter() {
+            if is_device_mini {
+                continue;
+            }
+
+            let colour_target = standard_to_sample_colour(colour);
+            let colour_map = get_profile_colour_map(self.profile.settings(), colour_target);
+            let off_style = profile_to_standard_colour_off_style(*colour_map.get_off_style());
+
+            sampler_map.insert(
+                colour,
+                SamplerLighting {
+                    off_style,
+                    colours: ThreeColours {
+                        colour_one: colour_map.colour_or_default(0).to_rgb(),
+                        colour_two: colour_map.colour_or_default(1).to_rgb(),
+                        colour_three: colour_map.colour_or_default(2).to_rgb(),
+                    },
+                },
+            );
+        }
+
         Lighting {
             faders: fader_map,
             buttons: button_map,
             simple: simple_map,
+            sampler: sampler_map,
         }
     }
 
@@ -1959,6 +1984,14 @@ pub fn standard_to_profile_simple_colour(target: SimpleColourTargets) -> ColourT
         SimpleColourTargets::Scribble2 => ColourTargets::Scribble2,
         SimpleColourTargets::Scribble3 => ColourTargets::Scribble3,
         SimpleColourTargets::Scribble4 => ColourTargets::Scribble4,
+    }
+}
+
+pub fn standard_to_sample_colour(target: SamplerColourTargets) -> ColourTargets {
+    match target {
+        SamplerColourTargets::SamplerSelectA => ColourTargets::SamplerSelectA,
+        SamplerColourTargets::SamplerSelectB => ColourTargets::SamplerSelectB,
+        SamplerColourTargets::SamplerSelectC => ColourTargets::SamplerSelectC,
     }
 }
 

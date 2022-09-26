@@ -4,7 +4,7 @@ use goxlr_types::{
     CompressorReleaseTime, EchoStyle, EffectBankPresets, EqFrequencies, FaderDisplayStyle,
     FaderName, FirmwareVersions, GateTimes, GenderStyle, HardTuneSource, HardTuneStyle,
     InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies, MuteFunction, OutputDevice,
-    PitchStyle, ReverbStyle, RobotStyle, SimpleColourTargets,
+    PitchStyle, ReverbStyle, RobotStyle, SamplerColourTargets, SimpleColourTargets,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -130,12 +130,19 @@ pub struct Lighting {
     pub faders: HashMap<FaderName, FaderLighting>,
     pub buttons: HashMap<ButtonColourTargets, ButtonLighting>,
     pub simple: HashMap<SimpleColourTargets, OneColour>,
+    pub sampler: HashMap<SamplerColourTargets, SamplerLighting>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ButtonLighting {
     pub off_style: ButtonColourOffStyle,
     pub colours: TwoColours,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SamplerLighting {
+    pub off_style: ButtonColourOffStyle,
+    pub colours: ThreeColours,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

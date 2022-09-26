@@ -316,6 +316,15 @@ pub enum SimpleColourTargets {
 #[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "clap", derive(clap::ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum SamplerColourTargets {
+    SamplerSelectA,
+    SamplerSelectB,
+    SamplerSelectC,
+}
+
+#[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "clap", derive(clap::ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum EncoderColourTargets {
     Reverb,
     Pitch,
