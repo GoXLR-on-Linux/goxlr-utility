@@ -327,6 +327,24 @@ async fn main() -> Result<()> {
                             )
                             .await?;
                     }
+                    LightingCommands::EncoderColour {
+                        target,
+                        colour_one,
+                        colour_two,
+                        colour_three,
+                    } => {
+                        client
+                            .command(
+                                &serial,
+                                GoXLRCommand::SetEncoderColour(
+                                    *target,
+                                    colour_one.clone(),
+                                    colour_two.clone(),
+                                    colour_three.clone(),
+                                ),
+                            )
+                            .await?;
+                    }
                 },
 
                 SubCommands::Profiles { command } => match command {

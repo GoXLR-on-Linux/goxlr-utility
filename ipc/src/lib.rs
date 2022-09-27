@@ -9,9 +9,10 @@ pub use device::*;
 use goxlr_types::{
     ButtonColourGroups, ButtonColourOffStyle, ButtonColourTargets, ChannelName,
     CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EchoStyle, EffectBankPresets,
-    EqFrequencies, FaderDisplayStyle, FaderName, GateTimes, GenderStyle, HardTuneSource,
-    HardTuneStyle, InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies, MuteFunction,
-    OutputDevice, PitchStyle, ReverbStyle, RobotRange, RobotStyle, SimpleColourTargets,
+    EncoderColourTargets, EqFrequencies, FaderDisplayStyle, FaderName, GateTimes, GenderStyle,
+    HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies,
+    MuteFunction, OutputDevice, PitchStyle, ReverbStyle, RobotRange, RobotStyle,
+    SimpleColourTargets,
 };
 pub use socket::*;
 
@@ -92,6 +93,8 @@ pub enum GoXLRCommand {
     SetButtonGroupOffStyle(ButtonColourGroups, ButtonColourOffStyle),
 
     SetSimpleColour(SimpleColourTargets, String),
+    SetEncoderColour(EncoderColourTargets, String, String, String),
+    //SetSampleColour(SamplerColourTargets, String, )
 
     // Effect Related Settings..
     LoadEffectPreset(String),

@@ -2,9 +2,9 @@ use clap::{AppSettings, Args, Parser, Subcommand};
 use goxlr_types::{
     ButtonColourGroups, ButtonColourOffStyle, ButtonColourTargets, ChannelName,
     CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EchoStyle, EffectBankPresets,
-    EqFrequencies, FaderDisplayStyle, FaderName, GateTimes, GenderStyle, HardTuneSource,
-    HardTuneStyle, InputDevice, MegaphoneStyle, MiniEqFrequencies, MuteFunction, OutputDevice,
-    PitchStyle, ReverbStyle, RobotRange, RobotStyle, SimpleColourTargets,
+    EncoderColourTargets, EqFrequencies, FaderDisplayStyle, FaderName, GateTimes, GenderStyle,
+    HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle, MiniEqFrequencies, MuteFunction,
+    OutputDevice, PitchStyle, ReverbStyle, RobotRange, RobotStyle, SimpleColourTargets,
 };
 use std::str::FromStr;
 
@@ -500,6 +500,21 @@ pub enum LightingCommands {
         #[clap(arg_enum)]
         target: SimpleColourTargets,
         colour: String,
+    },
+
+    EncoderColour {
+        /// The Encoder to Change
+        #[clap(arg_enum)]
+        target: EncoderColourTargets,
+
+        /// The 'Inactive' Colour?
+        colour_one: String,
+
+        /// The 'Active' Colour
+        colour_two: String,
+
+        /// The Knob Colour
+        colour_three: String,
     },
 }
 

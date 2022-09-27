@@ -1395,6 +1395,23 @@ impl ProfileAdapter {
         Ok(())
     }
 
+    pub fn set_encoder_colours(
+        &mut self,
+        target: EncoderColourTargets,
+        colour_one: String,
+        colour_two: String,
+        colour_three: String,
+    ) -> Result<()> {
+        let colour_target = standard_to_profile_encoder_colour(target);
+        let colours = get_profile_colour_map_mut(self.profile.settings_mut(), colour_target);
+
+        colours.set_colour(0, Colour::fromrgb(colour_one.as_str())?)?;
+        colours.set_colour(1, Colour::fromrgb(colour_two.as_str())?)?;
+        colours.set_colour(2, Colour::fromrgb(colour_three.as_str())?)?;
+
+        Ok(())
+    }
+
     pub fn set_button_off_style(
         &mut self,
         target: ButtonColourTargets,
