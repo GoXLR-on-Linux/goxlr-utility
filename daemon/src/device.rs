@@ -1676,6 +1676,8 @@ impl<'a, T: UsbContext> Device<'a, T> {
 
         if muted_to_all || (muted_to_x && mute_function == MuteFunction::All) {
             self.goxlr.set_channel_state(ChannelName::Mic, Muted)?;
+        } else {
+            self.goxlr.set_channel_state(ChannelName::Mic, Unmuted)?;
         }
         Ok(())
     }
