@@ -553,7 +553,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
             self.profile.set_mute_chat_button_on(false);
             if mute_function == MuteFunction::All {
                 if !self.mic_muted_by_fader() {
-                    self.goxlr.set_channel_state(ChannelName::Chat, Unmuted)?;
+                    self.goxlr.set_channel_state(ChannelName::Mic, Unmuted)?;
                 }
                 return Ok(());
             }
