@@ -367,6 +367,15 @@ async fn main() -> Result<()> {
                                 .await
                                 .context("Unable to Load Profile")?;
                         }
+                        ProfileAction::LoadColours { profile_name } => {
+                            client
+                                .command(
+                                    &serial,
+                                    GoXLRCommand::LoadProfileColours(profile_name.to_string()),
+                                )
+                                .await
+                                .context("Unable to load Profile Colours")?;
+                        }
                         ProfileAction::Save {} => {
                             client
                                 .command(&serial, GoXLRCommand::SaveProfile())
@@ -401,6 +410,9 @@ async fn main() -> Result<()> {
                                 )
                                 .await
                                 .context("Unable to Load Microphone Profile")?;
+                        }
+                        ProfileAction::LoadColours { .. } => {
+                            return Err(anyhow!("Not supported for Microphone"));
                         }
                         ProfileAction::Save {} => {
                             client

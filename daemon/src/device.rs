@@ -1410,6 +1410,18 @@ impl<'a, T: UsbContext> Device<'a, T> {
                     .await;
                 self.settings.save().await;
             }
+            GoXLRCommand::LoadProfileColours(profile_name) => {
+                let profile_directory = self.settings.get_profile_directory().await;
+                let distrib_path = Path::new(DISTRIBUTABLE_ROOT).join("profiles/");
+
+                let profile = ProfileAdapter::from_named(
+                    profile_name,
+                    vec![&profile_directory, &distrib_path],
+                )?;
+                self.profile.load_colour_profile(profile);
+                self.load_colour_map()?;
+                self.update_button_states()?;
+            }
             GoXLRCommand::SaveProfile() => {
                 let profile_directory = self.settings.get_profile_directory().await;
                 let profile_name = self.settings.get_device_profile_name(self.serial()).await;

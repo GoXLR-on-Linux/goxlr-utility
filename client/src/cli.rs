@@ -183,6 +183,12 @@ pub enum ProfileAction {
         profile_name: String,
     },
 
+    /// Load a Profiles Colours Only
+    LoadColours {
+        /// The name of the profile to load colours from
+        profile_name: String,
+    },
+
     /// Save the currently running profile
     #[clap(unset_setting = AppSettings::ArgRequiredElseHelp)]
     Save {},

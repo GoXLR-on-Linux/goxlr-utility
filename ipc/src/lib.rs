@@ -162,6 +162,7 @@ pub enum GoXLRCommand {
     // Profile Handling..
     NewProfile(String),
     LoadProfile(String),
+    LoadProfileColours(String),
     SaveProfile(),
     SaveProfileAs(String),
     DeleteProfile(String),

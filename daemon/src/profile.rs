@@ -149,6 +149,15 @@ impl ProfileAdapter {
         &self.name
     }
 
+    pub fn load_colour_profile(&mut self, new_profile: ProfileAdapter) {
+        for colour in ColourTargets::iter() {
+            let our_map = get_profile_colour_map_mut(self.profile.settings_mut(), colour);
+            let new_map = get_profile_colour_map(new_profile.profile.settings(), colour);
+
+            our_map.replace(new_map);
+        }
+    }
+
     pub fn load_preset(&mut self, name: String, directories: Vec<&Path>) -> Result<()> {
         let mut dir_list = "".to_string();
 
