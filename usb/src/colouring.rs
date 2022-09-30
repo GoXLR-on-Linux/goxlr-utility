@@ -158,8 +158,8 @@ impl ColourTargets {
             ColourTargets::GenderEncoder => 92,
             ColourTargets::ReverbEncoder => 95,
             ColourTargets::EchoEncoder => 98,
-            ColourTargets::LogoX => 8,
-            ColourTargets::Global => 10,
+            ColourTargets::LogoX => 10,
+            ColourTargets::Global => 8,
         }
     }
 
