@@ -1692,7 +1692,7 @@ fn profile_to_standard_fader_display(value: ColourDisplay) -> BasicColourDisplay
         ColourDisplay::TwoColour => BasicColourDisplay::TwoColour,
         ColourDisplay::Gradient => BasicColourDisplay::Gradient,
         ColourDisplay::Meter => BasicColourDisplay::Meter,
-        ColourDisplay::GradientMeter => BasicColourDisplay::Gradient,
+        ColourDisplay::GradientMeter => BasicColourDisplay::GradientMeter,
     }
 }
 
