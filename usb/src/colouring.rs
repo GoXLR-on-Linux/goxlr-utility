@@ -163,33 +163,6 @@ impl ColourTargets {
         }
     }
 
-    // There are a few buttons which seem to configure as 00000000 when offStyle is set to
-    // 'dimmed', this indicates whether or not that's true for a button..
-    pub fn is_blank_when_dimmed(&self) -> bool {
-        matches!(
-            self,
-            ColourTargets::Fader1Mute
-                | ColourTargets::Fader2Mute
-                | ColourTargets::Fader3Mute
-                | ColourTargets::Fader4Mute
-                | ColourTargets::Bleep
-                | ColourTargets::MicrophoneMute
-                | ColourTargets::EffectSelect1
-                | ColourTargets::EffectSelect2
-                | ColourTargets::EffectSelect3
-                | ColourTargets::EffectSelect4
-                | ColourTargets::EffectSelect5
-                | ColourTargets::EffectSelect6
-                | ColourTargets::EffectFx
-                | ColourTargets::EffectMegaphone
-                | ColourTargets::EffectRobot
-                | ColourTargets::EffectHardTune
-                | ColourTargets::SamplerSelectA
-                | ColourTargets::SamplerSelectB
-                | ColourTargets::SamplerSelectC
-        )
-    }
-
     pub fn position(&self, colour: u8, format_1_3_40: bool) -> usize {
         // For some odd reason, the Encoder dial order seems to be 1, 0, 2 as the colour definitions
         // where as all other buttons are 0, 1.. We *COULD* make this simpler by assuming that if
