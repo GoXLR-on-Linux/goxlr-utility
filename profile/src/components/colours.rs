@@ -139,10 +139,7 @@ impl ColourMap {
 
     // This would probably be easier to do with traits one level up, but for now..
     pub fn replace(&mut self, colour_map: &ColourMap) {
-        self.selected = colour_map.selected;
         self.off_style = colour_map.off_style;
-        self.state = colour_map.state;
-        self.blink = colour_map.blink;
         self.velocity = colour_map.velocity;
         self.colour_list = colour_map.colour_list.clone();
         self.colour_display = colour_map.colour_display;
