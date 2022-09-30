@@ -58,7 +58,7 @@ pub enum ColourTargets {
 
     // LogoX is known as 'Accent' in the Windows UI
     LogoX,
-    Global,
+    InternalLight,
 }
 
 impl ColourTargets {
@@ -115,7 +115,7 @@ impl ColourTargets {
             ColourTargets::ReverbEncoder => 47,
             ColourTargets::EchoEncoder => 50,
             ColourTargets::LogoX => 10,
-            ColourTargets::Global => 8,
+            ColourTargets::InternalLight => 8,
         }
     }
 
@@ -159,7 +159,7 @@ impl ColourTargets {
             ColourTargets::ReverbEncoder => 95,
             ColourTargets::EchoEncoder => 98,
             ColourTargets::LogoX => 10,
-            ColourTargets::Global => 8,
+            ColourTargets::InternalLight => 8,
         }
     }
 

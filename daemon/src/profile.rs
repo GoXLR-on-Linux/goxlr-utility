@@ -7,7 +7,7 @@ use std::path::Path;
 use anyhow::{anyhow, Context, Result};
 use enum_map::EnumMap;
 use enumset::EnumSet;
-use log::{debug, error};
+use log::{debug, error, warn};
 use strum::EnumCount;
 use strum::IntoEnumIterator;
 
@@ -454,6 +454,24 @@ impl ProfileAdapter {
         let ignore_mini_colours = get_scribble_colour_targets();
         for colour in SimpleColourTargets::iter() {
             if is_device_mini && ignore_mini_colours.contains(&colour) {
+                continue;
+            }
+
+            if colour == SimpleColourTargets::Global {
+                // Global is never passed to the GoXLR Verbatim, it's instead a 'wrapper' that
+                // changes all the GoXLRs colours at once.
+                let colour_map = self
+                    .profile
+                    .settings()
+                    .simple_element(SimpleElements::GlobalColour)
+                    .colour_map();
+
+                simple_map.insert(
+                    colour,
+                    OneColour {
+                        colour_one: colour_map.colour_or_default(0).to_rgb(),
+                    },
+                );
                 continue;
             }
 
@@ -1397,6 +1415,22 @@ impl ProfileAdapter {
         target: SimpleColourTargets,
         colour_one: String,
     ) -> Result<()> {
+        if target == SimpleColourTargets::Global {
+            // The 'Global' Colour as defined in the GoXLR App is a 'special' case, where it will
+            // set every target to the same colour. (along with a couple of other tweaks).
+            warn!("Global Colour Setting not Implemented");
+
+            // Set the config value anyway..
+            let colour_map = self
+                .profile
+                .settings_mut()
+                .simple_element_mut(SimpleElements::GlobalColour)
+                .colour_map_mut();
+            colour_map.set_colour(0, Colour::fromrgb(colour_one.as_str())?)?;
+
+            return Ok(());
+        }
+
         let colour_target = standard_to_profile_simple_colour(target);
         let colours = get_profile_colour_map_mut(self.profile.settings_mut(), colour_target);
 
@@ -1897,9 +1931,7 @@ fn get_profile_colour_map(profile: &ProfileSettings, colour_target: ColourTarget
         ColourTargets::ReverbEncoder => profile.reverb_encoder().colour_map(),
         ColourTargets::EchoEncoder => profile.echo_encoder().colour_map(),
         ColourTargets::LogoX => profile.simple_element(SimpleElements::LogoX).colour_map(),
-        ColourTargets::Global => profile
-            .simple_element(SimpleElements::GlobalColour)
-            .colour_map(),
+        ColourTargets::InternalLight => profile.simple_element(SimpleElements::LogoX).colour_map(),
     }
 }
 
@@ -1959,8 +1991,8 @@ fn get_profile_colour_map_mut(
         ColourTargets::LogoX => profile
             .simple_element_mut(SimpleElements::LogoX)
             .colour_map_mut(),
-        ColourTargets::Global => profile
-            .simple_element_mut(SimpleElements::GlobalColour)
+        ColourTargets::InternalLight => profile
+            .simple_element_mut(SimpleElements::LogoX)
             .colour_map_mut(),
     }
 }
@@ -2025,7 +2057,8 @@ pub fn get_sampler_selector_colour_targets() -> Vec<ButtonColourTargets> {
 
 pub fn standard_to_profile_simple_colour(target: SimpleColourTargets) -> ColourTargets {
     match target {
-        SimpleColourTargets::Global => ColourTargets::Global,
+        // This is technically incorrect, the Global doesn't have a matching Colour Target.
+        SimpleColourTargets::Global => ColourTargets::InternalLight,
         SimpleColourTargets::Accent => ColourTargets::LogoX,
         SimpleColourTargets::Scribble1 => ColourTargets::Scribble1,
         SimpleColourTargets::Scribble2 => ColourTargets::Scribble2,
