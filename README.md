@@ -45,15 +45,8 @@ If the daemon can't connect to your GoXLR device, check your device permissions 
 **You should not run the GoXLR Daemon as root!**
 
 ## Interacting with the GoXLR
-There are two methods for communicating with the daemon and the GoXLR, `goxlr-client` (a command-line configuration
-utility), and the embedded [Web UI](https://github.com/GoXLR-on-Linux/goxlr-ui).
-
-### goxlr-client
-The GoXLR Client allows for complete configuration of the GoXLR via the command line. This could be useful for
-situations where automation of commands and configurations are needed, or you simply don't like the provided UI!
-
-The option list for the CLI is pretty extensive, but reasonably well documented, all parameters, options and their
-descriptions can by found via `goxlr-client --help`
+There are two methods for communicating with the daemon and the GoXLR, an embedded WebUI and the `goxlr-client`
+command line configuration utility.
 
 ### Web UI
 Introduced in 0.2.0, the GoXLR daemon now has a web configuration utility available (by default) at
@@ -65,6 +58,13 @@ If you're not a fan of the WebUI, or would prefer to turn it off, you can start 
 
 The UI is still a heavy work in progress, if you'd like to assist, feel free to contribute to its
 [Github Repo](https://github.com/GoXLR-on-Linux/goxlr-ui).
+
+### goxlr-client
+The GoXLR Client allows for complete configuration of the GoXLR via the command line. This could be useful for
+situations where automation of commands and configurations are needed, or you simply don't like the provided UI!
+
+The option list for the CLI is pretty extensive, but reasonably well documented, all parameters, options and their
+descriptions can be found via `goxlr-client --help`
 
 # Manual Compilation
 ## Setting Permissions
