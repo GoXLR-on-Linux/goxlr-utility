@@ -104,6 +104,19 @@ impl SettingsHandle {
             .map(|d| d.mic_profile.clone())
     }
 
+    pub async fn get_device_hold_time(&self, device_serial: &str) -> u16 {
+        let settings = self.settings.read().await;
+        let value = settings
+            .devices
+            .get(device_serial)
+            .map(|d| d.hold_delay.unwrap_or(500));
+
+        if let Some(value) = value {
+            return value;
+        }
+        500
+    }
+
     pub async fn set_device_profile_name(&self, device_serial: &str, profile_name: &str) {
         let mut settings = self.settings.write().await;
         let entry = settings
@@ -175,6 +188,8 @@ impl Settings {
 struct DeviceSettings {
     profile: String,
     mic_profile: String,
+
+    hold_delay: Option<u16>,
 }
 
 impl Default for DeviceSettings {
@@ -182,6 +197,8 @@ impl Default for DeviceSettings {
         DeviceSettings {
             profile: DEFAULT_PROFILE_NAME.to_owned(),
             mic_profile: DEFAULT_MIC_PROFILE_NAME.to_owned(),
+
+            hold_delay: Some(500),
         }
     }
 }

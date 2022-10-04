@@ -211,7 +211,13 @@ impl<'a, T: UsbContext> Device<'a, T> {
         for button in state.pressed {
             if !self.button_states[button].hold_handled {
                 let now = self.get_epoch_ms();
-                if (now - self.button_states[button].press_time) > 500 {
+                if (now - self.button_states[button].press_time)
+                    > self
+                        .settings
+                        .get_device_hold_time(self.serial())
+                        .await
+                        .into()
+                {
                     if let Err(error) = self.on_button_hold(button).await {
                         error!("{}", error);
                     }
