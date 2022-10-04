@@ -12,7 +12,7 @@ use goxlr_types::{
     EncoderColourTargets, EqFrequencies, FaderDisplayStyle, FaderName, GateTimes, GenderStyle,
     HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies,
     MuteFunction, OutputDevice, PitchStyle, ReverbStyle, RobotRange, RobotStyle,
-    SimpleColourTargets,
+    SamplerColourTargets, SimpleColourTargets,
 };
 pub use socket::*;
 
@@ -94,7 +94,8 @@ pub enum GoXLRCommand {
 
     SetSimpleColour(SimpleColourTargets, String),
     SetEncoderColour(EncoderColourTargets, String, String, String),
-    //SetSampleColour(SamplerColourTargets, String, )
+    SetSampleColour(SamplerColourTargets, String, String, String),
+    SetSampleOffStyle(SamplerColourTargets, ButtonColourOffStyle),
 
     // Effect Related Settings..
     LoadEffectPreset(String),

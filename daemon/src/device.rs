@@ -989,6 +989,17 @@ impl<'a, T: UsbContext> Device<'a, T> {
                     .set_encoder_colours(target, colour, colour_2, colour_3)?;
                 self.load_colour_map()?;
             }
+            GoXLRCommand::SetSampleColour(target, colour, colour_2, colour_3) => {
+                self.profile
+                    .set_sampler_colours(target, colour, colour_2, colour_3)?;
+                self.profile.sync_sample_if_active(target)?;
+                self.load_colour_map()?;
+            }
+            GoXLRCommand::SetSampleOffStyle(target, style) => {
+                self.profile.set_sampler_off_style(target, style)?;
+                self.load_colour_map()?;
+                self.update_button_states()?;
+            }
 
             // Effects
             GoXLRCommand::LoadEffectPreset(name) => {

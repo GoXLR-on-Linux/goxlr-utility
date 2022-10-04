@@ -1326,6 +1326,21 @@ impl ProfileAdapter {
         )
         .set_state_on(true)?;
 
+        self.sync_sample_colours(bank)?;
+        Ok(())
+    }
+
+    pub fn sync_sample_if_active(&mut self, target: SamplerColourTargets) -> Result<()> {
+        let current = self.profile.settings().context().selected_sample();
+        let bank = standard_sample_colour_to_profile_bank(target);
+
+        if bank == current {
+            self.sync_sample_colours(bank)?;
+        }
+        Ok(())
+    }
+
+    pub fn sync_sample_colours(&mut self, bank: SampleBank) -> Result<()> {
         // When loading a bank, the colour settings from the SampleBank button get migrated
         // across to the sample buttons, which are then used to display (it's a little convoluted!)
         let colour_map = get_profile_colour_map(
@@ -1453,6 +1468,33 @@ impl ProfileAdapter {
         colours.set_colour(2, Colour::fromrgb(colour_three.as_str())?)?;
 
         Ok(())
+    }
+
+    pub fn set_sampler_colours(
+        &mut self,
+        target: SamplerColourTargets,
+        colour_one: String,
+        colour_two: String,
+        colour_three: String,
+    ) -> Result<()> {
+        let colour_target = standard_to_sample_colour(target);
+        let colours = get_profile_colour_map_mut(self.profile.settings_mut(), colour_target);
+
+        colours.set_colour(0, Colour::fromrgb(colour_one.as_str())?)?;
+        colours.set_colour(1, Colour::fromrgb(colour_two.as_str())?)?;
+        colours.set_colour(2, Colour::fromrgb(colour_three.as_str())?)?;
+
+        Ok(())
+    }
+
+    pub fn set_sampler_off_style(
+        &mut self,
+        target: SamplerColourTargets,
+        off_style: BasicColourOffStyle,
+    ) -> Result<()> {
+        let colour_target = standard_to_sample_colour(target);
+        get_profile_colour_map_mut(self.profile.settings_mut(), colour_target)
+            .set_off_style(standard_to_profile_colour_off_style(off_style))
     }
 
     pub fn set_button_off_style(
@@ -2081,6 +2123,14 @@ pub fn standard_to_sample_colour(target: SamplerColourTargets) -> ColourTargets 
         SamplerColourTargets::SamplerSelectA => ColourTargets::SamplerSelectA,
         SamplerColourTargets::SamplerSelectB => ColourTargets::SamplerSelectB,
         SamplerColourTargets::SamplerSelectC => ColourTargets::SamplerSelectC,
+    }
+}
+
+pub fn standard_sample_colour_to_profile_bank(target: SamplerColourTargets) -> SampleBank {
+    match target {
+        SamplerColourTargets::SamplerSelectA => SampleBank::A,
+        SamplerColourTargets::SamplerSelectB => SampleBank::B,
+        SamplerColourTargets::SamplerSelectC => SampleBank::C,
     }
 }
 
