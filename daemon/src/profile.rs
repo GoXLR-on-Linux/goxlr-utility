@@ -7,13 +7,14 @@ use std::path::Path;
 use anyhow::{anyhow, Context, Result};
 use enum_map::EnumMap;
 use enumset::EnumSet;
-use log::{debug, error};
+use log::{debug, error, warn};
 use strum::EnumCount;
 use strum::IntoEnumIterator;
 
 use goxlr_ipc::{
     ActiveEffects, ButtonLighting, CoughButton, Echo, Effects, FaderLighting, Gender, HardTune,
-    Lighting, Megaphone, Pitch, Reverb, Robot, TwoColours,
+    Lighting, Megaphone, OneColour, Pitch, Reverb, Robot, SamplerLighting, ThreeColours,
+    TwoColours,
 };
 use goxlr_profile_loader::components::colours::{
     Colour, ColourDisplay, ColourMap, ColourOffStyle, ColourState,
@@ -35,8 +36,9 @@ use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLef
 use goxlr_profile_loader::{Faders, Preset, SampleButtons};
 use goxlr_types::{
     ButtonColourGroups, ButtonColourOffStyle as BasicColourOffStyle, ButtonColourTargets,
-    ChannelName, EffectBankPresets, FaderDisplayStyle as BasicColourDisplay, FaderName,
-    InputDevice, MuteFunction as BasicMuteFunction, OutputDevice, VersionNumber,
+    ChannelName, EffectBankPresets, EncoderColourTargets, FaderDisplayStyle as BasicColourDisplay,
+    FaderName, InputDevice, MuteFunction as BasicMuteFunction, OutputDevice, SamplerColourTargets,
+    SimpleColourTargets, VersionNumber,
 };
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::colouring::ColourTargets;
@@ -145,6 +147,15 @@ impl ProfileAdapter {
 
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    pub fn load_colour_profile(&mut self, new_profile: ProfileAdapter) {
+        for colour in ColourTargets::iter() {
+            let our_map = get_profile_colour_map_mut(self.profile.settings_mut(), colour);
+            let new_map = get_profile_colour_map(new_profile.profile.settings(), colour);
+
+            our_map.replace(new_map);
+        }
     }
 
     pub fn load_preset(&mut self, name: String, directories: Vec<&Path>) -> Result<()> {
@@ -439,9 +450,91 @@ impl ProfileAdapter {
             );
         }
 
+        let mut simple_map: HashMap<SimpleColourTargets, OneColour> = HashMap::new();
+        let ignore_mini_colours = get_scribble_colour_targets();
+        for colour in SimpleColourTargets::iter() {
+            if is_device_mini && ignore_mini_colours.contains(&colour) {
+                continue;
+            }
+
+            if colour == SimpleColourTargets::Global {
+                // Global is never passed to the GoXLR Verbatim, it's instead a 'wrapper' that
+                // changes all the GoXLRs colours at once.
+                let colour_map = self
+                    .profile
+                    .settings()
+                    .simple_element(SimpleElements::GlobalColour)
+                    .colour_map();
+
+                simple_map.insert(
+                    colour,
+                    OneColour {
+                        colour_one: colour_map.colour_or_default(0).to_rgb(),
+                    },
+                );
+                continue;
+            }
+
+            let colour_target = standard_to_profile_simple_colour(colour);
+            let colour_map = get_profile_colour_map(self.profile.settings(), colour_target);
+
+            simple_map.insert(
+                colour,
+                OneColour {
+                    colour_one: colour_map.colour_or_default(0).to_rgb(),
+                },
+            );
+        }
+
+        // Encoder Settings..
+        let mut encoder_map: HashMap<EncoderColourTargets, ThreeColours> = HashMap::new();
+        for colour in EncoderColourTargets::iter() {
+            if is_device_mini {
+                continue;
+            }
+
+            let colour_target = standard_to_profile_encoder_colour(colour);
+            let colour_map = get_profile_colour_map(self.profile.settings(), colour_target);
+
+            encoder_map.insert(
+                colour,
+                ThreeColours {
+                    colour_one: colour_map.colour_or_default(0).to_rgb(),
+                    colour_two: colour_map.colour_or_default(1).to_rgb(),
+                    colour_three: colour_map.colour_or_default(2).to_rgb(),
+                },
+            );
+        }
+
+        let mut sampler_map = HashMap::new();
+        for colour in SamplerColourTargets::iter() {
+            if is_device_mini {
+                continue;
+            }
+
+            let colour_target = standard_to_sample_colour(colour);
+            let colour_map = get_profile_colour_map(self.profile.settings(), colour_target);
+            let off_style = profile_to_standard_colour_off_style(*colour_map.get_off_style());
+
+            sampler_map.insert(
+                colour,
+                SamplerLighting {
+                    off_style,
+                    colours: ThreeColours {
+                        colour_one: colour_map.colour_or_default(0).to_rgb(),
+                        colour_two: colour_map.colour_or_default(1).to_rgb(),
+                        colour_three: colour_map.colour_or_default(2).to_rgb(),
+                    },
+                },
+            );
+        }
+
         Lighting {
             faders: fader_map,
             buttons: button_map,
+            simple: simple_map,
+            sampler: sampler_map,
+            encoders: encoder_map,
         }
     }
 
@@ -1233,6 +1326,21 @@ impl ProfileAdapter {
         )
         .set_state_on(true)?;
 
+        self.sync_sample_colours(bank)?;
+        Ok(())
+    }
+
+    pub fn sync_sample_if_active(&mut self, target: SamplerColourTargets) -> Result<()> {
+        let current = self.profile.settings().context().selected_sample();
+        let bank = standard_sample_colour_to_profile_bank(target);
+
+        if bank == current {
+            self.sync_sample_colours(bank)?;
+        }
+        Ok(())
+    }
+
+    pub fn sync_sample_colours(&mut self, bank: SampleBank) -> Result<()> {
         // When loading a bank, the colour settings from the SampleBank button get migrated
         // across to the sample buttons, which are then used to display (it's a little convoluted!)
         let colour_map = get_profile_colour_map(
@@ -1315,6 +1423,78 @@ impl ProfileAdapter {
             colours.set_colour(1, Colour::fromrgb(two.as_str())?)?;
         }
         Ok(())
+    }
+
+    pub fn set_simple_colours(
+        &mut self,
+        target: SimpleColourTargets,
+        colour_one: String,
+    ) -> Result<()> {
+        if target == SimpleColourTargets::Global {
+            // The 'Global' Colour as defined in the GoXLR App is a 'special' case, where it will
+            // set every target to the same colour. (along with a couple of other tweaks).
+            warn!("Global Colour Setting not Implemented");
+
+            // Set the config value anyway..
+            let colour_map = self
+                .profile
+                .settings_mut()
+                .simple_element_mut(SimpleElements::GlobalColour)
+                .colour_map_mut();
+            colour_map.set_colour(0, Colour::fromrgb(colour_one.as_str())?)?;
+
+            return Ok(());
+        }
+
+        let colour_target = standard_to_profile_simple_colour(target);
+        let colours = get_profile_colour_map_mut(self.profile.settings_mut(), colour_target);
+
+        colours.set_colour(0, Colour::fromrgb(colour_one.as_str())?)?;
+        Ok(())
+    }
+
+    pub fn set_encoder_colours(
+        &mut self,
+        target: EncoderColourTargets,
+        colour_one: String,
+        colour_two: String,
+        colour_three: String,
+    ) -> Result<()> {
+        let colour_target = standard_to_profile_encoder_colour(target);
+        let colours = get_profile_colour_map_mut(self.profile.settings_mut(), colour_target);
+
+        colours.set_colour(0, Colour::fromrgb(colour_one.as_str())?)?;
+        colours.set_colour(1, Colour::fromrgb(colour_two.as_str())?)?;
+        colours.set_colour(2, Colour::fromrgb(colour_three.as_str())?)?;
+
+        Ok(())
+    }
+
+    pub fn set_sampler_colours(
+        &mut self,
+        target: SamplerColourTargets,
+        colour_one: String,
+        colour_two: String,
+        colour_three: String,
+    ) -> Result<()> {
+        let colour_target = standard_to_sample_colour(target);
+        let colours = get_profile_colour_map_mut(self.profile.settings_mut(), colour_target);
+
+        colours.set_colour(0, Colour::fromrgb(colour_one.as_str())?)?;
+        colours.set_colour(1, Colour::fromrgb(colour_two.as_str())?)?;
+        colours.set_colour(2, Colour::fromrgb(colour_three.as_str())?)?;
+
+        Ok(())
+    }
+
+    pub fn set_sampler_off_style(
+        &mut self,
+        target: SamplerColourTargets,
+        off_style: BasicColourOffStyle,
+    ) -> Result<()> {
+        let colour_target = standard_to_sample_colour(target);
+        get_profile_colour_map_mut(self.profile.settings_mut(), colour_target)
+            .set_off_style(standard_to_profile_colour_off_style(off_style))
     }
 
     pub fn set_button_off_style(
@@ -1588,7 +1768,7 @@ fn profile_to_standard_fader_display(value: ColourDisplay) -> BasicColourDisplay
         ColourDisplay::TwoColour => BasicColourDisplay::TwoColour,
         ColourDisplay::Gradient => BasicColourDisplay::Gradient,
         ColourDisplay::Meter => BasicColourDisplay::Meter,
-        ColourDisplay::GradientMeter => BasicColourDisplay::Gradient,
+        ColourDisplay::GradientMeter => BasicColourDisplay::GradientMeter,
     }
 }
 
@@ -1793,9 +1973,7 @@ fn get_profile_colour_map(profile: &ProfileSettings, colour_target: ColourTarget
         ColourTargets::ReverbEncoder => profile.reverb_encoder().colour_map(),
         ColourTargets::EchoEncoder => profile.echo_encoder().colour_map(),
         ColourTargets::LogoX => profile.simple_element(SimpleElements::LogoX).colour_map(),
-        ColourTargets::Global => profile
-            .simple_element(SimpleElements::GlobalColour)
-            .colour_map(),
+        ColourTargets::InternalLight => profile.simple_element(SimpleElements::LogoX).colour_map(),
     }
 }
 
@@ -1855,8 +2033,8 @@ fn get_profile_colour_map_mut(
         ColourTargets::LogoX => profile
             .simple_element_mut(SimpleElements::LogoX)
             .colour_map_mut(),
-        ColourTargets::Global => profile
-            .simple_element_mut(SimpleElements::GlobalColour)
+        ColourTargets::InternalLight => profile
+            .simple_element_mut(SimpleElements::LogoX)
             .colour_map_mut(),
     }
 }
@@ -1916,6 +2094,52 @@ pub fn get_sampler_selector_colour_targets() -> Vec<ButtonColourTargets> {
         ButtonColourTargets::SamplerSelectA,
         ButtonColourTargets::SamplerSelectB,
         ButtonColourTargets::SamplerSelectC,
+    ]
+}
+
+pub fn standard_to_profile_simple_colour(target: SimpleColourTargets) -> ColourTargets {
+    match target {
+        // This is technically incorrect, the Global doesn't have a matching Colour Target.
+        SimpleColourTargets::Global => ColourTargets::InternalLight,
+        SimpleColourTargets::Accent => ColourTargets::LogoX,
+        SimpleColourTargets::Scribble1 => ColourTargets::Scribble1,
+        SimpleColourTargets::Scribble2 => ColourTargets::Scribble2,
+        SimpleColourTargets::Scribble3 => ColourTargets::Scribble3,
+        SimpleColourTargets::Scribble4 => ColourTargets::Scribble4,
+    }
+}
+
+pub fn standard_to_profile_encoder_colour(target: EncoderColourTargets) -> ColourTargets {
+    match target {
+        EncoderColourTargets::Reverb => ColourTargets::ReverbEncoder,
+        EncoderColourTargets::Pitch => ColourTargets::PitchEncoder,
+        EncoderColourTargets::Echo => ColourTargets::EchoEncoder,
+        EncoderColourTargets::Gender => ColourTargets::GenderEncoder,
+    }
+}
+
+pub fn standard_to_sample_colour(target: SamplerColourTargets) -> ColourTargets {
+    match target {
+        SamplerColourTargets::SamplerSelectA => ColourTargets::SamplerSelectA,
+        SamplerColourTargets::SamplerSelectB => ColourTargets::SamplerSelectB,
+        SamplerColourTargets::SamplerSelectC => ColourTargets::SamplerSelectC,
+    }
+}
+
+pub fn standard_sample_colour_to_profile_bank(target: SamplerColourTargets) -> SampleBank {
+    match target {
+        SamplerColourTargets::SamplerSelectA => SampleBank::A,
+        SamplerColourTargets::SamplerSelectB => SampleBank::B,
+        SamplerColourTargets::SamplerSelectC => SampleBank::C,
+    }
+}
+
+pub fn get_scribble_colour_targets() -> Vec<SimpleColourTargets> {
+    vec![
+        SimpleColourTargets::Scribble1,
+        SimpleColourTargets::Scribble2,
+        SimpleColourTargets::Scribble3,
+        SimpleColourTargets::Scribble4,
     ]
 }
 

@@ -9,9 +9,10 @@ pub use device::*;
 use goxlr_types::{
     ButtonColourGroups, ButtonColourOffStyle, ButtonColourTargets, ChannelName,
     CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EchoStyle, EffectBankPresets,
-    EqFrequencies, FaderDisplayStyle, FaderName, GateTimes, GenderStyle, HardTuneSource,
-    HardTuneStyle, InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies, MuteFunction,
-    OutputDevice, PitchStyle, ReverbStyle, RobotRange, RobotStyle,
+    EncoderColourTargets, EqFrequencies, FaderDisplayStyle, FaderName, GateTimes, GenderStyle,
+    HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies,
+    MuteFunction, OutputDevice, PitchStyle, ReverbStyle, RobotRange, RobotStyle,
+    SamplerColourTargets, SimpleColourTargets,
 };
 pub use socket::*;
 
@@ -91,6 +92,11 @@ pub enum GoXLRCommand {
     SetButtonGroupColours(ButtonColourGroups, String, Option<String>),
     SetButtonGroupOffStyle(ButtonColourGroups, ButtonColourOffStyle),
 
+    SetSimpleColour(SimpleColourTargets, String),
+    SetEncoderColour(EncoderColourTargets, String, String, String),
+    SetSampleColour(SamplerColourTargets, String, String, String),
+    SetSampleOffStyle(SamplerColourTargets, ButtonColourOffStyle),
+
     // Effect Related Settings..
     LoadEffectPreset(String),
     SetActiveEffectPreset(EffectBankPresets),
@@ -157,6 +163,7 @@ pub enum GoXLRCommand {
     // Profile Handling..
     NewProfile(String),
     LoadProfile(String),
+    LoadProfileColours(String),
     SaveProfile(),
     SaveProfileAs(String),
     DeleteProfile(String),

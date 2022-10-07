@@ -34,6 +34,8 @@ async fn main() -> Result<()> {
 
     let serial = if let Some(serial) = &cli.device {
         serial.to_owned()
+    } else if client.status().mixers.is_empty() {
+        return Err(anyhow!("No GoXLR Devices are Connected."));
     } else if client.status().mixers.len() == 1 {
         client.status().mixers.keys().next().unwrap().to_owned()
     } else {
@@ -317,6 +319,32 @@ async fn main() -> Result<()> {
                                 .await?;
                         }
                     },
+                    LightingCommands::SimpleColour { target, colour } => {
+                        client
+                            .command(
+                                &serial,
+                                GoXLRCommand::SetSimpleColour(*target, colour.clone()),
+                            )
+                            .await?;
+                    }
+                    LightingCommands::EncoderColour {
+                        target,
+                        colour_one,
+                        colour_two,
+                        colour_three,
+                    } => {
+                        client
+                            .command(
+                                &serial,
+                                GoXLRCommand::SetEncoderColour(
+                                    *target,
+                                    colour_one.clone(),
+                                    colour_two.clone(),
+                                    colour_three.clone(),
+                                ),
+                            )
+                            .await?;
+                    }
                 },
 
                 SubCommands::Profiles { command } => match command {
@@ -338,6 +366,15 @@ async fn main() -> Result<()> {
                                 )
                                 .await
                                 .context("Unable to Load Profile")?;
+                        }
+                        ProfileAction::LoadColours { profile_name } => {
+                            client
+                                .command(
+                                    &serial,
+                                    GoXLRCommand::LoadProfileColours(profile_name.to_string()),
+                                )
+                                .await
+                                .context("Unable to load Profile Colours")?;
                         }
                         ProfileAction::Save {} => {
                             client
@@ -373,6 +410,9 @@ async fn main() -> Result<()> {
                                 )
                                 .await
                                 .context("Unable to Load Microphone Profile")?;
+                        }
+                        ProfileAction::LoadColours { .. } => {
+                            return Err(anyhow!("Not supported for Microphone"));
                         }
                         ProfileAction::Save {} => {
                             client

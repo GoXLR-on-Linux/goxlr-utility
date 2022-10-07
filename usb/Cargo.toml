@@ -1,6 +1,6 @@
 [package]
 name = "goxlr-usb"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 authors = ["Nathan Adams <dinnerbone@dinnerbone.com>", "Craig McLure <craig@mclure.net>", "Lars Mühlbauer <lm41@dismail.de>"]
 description = "A direct interface to the TC-Helicon GoXLR & GoXLR Mini via usb."
@@ -12,7 +12,7 @@ categories = ["hardware-support", "api-bindings"]
 
 [dependencies]
 goxlr-types = {path = "../types"}
-rusb = "0.9"
+rusb = "0.9.1"
 thiserror = "1.0"
 byteorder = "1"
 log = "0.4.14"

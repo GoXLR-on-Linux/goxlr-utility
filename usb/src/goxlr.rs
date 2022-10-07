@@ -12,7 +12,7 @@ use goxlr_types::{
     ChannelName, EffectKey, EncoderName, FaderName, FirmwareVersions, MicrophoneParamKey,
     MicrophoneType, VersionNumber,
 };
-use log::{debug, info, warn};
+use log::{debug, error, info, warn};
 use rusb::Error::Pipe;
 use rusb::{
     Device, DeviceDescriptor, DeviceHandle, Direction, GlobalContext, Language, Recipient,
@@ -229,6 +229,15 @@ impl<T: UsbContext> GoXLR<T> {
     }
 
     pub fn request_data(&mut self, command: Command, body: &[u8]) -> Result<Vec<u8>, rusb::Error> {
+        self.perform_request(command, body, false)
+    }
+
+    fn perform_request(
+        &mut self,
+        command: Command,
+        body: &[u8],
+        is_retry: bool,
+    ) -> Result<Vec<u8>, rusb::Error> {
         if command == Command::ResetCommandIndex {
             self.command_count = 0;
         } else {
@@ -237,6 +246,7 @@ impl<T: UsbContext> GoXLR<T> {
             }
             self.command_count += 1;
         }
+
         let command_index = self.command_count;
         let mut full_request = vec![0; 16];
         LittleEndian::write_u32(&mut full_request[0..4], command.command_id());
@@ -273,18 +283,46 @@ impl<T: UsbContext> GoXLR<T> {
             }
             if response_value.is_err() {
                 let err = response_value.err().unwrap();
-                debug!("Error Occured during packet read: {}", err);
+                debug!("Error Occurred during packet read: {}", err);
                 return Err(err);
             }
 
             let mut response_header = response_value.unwrap();
+            if response_header.len() < 16 {
+                error!(
+                    "Invalid Response received from the GoXLR, Expected: 16, Received: {}",
+                    response_header.len()
+                );
+                return Err(Pipe);
+            }
+
             response = response_header.split_off(16);
             let response_length = LittleEndian::read_u16(&response_header[4..6]);
             let response_command_index = LittleEndian::read_u16(&response_header[6..8]);
 
-            debug_assert!(response.len() == response_length as usize);
-            debug_assert!(response_command_index == command_index);
+            if response_command_index != command_index {
+                debug!("Mismatched Command Indexes..");
+                debug!(
+                    "Expected {}, received: {}",
+                    command_index, response_command_index
+                );
+                debug!("Full Request: {:?}", full_request);
+                debug!("Response Header: {:?}", response_header);
+                debug!("Response Body: {:?}", response);
 
+                return if !is_retry {
+                    debug!("Attempting Resync and Retry");
+                    let _ = self.perform_request(Command::ResetCommandIndex, &[], true)?;
+
+                    debug!("Resync complete, retrying Command..");
+                    self.perform_request(command, body, true)
+                } else {
+                    debug!("Resync Failed, Throwing Error..");
+                    Err(rusb::Error::Other)
+                };
+            }
+
+            debug_assert!(response.len() == response_length as usize);
             break;
         }
 
@@ -551,7 +589,19 @@ impl<T: UsbContext> GoXLR<T> {
         )
     }
 
-    pub fn is_connected(&self) -> bool {
-        self.handle.active_configuration().is_ok()
+    pub fn is_connected(&mut self) -> bool {
+        debug!("Checking Disconnect for device: {:?}", self.device);
+        let active_configuration = self.handle.active_configuration();
+        if active_configuration.is_ok() {
+            let result = self.request_data(Command::ResetCommandIndex, &[]);
+            return if result.is_ok() {
+                debug!("Device {:?} is still connected", self.device);
+                true
+            } else {
+                debug!("Device {:?} has been disconnected", self.device);
+                false
+            };
+        }
+        false
     }
 }

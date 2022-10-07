@@ -56,9 +56,9 @@ pub enum ColourTargets {
     ReverbEncoder,
     EchoEncoder,
 
-    // I believe this is referred to as 'Global' in the UI
+    // LogoX is known as 'Accent' in the Windows UI
     LogoX,
-    Global,
+    InternalLight,
 }
 
 impl ColourTargets {
@@ -114,8 +114,8 @@ impl ColourTargets {
             ColourTargets::GenderEncoder => 44,
             ColourTargets::ReverbEncoder => 47,
             ColourTargets::EchoEncoder => 50,
-            ColourTargets::LogoX => 8,
-            ColourTargets::Global => 10,
+            ColourTargets::LogoX => 10,
+            ColourTargets::InternalLight => 8,
         }
     }
 
@@ -158,36 +158,9 @@ impl ColourTargets {
             ColourTargets::GenderEncoder => 92,
             ColourTargets::ReverbEncoder => 95,
             ColourTargets::EchoEncoder => 98,
-            ColourTargets::LogoX => 8,
-            ColourTargets::Global => 10,
+            ColourTargets::LogoX => 10,
+            ColourTargets::InternalLight => 8,
         }
-    }
-
-    // There are a few buttons which seem to configure as 00000000 when offStyle is set to
-    // 'dimmed', this indicates whether or not that's true for a button..
-    pub fn is_blank_when_dimmed(&self) -> bool {
-        matches!(
-            self,
-            ColourTargets::Fader1Mute
-                | ColourTargets::Fader2Mute
-                | ColourTargets::Fader3Mute
-                | ColourTargets::Fader4Mute
-                | ColourTargets::Bleep
-                | ColourTargets::MicrophoneMute
-                | ColourTargets::EffectSelect1
-                | ColourTargets::EffectSelect2
-                | ColourTargets::EffectSelect3
-                | ColourTargets::EffectSelect4
-                | ColourTargets::EffectSelect5
-                | ColourTargets::EffectSelect6
-                | ColourTargets::EffectFx
-                | ColourTargets::EffectMegaphone
-                | ColourTargets::EffectRobot
-                | ColourTargets::EffectHardTune
-                | ColourTargets::SamplerSelectA
-                | ColourTargets::SamplerSelectB
-                | ColourTargets::SamplerSelectC
-        )
     }
 
     pub fn position(&self, colour: u8, format_1_3_40: bool) -> usize {

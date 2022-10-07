@@ -1,10 +1,10 @@
 use enumset::EnumSet;
 use goxlr_types::{
     ButtonColourOffStyle, ButtonColourTargets, ChannelName, CompressorAttackTime, CompressorRatio,
-    CompressorReleaseTime, EchoStyle, EffectBankPresets, EqFrequencies, FaderDisplayStyle,
-    FaderName, FirmwareVersions, GateTimes, GenderStyle, HardTuneSource, HardTuneStyle,
-    InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies, MuteFunction, OutputDevice,
-    PitchStyle, ReverbStyle, RobotStyle,
+    CompressorReleaseTime, EchoStyle, EffectBankPresets, EncoderColourTargets, EqFrequencies,
+    FaderDisplayStyle, FaderName, FirmwareVersions, GateTimes, GenderStyle, HardTuneSource,
+    HardTuneStyle, InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies, MuteFunction,
+    OutputDevice, PitchStyle, ReverbStyle, RobotStyle, SamplerColourTargets, SimpleColourTargets,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -129,6 +129,9 @@ pub struct Compressor {
 pub struct Lighting {
     pub faders: HashMap<FaderName, FaderLighting>,
     pub buttons: HashMap<ButtonColourTargets, ButtonLighting>,
+    pub simple: HashMap<SimpleColourTargets, OneColour>,
+    pub sampler: HashMap<SamplerColourTargets, SamplerLighting>,
+    pub encoders: HashMap<EncoderColourTargets, ThreeColours>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -138,15 +141,33 @@ pub struct ButtonLighting {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SamplerLighting {
+    pub off_style: ButtonColourOffStyle,
+    pub colours: ThreeColours,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FaderLighting {
     pub style: FaderDisplayStyle,
     pub colours: TwoColours,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OneColour {
+    pub colour_one: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TwoColours {
     pub colour_one: String,
     pub colour_two: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ThreeColours {
+    pub colour_one: String,
+    pub colour_two: String,
+    pub colour_three: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
