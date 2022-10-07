@@ -1,3 +1,5 @@
+[![Support Server](https://img.shields.io/discord/828348446775574548.svg?label=Discord&logo=Discord&colorB=7289da&style=flat)](https://discord.gg/Wbp3UxkX2j)
+
 # GoXLR Configuration Utility
 A tool to configure and use a TC-Helicon GoXLR or GoXLR Mini without requiring windows.
 
