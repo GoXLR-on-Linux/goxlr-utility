@@ -134,11 +134,22 @@ impl SampleBase {
             XmlWriterEvent::start_element(self.element_name.as_str());
 
         let mut attributes: HashMap<String, String> = HashMap::default();
+        self.colour_map.write_colours(&mut attributes);
+
+        // TODO: Solve the 'State' problem properly..
+        /*
+        This is somewhat dependant on the 'Active' stack, and whether this button has any
+        tracks assigned to it. If there are tracks, it should be 'Stopped', if there are no
+        tracks it should be 'Empty'. Given the contexts here, this should be handled at the
+        profile management level.
+
+        More annoyingly though, unlike every other profile component, this *HAS* to override
+        the colour 'state' settings, so we write it last.
+         */
         attributes.insert(
             format!("{}state", self.element_name),
             self.state.to_string(),
         );
-        self.colour_map.write_colours(&mut attributes);
 
         // Write out the attributes etc for this element, but don't close it yet..
         for (key, value) in &attributes {
