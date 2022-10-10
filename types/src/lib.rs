@@ -398,7 +398,7 @@ pub enum EffectBankPresets {
     Preset6,
 }
 
-#[derive(Debug, Copy, Clone, Display, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, Enum, Display, PartialEq, Eq)]
 pub enum SampleBank {
     A,
     B,
