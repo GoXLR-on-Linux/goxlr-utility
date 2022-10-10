@@ -1,11 +1,17 @@
+use crate::DISTRIBUTABLE_ROOT;
 use anyhow::{anyhow, Context, Result};
 use directories::ProjectDirs;
 use goxlr_profile_loader::SampleButtons;
-use log::{debug, error};
+use log::{debug, error, warn};
 use std::collections::HashMap;
+use std::fs;
+use std::fs::Permissions;
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
+
+const DEFAULT_SCRIPT: &str = include_str!("../scripts/goxlr-audio.sh");
 
 #[derive(Debug)]
 pub struct AudioHandler {
@@ -27,10 +33,10 @@ impl AudioHandler {
         // 1) /usr/share/goxlr
         // -- This allows distros to provide their own scripts
         // 2) ~/.local/share/goxlr-on-linux/
-        // -- We'll write an embedded script there if it's not present in 1
+        // -- We'll write an embedded script there if it's not present in 2
 
         // TODO: include_bytes!(from build), and write to 2 if not present.
-        let mut script_path = Path::new("/usr/share/goxlr/goxlr-audio.sh").to_path_buf();
+        let mut script_path = Path::new(DISTRIBUTABLE_ROOT).join("goxlr-audio.sh");
         debug!("Checking For {}", script_path.to_string_lossy());
 
         if !script_path.exists() {
@@ -43,10 +49,25 @@ impl AudioHandler {
 
         // This is temporary, just grab the script in the dev directory.
         if !script_path.exists() {
-            return Err(anyhow!(
-                "Unable to locate GoXLR Audio Script, Sampler Disabled."
-            ));
+            warn!("GoXLR Audio Script not found, creating from embedded");
+            fs::write(&script_path, DEFAULT_SCRIPT)?;
+            fs::set_permissions(&script_path, Permissions::from_mode(0o755))?;
         }
+
+        // This is basically an 'upgrade' check, we should consider if the user has manually edited
+        // the script though, currently we'll replace their changes.
+        if !script_path.starts_with(DISTRIBUTABLE_ROOT) {
+            debug!("Checking MD5 Hash of Script vs Embedded..");
+            if md5::compute(DEFAULT_SCRIPT) != md5::compute(fs::read_to_string(&script_path)?) {
+                warn!("Existing Script differs from Embedded script, replacing..");
+                fs::remove_file(&script_path)?;
+                fs::write(&script_path, DEFAULT_SCRIPT)?;
+                fs::set_permissions(&script_path, Permissions::from_mode(0o755))?;
+            } else {
+                debug!("Files Match, continuing..");
+            }
+        }
+
         debug!(
             "Found GoXLR Audio script in {}",
             script_path.to_string_lossy()

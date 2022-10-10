@@ -934,6 +934,7 @@ dependencies = [
  "goxlr-types",
  "goxlr-usb",
  "log",
+ "md5",
  "nix",
  "opener",
  "ritelinked",
