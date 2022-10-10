@@ -144,12 +144,14 @@ impl SampleBase {
         profile management level.
 
         More annoyingly though, unlike every other profile component, this *HAS* to override
-        the colour 'state' settings, so we write it last.
+        the colour 'state' settings, so we write it last, unless it's sampleClear :)
          */
-        attributes.insert(
-            format!("{}state", self.element_name),
-            self.state.to_string(),
-        );
+        if self.element_name != "sampleClear" {
+            attributes.insert(
+                format!("{}state", self.element_name),
+                self.state.to_string(),
+            );
+        }
 
         // Write out the attributes etc for this element, but don't close it yet..
         for (key, value) in &attributes {
