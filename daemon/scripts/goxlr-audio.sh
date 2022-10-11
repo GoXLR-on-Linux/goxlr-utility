@@ -72,16 +72,37 @@ function pulse_record_audio() {
 }
 
 function pipewire_get_output() {
-  # pw-cli dump short Node
+  DEVICE=$(pw-cli list-objects Node | grep 'goxlr_sample.*sink' | awk '{print $3}' | sed 's/"//g');
+  if [ -n "$DEVICE" ]; then
+    echo "$DEVICE";
+    exit 0;
+  fi
 
-  >&2 echo "Pipewire Get Output Not Implemented";
+  DEVICE=$(pw-cli list-objects Node | grep 'GoXLR_0_8_9.*sink' | awk '{print $3}' | sed 's/"//g');
+  if [ -n "$DEVICE" ]; then
+    echo "$DEVICE";
+    exit 0;
+  fi
+
+  >&2 echo "Unable to locate GoXLR Sampler Output Device";
   exit 1;
 }
 
 function pipewire_get_input() {
-  # pw-cli dump short Node
+  DEVICE=$(pw-cli list-objects Node | grep 'goxlr_sampler.*source' | awk '{print $3}' | sed 's/"//g');
+  if [ -n "$DEVICE" ]; then
+    echo "$DEVICE";
+    exit 0;
+  fi
 
-  >&2 echo "Pipewire Get Input Not Implemented";
+
+  DEVICE=$(pw-cli list-objects Node | grep 'GoXLR_0_4_5.*source' | awk '{print $3}' | sed 's/"//g');
+  if [ -n "$DEVICE" ]; then
+    echo "$DEVICE";
+    exit 0;
+  fi
+
+  >&2 echo "Unable to locate GoXLR Sampler input Device";
   exit 1;
 }
 
