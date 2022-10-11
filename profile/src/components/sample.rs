@@ -237,6 +237,9 @@ impl SampleBase {
     pub fn get_stack(&self, bank: SampleBank) -> &SampleStack {
         self.sample_stack.get(&bank).unwrap()
     }
+    pub fn get_stack_mut(&mut self, bank: SampleBank) -> &mut SampleStack {
+        self.sample_stack.get_mut(&bank).unwrap()
+    }
 }
 
 #[derive(Debug)]

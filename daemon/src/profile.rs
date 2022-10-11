@@ -1385,15 +1385,15 @@ impl ProfileAdapter {
         true
     }
 
-    pub fn get_sample_file(&self, button: SampleButtons) -> String {
+    pub fn get_sample_file(&mut self, button: SampleButtons) -> String {
         let bank = self.profile.settings().context().selected_sample();
         let stack = self
             .profile
-            .settings()
-            .sample_button(button)
-            .get_stack(bank);
+            .settings_mut()
+            .sample_button_mut(button)
+            .get_stack_mut(bank);
 
-        stack.get_first_sample_file()
+        stack.get_next_sample()
     }
 
     pub fn is_sample_active(&self, button: SampleButtons) -> bool {
