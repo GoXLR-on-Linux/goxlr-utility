@@ -612,8 +612,11 @@ impl<'a, T: UsbContext> Device<'a, T> {
 
         debug!("Attempting to play: {}", sample_path.to_string_lossy());
         let audio_handler = self.audio_handler.as_mut().unwrap();
-        let result =
-            audio_handler.play_for_button(button, sample_path.to_str().unwrap().to_string());
+        let result = audio_handler.play_for_button(
+            self.profile.get_active_sample_bank(),
+            button,
+            sample_path.to_str().unwrap().to_string(),
+        );
 
         if result.is_ok() {
             self.profile.set_sample_button_state(button, true)?;
@@ -631,13 +634,12 @@ impl<'a, T: UsbContext> Device<'a, T> {
         }
 
         let mut changed = false;
-
         for button in SampleButtons::iter() {
             let playing = self
                 .audio_handler
                 .as_ref()
                 .unwrap()
-                .is_sample_playing(button);
+                .is_sample_playing(self.profile.get_active_sample_bank(), button);
 
             if self.profile.is_sample_active(button) && !playing {
                 self.profile.set_sample_button_state(button, false)?;

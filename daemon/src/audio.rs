@@ -1,15 +1,17 @@
 use crate::DISTRIBUTABLE_ROOT;
 use anyhow::{anyhow, Context, Result};
 use directories::ProjectDirs;
+use enum_map::EnumMap;
 use goxlr_profile_loader::SampleButtons;
+use goxlr_types::SampleBank;
 use log::{debug, error, warn};
-use std::collections::HashMap;
 use std::fs;
 use std::fs::Permissions;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
+use strum::IntoEnumIterator;
 
 const DEFAULT_SCRIPT: &str = include_str!("../scripts/goxlr-audio.sh");
 
@@ -21,7 +23,7 @@ pub struct AudioHandler {
 
     last_device_check: Instant,
 
-    active_streams: HashMap<SampleButtons, Child>,
+    active_streams: EnumMap<SampleBank, EnumMap<SampleButtons, Option<Child>>>,
 }
 
 impl AudioHandler {
@@ -34,8 +36,6 @@ impl AudioHandler {
         // -- This allows distros to provide their own scripts
         // 2) ~/.local/share/goxlr-on-linux/
         // -- We'll write an embedded script there if it's not present in 2
-
-        // TODO: include_bytes!(from build), and write to 2 if not present.
         let mut script_path = Path::new(DISTRIBUTABLE_ROOT).join("goxlr-audio.sh");
         debug!("Checking For {}", script_path.to_string_lossy());
 
@@ -79,7 +79,7 @@ impl AudioHandler {
             _input_device: None,
 
             last_device_check: Instant::now(),
-            active_streams: HashMap::new(),
+            active_streams: EnumMap::default(),
         };
 
         handler.output_device = handler.find_device("get-output-device")?;
@@ -111,33 +111,45 @@ impl AudioHandler {
 
     pub fn check_playing(&mut self) {
         let map = &mut self.active_streams;
-        let mut to_remove = Vec::new();
 
-        for (key, value) in &mut *map {
-            match value.try_wait() {
-                Ok(Some(status)) => {
-                    debug!("PID {} has terminated: {}", value.id(), status);
-                    to_remove.push(*key);
+        // Iterate over the Sampler Banks..
+        for bank in SampleBank::iter() {
+            //let buttons: &mut EnumMap<SampleButtons, Option<Child>> = &mut map[bank];
+
+            // Iterate over the buttons..
+            for button in SampleButtons::iter() {
+                if button == SampleButtons::Clear {
+                    continue;
                 }
-                Ok(None) => {
-                    // Process hasn't terminated yet..
-                }
-                Err(e) => {
-                    error!("Error checking wait {}", e)
+
+                if let Some(current) = &mut map[bank][button] {
+                    match current.try_wait() {
+                        Ok(Some(status)) => {
+                            debug!("PID {} has terminated: {}", current.id(), status);
+                            map[bank][button] = None;
+                        }
+                        Ok(None) => {
+                            // Process hasn't terminated yet..
+                        }
+                        Err(e) => {
+                            error!("Error checking wait {}", e)
+                        }
+                    }
                 }
             }
         }
-
-        for key in to_remove.iter() {
-            map.remove(key);
-        }
     }
 
-    pub fn is_sample_playing(&self, button: SampleButtons) -> bool {
-        self.active_streams.contains_key(&button)
+    pub fn is_sample_playing(&self, bank: SampleBank, button: SampleButtons) -> bool {
+        self.active_streams[bank][button].is_some()
     }
 
-    pub fn play_for_button(&mut self, button: SampleButtons, file: String) -> Result<()> {
+    pub fn play_for_button(
+        &mut self,
+        bank: SampleBank,
+        button: SampleButtons,
+        file: String,
+    ) -> Result<()> {
         if self.output_device.is_none()
             && (self.last_device_check + Duration::from_secs(5)) < Instant::now()
         {
@@ -152,11 +164,15 @@ impl AudioHandler {
                 .arg(output_device)
                 .arg(file)
                 .spawn()?;
-            self.active_streams.insert(button, command);
+            self.active_streams[bank][button] = Some(command);
         } else {
             return Err(anyhow!("Unable to play Sample, Output device not found"));
         }
 
+        Ok(())
+    }
+
+    pub fn record_for_button(&mut self, button: SampleButtons) -> Result<()> {
         Ok(())
     }
 
