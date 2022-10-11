@@ -11,8 +11,8 @@ use goxlr_types::{
     CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EchoStyle, EffectBankPresets,
     EncoderColourTargets, EqFrequencies, FaderDisplayStyle, FaderName, GateTimes, GenderStyle,
     HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies,
-    MuteFunction, OutputDevice, PitchStyle, ReverbStyle, RobotRange, RobotStyle,
-    SamplerColourTargets, SimpleColourTargets,
+    MuteFunction, OutputDevice, PitchStyle, ReverbStyle, RobotRange, RobotStyle, SampleBank,
+    SampleButtons, SamplePlayOrder, SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets,
 };
 pub use socket::*;
 
@@ -159,6 +159,12 @@ pub enum GoXLRCommand {
     SetHardTuneRate(u8),
     SetHardTuneWindow(u16),
     SetHardTuneSource(HardTuneSource),
+
+    // Sampler..
+    SetSamplerFunction(SampleBank, SampleButtons, SamplePlaybackMode),
+    SetSamplerOrder(SampleBank, SampleButtons, SamplePlayOrder),
+    AddSample(SampleBank, SampleButtons, String),
+    RemoveSampleByIndex(SampleBank, SampleButtons, usize),
 
     // Profile Handling..
     NewProfile(String),

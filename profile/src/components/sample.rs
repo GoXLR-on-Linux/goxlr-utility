@@ -286,7 +286,6 @@ impl SampleStack {
     pub fn get_tracks(&self) -> &Vec<Track> {
         &self.tracks
     }
-
     pub fn get_sample_count(&self) -> usize {
         self.tracks.len()
     }
@@ -326,14 +325,29 @@ impl SampleStack {
 
         String::from("")
     }
+
+    pub fn set_playback_mode(&mut self, playback_mode: Option<PlaybackMode>) {
+        self.playback_mode = playback_mode;
+    }
+    pub fn set_play_order(&mut self, play_order: Option<PlayOrder>) {
+        self.play_order = play_order;
+    }
+
+    pub fn add_track(&mut self, track: Track) {
+        self.tracks.push(track);
+    }
+
+    pub fn remove_track_by_index(&mut self, track: usize) {
+        self.tracks.remove(track);
+    }
 }
 
 #[derive(Debug)]
 pub struct Track {
-    track: String,
-    start_position: f32,
-    end_position: f32,
-    normalized_gain: f64,
+    pub track: String,
+    pub start_position: f32,
+    pub end_position: f32,
+    pub normalized_gain: f64,
 }
 
 impl Track {

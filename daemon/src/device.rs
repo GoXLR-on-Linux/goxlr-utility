@@ -1493,6 +1493,26 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 self.apply_effects(LinkedHashSet::from_iter([EffectKey::HardTuneKeySource]))?;
             }
 
+            // Sampler..
+            GoXLRCommand::SetSamplerFunction(bank, button, function) => {
+                self.profile.set_sampler_function(bank, button, function);
+            }
+            GoXLRCommand::SetSamplerOrder(bank, button, order) => {
+                self.profile.set_sampler_play_order(bank, button, order);
+            }
+            GoXLRCommand::AddSample(bank, button, filename) => {
+                // Make sure the file exists..
+                if (self.get_path_for_sample(filename.clone()).await).is_ok() {
+                    self.profile.add_sample_file(bank, button, filename);
+                } else {
+                    return Err(anyhow!("Sample File not Found"));
+                }
+            }
+            GoXLRCommand::RemoveSampleByIndex(bank, button, index) => {
+                self.profile
+                    .remove_sample_file_by_index(bank, button, index);
+            }
+
             // Profiles
             GoXLRCommand::NewProfile(profile_name) => {
                 let profile_directory = self.settings.get_profile_directory().await;

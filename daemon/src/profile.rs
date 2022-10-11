@@ -29,7 +29,7 @@ use goxlr_profile_loader::components::mute_chat::{CoughToggle, MuteChat};
 use goxlr_profile_loader::components::pitch::{PitchEncoder, PitchStyle};
 use goxlr_profile_loader::components::reverb::{ReverbEncoder, ReverbStyle};
 use goxlr_profile_loader::components::robot::{RobotEffect, RobotStyle};
-use goxlr_profile_loader::components::sample::{PlayOrder, PlaybackMode, SampleBank};
+use goxlr_profile_loader::components::sample::{PlayOrder, PlaybackMode, SampleBank, Track};
 use goxlr_profile_loader::components::simple::SimpleElements;
 use goxlr_profile_loader::profile::{Profile, ProfileSettings};
 use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
@@ -1552,6 +1552,66 @@ impl ProfileAdapter {
             .set_off_style(standard_to_profile_colour_off_style(off_style))
     }
 
+    pub fn set_sampler_function(
+        &mut self,
+        bank: goxlr_types::SampleBank,
+        button: goxlr_types::SampleButtons,
+        mode: SamplePlaybackMode,
+    ) {
+        self.profile
+            .settings_mut()
+            .sample_button_mut(standard_to_profile_sample_button(button))
+            .get_stack_mut(standard_to_profile_sample_bank(bank))
+            .set_playback_mode(Some(standard_to_profile_sample_playback_mode(mode)));
+    }
+
+    pub fn set_sampler_play_order(
+        &mut self,
+        bank: goxlr_types::SampleBank,
+        button: goxlr_types::SampleButtons,
+        order: SamplePlayOrder,
+    ) {
+        self.profile
+            .settings_mut()
+            .sample_button_mut(standard_to_profile_sample_button(button))
+            .get_stack_mut(standard_to_profile_sample_bank(bank))
+            .set_play_order(Some(standard_to_profile_sample_playback_order(order)));
+    }
+
+    pub fn add_sample_file(
+        &mut self,
+        bank: goxlr_types::SampleBank,
+        button: goxlr_types::SampleButtons,
+        file: String,
+    ) {
+        // Create a new 'Track' (Oddly, positions are a percentage :D)..
+        let track = Track {
+            track: file,
+            start_position: 0.0,
+            end_position: 100.0,
+            normalized_gain: 1.0,
+        };
+
+        self.profile
+            .settings_mut()
+            .sample_button_mut(standard_to_profile_sample_button(button))
+            .get_stack_mut(standard_to_profile_sample_bank(bank))
+            .add_track(track);
+    }
+
+    pub fn remove_sample_file_by_index(
+        &mut self,
+        bank: goxlr_types::SampleBank,
+        button: goxlr_types::SampleButtons,
+        index: usize,
+    ) {
+        self.profile
+            .settings_mut()
+            .sample_button_mut(standard_to_profile_sample_button(button))
+            .get_stack_mut(standard_to_profile_sample_bank(bank))
+            .remove_track_by_index(index);
+    }
+
     pub fn set_button_off_style(
         &mut self,
         target: ButtonColourTargets,
@@ -1901,7 +1961,6 @@ fn standard_to_profile_sample_button(button: goxlr_types::SampleButtons) -> Samp
     }
 }
 
-#[allow(dead_code)]
 fn standard_to_profile_sample_playback_mode(mode: SamplePlaybackMode) -> PlaybackMode {
     match mode {
         SamplePlaybackMode::PlayNext => PlaybackMode::PlayNext,
@@ -1928,6 +1987,13 @@ fn profile_to_standard_sample_playback_order(order: PlayOrder) -> SamplePlayOrde
     match order {
         PlayOrder::Sequential => SamplePlayOrder::Sequential,
         PlayOrder::Random => SamplePlayOrder::Random,
+    }
+}
+
+fn standard_to_profile_sample_playback_order(order: SamplePlayOrder) -> PlayOrder {
+    match order {
+        SamplePlayOrder::Sequential => PlayOrder::Sequential,
+        SamplePlayOrder::Random => PlayOrder::Random,
     }
 }
 
