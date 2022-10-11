@@ -5,7 +5,7 @@ trap 'shutdown' SIGTERM
 
 
 function shutdown() {
-  [ -n "$BACKGROUND_PID" ] && kill $BACKGROUND_PID
+  [ -n "$BACKGROUND_PID" ] && kill "$BACKGROUND_PID"
 }
 
 # These checks will likely need expanding over time due to differing available configurations
