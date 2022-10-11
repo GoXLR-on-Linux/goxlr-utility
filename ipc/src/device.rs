@@ -4,7 +4,8 @@ use goxlr_types::{
     CompressorReleaseTime, EchoStyle, EffectBankPresets, EncoderColourTargets, EqFrequencies,
     FaderDisplayStyle, FaderName, FirmwareVersions, GateTimes, GenderStyle, HardTuneSource,
     HardTuneStyle, InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies, MuteFunction,
-    OutputDevice, PitchStyle, ReverbStyle, RobotStyle, SamplerColourTargets, SimpleColourTargets,
+    OutputDevice, PitchStyle, ReverbStyle, RobotStyle, SampleBank, SampleButtons, SamplePlayOrder,
+    SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -29,6 +30,7 @@ pub struct MixerStatus {
     pub cough_button: CoughButton,
     pub lighting: Lighting,
     pub effects: Option<Effects>,
+    pub sampler: Option<Sampler>,
     pub profile_name: String,
     pub mic_profile_name: String,
 }
@@ -266,6 +268,18 @@ pub struct HardTune {
     pub rate: u8,
     pub window: u16,
     pub source: HardTuneSource,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Sampler {
+    pub banks: HashMap<SampleBank, HashMap<SampleButtons, SamplerButton>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SamplerButton {
+    pub function: SamplePlaybackMode,
+    pub order: SamplePlayOrder,
+    pub samples: Vec<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

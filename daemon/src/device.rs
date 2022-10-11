@@ -151,6 +151,9 @@ impl<'a, T: UsbContext> Device<'a, T> {
             effects: self
                 .profile
                 .get_effects_ipc(self.hardware.device_type == DeviceType::Mini),
+            sampler: self
+                .profile
+                .get_sampler_ipc(self.hardware.device_type == DeviceType::Mini),
             profile_name: self.profile.name().to_owned(),
             mic_profile_name: self.mic_profile.name().to_owned(),
         }

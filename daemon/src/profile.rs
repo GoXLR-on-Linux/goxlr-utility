@@ -13,8 +13,8 @@ use strum::IntoEnumIterator;
 
 use goxlr_ipc::{
     ActiveEffects, ButtonLighting, CoughButton, Echo, Effects, FaderLighting, Gender, HardTune,
-    Lighting, Megaphone, OneColour, Pitch, Reverb, Robot, SamplerLighting, ThreeColours,
-    TwoColours,
+    Lighting, Megaphone, OneColour, Pitch, Reverb, Robot, Sampler, SamplerButton, SamplerLighting,
+    ThreeColours, TwoColours,
 };
 use goxlr_profile_loader::components::colours::{
     Colour, ColourDisplay, ColourMap, ColourOffStyle, ColourState,
@@ -29,7 +29,7 @@ use goxlr_profile_loader::components::mute_chat::{CoughToggle, MuteChat};
 use goxlr_profile_loader::components::pitch::{PitchEncoder, PitchStyle};
 use goxlr_profile_loader::components::reverb::{ReverbEncoder, ReverbStyle};
 use goxlr_profile_loader::components::robot::{RobotEffect, RobotStyle};
-use goxlr_profile_loader::components::sample::{PlaybackMode, SampleBank};
+use goxlr_profile_loader::components::sample::{PlayOrder, PlaybackMode, SampleBank};
 use goxlr_profile_loader::components::simple::SimpleElements;
 use goxlr_profile_loader::profile::{Profile, ProfileSettings};
 use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
@@ -37,8 +37,8 @@ use goxlr_profile_loader::{Faders, Preset, SampleButtons};
 use goxlr_types::{
     ButtonColourGroups, ButtonColourOffStyle as BasicColourOffStyle, ButtonColourTargets,
     ChannelName, EffectBankPresets, EncoderColourTargets, FaderDisplayStyle as BasicColourDisplay,
-    FaderName, InputDevice, MuteFunction as BasicMuteFunction, OutputDevice, SamplePlaybackMode,
-    SamplerColourTargets, SimpleColourTargets, VersionNumber,
+    FaderName, InputDevice, MuteFunction as BasicMuteFunction, OutputDevice, SamplePlayOrder,
+    SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets, VersionNumber,
 };
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::colouring::ColourTargets;
@@ -649,6 +649,46 @@ impl ProfileAdapter {
                 hard_tune,
             },
         })
+    }
+
+    pub fn get_sampler_ipc(&self, is_device_mini: bool) -> Option<Sampler> {
+        if is_device_mini {
+            return None;
+        }
+
+        let mut sampler_map = HashMap::new();
+
+        for bank in goxlr_types::SampleBank::iter() {
+            let mut buttons = HashMap::new();
+
+            for button in goxlr_types::SampleButtons::iter() {
+                // Grab the sample config..
+                let sample_bank = self
+                    .profile
+                    .settings()
+                    .sample_button(standard_to_profile_sample_button(button))
+                    .get_stack(standard_to_profile_sample_bank(bank));
+
+                let mut tracks = vec![];
+                for track in sample_bank.get_tracks() {
+                    tracks.push(track.track().to_string())
+                }
+
+                // Create a SamplerButton
+                let sampler_button = SamplerButton {
+                    function: profile_to_standard_sample_playback_mode(
+                        sample_bank.get_playback_mode(),
+                    ),
+                    order: profile_to_standard_sample_playback_order(sample_bank.get_play_order()),
+                    samples: tracks,
+                };
+                buttons.insert(button, sampler_button);
+            }
+
+            sampler_map.insert(bank, buttons);
+        }
+
+        Some(Sampler { banks: sampler_map })
     }
 
     /** Regular Mute button handlers */
@@ -1334,10 +1374,7 @@ impl ProfileAdapter {
         profile_to_standard_sample_bank(self.profile.settings().context().selected_sample())
     }
 
-    pub fn get_sample_playback_mode(
-        &self,
-        button: SampleButtons,
-    ) -> goxlr_types::SamplePlaybackMode {
+    pub fn get_sample_playback_mode(&self, button: SampleButtons) -> SamplePlaybackMode {
         let bank = self.profile.settings().context().selected_sample();
         let stack = self
             .profile
@@ -1854,8 +1891,18 @@ fn standard_to_profile_sample_bank(bank: goxlr_types::SampleBank) -> SampleBank 
         goxlr_types::SampleBank::C => SampleBank::C,
     }
 }
+
+fn standard_to_profile_sample_button(button: goxlr_types::SampleButtons) -> SampleButtons {
+    match button {
+        goxlr_types::SampleButtons::TopLeft => TopLeft,
+        goxlr_types::SampleButtons::TopRight => TopRight,
+        goxlr_types::SampleButtons::BottomLeft => BottomLeft,
+        goxlr_types::SampleButtons::BottomRight => BottomRight,
+    }
+}
+
 #[allow(dead_code)]
-fn standard_to_profile_sample_playback_mode(mode: goxlr_types::SamplePlaybackMode) -> PlaybackMode {
+fn standard_to_profile_sample_playback_mode(mode: SamplePlaybackMode) -> PlaybackMode {
     match mode {
         SamplePlaybackMode::PlayNext => PlaybackMode::PlayNext,
         SamplePlaybackMode::PlayStop => PlaybackMode::PlayStop,
@@ -1874,6 +1921,13 @@ fn profile_to_standard_sample_playback_mode(mode: PlaybackMode) -> SamplePlaybac
         PlaybackMode::StopOnRelease => SamplePlaybackMode::StopOnRelease,
         PlaybackMode::FadeOnRelease => SamplePlaybackMode::FadeOnRelease,
         PlaybackMode::Loop => SamplePlaybackMode::Loop,
+    }
+}
+
+fn profile_to_standard_sample_playback_order(order: PlayOrder) -> SamplePlayOrder {
+    match order {
+        PlayOrder::Sequential => SamplePlayOrder::Sequential,
+        PlayOrder::Random => SamplePlayOrder::Random,
     }
 }
 

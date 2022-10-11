@@ -275,6 +275,18 @@ impl SampleStack {
         }
         PlaybackMode::PlayNext
     }
+
+    pub fn get_play_order(&self) -> PlayOrder {
+        if let Some(order) = self.play_order {
+            return order;
+        }
+        Sequential
+    }
+
+    pub fn get_tracks(&self) -> &Vec<Track> {
+        &self.tracks
+    }
+
     pub fn get_sample_count(&self) -> usize {
         self.tracks.len()
     }
@@ -317,7 +329,7 @@ impl SampleStack {
 }
 
 #[derive(Debug)]
-struct Track {
+pub struct Track {
     track: String,
     start_position: f32,
     end_position: f32,
@@ -338,6 +350,10 @@ impl Track {
             normalized_gain,
         }
     }
+
+    pub fn track(&self) -> &str {
+        &self.track
+    }
 }
 
 #[derive(Debug, Copy, Clone, Enum, EnumProperty)]
@@ -356,8 +372,8 @@ pub enum PlaybackMode {
     Loop,
 }
 
-#[derive(Debug, Enum, EnumProperty, Eq, PartialEq)]
-enum PlayOrder {
+#[derive(Debug, Copy, Clone, Enum, EnumProperty, Eq, PartialEq)]
+pub enum PlayOrder {
     #[strum(props(index = "0"))]
     Sequential,
     #[strum(props(index = "1"))]
