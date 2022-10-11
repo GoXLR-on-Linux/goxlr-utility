@@ -581,6 +581,14 @@ impl<'a, T: UsbContext> Device<'a, T> {
     async fn load_sample_bank(&mut self, bank: SampleBank) -> Result<()> {
         self.profile.load_sample_bank(bank)?;
 
+        // Sync the state of active playback..
+        if let Some(audio) = &self.audio_handler {
+            for button in SampleButtons::iter() {
+                if audio.is_sample_playing(bank, button) {
+                    self.profile.set_sample_button_state(button, true)?;
+                }
+            }
+        }
         Ok(())
     }
 
