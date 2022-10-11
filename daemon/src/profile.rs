@@ -1330,6 +1330,10 @@ impl ProfileAdapter {
         Ok(())
     }
 
+    pub fn get_active_sample_bank(&self) -> goxlr_types::SampleBank {
+        profile_to_standard_sample_bank(self.profile.settings().context().selected_sample())
+    }
+
     pub fn sync_sample_if_active(&mut self, target: SamplerColourTargets) -> Result<()> {
         let current = self.profile.settings().context().selected_sample();
         let bank = standard_sample_colour_to_profile_bank(target);
