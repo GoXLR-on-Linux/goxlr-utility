@@ -170,7 +170,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
 
         // Let the audio handle handle stuff..
         if let Some(audio_handler) = &mut self.audio_handler {
-            audio_handler.check_playing();
+            audio_handler.check_playing().await;
             self.sync_sample_lighting().await?;
         }
 
@@ -618,13 +618,15 @@ impl<'a, T: UsbContext> Device<'a, T> {
             return Err(anyhow!("Sample File does not exist!"));
         }
 
-        debug!("Attempting to play: {}", sample_path.to_string_lossy());
+        let bank = self.profile.get_active_sample_bank();
+
         let audio_handler = self.audio_handler.as_mut().unwrap();
-        let result = audio_handler.play_for_button(
-            self.profile.get_active_sample_bank(),
-            button,
-            sample_path.to_str().unwrap().to_string(),
-        );
+        audio_handler.stop_playback(bank, button).await?;
+
+        debug!("Attempting to play: {}", sample_path.to_string_lossy());
+        let result = audio_handler
+            .play_for_button(bank, button, sample_path.to_str().unwrap().to_string())
+            .await;
 
         if result.is_ok() {
             self.profile.set_sample_button_state(button, true)?;

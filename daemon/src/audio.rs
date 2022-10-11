@@ -2,6 +2,7 @@ use crate::DISTRIBUTABLE_ROOT;
 use anyhow::{anyhow, Context, Result};
 use directories::ProjectDirs;
 use enum_map::EnumMap;
+use futures::executor::block_on;
 use goxlr_profile_loader::SampleButtons;
 use goxlr_types::SampleBank;
 use log::{debug, error, warn};
@@ -9,9 +10,10 @@ use std::fs;
 use std::fs::Permissions;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command, Stdio};
+use std::process::Stdio;
 use std::time::{Duration, Instant};
 use strum::IntoEnumIterator;
+use tokio::process::{Child, Command};
 
 const DEFAULT_SCRIPT: &str = include_str!("../scripts/goxlr-audio.sh");
 
@@ -90,11 +92,13 @@ impl AudioHandler {
 
     fn find_device(&self, arg: &str) -> Result<Option<String>> {
         debug!("Attempting to Find Device..");
-        let command = Command::new(&self.script_path)
-            .arg(arg)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .output()?;
+        let command = block_on(
+            Command::new(&self.script_path)
+                .arg(arg)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .output(),
+        )?;
 
         let mut input_device = None;
         if command.status.success() {
@@ -109,7 +113,7 @@ impl AudioHandler {
         Ok(input_device)
     }
 
-    pub fn check_playing(&mut self) {
+    pub async fn check_playing(&mut self) {
         let map = &mut self.active_streams;
 
         // Iterate over the Sampler Banks..
@@ -125,7 +129,7 @@ impl AudioHandler {
                 if let Some(current) = &mut map[bank][button] {
                     match current.try_wait() {
                         Ok(Some(status)) => {
-                            debug!("PID {} has terminated: {}", current.id(), status);
+                            debug!("Audio for {} - {} has terminated {}", bank, button, status);
                             map[bank][button] = None;
                         }
                         Ok(None) => {
@@ -144,7 +148,7 @@ impl AudioHandler {
         self.active_streams[bank][button].is_some()
     }
 
-    pub fn play_for_button(
+    pub async fn play_for_button(
         &mut self,
         bank: SampleBank,
         button: SampleButtons,
@@ -163,6 +167,7 @@ impl AudioHandler {
                 .arg("play-file")
                 .arg(output_device)
                 .arg(file)
+                .kill_on_drop(true)
                 .spawn()?;
             self.active_streams[bank][button] = Some(command);
         } else {
@@ -172,7 +177,22 @@ impl AudioHandler {
         Ok(())
     }
 
-    pub fn record_for_button(&mut self, button: SampleButtons) -> Result<()> {
+    pub async fn stop_playback(&mut self, bank: SampleBank, button: SampleButtons) -> Result<()> {
+        if let Some(child) = &mut self.active_streams[bank][button] {
+            if let Some(pid) = child.id() {
+                debug!("Killing child {}..", pid);
+                Command::new("kill")
+                    .args(["-TERM", pid.to_string().as_str()])
+                    .output()
+                    .await?;
+            }
+            self.active_streams[bank][button] = None;
+        }
+        Ok(())
+    }
+
+    #[allow(dead_code)]
+    pub fn record_for_button(&mut self, _button: SampleButtons) -> Result<()> {
         Ok(())
     }
 
