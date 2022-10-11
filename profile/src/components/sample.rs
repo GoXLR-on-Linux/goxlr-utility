@@ -5,6 +5,7 @@ use std::str::FromStr;
 use anyhow::Result;
 
 use enum_map::Enum;
+use rand::seq::SliceRandom;
 use ritelinked::LinkedHashMap;
 use strum::{Display, EnumIter, EnumProperty, EnumString};
 use xml::attribute::OwnedAttribute;
@@ -13,6 +14,7 @@ use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
 use crate::components::colours::ColourMap;
+use crate::components::sample::PlayOrder::{Random, Sequential};
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -242,6 +244,9 @@ pub struct SampleStack {
     tracks: Vec<Track>,
     playback_mode: Option<PlaybackMode>,
     play_order: Option<PlayOrder>,
+
+    // Transient value, keep track of where we may be sequentially..
+    transient_seq_position: usize,
 }
 
 impl Default for SampleStack {
@@ -256,6 +261,8 @@ impl SampleStack {
             tracks: vec![],
             playback_mode: None,
             play_order: None,
+
+            transient_seq_position: 0,
         }
     }
 
@@ -264,6 +271,39 @@ impl SampleStack {
     }
     pub fn get_first_sample_file(&self) -> String {
         self.tracks[0].track.to_string()
+    }
+
+    pub fn get_next_sample(&mut self) -> String {
+        if self.get_sample_count() == 1 {
+            return self.get_first_sample_file();
+        }
+
+        let mut play_order = &self.play_order;
+        if play_order.is_none() {
+            play_order = &Some(Sequential)
+        }
+
+        if let Some(order) = play_order {
+            // Per the Windows App, if there are only 2 tracks with 'Random' order, behave
+            // sequentially.
+            if order == &Sequential || (order == &Random && self.tracks.len() <= 2) {
+                let track = &self.tracks[self.transient_seq_position];
+                self.transient_seq_position += 1;
+
+                if self.transient_seq_position >= self.tracks.len() {
+                    self.transient_seq_position = 0;
+                }
+
+                return track.track.clone();
+            } else if order == &Random {
+                let track = &self.tracks.choose(&mut rand::thread_rng());
+                if let Some(track) = track {
+                    return track.track.clone();
+                }
+            }
+        }
+
+        String::from("")
     }
 }
 
@@ -307,7 +347,7 @@ enum PlaybackMode {
     Loop,
 }
 
-#[derive(Debug, Enum, EnumProperty)]
+#[derive(Debug, Enum, EnumProperty, Eq, PartialEq)]
 enum PlayOrder {
     #[strum(props(index = "0"))]
     Sequential,
