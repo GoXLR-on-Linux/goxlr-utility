@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::{anyhow, Result};
@@ -17,7 +17,7 @@ use goxlr_profile_loader::SampleButtons;
 use goxlr_types::{
     ChannelName, EffectBankPresets, EffectKey, EncoderName, FaderName, HardTuneSource,
     InputDevice as BasicInputDevice, MicrophoneParamKey, OutputDevice as BasicOutputDevice,
-    RobotRange, SampleBank, VersionNumber,
+    RobotRange, SampleBank, SamplePlaybackMode, VersionNumber,
 };
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::channelstate::ChannelState::{Muted, Unmuted};
@@ -241,6 +241,22 @@ impl<'a, T: UsbContext> Device<'a, T> {
             Buttons::Bleep => {
                 self.handle_swear_button(true).await?;
             }
+            Buttons::SamplerBottomLeft => {
+                self.handle_sample_button_down(SampleButtons::BottomLeft)
+                    .await?;
+            }
+            Buttons::SamplerBottomRight => {
+                self.handle_sample_button_down(SampleButtons::BottomRight)
+                    .await?;
+            }
+            Buttons::SamplerTopLeft => {
+                self.handle_sample_button_down(SampleButtons::TopLeft)
+                    .await?;
+            }
+            Buttons::SamplerTopRight => {
+                self.handle_sample_button_down(SampleButtons::TopRight)
+                    .await?;
+            }
             _ => {}
         }
         self.update_button_states()?;
@@ -352,17 +368,20 @@ impl<'a, T: UsbContext> Device<'a, T> {
             }
 
             Buttons::SamplerBottomLeft => {
-                self.handle_sample_button(SampleButtons::BottomLeft).await?;
+                self.handle_sample_button_release(SampleButtons::BottomLeft)
+                    .await?;
             }
             Buttons::SamplerBottomRight => {
-                self.handle_sample_button(SampleButtons::BottomRight)
+                self.handle_sample_button_release(SampleButtons::BottomRight)
                     .await?;
             }
             Buttons::SamplerTopLeft => {
-                self.handle_sample_button(SampleButtons::TopLeft).await?;
+                self.handle_sample_button_release(SampleButtons::TopLeft)
+                    .await?;
             }
             Buttons::SamplerTopRight => {
-                self.handle_sample_button(SampleButtons::TopRight).await?;
+                self.handle_sample_button_release(SampleButtons::TopRight)
+                    .await?;
             }
             _ => {}
         }
@@ -592,8 +611,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
         Ok(())
     }
 
-    // This currently only gets called on release, this will change.
-    async fn handle_sample_button(&mut self, button: SampleButtons) -> Result<()> {
+    async fn handle_sample_button_down(&mut self, button: SampleButtons) -> Result<()> {
         if self.audio_handler.is_none() {
             return Err(anyhow!(
                 "Not handling button, audio handler not configured."
@@ -601,40 +619,108 @@ impl<'a, T: UsbContext> Device<'a, T> {
         }
 
         if !self.profile.current_sample_bank_has_samples(button) {
-            // On release, so do nothing really..
-            return Ok(());
+            return Err(anyhow!("Audio Recording not yet implemented."));
         }
 
-        let sample = self.profile.get_sample_file(button);
-        let mut sample_path = self.settings.get_samples_directory().await;
+        // Grab the currently active bank..
+        let sample_bank = self.profile.get_active_sample_bank();
 
-        if sample.starts_with("Recording_") {
-            sample_path = sample_path.join("Recorded");
-        }
+        // Firstly, get the playback mode for this button..
+        let mode = self.profile.get_sample_playback_mode(button);
 
-        sample_path = sample_path.join(sample);
-
-        if !sample_path.exists() {
-            return Err(anyhow!("Sample File does not exist!"));
-        }
-
-        let bank = self.profile.get_active_sample_bank();
-
-        let audio_handler = self.audio_handler.as_mut().unwrap();
-        audio_handler.stop_playback(bank, button).await?;
-
-        debug!("Attempting to play: {}", sample_path.to_string_lossy());
-        let result = audio_handler
-            .play_for_button(bank, button, sample_path.to_str().unwrap().to_string())
-            .await;
-
-        if result.is_ok() {
-            self.profile.set_sample_button_state(button, true)?;
-        } else {
-            error!("{}", result.err().unwrap());
+        // Execute behaviour depending on mode, note that the 'fade' options aren't directly
+        // supported, so we'll just map their equivalent 'Stop' action
+        match mode {
+            SamplePlaybackMode::PlayNext
+            | SamplePlaybackMode::StopOnRelease
+            | SamplePlaybackMode::FadeOnRelease => {
+                // In all three of these cases, we will always play audio on button down.
+                let file = self.profile.get_sample_file(button);
+                self.play_audio_file(button, file).await?;
+                return Ok(());
+            }
+            SamplePlaybackMode::PlayStop | SamplePlaybackMode::PlayFade => {
+                let audio_handler = self.audio_handler.as_mut().unwrap();
+                // In these cases, we may be required to stop playback.
+                if audio_handler.is_sample_playing(sample_bank, button) {
+                    // Sample is playing, we need to stop it.
+                    audio_handler.stop_playback(sample_bank, button).await?;
+                    return Ok(());
+                } else {
+                    // Play the next file.
+                    let file = self.profile.get_sample_file(button);
+                    self.play_audio_file(button, file).await?;
+                    return Ok(());
+                }
+            }
+            SamplePlaybackMode::Loop => {}
         }
 
         Ok(())
+    }
+
+    async fn handle_sample_button_release(&mut self, button: SampleButtons) -> Result<()> {
+        // We only need to either a) Stop recording, or b) Handle Stop On Release..
+        if self.audio_handler.is_none() {
+            return Err(anyhow!(
+                "Not handling button, audio handler not configured."
+            ));
+        }
+
+        if !self.profile.current_sample_bank_has_samples(button) {
+            return Ok(());
+        }
+
+        let sample_bank = self.profile.get_active_sample_bank();
+        let mode = self.profile.get_sample_playback_mode(button);
+
+        match mode {
+            SamplePlaybackMode::StopOnRelease | SamplePlaybackMode::FadeOnRelease => {
+                self.audio_handler
+                    .as_mut()
+                    .unwrap()
+                    .stop_playback(sample_bank, button)
+                    .await?;
+                return Ok(());
+            }
+            _ => {}
+        }
+
+        Ok(())
+    }
+
+    /// A Simple Method that simply starts playback on the Sampler Channel..
+    async fn play_audio_file(&mut self, button: SampleButtons, file_name: String) -> Result<()> {
+        let sample_bank = self.profile.get_active_sample_bank();
+        let sample_path = self.get_path_for_sample(file_name).await?;
+
+        if let Some(audio_handler) = &mut self.audio_handler {
+            audio_handler.stop_playback(sample_bank, button).await?;
+            let result = audio_handler
+                .play_for_button(sample_bank, button, sample_path)
+                .await;
+
+            if result.is_ok() {
+                self.profile.set_sample_button_state(button, true)?;
+            } else {
+                error!("{}", result.err().unwrap());
+            }
+        }
+        Ok(())
+    }
+
+    async fn get_path_for_sample(&mut self, file_name: String) -> Result<PathBuf> {
+        let mut sample_path = self.settings.get_samples_directory().await;
+        if file_name.starts_with("Recording_") {
+            sample_path = sample_path.join("Recorded");
+        }
+        sample_path = sample_path.join(file_name);
+
+        if !sample_path.exists() {
+            return Err(anyhow!("Sample Not found on Path"));
+        }
+
+        Ok(sample_path)
     }
 
     async fn sync_sample_lighting(&mut self) -> Result<()> {

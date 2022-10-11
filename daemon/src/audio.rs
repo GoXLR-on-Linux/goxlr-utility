@@ -118,8 +118,6 @@ impl AudioHandler {
 
         // Iterate over the Sampler Banks..
         for bank in SampleBank::iter() {
-            //let buttons: &mut EnumMap<SampleButtons, Option<Child>> = &mut map[bank];
-
             // Iterate over the buttons..
             for button in SampleButtons::iter() {
                 if button == SampleButtons::Clear {
@@ -152,7 +150,7 @@ impl AudioHandler {
         &mut self,
         bank: SampleBank,
         button: SampleButtons,
-        file: String,
+        file: PathBuf,
     ) -> Result<()> {
         if self.output_device.is_none()
             && (self.last_device_check + Duration::from_secs(5)) < Instant::now()

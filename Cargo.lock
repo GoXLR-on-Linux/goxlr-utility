@@ -978,6 +978,7 @@ dependencies = [
  "enum-map",
  "enum-map-derive 0.8.0",
  "log",
+ "rand",
  "ritelinked",
  "strum",
  "thiserror",

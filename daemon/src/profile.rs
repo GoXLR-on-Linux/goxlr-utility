@@ -29,7 +29,7 @@ use goxlr_profile_loader::components::mute_chat::{CoughToggle, MuteChat};
 use goxlr_profile_loader::components::pitch::{PitchEncoder, PitchStyle};
 use goxlr_profile_loader::components::reverb::{ReverbEncoder, ReverbStyle};
 use goxlr_profile_loader::components::robot::{RobotEffect, RobotStyle};
-use goxlr_profile_loader::components::sample::SampleBank;
+use goxlr_profile_loader::components::sample::{PlaybackMode, SampleBank};
 use goxlr_profile_loader::components::simple::SimpleElements;
 use goxlr_profile_loader::profile::{Profile, ProfileSettings};
 use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
@@ -37,8 +37,8 @@ use goxlr_profile_loader::{Faders, Preset, SampleButtons};
 use goxlr_types::{
     ButtonColourGroups, ButtonColourOffStyle as BasicColourOffStyle, ButtonColourTargets,
     ChannelName, EffectBankPresets, EncoderColourTargets, FaderDisplayStyle as BasicColourDisplay,
-    FaderName, InputDevice, MuteFunction as BasicMuteFunction, OutputDevice, SamplerColourTargets,
-    SimpleColourTargets, VersionNumber,
+    FaderName, InputDevice, MuteFunction as BasicMuteFunction, OutputDevice, SamplePlaybackMode,
+    SamplerColourTargets, SimpleColourTargets, VersionNumber,
 };
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::colouring::ColourTargets;
@@ -1334,6 +1334,20 @@ impl ProfileAdapter {
         profile_to_standard_sample_bank(self.profile.settings().context().selected_sample())
     }
 
+    pub fn get_sample_playback_mode(
+        &self,
+        button: SampleButtons,
+    ) -> goxlr_types::SamplePlaybackMode {
+        let bank = self.profile.settings().context().selected_sample();
+        let stack = self
+            .profile
+            .settings()
+            .sample_button(button)
+            .get_stack(bank);
+
+        profile_to_standard_sample_playback_mode(stack.get_playback_mode())
+    }
+
     pub fn sync_sample_if_active(&mut self, target: SamplerColourTargets) -> Result<()> {
         let current = self.profile.settings().context().selected_sample();
         let bank = standard_sample_colour_to_profile_bank(target);
@@ -1838,6 +1852,28 @@ fn standard_to_profile_sample_bank(bank: goxlr_types::SampleBank) -> SampleBank 
         goxlr_types::SampleBank::A => SampleBank::A,
         goxlr_types::SampleBank::B => SampleBank::B,
         goxlr_types::SampleBank::C => SampleBank::C,
+    }
+}
+#[allow(dead_code)]
+fn standard_to_profile_sample_playback_mode(mode: goxlr_types::SamplePlaybackMode) -> PlaybackMode {
+    match mode {
+        SamplePlaybackMode::PlayNext => PlaybackMode::PlayNext,
+        SamplePlaybackMode::PlayStop => PlaybackMode::PlayStop,
+        SamplePlaybackMode::PlayFade => PlaybackMode::PlayFade,
+        SamplePlaybackMode::StopOnRelease => PlaybackMode::StopOnRelease,
+        SamplePlaybackMode::FadeOnRelease => PlaybackMode::FadeOnRelease,
+        SamplePlaybackMode::Loop => PlaybackMode::Loop,
+    }
+}
+
+fn profile_to_standard_sample_playback_mode(mode: PlaybackMode) -> SamplePlaybackMode {
+    match mode {
+        PlaybackMode::PlayNext => SamplePlaybackMode::PlayNext,
+        PlaybackMode::PlayStop => SamplePlaybackMode::PlayStop,
+        PlaybackMode::PlayFade => SamplePlaybackMode::PlayFade,
+        PlaybackMode::StopOnRelease => SamplePlaybackMode::StopOnRelease,
+        PlaybackMode::FadeOnRelease => SamplePlaybackMode::FadeOnRelease,
+        PlaybackMode::Loop => SamplePlaybackMode::Loop,
     }
 }
 

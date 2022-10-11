@@ -664,3 +664,15 @@ pub enum HardTuneSource {
     LineIn,
     System,
 }
+
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum SamplePlaybackMode {
+    PlayNext,
+    PlayStop,
+    PlayFade,
+    StopOnRelease,
+    FadeOnRelease,
+    Loop,
+}

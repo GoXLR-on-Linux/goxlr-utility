@@ -269,6 +269,12 @@ impl SampleStack {
         }
     }
 
+    pub fn get_playback_mode(&self) -> PlaybackMode {
+        if let Some(mode) = self.playback_mode {
+            return mode;
+        }
+        PlaybackMode::PlayNext
+    }
     pub fn get_sample_count(&self) -> usize {
         self.tracks.len()
     }
@@ -334,8 +340,8 @@ impl Track {
     }
 }
 
-#[derive(Debug, Enum, EnumProperty)]
-enum PlaybackMode {
+#[derive(Debug, Copy, Clone, Enum, EnumProperty)]
+pub enum PlaybackMode {
     #[strum(props(index = "0"))]
     PlayNext,
     #[strum(props(index = "1"))]
