@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# Configure a TERM trap, so we can stop any apps which we spawn on exit..
+trap 'shutdown' SIGTERM
+
+
+function shutdown() {
+  [ -n "$BACKGROUND_PID" ] && kill $BACKGROUND_PID
+}
+
 # These checks will likely need expanding over time due to differing available configurations
 function pulse_get_output() {
   # This is slightly 'legacy' UCM
@@ -43,13 +51,23 @@ function pulse_get_input() {
 
 function pulse_play_audio() {
   # Playback the specified file through paplay..
-  paplay --volume=65536 -d "$DEVICE" "$FILE"
+  paplay --volume=65536 -d "$DEVICE" "$FILE" &
+
+  # We intentionally run paplay in the background so that we can trap SIGTERM and shut it down when
+  # needed (can't do that in the foreground!) The next line waits for it to exit, so we can exit cleanly.
+  BACKGROUND_PID=$!
+  wait $BACKGROUND_PID
+
   exit 0;
 }
 
 function pulse_record_audio() {
   # Record to the specified file through parecord, keeping latency as low as possible..
-  parecord --latency-msec=1 --volume=65535 -d "$DEVICE" "$FILE"
+  parecord --latency-msec=1 --volume=65535 -d "$DEVICE" "$FILE" &
+
+  BACKGROUND_PID=$!
+  wait $BACKGROUND_PID
+
   exit 0;
 }
 
