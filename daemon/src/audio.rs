@@ -2,7 +2,6 @@ use crate::DISTRIBUTABLE_ROOT;
 use anyhow::{anyhow, Context, Result};
 use directories::ProjectDirs;
 use enum_map::EnumMap;
-use futures::executor::block_on;
 use goxlr_profile_loader::SampleButtons;
 use goxlr_types::SampleBank;
 use log::{debug, error, warn};
@@ -92,13 +91,11 @@ impl AudioHandler {
 
     fn find_device(&self, arg: &str) -> Result<Option<String>> {
         debug!("Attempting to Find Device..");
-        let command = block_on(
-            Command::new(&self.script_path)
-                .arg(arg)
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .output(),
-        )?;
+        let command = std::process::Command::new(&self.script_path)
+            .arg(arg)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .output()?;
 
         let mut input_device = None;
         if command.status.success() {
