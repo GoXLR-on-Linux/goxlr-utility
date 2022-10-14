@@ -1,8 +1,8 @@
-use crate::audio::AudioConfiguration;
-use crate::pulse::configuration::get_configuration;
+use crate::audio::get_configuration;
+
+pub mod player;
 
 mod audio;
-mod player;
 
 #[cfg(target_os = "linux")]
 mod pulse;

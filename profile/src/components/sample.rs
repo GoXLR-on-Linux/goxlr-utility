@@ -286,16 +286,16 @@ impl SampleStack {
     pub fn get_tracks(&self) -> &Vec<Track> {
         &self.tracks
     }
-    pub fn get_sample_count(&self) -> usize {
+    pub fn get_track_count(&self) -> usize {
         self.tracks.len()
     }
-    pub fn get_first_sample_file(&self) -> String {
-        self.tracks[0].track.to_string()
+    pub fn get_first_track(&self) -> &Track {
+        &self.tracks[0]
     }
 
-    pub fn get_next_sample(&mut self) -> String {
-        if self.get_sample_count() == 1 {
-            return self.get_first_sample_file();
+    pub fn get_next_track(&mut self) -> Option<&Track> {
+        if self.get_track_count() == 1 {
+            return Some(self.get_first_track());
         }
 
         let mut play_order = &self.play_order;
@@ -314,16 +314,15 @@ impl SampleStack {
                     self.transient_seq_position = 0;
                 }
 
-                return track.track.clone();
+                return Some(track);
             } else if order == &Random {
-                let track = &self.tracks.choose(&mut rand::thread_rng());
+                let track = self.tracks.choose(&mut rand::thread_rng());
                 if let Some(track) = track {
-                    return track.track.clone();
+                    return Some(track);
                 }
             }
         }
-
-        String::from("")
+        None
     }
 
     pub fn set_playback_mode(&mut self, playback_mode: Option<PlaybackMode>) {
@@ -342,7 +341,7 @@ impl SampleStack {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Track {
     pub track: String,
     pub start_position: f32,
@@ -367,6 +366,15 @@ impl Track {
 
     pub fn track(&self) -> &str {
         &self.track
+    }
+    pub fn start_position(&self) -> f32 {
+        self.start_position
+    }
+    pub fn end_position(&self) -> f32 {
+        self.end_position
+    }
+    pub fn normalized_gain(&self) -> f64 {
+        self.normalized_gain
     }
 }
 

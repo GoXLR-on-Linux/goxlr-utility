@@ -24,7 +24,7 @@ use goxlr_usb::goxlr::GoXLR;
 use goxlr_usb::routing::{InputDevice, OutputDevice};
 use goxlr_usb::rusb::UsbContext;
 
-use crate::audio::AudioHandler;
+use crate::audio::{AudioFile, AudioHandler};
 use crate::mic_profile::{MicProfileAdapter, DEFAULT_MIC_PROFILE_NAME};
 use crate::profile::{version_newer_or_equal_to, ProfileAdapter, DEFAULT_PROFILE_NAME};
 use crate::{SettingsHandle, DISTRIBUTABLE_ROOT};
@@ -637,21 +637,32 @@ impl<'a, T: UsbContext> Device<'a, T> {
             | SamplePlaybackMode::StopOnRelease
             | SamplePlaybackMode::FadeOnRelease => {
                 // In all three of these cases, we will always play audio on button down.
-                let file = self.profile.get_sample_file(button);
-                self.play_audio_file(button, file).await?;
+                //let file = self.profile.get_sample_file(button);
+                let mut audio = self.profile.get_next_track(button)?;
+                if mode == SamplePlaybackMode::FadeOnRelease {
+                    audio.fade_on_stop = true;
+                }
+                self.play_audio_file(button, audio).await?;
                 return Ok(());
             }
             SamplePlaybackMode::PlayStop | SamplePlaybackMode::PlayFade => {
                 let audio_handler = self.audio_handler.as_mut().unwrap();
                 // In these cases, we may be required to stop playback.
-                if audio_handler.is_sample_playing(sample_bank, button) {
+                if audio_handler.is_sample_playing(sample_bank, button)
+                    && !audio_handler.is_sample_stopping(sample_bank, button)
+                {
                     // Sample is playing, we need to stop it.
                     audio_handler.stop_playback(sample_bank, button).await?;
                     return Ok(());
                 } else {
                     // Play the next file.
-                    let file = self.profile.get_sample_file(button);
-                    self.play_audio_file(button, file).await?;
+                    let mut audio = self.profile.get_next_track(button)?;
+
+                    if mode == SamplePlaybackMode::PlayFade {
+                        audio.fade_on_stop = true;
+                    }
+
+                    self.play_audio_file(button, audio).await?;
                     return Ok(());
                 }
             }
@@ -692,14 +703,18 @@ impl<'a, T: UsbContext> Device<'a, T> {
     }
 
     /// A Simple Method that simply starts playback on the Sampler Channel..
-    async fn play_audio_file(&mut self, button: SampleButtons, file_name: String) -> Result<()> {
+    async fn play_audio_file(&mut self, button: SampleButtons, mut audio: AudioFile) -> Result<()> {
         let sample_bank = self.profile.get_active_sample_bank();
-        let sample_path = self.get_path_for_sample(file_name).await?;
+
+        // Fill out the path..
+        let sample_path = self.get_path_for_sample(audio.file).await?;
+        audio.file = sample_path;
 
         if let Some(audio_handler) = &mut self.audio_handler {
             audio_handler.stop_playback(sample_bank, button).await?;
+
             let result = audio_handler
-                .play_for_button(sample_bank, button, sample_path)
+                .play_for_button(sample_bank, button, audio)
                 .await;
 
             if result.is_ok() {
@@ -711,12 +726,13 @@ impl<'a, T: UsbContext> Device<'a, T> {
         Ok(())
     }
 
-    async fn get_path_for_sample(&mut self, file_name: String) -> Result<PathBuf> {
+    async fn get_path_for_sample(&mut self, part: PathBuf) -> Result<PathBuf> {
         let mut sample_path = self.settings.get_samples_directory().await;
-        if file_name.starts_with("Recording_") {
+
+        if part.to_string_lossy().starts_with("Recording_") {
             sample_path = sample_path.join("Recorded");
         }
-        sample_path = sample_path.join(file_name);
+        sample_path = sample_path.join(part);
 
         if !sample_path.exists() {
             return Err(anyhow!("Sample Not found on Path"));
@@ -1501,7 +1517,11 @@ impl<'a, T: UsbContext> Device<'a, T> {
             }
             GoXLRCommand::AddSample(bank, button, filename) => {
                 // Make sure the file exists..
-                if (self.get_path_for_sample(filename.clone()).await).is_ok() {
+                if (self
+                    .get_path_for_sample(PathBuf::from(filename.clone()))
+                    .await)
+                    .is_ok()
+                {
                     self.profile.add_sample_file(bank, button, filename);
                 } else {
                     return Err(anyhow!("Sample File not Found"));

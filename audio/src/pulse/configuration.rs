@@ -30,7 +30,7 @@ impl PulseAudioConfiguration {
             Mainloop::new().expect("Failed to create MainLoop"),
         ));
         let context = Rc::new(RefCell::new(
-            Context::new_with_proplist(main_loop.borrow().deref(), &app_name, &proplist)
+            Context::new_with_proplist(main_loop.borrow().deref(), app_name, &proplist)
                 .expect("Unable to create context"),
         ));
 
@@ -43,7 +43,7 @@ impl PulseAudioConfiguration {
             match main_loop.borrow_mut().iterate(true) {
                 IterateResult::Success(_) => {}
                 IterateResult::Quit(_) | IterateResult::Err(_) => {
-                    eprintln!("Failed to Connect..");
+                    panic!("Failed to Connect to Pulse Audio!");
                 }
             }
 
@@ -53,7 +53,6 @@ impl PulseAudioConfiguration {
                 State::Authorizing => {}
                 State::SettingName => {}
                 State::Ready => {
-                    println!("Success!");
                     break;
                 }
                 State::Failed => {}

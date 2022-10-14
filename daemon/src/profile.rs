@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fs::{remove_file, File};
 use std::io::{Cursor, Read, Seek};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context, Result};
 use enum_map::EnumMap;
@@ -11,6 +11,7 @@ use log::{debug, error, warn};
 use strum::EnumCount;
 use strum::IntoEnumIterator;
 
+use crate::audio::AudioFile;
 use goxlr_ipc::{
     ActiveEffects, ButtonLighting, CoughButton, Echo, Effects, FaderLighting, Gender, HardTune,
     Lighting, Megaphone, OneColour, Pitch, Reverb, Robot, Sampler, SamplerButton, SamplerLighting,
@@ -1433,21 +1434,48 @@ impl ProfileAdapter {
             .sample_button(standard_to_profile_sample_button(button))
             .get_stack(bank);
 
-        if stack.get_sample_count() == 0 {
+        if stack.get_track_count() == 0 {
             return false;
         }
         true
     }
 
-    pub fn get_sample_file(&mut self, button: goxlr_types::SampleButtons) -> String {
+    pub fn get_next_track(&mut self, button: goxlr_types::SampleButtons) -> Result<AudioFile> {
         let bank = self.profile.settings().context().selected_sample();
-        let stack = self
+        let track = self
             .profile
             .settings_mut()
             .sample_button_mut(standard_to_profile_sample_button(button))
-            .get_stack_mut(bank);
+            .get_stack_mut(bank)
+            .get_next_track();
 
-        stack.get_next_sample()
+        if let Some(track) = track {
+            let mut gain = None;
+            let mut start_pct = None;
+            let mut stop_pct = None;
+
+            if track.normalized_gain() != 1.0 {
+                gain = Some(track.normalized_gain());
+            }
+
+            if track.start_position() != 0.0 {
+                start_pct = Some(track.start_position() as f64);
+            }
+
+            if track.end_position() != 100.0 {
+                stop_pct = Some(track.end_position() as f64);
+            }
+
+            return Ok(AudioFile {
+                file: PathBuf::from(track.track()),
+                gain,
+                start_pct,
+                stop_pct,
+                fade_on_stop: false,
+            });
+        }
+
+        Err(anyhow!("Unable to Find Track to play!"))
     }
 
     pub fn is_sample_active(&self, button: goxlr_types::SampleButtons) -> bool {

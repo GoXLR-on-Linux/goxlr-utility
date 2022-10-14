@@ -9,7 +9,6 @@ use std::sync::Arc;
 
 use crate::audio::get_output;
 use symphonia::core::audio::SampleBuffer;
-use symphonia::core::errors::Error;
 use symphonia::core::formats::{SeekMode, SeekTo};
 use symphonia::core::io::MediaSourceStream;
 use symphonia::core::probe::{Hint, ProbeResult};
@@ -26,12 +25,19 @@ pub struct Player {
     fade_duration: Option<f32>,
     start_pct: Option<f64>,
     stop_pct: Option<f64>,
-    gain: Option<f32>,
+    gain: Option<f64>,
 }
 
 impl Player {
     /// Load up the Player, and prepare for playback..
-    pub fn new(file: &PathBuf, device: Option<String>) -> Result<Self> {
+    pub fn new(
+        file: &PathBuf,
+        device: Option<String>,
+        fade_duration: Option<f32>,
+        start_pct: Option<f64>,
+        stop_pct: Option<f64>,
+        gain: Option<f64>,
+    ) -> Result<Self> {
         // Use the file extension to get a type hint..
         let mut hint = Hint::new();
         if let Some(extension) = file.extension() {
@@ -64,15 +70,14 @@ impl Player {
             force_stop: Arc::new(AtomicBool::new(false)),
 
             device,
-            fade_duration: Some(1.0),
-            start_pct: None,
-            stop_pct: None,
-            gain: None,
+            fade_duration,
+            start_pct,
+            stop_pct,
+            gain,
         })
     }
 
-    pub fn play(&mut self) -> Result<(), Error> {
-        println!("{}", self.volume);
+    pub fn play(&mut self) -> Result<()> {
         let reader = &mut self.probe.format;
 
         // Grab the Track and it's ID
@@ -181,7 +186,7 @@ impl Player {
                         // Apply any gain to the samples..
                         if let Some(gain) = self.gain {
                             for i in 0..samples.len() - 1 {
-                                samples[i] *= gain;
+                                samples[i] *= gain as f32;
                             }
                         }
 
@@ -239,7 +244,11 @@ impl Player {
         };
 
         decoder.finalize();
-        result
+        if result.is_err() {
+            Err(anyhow!("{:?}", result.err().unwrap()))
+        } else {
+            Ok(())
+        }
     }
 
     pub fn get_state(&self) -> PlayerState {
@@ -250,6 +259,7 @@ impl Player {
     }
 }
 
+#[derive(Debug)]
 pub struct PlayerState {
     pub stopping: Arc<AtomicBool>,
     pub force_stop: Arc<AtomicBool>,
