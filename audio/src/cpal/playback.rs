@@ -22,17 +22,23 @@ impl CpalAudioOutput {
                 let str_host = &device_name[0..position];
                 let str_device = &device_name[position + 1..device_name.len()];
 
+                debug!("Searching For Host: {}, Device: {}", str_host, str_device);
+
                 // Ok, now for cpal, find the correct host..
                 let cpal_host_list = cpal::available_hosts();
                 let host_id = cpal_host_list.iter().find(|x| x.name() == str_host);
 
                 if let Some(host_id) = host_id {
+                    debug!("Audio Host Found: {:?}", host_id);
+
                     if let Ok(host) = cpal::host_from_id(*host_id) {
                         // We have found our host, now try to find the device..
+                        debug!("Looking For Device..");
                         if let Ok(mut devices) = host.output_devices() {
                             if let Some(device) = devices.find(|x| {
                                 x.name().unwrap_or_else(|_| "UNKNOWN".to_string()) == str_device
                             }) {
+                                debug!("Device Found.");
                                 cpal_device = Some(device);
                             }
                         }
@@ -45,6 +51,7 @@ impl CpalAudioOutput {
         if let Some(device) = cpal_device {
             final_device = device;
         } else {
+            debug!("Device not found, looking for default..");
             let host = cpal::default_host();
             final_device = match host.default_output_device() {
                 Some(device) => device,
