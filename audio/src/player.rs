@@ -185,7 +185,10 @@ impl Player {
 
                         // Apply any gain to the samples..
                         if let Some(gain) = self.gain {
-                            for i in 0..samples.len() - 1 {
+                            // Clippy doesn't seem to understand that I'm actually changing the
+                            // values here, so we'll ignore this warning.
+                            #[allow(clippy::needless_range_loop)]
+                            for i in 0..samples.len() {
                                 samples[i] *= gain as f32;
                             }
                         }
