@@ -372,7 +372,7 @@ impl ProfileAdapter {
     }
 
     fn get_colour_array(&self, target: ColourTargets, button: SampleButtons) -> [u8; 4] {
-        if self.current_sample_bank_has_samples(button) {
+        if self.current_sample_bank_has_samples(profile_to_standard_sample_button(button)) {
             return get_profile_colour_map(self.profile.settings(), target)
                 .colour(0)
                 .to_reverse_bytes();
@@ -1374,12 +1374,15 @@ impl ProfileAdapter {
         profile_to_standard_sample_bank(self.profile.settings().context().selected_sample())
     }
 
-    pub fn get_sample_playback_mode(&self, button: SampleButtons) -> SamplePlaybackMode {
+    pub fn get_sample_playback_mode(
+        &self,
+        button: goxlr_types::SampleButtons,
+    ) -> SamplePlaybackMode {
         let bank = self.profile.settings().context().selected_sample();
         let stack = self
             .profile
             .settings()
-            .sample_button(button)
+            .sample_button(standard_to_profile_sample_button(button))
             .get_stack(bank);
 
         profile_to_standard_sample_playback_mode(stack.get_playback_mode())
@@ -1422,12 +1425,12 @@ impl ProfileAdapter {
         Ok(())
     }
 
-    pub fn current_sample_bank_has_samples(&self, button: SampleButtons) -> bool {
+    pub fn current_sample_bank_has_samples(&self, button: goxlr_types::SampleButtons) -> bool {
         let bank = self.profile.settings().context().selected_sample();
         let stack = self
             .profile
             .settings()
-            .sample_button(button)
+            .sample_button(standard_to_profile_sample_button(button))
             .get_stack(bank);
 
         if stack.get_sample_count() == 0 {
@@ -1436,29 +1439,33 @@ impl ProfileAdapter {
         true
     }
 
-    pub fn get_sample_file(&mut self, button: SampleButtons) -> String {
+    pub fn get_sample_file(&mut self, button: goxlr_types::SampleButtons) -> String {
         let bank = self.profile.settings().context().selected_sample();
         let stack = self
             .profile
             .settings_mut()
-            .sample_button_mut(button)
+            .sample_button_mut(standard_to_profile_sample_button(button))
             .get_stack_mut(bank);
 
         stack.get_next_sample()
     }
 
-    pub fn is_sample_active(&self, button: SampleButtons) -> bool {
+    pub fn is_sample_active(&self, button: goxlr_types::SampleButtons) -> bool {
         self.profile
             .settings()
-            .sample_button(button)
+            .sample_button(standard_to_profile_sample_button(button))
             .colour_map()
             .get_state()
     }
 
-    pub fn set_sample_button_state(&mut self, button: SampleButtons, state: bool) -> Result<()> {
+    pub fn set_sample_button_state(
+        &mut self,
+        button: goxlr_types::SampleButtons,
+        state: bool,
+    ) -> Result<()> {
         self.profile
             .settings_mut()
-            .sample_button_mut(button)
+            .sample_button_mut(standard_to_profile_sample_button(button))
             .colour_map_mut()
             .set_state_on(state)
     }
@@ -1958,6 +1965,16 @@ fn standard_to_profile_sample_button(button: goxlr_types::SampleButtons) -> Samp
         goxlr_types::SampleButtons::TopRight => TopRight,
         goxlr_types::SampleButtons::BottomLeft => BottomLeft,
         goxlr_types::SampleButtons::BottomRight => BottomRight,
+    }
+}
+
+fn profile_to_standard_sample_button(button: SampleButtons) -> goxlr_types::SampleButtons {
+    match button {
+        TopLeft => goxlr_types::SampleButtons::TopLeft,
+        TopRight => goxlr_types::SampleButtons::TopRight,
+        BottomLeft => goxlr_types::SampleButtons::BottomLeft,
+        BottomRight => goxlr_types::SampleButtons::BottomRight,
+        _ => goxlr_types::SampleButtons::TopLeft,
     }
 }
 

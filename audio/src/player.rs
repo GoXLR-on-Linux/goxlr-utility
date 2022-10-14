@@ -7,14 +7,13 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
+use crate::audio::get_output;
 use symphonia::core::audio::SampleBuffer;
 use symphonia::core::errors::Error;
 use symphonia::core::formats::{SeekMode, SeekTo};
 use symphonia::core::io::MediaSourceStream;
 use symphonia::core::probe::{Hint, ProbeResult};
 use symphonia::default::get_codecs;
-
-use crate::audio::get_output;
 
 pub struct Player {
     probe: ProbeResult,

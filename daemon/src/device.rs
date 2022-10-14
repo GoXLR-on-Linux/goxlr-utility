@@ -13,11 +13,10 @@ use goxlr_ipc::{
     DeviceType, FaderStatus, GoXLRCommand, HardwareStatus, Levels, MicSettings, MixerStatus,
 };
 use goxlr_profile_loader::components::mute::MuteFunction;
-use goxlr_profile_loader::SampleButtons;
 use goxlr_types::{
     ChannelName, EffectBankPresets, EffectKey, EncoderName, FaderName, HardTuneSource,
     InputDevice as BasicInputDevice, MicrophoneParamKey, OutputDevice as BasicOutputDevice,
-    RobotRange, SampleBank, SamplePlaybackMode, VersionNumber,
+    RobotRange, SampleBank, SampleButtons, SamplePlaybackMode, VersionNumber,
 };
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::channelstate::ChannelState::{Muted, Unmuted};

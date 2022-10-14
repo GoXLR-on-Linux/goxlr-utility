@@ -14,6 +14,7 @@ categories = ["hardware-support", "command-line-utilities"]
 goxlr-usb = { path = "../usb" }
 goxlr-ipc = { path = "../ipc" }
 goxlr-types = { path = "../types" }
+goxlr-audio = { path = "../audio" }
 goxlr-profile-loader = { path = "../profile" }
 simplelog = "0.11.1"
 tokio = { version = "1.0", features = ["full"] }
@@ -32,6 +33,7 @@ clap = { version = "3.0.0", features = ["derive"] }
 nix = { version = "0.25.0", features = ["user"] }
 opener = "0.5.0"
 md5 = "0.7.0"
+regex = "1.6.0"
 
 ## HTTPd Server
 actix = "0.13"
