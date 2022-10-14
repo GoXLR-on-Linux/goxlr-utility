@@ -64,6 +64,7 @@ impl AudioHandler {
         let patterns = vec![
             Regex::new("goxlr_sample").expect("Invalid Regex in Audio Handler"),
             Regex::new("GoXLR_0_8_9").expect("Invalid Regex in Audio Handler"),
+            Regex::new("CoreAudio\\*Sample").expect("Invalid Regex in Audio Handler"),
         ];
         patterns
     }
