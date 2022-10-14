@@ -1,4 +1,4 @@
-use crate::AudioConfiguration;
+use crate::audio::AudioConfiguration;
 use cpal::traits::{DeviceTrait, HostTrait};
 
 pub struct CpalConfiguration {}
