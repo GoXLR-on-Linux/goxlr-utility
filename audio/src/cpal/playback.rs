@@ -5,7 +5,7 @@ use rb::*;
 use symphonia::core::audio::SignalSpec;
 
 use crate::audio::AudioOutput;
-use log::error;
+use log::{debug, error};
 
 pub struct CpalAudioOutput;
 
