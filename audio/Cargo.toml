@@ -1,0 +1,28 @@
+[package]
+name = "goxlr-audio"
+version = "0.5.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# Symphonia for Audio Decoding..
+symphonia = { version = "0.5.1", features = [ "wav", "mp3", "ogg"] }
+
+# Exceptions
+anyhow = "1.0.65"
+
+# Logging..
+log = "0.4.17"
+simplelog = "0.12.0"
+
+# Under Linux, we'll use PulseAudio to output to the GoXLR..
+# We can't find the specific audio channels using CPAL, so will ask Pulse instead.
+[target.'cfg(target_os = "linux")'.dependencies]
+libpulse-binding = "2.5.0"
+libpulse-simple-binding = "2.5.0"
+
+# Under Other Operating Systems, we'll use CPAL
+[target.'cfg(not(target_os = "linux"))'.dependencies]
+cpal = "0.14.0"
+rb = "0.4.1"
