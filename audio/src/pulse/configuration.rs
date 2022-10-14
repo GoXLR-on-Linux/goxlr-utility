@@ -23,7 +23,7 @@ impl PulseAudioConfiguration {
 
         let mut proplist = Proplist::new().unwrap();
         proplist
-            .set_str(pulse::proplist::properties::APPLICATION_NAME, &app_name)
+            .set_str(pulse::proplist::properties::APPLICATION_NAME, app_name)
             .unwrap();
 
         let main_loop = Rc::new(RefCell::new(
