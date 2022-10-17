@@ -1848,16 +1848,15 @@ impl<'a, T: UsbContext> Device<'a, T> {
             return Ok(());
         }
 
-        let mut muted_by_fader = false;
-        if self.profile.get_mic_fader_id() != 4 {
+        let muted_by_fader = if self.profile.get_mic_fader_id() != 4 {
             // We need to check this fader's mute button..
             let fader = self.profile.get_mic_fader();
             let (muted_to_x, muted_to_all, mute_function) =
                 self.profile.get_mute_button_state(fader);
-            if muted_to_all || muted_to_x && mute_function == MuteFunction::All {
-                muted_by_fader = true;
-            }
-        }
+            muted_to_all || muted_to_x && mute_function == MuteFunction::All
+        } else {
+            false
+        };
 
         if muted_to_all || (muted_to_x && mute_function == MuteFunction::All) || muted_by_fader {
             self.goxlr.set_channel_state(ChannelName::Mic, Muted)?;
