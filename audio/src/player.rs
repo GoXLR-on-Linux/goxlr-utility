@@ -1,20 +1,23 @@
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 
 use core::default::Default;
 use log::{debug, warn};
 use std::fs::File;
+use std::io::ErrorKind::UnexpectedEof;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use crate::audio::get_output;
 use symphonia::core::audio::SampleBuffer;
+use symphonia::core::errors::Error;
 use symphonia::core::formats::{SeekMode, SeekTo};
 use symphonia::core::io::MediaSourceStream;
 use symphonia::core::probe::{Hint, ProbeResult};
 use symphonia::default::get_codecs;
 
 pub struct Player {
+    file: PathBuf,
     probe: ProbeResult,
 
     volume: f32,
@@ -38,6 +41,28 @@ impl Player {
         stop_pct: Option<f64>,
         gain: Option<f64>,
     ) -> Result<Self> {
+        let probe_result = Player::load_file(file);
+        if probe_result.is_err() {
+            return Err(anyhow!("Unable to Probe audio file"));
+        }
+
+        Ok(Self {
+            file: file.clone(),
+
+            probe: probe_result.unwrap(),
+            volume: 1.0_f32,
+            stopping: Arc::new(AtomicBool::new(false)),
+            force_stop: Arc::new(AtomicBool::new(false)),
+
+            device,
+            fade_duration,
+            start_pct,
+            stop_pct,
+            gain,
+        })
+    }
+
+    fn load_file(file: &PathBuf) -> symphonia::core::errors::Result<ProbeResult> {
         // Use the file extension to get a type hint..
         let mut hint = Hint::new();
         if let Some(extension) = file.extension() {
@@ -58,23 +83,22 @@ impl Player {
             &format_options,
             &metadata_options,
         );
+        probe_result
+    }
 
-        if probe_result.is_err() {
-            return Err(anyhow!("Unable to Probe audio file"));
+    pub fn play_loop(&mut self) -> Result<()> {
+        while !self.stopping.load(Ordering::Relaxed) {
+            // Play the Sample..
+            self.play()?;
+
+            // Reload the file for next play..
+            let probe = Player::load_file(&self.file);
+            if probe.is_err() {
+                bail!(probe.err().unwrap());
+            }
+            self.probe = probe.unwrap();
         }
-
-        Ok(Self {
-            probe: probe_result.unwrap(),
-            volume: 1.0_f32,
-            stopping: Arc::new(AtomicBool::new(false)),
-            force_stop: Arc::new(AtomicBool::new(false)),
-
-            device,
-            fade_duration,
-            start_pct,
-            stop_pct,
-            gain,
-        })
+        Ok(())
     }
 
     pub fn play(&mut self) -> Result<()> {
@@ -247,11 +271,23 @@ impl Player {
         };
 
         decoder.finalize();
-        if result.is_err() {
-            Err(anyhow!("{:?}", result.err().unwrap()))
-        } else {
-            Ok(())
+
+        // Symphonia's reader doesn't seem to have a way to check whether we've finished reading
+        // bytes for the file, so will continue to try until it hits and EoF then drop an error.
+        //
+        // We're going to suppress that error here, with the assumption that if it's reached, the
+        // file has ended, and playback is complete. It's not ideal, but we'll work with it.
+        if let Err(error) = result {
+            if let Error::IoError(ref error) = error {
+                if error.kind() == UnexpectedEof {
+                    return Ok(());
+                }
+            }
+
+            // Otherwise, throw this error up.
+            bail!(error)
         }
+        Ok(())
     }
 
     pub fn get_state(&self) -> PlayerState {

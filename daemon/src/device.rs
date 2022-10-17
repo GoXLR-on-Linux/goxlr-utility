@@ -632,7 +632,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
 
         // Execute behaviour depending on mode, note that the 'fade' options aren't directly
         // supported, so we'll just map their equivalent 'Stop' action
-        match mode {
+        return match mode {
             SamplePlaybackMode::PlayNext
             | SamplePlaybackMode::StopOnRelease
             | SamplePlaybackMode::FadeOnRelease => {
@@ -642,10 +642,12 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 if mode == SamplePlaybackMode::FadeOnRelease {
                     audio.fade_on_stop = true;
                 }
-                self.play_audio_file(button, audio).await?;
-                return Ok(());
+                self.play_audio_file(button, audio, false).await?;
+                Ok(())
             }
-            SamplePlaybackMode::PlayStop | SamplePlaybackMode::PlayFade => {
+            SamplePlaybackMode::PlayStop
+            | SamplePlaybackMode::PlayFade
+            | SamplePlaybackMode::Loop => {
                 let audio_handler = self.audio_handler.as_mut().unwrap();
                 // In these cases, we may be required to stop playback.
                 if audio_handler.is_sample_playing(sample_bank, button)
@@ -653,7 +655,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 {
                     // Sample is playing, we need to stop it.
                     audio_handler.stop_playback(sample_bank, button).await?;
-                    return Ok(());
+                    Ok(())
                 } else {
                     // Play the next file.
                     let mut audio = self.profile.get_next_track(button)?;
@@ -662,14 +664,13 @@ impl<'a, T: UsbContext> Device<'a, T> {
                         audio.fade_on_stop = true;
                     }
 
-                    self.play_audio_file(button, audio).await?;
-                    return Ok(());
+                    let loop_track = mode == SamplePlaybackMode::Loop;
+
+                    self.play_audio_file(button, audio, loop_track).await?;
+                    Ok(())
                 }
             }
-            SamplePlaybackMode::Loop => {}
-        }
-
-        Ok(())
+        };
     }
 
     async fn handle_sample_button_release(&mut self, button: SampleButtons) -> Result<()> {
@@ -703,7 +704,12 @@ impl<'a, T: UsbContext> Device<'a, T> {
     }
 
     /// A Simple Method that simply starts playback on the Sampler Channel..
-    async fn play_audio_file(&mut self, button: SampleButtons, mut audio: AudioFile) -> Result<()> {
+    async fn play_audio_file(
+        &mut self,
+        button: SampleButtons,
+        mut audio: AudioFile,
+        loop_track: bool,
+    ) -> Result<()> {
         let sample_bank = self.profile.get_active_sample_bank();
 
         // Fill out the path..
@@ -714,7 +720,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
             audio_handler.stop_playback(sample_bank, button).await?;
 
             let result = audio_handler
-                .play_for_button(sample_bank, button, audio)
+                .play_for_button(sample_bank, button, audio, loop_track)
                 .await;
 
             if result.is_ok() {

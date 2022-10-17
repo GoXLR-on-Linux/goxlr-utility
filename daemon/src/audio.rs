@@ -149,6 +149,7 @@ impl AudioHandler {
         bank: SampleBank,
         button: SampleButtons,
         audio: AudioFile,
+        loop_track: bool,
     ) -> Result<()> {
         if self.output_device.is_none() {
             self.find_device(true);
@@ -172,7 +173,11 @@ impl AudioHandler {
 
             let state = player.get_state();
             let handler = thread::spawn(move || {
-                let _ = player.play();
+                if !loop_track {
+                    let _ = player.play();
+                } else {
+                    let _ = player.play_loop();
+                }
             });
 
             self.active_streams[bank][button] = Some(GoXLRPlayer {
