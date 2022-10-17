@@ -842,6 +842,10 @@ impl ProfileAdapter {
         self.profile.settings().mute_chat().mic_fader_id()
     }
 
+    pub fn get_mic_fader(&self) -> FaderName {
+        self.fader_from_id(self.profile.settings().mute_chat().mic_fader_id())
+    }
+
     pub fn set_mic_fader(&mut self, fader: FaderName) -> Result<()> {
         self.profile
             .settings_mut()
