@@ -1828,30 +1828,16 @@ impl ProfileAdapter {
     pub fn get_button_colour_state(&self, button: Buttons) -> ButtonStates {
         let colour_map = self.get_button_colour_map(button);
 
-        if button == Buttons::SamplerBottomRight {
-            debug!("Handling Bottom Right..");
-        }
-
         if let Some(blink) = colour_map.blink() {
             if blink == &ColourState::On {
-                if button == Buttons::SamplerBottomRight {
-                    debug!("Should Be Blinking..");
-                }
                 return ButtonStates::Flashing;
             }
         }
 
         if let Some(state) = colour_map.state() {
             if state == &ColourState::On {
-                if button == Buttons::SamplerBottomRight {
-                    debug!("Should be on..");
-                }
                 return ButtonStates::Colour1;
             }
-        }
-
-        if button == Buttons::SamplerBottomRight {
-            debug!("Should Be Off..");
         }
 
         // Button is turned off, so go return the 'Off Style'

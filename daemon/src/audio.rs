@@ -38,6 +38,7 @@ struct AudioPlaybackState {
 
 #[derive(Debug)]
 struct AudioRecordingState {
+    file_name: String,
     handle: Option<JoinHandle<()>>,
     state: RecorderState,
 }
@@ -290,14 +291,19 @@ impl AudioHandler {
                 let _ = recorder.record();
             });
 
-            self.active_streams[bank][button] = Some(StateManager {
-                stream_type: StreamType::Recording,
-                recording: Some(AudioRecordingState {
-                    handle: Some(handler),
-                    state,
-                }),
-                playback: None,
-            });
+            if let Some(file_name) = path.file_name() {
+                self.active_streams[bank][button] = Some(StateManager {
+                    stream_type: StreamType::Recording,
+                    recording: Some(AudioRecordingState {
+                        file_name: String::from(file_name.to_string_lossy()),
+                        handle: Some(handler),
+                        state,
+                    }),
+                    playback: None,
+                });
+            } else {
+                bail!("Unable to Extract Filename, something is wrong..");
+            }
         } else {
             bail!("No valid Input Device was Found");
         }
@@ -305,7 +311,11 @@ impl AudioHandler {
         Ok(())
     }
 
-    pub fn stop_record(&mut self, bank: SampleBank, button: SampleButtons) -> Result<()> {
+    pub fn stop_record(
+        &mut self,
+        bank: SampleBank,
+        button: SampleButtons,
+    ) -> Result<Option<String>> {
         if let Some(player) = &mut self.active_streams[bank][button] {
             if player.stream_type == StreamType::Playback {
                 return Err(anyhow!("Attempted to Stop Recording on Playback Stream.."));
@@ -314,8 +324,10 @@ impl AudioHandler {
             if let Some(recording_state) = &mut player.recording {
                 recording_state.state.stop.store(true, Ordering::Relaxed);
                 recording_state.wait();
+
+                return Ok(Some(recording_state.file_name.clone()));
             }
         }
-        Ok(())
+        bail!("Attempted to stop inactive recording..");
     }
 }
