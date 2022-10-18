@@ -340,13 +340,8 @@ impl ProfileAdapter {
                     | ColourTargets::SamplerBottomRight
                     | ColourTargets::SamplerTopLeft
                     | ColourTargets::SamplerTopRight => {
-                        if i == 0 {
-                            colour_array[position..position + 4]
-                                .copy_from_slice(&self.get_sampler_lighting(colour));
-                        } else {
-                            colour_array[position..position + 4]
-                                .copy_from_slice(&colour_map.colour(i).to_reverse_bytes());
-                        }
+                        colour_array[position..position + 4]
+                            .copy_from_slice(&self.get_sampler_lighting(colour, i));
                     }
                     _ => {
                         // Update the correct 4 bytes in the map..
@@ -360,30 +355,39 @@ impl ProfileAdapter {
         colour_array
     }
 
-    fn get_sampler_lighting(&self, target: ColourTargets) -> [u8; 4] {
+    fn get_sampler_lighting(&self, target: ColourTargets, index: u8) -> [u8; 4] {
         match target {
-            ColourTargets::SamplerBottomLeft => self.get_colour_array(target, BottomLeft),
-            ColourTargets::SamplerBottomRight => self.get_colour_array(target, BottomRight),
-            ColourTargets::SamplerTopLeft => self.get_colour_array(target, TopLeft),
-            ColourTargets::SamplerTopRight => self.get_colour_array(target, TopRight),
+            ColourTargets::SamplerBottomLeft => self.get_colour_array(target, BottomLeft, index),
+            ColourTargets::SamplerBottomRight => self.get_colour_array(target, BottomRight, index),
+            ColourTargets::SamplerTopLeft => self.get_colour_array(target, TopLeft, index),
+            ColourTargets::SamplerTopRight => self.get_colour_array(target, TopRight, index),
 
             // Honestly, we should never reach this, return nothing.
             _ => [00, 00, 00, 00],
         }
     }
 
-    fn get_colour_array(&self, target: ColourTargets, button: SampleButtons) -> [u8; 4] {
+    fn get_colour_array(&self, target: ColourTargets, button: SampleButtons, index: u8) -> [u8; 4] {
         if self.current_sample_bank_has_samples(profile_to_standard_sample_button(button)) {
             return get_profile_colour_map(self.profile.settings(), target)
-                .colour(0)
-                .to_reverse_bytes();
-        } else {
-            // For buttons without samples, we simply use colour1 (this gets configured when
-            // loading the bank)..
-            return get_profile_colour_map(self.profile.settings(), target)
-                .colour_or_default(1)
+                .colour(index)
                 .to_reverse_bytes();
         }
+
+        // Ok, if we don't have a sample, we need to switch colours 0 and 1..
+        let new_index = if index == 0 {
+            1
+        } else if index == 1 {
+            0
+        } else {
+            index
+        };
+
+        // For buttons without samples, we simply use colour1 (this gets configured when
+        // loading the bank)..
+        return get_profile_colour_map(self.profile.settings(), target)
+            .colour_or_default(new_index)
+            .to_reverse_bytes();
     }
 
     fn get_button_colour_map(&self, button: Buttons) -> &ColourMap {
@@ -1502,6 +1506,18 @@ impl ProfileAdapter {
             .set_state_on(state)
     }
 
+    pub fn set_sample_button_blink(
+        &mut self,
+        button: goxlr_types::SampleButtons,
+        state: bool,
+    ) -> Result<()> {
+        self.profile
+            .settings_mut()
+            .sample_button_mut(standard_to_profile_sample_button(button))
+            .colour_map_mut()
+            .set_blink_on(state)
+    }
+
     /** Colour Changing Code **/
     pub fn set_button_colours(
         &mut self,
@@ -1812,16 +1828,30 @@ impl ProfileAdapter {
     pub fn get_button_colour_state(&self, button: Buttons) -> ButtonStates {
         let colour_map = self.get_button_colour_map(button);
 
+        if button == Buttons::SamplerBottomRight {
+            debug!("Handling Bottom Right..");
+        }
+
         if let Some(blink) = colour_map.blink() {
             if blink == &ColourState::On {
+                if button == Buttons::SamplerBottomRight {
+                    debug!("Should Be Blinking..");
+                }
                 return ButtonStates::Flashing;
             }
         }
 
         if let Some(state) = colour_map.state() {
             if state == &ColourState::On {
+                if button == Buttons::SamplerBottomRight {
+                    debug!("Should be on..");
+                }
                 return ButtonStates::Colour1;
             }
+        }
+
+        if button == Buttons::SamplerBottomRight {
+            debug!("Should Be Off..");
         }
 
         // Button is turned off, so go return the 'Off Style'

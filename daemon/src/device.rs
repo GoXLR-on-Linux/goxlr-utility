@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::{anyhow, Result};
+use chrono::Local;
 use enum_map::EnumMap;
 use enumset::EnumSet;
 use log::{debug, error, info};
@@ -620,12 +621,16 @@ impl<'a, T: UsbContext> Device<'a, T> {
             ));
         }
 
-        if !self.profile.current_sample_bank_has_samples(button) {
-            return Err(anyhow!("Audio Recording not yet implemented."));
-        }
-
         // Grab the currently active bank..
         let sample_bank = self.profile.get_active_sample_bank();
+
+        if !self.profile.current_sample_bank_has_samples(button) {
+            let file_date = Local::now().format("%Y-%m-%dT%H%M%S").to_string();
+            let full_name = format!("Recording_{}", file_date);
+
+            self.record_audio_file(button, full_name).await?;
+            return Ok(());
+        }
 
         // Firstly, get the playback mode for this button..
         let mode = self.profile.get_sample_playback_mode(button);
@@ -681,13 +686,21 @@ impl<'a, T: UsbContext> Device<'a, T> {
             ));
         }
 
+        let sample_bank = self.profile.get_active_sample_bank();
         if !self.profile.current_sample_bank_has_samples(button) {
+            self.audio_handler
+                .as_mut()
+                .unwrap()
+                .stop_record(sample_bank, button)?;
+
+            // Stop flashing the button..
+            self.profile.set_sample_button_blink(button, false)?;
+
+            // We need to assign the sample to the button, for now, disk save..
             return Ok(());
         }
 
-        let sample_bank = self.profile.get_active_sample_bank();
         let mode = self.profile.get_sample_playback_mode(button);
-
         match mode {
             SamplePlaybackMode::StopOnRelease | SamplePlaybackMode::FadeOnRelease => {
                 self.audio_handler
@@ -729,6 +742,24 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 error!("{}", result.err().unwrap());
             }
         }
+        Ok(())
+    }
+
+    async fn record_audio_file(&mut self, button: SampleButtons, file_name: String) -> Result<()> {
+        let sample_bank = self.profile.get_active_sample_bank();
+
+        // Create the full Path..
+        let mut sample_path = self.settings.get_samples_directory().await;
+        sample_path = sample_path.join("Recorded");
+        sample_path = sample_path.join(file_name);
+
+        if let Some(audio_handler) = &mut self.audio_handler {
+            let result = audio_handler.record_for_button(sample_path, sample_bank, button);
+            if result.is_ok() {
+                self.profile.set_sample_button_blink(button, true)?;
+            }
+        }
+
         Ok(())
     }
 

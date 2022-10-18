@@ -34,6 +34,7 @@ nix = { version = "0.25.0", features = ["user"] }
 opener = "0.5.0"
 md5 = "0.7.0"
 regex = "1.6.0"
+chrono = "0.4.22"
 
 ## HTTPd Server
 actix = "0.13"

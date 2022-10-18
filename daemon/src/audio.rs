@@ -1,7 +1,7 @@
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use enum_map::EnumMap;
 use goxlr_audio::player::{Player, PlayerState};
-use goxlr_audio::recorder::RecorderState;
+use goxlr_audio::recorder::{Recorder, RecorderState};
 use goxlr_types::SampleBank;
 use goxlr_types::SampleButtons;
 use log::debug;
@@ -246,6 +246,7 @@ impl AudioHandler {
     pub async fn stop_playback(&mut self, bank: SampleBank, button: SampleButtons) -> Result<()> {
         if let Some(player) = &mut self.active_streams[bank][button] {
             if player.stream_type == StreamType::Recording {
+                // TODO: We can proably use this..
                 return Err(anyhow!("Attempted to Stop Playback on Recording Stream.."));
             }
 
@@ -271,8 +272,50 @@ impl AudioHandler {
         Ok(())
     }
 
-    #[allow(dead_code)]
-    pub fn record_for_button(&mut self, bank: SampleBank, button: SampleButtons) -> Result<()> {
+    pub fn record_for_button(
+        &mut self,
+        path: PathBuf,
+        bank: SampleBank,
+        button: SampleButtons,
+    ) -> Result<()> {
+        if self._input_device.is_none() {
+            self.find_device(false);
+        }
+
+        if let Some(device) = &self._input_device {
+            let mut recorder = Recorder::new(&path, Some(device.clone()))?;
+            let state = recorder.get_state();
+
+            let handler = thread::spawn(move || {
+                let _ = recorder.record();
+            });
+
+            self.active_streams[bank][button] = Some(StateManager {
+                stream_type: StreamType::Recording,
+                recording: Some(AudioRecordingState {
+                    handle: Some(handler),
+                    state,
+                }),
+                playback: None,
+            });
+        } else {
+            bail!("No valid Input Device was Found");
+        }
+
+        Ok(())
+    }
+
+    pub fn stop_record(&mut self, bank: SampleBank, button: SampleButtons) -> Result<()> {
+        if let Some(player) = &mut self.active_streams[bank][button] {
+            if player.stream_type == StreamType::Playback {
+                return Err(anyhow!("Attempted to Stop Recording on Playback Stream.."));
+            }
+
+            if let Some(recording_state) = &mut player.recording {
+                recording_state.state.stop.store(true, Ordering::Relaxed);
+                recording_state.wait();
+            }
+        }
         Ok(())
     }
 }
