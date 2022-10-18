@@ -1,6 +1,7 @@
 use crate::audio::get_configuration;
 
 pub mod player;
+pub mod recorder;
 
 mod audio;
 

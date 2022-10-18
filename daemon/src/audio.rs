@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Result};
 use enum_map::EnumMap;
 use goxlr_audio::player::{Player, PlayerState};
+use goxlr_audio::recorder::RecorderState;
 use goxlr_types::SampleBank;
 use goxlr_types::SampleButtons;
 use log::debug;
@@ -18,7 +19,7 @@ pub struct AudioHandler {
     _input_device: Option<String>,
 
     last_device_check: Option<Instant>,
-    active_streams: EnumMap<SampleBank, EnumMap<SampleButtons, Option<GoXLRPlayer>>>,
+    active_streams: EnumMap<SampleBank, EnumMap<SampleButtons, Option<StateManager>>>,
 }
 
 pub struct AudioFile {
@@ -30,12 +31,45 @@ pub struct AudioFile {
 }
 
 #[derive(Debug)]
-struct GoXLRPlayer {
+struct AudioPlaybackState {
     handle: Option<JoinHandle<()>>,
     state: PlayerState,
 }
 
-impl GoXLRPlayer {
+#[derive(Debug)]
+struct AudioRecordingState {
+    handle: Option<JoinHandle<()>>,
+    state: RecorderState,
+}
+
+#[derive(Debug)]
+struct StateManager {
+    pub(crate) stream_type: StreamType,
+    pub(crate) recording: Option<AudioRecordingState>,
+    pub(crate) playback: Option<AudioPlaybackState>,
+}
+
+#[derive(Debug, PartialEq)]
+enum StreamType {
+    Playback,
+    Recording,
+}
+
+// I could probably use a trait for this..
+impl AudioPlaybackState {
+    pub fn wait(&mut self) {
+        let _ = self.handle.take().map(JoinHandle::join);
+    }
+
+    pub fn is_finished(&self) -> bool {
+        if let Some(handle) = &self.handle {
+            return handle.is_finished();
+        }
+        true
+    }
+}
+
+impl AudioRecordingState {
     pub fn wait(&mut self) {
         let _ = self.handle.take().map(JoinHandle::join);
     }
@@ -123,9 +157,17 @@ impl AudioHandler {
         for bank in SampleBank::iter() {
             // Iterate over the buttons..
             for button in SampleButtons::iter() {
-                if let Some(current) = &self.active_streams[bank][button] {
-                    if current.is_finished() {
-                        self.active_streams[bank][button] = None;
+                if let Some(state) = &self.active_streams[bank][button] {
+                    if state.stream_type == StreamType::Recording {
+                        if let Some(recording) = &state.recording {
+                            if recording.is_finished() {
+                                self.active_streams[bank][button] = None;
+                            }
+                        }
+                    } else if let Some(playback) = &state.playback {
+                        if playback.is_finished() {
+                            self.active_streams[bank][button] = None;
+                        }
                     }
                 }
             }
@@ -137,8 +179,14 @@ impl AudioHandler {
     }
 
     pub fn is_sample_stopping(&self, bank: SampleBank, button: SampleButtons) -> bool {
-        if let Some(player) = &self.active_streams[bank][button] {
-            return player.state.stopping.load(Ordering::Relaxed);
+        if let Some(state) = &self.active_streams[bank][button] {
+            if state.stream_type == StreamType::Recording {
+                return false;
+            }
+
+            if let Some(player) = &state.playback {
+                return player.state.stopping.load(Ordering::Relaxed);
+            }
         }
 
         false
@@ -180,9 +228,13 @@ impl AudioHandler {
                 }
             });
 
-            self.active_streams[bank][button] = Some(GoXLRPlayer {
-                handle: Some(handler),
-                state,
+            self.active_streams[bank][button] = Some(StateManager {
+                stream_type: StreamType::Playback,
+                recording: None,
+                playback: Some(AudioPlaybackState {
+                    handle: Some(handler),
+                    state,
+                }),
             });
         } else {
             return Err(anyhow!("Unable to play Sample, Output device not found"));
@@ -193,25 +245,34 @@ impl AudioHandler {
 
     pub async fn stop_playback(&mut self, bank: SampleBank, button: SampleButtons) -> Result<()> {
         if let Some(player) = &mut self.active_streams[bank][button] {
-            if player.state.stopping.load(Ordering::Relaxed) {
-                // We should be stopping already, force the shutdown.
-                debug!("Forcing Stop of Audio on {} {}..", bank, button);
-                player.state.force_stop.store(true, Ordering::Relaxed);
-
-                // We'll wait for this thread to complete before proceeding..
-                player.wait();
-                self.active_streams[bank][button] = None;
-                return Ok(());
+            if player.stream_type == StreamType::Recording {
+                return Err(anyhow!("Attempted to Stop Playback on Recording Stream.."));
             }
 
-            // We're not currently in a stopping state, trigger it.
-            player.state.stopping.store(true, Ordering::Relaxed);
+            if let Some(playback_state) = &mut player.playback {
+                if playback_state.state.stopping.load(Ordering::Relaxed) {
+                    // We should be stopping already, force the shutdown.
+                    debug!("Forcing Stop of Audio on {} {}..", bank, button);
+                    playback_state
+                        .state
+                        .force_stop
+                        .store(true, Ordering::Relaxed);
+
+                    // We'll wait for this thread to complete before proceeding..
+                    playback_state.wait();
+                    self.active_streams[bank][button] = None;
+                    return Ok(());
+                }
+
+                // We're not currently in a stopping state, trigger it.
+                playback_state.state.stopping.store(true, Ordering::Relaxed);
+            }
         }
         Ok(())
     }
 
     #[allow(dead_code)]
-    pub fn record_for_button(&mut self, _button: SampleButtons) -> Result<()> {
+    pub fn record_for_button(&mut self, bank: SampleBank, button: SampleButtons) -> Result<()> {
         Ok(())
     }
 }

@@ -9,6 +9,9 @@ edition = "2021"
 # Symphonia for Audio Decoding..
 symphonia = { version = "0.5.1", features = [ "wav", "mp3", "ogg"] }
 
+# Hound for WAV Encoding..
+hound = "3.5.0"
+
 # Exceptions
 anyhow = "1.0.65"
 
