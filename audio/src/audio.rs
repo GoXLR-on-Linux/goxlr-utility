@@ -6,7 +6,10 @@ pub trait AudioOutput {
     fn flush(&mut self);
 }
 
-pub trait AudioInput {}
+pub trait AudioInput {
+    fn read(&mut self) -> Result<Vec<f32>>;
+    fn flush(&mut self);
+}
 
 pub trait AudioConfiguration {
     fn get_outputs(&mut self) -> Vec<String>;
@@ -31,11 +34,21 @@ pub(crate) fn get_output(
     crate::pulse::playback::PulseAudioOutput::open(signal_spec, device)
 }
 
+#[cfg(target_os = "linux")]
+pub(crate) fn get_input(device: Option<String>) -> Result<Box<dyn AudioInput>> {
+    // I have no idea why IntelliJ throws an error for the next line, it's fine!
+    crate::pulse::record::PulseAudioInput::open(device)
+}
+
 #[cfg(not(target_os = "linux"))]
 pub(crate) fn get_output(
     signal_spec: SignalSpec,
     device: Option<String>,
 ) -> Result<Box<dyn AudioOutput>> {
     crate::cpal::playback::CpalAudioOutput::open(signal_spec, device)
-    //crate::pulse::playback::PulseAudioOutput::open(signal_spec, device)
+}
+
+#[cfg(not(target_os = "linux"))]
+pub(crate) fn get_input(device: Option<String>) -> Result<Box<dyn AudioInput>> {
+    crate::cpal::playback::CpalAudioInput::open(device)
 }
