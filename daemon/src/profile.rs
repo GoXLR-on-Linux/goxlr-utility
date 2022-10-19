@@ -1518,6 +1518,32 @@ impl ProfileAdapter {
             .set_blink_on(state)
     }
 
+    pub fn is_sample_clear_active(&self) -> bool {
+        self.profile
+            .settings()
+            .sample_button(SampleButtons::Clear)
+            .colour_map()
+            .is_blink()
+    }
+
+    pub fn set_sample_clear_active(&mut self, active: bool) -> Result<()> {
+        self.profile
+            .settings_mut()
+            .sample_button_mut(SampleButtons::Clear)
+            .colour_map_mut()
+            .set_blink_on(active)
+    }
+
+    pub fn clear_all_samples(&mut self, button: goxlr_types::SampleButtons) {
+        let bank = self.profile.settings().context().selected_sample();
+
+        self.profile
+            .settings_mut()
+            .sample_button_mut(standard_to_profile_sample_button(button))
+            .get_stack_mut(bank)
+            .clear_tracks();
+    }
+
     /** Colour Changing Code **/
     pub fn set_button_colours(
         &mut self,

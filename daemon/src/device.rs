@@ -386,7 +386,10 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 self.handle_sample_button_release(SampleButtons::TopRight)
                     .await?;
             }
-            _ => {}
+            Buttons::SamplerClear => {
+                self.profile
+                    .set_sample_clear_active(!self.profile.is_sample_clear_active())?;
+            }
         }
         self.update_button_states()?;
         Ok(())
@@ -615,6 +618,11 @@ impl<'a, T: UsbContext> Device<'a, T> {
     }
 
     async fn handle_sample_button_down(&mut self, button: SampleButtons) -> Result<()> {
+        // We don't do anything if clear is flashing..
+        if self.profile.is_sample_clear_active() {
+            return Ok(());
+        }
+
         if self.audio_handler.is_none() {
             return Err(anyhow!(
                 "Not handling button, audio handler not configured."
@@ -679,6 +687,14 @@ impl<'a, T: UsbContext> Device<'a, T> {
     }
 
     async fn handle_sample_button_release(&mut self, button: SampleButtons) -> Result<()> {
+        // If clear is flashing, remove all samples from the button, disable the clearer and return..
+        if self.profile.is_sample_clear_active() {
+            self.profile.clear_all_samples(button);
+            self.profile.set_sample_clear_active(false)?;
+            self.load_colour_map()?;
+            return Ok(());
+        }
+
         // We only need to either a) Stop recording, or b) Handle Stop On Release..
         if self.audio_handler.is_none() {
             return Err(anyhow!(

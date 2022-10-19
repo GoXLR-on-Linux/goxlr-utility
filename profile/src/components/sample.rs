@@ -341,6 +341,9 @@ impl SampleStack {
     pub fn remove_track_by_index(&mut self, track: usize) {
         self.tracks.remove(track);
     }
+    pub fn clear_tracks(&mut self) {
+        self.tracks.clear();
+    }
 }
 
 #[derive(Debug, Clone)]
