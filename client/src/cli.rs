@@ -4,7 +4,8 @@ use goxlr_types::{
     CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EchoStyle, EffectBankPresets,
     EncoderColourTargets, EqFrequencies, FaderDisplayStyle, FaderName, GateTimes, GenderStyle,
     HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle, MiniEqFrequencies, MuteFunction,
-    OutputDevice, PitchStyle, ReverbStyle, RobotRange, RobotStyle, SimpleColourTargets,
+    OutputDevice, PitchStyle, ReverbStyle, RobotRange, RobotStyle, SampleBank, SampleButtons,
+    SimpleColourTargets,
 };
 use std::str::FromStr;
 
@@ -121,6 +122,11 @@ pub enum SubCommands {
     Effects {
         #[clap(subcommand)]
         command: EffectsCommands,
+    },
+
+    Sampler {
+        #[clap[subcommand]]
+        command: SamplerCommands,
     },
 }
 
@@ -901,5 +907,20 @@ pub enum HardTune {
     Source {
         #[clap(arg_enum)]
         source: HardTuneSource,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+#[clap(setting = AppSettings::DeriveDisplayOrder)]
+#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+pub enum SamplerCommands {
+    Add {
+        #[clap(arg_enum)]
+        bank: SampleBank,
+
+        #[clap(arg_enum)]
+        button: SampleButtons,
+
+        file: String,
     },
 }

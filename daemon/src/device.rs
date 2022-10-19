@@ -1559,16 +1559,23 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 self.profile.set_sampler_play_order(bank, button, order);
             }
             GoXLRCommand::AddSample(bank, button, filename) => {
-                // Make sure the file exists..
-                if (self
+                let path = self
                     .get_path_for_sample(PathBuf::from(filename.clone()))
-                    .await)
-                    .is_ok()
-                {
-                    self.profile.add_sample_file(bank, button, filename);
-                } else {
-                    return Err(anyhow!("Sample File not Found"));
+                    .await?;
+
+                // Add the Sample, and Grab the created track..
+                let track = self.profile.add_sample_file(bank, button, filename);
+
+                // If we have an audio handler, try to calcuate the Gain..
+                if let Some(audio_handler) = &mut self.audio_handler {
+                    if let Some(gain) = audio_handler.calculate_gain(&path).await? {
+                        // Gain was calculated, Apply it to the track..
+                        track.normalized_gain = gain;
+                    }
                 }
+
+                // Update the lighting..
+                self.load_colour_map()?;
             }
             GoXLRCommand::RemoveSampleByIndex(bank, button, index) => {
                 self.profile

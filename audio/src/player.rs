@@ -94,11 +94,11 @@ impl Player {
         probe_result
     }
 
-    pub fn calculate_gain(&mut self) -> Result<()> {
+    pub fn calculate_gain(&mut self) -> Result<Option<f64>> {
         self.process_only = true;
         self.play()?;
-        debug!("{:?}", self.normalized_gain);
-        Ok(())
+
+        Ok(self.normalized_gain)
     }
 
     pub fn play_loop(&mut self) -> Result<()> {
@@ -136,45 +136,44 @@ impl Player {
         let sample_rate = track.codec_params.sample_rate;
         let frames = track.codec_params.n_frames;
 
-        let mut channel_count = 2;
-        let mut actual_rate = 48000;
+        let mut ebu_r128 = None;
 
         if let Some(rate) = sample_rate {
-            actual_rate = rate;
-
             let channels = match track.codec_params.channels {
                 None => 2, // Assume 2 playback Channels..
                 Some(channels) => channels.count(),
             };
-            channel_count = channels;
 
-            if let Some(fade_duration) = self.fade_duration {
-                // Calculate the Change in Volume per sample..
-                fade_amount = Some(1.0 / (rate as f32 * fade_duration) / channels as f32);
-            }
-
-            if let Some(start_pct) = self.start_pct {
-                if let Some(frames) = frames {
-                    // Calculate the first frame based on the percent..
-                    first_frame = Some(((frames as f64 / 100.0) * start_pct).round() as u64);
-                    debug!("Starting Sample: {}", first_frame.unwrap());
+            if self.process_only {
+                ebu_r128 = Some(EbuR128::new(channels as u32, rate, Mode::I)?);
+            } else {
+                if let Some(fade_duration) = self.fade_duration {
+                    // Calculate the Change in Volume per sample..
+                    fade_amount = Some(1.0 / (rate as f32 * fade_duration) / channels as f32);
                 }
-            }
 
-            if let Some(stop_pct) = self.stop_pct {
-                if let Some(frames) = frames {
-                    stop_sample =
-                        Some(((frames as f64 / 100.0) * stop_pct).round() as u64 * channels as u64);
-                    debug!("Stop Sample: {}", stop_sample.unwrap());
+                if let Some(start_pct) = self.start_pct {
+                    if let Some(frames) = frames {
+                        // Calculate the first frame based on the percent..
+                        first_frame = Some(((frames as f64 / 100.0) * start_pct).round() as u64);
+                        debug!("Starting Sample: {}", first_frame.unwrap());
+                    }
+                }
+
+                if let Some(stop_pct) = self.stop_pct {
+                    if let Some(frames) = frames {
+                        stop_sample = Some(
+                            ((frames as f64 / 100.0) * stop_pct).round() as u64 * channels as u64,
+                        );
+                        debug!("Stop Sample: {}", stop_sample.unwrap());
+                    }
                 }
             }
         } else {
+            if self.process_only {
+                bail!("Unable to obtain Rate, cannot normalise.");
+            }
             warn!("Unable to get the Sample Rate, Fade and Seek Unavailable");
-        }
-
-        let mut ebu_r128 = None;
-        if self.process_only {
-            ebu_r128 = Some(EbuR128::new(channel_count as u32, actual_rate, Mode::I)?);
         }
 
         // Audio Output Device..

@@ -8,10 +8,12 @@ use log::debug;
 use regex::Regex;
 use std::path::PathBuf;
 use std::sync::atomic::Ordering;
+use std::sync::Arc;
 use std::thread;
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 use strum::IntoEnumIterator;
+use tokio::sync::Mutex;
 
 #[derive(Debug)]
 pub struct AudioHandler {
@@ -329,5 +331,21 @@ impl AudioHandler {
             }
         }
         bail!("Attempted to stop inactive recording..");
+    }
+
+    pub async fn calculate_gain(&self, path: &PathBuf) -> Result<Option<f64>> {
+        let mut player = Player::new(path, None, None, None, None, None)?;
+
+        let gain_value: Arc<Mutex<Option<f64>>> = Arc::new(Mutex::new(None));
+        let internal = gain_value.clone();
+        tokio::spawn(async move {
+            if let Ok(value) = player.calculate_gain() {
+                // Grab our Mutex, and change the value..
+                let mut mutex_value = internal.lock().await;
+                *mutex_value = value;
+            }
+        })
+        .await?;
+        Ok(Arc::try_unwrap(gain_value).unwrap().into_inner())
     }
 }

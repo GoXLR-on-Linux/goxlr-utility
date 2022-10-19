@@ -6,7 +6,7 @@ use crate::cli::{
     Echo, EffectsCommands, EqualiserCommands, EqualiserMiniCommands, FaderCommands,
     FaderLightingCommands, FadersAllLightingCommands, Gender, HardTune, LightingCommands,
     Megaphone, MicrophoneCommands, NoiseGateCommands, Pitch, ProfileAction, ProfileType, Reverb,
-    Robot, SubCommands,
+    Robot, SamplerCommands, SubCommands,
 };
 use crate::microphone::apply_microphone_controls;
 use anyhow::{anyhow, Context, Result};
@@ -720,6 +720,17 @@ async fn main() -> Result<()> {
                                 .context("Unable to set HardTune Source")?;
                         }
                     },
+                },
+                SubCommands::Sampler { command } => match command {
+                    SamplerCommands::Add { bank, button, file } => {
+                        client
+                            .command(
+                                &serial,
+                                GoXLRCommand::AddSample(*bank, *button, file.clone()),
+                            )
+                            .await
+                            .context("Unable to add Sample File")?;
+                    }
                 },
             }
         }

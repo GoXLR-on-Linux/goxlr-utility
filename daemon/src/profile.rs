@@ -1638,7 +1638,7 @@ impl ProfileAdapter {
         bank: goxlr_types::SampleBank,
         button: goxlr_types::SampleButtons,
         file: String,
-    ) {
+    ) -> &mut Track {
         // Create a new 'Track' (Oddly, positions are a percentage :D)..
         let track = Track {
             track: file,
@@ -1647,11 +1647,12 @@ impl ProfileAdapter {
             normalized_gain: 1.0,
         };
 
+        // Add this to the list, then return the track..
         self.profile
             .settings_mut()
             .sample_button_mut(standard_to_profile_sample_button(button))
             .get_stack_mut(standard_to_profile_sample_bank(bank))
-            .add_track(track);
+            .add_track(track)
     }
 
     pub fn remove_sample_file_by_index(

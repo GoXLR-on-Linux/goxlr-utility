@@ -332,8 +332,10 @@ impl SampleStack {
         self.play_order = play_order;
     }
 
-    pub fn add_track(&mut self, track: Track) {
+    pub fn add_track(&mut self, track: Track) -> &mut Track {
         self.tracks.push(track);
+        let len = self.tracks.len();
+        &mut self.tracks[len - 1]
     }
 
     pub fn remove_track_by_index(&mut self, track: usize) {
