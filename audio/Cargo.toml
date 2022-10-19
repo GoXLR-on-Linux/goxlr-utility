@@ -12,6 +12,9 @@ symphonia = { version = "0.5.1", features = [ "wav", "mp3", "ogg"] }
 # Hound for WAV Encoding..
 hound = "3.5.0"
 
+# Audio Normalisation
+ebur128 = "0.1.6"
+
 # Exceptions
 anyhow = "1.0.65"
 

@@ -1,6 +1,7 @@
 use anyhow::{anyhow, bail, Result};
 
 use core::default::Default;
+use ebur128::{EbuR128, Mode};
 use log::{debug, warn};
 use std::fs::File;
 use std::io::ErrorKind::UnexpectedEof;
@@ -29,6 +30,10 @@ pub struct Player {
     start_pct: Option<f64>,
     stop_pct: Option<f64>,
     gain: Option<f64>,
+
+    // Used for processing Gain..
+    process_only: bool,
+    normalized_gain: Option<f64>,
 }
 
 impl Player {
@@ -59,6 +64,9 @@ impl Player {
             start_pct,
             stop_pct,
             gain,
+
+            process_only: false,
+            normalized_gain: None,
         })
     }
 
@@ -84,6 +92,13 @@ impl Player {
             &metadata_options,
         );
         probe_result
+    }
+
+    pub fn calculate_gain(&mut self) -> Result<()> {
+        self.process_only = true;
+        self.play()?;
+        debug!("{:?}", self.normalized_gain);
+        Ok(())
     }
 
     pub fn play_loop(&mut self) -> Result<()> {
@@ -121,11 +136,17 @@ impl Player {
         let sample_rate = track.codec_params.sample_rate;
         let frames = track.codec_params.n_frames;
 
+        let mut channel_count = 2;
+        let mut actual_rate = 48000;
+
         if let Some(rate) = sample_rate {
+            actual_rate = rate;
+
             let channels = match track.codec_params.channels {
                 None => 2, // Assume 2 playback Channels..
                 Some(channels) => channels.count(),
             };
+            channel_count = channels;
 
             if let Some(fade_duration) = self.fade_duration {
                 // Calculate the Change in Volume per sample..
@@ -149,6 +170,11 @@ impl Player {
             }
         } else {
             warn!("Unable to get the Sample Rate, Fade and Seek Unavailable");
+        }
+
+        let mut ebu_r128 = None;
+        if self.process_only {
+            ebu_r128 = Some(EbuR128::new(channel_count as u32, actual_rate, Mode::I)?);
         }
 
         // Audio Output Device..
@@ -192,20 +218,32 @@ impl Player {
 
             match decoder.decode(&packet) {
                 Ok(decoded) => {
-                    if audio_output.is_none() {
+                    // Is this the first decoded packet?
+                    if audio_output.is_none() && sample_buffer.is_none() {
                         let spec = *decoded.spec();
                         let duration = decoded.capacity() as u64;
 
-                        audio_output.replace(get_output(spec, self.device.clone()).unwrap());
                         sample_buffer = Some(SampleBuffer::<f32>::new(duration, spec));
+
+                        if !self.process_only {
+                            audio_output.replace(get_output(spec, self.device.clone()).unwrap());
+                        }
                     }
 
                     if let Some(ref mut buf) = sample_buffer {
                         // Grab out the samples..
                         buf.copy_interleaved_ref(decoded.clone());
-
                         let mut break_playback = false;
                         let mut samples = buf.samples().to_vec();
+
+                        if let Some(ref mut ebu_r128) = ebu_r128 {
+                            // We need to convert the samples to f64..
+                            let samples64: Vec<f64> = samples.iter().map(|n| *n as f64).collect();
+                            ebu_r128.add_frames_f64(samples64.as_slice())?;
+
+                            // Skip straight to the next packet..
+                            continue;
+                        }
 
                         // Apply any gain to the samples..
                         if let Some(gain) = self.gain {
@@ -270,6 +308,14 @@ impl Player {
             }
         };
 
+        if let Some(ebu_r128) = ebu_r128 {
+            // Calculate Gain..
+            let loudness = ebu_r128.loudness_global()?;
+            let target = -23.0;
+
+            let gain_db = target - loudness;
+            self.normalized_gain = Some(f64::powf(10., gain_db / 20.));
+        }
         decoder.finalize();
 
         // Symphonia's reader doesn't seem to have a way to check whether we've finished reading
