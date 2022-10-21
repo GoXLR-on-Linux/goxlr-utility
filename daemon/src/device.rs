@@ -618,8 +618,14 @@ impl<'a, T: UsbContext> Device<'a, T> {
     }
 
     async fn handle_sample_button_down(&mut self, button: SampleButtons) -> Result<()> {
+        debug!(
+            "Handling Sample Button, clear state: {}",
+            self.profile.is_sample_clear_active()
+        );
+
         // We don't do anything if clear is flashing..
         if self.profile.is_sample_clear_active() {
+            debug!("Sample Clear is Active, ignoring..");
             return Ok(());
         }
 
@@ -691,9 +697,17 @@ impl<'a, T: UsbContext> Device<'a, T> {
     async fn handle_sample_button_release(&mut self, button: SampleButtons) -> Result<()> {
         // If clear is flashing, remove all samples from the button, disable the clearer and return..
         if self.profile.is_sample_clear_active() {
+            debug!("Sample Clear Active..");
+
             self.profile.clear_all_samples(button);
+
+            debug!("Cleared samples..");
             self.profile.set_sample_clear_active(false)?;
+
+            debug!("Disabled Buttons..");
             self.load_colour_map()?;
+
+            debug!("Reset Colours");
             return Ok(());
         }
 
