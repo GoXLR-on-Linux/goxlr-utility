@@ -21,11 +21,6 @@ pub fn get_configuration() -> Box<dyn AudioConfiguration> {
     Box::new(crate::pulse::configuration::get_configuration())
 }
 
-#[cfg(not(target_os = "linux"))]
-pub fn get_configuration() -> Box<dyn AudioConfiguration> {
-    Box::new(crate::cpal::configuration::get_configuration())
-}
-
 #[cfg(target_os = "linux")]
 pub(crate) fn get_output(
     signal_spec: SignalSpec,
@@ -38,6 +33,11 @@ pub(crate) fn get_output(
 pub(crate) fn get_input(device: Option<String>) -> Result<Box<dyn AudioInput>> {
     // I have no idea why IntelliJ throws an error for the next line, it's fine!
     crate::pulse::record::PulseAudioInput::open(device)
+}
+
+#[cfg(not(target_os = "linux"))]
+pub fn get_configuration() -> Box<dyn AudioConfiguration> {
+    Box::new(crate::cpal::configuration::get_configuration())
 }
 
 #[cfg(not(target_os = "linux"))]
