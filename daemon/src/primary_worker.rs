@@ -50,7 +50,13 @@ pub async fn handle_changes(
         warn!("Unable to create mic profile directory: {}", error);
     }
 
-    if let Err(error) = create_path(&settings.get_samples_directory().await) {
+    let samples_path = &settings.get_samples_directory().await;
+    if let Err(error) = create_path(samples_path) {
+        warn!("Unable to create samples directory: {}", error);
+    }
+
+    let recorded_path = samples_path.join("Recorded/");
+    if let Err(error) = create_path(&recorded_path) {
         warn!("Unable to create samples directory: {}", error);
     }
 
