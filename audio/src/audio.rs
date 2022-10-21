@@ -50,5 +50,5 @@ pub(crate) fn get_output(
 
 #[cfg(not(target_os = "linux"))]
 pub(crate) fn get_input(device: Option<String>) -> Result<Box<dyn AudioInput>> {
-    crate::cpal::playback::CpalAudioInput::open(device)
+    crate::cpal::record::CpalAudioInput::open(device)
 }
