@@ -25,6 +25,7 @@ pub struct FileManager {
     profiles: FileList,
     mic_profiles: FileList,
     presets: FileList,
+    samples: FileList,
 }
 
 #[derive(Debug, Clone)]
@@ -48,6 +49,7 @@ impl FileManager {
             profiles: Default::default(),
             mic_profiles: Default::default(),
             presets: Default::default(),
+            samples: Default::default(),
         }
     }
 
@@ -56,6 +58,7 @@ impl FileManager {
         self.profiles = Default::default();
         self.mic_profiles = Default::default();
         self.presets = Default::default();
+        self.samples = Default::default();
     }
 
     pub fn get_profiles(&mut self, settings: &SettingsHandle) -> HashSet<String> {
@@ -66,7 +69,7 @@ impl FileManager {
         }
 
         let path = block_on(settings.get_profile_directory());
-        let extension = "goxlr";
+        let extension = ["goxlr"].to_vec();
 
         let distrib_path = Path::new(DISTRIBUTABLE_ROOT).join("profiles/");
         self.profiles = self.get_file_list(vec![distrib_path, path], extension);
@@ -79,7 +82,7 @@ impl FileManager {
         }
 
         let path = block_on(settings.get_mic_profile_directory());
-        let extension = "goxlrMicProfile";
+        let extension = ["goxlrMicProfile"].to_vec();
 
         self.mic_profiles = self.get_file_list(vec![path], extension);
         self.mic_profiles.names.clone()
@@ -92,32 +95,44 @@ impl FileManager {
 
         let path = block_on(settings.get_presets_directory());
         let distrib_path = Path::new(DISTRIBUTABLE_ROOT).join("presets/");
-
-        let extension = "preset";
+        let extension = ["preset"].to_vec();
 
         self.presets = self.get_file_list(vec![path, distrib_path], extension);
         self.presets.names.clone()
     }
 
-    fn get_file_list(&self, path: Vec<PathBuf>, extension: &str) -> FileList {
+    pub fn get_samples(&mut self, settings: &SettingsHandle) -> HashSet<String> {
+        if self.samples.timeout > Instant::now() {
+            return self.samples.names.clone();
+        }
+
+        let path = block_on(settings.get_samples_directory());
+        let recorded_path = path.clone().join("Recorded");
+        let extensions = ["wav", "mp3"].to_vec();
+
+        self.samples = self.get_file_list(vec![path, recorded_path], extensions);
+        self.samples.names.clone()
+    }
+
+    fn get_file_list(&self, path: Vec<PathBuf>, extensions: Vec<&str>) -> FileList {
         // We need to refresh..
         FileList {
-            names: self.get_files_from_paths(path, extension),
+            names: self.get_files_from_paths(path, extensions),
             timeout: Instant::now() + Duration::from_secs(5),
         }
     }
 
-    fn get_files_from_paths(&self, paths: Vec<PathBuf>, extension: &str) -> HashSet<String> {
+    fn get_files_from_paths(&self, paths: Vec<PathBuf>, extensions: Vec<&str>) -> HashSet<String> {
         let mut result = HashSet::new();
 
         for path in paths {
-            result.extend(self.get_files_from_drive(path, extension));
+            result.extend(self.get_files_from_drive(path, extensions.clone()));
         }
 
         result
     }
 
-    fn get_files_from_drive(&self, path: PathBuf, extension: &str) -> HashSet<String> {
+    fn get_files_from_drive(&self, path: PathBuf, extensions: Vec<&str>) -> HashSet<String> {
         if let Err(error) = create_path(&path) {
             warn!(
                 "Unable to create path: {}: {}",
@@ -134,7 +149,16 @@ impl FileManager {
                         // Make sure this has an extension..
                         .filter(|e| e.path().extension().is_some())
                         // Is it the extension we're looking for?
-                        .filter(|e| e.path().extension().unwrap() == extension)
+                        .filter(|e| {
+                            let path = e.path();
+                            let os_ext = path.extension().unwrap();
+                            for extension in extensions.clone() {
+                                if extension == os_ext {
+                                    return true;
+                                }
+                            }
+                            false
+                        })
                         // Get the File Name..
                         .and_then(|e| {
                             e.path().file_stem().and_then(

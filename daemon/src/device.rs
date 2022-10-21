@@ -655,7 +655,8 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 if mode == SamplePlaybackMode::FadeOnRelease {
                     audio.fade_on_stop = true;
                 }
-                self.play_audio_file(button, audio, false).await?;
+                self.play_audio_file(sample_bank, button, audio, false)
+                    .await?;
                 Ok(())
             }
             SamplePlaybackMode::PlayStop
@@ -679,7 +680,8 @@ impl<'a, T: UsbContext> Device<'a, T> {
 
                     let loop_track = mode == SamplePlaybackMode::Loop;
 
-                    self.play_audio_file(button, audio, loop_track).await?;
+                    self.play_audio_file(sample_bank, button, audio, loop_track)
+                        .await?;
                     Ok(())
                 }
             }
@@ -741,21 +743,20 @@ impl<'a, T: UsbContext> Device<'a, T> {
     /// A Simple Method that simply starts playback on the Sampler Channel..
     async fn play_audio_file(
         &mut self,
+        bank: SampleBank,
         button: SampleButtons,
         mut audio: AudioFile,
         loop_track: bool,
     ) -> Result<()> {
-        let sample_bank = self.profile.get_active_sample_bank();
-
         // Fill out the path..
         let sample_path = self.get_path_for_sample(audio.file).await?;
         audio.file = sample_path;
 
         if let Some(audio_handler) = &mut self.audio_handler {
-            audio_handler.stop_playback(sample_bank, button).await?;
+            audio_handler.stop_playback(bank, button).await?;
 
             let result = audio_handler
-                .play_for_button(sample_bank, button, audio, loop_track)
+                .play_for_button(bank, button, audio, loop_track)
                 .await;
 
             if result.is_ok() {
@@ -764,6 +765,18 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 error!("{}", result.err().unwrap());
             }
         }
+        Ok(())
+    }
+
+    async fn stop_sample_playback(
+        &mut self,
+        bank: SampleBank,
+        button: SampleButtons,
+    ) -> Result<()> {
+        if let Some(audio_handler) = &mut self.audio_handler {
+            audio_handler.stop_playback(bank, button).await?;
+        }
+
         Ok(())
     }
 
@@ -1594,8 +1607,25 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 self.load_colour_map()?;
             }
             GoXLRCommand::RemoveSampleByIndex(bank, button, index) => {
-                self.profile
+                let remaining = self
+                    .profile
                     .remove_sample_file_by_index(bank, button, index);
+
+                if remaining == 0 {
+                    self.load_colour_map()?;
+                }
+            }
+            GoXLRCommand::PlaySampleByIndex(bank, button, index) => {
+                self.play_audio_file(
+                    bank,
+                    button,
+                    self.profile.get_track_by_index(bank, button, index)?,
+                    false,
+                )
+                .await?;
+            }
+            GoXLRCommand::StopSamplePlayback(bank, button) => {
+                self.stop_sample_playback(bank, button).await?;
             }
 
             // Profiles

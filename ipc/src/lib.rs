@@ -165,6 +165,8 @@ pub enum GoXLRCommand {
     SetSamplerOrder(SampleBank, SampleButtons, SamplePlayOrder),
     AddSample(SampleBank, SampleButtons, String),
     RemoveSampleByIndex(SampleBank, SampleButtons, usize),
+    PlaySampleByIndex(SampleBank, SampleButtons, usize),
+    StopSamplePlayback(SampleBank, SampleButtons),
 
     // Profile Handling..
     NewProfile(String),

@@ -4,7 +4,7 @@ use std::fs::{remove_file, File};
 use std::io::{Cursor, Read, Seek};
 use std::path::{Path, PathBuf};
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use enum_map::EnumMap;
 use enumset::EnumSet;
 use log::{debug, error, warn};
@@ -14,8 +14,8 @@ use strum::IntoEnumIterator;
 use crate::audio::AudioFile;
 use goxlr_ipc::{
     ActiveEffects, ButtonLighting, CoughButton, Echo, Effects, FaderLighting, Gender, HardTune,
-    Lighting, Megaphone, OneColour, Pitch, Reverb, Robot, Sampler, SamplerButton, SamplerLighting,
-    ThreeColours, TwoColours,
+    Lighting, Megaphone, OneColour, Pitch, Reverb, Robot, Sample, Sampler, SamplerButton,
+    SamplerLighting, ThreeColours, TwoColours,
 };
 use goxlr_profile_loader::components::colours::{
     Colour, ColourDisplay, ColourMap, ColourOffStyle, ColourState,
@@ -676,7 +676,11 @@ impl ProfileAdapter {
 
                 let mut tracks = vec![];
                 for track in sample_bank.get_tracks() {
-                    tracks.push(track.track().to_string())
+                    tracks.push(Sample {
+                        name: track.track.clone(),
+                        start_pct: track.start_position,
+                        stop_pct: track.end_position,
+                    })
                 }
 
                 // Create a SamplerButton
@@ -1458,32 +1462,55 @@ impl ProfileAdapter {
             .get_next_track();
 
         if let Some(track) = track {
-            let mut gain = None;
-            let mut start_pct = None;
-            let mut stop_pct = None;
-
-            if track.normalized_gain() != 1.0 {
-                gain = Some(track.normalized_gain());
-            }
-
-            if track.start_position() != 0.0 {
-                start_pct = Some(track.start_position() as f64);
-            }
-
-            if track.end_position() != 100.0 {
-                stop_pct = Some(track.end_position() as f64);
-            }
-
-            return Ok(AudioFile {
-                file: PathBuf::from(track.track()),
-                gain,
-                start_pct,
-                stop_pct,
-                fade_on_stop: false,
-            });
+            return Ok(ProfileAdapter::track_to_audio(track));
         }
 
         Err(anyhow!("Unable to Find Track to play!"))
+    }
+
+    pub fn get_track_by_index(
+        &self,
+        bank: goxlr_types::SampleBank,
+        button: goxlr_types::SampleButtons,
+        index: usize,
+    ) -> Result<AudioFile> {
+        let track = self
+            .profile
+            .settings()
+            .sample_button(standard_to_profile_sample_button(button))
+            .get_stack(standard_to_profile_sample_bank(bank))
+            .get_track_by_index(index);
+
+        if let Ok(track) = track {
+            return Ok(ProfileAdapter::track_to_audio(track));
+        }
+        bail!("Unable to find track");
+    }
+
+    pub fn track_to_audio(track: &Track) -> AudioFile {
+        let mut gain = None;
+        let mut start_pct = None;
+        let mut stop_pct = None;
+
+        if track.normalized_gain() != 1.0 {
+            gain = Some(track.normalized_gain());
+        }
+
+        if track.start_position() != 0.0 {
+            start_pct = Some(track.start_position() as f64);
+        }
+
+        if track.end_position() != 100.0 {
+            stop_pct = Some(track.end_position() as f64);
+        }
+
+        return AudioFile {
+            file: PathBuf::from(track.track()),
+            gain,
+            start_pct,
+            stop_pct,
+            fade_on_stop: false,
+        };
     }
 
     pub fn is_sample_active(&self, button: goxlr_types::SampleButtons) -> bool {
@@ -1521,7 +1548,7 @@ impl ProfileAdapter {
     pub fn is_sample_clear_active(&self) -> bool {
         self.profile
             .settings()
-            .sample_button(SampleButtons::Clear)
+            .sample_button(Clear)
             .colour_map()
             .is_blink()
     }
@@ -1529,7 +1556,7 @@ impl ProfileAdapter {
     pub fn set_sample_clear_active(&mut self, active: bool) -> Result<()> {
         self.profile
             .settings_mut()
-            .sample_button_mut(SampleButtons::Clear)
+            .sample_button_mut(Clear)
             .colour_map_mut()
             .set_blink_on(active)
     }
@@ -1686,12 +1713,18 @@ impl ProfileAdapter {
         bank: goxlr_types::SampleBank,
         button: goxlr_types::SampleButtons,
         index: usize,
-    ) {
+    ) -> usize {
         self.profile
             .settings_mut()
             .sample_button_mut(standard_to_profile_sample_button(button))
             .get_stack_mut(standard_to_profile_sample_bank(bank))
             .remove_track_by_index(index);
+
+        self.profile
+            .settings()
+            .sample_button(standard_to_profile_sample_button(button))
+            .get_stack(standard_to_profile_sample_bank(bank))
+            .get_track_count()
     }
 
     pub fn set_button_off_style(

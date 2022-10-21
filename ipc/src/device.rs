@@ -279,7 +279,14 @@ pub struct Sampler {
 pub struct SamplerButton {
     pub function: SamplePlaybackMode,
     pub order: SamplePlayOrder,
-    pub samples: Vec<String>,
+    pub samples: Vec<Sample>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Sample {
+    pub name: String,
+    pub start_pct: f32,
+    pub stop_pct: f32,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -295,6 +302,7 @@ pub struct Files {
     pub profiles: HashSet<String>,
     pub mic_profiles: HashSet<String>,
     pub presets: HashSet<String>,
+    pub samples: HashSet<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
