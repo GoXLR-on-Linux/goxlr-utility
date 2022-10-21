@@ -4,7 +4,7 @@ use goxlr_audio::player::{Player, PlayerState};
 use goxlr_audio::recorder::{Recorder, RecorderState};
 use goxlr_types::SampleBank;
 use goxlr_types::SampleButtons;
-use log::debug;
+use log::{debug, error};
 use regex::Regex;
 use std::path::PathBuf;
 use std::sync::atomic::Ordering;
@@ -289,7 +289,10 @@ impl AudioHandler {
             let state = recorder.get_state();
 
             let handler = thread::spawn(move || {
-                let _ = recorder.record();
+                let result = recorder.record();
+                if result.is_err() {
+                    error!("Error: {}", result.err().unwrap());
+                }
             });
 
             if let Some(file_name) = path.file_name() {
