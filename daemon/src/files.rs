@@ -107,7 +107,7 @@ impl FileManager {
         }
 
         let path = block_on(settings.get_samples_directory());
-        let recorded_path = path.clone().join("Recorded");
+        let recorded_path = path.join("Recorded");
         let extensions = ["wav", "mp3"].to_vec();
 
         self.samples = self.get_file_list(vec![path, recorded_path], extensions);

@@ -11,7 +11,7 @@ use log::{debug, error, warn};
 use strum::EnumCount;
 use strum::IntoEnumIterator;
 
-use crate::audio::AudioFile;
+use crate::audio::{AudioFile, AudioHandler};
 use goxlr_ipc::{
     ActiveEffects, ButtonLighting, CoughButton, Echo, Effects, FaderLighting, Gender, HardTune,
     Lighting, Megaphone, OneColour, Pitch, Reverb, Robot, Sample, Sampler, SamplerButton,
@@ -656,7 +656,11 @@ impl ProfileAdapter {
         })
     }
 
-    pub fn get_sampler_ipc(&self, is_device_mini: bool) -> Option<Sampler> {
+    pub fn get_sampler_ipc(
+        &self,
+        is_device_mini: bool,
+        audio_handler: &Option<AudioHandler>,
+    ) -> Option<Sampler> {
         if is_device_mini {
             return None;
         }
@@ -683,6 +687,11 @@ impl ProfileAdapter {
                     })
                 }
 
+                let mut is_playing = false;
+                if let Some(audio_handler) = audio_handler {
+                    is_playing = audio_handler.is_sample_playing(bank, button);
+                }
+
                 // Create a SamplerButton
                 let sampler_button = SamplerButton {
                     function: profile_to_standard_sample_playback_mode(
@@ -690,6 +699,7 @@ impl ProfileAdapter {
                     ),
                     order: profile_to_standard_sample_playback_order(sample_bank.get_play_order()),
                     samples: tracks,
+                    is_playing,
                 };
                 buttons.insert(button, sampler_button);
             }
