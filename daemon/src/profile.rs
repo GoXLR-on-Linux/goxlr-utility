@@ -1708,6 +1708,42 @@ impl ProfileAdapter {
             .add_track(track)
     }
 
+    pub fn set_sample_start_pct(
+        &mut self,
+        bank: goxlr_types::SampleBank,
+        button: goxlr_types::SampleButtons,
+        index: usize,
+        percent: f32,
+    ) -> Result<()> {
+        let track = self
+            .profile
+            .settings_mut()
+            .sample_button_mut(standard_to_profile_sample_button(button))
+            .get_stack_mut(standard_to_profile_sample_bank(bank))
+            .get_track_by_index_mut(index)?;
+
+        track.start_position = percent;
+        Ok(())
+    }
+
+    pub fn set_sample_stop_pct(
+        &mut self,
+        bank: goxlr_types::SampleBank,
+        button: goxlr_types::SampleButtons,
+        index: usize,
+        percent: f32,
+    ) -> Result<()> {
+        let track = self
+            .profile
+            .settings_mut()
+            .sample_button_mut(standard_to_profile_sample_button(button))
+            .get_stack_mut(standard_to_profile_sample_bank(bank))
+            .get_track_by_index_mut(index)?;
+
+        track.end_position = percent;
+        Ok(())
+    }
+
     pub fn remove_sample_file_by_index(
         &mut self,
         bank: goxlr_types::SampleBank,

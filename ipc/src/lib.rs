@@ -164,6 +164,8 @@ pub enum GoXLRCommand {
     SetSamplerFunction(SampleBank, SampleButtons, SamplePlaybackMode),
     SetSamplerOrder(SampleBank, SampleButtons, SamplePlayOrder),
     AddSample(SampleBank, SampleButtons, String),
+    SetSampleStartPercent(SampleBank, SampleButtons, usize, f32),
+    SetSampleStopPercent(SampleBank, SampleButtons, usize, f32),
     RemoveSampleByIndex(SampleBank, SampleButtons, usize),
     PlaySampleByIndex(SampleBank, SampleButtons, usize),
     StopSamplePlayback(SampleBank, SampleButtons),

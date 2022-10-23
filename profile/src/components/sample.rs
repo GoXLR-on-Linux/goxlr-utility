@@ -292,6 +292,13 @@ impl SampleStack {
         }
         Ok(&self.tracks[index])
     }
+    pub fn get_track_by_index_mut(&mut self, index: usize) -> Result<&mut Track> {
+        if self.tracks.len() <= index {
+            bail!("Track not Found");
+        }
+        Ok(&mut self.tracks[index])
+    }
+
     pub fn get_track_count(&self) -> usize {
         self.tracks.len()
     }

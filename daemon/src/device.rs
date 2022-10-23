@@ -1620,6 +1620,14 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 // Update the lighting..
                 self.load_colour_map()?;
             }
+            GoXLRCommand::SetSampleStartPercent(bank, button, index, percent) => {
+                self.profile
+                    .set_sample_start_pct(bank, button, index, percent)?;
+            }
+            GoXLRCommand::SetSampleStopPercent(bank, button, index, percent) => {
+                self.profile
+                    .set_sample_stop_pct(bank, button, index, percent)?;
+            }
             GoXLRCommand::RemoveSampleByIndex(bank, button, index) => {
                 let remaining = self
                     .profile
