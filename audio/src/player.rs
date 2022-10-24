@@ -138,12 +138,15 @@ impl Player {
 
         let mut ebu_r128 = None;
 
-        if let Some(rate) = sample_rate {
-            let channels = match track.codec_params.channels {
-                None => 2, // Assume 2 playback Channels..
-                Some(channels) => channels.count(),
-            };
+        let channels = match track.codec_params.channels {
+            None => {
+                debug!("Unable to ascertain channel count, assuming 2..");
+                2
+            } // Assume 2 playback Channels..
+            Some(channels) => channels.count(),
+        };
 
+        if let Some(rate) = sample_rate {
             if self.process_only {
                 ebu_r128 = Some(EbuR128::new(channels as u32, rate, Mode::I)?);
             } else {
@@ -152,16 +155,17 @@ impl Player {
                     fade_amount = Some(1.0 / (rate as f32 * fade_duration) / channels as f32);
                 }
 
-                if let Some(start_pct) = self.start_pct {
-                    if let Some(frames) = frames {
+                if let Some(frames) = frames {
+                    if let Some(start_pct) = self.start_pct {
                         // Calculate the first frame based on the percent..
                         first_frame = Some(((frames as f64 / 100.0) * start_pct).round() as u64);
-                        debug!("Starting Sample: {}", first_frame.unwrap());
+                        debug!(
+                            "Starting Sample: {}",
+                            first_frame.unwrap() * channels as u64
+                        );
                     }
-                }
 
-                if let Some(stop_pct) = self.stop_pct {
-                    if let Some(frames) = frames {
+                    if let Some(stop_pct) = self.stop_pct {
                         stop_sample = Some(
                             ((frames as f64 / 100.0) * stop_pct).round() as u64 * channels as u64,
                         );
@@ -194,7 +198,7 @@ impl Player {
             };
 
             match reader.seek(SeekMode::Accurate, seek_time) {
-                Ok(seeked_to) => seeked_to.actual_ts,
+                Ok(seeked_to) => seeked_to.actual_ts * channels as u64,
                 Err(_) => 0,
             }
         } else {
