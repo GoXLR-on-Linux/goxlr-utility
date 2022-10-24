@@ -303,7 +303,7 @@ pub struct Files {
     pub profiles: HashSet<String>,
     pub mic_profiles: HashSet<String>,
     pub presets: HashSet<String>,
-    pub samples: HashSet<String>,
+    pub samples: HashMap<String, String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

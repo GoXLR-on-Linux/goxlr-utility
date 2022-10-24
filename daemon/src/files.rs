@@ -8,7 +8,7 @@ This has been created as a separate mod primarily because profile.rs is big enou
 secondly because it's managing different types of files
  */
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::fs::{create_dir_all, File};
 use std::path::{Path, PathBuf};
@@ -18,6 +18,9 @@ use anyhow::{anyhow, Context, Result};
 use futures::executor::block_on;
 use log::{debug, info, warn};
 
+use glob::glob;
+use nix::NixPath;
+
 use crate::{SettingsHandle, DISTRIBUTABLE_ROOT};
 
 #[derive(Debug)]
@@ -25,7 +28,7 @@ pub struct FileManager {
     profiles: FileList,
     mic_profiles: FileList,
     presets: FileList,
-    samples: FileList,
+    samples: RecursiveFileList,
 }
 
 #[derive(Debug, Clone)]
@@ -34,11 +37,26 @@ struct FileList {
     timeout: Instant,
 }
 
+#[derive(Debug, Clone)]
+struct RecursiveFileList {
+    names: HashMap<String, String>,
+    timeout: Instant,
+}
+
 impl Default for FileList {
     fn default() -> Self {
         Self {
-            timeout: Instant::now(),
             names: HashSet::new(),
+            timeout: Instant::now(),
+        }
+    }
+}
+
+impl Default for RecursiveFileList {
+    fn default() -> Self {
+        Self {
+            names: HashMap::new(),
+            timeout: Instant::now(),
         }
     }
 }
@@ -101,17 +119,45 @@ impl FileManager {
         self.presets.names.clone()
     }
 
-    pub fn get_samples(&mut self, settings: &SettingsHandle) -> HashSet<String> {
+    pub fn get_samples(&mut self, settings: &SettingsHandle) -> HashMap<String, String> {
         if self.samples.timeout > Instant::now() {
             return self.samples.names.clone();
         }
 
-        let path = block_on(settings.get_samples_directory());
-        let recorded_path = path.join("Recorded");
+        let base_path = block_on(settings.get_samples_directory());
         let extensions = ["wav", "mp3"].to_vec();
 
-        self.samples = self.get_file_list(vec![path, recorded_path], extensions);
+        self.samples.names.clear();
+
+        self.samples = self.get_recursive_file_list(base_path, extensions);
         self.samples.names.clone()
+    }
+
+    fn get_recursive_file_list(&self, path: PathBuf, extensions: Vec<&str>) -> RecursiveFileList {
+        //let extensions = extensions.join(",");
+        let mut paths: Vec<PathBuf> = Vec::new();
+
+        for extension in extensions {
+            let format = format!("{}/**/*.{}", path.to_string_lossy(), extension);
+            let files = glob(format.as_str());
+            if let Ok(files) = files {
+                files.for_each(|f| paths.push(f.unwrap()));
+            }
+        }
+
+        let mut map: HashMap<String, String> = HashMap::new();
+        // Ok, we need to split stuff up..
+        for file_path in paths {
+            map.insert(
+                file_path.file_name().unwrap().to_string_lossy().to_string(),
+                file_path.to_string_lossy()[path.len() + 1..].to_string(),
+            );
+        }
+
+        RecursiveFileList {
+            names: map,
+            timeout: Instant::now(),
+        }
     }
 
     fn get_file_list(&self, path: Vec<PathBuf>, extensions: Vec<&str>) -> FileList {

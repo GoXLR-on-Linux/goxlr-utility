@@ -1189,6 +1189,7 @@ dependencies = [
  "enum-map",
  "enumset",
  "futures",
+ "glob",
  "goxlr-audio",
  "goxlr-ipc",
  "goxlr-profile-loader",
