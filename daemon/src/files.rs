@@ -228,6 +228,18 @@ impl FileManager {
     }
 }
 
+pub fn find_file_in_path(path: PathBuf, file: PathBuf) -> Option<PathBuf> {
+    let format = format!("{}/**/{}", path.to_string_lossy(), file.to_string_lossy());
+    let files = glob(format.as_str());
+    if let Ok(files) = files {
+        if let Some(file) = files.into_iter().next() {
+            return Some(file.unwrap());
+        }
+    }
+
+    None
+}
+
 pub fn create_path(path: &Path) -> Result<()> {
     if path.starts_with(Path::new(DISTRIBUTABLE_ROOT)) {
         return Ok(());

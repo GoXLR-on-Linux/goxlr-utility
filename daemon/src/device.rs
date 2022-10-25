@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use chrono::Local;
 use enum_map::EnumMap;
 use enumset::EnumSet;
@@ -26,6 +26,7 @@ use goxlr_usb::routing::{InputDevice, OutputDevice};
 use goxlr_usb::rusb::UsbContext;
 
 use crate::audio::{AudioFile, AudioHandler};
+use crate::files::find_file_in_path;
 use crate::mic_profile::{MicProfileAdapter, DEFAULT_MIC_PROFILE_NAME};
 use crate::profile::{version_newer_or_equal_to, ProfileAdapter, DEFAULT_PROFILE_NAME};
 use crate::{SettingsHandle, DISTRIBUTABLE_ROOT};
@@ -814,18 +815,11 @@ impl<'a, T: UsbContext> Device<'a, T> {
     }
 
     async fn get_path_for_sample(&mut self, part: PathBuf) -> Result<PathBuf> {
-        let mut sample_path = self.settings.get_samples_directory().await;
-
-        if part.to_string_lossy().starts_with("Recording_") {
-            sample_path = sample_path.join("Recorded");
+        let sample_path = self.settings.get_samples_directory().await;
+        if let Some(file) = find_file_in_path(sample_path, part) {
+            return Ok(file);
         }
-        sample_path = sample_path.join(part);
-
-        if !sample_path.exists() {
-            return Err(anyhow!("Sample Not found on Path"));
-        }
-
-        Ok(sample_path)
+        bail!("Sample Not Found");
     }
 
     async fn sync_sample_lighting(&mut self) -> Result<()> {
