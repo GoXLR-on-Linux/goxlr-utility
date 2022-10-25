@@ -8,7 +8,7 @@ This has been created as a separate mod primarily because profile.rs is big enou
 secondly because it's managing different types of files
  */
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::fs::{create_dir_all, File};
 use std::path::{Path, PathBuf};
@@ -18,6 +18,9 @@ use anyhow::{anyhow, Context, Result};
 use futures::executor::block_on;
 use log::{debug, info, warn};
 
+use glob::glob;
+use nix::NixPath;
+
 use crate::{SettingsHandle, DISTRIBUTABLE_ROOT};
 
 #[derive(Debug)]
@@ -25,6 +28,7 @@ pub struct FileManager {
     profiles: FileList,
     mic_profiles: FileList,
     presets: FileList,
+    samples: RecursiveFileList,
 }
 
 #[derive(Debug, Clone)]
@@ -33,11 +37,26 @@ struct FileList {
     timeout: Instant,
 }
 
+#[derive(Debug, Clone)]
+struct RecursiveFileList {
+    names: HashMap<String, String>,
+    timeout: Instant,
+}
+
 impl Default for FileList {
     fn default() -> Self {
         Self {
-            timeout: Instant::now(),
             names: HashSet::new(),
+            timeout: Instant::now(),
+        }
+    }
+}
+
+impl Default for RecursiveFileList {
+    fn default() -> Self {
+        Self {
+            names: HashMap::new(),
+            timeout: Instant::now(),
         }
     }
 }
@@ -48,6 +67,7 @@ impl FileManager {
             profiles: Default::default(),
             mic_profiles: Default::default(),
             presets: Default::default(),
+            samples: Default::default(),
         }
     }
 
@@ -56,6 +76,7 @@ impl FileManager {
         self.profiles = Default::default();
         self.mic_profiles = Default::default();
         self.presets = Default::default();
+        self.samples = Default::default();
     }
 
     pub fn get_profiles(&mut self, settings: &SettingsHandle) -> HashSet<String> {
@@ -66,7 +87,7 @@ impl FileManager {
         }
 
         let path = block_on(settings.get_profile_directory());
-        let extension = "goxlr";
+        let extension = ["goxlr"].to_vec();
 
         let distrib_path = Path::new(DISTRIBUTABLE_ROOT).join("profiles/");
         self.profiles = self.get_file_list(vec![distrib_path, path], extension);
@@ -79,7 +100,7 @@ impl FileManager {
         }
 
         let path = block_on(settings.get_mic_profile_directory());
-        let extension = "goxlrMicProfile";
+        let extension = ["goxlrMicProfile"].to_vec();
 
         self.mic_profiles = self.get_file_list(vec![path], extension);
         self.mic_profiles.names.clone()
@@ -92,32 +113,72 @@ impl FileManager {
 
         let path = block_on(settings.get_presets_directory());
         let distrib_path = Path::new(DISTRIBUTABLE_ROOT).join("presets/");
-
-        let extension = "preset";
+        let extension = ["preset"].to_vec();
 
         self.presets = self.get_file_list(vec![path, distrib_path], extension);
         self.presets.names.clone()
     }
 
-    fn get_file_list(&self, path: Vec<PathBuf>, extension: &str) -> FileList {
+    pub fn get_samples(&mut self, settings: &SettingsHandle) -> HashMap<String, String> {
+        if self.samples.timeout > Instant::now() {
+            return self.samples.names.clone();
+        }
+
+        let base_path = block_on(settings.get_samples_directory());
+        let extensions = ["wav", "mp3"].to_vec();
+
+        self.samples.names.clear();
+
+        self.samples = self.get_recursive_file_list(base_path, extensions);
+        self.samples.names.clone()
+    }
+
+    fn get_recursive_file_list(&self, path: PathBuf, extensions: Vec<&str>) -> RecursiveFileList {
+        //let extensions = extensions.join(",");
+        let mut paths: Vec<PathBuf> = Vec::new();
+
+        for extension in extensions {
+            let format = format!("{}/**/*.{}", path.to_string_lossy(), extension);
+            let files = glob(format.as_str());
+            if let Ok(files) = files {
+                files.for_each(|f| paths.push(f.unwrap()));
+            }
+        }
+
+        let mut map: HashMap<String, String> = HashMap::new();
+        // Ok, we need to split stuff up..
+        for file_path in paths {
+            map.insert(
+                file_path.to_string_lossy()[path.len() + 1..].to_string(),
+                file_path.file_name().unwrap().to_string_lossy().to_string(),
+            );
+        }
+
+        RecursiveFileList {
+            names: map,
+            timeout: Instant::now(),
+        }
+    }
+
+    fn get_file_list(&self, path: Vec<PathBuf>, extensions: Vec<&str>) -> FileList {
         // We need to refresh..
         FileList {
-            names: self.get_files_from_paths(path, extension),
+            names: self.get_files_from_paths(path, extensions),
             timeout: Instant::now() + Duration::from_secs(5),
         }
     }
 
-    fn get_files_from_paths(&self, paths: Vec<PathBuf>, extension: &str) -> HashSet<String> {
+    fn get_files_from_paths(&self, paths: Vec<PathBuf>, extensions: Vec<&str>) -> HashSet<String> {
         let mut result = HashSet::new();
 
         for path in paths {
-            result.extend(self.get_files_from_drive(path, extension));
+            result.extend(self.get_files_from_drive(path, extensions.clone()));
         }
 
         result
     }
 
-    fn get_files_from_drive(&self, path: PathBuf, extension: &str) -> HashSet<String> {
+    fn get_files_from_drive(&self, path: PathBuf, extensions: Vec<&str>) -> HashSet<String> {
         if let Err(error) = create_path(&path) {
             warn!(
                 "Unable to create path: {}: {}",
@@ -134,7 +195,16 @@ impl FileManager {
                         // Make sure this has an extension..
                         .filter(|e| e.path().extension().is_some())
                         // Is it the extension we're looking for?
-                        .filter(|e| e.path().extension().unwrap() == extension)
+                        .filter(|e| {
+                            let path = e.path();
+                            let os_ext = path.extension().unwrap();
+                            for extension in extensions.clone() {
+                                if extension == os_ext {
+                                    return true;
+                                }
+                            }
+                            false
+                        })
                         // Get the File Name..
                         .and_then(|e| {
                             e.path().file_stem().and_then(
@@ -156,6 +226,18 @@ impl FileManager {
 
         HashSet::new()
     }
+}
+
+pub fn find_file_in_path(path: PathBuf, file: PathBuf) -> Option<PathBuf> {
+    let format = format!("{}/**/{}", path.to_string_lossy(), file.to_string_lossy());
+    let files = glob(format.as_str());
+    if let Ok(files) = files {
+        if let Some(file) = files.into_iter().next() {
+            return Some(file.unwrap());
+        }
+    }
+
+    None
 }
 
 pub fn create_path(path: &Path) -> Result<()> {

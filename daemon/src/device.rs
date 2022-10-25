@@ -1,8 +1,9 @@
 use std::collections::HashSet;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
+use chrono::Local;
 use enum_map::EnumMap;
 use enumset::EnumSet;
 use log::{debug, error, info};
@@ -13,11 +14,10 @@ use goxlr_ipc::{
     DeviceType, FaderStatus, GoXLRCommand, HardwareStatus, Levels, MicSettings, MixerStatus,
 };
 use goxlr_profile_loader::components::mute::MuteFunction;
-use goxlr_profile_loader::SampleButtons;
 use goxlr_types::{
     ChannelName, EffectBankPresets, EffectKey, EncoderName, FaderName, HardTuneSource,
     InputDevice as BasicInputDevice, MicrophoneParamKey, OutputDevice as BasicOutputDevice,
-    RobotRange, SampleBank, VersionNumber,
+    RobotRange, SampleBank, SampleButtons, SamplePlaybackMode, VersionNumber,
 };
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::channelstate::ChannelState::{Muted, Unmuted};
@@ -25,7 +25,8 @@ use goxlr_usb::goxlr::GoXLR;
 use goxlr_usb::routing::{InputDevice, OutputDevice};
 use goxlr_usb::rusb::UsbContext;
 
-use crate::audio::AudioHandler;
+use crate::audio::{AudioFile, AudioHandler};
+use crate::files::find_file_in_path;
 use crate::mic_profile::{MicProfileAdapter, DEFAULT_MIC_PROFILE_NAME};
 use crate::profile::{version_newer_or_equal_to, ProfileAdapter, DEFAULT_PROFILE_NAME};
 use crate::{SettingsHandle, DISTRIBUTABLE_ROOT};
@@ -151,6 +152,10 @@ impl<'a, T: UsbContext> Device<'a, T> {
             effects: self
                 .profile
                 .get_effects_ipc(self.hardware.device_type == DeviceType::Mini),
+            sampler: self.profile.get_sampler_ipc(
+                self.hardware.device_type == DeviceType::Mini,
+                &self.audio_handler,
+            ),
             profile_name: self.profile.name().to_owned(),
             mic_profile_name: self.mic_profile.name().to_owned(),
         }
@@ -170,7 +175,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
 
         // Let the audio handle handle stuff..
         if let Some(audio_handler) = &mut self.audio_handler {
-            audio_handler.check_playing();
+            audio_handler.check_playing().await;
             self.sync_sample_lighting().await?;
         }
 
@@ -240,6 +245,22 @@ impl<'a, T: UsbContext> Device<'a, T> {
             }
             Buttons::Bleep => {
                 self.handle_swear_button(true).await?;
+            }
+            Buttons::SamplerBottomLeft => {
+                self.handle_sample_button_down(SampleButtons::BottomLeft)
+                    .await?;
+            }
+            Buttons::SamplerBottomRight => {
+                self.handle_sample_button_down(SampleButtons::BottomRight)
+                    .await?;
+            }
+            Buttons::SamplerTopLeft => {
+                self.handle_sample_button_down(SampleButtons::TopLeft)
+                    .await?;
+            }
+            Buttons::SamplerTopRight => {
+                self.handle_sample_button_down(SampleButtons::TopRight)
+                    .await?;
             }
             _ => {}
         }
@@ -352,19 +373,25 @@ impl<'a, T: UsbContext> Device<'a, T> {
             }
 
             Buttons::SamplerBottomLeft => {
-                self.handle_sample_button(SampleButtons::BottomLeft).await?;
+                self.handle_sample_button_release(SampleButtons::BottomLeft)
+                    .await?;
             }
             Buttons::SamplerBottomRight => {
-                self.handle_sample_button(SampleButtons::BottomRight)
+                self.handle_sample_button_release(SampleButtons::BottomRight)
                     .await?;
             }
             Buttons::SamplerTopLeft => {
-                self.handle_sample_button(SampleButtons::TopLeft).await?;
+                self.handle_sample_button_release(SampleButtons::TopLeft)
+                    .await?;
             }
             Buttons::SamplerTopRight => {
-                self.handle_sample_button(SampleButtons::TopRight).await?;
+                self.handle_sample_button_release(SampleButtons::TopRight)
+                    .await?;
             }
-            _ => {}
+            Buttons::SamplerClear => {
+                self.profile
+                    .set_sample_clear_active(!self.profile.is_sample_clear_active())?;
+            }
         }
         self.update_button_states()?;
         Ok(())
@@ -581,47 +608,218 @@ impl<'a, T: UsbContext> Device<'a, T> {
     async fn load_sample_bank(&mut self, bank: SampleBank) -> Result<()> {
         self.profile.load_sample_bank(bank)?;
 
+        // Sync the state of active playback..
+        if let Some(audio) = &self.audio_handler {
+            for button in SampleButtons::iter() {
+                if audio.is_sample_playing(bank, button) {
+                    self.profile.set_sample_button_state(button, true)?;
+                }
+            }
+        }
         Ok(())
     }
 
-    // This currently only gets called on release, this will change.
-    async fn handle_sample_button(&mut self, button: SampleButtons) -> Result<()> {
+    async fn handle_sample_button_down(&mut self, button: SampleButtons) -> Result<()> {
+        debug!(
+            "Handling Sample Button, clear state: {}",
+            self.profile.is_sample_clear_active()
+        );
+
+        // We don't do anything if clear is flashing..
+        if self.profile.is_sample_clear_active() {
+            debug!("Sample Clear is Active, ignoring..");
+            return Ok(());
+        }
+
         if self.audio_handler.is_none() {
             return Err(anyhow!(
                 "Not handling button, audio handler not configured."
             ));
         }
 
+        // Grab the currently active bank..
+        let sample_bank = self.profile.get_active_sample_bank();
+
         if !self.profile.current_sample_bank_has_samples(button) {
-            // On release, so do nothing really..
+            let file_date = Local::now().format("%Y-%m-%dT%H%M%S").to_string();
+            let full_name = format!("Recording_{}.wav", file_date);
+
+            self.record_audio_file(button, full_name).await?;
             return Ok(());
         }
 
-        let sample = self.profile.get_sample_file(button);
-        let mut sample_path = self.settings.get_samples_directory().await;
+        // Firstly, get the playback mode for this button..
+        let mode = self.profile.get_sample_playback_mode(button);
 
-        if sample.starts_with("Recording_") {
-            sample_path = sample_path.join("Recorded");
+        // Execute behaviour depending on mode, note that the 'fade' options aren't directly
+        // supported, so we'll just map their equivalent 'Stop' action
+        return match mode {
+            SamplePlaybackMode::PlayNext
+            | SamplePlaybackMode::StopOnRelease
+            | SamplePlaybackMode::FadeOnRelease => {
+                // In all three of these cases, we will always play audio on button down.
+                //let file = self.profile.get_sample_file(button);
+                let mut audio = self.profile.get_next_track(button)?;
+                if mode == SamplePlaybackMode::FadeOnRelease {
+                    audio.fade_on_stop = true;
+                }
+                self.play_audio_file(sample_bank, button, audio, false)
+                    .await?;
+                Ok(())
+            }
+            SamplePlaybackMode::PlayStop
+            | SamplePlaybackMode::PlayFade
+            | SamplePlaybackMode::Loop => {
+                let audio_handler = self.audio_handler.as_mut().unwrap();
+                // In these cases, we may be required to stop playback.
+                if audio_handler.is_sample_playing(sample_bank, button)
+                    && !audio_handler.is_sample_stopping(sample_bank, button)
+                {
+                    // Sample is playing, we need to stop it.
+                    audio_handler.stop_playback(sample_bank, button).await?;
+                    Ok(())
+                } else {
+                    // Play the next file.
+                    let mut audio = self.profile.get_next_track(button)?;
+
+                    if mode == SamplePlaybackMode::PlayFade {
+                        audio.fade_on_stop = true;
+                    }
+
+                    let loop_track = mode == SamplePlaybackMode::Loop;
+
+                    self.play_audio_file(sample_bank, button, audio, loop_track)
+                        .await?;
+                    Ok(())
+                }
+            }
+        };
+    }
+
+    async fn handle_sample_button_release(&mut self, button: SampleButtons) -> Result<()> {
+        // If clear is flashing, remove all samples from the button, disable the clearer and return..
+        if self.profile.is_sample_clear_active() {
+            debug!("Sample Clear Active..");
+
+            self.profile.clear_all_samples(button);
+
+            debug!("Cleared samples..");
+            self.profile.set_sample_clear_active(false)?;
+
+            debug!("Disabled Buttons..");
+            self.load_colour_map()?;
+
+            debug!("Reset Colours");
+            return Ok(());
         }
 
-        sample_path = sample_path.join(sample);
-
-        if !sample_path.exists() {
-            return Err(anyhow!("Sample File does not exist!"));
+        // We only need to either a) Stop recording, or b) Handle Stop On Release..
+        if self.audio_handler.is_none() {
+            return Err(anyhow!(
+                "Not handling button, audio handler not configured."
+            ));
         }
 
-        debug!("Attempting to play: {}", sample_path.to_string_lossy());
-        let audio_handler = self.audio_handler.as_mut().unwrap();
-        let result =
-            audio_handler.play_for_button(button, sample_path.to_str().unwrap().to_string());
+        let sample_bank = self.profile.get_active_sample_bank();
+        if !self.profile.current_sample_bank_has_samples(button) {
+            let file_name = self
+                .audio_handler
+                .as_mut()
+                .unwrap()
+                .stop_record(sample_bank, button)?;
 
-        if result.is_ok() {
-            self.profile.set_sample_button_state(button, true)?;
-        } else {
-            error!("{}", result.err().unwrap());
+            // Stop flashing the button..
+            self.profile.set_sample_button_blink(button, false)?;
+
+            if let Some(file_name) = file_name {
+                self.profile.add_sample_file(sample_bank, button, file_name);
+
+                // Reload the Colour Map..
+                self.load_colour_map()?;
+            }
+            return Ok(());
+        }
+
+        let mode = self.profile.get_sample_playback_mode(button);
+        match mode {
+            SamplePlaybackMode::StopOnRelease | SamplePlaybackMode::FadeOnRelease => {
+                self.audio_handler
+                    .as_mut()
+                    .unwrap()
+                    .stop_playback(sample_bank, button)
+                    .await?;
+                return Ok(());
+            }
+            _ => {}
         }
 
         Ok(())
+    }
+
+    /// A Simple Method that simply starts playback on the Sampler Channel..
+    async fn play_audio_file(
+        &mut self,
+        bank: SampleBank,
+        button: SampleButtons,
+        mut audio: AudioFile,
+        loop_track: bool,
+    ) -> Result<()> {
+        // Fill out the path..
+        let sample_path = self.get_path_for_sample(audio.file).await?;
+        audio.file = sample_path;
+
+        if let Some(audio_handler) = &mut self.audio_handler {
+            audio_handler.stop_playback(bank, button).await?;
+
+            let result = audio_handler
+                .play_for_button(bank, button, audio, loop_track)
+                .await;
+
+            if result.is_ok() {
+                self.profile.set_sample_button_state(button, true)?;
+            } else {
+                error!("{}", result.err().unwrap());
+            }
+        }
+        Ok(())
+    }
+
+    async fn stop_sample_playback(
+        &mut self,
+        bank: SampleBank,
+        button: SampleButtons,
+    ) -> Result<()> {
+        if let Some(audio_handler) = &mut self.audio_handler {
+            audio_handler.stop_playback(bank, button).await?;
+        }
+
+        Ok(())
+    }
+
+    async fn record_audio_file(&mut self, button: SampleButtons, file_name: String) -> Result<()> {
+        let sample_bank = self.profile.get_active_sample_bank();
+
+        // Create the full Path..
+        let mut sample_path = self.settings.get_samples_directory().await;
+        sample_path = sample_path.join("Recorded");
+        sample_path = sample_path.join(file_name);
+
+        if let Some(audio_handler) = &mut self.audio_handler {
+            let result = audio_handler.record_for_button(sample_path, sample_bank, button);
+            if result.is_ok() {
+                self.profile.set_sample_button_blink(button, true)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn get_path_for_sample(&mut self, part: PathBuf) -> Result<PathBuf> {
+        let sample_path = self.settings.get_samples_directory().await;
+        if let Some(file) = find_file_in_path(sample_path, part) {
+            return Ok(file);
+        }
+        bail!("Sample Not Found");
     }
 
     async fn sync_sample_lighting(&mut self) -> Result<()> {
@@ -631,13 +829,12 @@ impl<'a, T: UsbContext> Device<'a, T> {
         }
 
         let mut changed = false;
-
         for button in SampleButtons::iter() {
             let playing = self
                 .audio_handler
                 .as_ref()
                 .unwrap()
-                .is_sample_playing(button);
+                .is_sample_playing(self.profile.get_active_sample_bank(), button);
 
             if self.profile.is_sample_active(button) && !playing {
                 self.profile.set_sample_button_state(button, false)?;
@@ -1392,6 +1589,71 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 self.apply_effects(LinkedHashSet::from_iter([EffectKey::HardTuneKeySource]))?;
             }
 
+            // Sampler..
+            GoXLRCommand::SetSamplerFunction(bank, button, function) => {
+                self.profile.set_sampler_function(bank, button, function);
+            }
+            GoXLRCommand::SetSamplerOrder(bank, button, order) => {
+                self.profile.set_sampler_play_order(bank, button, order);
+            }
+            GoXLRCommand::AddSample(bank, button, filename) => {
+                let path = self
+                    .get_path_for_sample(PathBuf::from(filename.clone()))
+                    .await?;
+
+                // Add the Sample, and Grab the created track..
+                let track = self.profile.add_sample_file(bank, button, filename);
+
+                // If we have an audio handler, try to calcuate the Gain..
+                if let Some(audio_handler) = &mut self.audio_handler {
+                    // TODO: Find a way to do this asynchronously..
+                    // Currently this will block the main thread until the calculation is complete,
+                    // obviously this is less than ideal. We can't hold the track because it also
+                    // needs to exist in the profile and could be removed prior to the calculation
+                    // completing (causing Cross Thread Mutability issues), consider looking into
+                    // refcounters to see if this can be solved.
+                    //
+                    // Bonus issue here, if too many commands are sent while this is happening, the
+                    // entire daemon will lock up :D
+                    if let Some(gain) = audio_handler.calculate_gain(&path)? {
+                        // Gain was calculated, Apply it to the track..
+                        track.normalized_gain = gain;
+                    }
+                }
+
+                // Update the lighting..
+                self.load_colour_map()?;
+            }
+            GoXLRCommand::SetSampleStartPercent(bank, button, index, percent) => {
+                self.profile
+                    .set_sample_start_pct(bank, button, index, percent)?;
+            }
+            GoXLRCommand::SetSampleStopPercent(bank, button, index, percent) => {
+                self.profile
+                    .set_sample_stop_pct(bank, button, index, percent)?;
+            }
+            GoXLRCommand::RemoveSampleByIndex(bank, button, index) => {
+                let remaining = self
+                    .profile
+                    .remove_sample_file_by_index(bank, button, index);
+
+                if remaining == 0 {
+                    self.load_colour_map()?;
+                }
+            }
+            GoXLRCommand::PlaySampleByIndex(bank, button, index) => {
+                self.play_audio_file(
+                    bank,
+                    button,
+                    self.profile.get_track_by_index(bank, button, index)?,
+                    false,
+                )
+                .await?;
+            }
+            GoXLRCommand::StopSamplePlayback(bank, button) => {
+                self.stop_sample_playback(bank, button).await?;
+            }
+
             // Profiles
             GoXLRCommand::NewProfile(profile_name) => {
                 let profile_directory = self.settings.get_profile_directory().await;
@@ -1708,7 +1970,17 @@ impl<'a, T: UsbContext> Device<'a, T> {
             return Ok(());
         }
 
-        if muted_to_all || (muted_to_x && mute_function == MuteFunction::All) {
+        let muted_by_fader = if self.profile.get_mic_fader_id() != 4 {
+            // We need to check this fader's mute button..
+            let fader = self.profile.get_mic_fader();
+            let (muted_to_x, muted_to_all, mute_function) =
+                self.profile.get_mute_button_state(fader);
+            muted_to_all || muted_to_x && mute_function == MuteFunction::All
+        } else {
+            false
+        };
+
+        if muted_to_all || (muted_to_x && mute_function == MuteFunction::All) || muted_by_fader {
             self.goxlr.set_channel_state(ChannelName::Mic, Muted)?;
         } else {
             self.goxlr.set_channel_state(ChannelName::Mic, Unmuted)?;

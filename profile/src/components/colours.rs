@@ -264,6 +264,12 @@ impl ColourMap {
     pub fn blink(&self) -> &Option<ColourState> {
         &self.blink
     }
+    pub fn is_blink(&self) -> bool {
+        if let Some(state) = &self.blink {
+            return state == &ColourState::On;
+        }
+        false
+    }
 
     pub fn set_state(&mut self, state: Option<ColourState>) -> Result<()> {
         self.state = state;

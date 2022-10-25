@@ -50,7 +50,13 @@ pub async fn handle_changes(
         warn!("Unable to create mic profile directory: {}", error);
     }
 
-    if let Err(error) = create_path(&settings.get_samples_directory().await) {
+    let samples_path = &settings.get_samples_directory().await;
+    if let Err(error) = create_path(samples_path) {
+        warn!("Unable to create samples directory: {}", error);
+    }
+
+    let recorded_path = samples_path.join("Recorded/");
+    if let Err(error) = create_path(&recorded_path) {
         warn!("Unable to create samples directory: {}", error);
     }
 
@@ -108,6 +114,7 @@ pub async fn handle_changes(
                                 profiles: file_manager.get_profiles(&settings),
                                 mic_profiles: file_manager.get_mic_profiles(&settings),
                                 presets: file_manager.get_presets(&settings),
+                                samples: file_manager.get_samples(&settings),
                             },
                             ..Default::default()
                         };
@@ -124,7 +131,8 @@ pub async fn handle_changes(
                         let result = opener::open(match path_type {
                             PathTypes::Profiles => settings.get_profile_directory().await,
                             PathTypes::MicProfiles => settings.get_mic_profile_directory().await,
-                            PathTypes::Presets => settings.get_presets_directory().await
+                            PathTypes::Presets => settings.get_presets_directory().await,
+                            PathTypes::Samples => settings.get_samples_directory().await,
                         });
                         if result.is_err() {
                             let _ = sender.send(DaemonResponse::Error("Unable to Open".to_string()));

@@ -2,19 +2,20 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fs::{remove_file, File};
 use std::io::{Cursor, Read, Seek};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use enum_map::EnumMap;
 use enumset::EnumSet;
 use log::{debug, error, warn};
 use strum::EnumCount;
 use strum::IntoEnumIterator;
 
+use crate::audio::{AudioFile, AudioHandler};
 use goxlr_ipc::{
     ActiveEffects, ButtonLighting, CoughButton, Echo, Effects, FaderLighting, Gender, HardTune,
-    Lighting, Megaphone, OneColour, Pitch, Reverb, Robot, SamplerLighting, ThreeColours,
-    TwoColours,
+    Lighting, Megaphone, OneColour, Pitch, Reverb, Robot, Sample, Sampler, SamplerButton,
+    SamplerLighting, ThreeColours, TwoColours,
 };
 use goxlr_profile_loader::components::colours::{
     Colour, ColourDisplay, ColourMap, ColourOffStyle, ColourState,
@@ -29,7 +30,7 @@ use goxlr_profile_loader::components::mute_chat::{CoughToggle, MuteChat};
 use goxlr_profile_loader::components::pitch::{PitchEncoder, PitchStyle};
 use goxlr_profile_loader::components::reverb::{ReverbEncoder, ReverbStyle};
 use goxlr_profile_loader::components::robot::{RobotEffect, RobotStyle};
-use goxlr_profile_loader::components::sample::SampleBank;
+use goxlr_profile_loader::components::sample::{PlayOrder, PlaybackMode, SampleBank, Track};
 use goxlr_profile_loader::components::simple::SimpleElements;
 use goxlr_profile_loader::profile::{Profile, ProfileSettings};
 use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
@@ -37,8 +38,8 @@ use goxlr_profile_loader::{Faders, Preset, SampleButtons};
 use goxlr_types::{
     ButtonColourGroups, ButtonColourOffStyle as BasicColourOffStyle, ButtonColourTargets,
     ChannelName, EffectBankPresets, EncoderColourTargets, FaderDisplayStyle as BasicColourDisplay,
-    FaderName, InputDevice, MuteFunction as BasicMuteFunction, OutputDevice, SamplerColourTargets,
-    SimpleColourTargets, VersionNumber,
+    FaderName, InputDevice, MuteFunction as BasicMuteFunction, OutputDevice, SamplePlayOrder,
+    SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets, VersionNumber,
 };
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::colouring::ColourTargets;
@@ -339,13 +340,8 @@ impl ProfileAdapter {
                     | ColourTargets::SamplerBottomRight
                     | ColourTargets::SamplerTopLeft
                     | ColourTargets::SamplerTopRight => {
-                        if i == 0 {
-                            colour_array[position..position + 4]
-                                .copy_from_slice(&self.get_sampler_lighting(colour));
-                        } else {
-                            colour_array[position..position + 4]
-                                .copy_from_slice(&colour_map.colour(i).to_reverse_bytes());
-                        }
+                        colour_array[position..position + 4]
+                            .copy_from_slice(&self.get_sampler_lighting(colour, i));
                     }
                     _ => {
                         // Update the correct 4 bytes in the map..
@@ -359,30 +355,39 @@ impl ProfileAdapter {
         colour_array
     }
 
-    fn get_sampler_lighting(&self, target: ColourTargets) -> [u8; 4] {
+    fn get_sampler_lighting(&self, target: ColourTargets, index: u8) -> [u8; 4] {
         match target {
-            ColourTargets::SamplerBottomLeft => self.get_colour_array(target, BottomLeft),
-            ColourTargets::SamplerBottomRight => self.get_colour_array(target, BottomRight),
-            ColourTargets::SamplerTopLeft => self.get_colour_array(target, TopLeft),
-            ColourTargets::SamplerTopRight => self.get_colour_array(target, TopRight),
+            ColourTargets::SamplerBottomLeft => self.get_colour_array(target, BottomLeft, index),
+            ColourTargets::SamplerBottomRight => self.get_colour_array(target, BottomRight, index),
+            ColourTargets::SamplerTopLeft => self.get_colour_array(target, TopLeft, index),
+            ColourTargets::SamplerTopRight => self.get_colour_array(target, TopRight, index),
 
             // Honestly, we should never reach this, return nothing.
             _ => [00, 00, 00, 00],
         }
     }
 
-    fn get_colour_array(&self, target: ColourTargets, button: SampleButtons) -> [u8; 4] {
-        if self.current_sample_bank_has_samples(button) {
+    fn get_colour_array(&self, target: ColourTargets, button: SampleButtons, index: u8) -> [u8; 4] {
+        if self.current_sample_bank_has_samples(profile_to_standard_sample_button(button)) {
             return get_profile_colour_map(self.profile.settings(), target)
-                .colour(0)
-                .to_reverse_bytes();
-        } else {
-            // For buttons without samples, we simply use colour1 (this gets configured when
-            // loading the bank)..
-            return get_profile_colour_map(self.profile.settings(), target)
-                .colour_or_default(1)
+                .colour(index)
                 .to_reverse_bytes();
         }
+
+        // Ok, if we don't have a sample, we need to switch colours 0 and 1..
+        let new_index = if index == 0 {
+            1
+        } else if index == 1 {
+            0
+        } else {
+            index
+        };
+
+        // For buttons without samples, we simply use colour1 (this gets configured when
+        // loading the bank)..
+        return get_profile_colour_map(self.profile.settings(), target)
+            .colour_or_default(new_index)
+            .to_reverse_bytes();
     }
 
     fn get_button_colour_map(&self, button: Buttons) -> &ColourMap {
@@ -651,6 +656,60 @@ impl ProfileAdapter {
         })
     }
 
+    pub fn get_sampler_ipc(
+        &self,
+        is_device_mini: bool,
+        audio_handler: &Option<AudioHandler>,
+    ) -> Option<Sampler> {
+        if is_device_mini {
+            return None;
+        }
+
+        let mut sampler_map = HashMap::new();
+
+        for bank in goxlr_types::SampleBank::iter() {
+            let mut buttons = HashMap::new();
+
+            for button in goxlr_types::SampleButtons::iter() {
+                // Grab the sample config..
+                let sample_bank = self
+                    .profile
+                    .settings()
+                    .sample_button(standard_to_profile_sample_button(button))
+                    .get_stack(standard_to_profile_sample_bank(bank));
+
+                let mut tracks = vec![];
+                for track in sample_bank.get_tracks() {
+                    tracks.push(Sample {
+                        name: track.track.clone(),
+                        start_pct: track.start_position,
+                        stop_pct: track.end_position,
+                    })
+                }
+
+                let mut is_playing = false;
+                if let Some(audio_handler) = audio_handler {
+                    is_playing = audio_handler.is_sample_playing(bank, button);
+                }
+
+                // Create a SamplerButton
+                let sampler_button = SamplerButton {
+                    function: profile_to_standard_sample_playback_mode(
+                        sample_bank.get_playback_mode(),
+                    ),
+                    order: profile_to_standard_sample_playback_order(sample_bank.get_play_order()),
+                    samples: tracks,
+                    is_playing,
+                };
+                buttons.insert(button, sampler_button);
+            }
+
+            sampler_map.insert(bank, buttons);
+        }
+
+        Some(Sampler { banks: sampler_map })
+    }
+
     /** Regular Mute button handlers */
     fn get_mute_button(&self, fader: FaderName) -> &MuteButton {
         self.profile
@@ -799,6 +858,10 @@ impl ProfileAdapter {
     /** Fader Stuff */
     pub fn get_mic_fader_id(&self) -> u8 {
         self.profile.settings().mute_chat().mic_fader_id()
+    }
+
+    pub fn get_mic_fader(&self) -> FaderName {
+        self.fader_from_id(self.profile.settings().mute_chat().mic_fader_id())
     }
 
     pub fn set_mic_fader(&mut self, fader: FaderName) -> Result<()> {
@@ -1330,6 +1393,24 @@ impl ProfileAdapter {
         Ok(())
     }
 
+    pub fn get_active_sample_bank(&self) -> goxlr_types::SampleBank {
+        profile_to_standard_sample_bank(self.profile.settings().context().selected_sample())
+    }
+
+    pub fn get_sample_playback_mode(
+        &self,
+        button: goxlr_types::SampleButtons,
+    ) -> SamplePlaybackMode {
+        let bank = self.profile.settings().context().selected_sample();
+        let stack = self
+            .profile
+            .settings()
+            .sample_button(standard_to_profile_sample_button(button))
+            .get_stack(bank);
+
+        profile_to_standard_sample_playback_mode(stack.get_playback_mode())
+    }
+
     pub fn sync_sample_if_active(&mut self, target: SamplerColourTargets) -> Result<()> {
         let current = self.profile.settings().context().selected_sample();
         let bank = standard_sample_colour_to_profile_bank(target);
@@ -1367,45 +1448,137 @@ impl ProfileAdapter {
         Ok(())
     }
 
-    pub fn current_sample_bank_has_samples(&self, button: SampleButtons) -> bool {
+    pub fn current_sample_bank_has_samples(&self, button: goxlr_types::SampleButtons) -> bool {
         let bank = self.profile.settings().context().selected_sample();
         let stack = self
             .profile
             .settings()
-            .sample_button(button)
+            .sample_button(standard_to_profile_sample_button(button))
             .get_stack(bank);
 
-        if stack.get_sample_count() == 0 {
+        if stack.get_track_count() == 0 {
             return false;
         }
         true
     }
 
-    pub fn get_sample_file(&self, button: SampleButtons) -> String {
+    pub fn get_next_track(&mut self, button: goxlr_types::SampleButtons) -> Result<AudioFile> {
         let bank = self.profile.settings().context().selected_sample();
-        let stack = self
+        let track = self
             .profile
-            .settings()
-            .sample_button(button)
-            .get_stack(bank);
+            .settings_mut()
+            .sample_button_mut(standard_to_profile_sample_button(button))
+            .get_stack_mut(bank)
+            .get_next_track();
 
-        stack.get_first_sample_file()
+        if let Some(track) = track {
+            return Ok(ProfileAdapter::track_to_audio(track));
+        }
+
+        Err(anyhow!("Unable to Find Track to play!"))
     }
 
-    pub fn is_sample_active(&self, button: SampleButtons) -> bool {
+    pub fn get_track_by_index(
+        &self,
+        bank: goxlr_types::SampleBank,
+        button: goxlr_types::SampleButtons,
+        index: usize,
+    ) -> Result<AudioFile> {
+        let track = self
+            .profile
+            .settings()
+            .sample_button(standard_to_profile_sample_button(button))
+            .get_stack(standard_to_profile_sample_bank(bank))
+            .get_track_by_index(index);
+
+        if let Ok(track) = track {
+            return Ok(ProfileAdapter::track_to_audio(track));
+        }
+        bail!("Unable to find track");
+    }
+
+    pub fn track_to_audio(track: &Track) -> AudioFile {
+        let mut gain = None;
+        let mut start_pct = None;
+        let mut stop_pct = None;
+
+        if track.normalized_gain() != 1.0 {
+            gain = Some(track.normalized_gain());
+        }
+
+        if track.start_position() != 0.0 {
+            start_pct = Some(track.start_position() as f64);
+        }
+
+        if track.end_position() != 100.0 {
+            stop_pct = Some(track.end_position() as f64);
+        }
+
+        return AudioFile {
+            file: PathBuf::from(track.track()),
+            gain,
+            start_pct,
+            stop_pct,
+            fade_on_stop: false,
+        };
+    }
+
+    pub fn is_sample_active(&self, button: goxlr_types::SampleButtons) -> bool {
         self.profile
             .settings()
-            .sample_button(button)
+            .sample_button(standard_to_profile_sample_button(button))
             .colour_map()
             .get_state()
     }
 
-    pub fn set_sample_button_state(&mut self, button: SampleButtons, state: bool) -> Result<()> {
+    pub fn set_sample_button_state(
+        &mut self,
+        button: goxlr_types::SampleButtons,
+        state: bool,
+    ) -> Result<()> {
         self.profile
             .settings_mut()
-            .sample_button_mut(button)
+            .sample_button_mut(standard_to_profile_sample_button(button))
             .colour_map_mut()
             .set_state_on(state)
+    }
+
+    pub fn set_sample_button_blink(
+        &mut self,
+        button: goxlr_types::SampleButtons,
+        state: bool,
+    ) -> Result<()> {
+        self.profile
+            .settings_mut()
+            .sample_button_mut(standard_to_profile_sample_button(button))
+            .colour_map_mut()
+            .set_blink_on(state)
+    }
+
+    pub fn is_sample_clear_active(&self) -> bool {
+        self.profile
+            .settings()
+            .sample_button(Clear)
+            .colour_map()
+            .is_blink()
+    }
+
+    pub fn set_sample_clear_active(&mut self, active: bool) -> Result<()> {
+        self.profile
+            .settings_mut()
+            .sample_button_mut(Clear)
+            .colour_map_mut()
+            .set_blink_on(active)
+    }
+
+    pub fn clear_all_samples(&mut self, button: goxlr_types::SampleButtons) {
+        let bank = self.profile.settings().context().selected_sample();
+
+        self.profile
+            .settings_mut()
+            .sample_button_mut(standard_to_profile_sample_button(button))
+            .get_stack_mut(bank)
+            .clear_tracks();
     }
 
     /** Colour Changing Code **/
@@ -1495,6 +1668,109 @@ impl ProfileAdapter {
         let colour_target = standard_to_sample_colour(target);
         get_profile_colour_map_mut(self.profile.settings_mut(), colour_target)
             .set_off_style(standard_to_profile_colour_off_style(off_style))
+    }
+
+    pub fn set_sampler_function(
+        &mut self,
+        bank: goxlr_types::SampleBank,
+        button: goxlr_types::SampleButtons,
+        mode: SamplePlaybackMode,
+    ) {
+        self.profile
+            .settings_mut()
+            .sample_button_mut(standard_to_profile_sample_button(button))
+            .get_stack_mut(standard_to_profile_sample_bank(bank))
+            .set_playback_mode(Some(standard_to_profile_sample_playback_mode(mode)));
+    }
+
+    pub fn set_sampler_play_order(
+        &mut self,
+        bank: goxlr_types::SampleBank,
+        button: goxlr_types::SampleButtons,
+        order: SamplePlayOrder,
+    ) {
+        self.profile
+            .settings_mut()
+            .sample_button_mut(standard_to_profile_sample_button(button))
+            .get_stack_mut(standard_to_profile_sample_bank(bank))
+            .set_play_order(Some(standard_to_profile_sample_playback_order(order)));
+    }
+
+    pub fn add_sample_file(
+        &mut self,
+        bank: goxlr_types::SampleBank,
+        button: goxlr_types::SampleButtons,
+        file: String,
+    ) -> &mut Track {
+        // Create a new 'Track' (Oddly, positions are a percentage :D)..
+        let track = Track {
+            track: file,
+            start_position: 0.0,
+            end_position: 100.0,
+            normalized_gain: 1.0,
+        };
+
+        // Add this to the list, then return the track..
+        self.profile
+            .settings_mut()
+            .sample_button_mut(standard_to_profile_sample_button(button))
+            .get_stack_mut(standard_to_profile_sample_bank(bank))
+            .add_track(track)
+    }
+
+    pub fn set_sample_start_pct(
+        &mut self,
+        bank: goxlr_types::SampleBank,
+        button: goxlr_types::SampleButtons,
+        index: usize,
+        percent: f32,
+    ) -> Result<()> {
+        let track = self
+            .profile
+            .settings_mut()
+            .sample_button_mut(standard_to_profile_sample_button(button))
+            .get_stack_mut(standard_to_profile_sample_bank(bank))
+            .get_track_by_index_mut(index)?;
+
+        track.start_position = percent;
+        Ok(())
+    }
+
+    pub fn set_sample_stop_pct(
+        &mut self,
+        bank: goxlr_types::SampleBank,
+        button: goxlr_types::SampleButtons,
+        index: usize,
+        percent: f32,
+    ) -> Result<()> {
+        let track = self
+            .profile
+            .settings_mut()
+            .sample_button_mut(standard_to_profile_sample_button(button))
+            .get_stack_mut(standard_to_profile_sample_bank(bank))
+            .get_track_by_index_mut(index)?;
+
+        track.end_position = percent;
+        Ok(())
+    }
+
+    pub fn remove_sample_file_by_index(
+        &mut self,
+        bank: goxlr_types::SampleBank,
+        button: goxlr_types::SampleButtons,
+        index: usize,
+    ) -> usize {
+        self.profile
+            .settings_mut()
+            .sample_button_mut(standard_to_profile_sample_button(button))
+            .get_stack_mut(standard_to_profile_sample_bank(bank))
+            .remove_track_by_index(index);
+
+        self.profile
+            .settings()
+            .sample_button(standard_to_profile_sample_button(button))
+            .get_stack(standard_to_profile_sample_bank(bank))
+            .get_track_count()
     }
 
     pub fn set_button_off_style(
@@ -1834,6 +2110,61 @@ fn standard_to_profile_sample_bank(bank: goxlr_types::SampleBank) -> SampleBank 
         goxlr_types::SampleBank::A => SampleBank::A,
         goxlr_types::SampleBank::B => SampleBank::B,
         goxlr_types::SampleBank::C => SampleBank::C,
+    }
+}
+
+fn standard_to_profile_sample_button(button: goxlr_types::SampleButtons) -> SampleButtons {
+    match button {
+        goxlr_types::SampleButtons::TopLeft => TopLeft,
+        goxlr_types::SampleButtons::TopRight => TopRight,
+        goxlr_types::SampleButtons::BottomLeft => BottomLeft,
+        goxlr_types::SampleButtons::BottomRight => BottomRight,
+    }
+}
+
+fn profile_to_standard_sample_button(button: SampleButtons) -> goxlr_types::SampleButtons {
+    match button {
+        TopLeft => goxlr_types::SampleButtons::TopLeft,
+        TopRight => goxlr_types::SampleButtons::TopRight,
+        BottomLeft => goxlr_types::SampleButtons::BottomLeft,
+        BottomRight => goxlr_types::SampleButtons::BottomRight,
+        _ => goxlr_types::SampleButtons::TopLeft,
+    }
+}
+
+fn standard_to_profile_sample_playback_mode(mode: SamplePlaybackMode) -> PlaybackMode {
+    match mode {
+        SamplePlaybackMode::PlayNext => PlaybackMode::PlayNext,
+        SamplePlaybackMode::PlayStop => PlaybackMode::PlayStop,
+        SamplePlaybackMode::PlayFade => PlaybackMode::PlayFade,
+        SamplePlaybackMode::StopOnRelease => PlaybackMode::StopOnRelease,
+        SamplePlaybackMode::FadeOnRelease => PlaybackMode::FadeOnRelease,
+        SamplePlaybackMode::Loop => PlaybackMode::Loop,
+    }
+}
+
+fn profile_to_standard_sample_playback_mode(mode: PlaybackMode) -> SamplePlaybackMode {
+    match mode {
+        PlaybackMode::PlayNext => SamplePlaybackMode::PlayNext,
+        PlaybackMode::PlayStop => SamplePlaybackMode::PlayStop,
+        PlaybackMode::PlayFade => SamplePlaybackMode::PlayFade,
+        PlaybackMode::StopOnRelease => SamplePlaybackMode::StopOnRelease,
+        PlaybackMode::FadeOnRelease => SamplePlaybackMode::FadeOnRelease,
+        PlaybackMode::Loop => SamplePlaybackMode::Loop,
+    }
+}
+
+fn profile_to_standard_sample_playback_order(order: PlayOrder) -> SamplePlayOrder {
+    match order {
+        PlayOrder::Sequential => SamplePlayOrder::Sequential,
+        PlayOrder::Random => SamplePlayOrder::Random,
+    }
+}
+
+fn standard_to_profile_sample_playback_order(order: SamplePlayOrder) -> PlayOrder {
+    match order {
+        SamplePlayOrder::Sequential => PlayOrder::Sequential,
+        SamplePlayOrder::Random => PlayOrder::Random,
     }
 }
 

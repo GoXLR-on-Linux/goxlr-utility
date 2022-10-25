@@ -21,6 +21,10 @@ jobs:
     name: Test Suite
     runs-on: ubuntu-latest
     steps:
+      - name: "Install Pulse Client Libraries.."
+        run: |
+          sudo apt-get update
+          sudo apt-get install libpulse0
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:

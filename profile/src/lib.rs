@@ -1,5 +1,5 @@
 use enum_map::Enum;
-use strum::{EnumIter, EnumProperty};
+use strum::{Display, EnumIter, EnumProperty};
 
 pub mod components;
 pub mod error;
@@ -7,7 +7,7 @@ pub mod mic_profile;
 pub mod microphone;
 pub mod profile;
 
-#[derive(Debug, Enum, EnumIter, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Display, Enum, EnumIter, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum SampleButtons {
     TopLeft,
     TopRight,

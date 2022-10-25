@@ -398,7 +398,9 @@ pub enum EffectBankPresets {
     Preset6,
 }
 
-#[derive(Debug, Copy, Clone, Display, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, Display, Enum, EnumIter, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum SampleBank {
     A,
     B,
@@ -663,4 +665,34 @@ pub enum HardTuneSource {
     Game,
     LineIn,
     System,
+}
+
+#[derive(Debug, Copy, Clone, Enum, EnumIter, Display, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum SampleButtons {
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight,
+}
+
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum SamplePlaybackMode {
+    PlayNext,
+    PlayStop,
+    PlayFade,
+    StopOnRelease,
+    FadeOnRelease,
+    Loop,
+}
+
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum SamplePlayOrder {
+    Sequential,
+    Random,
 }

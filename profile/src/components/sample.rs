@@ -2,9 +2,10 @@ use std::collections::HashMap;
 use std::io::Write;
 use std::str::FromStr;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 
 use enum_map::Enum;
+use rand::seq::SliceRandom;
 use ritelinked::LinkedHashMap;
 use strum::{Display, EnumIter, EnumProperty, EnumString};
 use xml::attribute::OwnedAttribute;
@@ -13,6 +14,7 @@ use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
 use crate::components::colours::ColourMap;
+use crate::components::sample::PlayOrder::{Random, Sequential};
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -134,11 +136,24 @@ impl SampleBase {
             XmlWriterEvent::start_element(self.element_name.as_str());
 
         let mut attributes: HashMap<String, String> = HashMap::default();
-        attributes.insert(
-            format!("{}state", self.element_name),
-            self.state.to_string(),
-        );
         self.colour_map.write_colours(&mut attributes);
+
+        // TODO: Solve the 'State' problem properly..
+        /*
+        This is somewhat dependant on the 'Active' stack, and whether this button has any
+        tracks assigned to it. If there are tracks, it should be 'Stopped', if there are no
+        tracks it should be 'Empty'. Given the contexts here, this should be handled at the
+        profile management level.
+
+        More annoyingly though, unlike every other profile component, this *HAS* to override
+        the colour 'state' settings, so we write it last, unless it's sampleClear :)
+         */
+        if self.element_name != "sampleClear" {
+            attributes.insert(
+                format!("{}state", self.element_name),
+                self.state.to_string(),
+            );
+        }
 
         // Write out the attributes etc for this element, but don't close it yet..
         for (key, value) in &attributes {
@@ -222,6 +237,9 @@ impl SampleBase {
     pub fn get_stack(&self, bank: SampleBank) -> &SampleStack {
         self.sample_stack.get(&bank).unwrap()
     }
+    pub fn get_stack_mut(&mut self, bank: SampleBank) -> &mut SampleStack {
+        self.sample_stack.get_mut(&bank).unwrap()
+    }
 }
 
 #[derive(Debug)]
@@ -229,6 +247,9 @@ pub struct SampleStack {
     tracks: Vec<Track>,
     playback_mode: Option<PlaybackMode>,
     play_order: Option<PlayOrder>,
+
+    // Transient value, keep track of where we may be sequentially..
+    transient_seq_position: usize,
 }
 
 impl Default for SampleStack {
@@ -243,23 +264,107 @@ impl SampleStack {
             tracks: vec![],
             playback_mode: None,
             play_order: None,
+
+            transient_seq_position: 0,
         }
     }
 
-    pub fn get_sample_count(&self) -> usize {
+    pub fn get_playback_mode(&self) -> PlaybackMode {
+        if let Some(mode) = self.playback_mode {
+            return mode;
+        }
+        PlaybackMode::PlayNext
+    }
+
+    pub fn get_play_order(&self) -> PlayOrder {
+        if let Some(order) = self.play_order {
+            return order;
+        }
+        Sequential
+    }
+
+    pub fn get_tracks(&self) -> &Vec<Track> {
+        &self.tracks
+    }
+    pub fn get_track_by_index(&self, index: usize) -> Result<&Track> {
+        if self.tracks.len() <= index {
+            bail!("Track not Found");
+        }
+        Ok(&self.tracks[index])
+    }
+    pub fn get_track_by_index_mut(&mut self, index: usize) -> Result<&mut Track> {
+        if self.tracks.len() <= index {
+            bail!("Track not Found");
+        }
+        Ok(&mut self.tracks[index])
+    }
+
+    pub fn get_track_count(&self) -> usize {
         self.tracks.len()
     }
-    pub fn get_first_sample_file(&self) -> String {
-        self.tracks[0].track.to_string()
+    pub fn get_first_track(&self) -> &Track {
+        &self.tracks[0]
+    }
+
+    pub fn get_next_track(&mut self) -> Option<&Track> {
+        if self.get_track_count() == 1 {
+            return Some(self.get_first_track());
+        }
+
+        let mut play_order = &self.play_order;
+        if play_order.is_none() {
+            play_order = &Some(Sequential)
+        }
+
+        if let Some(order) = play_order {
+            // Per the Windows App, if there are only 2 tracks with 'Random' order, behave
+            // sequentially.
+            if order == &Sequential || (order == &Random && self.tracks.len() <= 2) {
+                let track = &self.tracks[self.transient_seq_position];
+                self.transient_seq_position += 1;
+
+                if self.transient_seq_position >= self.tracks.len() {
+                    self.transient_seq_position = 0;
+                }
+
+                return Some(track);
+            } else if order == &Random {
+                let track = self.tracks.choose(&mut rand::thread_rng());
+                if let Some(track) = track {
+                    return Some(track);
+                }
+            }
+        }
+        None
+    }
+
+    pub fn set_playback_mode(&mut self, playback_mode: Option<PlaybackMode>) {
+        self.playback_mode = playback_mode;
+    }
+    pub fn set_play_order(&mut self, play_order: Option<PlayOrder>) {
+        self.play_order = play_order;
+    }
+
+    pub fn add_track(&mut self, track: Track) -> &mut Track {
+        self.tracks.push(track);
+        let len = self.tracks.len();
+        &mut self.tracks[len - 1]
+    }
+
+    pub fn remove_track_by_index(&mut self, track: usize) {
+        self.tracks.remove(track);
+    }
+    pub fn clear_tracks(&mut self) {
+        self.tracks.clear();
     }
 }
 
-#[derive(Debug)]
-struct Track {
-    track: String,
-    start_position: f32,
-    end_position: f32,
-    normalized_gain: f64,
+#[derive(Debug, Clone)]
+pub struct Track {
+    pub track: String,
+    pub start_position: f32,
+    pub end_position: f32,
+    pub normalized_gain: f64,
 }
 
 impl Track {
@@ -276,10 +381,23 @@ impl Track {
             normalized_gain,
         }
     }
+
+    pub fn track(&self) -> &str {
+        &self.track
+    }
+    pub fn start_position(&self) -> f32 {
+        self.start_position
+    }
+    pub fn end_position(&self) -> f32 {
+        self.end_position
+    }
+    pub fn normalized_gain(&self) -> f64 {
+        self.normalized_gain
+    }
 }
 
-#[derive(Debug, Enum, EnumProperty)]
-enum PlaybackMode {
+#[derive(Debug, Copy, Clone, Enum, EnumProperty)]
+pub enum PlaybackMode {
     #[strum(props(index = "0"))]
     PlayNext,
     #[strum(props(index = "1"))]
@@ -294,8 +412,8 @@ enum PlaybackMode {
     Loop,
 }
 
-#[derive(Debug, Enum, EnumProperty)]
-enum PlayOrder {
+#[derive(Debug, Copy, Clone, Enum, EnumProperty, Eq, PartialEq)]
+pub enum PlayOrder {
     #[strum(props(index = "0"))]
     Sequential,
     #[strum(props(index = "1"))]
