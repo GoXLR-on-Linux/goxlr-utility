@@ -1612,7 +1612,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
 
                 // If we have an audio handler, try to calcuate the Gain..
                 if let Some(audio_handler) = &mut self.audio_handler {
-                    if let Some(gain) = audio_handler.calculate_gain(&path).await? {
+                    if let Some(gain) = audio_handler.calculate_gain(&path)? {
                         // Gain was calculated, Apply it to the track..
                         track.normalized_gain = gain;
                     }
