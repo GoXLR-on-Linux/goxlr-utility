@@ -69,7 +69,7 @@ assets = [
 maintainer-scripts = "../ci/distrib/DEBIAN/"
 section = "sound"
 priority = "optional"
-depends = "libusb-1.0-0,$auto"
+depends = "libusb-1.0-0,libpulse0,$auto"
 extended-description = """\
 A utility for monitoring and controlling a TC-Helicon GoXLR or GoXLR Mini.
 """
@@ -103,3 +103,4 @@ echo "You may need to replug your GoXLR before running the Daemon"
 [package.metadata.generate-rpm.requires]
 bzip2 = "*"
 libusb = "*"
+pulseaudio-libs = "*"
