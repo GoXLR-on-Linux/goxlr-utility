@@ -1612,6 +1612,15 @@ impl<'a, T: UsbContext> Device<'a, T> {
 
                 // If we have an audio handler, try to calcuate the Gain..
                 if let Some(audio_handler) = &mut self.audio_handler {
+                    // TODO: Find a way to do this asynchronously..
+                    // Currently this will block the main thread until the calculation is complete,
+                    // obviously this is less than ideal. We can't hold the track because it also
+                    // needs to exist in the profile and could be removed prior to the calculation
+                    // completing (causing Cross Thread Mutability issues), consider looking into
+                    // refcounters to see if this can be solved.
+                    //
+                    // Bonus issue here, if too many commands are sent while this is happening, the
+                    // entire daemon will lock up :D
                     if let Some(gain) = audio_handler.calculate_gain(&path)? {
                         // Gain was calculated, Apply it to the track..
                         track.normalized_gain = gain;
