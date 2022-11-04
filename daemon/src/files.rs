@@ -19,7 +19,6 @@ use futures::executor::block_on;
 use log::{debug, info, warn};
 
 use glob::glob;
-use nix::NixPath;
 
 use crate::{SettingsHandle, DISTRIBUTABLE_ROOT};
 
@@ -149,7 +148,7 @@ impl FileManager {
         // Ok, we need to split stuff up..
         for file_path in paths {
             map.insert(
-                file_path.to_string_lossy()[path.len() + 1..].to_string(),
+                file_path.to_string_lossy()[path.to_string_lossy().len() + 1..].to_string(),
                 file_path.file_name().unwrap().to_string_lossy().to_string(),
             );
         }
