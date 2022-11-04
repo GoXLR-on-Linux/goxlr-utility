@@ -14,8 +14,9 @@ categories = ["hardware-support", "api-bindings"]
 goxlr-types = { path = "../types", features = ["serde", "enumset"] }
 serde = { version = "1.0", features = ["derive"] }
 tokio = {version = "1.0", features = ["net"]}
-tokio-util = { version = "0.6.9", features=["codec"]}
+tokio-util = { version = "0.6.9", features=["codec", "compat"]}
 tokio-serde = { version = "0.8.0", features=["bincode", "json"] }
+interprocess = { version = "1.2.0", features=["tokio_support"]}
 serde_repr = "0.1"
 futures = "0.3.19"
 strum = { version = "0.23"}

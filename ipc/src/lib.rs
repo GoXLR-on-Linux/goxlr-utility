@@ -1,9 +1,8 @@
-use futures::{SinkExt, StreamExt, TryStreamExt};
 use serde::{Deserialize, Serialize};
 
 pub mod client;
 mod device;
-mod socket;
+pub mod ipc_socket;
 
 pub use device::*;
 use goxlr_types::{
@@ -14,7 +13,6 @@ use goxlr_types::{
     MuteFunction, OutputDevice, PitchStyle, ReverbStyle, RobotRange, RobotStyle, SampleBank,
     SampleButtons, SamplePlayOrder, SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets,
 };
-pub use socket::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DaemonRequest {

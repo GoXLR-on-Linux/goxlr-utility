@@ -13,22 +13,29 @@ use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use cli::Cli;
 use goxlr_ipc::client::Client;
+use goxlr_ipc::ipc_socket::Socket;
+use goxlr_ipc::GoXLRCommand;
 use goxlr_ipc::{DaemonRequest, DaemonResponse, DeviceType, MixerStatus, UsbProductInformation};
-use goxlr_ipc::{GoXLRCommand, Socket};
 use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice};
+use interprocess::local_socket::tokio::LocalSocketStream;
+use interprocess::local_socket::NameTypeSupport;
 use strum::IntoEnumIterator;
-use tokio::net::UnixStream;
+
+static SOCKET_PATH: &str = "/tmp/goxlr.socket";
+static NAMED_PIPE: &str = "@goxlr.socket";
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli: Cli = Cli::parse();
-    let stream = UnixStream::connect("/tmp/goxlr.socket")
-        .await
-        .context("Could not connect to the GoXLR daemon process")?;
-    let address = stream
-        .peer_addr()
-        .context("Could not get the address of the GoXLR daemon process")?;
-    let socket: Socket<DaemonResponse, DaemonRequest> = Socket::new(address, stream);
+
+    let connection = LocalSocketStream::connect(match NameTypeSupport::query() {
+        NameTypeSupport::OnlyPaths | NameTypeSupport::Both => SOCKET_PATH,
+        NameTypeSupport::OnlyNamespaced => NAMED_PIPE,
+    })
+    .await
+    .context("Unable to connect to the GoXLR daemon Process")?;
+
+    let socket: Socket<DaemonResponse, DaemonRequest> = Socket::new(connection);
     let mut client = Client::new(socket);
     client.poll_status().await?;
 

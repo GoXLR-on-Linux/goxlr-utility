@@ -18,6 +18,7 @@ goxlr-audio = { path = "../audio" }
 goxlr-profile-loader = { path = "../profile" }
 simplelog = "0.11.1"
 tokio = { version = "1.0", features = ["full"] }
+tokio-serde = "0.8.0"
 log = "0.4.14"
 anyhow = "1.0"
 strum = { version = "0.23" }
@@ -36,6 +37,8 @@ md5 = "0.7.0"
 regex = "1.6.0"
 chrono = "0.4.22"
 glob = "0.3.0"
+
+interprocess = { version = "1.2.0", features = ["tokio_support"] }
 
 ## HTTPd Server
 actix = "0.13"

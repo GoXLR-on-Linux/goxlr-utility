@@ -19,8 +19,8 @@ use tokio::sync::oneshot::Sender;
 
 use goxlr_ipc::{DaemonRequest, DaemonResponse, DaemonStatus};
 
-use crate::communication::handle_packet;
 use crate::primary_worker::DeviceSender;
+use crate::servers::server_packet::handle_packet;
 
 const WEB_CONTENT: Dir = include_dir!("./web-content/");
 
