@@ -21,6 +21,8 @@ pub trait AttachGoXLR {
     fn from_device(device: GoXLRDevice) -> Result<Box<dyn FullGoXLRDevice>>
     where
         Self: Sized;
+
+    fn is_connected(&mut self) -> bool;
 }
 
 pub trait ExecutableGoXLR {

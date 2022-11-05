@@ -2260,7 +2260,6 @@ impl<'a> Device<'a> {
     }
 
     pub fn is_connected(&mut self) -> bool {
-        true
-        //self.goxlr.is_connected()
+        self.goxlr.is_connected()
     }
 }

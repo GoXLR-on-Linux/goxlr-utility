@@ -114,8 +114,6 @@ impl AttachGoXLR for GoXLRUSB {
             .to_owned();
 
         let device = handle.device();
-        let timeout = Duration::from_secs(1);
-
         info!("Connected to possible GoXLR device at {:?}", device);
 
         debug!(
@@ -130,7 +128,7 @@ impl AttachGoXLR for GoXLRUSB {
             descriptor,
             language,
             command_count: 0,
-            timeout: Duration::from_secs(1),
+            timeout,
         };
 
         // Resets the state of the device (unconfirmed - Might just be the command id counter)
@@ -174,6 +172,22 @@ impl AttachGoXLR for GoXLRUSB {
         debug!("Handling initial request");
         goxlr.read_control(3, 0, 0, 1040)?;
         Ok(Box::new(goxlr))
+    }
+
+    fn is_connected(&mut self) -> bool {
+        debug!("Checking Disconnect for device: {:?}", self.device);
+        let active_configuration = self.handle.active_configuration();
+        if active_configuration.is_ok() {
+            let result = self.request_data(Command::ResetCommandIndex, &[]);
+            return if result.is_ok() {
+                debug!("Device {:?} is still connected", self.device);
+                true
+            } else {
+                debug!("Device {:?} has been disconnected", self.device);
+                false
+            };
+        }
+        false
     }
 }
 
