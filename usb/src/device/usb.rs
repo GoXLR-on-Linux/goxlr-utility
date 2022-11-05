@@ -5,7 +5,7 @@ use crate::device::base::{
 use crate::{PID_GOXLR_FULL, PID_GOXLR_MINI, VID_GOXLR};
 use anyhow::{anyhow, bail, Error, Result};
 use byteorder::{ByteOrder, LittleEndian};
-use log::{debug, error};
+use log::{debug, error, info, warn};
 use rusb::Error::Pipe;
 use rusb::{
     Device, DeviceDescriptor, DeviceHandle, Direction, GlobalContext, Language, Recipient,
@@ -40,7 +40,26 @@ impl GoXLRUSB {
         bail!("Specified Device not Found!")
     }
 
-    pub fn write_control(
+    pub(crate) fn write_class_control(
+        &mut self,
+        request: u8,
+        value: u16,
+        index: u16,
+        data: &[u8],
+    ) -> Result<(), rusb::Error> {
+        self.handle.write_control(
+            rusb::request_type(Direction::Out, RequestType::Class, Recipient::Interface),
+            request,
+            value,
+            index,
+            data,
+            self.timeout,
+        )?;
+
+        Ok(())
+    }
+
+    pub(crate) fn write_control(
         &mut self,
         request: u8,
         value: u16,
@@ -59,7 +78,7 @@ impl GoXLRUSB {
         Ok(())
     }
 
-    pub fn read_control(
+    pub(crate) fn read_control(
         &mut self,
         request: u8,
         value: u16,
@@ -84,7 +103,7 @@ impl AttachGoXLR for GoXLRUSB {
     fn from_device(device: GoXLRDevice) -> Result<Box<(dyn FullGoXLRDevice)>> {
         // Firstly, we need to locate the USB device based on the location..
         let (device, descriptor) = GoXLRUSB::find_device(device)?;
-        let handle = device.open()?;
+        let mut handle = device.open()?;
 
         let timeout = Duration::from_secs(1);
 
@@ -94,14 +113,67 @@ impl AttachGoXLR for GoXLRUSB {
             .ok_or_else(|| anyhow!("Not GoXLR?"))?
             .to_owned();
 
-        Ok(Box::new(Self {
+        let device = handle.device();
+        let timeout = Duration::from_secs(1);
+
+        info!("Connected to possible GoXLR device at {:?}", device);
+
+        debug!(
+            "Set Active Config: {:?}",
+            handle.set_active_configuration(1)
+        );
+        let device_is_claimed = handle.claim_interface(0).is_ok();
+
+        let mut goxlr = Self {
             device: handle.device(),
             handle,
             descriptor,
             language,
             command_count: 0,
             timeout: Duration::from_secs(1),
-        }))
+        };
+
+        // Resets the state of the device (unconfirmed - Might just be the command id counter)
+        let result = goxlr.write_control(1, 0, 0, &[]);
+
+        if result == Err(Pipe) {
+            // The GoXLR is not initialised, we need to fix that..
+            info!("Found uninitialised GoXLR, attempting initialisation..");
+            if device_is_claimed {
+                goxlr.handle.release_interface(0)?;
+            }
+            goxlr.handle.set_auto_detach_kernel_driver(true)?;
+
+            if goxlr.handle.claim_interface(0).is_err() {
+                return Err(anyhow!("Unable to Claim Device"));
+            }
+
+            debug!("Activating Vendor Interface...");
+            goxlr.read_control(0, 0, 0, 24)?;
+
+            // Now activate audio..
+            debug!("Activating Audio...");
+            goxlr.write_class_control(1, 0x0100, 0x2900, &[0x80, 0xbb, 0x00, 0x00])?;
+            goxlr.handle.release_interface(0)?;
+
+            // Reset the device, so ALSA can pick it up again..
+            goxlr.handle.reset()?;
+
+            // Reattempt the reset..
+            goxlr.write_control(1, 0, 0, &[])?;
+
+            warn!(
+                "Initialisation complete. If you are using the JACK script, you may need to reboot for audio to work."
+            );
+
+            // Pause for a second, as we can grab devices a little too quickly!
+            sleep(Duration::from_secs(1));
+        }
+
+        // Force command pipe activation in all cases.
+        debug!("Handling initial request");
+        goxlr.read_control(3, 0, 0, 1040)?;
+        Ok(Box::new(goxlr))
     }
 }
 
