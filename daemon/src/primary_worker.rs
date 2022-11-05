@@ -7,7 +7,7 @@ use goxlr_ipc::{
     Paths, UsbProductInformation,
 };
 use goxlr_usb::device::base::{find_devices, from_device, GoXLRDevice};
-use goxlr_usb::goxlr::{PID_GOXLR_FULL, PID_GOXLR_MINI};
+use goxlr_usb::{PID_GOXLR_FULL, PID_GOXLR_MINI};
 use log::{error, info, warn};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};

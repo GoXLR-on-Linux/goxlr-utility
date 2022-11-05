@@ -2,7 +2,7 @@ use crate::commands::Command;
 use crate::device::base::{
     AttachGoXLR, ExecutableGoXLR, FullGoXLRDevice, GoXLRCommands, GoXLRDevice, UsbData,
 };
-use crate::goxlr::{PID_GOXLR_FULL, PID_GOXLR_MINI, VID_GOXLR};
+use crate::{PID_GOXLR_FULL, PID_GOXLR_MINI, VID_GOXLR};
 use anyhow::{anyhow, bail, Error, Result};
 use byteorder::{ByteOrder, LittleEndian};
 use log::{debug, error};
