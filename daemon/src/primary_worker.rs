@@ -6,9 +6,8 @@ use goxlr_ipc::{
     DaemonResponse, DaemonStatus, DeviceType, Files, GoXLRCommand, HardwareStatus, PathTypes,
     Paths, UsbProductInformation,
 };
-use goxlr_usb::goxlr::{GoXLR, PID_GOXLR_FULL, PID_GOXLR_MINI, VID_GOXLR};
-use goxlr_usb::rusb;
-use goxlr_usb::rusb::{DeviceDescriptor, GlobalContext};
+use goxlr_usb::device::base::{find_devices, from_device, GoXLRDevice};
+use goxlr_usb::goxlr::{PID_GOXLR_FULL, PID_GOXLR_MINI};
 use log::{error, info, warn};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
@@ -64,11 +63,11 @@ pub async fn handle_changes(
         tokio::select! {
             () = sleep(sleep_duration) => {
                 if loop_count == detect_count {
-                    if let Some((device, descriptor)) = find_new_device(&devices, &ignore_list) {
+                    if let Some(device) = find_new_device(&devices, &ignore_list) {
                     let existing_serials: Vec<String> = get_all_serials(&devices);
                     let bus_number = device.bus_number();
                     let address = device.address();
-                        match load_device(device, descriptor, existing_serials, &settings).await {
+                        match load_device(device, existing_serials, &settings).await {
                             Ok(device) => {
                                 devices.insert(device.serial().to_owned(), device);
                             }
@@ -154,39 +153,25 @@ pub async fn handle_changes(
 }
 
 fn find_new_device(
-    existing_devices: &HashMap<String, Device<GlobalContext>>,
+    existing_devices: &HashMap<String, Device>,
     devices_to_ignore: &HashMap<(u8, u8), Instant>,
-) -> Option<(rusb::Device<GlobalContext>, DeviceDescriptor)> {
+) -> Option<GoXLRDevice> {
     let now = Instant::now();
-    if let Ok(devices) = rusb::devices() {
-        for device in devices.iter() {
-            if let Ok(descriptor) = device.device_descriptor() {
-                let bus_number = device.bus_number();
-                let address = device.address();
-                if descriptor.vendor_id() == VID_GOXLR
-                    && (descriptor.product_id() == PID_GOXLR_FULL
-                        || descriptor.product_id() == PID_GOXLR_MINI)
-                    && !existing_devices.values().any(|d| {
-                        d.status().hardware.usb_device.bus_number == bus_number
-                            && d.status().hardware.usb_device.address == address
-                    })
-                    && !devices_to_ignore
-                        .iter()
-                        .any(|((bus_number, address), expires)| {
-                            *bus_number == device.bus_number()
-                                && *address == device.address()
-                                && expires > &now
-                        })
-                {
-                    return Some((device, descriptor));
-                }
-            }
-        }
-    }
-    None
+
+    let goxlr_devices = find_devices();
+    goxlr_devices.into_iter().find(|&device| {
+        !existing_devices.values().any(|d| {
+            d.status().hardware.usb_device.bus_number == device.bus_number()
+                && d.status().hardware.usb_device.address == device.address()
+        }) && !devices_to_ignore
+            .iter()
+            .any(|((bus_number, address), expires)| {
+                *bus_number == device.bus_number() && *address == device.address() && expires > &now
+            })
+    })
 }
 
-fn get_all_serials(existing_devices: &HashMap<String, Device<GlobalContext>>) -> Vec<String> {
+fn get_all_serials(existing_devices: &HashMap<String, Device>) -> Vec<String> {
     let mut serials: Vec<String> = vec![];
 
     for device in existing_devices {
@@ -197,13 +182,15 @@ fn get_all_serials(existing_devices: &HashMap<String, Device<GlobalContext>>) ->
 }
 
 async fn load_device(
-    device: rusb::Device<GlobalContext>,
-    descriptor: DeviceDescriptor,
+    device: GoXLRDevice,
     existing_serials: Vec<String>,
     settings: &SettingsHandle,
-) -> Result<Device<'_, GlobalContext>> {
-    let mut device = GoXLR::from_device(device.open()?, descriptor)?;
-    let descriptor = device.usb_device_descriptor();
+) -> Result<Device<'_>> {
+    let mut handled_device = from_device(device)?;
+    let descriptor = handled_device.get_descriptor()?;
+
+    //let mut device = GoXLR::from_device(device.open()?, descriptor)?;
+
     let device_type = match descriptor.product_id() {
         PID_GOXLR_FULL => DeviceType::Full,
         PID_GOXLR_MINI => DeviceType::Mini,
@@ -212,15 +199,13 @@ async fn load_device(
     let device_version = descriptor.device_version();
     let version = (device_version.0, device_version.1, device_version.2);
     let usb_device = UsbProductInformation {
-        manufacturer_name: device.usb_device_manufacturer()?,
-        product_name: device.usb_device_product_name()?,
-        is_claimed: device.usb_device_is_claimed(),
-        has_kernel_driver_attached: device.usb_device_has_kernel_driver_active()?,
-        bus_number: device.usb_bus_number(),
-        address: device.usb_address(),
+        manufacturer_name: descriptor.device_manufacturer(),
+        product_name: descriptor.product_name(),
+        bus_number: device.bus_number(),
+        address: device.address(),
         version,
     };
-    let (mut serial_number, manufactured_date) = device.get_serial_number()?;
+    let (mut serial_number, manufactured_date) = handled_device.get_serial_number()?;
     if serial_number.is_empty() {
         let mut serial = String::from("");
         for i in 0..=24 {
@@ -236,7 +221,7 @@ async fn load_device(
     }
 
     let hardware = HardwareStatus {
-        versions: device.get_firmware_version()?,
+        versions: handled_device.get_firmware_version()?,
         serial_number: serial_number.clone(),
         manufactured_date,
         device_type,
@@ -247,7 +232,7 @@ async fn load_device(
     let mic_profile_name = settings.get_device_mic_profile_name(&serial_number).await;
     let mic_profile_directory = settings.get_mic_profile_directory().await;
     let device = Device::new(
-        device,
+        handled_device,
         hardware,
         profile_name,
         mic_profile_name,

@@ -21,9 +21,8 @@ use goxlr_types::{
 };
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::channelstate::ChannelState::{Muted, Unmuted};
-use goxlr_usb::goxlr::GoXLR;
+use goxlr_usb::device::base::FullGoXLRDevice;
 use goxlr_usb::routing::{InputDevice, OutputDevice};
-use goxlr_usb::rusb::UsbContext;
 
 use crate::audio::{AudioFile, AudioHandler};
 use crate::files::find_file_in_path;
@@ -31,9 +30,8 @@ use crate::mic_profile::{MicProfileAdapter, DEFAULT_MIC_PROFILE_NAME};
 use crate::profile::{version_newer_or_equal_to, ProfileAdapter, DEFAULT_PROFILE_NAME};
 use crate::{SettingsHandle, DISTRIBUTABLE_ROOT};
 
-#[derive(Debug)]
-pub struct Device<'a, T: UsbContext> {
-    goxlr: GoXLR<T>,
+pub struct Device<'a> {
+    goxlr: Box<dyn FullGoXLRDevice>,
     hardware: HardwareStatus,
     last_buttons: EnumSet<Buttons>,
     button_states: EnumMap<Buttons, ButtonState>,
@@ -50,9 +48,9 @@ struct ButtonState {
     hold_handled: bool,
 }
 
-impl<'a, T: UsbContext> Device<'a, T> {
+impl<'a> Device<'a> {
     pub fn new(
-        goxlr: GoXLR<T>,
+        goxlr: Box<dyn FullGoXLRDevice>,
         hardware: HardwareStatus,
         profile_name: Option<String>,
         mic_profile_name: Option<String>,
@@ -170,9 +168,6 @@ impl<'a, T: UsbContext> Device<'a, T> {
     }
 
     pub async fn monitor_inputs(&mut self) -> Result<()> {
-        self.hardware.usb_device.has_kernel_driver_attached =
-            self.goxlr.usb_device_has_kernel_driver_active()?;
-
         // Let the audio handle handle stuff..
         if let Some(audio_handler) = &mut self.audio_handler {
             audio_handler.check_playing().await;
@@ -2265,6 +2260,7 @@ impl<'a, T: UsbContext> Device<'a, T> {
     }
 
     pub fn is_connected(&mut self) -> bool {
-        self.goxlr.is_connected()
+        true
+        //self.goxlr.is_connected()
     }
 }

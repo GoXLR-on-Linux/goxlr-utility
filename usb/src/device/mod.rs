@@ -1,2 +1,2 @@
-mod base;
+pub mod base;
 mod usb;

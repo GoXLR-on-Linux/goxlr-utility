@@ -1,11 +1,13 @@
-use crate::buttonstate::ButtonStates;
+use crate::buttonstate::{ButtonStates, Buttons, CurrentButtonStates};
 use crate::channelstate::ChannelState;
 use crate::commands::SystemInfoCommand::SupportsDCPCategory;
 use crate::commands::{Command, HardwareInfoCommand, SystemInfoCommand};
 use crate::dcp::DCPCategory;
+use crate::device::usb::GoXLRUSB;
 use crate::routing::InputDevice;
 use anyhow::Result;
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
+use enumset::EnumSet;
 use goxlr_types::{
     ChannelName, EffectKey, EncoderName, FaderName, FirmwareVersions, MicrophoneParamKey,
     MicrophoneType, VersionNumber,
@@ -13,10 +15,10 @@ use goxlr_types::{
 use std::io::{Cursor, Write};
 
 // This is a basic SuperTrait which defines all the 'Parts' of the GoXLR for use.
-pub trait FullGoXLRDevice: AttachGoXLR + GoXLRCommands {}
+pub trait FullGoXLRDevice: AttachGoXLR + GoXLRCommands + Sync + Send {}
 
 pub trait AttachGoXLR {
-    fn from_device(device: GoXLRDevice) -> Result<Self>
+    fn from_device(device: GoXLRDevice) -> Result<Box<dyn FullGoXLRDevice>>
     where
         Self: Sized;
 }
@@ -27,6 +29,7 @@ pub trait ExecutableGoXLR {
     }
 
     fn perform_request(&mut self, command: Command, body: &[u8], retry: bool) -> Result<Vec<u8>>;
+    fn get_descriptor(&self) -> Result<UsbData>;
 }
 
 // These are commands that can be executed, but perform_request must be implemented..
@@ -216,10 +219,81 @@ pub trait GoXLRCommands: ExecutableGoXLR {
 
         Ok(())
     }
+
+    fn get_button_states(&mut self) -> Result<CurrentButtonStates> {
+        let result = self.request_data(Command::GetButtonStates, &[])?;
+        let mut pressed = EnumSet::empty();
+        let mut mixers = [0; 4];
+        let mut encoders = [0; 4];
+        let button_states = LittleEndian::read_u32(&result[0..4]);
+
+        mixers[0] = result[8];
+        mixers[1] = result[9];
+        mixers[2] = result[10];
+        mixers[3] = result[11];
+
+        // These can technically be negative, cast straight to i8
+        encoders[0] = result[4] as i8; // Pitch
+        encoders[1] = result[5] as i8; // Gender
+        encoders[2] = result[6] as i8; // Reverb
+        encoders[3] = result[7] as i8; // Echo
+
+        for button in EnumSet::<Buttons>::all() {
+            if button_states & (1 << button as u8) != 0 {
+                pressed.insert(button);
+            }
+        }
+
+        Ok(CurrentButtonStates {
+            pressed,
+            volumes: mixers,
+            encoders,
+        })
+    }
 }
 
 // We primarily need the bus number, and address for comparison..
+#[derive(Copy, Clone)]
 pub struct GoXLRDevice {
     pub(crate) bus_number: u8,
     pub(crate) address: u8,
+}
+
+impl GoXLRDevice {
+    pub fn bus_number(&self) -> u8 {
+        self.bus_number
+    }
+    pub fn address(&self) -> u8 {
+        self.address
+    }
+}
+
+pub struct UsbData {
+    pub(crate) product_id: u16,
+    pub(crate) device_version: (u8, u8, u8),
+    pub(crate) device_manufacturer: String,
+    pub(crate) product_name: String,
+}
+
+impl UsbData {
+    pub fn product_id(&self) -> u16 {
+        self.product_id
+    }
+    pub fn device_version(&self) -> (u8, u8, u8) {
+        self.device_version
+    }
+    pub fn device_manufacturer(&self) -> String {
+        self.device_manufacturer.clone()
+    }
+    pub fn product_name(&self) -> String {
+        self.product_name.clone()
+    }
+}
+
+pub fn find_devices() -> Vec<GoXLRDevice> {
+    crate::device::usb::find_devices()
+}
+
+pub fn from_device(device: GoXLRDevice) -> Result<Box<dyn FullGoXLRDevice>> {
+    GoXLRUSB::from_device(device)
 }

@@ -311,8 +311,6 @@ pub struct UsbProductInformation {
     pub manufacturer_name: String,
     pub product_name: String,
     pub version: (u8, u8, u8),
-    pub is_claimed: bool,
-    pub has_kernel_driver_attached: bool,
     pub bus_number: u8,
     pub address: u8,
 }

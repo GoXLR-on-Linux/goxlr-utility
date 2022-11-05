@@ -10,4 +10,4 @@ pub mod goxlr;
 pub mod microphone;
 pub mod routing;
 
-mod device;
+pub mod device;

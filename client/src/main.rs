@@ -796,11 +796,6 @@ fn print_usb_info(usb: &UsbProductInformation) {
     );
     println!("USB Device manufacturer: {}", usb.manufacturer_name);
     println!("USB Device name: {}", usb.product_name);
-    println!("USB Device is claimed by Daemon: {}", usb.is_claimed);
-    println!(
-        "USB Device has kernel driver attached: {}",
-        usb.has_kernel_driver_attached
-    );
     println!(
         "USB Address: bus {}, address {}",
         usb.bus_number, usb.address

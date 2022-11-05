@@ -1,14 +1,15 @@
 use crate::commands::Command;
 use crate::device::base::{
-    AttachGoXLR, ExecutableGoXLR, FullGoXLRDevice, GoXLRCommands, GoXLRDevice,
+    AttachGoXLR, ExecutableGoXLR, FullGoXLRDevice, GoXLRCommands, GoXLRDevice, UsbData,
 };
 use crate::goxlr::{PID_GOXLR_FULL, PID_GOXLR_MINI, VID_GOXLR};
-use anyhow::{bail, Error, Result};
+use anyhow::{anyhow, bail, Error, Result};
 use byteorder::{ByteOrder, LittleEndian};
 use log::{debug, error};
 use rusb::Error::Pipe;
 use rusb::{
-    Device, DeviceDescriptor, DeviceHandle, Direction, GlobalContext, Recipient, RequestType,
+    Device, DeviceDescriptor, DeviceHandle, Direction, GlobalContext, Language, Recipient,
+    RequestType,
 };
 use std::thread::sleep;
 use std::time::Duration;
@@ -18,6 +19,7 @@ pub struct GoXLRUSB {
     device: Device<GlobalContext>,
     descriptor: DeviceDescriptor,
 
+    language: Language,
     command_count: u16,
     timeout: Duration,
 }
@@ -79,18 +81,27 @@ impl GoXLRUSB {
 }
 
 impl AttachGoXLR for GoXLRUSB {
-    fn from_device(device: GoXLRDevice) -> Result<Self> {
+    fn from_device(device: GoXLRDevice) -> Result<Box<(dyn FullGoXLRDevice)>> {
         // Firstly, we need to locate the USB device based on the location..
         let (device, descriptor) = GoXLRUSB::find_device(device)?;
         let handle = device.open()?;
 
-        Ok(Self {
+        let timeout = Duration::from_secs(1);
+
+        let languages = handle.read_languages(timeout)?;
+        let language = languages
+            .get(0)
+            .ok_or_else(|| anyhow!("Not GoXLR?"))?
+            .to_owned();
+
+        Ok(Box::new(Self {
             device: handle.device(),
             handle,
             descriptor,
+            language,
             command_count: 0,
             timeout: Duration::from_secs(1),
-        })
+        }))
     }
 }
 
@@ -185,6 +196,30 @@ impl ExecutableGoXLR for GoXLRUSB {
         }
 
         Ok(response)
+    }
+
+    fn get_descriptor(&self) -> Result<UsbData> {
+        let version = self.descriptor.usb_version();
+        let usb_version = (version.0, version.1, version.2);
+
+        let device_manufacturer = self.handle.read_manufacturer_string(
+            self.language,
+            &self.descriptor,
+            Duration::from_millis(100),
+        )?;
+
+        let product_name = self.handle.read_product_string(
+            self.language,
+            &self.descriptor,
+            Duration::from_millis(100),
+        )?;
+
+        Ok(UsbData {
+            product_id: self.descriptor.product_id(),
+            device_version: usb_version,
+            device_manufacturer,
+            product_name,
+        })
     }
 }
 
