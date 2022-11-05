@@ -31,7 +31,6 @@ enum-map = "2.1.0"
 futures = "0.3.21"
 ritelinked = "0.3.2"
 clap = { version = "3.0.0", features = ["derive"] }
-nix = { version = "0.25.0", features = ["user"] }
 opener = "0.5.0"
 md5 = "0.7.0"
 regex = "1.6.0"
@@ -46,6 +45,9 @@ actix-web-actors = "4.1"
 actix-web = "4.1"
 actix-cors = "0.6.1"
 actix-plus-static-files = { git = "https://github.com/john01dav/actix-plus", rev = "4f7837c0d3d413bf82d7906b33abb7801340c063" }
+
+[target.'cfg(target_family = "unix")'.dependencies]
+nix = { version = "0.25.0", features = ["user"] }
 
 [build-dependencies]
 clap = { version = "3.0.0", features = ["derive"] }

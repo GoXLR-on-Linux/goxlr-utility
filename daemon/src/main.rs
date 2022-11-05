@@ -2,7 +2,6 @@ use actix_web::dev::ServerHandle;
 use anyhow::{bail, Context, Result};
 use clap::Parser;
 use log::{error, info, warn};
-use nix::unistd::Uid;
 use simplelog::{ColorChoice, CombinedLogger, Config, TermLogger, TerminalMode};
 use tokio::sync::mpsc;
 use tokio::{join, signal};
@@ -49,7 +48,7 @@ async fn main() -> Result<()> {
     )])
     .context("Could not configure the logger")?;
 
-    if Uid::effective().is_root() {
+    if is_root() {
         if args.force_root {
             error!("GoXLR Utility running as root, this is generally considered bad.");
         } else {
@@ -120,4 +119,15 @@ async fn await_ctrl_c(shutdown: Shutdown) {
     if signal::ctrl_c().await.is_ok() {
         shutdown.trigger();
     }
+}
+
+#[cfg(target_family = "unix")]
+fn is_root() -> bool {
+    nix::unistd::Uid::effective().is_root()
+}
+
+#[cfg(not(target_family = "unix"))]
+fn is_root() -> bool {
+    // On non-unix systems, we can't root check, assume we're good!
+    false
 }
