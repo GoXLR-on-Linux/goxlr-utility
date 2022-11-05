@@ -461,8 +461,8 @@ impl<T: UsbContext> GoXLR<T> {
         meter: bool,
     ) -> Result<(), rusb::Error> {
         // This one really doesn't need anything fancy..
-        let gradient_byte: u8 = if gradient { 0x01 } else { 0x00 };
-        let meter_byte: u8 = if meter { 0x01 } else { 0x00 };
+        let gradient_byte = u8::from(gradient);
+        let meter_byte = u8::from(meter);
 
         // TODO: Seemingly broken?
         self.request_data(
