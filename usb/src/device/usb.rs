@@ -301,6 +301,7 @@ impl ExecutableGoXLR for GoXLRUSB {
         )?;
 
         Ok(UsbData {
+            vendor_id: self.descriptor.vendor_id(),
             product_id: self.descriptor.product_id(),
             device_version: usb_version,
             device_manufacturer,

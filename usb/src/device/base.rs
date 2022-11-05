@@ -271,6 +271,7 @@ impl GoXLRDevice {
 }
 
 pub struct UsbData {
+    pub(crate) vendor_id: u16,
     pub(crate) product_id: u16,
     pub(crate) device_version: (u8, u8, u8),
     pub(crate) device_manufacturer: String,
@@ -278,6 +279,9 @@ pub struct UsbData {
 }
 
 impl UsbData {
+    pub fn vendor_id(&self) -> u16 {
+        self.vendor_id
+    }
     pub fn product_id(&self) -> u16 {
         self.product_id
     }
