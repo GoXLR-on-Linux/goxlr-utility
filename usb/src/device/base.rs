@@ -22,6 +22,7 @@ pub trait AttachGoXLR {
     fn from_device(
         device: GoXLRDevice,
         disconnect_sender: Sender<String>,
+        event_sender: Sender<String>,
     ) -> Result<Box<dyn FullGoXLRDevice>>
     where
         Self: Sized;
@@ -312,7 +313,8 @@ pub fn find_devices() -> Vec<GoXLRDevice> {
 
 pub fn from_device(
     device: GoXLRDevice,
-    disconnect_handler: Sender<String>,
+    disconnect_sender: Sender<String>,
+    event_sender: Sender<String>,
 ) -> Result<Box<dyn FullGoXLRDevice>> {
-    GoXLRUSB::from_device(device, disconnect_handler)
+    GoXLRUSB::from_device(device, disconnect_sender, event_sender)
 }

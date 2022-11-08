@@ -34,12 +34,11 @@ pub async fn handle_changes(
     settings: SettingsHandle,
     mut file_manager: FileManager,
 ) {
+    // We can probably either merge these, or struct them..
     let (disconnect_sender, mut disconnect_receiver) = mpsc::channel(32);
+    let (event_sender, mut event_receiver) = mpsc::channel(32);
 
-    let detect_count = 10;
-    let mut loop_count = 10;
-
-    let sleep_duration = Duration::from_millis(100);
+    let sleep_duration = Duration::from_millis(1000);
     let mut devices = HashMap::new();
     let mut ignore_list = HashMap::new();
 
@@ -65,38 +64,38 @@ pub async fn handle_changes(
     loop {
         tokio::select! {
             () = sleep(sleep_duration) => {
-                if loop_count == detect_count {
-                    if let Some(device) = find_new_device(&devices, &ignore_list) {
+                if let Some(device) = find_new_device(&devices, &ignore_list) {
                     let existing_serials: Vec<String> = get_all_serials(&devices);
                     let bus_number = device.bus_number();
                     let address = device.address();
-                        match load_device(device, existing_serials, disconnect_sender.clone(), &settings).await {
-                            Ok(device) => {
-                                devices.insert(device.serial().to_owned(), device);
-                            }
-                            Err(e) => {
-                                error!(
-                                    "Couldn't load potential GoXLR on bus {} address {}: {}",
-                                    bus_number, address, e
-                                );
-                                ignore_list
-                                    .insert((bus_number, address), Instant::now() + Duration::from_secs(10));
-                            }
-                        };
-                    }
-                    loop_count = -1;
-                }
-                loop_count += 1;
-                for device in devices.values_mut() {
-                    if let Err(error) = device.monitor_inputs().await {
-                        warn!("Error Received from {}: {}", device.serial(), error);
-                    }
+                    match load_device(device, existing_serials, disconnect_sender.clone(), event_sender.clone(), &settings).await {
+                        Ok(device) => {
+                            devices.insert(device.serial().to_owned(), device);
+                        }
+                        Err(e) => {
+                            error!(
+                                "Couldn't load potential GoXLR on bus {} address {}: {}",
+                                bus_number, address, e
+                            );
+                            ignore_list
+                                .insert((bus_number, address), Instant::now() + Duration::from_secs(10));
+                        }
+                    };
                 }
             },
             Some(serial) = disconnect_receiver.recv() => {
                 info!("[{}] Device Disconnected", serial);
                 devices.remove(&serial);
             },
+            Some(serial) = event_receiver.recv() => {
+                if let Some(device) = devices.get_mut(&serial) {
+                    if let Err(error) = device.monitor_inputs().await {
+                        warn!("Error Received from {}: {}", device.serial(), error);
+                    }
+                } else {
+                    warn!("Cannot find registered device with serial: {}", &serial);
+                }
+            }
             () = shutdown.recv() => {
                 info!("Shutting down device worker");
                 return;
@@ -187,11 +186,12 @@ async fn load_device(
     device: GoXLRDevice,
     existing_serials: Vec<String>,
     disconnect_sender: Sender<String>,
+    event_sender: Sender<String>,
     settings: &SettingsHandle,
 ) -> Result<Device<'_>> {
     let device_copy = device.clone();
 
-    let mut handled_device = from_device(device, disconnect_sender)?;
+    let mut handled_device = from_device(device, disconnect_sender, event_sender)?;
     let descriptor = handled_device.get_descriptor()?;
 
     //let mut device = GoXLR::from_device(device.open()?, descriptor)?;

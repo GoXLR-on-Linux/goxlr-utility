@@ -2258,8 +2258,4 @@ impl<'a> Device<'a> {
             .unwrap()
             .as_millis()
     }
-
-    pub fn is_connected(&mut self) -> bool {
-        self.goxlr.is_connected()
-    }
 }

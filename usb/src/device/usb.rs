@@ -12,17 +12,23 @@ use rusb::{
     Device, DeviceDescriptor, DeviceHandle, Direction, GlobalContext, Language, Recipient,
     RequestType,
 };
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::thread::sleep;
 use std::time::Duration;
 use tokio::sync::mpsc::Sender;
+use tokio::task;
 
 pub struct GoXLRUSB {
     handle: DeviceHandle<GlobalContext>,
     device: Device<GlobalContext>,
     descriptor: DeviceDescriptor,
 
-    disconnect_sender: Option<Sender<String>>,
+    disconnect_sender: Sender<String>,
+    event_sender: Sender<String>,
     identifier: Option<String>,
+
+    stopping: Arc<AtomicBool>,
 
     language: Language,
     command_count: u16,
@@ -50,14 +56,12 @@ impl GoXLRUSB {
             return Ok(());
         }
 
-        if let Some(handle) = &self.disconnect_sender {
-            if let Some(identifier) = &self.identifier {
-                block_on(handle.send(identifier.clone()))?;
-                return Ok(());
-            }
-            bail!("Unable to Disconnect, Identifier not Found!");
+        if let Some(identifier) = &self.identifier {
+            self.stopping.store(true, Ordering::Relaxed);
+            block_on(self.disconnect_sender.send(identifier.clone()))?;
+            return Ok(());
         }
-        bail!("Unable to Disconnect, Handler not Set!");
+        bail!("Unable to Disconnect, Identifier not Found!");
     }
 
     pub(crate) fn write_class_control(
@@ -123,6 +127,7 @@ impl AttachGoXLR for GoXLRUSB {
     fn from_device(
         device: GoXLRDevice,
         disconnect_sender: Sender<String>,
+        event_sender: Sender<String>,
     ) -> Result<Box<(dyn FullGoXLRDevice)>> {
         // Firstly, we need to locate the USB device based on the location..
         let (device, descriptor) = GoXLRUSB::find_device(device)?;
@@ -150,9 +155,11 @@ impl AttachGoXLR for GoXLRUSB {
             handle,
             descriptor,
             language,
-            disconnect_sender: Some(disconnect_sender),
+            disconnect_sender,
+            event_sender,
             identifier: None,
             command_count: 0,
+            stopping: Arc::new(AtomicBool::new(false)),
             timeout,
         };
 
@@ -202,7 +209,27 @@ impl AttachGoXLR for GoXLRUSB {
     }
 
     fn set_unique_identifier(&mut self, identifier: String) {
+        let event_id = identifier.clone();
         self.identifier = Some(identifier);
+
+        let sender = self.event_sender.clone();
+        let stopping = self.stopping.clone();
+
+        task::spawn(async move {
+            loop {
+                if stopping.load(Ordering::Relaxed) {
+                    break;
+                }
+                let event = event_id.clone();
+                tokio::time::sleep(Duration::from_millis(100)).await;
+                if !sender.is_closed() {
+                    sender.send(event).await.expect("Error Sending Event");
+                } else {
+                    warn!("Sender Closed for {}", event);
+                    break;
+                }
+            }
+        });
     }
 
     fn is_connected(&mut self) -> bool {
@@ -241,7 +268,6 @@ impl ExecutableGoXLR for GoXLRUSB {
         full_request.extend(body);
 
         if let Err(error) = self.write_control(2, 0, 0, &full_request) {
-            // TODO: Attempt Recovery?
             debug!("Error when attempting to write control.");
             self.trigger_disconnect()?;
             bail!(error);
