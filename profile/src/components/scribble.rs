@@ -180,10 +180,36 @@ impl Scribble {
     pub fn colour_map_mut(&mut self) -> &mut ColourMap {
         &mut self.colour_map
     }
+
+    pub fn icon_file(&self) -> Option<String> {
+        if self.icon_file.is_empty() {
+            return None;
+        }
+        Some(self.icon_file.to_string())
+    }
+    pub fn text_top_left(&self) -> Option<String> {
+        if self.text_top_left.is_empty() {
+            return None;
+        }
+        Some(self.text_top_left.to_string())
+    }
+    pub fn text_bottom_middle(&self) -> Option<String> {
+        if self.text_bottom_middle.is_empty() {
+            return None;
+        }
+        Some(self.text_bottom_middle.to_string())
+    }
+    pub fn is_style_invert(&self) -> bool {
+        self.style == Inverted
+    }
+
+    pub fn style(&self) -> &ScribbleStyle {
+        &self.style
+    }
 }
 
-#[derive(PartialEq, Debug)]
-enum ScribbleStyle {
+#[derive(PartialEq, Eq, Debug)]
+pub enum ScribbleStyle {
     Normal,
     Inverted,
 }

@@ -2121,6 +2121,9 @@ impl<'a> Device<'a> {
             self.apply_mute_from_profile(fader)?;
         }
 
+        debug!("Applying Scribbles?");
+        self.load_scribbles()?;
+
         debug!("Applying Cough button settings..");
         self.apply_cough_from_profile()?;
 
@@ -2234,6 +2237,17 @@ impl<'a> Device<'a> {
 
         value = self.profile.get_reverb_value();
         self.goxlr.set_encoder_value(EncoderName::Reverb, value)?;
+
+        Ok(())
+    }
+
+    fn load_scribbles(&mut self) -> Result<()> {
+        let icon_path = block_on(self.settings.get_icons_directory());
+
+        for fader in FaderName::iter() {
+            let scribble = self.profile.get_fader_scribble(fader, &icon_path);
+            self.goxlr.set_fader_scribble(fader, scribble)?;
+        }
 
         Ok(())
     }

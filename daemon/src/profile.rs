@@ -35,6 +35,7 @@ use goxlr_profile_loader::components::simple::SimpleElements;
 use goxlr_profile_loader::profile::{Profile, ProfileSettings};
 use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
 use goxlr_profile_loader::{Faders, Preset, SampleButtons};
+use goxlr_scribbles::get_scribble;
 use goxlr_types::{
     ButtonColourGroups, ButtonColourOffStyle as BasicColourOffStyle, ButtonColourTargets,
     ChannelName, EffectBankPresets, EncoderColourTargets, FaderDisplayStyle as BasicColourDisplay,
@@ -298,6 +299,25 @@ impl ProfileAdapter {
         colours.set_colour(0, Colour::fromrgb(top.as_str())?)?;
         colours.set_colour(1, Colour::fromrgb(bottom.as_str())?)?;
         Ok(())
+    }
+
+    pub fn get_fader_scribble(&self, fader: FaderName, path: &Path) -> [u8; 1024] {
+        let scribble = self
+            .profile
+            .settings()
+            .scribble(standard_to_profile_fader(fader));
+
+        let mut icon_path = None;
+        if let Some(file) = scribble.icon_file() {
+            icon_path = Some(path.join(file));
+        }
+
+        get_scribble(
+            icon_path,
+            scribble.text_bottom_middle(),
+            scribble.text_top_left(),
+            scribble.is_style_invert(),
+        )
     }
 
     pub fn get_channel_volume(&self, channel: ChannelName) -> u8 {

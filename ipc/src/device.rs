@@ -306,6 +306,13 @@ pub struct Files {
     pub samples: HashMap<String, String>,
 }
 
+pub struct Scribble {
+    pub file_name: Option<String>,
+    pub bottom_text: Option<String>,
+    pub left_text: Option<String>,
+    pub inverted: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UsbProductInformation {
     pub manufacturer_name: String,
