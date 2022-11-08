@@ -167,13 +167,36 @@ impl<'a> Device<'a> {
         &self.mic_profile
     }
 
-    pub async fn monitor_inputs(&mut self) -> Result<()> {
-        // Let the audio handle handle stuff..
+    pub async fn update_state(&mut self) -> Result<()> {
+        // Update any audio related states..
         if let Some(audio_handler) = &mut self.audio_handler {
             audio_handler.check_playing().await;
             self.sync_sample_lighting().await?;
         }
 
+        // Find any buttons that have been held, and action if needed.
+        for button in self.last_buttons {
+            if !self.button_states[button].hold_handled {
+                let now = self.get_epoch_ms();
+                if (now - self.button_states[button].press_time)
+                    > self
+                        .settings
+                        .get_device_hold_time(self.serial())
+                        .await
+                        .into()
+                {
+                    if let Err(error) = self.on_button_hold(button).await {
+                        error!("{}", error);
+                    }
+                    self.button_states[button].hold_handled = true;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    pub async fn monitor_inputs(&mut self) -> Result<()> {
         let state = self.goxlr.get_button_states()?;
         self.update_volumes_to(state.volumes)?;
         self.update_encoders_to(state.encoders)?;
@@ -203,26 +226,6 @@ impl<'a> Device<'a> {
             self.button_states[button] = ButtonState {
                 press_time: 0,
                 hold_handled: false,
-            }
-        }
-
-        // Finally, iterate over our existing button states, and see if any have been
-        // pressed for more than half a second and not handled.
-        for button in state.pressed {
-            if !self.button_states[button].hold_handled {
-                let now = self.get_epoch_ms();
-                if (now - self.button_states[button].press_time)
-                    > self
-                        .settings
-                        .get_device_hold_time(self.serial())
-                        .await
-                        .into()
-                {
-                    if let Err(error) = self.on_button_hold(button).await {
-                        error!("{}", error);
-                    }
-                    self.button_states[button].hold_handled = true;
-                }
             }
         }
 

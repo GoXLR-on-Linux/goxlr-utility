@@ -38,7 +38,17 @@ pub async fn handle_changes(
     let (disconnect_sender, mut disconnect_receiver) = mpsc::channel(32);
     let (event_sender, mut event_receiver) = mpsc::channel(32);
 
-    let sleep_duration = Duration::from_millis(1000);
+    // Create the device detection Sleep Timer..
+    let detection_duration = Duration::from_millis(1000);
+    let detection_sleep = sleep(Duration::from_millis(10));
+    tokio::pin!(detection_sleep);
+
+    // Create the State update Sleep Timer..
+    let update_duration = Duration::from_millis(100);
+    let update_sleep = sleep(update_duration);
+    tokio::pin!(update_sleep);
+
+    // Create the Primary Device List, and 'Ignore' list..
     let mut devices = HashMap::new();
     let mut ignore_list = HashMap::new();
 
@@ -63,7 +73,7 @@ pub async fn handle_changes(
 
     loop {
         tokio::select! {
-            () = sleep(sleep_duration) => {
+            () = &mut detection_sleep => {
                 if let Some(device) = find_new_device(&devices, &ignore_list) {
                     let existing_serials: Vec<String> = get_all_serials(&devices);
                     let bus_number = device.bus_number();
@@ -82,7 +92,16 @@ pub async fn handle_changes(
                         }
                     };
                 }
+                detection_sleep.as_mut().reset(tokio::time::Instant::now() + detection_duration);
             },
+            () = &mut update_sleep => {
+                for device in devices.values_mut() {
+                     if let Err(error) = device.update_state().await {
+                        warn!("Error Received from {} while updating state: {}", device.serial(), error);
+                    }
+                }
+                update_sleep.as_mut().reset(tokio::time::Instant::now() + update_duration);
+            }
             Some(serial) = disconnect_receiver.recv() => {
                 info!("[{}] Device Disconnected", serial);
                 devices.remove(&serial);
