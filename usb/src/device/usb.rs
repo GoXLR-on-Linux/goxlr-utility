@@ -5,6 +5,7 @@ use crate::device::base::{
 use crate::{PID_GOXLR_FULL, PID_GOXLR_MINI, VID_GOXLR};
 use anyhow::{anyhow, bail, Error, Result};
 use byteorder::{ByteOrder, LittleEndian};
+use futures::executor::block_on;
 use log::{debug, error, info, warn};
 use rusb::Error::Pipe;
 use rusb::{
@@ -13,11 +14,15 @@ use rusb::{
 };
 use std::thread::sleep;
 use std::time::Duration;
+use tokio::sync::mpsc::Sender;
 
 pub struct GoXLRUSB {
     handle: DeviceHandle<GlobalContext>,
     device: Device<GlobalContext>,
     descriptor: DeviceDescriptor,
+
+    disconnect_sender: Option<Sender<String>>,
+    identifier: Option<String>,
 
     language: Language,
     command_count: u16,
@@ -38,6 +43,21 @@ impl GoXLRUSB {
             }
         }
         bail!("Specified Device not Found!")
+    }
+
+    fn trigger_disconnect(&mut self) -> Result<()> {
+        if self.is_connected() {
+            return Ok(());
+        }
+
+        if let Some(handle) = &self.disconnect_sender {
+            if let Some(identifier) = &self.identifier {
+                block_on(handle.send(identifier.clone()))?;
+                return Ok(());
+            }
+            bail!("Unable to Disconnect, Identifier not Found!");
+        }
+        bail!("Unable to Disconnect, Handler not Set!");
     }
 
     pub(crate) fn write_class_control(
@@ -100,7 +120,10 @@ impl GoXLRUSB {
 }
 
 impl AttachGoXLR for GoXLRUSB {
-    fn from_device(device: GoXLRDevice) -> Result<Box<(dyn FullGoXLRDevice)>> {
+    fn from_device(
+        device: GoXLRDevice,
+        disconnect_sender: Sender<String>,
+    ) -> Result<Box<(dyn FullGoXLRDevice)>> {
         // Firstly, we need to locate the USB device based on the location..
         let (device, descriptor) = GoXLRUSB::find_device(device)?;
         let mut handle = device.open()?;
@@ -127,6 +150,8 @@ impl AttachGoXLR for GoXLRUSB {
             handle,
             descriptor,
             language,
+            disconnect_sender: Some(disconnect_sender),
+            identifier: None,
             command_count: 0,
             timeout,
         };
@@ -171,7 +196,13 @@ impl AttachGoXLR for GoXLRUSB {
         // Force command pipe activation in all cases.
         debug!("Handling initial request");
         goxlr.read_control(3, 0, 0, 1040)?;
+
+        // Set the local serial number..
         Ok(Box::new(goxlr))
+    }
+
+    fn set_unique_identifier(&mut self, identifier: String) {
+        self.identifier = Some(identifier);
     }
 
     fn is_connected(&mut self) -> bool {
@@ -209,7 +240,12 @@ impl ExecutableGoXLR for GoXLRUSB {
         LittleEndian::write_u16(&mut full_request[6..8], command_index);
         full_request.extend(body);
 
-        self.write_control(2, 0, 0, &full_request)?;
+        if let Err(error) = self.write_control(2, 0, 0, &full_request) {
+            // TODO: Attempt Recovery?
+            debug!("Error when attempting to write control.");
+            self.trigger_disconnect()?;
+            bail!(error);
+        }
 
         // The full fat GoXLR can handle requests incredibly quickly..
         let mut sleep_time = Duration::from_millis(3);
@@ -232,6 +268,9 @@ impl ExecutableGoXLR for GoXLRUSB {
                     sleep(sleep_time);
                     continue;
                 } else {
+                    // We can't read from this GoXLR, flag as disconnected.
+                    self.trigger_disconnect()?;
+
                     debug!("Failed to receive response (Attempt 20 of 20), possible Dead GoXLR?");
                     return Err(Error::from(response_value.err().unwrap()));
                 }
@@ -239,6 +278,8 @@ impl ExecutableGoXLR for GoXLRUSB {
             if response_value.is_err() {
                 let err = response_value.err().unwrap();
                 debug!("Error Occurred during packet read: {}", err);
+
+                self.trigger_disconnect()?;
                 return Err(Error::from(err));
             }
 
@@ -248,6 +289,7 @@ impl ExecutableGoXLR for GoXLRUSB {
                     "Invalid Response received from the GoXLR, Expected: 16, Received: {}",
                     response_header.len()
                 );
+                self.trigger_disconnect()?;
                 return Err(Error::from(Pipe));
             }
 
@@ -273,6 +315,7 @@ impl ExecutableGoXLR for GoXLRUSB {
                     self.perform_request(command, body, true)
                 } else {
                     debug!("Resync Failed, Throwing Error..");
+                    self.trigger_disconnect()?;
                     Err(Error::from(rusb::Error::Other))
                 };
             }

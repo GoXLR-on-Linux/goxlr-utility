@@ -13,15 +13,20 @@ use goxlr_types::{
     MicrophoneType, VersionNumber,
 };
 use std::io::{Cursor, Write};
+use tokio::sync::mpsc::Sender;
 
 // This is a basic SuperTrait which defines all the 'Parts' of the GoXLR for use.
 pub trait FullGoXLRDevice: AttachGoXLR + GoXLRCommands + Sync + Send {}
 
 pub trait AttachGoXLR {
-    fn from_device(device: GoXLRDevice) -> Result<Box<dyn FullGoXLRDevice>>
+    fn from_device(
+        device: GoXLRDevice,
+        disconnect_sender: Sender<String>,
+    ) -> Result<Box<dyn FullGoXLRDevice>>
     where
         Self: Sized;
 
+    fn set_unique_identifier(&mut self, identifier: String);
     fn is_connected(&mut self) -> bool;
 }
 
@@ -305,6 +310,9 @@ pub fn find_devices() -> Vec<GoXLRDevice> {
     crate::device::usb::find_devices()
 }
 
-pub fn from_device(device: GoXLRDevice) -> Result<Box<dyn FullGoXLRDevice>> {
-    GoXLRUSB::from_device(device)
+pub fn from_device(
+    device: GoXLRDevice,
+    disconnect_handler: Sender<String>,
+) -> Result<Box<dyn FullGoXLRDevice>> {
+    GoXLRUSB::from_device(device, disconnect_handler)
 }

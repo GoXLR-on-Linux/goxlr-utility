@@ -11,6 +11,7 @@ use goxlr_usb::{PID_GOXLR_FULL, PID_GOXLR_MINI};
 use log::{error, info, warn};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
+use tokio::sync::mpsc::Sender;
 use tokio::sync::{mpsc, oneshot};
 use tokio::time::sleep;
 
@@ -33,6 +34,8 @@ pub async fn handle_changes(
     settings: SettingsHandle,
     mut file_manager: FileManager,
 ) {
+    let (disconnect_sender, mut disconnect_receiver) = mpsc::channel(32);
+
     let detect_count = 10;
     let mut loop_count = 10;
 
@@ -67,7 +70,7 @@ pub async fn handle_changes(
                     let existing_serials: Vec<String> = get_all_serials(&devices);
                     let bus_number = device.bus_number();
                     let address = device.address();
-                        match load_device(device, existing_serials, &settings).await {
+                        match load_device(device, existing_serials, disconnect_sender.clone(), &settings).await {
                             Ok(device) => {
                                 devices.insert(device.serial().to_owned(), device);
                             }
@@ -84,16 +87,15 @@ pub async fn handle_changes(
                     loop_count = -1;
                 }
                 loop_count += 1;
-                let mut found_error = false;
                 for device in devices.values_mut() {
-                    if let Err(e) = device.monitor_inputs().await {
-                        error!("Couldn't monitor device for inputs: {}", e);
-                        found_error = true;
+                    if let Err(error) = device.monitor_inputs().await {
+                        warn!("Error Received from {}: {}", device.serial(), error);
                     }
                 }
-                if found_error {
-                    devices.retain(|_, d| d.is_connected());
-                }
+            },
+            Some(serial) = disconnect_receiver.recv() => {
+                info!("[{}] Device Disconnected", serial);
+                devices.remove(&serial);
             },
             () = shutdown.recv() => {
                 info!("Shutting down device worker");
@@ -184,11 +186,12 @@ fn get_all_serials(existing_devices: &HashMap<String, Device>) -> Vec<String> {
 async fn load_device(
     device: GoXLRDevice,
     existing_serials: Vec<String>,
+    disconnect_sender: Sender<String>,
     settings: &SettingsHandle,
 ) -> Result<Device<'_>> {
     let device_copy = device.clone();
 
-    let mut handled_device = from_device(device)?;
+    let mut handled_device = from_device(device, disconnect_sender)?;
     let descriptor = handled_device.get_descriptor()?;
 
     //let mut device = GoXLR::from_device(device.open()?, descriptor)?;
@@ -221,6 +224,7 @@ async fn load_device(
         serial_number = serial;
         warn!("Generated Internal Serial Number: {}", serial_number);
     }
+    handled_device.set_unique_identifier(serial_number.clone());
 
     let hardware = HardwareStatus {
         versions: handled_device.get_firmware_version()?,

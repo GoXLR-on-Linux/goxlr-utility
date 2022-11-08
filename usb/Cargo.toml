@@ -20,3 +20,7 @@ enumset = "1.0.8"
 strum = "0.23.0"
 enum-map = "2.1.0"
 anyhow = "1.0.66"
+
+# New, some fun async stuff..
+tokio = { version = "1.21.2", features = ["sync"] }
+futures = "0.3.25"
