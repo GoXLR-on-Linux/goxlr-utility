@@ -329,6 +329,7 @@ pub fn find_devices() -> Vec<GoXLRDevice> {
                     found_devices.push(GoXLRDevice {
                         bus_number,
                         address,
+                        identifier: None,
                     });
                 }
             }

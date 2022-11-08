@@ -255,10 +255,11 @@ pub trait GoXLRCommands: ExecutableGoXLR {
 }
 
 // We primarily need the bus number, and address for comparison..
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct GoXLRDevice {
     pub(crate) bus_number: u8,
     pub(crate) address: u8,
+    pub(crate) identifier: Option<String>,
 }
 
 impl GoXLRDevice {
@@ -267,6 +268,10 @@ impl GoXLRDevice {
     }
     pub fn address(&self) -> u8 {
         self.address
+    }
+
+    pub fn identifier(&self) -> &Option<String> {
+        &self.identifier
     }
 }
 

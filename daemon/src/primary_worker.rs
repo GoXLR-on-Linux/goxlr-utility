@@ -159,7 +159,7 @@ fn find_new_device(
     let now = Instant::now();
 
     let goxlr_devices = find_devices();
-    goxlr_devices.into_iter().find(|&device| {
+    goxlr_devices.into_iter().find(|device| {
         !existing_devices.values().any(|d| {
             d.status().hardware.usb_device.bus_number == device.bus_number()
                 && d.status().hardware.usb_device.address == device.address()
@@ -186,6 +186,8 @@ async fn load_device(
     existing_serials: Vec<String>,
     settings: &SettingsHandle,
 ) -> Result<Device<'_>> {
+    let device_copy = device.clone();
+
     let mut handled_device = from_device(device)?;
     let descriptor = handled_device.get_descriptor()?;
 
@@ -201,8 +203,8 @@ async fn load_device(
     let usb_device = UsbProductInformation {
         manufacturer_name: descriptor.device_manufacturer(),
         product_name: descriptor.product_name(),
-        bus_number: device.bus_number(),
-        address: device.address(),
+        bus_number: device_copy.bus_number(),
+        address: device_copy.address(),
         version,
     };
     let (mut serial_number, manufactured_date) = handled_device.get_serial_number()?;
