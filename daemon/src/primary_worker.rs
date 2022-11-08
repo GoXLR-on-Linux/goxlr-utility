@@ -128,12 +128,14 @@ pub async fn handle_changes(
                                 mic_profile_directory: settings.get_mic_profile_directory().await,
                                 samples_directory: settings.get_samples_directory().await,
                                 presets_directory: settings.get_presets_directory().await,
+                                icons_directory: settings.get_icons_directory().await,
                             },
                             files: Files {
                                 profiles: file_manager.get_profiles(&settings),
                                 mic_profiles: file_manager.get_mic_profiles(&settings),
                                 presets: file_manager.get_presets(&settings),
                                 samples: file_manager.get_samples(&settings),
+                                icons: file_manager.get_icons(&settings),
                             },
                             ..Default::default()
                         };

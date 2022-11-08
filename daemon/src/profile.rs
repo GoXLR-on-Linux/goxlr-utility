@@ -15,7 +15,7 @@ use crate::audio::{AudioFile, AudioHandler};
 use goxlr_ipc::{
     ActiveEffects, ButtonLighting, CoughButton, Echo, Effects, FaderLighting, Gender, HardTune,
     Lighting, Megaphone, OneColour, Pitch, Reverb, Robot, Sample, Sampler, SamplerButton,
-    SamplerLighting, ThreeColours, TwoColours,
+    SamplerLighting, Scribble, ThreeColours, TwoColours,
 };
 use goxlr_profile_loader::components::colours::{
     Colour, ColourDisplay, ColourMap, ColourOffStyle, ColourState,
@@ -309,7 +309,7 @@ impl ProfileAdapter {
         Ok(())
     }
 
-    pub fn get_fader_scribble(&self, fader: FaderName, path: &Path) -> [u8; 1024] {
+    pub fn get_scribble_image(&self, fader: FaderName, path: &Path) -> [u8; 1024] {
         let scribble = self
             .profile
             .settings()
@@ -736,6 +736,24 @@ impl ProfileAdapter {
         }
 
         Some(Sampler { banks: sampler_map })
+    }
+
+    pub fn get_scribble_ipc(&self, fader: FaderName, is_mini: bool) -> Option<Scribble> {
+        if is_mini {
+            return None;
+        }
+
+        let scribble = self
+            .profile
+            .settings()
+            .scribble(standard_to_profile_fader(fader));
+
+        Some(Scribble {
+            file_name: scribble.icon_file(),
+            bottom_text: scribble.text_bottom_middle(),
+            left_text: scribble.text_top_left(),
+            inverted: scribble.is_style_invert(),
+        })
     }
 
     /** Regular Mute button handlers */

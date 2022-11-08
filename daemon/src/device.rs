@@ -123,15 +123,21 @@ impl<'a> Device<'a> {
     }
 
     pub fn status(&self) -> MixerStatus {
-        let mut fader_map = [Default::default(); 4];
-        fader_map[FaderName::A as usize] = self.get_fader_state(FaderName::A);
-        fader_map[FaderName::B as usize] = self.get_fader_state(FaderName::B);
-        fader_map[FaderName::C as usize] = self.get_fader_state(FaderName::C);
-        fader_map[FaderName::D as usize] = self.get_fader_state(FaderName::D);
+        //let mut fader_map = [Default::default(); 4];
+        let fader_map = vec![
+            self.get_fader_state(FaderName::A),
+            self.get_fader_state(FaderName::B),
+            self.get_fader_state(FaderName::C),
+            self.get_fader_state(FaderName::D),
+        ];
+
+        // Unbox the Fader Map
+        let boxed = fader_map.into_boxed_slice();
+        let boxed_array: Box<[FaderStatus; 4]> = boxed.try_into().expect("This shouldn't happen!");
 
         MixerStatus {
             hardware: self.hardware.clone(),
-            fader_status: fader_map,
+            fader_status: *boxed_array,
             cough_button: self.profile.get_cough_status(),
             levels: Levels {
                 volumes: self.profile.get_volumes(),
@@ -2064,6 +2070,9 @@ impl<'a> Device<'a> {
         FaderStatus {
             channel: self.profile().get_fader_assignment(fader),
             mute_type: self.profile().get_mute_button_behaviour(fader),
+            scribble: self
+                .profile()
+                .get_scribble_ipc(fader, self.hardware.device_type == DeviceType::Mini),
         }
     }
 
@@ -2248,7 +2257,7 @@ impl<'a> Device<'a> {
     fn apply_scribble(&mut self, fader: FaderName) -> Result<()> {
         let icon_path = block_on(self.settings.get_icons_directory());
 
-        let scribble = self.profile.get_fader_scribble(fader, &icon_path);
+        let scribble = self.profile.get_scribble_image(fader, &icon_path);
         self.goxlr.set_fader_scribble(fader, scribble)?;
 
         Ok(())
