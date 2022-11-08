@@ -6,6 +6,7 @@ use anyhow::{anyhow, bail, Result};
 use chrono::Local;
 use enum_map::EnumMap;
 use enumset::EnumSet;
+use futures::executor::block_on;
 use log::{debug, error, info};
 use ritelinked::LinkedHashSet;
 use strum::IntoEnumIterator;
@@ -38,6 +39,7 @@ pub struct Device<'a> {
     profile: ProfileAdapter,
     mic_profile: MicProfileAdapter,
     audio_handler: Option<AudioHandler>,
+    held_timeout: u16,
     settings: &'a SettingsHandle,
 }
 
@@ -97,11 +99,13 @@ impl<'a> Device<'a> {
             audio_handler = Some(audio);
         }
 
+        let hold_time = block_on(settings_handle.get_device_hold_time(&hardware.serial_number));
         let mut device = Self {
             profile,
             mic_profile,
             goxlr,
             hardware,
+            held_timeout: hold_time,
             last_buttons: EnumSet::empty(),
             button_states: EnumMap::default(),
             audio_handler,
@@ -178,13 +182,7 @@ impl<'a> Device<'a> {
         for button in self.last_buttons {
             if !self.button_states[button].hold_handled {
                 let now = self.get_epoch_ms();
-                if (now - self.button_states[button].press_time)
-                    > self
-                        .settings
-                        .get_device_hold_time(self.serial())
-                        .await
-                        .into()
-                {
+                if (now - self.button_states[button].press_time) > self.held_timeout.into() {
                     if let Err(error) = self.on_button_hold(button).await {
                         error!("{}", error);
                     }

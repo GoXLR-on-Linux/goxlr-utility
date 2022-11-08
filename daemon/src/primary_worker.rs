@@ -44,7 +44,7 @@ pub async fn handle_changes(
     tokio::pin!(detection_sleep);
 
     // Create the State update Sleep Timer..
-    let update_duration = Duration::from_millis(100);
+    let update_duration = Duration::from_millis(50);
     let update_sleep = sleep(update_duration);
     tokio::pin!(update_sleep);
 
