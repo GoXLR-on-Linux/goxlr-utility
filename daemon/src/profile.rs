@@ -260,15 +260,23 @@ impl ProfileAdapter {
     }
 
     pub fn switch_fader_assignment(&mut self, fader_one: FaderName, fader_two: FaderName) {
-        // TODO: Scribble?
-        self.profile.settings_mut().faders().swap(
-            standard_to_profile_fader(fader_one),
-            standard_to_profile_fader(fader_two),
-        );
-        self.profile.settings_mut().mute_buttons().swap(
-            standard_to_profile_fader(fader_one),
-            standard_to_profile_fader(fader_two),
-        );
+        let profile_fader_one = standard_to_profile_fader(fader_one);
+        let profile_fader_two = standard_to_profile_fader(fader_two);
+
+        self.profile
+            .settings_mut()
+            .scribbles_mut()
+            .swap(profile_fader_one, profile_fader_two);
+
+        self.profile
+            .settings_mut()
+            .faders_mut()
+            .swap(profile_fader_one, profile_fader_two);
+
+        self.profile
+            .settings_mut()
+            .mute_buttons()
+            .swap(profile_fader_one, profile_fader_two);
     }
 
     pub fn set_fader_display(

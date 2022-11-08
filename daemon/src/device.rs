@@ -2051,6 +2051,9 @@ impl<'a> Device<'a> {
         self.goxlr.set_fader(fader, new_channel)?;
         self.goxlr.set_fader(fader_to_switch, existing_channel)?;
 
+        self.apply_scribble(fader)?;
+        self.apply_scribble(fader_to_switch)?;
+
         // Finally update the button colours..
         self.update_button_states()?;
 
@@ -2119,10 +2122,11 @@ impl<'a> Device<'a> {
 
             debug!("Applying Mute Profile for {}", fader);
             self.apply_mute_from_profile(fader)?;
-        }
 
-        debug!("Applying Scribbles?");
-        self.load_scribbles()?;
+            if self.hardware.device_type == DeviceType::Full {
+                self.apply_scribble(fader)?;
+            }
+        }
 
         debug!("Applying Cough button settings..");
         self.apply_cough_from_profile()?;
@@ -2241,13 +2245,11 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
-    fn load_scribbles(&mut self) -> Result<()> {
+    fn apply_scribble(&mut self, fader: FaderName) -> Result<()> {
         let icon_path = block_on(self.settings.get_icons_directory());
 
-        for fader in FaderName::iter() {
-            let scribble = self.profile.get_fader_scribble(fader, &icon_path);
-            self.goxlr.set_fader_scribble(fader, scribble)?;
-        }
+        let scribble = self.profile.get_fader_scribble(fader, &icon_path);
+        self.goxlr.set_fader_scribble(fader, scribble)?;
 
         Ok(())
     }
