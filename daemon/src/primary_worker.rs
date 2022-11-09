@@ -78,6 +78,12 @@ pub async fn handle_changes(
                     let existing_serials: Vec<String> = get_all_serials(&devices);
                     let bus_number = device.bus_number();
                     let address = device.address();
+
+                    let mut device_identifier = None;
+                    if let Some(identifier) = device.identifier() {
+                        device_identifier = Some(identifier.clone());
+                    }
+
                     match load_device(device, existing_serials, disconnect_sender.clone(), event_sender.clone(), &settings).await {
                         Ok(device) => {
                             devices.insert(device.serial().to_owned(), device);
@@ -88,7 +94,7 @@ pub async fn handle_changes(
                                 bus_number, address, e
                             );
                             ignore_list
-                                .insert((bus_number, address), Instant::now() + Duration::from_secs(10));
+                                .insert((bus_number, address, device_identifier), Instant::now() + Duration::from_secs(10));
                         }
                     };
                 }
@@ -176,18 +182,30 @@ pub async fn handle_changes(
 
 fn find_new_device(
     existing_devices: &HashMap<String, Device>,
-    devices_to_ignore: &HashMap<(u8, u8), Instant>,
+    devices_to_ignore: &HashMap<(u8, u8, Option<String>), Instant>,
 ) -> Option<GoXLRDevice> {
     let now = Instant::now();
 
     let goxlr_devices = find_devices();
     goxlr_devices.into_iter().find(|device| {
         !existing_devices.values().any(|d| {
+            if let Some(identifier) = device.identifier() {
+                if let Some(device_identifier) = d.status().hardware.usb_device.identifier {
+                    return identifier.clone() == device_identifier;
+                }
+            }
+
             d.status().hardware.usb_device.bus_number == device.bus_number()
                 && d.status().hardware.usb_device.address == device.address()
         }) && !devices_to_ignore
             .iter()
-            .any(|((bus_number, address), expires)| {
+            .any(|((bus_number, address, identifier), expires)| {
+                if let Some(identifier) = identifier {
+                    if let Some(device_identifier) = device.identifier() {
+                        return identifier == device_identifier;
+                    }
+                }
+
                 *bus_number == device.bus_number() && *address == device.address() && expires > &now
             })
     })
@@ -211,6 +229,10 @@ async fn load_device(
     settings: &SettingsHandle,
 ) -> Result<Device<'_>> {
     let device_copy = device.clone();
+    let mut device_identifier = None;
+    if let Some(identifier) = device_copy.identifier() {
+        device_identifier = Some(identifier.clone());
+    }
 
     let mut handled_device = from_device(device, disconnect_sender, event_sender)?;
     let descriptor = handled_device.get_descriptor()?;
@@ -229,6 +251,7 @@ async fn load_device(
         product_name: descriptor.product_name(),
         bus_number: device_copy.bus_number(),
         address: device_copy.address(),
+        identifier: device_identifier,
         version,
     };
     let (mut serial_number, manufactured_date) = handled_device.get_serial_number()?;

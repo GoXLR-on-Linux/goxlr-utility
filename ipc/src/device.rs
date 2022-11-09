@@ -325,6 +325,7 @@ pub struct UsbProductInformation {
     pub version: (u8, u8, u8),
     pub bus_number: u8,
     pub address: u8,
+    pub identifier: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
