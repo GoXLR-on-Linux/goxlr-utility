@@ -125,8 +125,6 @@ fn create_final_image(
         // Resize the icon down to the calculated level..
         *icon = icon.resize(w, h, FilterType::Gaussian);
 
-        debug!("Dimensions: {}x{}", icon.width(), icon.height());
-
         // Find the middle..
         let x = (image.width() - icon.width()) / 2;
         let y = ((h - icon.height()) / 2) + 3;
