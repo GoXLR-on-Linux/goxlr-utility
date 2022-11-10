@@ -1411,6 +1411,7 @@ dependencies = [
  "interprocess",
  "log",
  "md5",
+ "mime_guess",
  "nix 0.25.0",
  "opener",
  "regex",

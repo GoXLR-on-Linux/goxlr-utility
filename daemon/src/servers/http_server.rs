@@ -7,6 +7,7 @@ use actix::{
 use actix_cors::Cors;
 use actix_plus_static_files::{build_hashmap_from_included_dir, include_dir, Dir, ResourceFiles};
 use actix_web::dev::ServerHandle;
+use actix_web::http::header::ContentType;
 use actix_web::middleware::Condition;
 use actix_web::web::Data;
 use actix_web::{get, post, web, App, HttpRequest, HttpResponse, HttpServer};
@@ -14,7 +15,8 @@ use actix_web_actors::ws;
 use actix_web_actors::ws::CloseCode;
 use anyhow::{anyhow, Result};
 use futures::lock::Mutex;
-use log::{info, warn};
+use log::{debug, info, warn};
+use mime_guess::MimeGuess;
 use tokio::sync::oneshot::Sender;
 
 use goxlr_ipc::{DaemonRequest, DaemonResponse, DaemonStatus};
@@ -116,7 +118,8 @@ pub async fn launch_httpd(
             .service(execute_command)
             .service(get_devices)
             .service(websocket)
-            .service(ResourceFiles::new("/", static_files))
+            .default_service(web::to(default))
+        //.service(ResourceFiles::new("/", static_files))
     })
     .bind(("127.0.0.1", port))?
     .run();
@@ -169,6 +172,22 @@ async fn get_devices(usb_mutex: Data<Mutex<DeviceSender>>) -> HttpResponse {
         return HttpResponse::Ok().json(&response);
     }
     HttpResponse::InternalServerError().finish()
+}
+
+async fn default(req: HttpRequest) -> HttpResponse {
+    let path = req.path();
+    let path_part = &path[1..path.len()];
+
+    let file = WEB_CONTENT.get_file(path_part);
+    if let Some(file) = file {
+        let mime_type = MimeGuess::from_path(req.path()).first_or_octet_stream();
+        let mut builder = HttpResponse::Ok();
+
+        builder.insert_header(ContentType(mime_type));
+        builder.body(file.contents())
+    } else {
+        HttpResponse::NotFound().finish()
+    }
 }
 
 async fn get_status(usb_tx: Data<Mutex<DeviceSender>>) -> Result<DaemonStatus> {
