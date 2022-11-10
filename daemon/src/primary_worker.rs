@@ -202,7 +202,7 @@ fn find_new_device(
             .any(|((bus_number, address, identifier), expires)| {
                 if let Some(identifier) = identifier {
                     if let Some(device_identifier) = device.identifier() {
-                        return identifier == device_identifier;
+                        return identifier == device_identifier && expires > &now;
                     }
                 }
 
