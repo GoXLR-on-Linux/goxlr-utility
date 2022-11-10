@@ -38,6 +38,7 @@ pub enum PathTypes {
     MicProfiles,
     Presets,
     Samples,
+    Icons,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

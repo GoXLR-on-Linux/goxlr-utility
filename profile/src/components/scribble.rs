@@ -218,11 +218,7 @@ impl Scribble {
     }
 
     pub fn set_scribble_inverted(&mut self, inverted: bool) {
-        self.style = if inverted {
-            ScribbleStyle::Inverted
-        } else {
-            ScribbleStyle::Normal
-        }
+        self.style = if inverted { Inverted } else { Normal }
     }
 }
 

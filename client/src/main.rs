@@ -6,7 +6,7 @@ use crate::cli::{
     Echo, EffectsCommands, EqualiserCommands, EqualiserMiniCommands, FaderCommands,
     FaderLightingCommands, FadersAllLightingCommands, Gender, HardTune, LightingCommands,
     Megaphone, MicrophoneCommands, NoiseGateCommands, Pitch, ProfileAction, ProfileType, Reverb,
-    Robot, SamplerCommands, SubCommands,
+    Robot, SamplerCommands, Scribbles, SubCommands,
 };
 use crate::microphone::apply_microphone_controls;
 use anyhow::{anyhow, Context, Result};
@@ -180,6 +180,40 @@ async fn main() -> Result<()> {
                             )
                             .await?;
                     }
+                    FaderCommands::Scribbles { command } => match command {
+                        Scribbles::Icon { fader, name } => {
+                            client
+                                .command(
+                                    &serial,
+                                    GoXLRCommand::SetScribbleIcon(*fader, name.clone()),
+                                )
+                                .await?;
+                        }
+                        Scribbles::Text { fader, text } => {
+                            client
+                                .command(
+                                    &serial,
+                                    GoXLRCommand::SetScribbleText(*fader, text.clone()),
+                                )
+                                .await?;
+                        }
+                        Scribbles::Number { fader, text } => {
+                            client
+                                .command(
+                                    &serial,
+                                    GoXLRCommand::SetScribbleNumber(*fader, text.clone()),
+                                )
+                                .await?;
+                        }
+                        Scribbles::Invert { fader, inverted } => {
+                            client
+                                .command(
+                                    &serial,
+                                    GoXLRCommand::SetScribbleInvert(*fader, *inverted),
+                                )
+                                .await?;
+                        }
+                    },
                 },
                 SubCommands::Router {
                     input,

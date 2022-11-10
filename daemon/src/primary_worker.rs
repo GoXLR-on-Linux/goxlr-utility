@@ -160,6 +160,7 @@ pub async fn handle_changes(
                             PathTypes::MicProfiles => settings.get_mic_profile_directory().await,
                             PathTypes::Presets => settings.get_presets_directory().await,
                             PathTypes::Samples => settings.get_samples_directory().await,
+                            PathTypes::Icons => settings.get_icons_directory().await,
                         });
                         if result.is_err() {
                             let _ = sender.send(DaemonResponse::Error("Unable to Open".to_string()));

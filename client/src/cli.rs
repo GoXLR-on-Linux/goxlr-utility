@@ -480,6 +480,37 @@ pub enum FaderCommands {
         #[clap(arg_enum)]
         mute_behaviour: MuteFunction,
     },
+
+    Scribbles {
+        #[clap(subcommand)]
+        command: Scribbles,
+    },
+}
+#[derive(Subcommand, Debug)]
+pub enum Scribbles {
+    Icon {
+        #[clap(arg_enum)]
+        fader: FaderName,
+        name: String,
+    },
+
+    Text {
+        #[clap(arg_enum)]
+        fader: FaderName,
+        text: String,
+    },
+
+    Number {
+        #[clap(arg_enum)]
+        fader: FaderName,
+        text: String,
+    },
+
+    Invert {
+        #[clap(arg_enum)]
+        fader: FaderName,
+        inverted: bool,
+    },
 }
 
 #[derive(Subcommand, Debug)]
