@@ -738,6 +738,98 @@ async fn main() -> Result<()> {
                             .await
                             .context("Unable to add Sample File")?;
                     }
+                    SamplerCommands::RemoveByIndex {
+                        bank,
+                        button,
+                        index,
+                    } => {
+                        client
+                            .command(
+                                &serial,
+                                GoXLRCommand::RemoveSampleByIndex(*bank, *button, *index),
+                            )
+                            .await
+                            .context("Unable to Remove Sample")?;
+                    }
+                    SamplerCommands::PlayByIndex {
+                        bank,
+                        button,
+                        index,
+                    } => {
+                        client
+                            .command(
+                                &serial,
+                                GoXLRCommand::PlaySampleByIndex(*bank, *button, *index),
+                            )
+                            .await
+                            .context("Unable to Play Sample")?;
+                    }
+                    SamplerCommands::StopPlayback { bank, button } => {
+                        client
+                            .command(&serial, GoXLRCommand::StopSamplePlayback(*bank, *button))
+                            .await
+                            .context("Unable to Stop Sample Playback")?;
+                    }
+                    SamplerCommands::PlaybackMode { bank, button, mode } => {
+                        client
+                            .command(
+                                &serial,
+                                GoXLRCommand::SetSamplerFunction(*bank, *button, *mode),
+                            )
+                            .await
+                            .context("Unable to set Playback Mode")?;
+                    }
+                    SamplerCommands::PlaybackOrder {
+                        bank,
+                        button,
+                        mode: order,
+                    } => {
+                        client
+                            .command(
+                                &serial,
+                                GoXLRCommand::SetSamplerOrder(*bank, *button, *order),
+                            )
+                            .await
+                            .context("Unable to set Play Order")?;
+                    }
+                    SamplerCommands::StartPercent {
+                        bank,
+                        button,
+                        sample_id,
+                        start_position,
+                    } => {
+                        client
+                            .command(
+                                &serial,
+                                GoXLRCommand::SetSampleStartPercent(
+                                    *bank,
+                                    *button,
+                                    *sample_id,
+                                    *start_position,
+                                ),
+                            )
+                            .await
+                            .context("Unable to set Start Percent")?;
+                    }
+                    SamplerCommands::StopPercent {
+                        bank,
+                        button,
+                        sample_id,
+                        stop_position,
+                    } => {
+                        client
+                            .command(
+                                &serial,
+                                GoXLRCommand::SetSampleStopPercent(
+                                    *bank,
+                                    *button,
+                                    *sample_id,
+                                    *stop_position,
+                                ),
+                            )
+                            .await
+                            .context("Unable to set Stop Percent")?;
+                    }
                 },
             }
         }

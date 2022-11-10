@@ -5,7 +5,7 @@ use goxlr_types::{
     EncoderColourTargets, EqFrequencies, FaderDisplayStyle, FaderName, GateTimes, GenderStyle,
     HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle, MiniEqFrequencies, MuteFunction,
     OutputDevice, PitchStyle, ReverbStyle, RobotRange, RobotStyle, SampleBank, SampleButtons,
-    SimpleColourTargets,
+    SamplePlayOrder, SamplePlaybackMode, SimpleColourTargets,
 };
 use std::str::FromStr;
 
@@ -140,6 +140,20 @@ fn percent_value(s: &str) -> Result<u8, String> {
     if value > 100 {
         return Err(String::from("Value must be lower than 100"));
     }
+    Ok(value)
+}
+
+fn percent_value_float(s: &str) -> Result<f32, String> {
+    let value = f32::from_str(s);
+    if value.is_err() {
+        return Err(String::from("Value must be between 0 and 100"));
+    }
+
+    let value = value.unwrap();
+    if !(0.0..=100.0).contains(&value) {
+        return Err(String::from("Value must be between 0 and 100"));
+    }
+
     Ok(value)
 }
 
@@ -913,6 +927,15 @@ pub enum HardTune {
 #[derive(Subcommand, Debug)]
 #[clap(setting = AppSettings::DeriveDisplayOrder)]
 #[clap(setting = AppSettings::ArgRequiredElseHelp)]
+
+/**
+Reference Commands:
+
+RemoveSampleByIndex(SampleBank, SampleButtons, usize),
+PlaySampleByIndex(SampleBank, SampleButtons, usize),
+StopSamplePlayback(SampleBank, SampleButtons),
+*/
+
 pub enum SamplerCommands {
     Add {
         #[clap(arg_enum)]
@@ -922,5 +945,81 @@ pub enum SamplerCommands {
         button: SampleButtons,
 
         file: String,
+    },
+
+    RemoveByIndex {
+        #[clap(arg_enum)]
+        bank: SampleBank,
+
+        #[clap(arg_enum)]
+        button: SampleButtons,
+
+        index: usize,
+    },
+
+    PlayByIndex {
+        #[clap(arg_enum)]
+        bank: SampleBank,
+
+        #[clap(arg_enum)]
+        button: SampleButtons,
+
+        index: usize,
+    },
+
+    StopPlayback {
+        #[clap(arg_enum)]
+        bank: SampleBank,
+
+        #[clap(arg_enum)]
+        button: SampleButtons,
+    },
+
+    PlaybackMode {
+        #[clap(arg_enum)]
+        bank: SampleBank,
+
+        #[clap(arg_enum)]
+        button: SampleButtons,
+
+        #[clap(arg_enum)]
+        mode: SamplePlaybackMode,
+    },
+
+    PlaybackOrder {
+        #[clap(arg_enum)]
+        bank: SampleBank,
+
+        #[clap(arg_enum)]
+        button: SampleButtons,
+
+        #[clap(arg_enum)]
+        mode: SamplePlayOrder,
+    },
+
+    StartPercent {
+        #[clap(arg_enum)]
+        bank: SampleBank,
+
+        #[clap(arg_enum)]
+        button: SampleButtons,
+
+        sample_id: usize,
+
+        #[clap(parse(try_from_str=percent_value_float))]
+        start_position: f32,
+    },
+
+    StopPercent {
+        #[clap(arg_enum)]
+        bank: SampleBank,
+
+        #[clap(arg_enum)]
+        button: SampleButtons,
+
+        sample_id: usize,
+
+        #[clap(parse(try_from_str=percent_value_float))]
+        stop_position: f32,
     },
 }
