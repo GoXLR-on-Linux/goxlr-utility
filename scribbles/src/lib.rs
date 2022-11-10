@@ -2,7 +2,7 @@ use anyhow::{bail, Result};
 use image::imageops::{dither, overlay, BiLevel, FilterType};
 use image::{ColorType, DynamicImage, GenericImage, GenericImageView, GrayImage, Luma, Rgba};
 use imageproc::drawing::{draw_text_mut, text_size};
-use log::warn;
+use log::{debug, warn};
 use rusttype::{Font, Scale};
 use std::borrow::BorrowMut;
 use std::path::PathBuf;
@@ -72,14 +72,14 @@ fn create_text_image(text: &str) -> Result<DynamicImage> {
 
     let scale = Scale {
         x: 23_f32,
-        y: 20_f32,
+        y: 19_f32,
     };
 
     // Calculate the draw width..
     let (width, _height) = text_size(scale, &draw_font, text);
     let draw_width = if width < 128 { width } else { 128 };
 
-    let mut image = DynamicImage::new_rgb8(draw_width as u32, 20);
+    let mut image = DynamicImage::new_rgb8(draw_width as u32, 19);
     image
         .clone()
         .pixels()
@@ -113,10 +113,19 @@ fn create_final_image(
     // Ok, now we need to position and draw the specific components onto it..
     if let Some(ref mut icon) = icon {
         // We have an icon, we need to resize and position based on the existance of text..
-        let (w, h) = if text.is_some() { (80, 40) } else { (120, 60) };
+        let (w, h) = if text.is_some() { (80, 41) } else { (120, 60) };
+
+        // Before we resize it, we wanna stretch it by about 20% to offset the differences in pixel sizes on the GoXLR..
+        *icon = icon.resize_exact(
+            (icon.width() as f32 * 1.20) as u32,
+            icon.height(),
+            FilterType::Nearest,
+        );
 
         // Resize the icon down to the calculated level..
-        *icon = icon.resize(w, h, FilterType::Nearest);
+        *icon = icon.resize(w, h, FilterType::Gaussian);
+
+        debug!("Dimensions: {}x{}", icon.width(), icon.height());
 
         // Find the middle..
         let x = (image.width() - icon.width()) / 2;
