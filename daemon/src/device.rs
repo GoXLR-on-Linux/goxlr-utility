@@ -1656,6 +1656,23 @@ impl<'a> Device<'a> {
                 self.stop_sample_playback(bank, button).await?;
             }
 
+            GoXLRCommand::SetScribbleIcon(fader, icon) => {
+                self.profile.set_scribble_icon(fader, icon);
+                self.apply_scribble(fader)?;
+            }
+            GoXLRCommand::SetScribbleText(fader, text) => {
+                self.profile.set_scribble_text(fader, text);
+                self.apply_scribble(fader)?;
+            }
+            GoXLRCommand::SetScribbleNumber(fader, number) => {
+                self.profile.set_scribble_number(fader, number);
+                self.apply_scribble(fader)?;
+            }
+            GoXLRCommand::SetScribbleInvert(fader, inverted) => {
+                self.profile.set_scribble_inverted(fader, inverted);
+                self.apply_scribble(fader)?;
+            }
+
             // Profiles
             GoXLRCommand::NewProfile(profile_name) => {
                 let profile_directory = self.settings.get_profile_directory().await;

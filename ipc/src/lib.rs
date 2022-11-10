@@ -169,6 +169,12 @@ pub enum GoXLRCommand {
     PlaySampleByIndex(SampleBank, SampleButtons, usize),
     StopSamplePlayback(SampleBank, SampleButtons),
 
+    // Scribbles
+    SetScribbleIcon(FaderName, String),
+    SetScribbleText(FaderName, String),
+    SetScribbleNumber(FaderName, String),
+    SetScribbleInvert(FaderName, bool),
+
     // Profile Handling..
     NewProfile(String),
     LoadProfile(String),

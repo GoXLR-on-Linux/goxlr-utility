@@ -206,6 +206,24 @@ impl Scribble {
     pub fn style(&self) -> &ScribbleStyle {
         &self.style
     }
+
+    pub fn set_icon_file(&mut self, icon_file: String) {
+        self.icon_file = icon_file;
+    }
+    pub fn set_text_top_left(&mut self, text_top_left: String) {
+        self.text_top_left = text_top_left;
+    }
+    pub fn set_text_bottom_middle(&mut self, text_bottom_middle: String) {
+        self.text_bottom_middle = text_bottom_middle;
+    }
+
+    pub fn set_scribble_inverted(&mut self, inverted: bool) {
+        self.style = if inverted {
+            ScribbleStyle::Inverted
+        } else {
+            ScribbleStyle::Normal
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, Debug)]

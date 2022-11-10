@@ -328,6 +328,42 @@ impl ProfileAdapter {
         )
     }
 
+    pub fn set_scribble_icon(&mut self, fader: FaderName, icon: String) {
+        let scribble = self
+            .profile
+            .settings_mut()
+            .scribble_mut(standard_to_profile_fader(fader));
+
+        scribble.set_icon_file(icon);
+    }
+
+    pub fn set_scribble_text(&mut self, fader: FaderName, text: String) {
+        let scribble = self
+            .profile
+            .settings_mut()
+            .scribble_mut(standard_to_profile_fader(fader));
+
+        scribble.set_text_bottom_middle(text);
+    }
+
+    pub fn set_scribble_number(&mut self, fader: FaderName, text: String) {
+        let scribble = self
+            .profile
+            .settings_mut()
+            .scribble_mut(standard_to_profile_fader(fader));
+
+        scribble.set_text_top_left(text);
+    }
+
+    pub fn set_scribble_inverted(&mut self, fader: FaderName, inverted: bool) {
+        let scribble = self
+            .profile
+            .settings_mut()
+            .scribble_mut(standard_to_profile_fader(fader));
+
+        scribble.set_scribble_inverted(inverted);
+    }
+
     pub fn get_channel_volume(&self, channel: ChannelName) -> u8 {
         self.profile
             .settings()
