@@ -229,15 +229,9 @@ async fn load_device(
     settings: &SettingsHandle,
 ) -> Result<Device<'_>> {
     let device_copy = device.clone();
-    let mut device_identifier = None;
-    if let Some(identifier) = device_copy.identifier() {
-        device_identifier = Some(identifier.clone());
-    }
 
     let mut handled_device = from_device(device, disconnect_sender, event_sender)?;
     let descriptor = handled_device.get_descriptor()?;
-
-    //let mut device = GoXLR::from_device(device.open()?, descriptor)?;
 
     let device_type = match descriptor.product_id() {
         PID_GOXLR_FULL => DeviceType::Full,
@@ -251,7 +245,7 @@ async fn load_device(
         product_name: descriptor.product_name(),
         bus_number: device_copy.bus_number(),
         address: device_copy.address(),
-        identifier: device_identifier,
+        identifier: device_copy.identifier().clone(),
         version,
     };
     let (mut serial_number, manufactured_date) = handled_device.get_serial_number()?;
