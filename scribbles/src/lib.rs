@@ -2,7 +2,7 @@ use anyhow::{bail, Result};
 use image::imageops::{dither, overlay, BiLevel, FilterType};
 use image::{ColorType, DynamicImage, GenericImage, GenericImageView, GrayImage, Luma, Rgba};
 use imageproc::drawing::{draw_text_mut, text_size};
-use log::{debug, warn};
+use log::warn;
 use rusttype::{Font, Scale};
 use std::borrow::BorrowMut;
 use std::path::PathBuf;
