@@ -9,4 +9,5 @@ members = [
     "types",
     "profile",
     "initialiser",
+    "scribbles",
 ]

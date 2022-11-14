@@ -29,6 +29,7 @@ impl SettingsHandle {
             mic_profile_directory: Some(data_dir.join("mic-profiles")),
             samples_directory: Some(data_dir.join("samples")),
             presets_directory: Some(data_dir.join("presets")),
+            icons_directory: Some(data_dir.join("icons")),
             devices: Default::default(),
         });
 
@@ -47,6 +48,10 @@ impl SettingsHandle {
 
         if settings.presets_directory.is_none() {
             settings.presets_directory = Some(data_dir.join("presets"));
+        }
+
+        if settings.icons_directory.is_none() {
+            settings.icons_directory = Some(data_dir.join("icons"));
         }
 
         let handle = SettingsHandle {
@@ -86,6 +91,11 @@ impl SettingsHandle {
     pub async fn get_presets_directory(&self) -> PathBuf {
         let settings = self.settings.read().await;
         settings.presets_directory.clone().unwrap()
+    }
+
+    pub async fn get_icons_directory(&self) -> PathBuf {
+        let settings = self.settings.read().await;
+        settings.icons_directory.clone().unwrap()
     }
 
     pub async fn get_device_profile_name(&self, device_serial: &str) -> Option<String> {
@@ -142,6 +152,7 @@ pub struct Settings {
     mic_profile_directory: Option<PathBuf>,
     samples_directory: Option<PathBuf>,
     presets_directory: Option<PathBuf>,
+    icons_directory: Option<PathBuf>,
     devices: HashMap<String, DeviceSettings>,
 }
 

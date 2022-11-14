@@ -22,7 +22,7 @@ pub struct DaemonStatus {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MixerStatus {
     pub hardware: HardwareStatus,
-    pub fader_status: [FaderStatus; 4],
+    pub fader_status: [FaderStatus; 4], // TODO: Does this need to be an array? :p
     pub mic_status: MicSettings,
     pub levels: Levels,
     pub router: [EnumSet<OutputDevice>; InputDevice::COUNT],
@@ -58,10 +58,11 @@ pub struct HardwareStatus {
     pub usb_device: UsbProductInformation,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Copy)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FaderStatus {
     pub channel: ChannelName,
     pub mute_type: MuteFunction,
+    pub scribble: Option<Scribble>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Copy)]
@@ -75,6 +76,7 @@ impl Default for FaderStatus {
         FaderStatus {
             channel: ChannelName::Mic,
             mute_type: MuteFunction::All,
+            scribble: None,
         }
     }
 }
@@ -296,6 +298,7 @@ pub struct Paths {
     pub mic_profile_directory: PathBuf,
     pub samples_directory: PathBuf,
     pub presets_directory: PathBuf,
+    pub icons_directory: PathBuf,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -304,6 +307,15 @@ pub struct Files {
     pub mic_profiles: HashSet<String>,
     pub presets: HashSet<String>,
     pub samples: HashMap<String, String>,
+    pub icons: HashSet<String>,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct Scribble {
+    pub file_name: Option<String>,
+    pub bottom_text: Option<String>,
+    pub left_text: Option<String>,
+    pub inverted: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -311,10 +323,9 @@ pub struct UsbProductInformation {
     pub manufacturer_name: String,
     pub product_name: String,
     pub version: (u8, u8, u8),
-    pub is_claimed: bool,
-    pub has_kernel_driver_attached: bool,
     pub bus_number: u8,
     pub address: u8,
+    pub identifier: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

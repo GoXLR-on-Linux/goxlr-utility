@@ -6,29 +6,36 @@ use crate::cli::{
     Echo, EffectsCommands, EqualiserCommands, EqualiserMiniCommands, FaderCommands,
     FaderLightingCommands, FadersAllLightingCommands, Gender, HardTune, LightingCommands,
     Megaphone, MicrophoneCommands, NoiseGateCommands, Pitch, ProfileAction, ProfileType, Reverb,
-    Robot, SamplerCommands, SubCommands,
+    Robot, SamplerCommands, Scribbles, SubCommands,
 };
 use crate::microphone::apply_microphone_controls;
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use cli::Cli;
 use goxlr_ipc::client::Client;
+use goxlr_ipc::ipc_socket::Socket;
+use goxlr_ipc::GoXLRCommand;
 use goxlr_ipc::{DaemonRequest, DaemonResponse, DeviceType, MixerStatus, UsbProductInformation};
-use goxlr_ipc::{GoXLRCommand, Socket};
 use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice};
+use interprocess::local_socket::tokio::LocalSocketStream;
+use interprocess::local_socket::NameTypeSupport;
 use strum::IntoEnumIterator;
-use tokio::net::UnixStream;
+
+static SOCKET_PATH: &str = "/tmp/goxlr.socket";
+static NAMED_PIPE: &str = "@goxlr.socket";
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli: Cli = Cli::parse();
-    let stream = UnixStream::connect("/tmp/goxlr.socket")
-        .await
-        .context("Could not connect to the GoXLR daemon process")?;
-    let address = stream
-        .peer_addr()
-        .context("Could not get the address of the GoXLR daemon process")?;
-    let socket: Socket<DaemonResponse, DaemonRequest> = Socket::new(address, stream);
+
+    let connection = LocalSocketStream::connect(match NameTypeSupport::query() {
+        NameTypeSupport::OnlyPaths | NameTypeSupport::Both => SOCKET_PATH,
+        NameTypeSupport::OnlyNamespaced => NAMED_PIPE,
+    })
+    .await
+    .context("Unable to connect to the GoXLR daemon Process")?;
+
+    let socket: Socket<DaemonResponse, DaemonRequest> = Socket::new(connection);
     let mut client = Client::new(socket);
     client.poll_status().await?;
 
@@ -173,6 +180,40 @@ async fn main() -> Result<()> {
                             )
                             .await?;
                     }
+                    FaderCommands::Scribbles { command } => match command {
+                        Scribbles::Icon { fader, name } => {
+                            client
+                                .command(
+                                    &serial,
+                                    GoXLRCommand::SetScribbleIcon(*fader, name.clone()),
+                                )
+                                .await?;
+                        }
+                        Scribbles::Text { fader, text } => {
+                            client
+                                .command(
+                                    &serial,
+                                    GoXLRCommand::SetScribbleText(*fader, text.clone()),
+                                )
+                                .await?;
+                        }
+                        Scribbles::Number { fader, text } => {
+                            client
+                                .command(
+                                    &serial,
+                                    GoXLRCommand::SetScribbleNumber(*fader, text.clone()),
+                                )
+                                .await?;
+                        }
+                        Scribbles::Invert { fader, inverted } => {
+                            client
+                                .command(
+                                    &serial,
+                                    GoXLRCommand::SetScribbleInvert(*fader, *inverted),
+                                )
+                                .await?;
+                        }
+                    },
                 },
                 SubCommands::Router {
                     input,
@@ -731,6 +772,98 @@ async fn main() -> Result<()> {
                             .await
                             .context("Unable to add Sample File")?;
                     }
+                    SamplerCommands::RemoveByIndex {
+                        bank,
+                        button,
+                        index,
+                    } => {
+                        client
+                            .command(
+                                &serial,
+                                GoXLRCommand::RemoveSampleByIndex(*bank, *button, *index),
+                            )
+                            .await
+                            .context("Unable to Remove Sample")?;
+                    }
+                    SamplerCommands::PlayByIndex {
+                        bank,
+                        button,
+                        index,
+                    } => {
+                        client
+                            .command(
+                                &serial,
+                                GoXLRCommand::PlaySampleByIndex(*bank, *button, *index),
+                            )
+                            .await
+                            .context("Unable to Play Sample")?;
+                    }
+                    SamplerCommands::StopPlayback { bank, button } => {
+                        client
+                            .command(&serial, GoXLRCommand::StopSamplePlayback(*bank, *button))
+                            .await
+                            .context("Unable to Stop Sample Playback")?;
+                    }
+                    SamplerCommands::PlaybackMode { bank, button, mode } => {
+                        client
+                            .command(
+                                &serial,
+                                GoXLRCommand::SetSamplerFunction(*bank, *button, *mode),
+                            )
+                            .await
+                            .context("Unable to set Playback Mode")?;
+                    }
+                    SamplerCommands::PlaybackOrder {
+                        bank,
+                        button,
+                        mode: order,
+                    } => {
+                        client
+                            .command(
+                                &serial,
+                                GoXLRCommand::SetSamplerOrder(*bank, *button, *order),
+                            )
+                            .await
+                            .context("Unable to set Play Order")?;
+                    }
+                    SamplerCommands::StartPercent {
+                        bank,
+                        button,
+                        sample_id,
+                        start_position,
+                    } => {
+                        client
+                            .command(
+                                &serial,
+                                GoXLRCommand::SetSampleStartPercent(
+                                    *bank,
+                                    *button,
+                                    *sample_id,
+                                    *start_position,
+                                ),
+                            )
+                            .await
+                            .context("Unable to set Start Percent")?;
+                    }
+                    SamplerCommands::StopPercent {
+                        bank,
+                        button,
+                        sample_id,
+                        stop_position,
+                    } => {
+                        client
+                            .command(
+                                &serial,
+                                GoXLRCommand::SetSampleStopPercent(
+                                    *bank,
+                                    *button,
+                                    *sample_id,
+                                    *stop_position,
+                                ),
+                            )
+                            .await
+                            .context("Unable to set Stop Percent")?;
+                    }
                 },
             }
         }
@@ -789,11 +922,6 @@ fn print_usb_info(usb: &UsbProductInformation) {
     );
     println!("USB Device manufacturer: {}", usb.manufacturer_name);
     println!("USB Device name: {}", usb.product_name);
-    println!("USB Device is claimed by Daemon: {}", usb.is_claimed);
-    println!(
-        "USB Device has kernel driver attached: {}",
-        usb.has_kernel_driver_attached
-    );
     println!(
         "USB Address: bus {}, address {}",
         usb.bus_number, usb.address

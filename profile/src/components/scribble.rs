@@ -180,10 +180,50 @@ impl Scribble {
     pub fn colour_map_mut(&mut self) -> &mut ColourMap {
         &mut self.colour_map
     }
+
+    pub fn icon_file(&self) -> Option<String> {
+        if self.icon_file.is_empty() {
+            return None;
+        }
+        Some(self.icon_file.to_string())
+    }
+    pub fn text_top_left(&self) -> Option<String> {
+        if self.text_top_left.is_empty() {
+            return None;
+        }
+        Some(self.text_top_left.to_string())
+    }
+    pub fn text_bottom_middle(&self) -> Option<String> {
+        if self.text_bottom_middle.is_empty() {
+            return None;
+        }
+        Some(self.text_bottom_middle.to_string())
+    }
+    pub fn is_style_invert(&self) -> bool {
+        self.style == Inverted
+    }
+
+    pub fn style(&self) -> &ScribbleStyle {
+        &self.style
+    }
+
+    pub fn set_icon_file(&mut self, icon_file: String) {
+        self.icon_file = icon_file;
+    }
+    pub fn set_text_top_left(&mut self, text_top_left: String) {
+        self.text_top_left = text_top_left;
+    }
+    pub fn set_text_bottom_middle(&mut self, text_bottom_middle: String) {
+        self.text_bottom_middle = text_bottom_middle;
+    }
+
+    pub fn set_scribble_inverted(&mut self, inverted: bool) {
+        self.style = if inverted { Inverted } else { Normal }
+    }
 }
 
-#[derive(PartialEq, Debug)]
-enum ScribbleStyle {
+#[derive(PartialEq, Eq, Debug)]
+pub enum ScribbleStyle {
     Normal,
     Inverted,
 }

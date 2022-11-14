@@ -19,7 +19,6 @@ use futures::executor::block_on;
 use log::{debug, info, warn};
 
 use glob::glob;
-use nix::NixPath;
 
 use crate::{SettingsHandle, DISTRIBUTABLE_ROOT};
 
@@ -28,6 +27,7 @@ pub struct FileManager {
     profiles: FileList,
     mic_profiles: FileList,
     presets: FileList,
+    icons: FileList,
     samples: RecursiveFileList,
 }
 
@@ -68,6 +68,7 @@ impl FileManager {
             mic_profiles: Default::default(),
             presets: Default::default(),
             samples: Default::default(),
+            icons: Default::default(),
         }
     }
 
@@ -77,6 +78,7 @@ impl FileManager {
         self.mic_profiles = Default::default();
         self.presets = Default::default();
         self.samples = Default::default();
+        self.icons = Default::default();
     }
 
     pub fn get_profiles(&mut self, settings: &SettingsHandle) -> HashSet<String> {
@@ -90,7 +92,7 @@ impl FileManager {
         let extension = ["goxlr"].to_vec();
 
         let distrib_path = Path::new(DISTRIBUTABLE_ROOT).join("profiles/");
-        self.profiles = self.get_file_list(vec![distrib_path, path], extension);
+        self.profiles = self.get_file_list(vec![distrib_path, path], extension, false);
         self.profiles.names.clone()
     }
 
@@ -102,7 +104,7 @@ impl FileManager {
         let path = block_on(settings.get_mic_profile_directory());
         let extension = ["goxlrMicProfile"].to_vec();
 
-        self.mic_profiles = self.get_file_list(vec![path], extension);
+        self.mic_profiles = self.get_file_list(vec![path], extension, false);
         self.mic_profiles.names.clone()
     }
 
@@ -115,7 +117,7 @@ impl FileManager {
         let distrib_path = Path::new(DISTRIBUTABLE_ROOT).join("presets/");
         let extension = ["preset"].to_vec();
 
-        self.presets = self.get_file_list(vec![path, distrib_path], extension);
+        self.presets = self.get_file_list(vec![path, distrib_path], extension, false);
         self.presets.names.clone()
     }
 
@@ -131,6 +133,18 @@ impl FileManager {
 
         self.samples = self.get_recursive_file_list(base_path, extensions);
         self.samples.names.clone()
+    }
+
+    pub fn get_icons(&mut self, settings: &SettingsHandle) -> HashSet<String> {
+        if self.icons.timeout > Instant::now() {
+            return self.icons.names.clone();
+        }
+
+        let path = block_on(settings.get_icons_directory());
+        let extension = ["gif", "jpg", "png"].to_vec();
+
+        self.icons = self.get_file_list(vec![path], extension, true);
+        self.icons.names.clone()
     }
 
     fn get_recursive_file_list(&self, path: PathBuf, extensions: Vec<&str>) -> RecursiveFileList {
@@ -149,7 +163,7 @@ impl FileManager {
         // Ok, we need to split stuff up..
         for file_path in paths {
             map.insert(
-                file_path.to_string_lossy()[path.len() + 1..].to_string(),
+                file_path.to_string_lossy()[path.to_string_lossy().len() + 1..].to_string(),
                 file_path.file_name().unwrap().to_string_lossy().to_string(),
             );
         }
@@ -160,25 +174,40 @@ impl FileManager {
         }
     }
 
-    fn get_file_list(&self, path: Vec<PathBuf>, extensions: Vec<&str>) -> FileList {
+    fn get_file_list(
+        &self,
+        path: Vec<PathBuf>,
+        extensions: Vec<&str>,
+        with_extension: bool,
+    ) -> FileList {
         // We need to refresh..
         FileList {
-            names: self.get_files_from_paths(path, extensions),
+            names: self.get_files_from_paths(path, extensions, with_extension),
             timeout: Instant::now() + Duration::from_secs(5),
         }
     }
 
-    fn get_files_from_paths(&self, paths: Vec<PathBuf>, extensions: Vec<&str>) -> HashSet<String> {
+    fn get_files_from_paths(
+        &self,
+        paths: Vec<PathBuf>,
+        extensions: Vec<&str>,
+        with_extension: bool,
+    ) -> HashSet<String> {
         let mut result = HashSet::new();
 
         for path in paths {
-            result.extend(self.get_files_from_drive(path, extensions.clone()));
+            result.extend(self.get_files_from_drive(path, extensions.clone(), with_extension));
         }
 
         result
     }
 
-    fn get_files_from_drive(&self, path: PathBuf, extensions: Vec<&str>) -> HashSet<String> {
+    fn get_files_from_drive(
+        &self,
+        path: PathBuf,
+        extensions: Vec<&str>,
+        with_extension: bool,
+    ) -> HashSet<String> {
         if let Err(error) = create_path(&path) {
             warn!(
                 "Unable to create path: {}: {}",
@@ -207,10 +236,16 @@ impl FileManager {
                         })
                         // Get the File Name..
                         .and_then(|e| {
-                            e.path().file_stem().and_then(
-                                // Convert it to a String..
-                                |n| n.to_str().map(String::from),
-                            )
+                            return if with_extension {
+                                e.path()
+                                    .file_name()
+                                    .and_then(|n| n.to_str().map(String::from))
+                            } else {
+                                e.path().file_stem().and_then(
+                                    // Convert it to a String..
+                                    |n| n.to_str().map(String::from),
+                                )
+                            };
                         })
                     // Collect the result.
                 })
@@ -246,7 +281,7 @@ pub fn create_path(path: &Path) -> Result<()> {
     }
     if !path.exists() {
         // Attempt to create the profile directory..
-        if let Err(e) = create_dir_all(&path) {
+        if let Err(e) = create_dir_all(path) {
             return Err(e).context(format!("Could not create path {}", &path.to_string_lossy()))?;
         } else {
             info!("Created Path: {}", path.to_string_lossy());

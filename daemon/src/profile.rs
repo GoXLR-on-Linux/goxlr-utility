@@ -15,7 +15,7 @@ use crate::audio::{AudioFile, AudioHandler};
 use goxlr_ipc::{
     ActiveEffects, ButtonLighting, CoughButton, Echo, Effects, FaderLighting, Gender, HardTune,
     Lighting, Megaphone, OneColour, Pitch, Reverb, Robot, Sample, Sampler, SamplerButton,
-    SamplerLighting, ThreeColours, TwoColours,
+    SamplerLighting, Scribble, ThreeColours, TwoColours,
 };
 use goxlr_profile_loader::components::colours::{
     Colour, ColourDisplay, ColourMap, ColourOffStyle, ColourState,
@@ -35,6 +35,7 @@ use goxlr_profile_loader::components::simple::SimpleElements;
 use goxlr_profile_loader::profile::{Profile, ProfileSettings};
 use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
 use goxlr_profile_loader::{Faders, Preset, SampleButtons};
+use goxlr_scribbles::get_scribble;
 use goxlr_types::{
     ButtonColourGroups, ButtonColourOffStyle as BasicColourOffStyle, ButtonColourTargets,
     ChannelName, EffectBankPresets, EncoderColourTargets, FaderDisplayStyle as BasicColourDisplay,
@@ -259,15 +260,23 @@ impl ProfileAdapter {
     }
 
     pub fn switch_fader_assignment(&mut self, fader_one: FaderName, fader_two: FaderName) {
-        // TODO: Scribble?
-        self.profile.settings_mut().faders().swap(
-            standard_to_profile_fader(fader_one),
-            standard_to_profile_fader(fader_two),
-        );
-        self.profile.settings_mut().mute_buttons().swap(
-            standard_to_profile_fader(fader_one),
-            standard_to_profile_fader(fader_two),
-        );
+        let profile_fader_one = standard_to_profile_fader(fader_one);
+        let profile_fader_two = standard_to_profile_fader(fader_two);
+
+        self.profile
+            .settings_mut()
+            .scribbles_mut()
+            .swap(profile_fader_one, profile_fader_two);
+
+        self.profile
+            .settings_mut()
+            .faders_mut()
+            .swap(profile_fader_one, profile_fader_two);
+
+        self.profile
+            .settings_mut()
+            .mute_buttons()
+            .swap(profile_fader_one, profile_fader_two);
     }
 
     pub fn set_fader_display(
@@ -298,6 +307,61 @@ impl ProfileAdapter {
         colours.set_colour(0, Colour::fromrgb(top.as_str())?)?;
         colours.set_colour(1, Colour::fromrgb(bottom.as_str())?)?;
         Ok(())
+    }
+
+    pub fn get_scribble_image(&self, fader: FaderName, path: &Path) -> [u8; 1024] {
+        let scribble = self
+            .profile
+            .settings()
+            .scribble(standard_to_profile_fader(fader));
+
+        let mut icon_path = None;
+        if let Some(file) = scribble.icon_file() {
+            icon_path = Some(path.join(file));
+        }
+
+        get_scribble(
+            icon_path,
+            scribble.text_bottom_middle(),
+            scribble.text_top_left(),
+            scribble.is_style_invert(),
+        )
+    }
+
+    pub fn set_scribble_icon(&mut self, fader: FaderName, icon: String) {
+        let scribble = self
+            .profile
+            .settings_mut()
+            .scribble_mut(standard_to_profile_fader(fader));
+
+        scribble.set_icon_file(icon);
+    }
+
+    pub fn set_scribble_text(&mut self, fader: FaderName, text: String) {
+        let scribble = self
+            .profile
+            .settings_mut()
+            .scribble_mut(standard_to_profile_fader(fader));
+
+        scribble.set_text_bottom_middle(text);
+    }
+
+    pub fn set_scribble_number(&mut self, fader: FaderName, text: String) {
+        let scribble = self
+            .profile
+            .settings_mut()
+            .scribble_mut(standard_to_profile_fader(fader));
+
+        scribble.set_text_top_left(text);
+    }
+
+    pub fn set_scribble_inverted(&mut self, fader: FaderName, inverted: bool) {
+        let scribble = self
+            .profile
+            .settings_mut()
+            .scribble_mut(standard_to_profile_fader(fader));
+
+        scribble.set_scribble_inverted(inverted);
     }
 
     pub fn get_channel_volume(&self, channel: ChannelName) -> u8 {
@@ -708,6 +772,24 @@ impl ProfileAdapter {
         }
 
         Some(Sampler { banks: sampler_map })
+    }
+
+    pub fn get_scribble_ipc(&self, fader: FaderName, is_mini: bool) -> Option<Scribble> {
+        if is_mini {
+            return None;
+        }
+
+        let scribble = self
+            .profile
+            .settings()
+            .scribble(standard_to_profile_fader(fader));
+
+        Some(Scribble {
+            file_name: scribble.icon_file(),
+            bottom_text: scribble.text_bottom_middle(),
+            left_text: scribble.text_top_left(),
+            inverted: scribble.is_style_invert(),
+        })
     }
 
     /** Regular Mute button handlers */

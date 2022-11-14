@@ -6,6 +6,7 @@ use anyhow::{anyhow, bail, Result};
 use chrono::Local;
 use enum_map::EnumMap;
 use enumset::EnumSet;
+use futures::executor::block_on;
 use log::{debug, error, info};
 use ritelinked::LinkedHashSet;
 use strum::IntoEnumIterator;
@@ -21,9 +22,8 @@ use goxlr_types::{
 };
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::channelstate::ChannelState::{Muted, Unmuted};
-use goxlr_usb::goxlr::GoXLR;
+use goxlr_usb::device::base::FullGoXLRDevice;
 use goxlr_usb::routing::{InputDevice, OutputDevice};
-use goxlr_usb::rusb::UsbContext;
 
 use crate::audio::{AudioFile, AudioHandler};
 use crate::files::find_file_in_path;
@@ -31,15 +31,15 @@ use crate::mic_profile::{MicProfileAdapter, DEFAULT_MIC_PROFILE_NAME};
 use crate::profile::{version_newer_or_equal_to, ProfileAdapter, DEFAULT_PROFILE_NAME};
 use crate::{SettingsHandle, DISTRIBUTABLE_ROOT};
 
-#[derive(Debug)]
-pub struct Device<'a, T: UsbContext> {
-    goxlr: GoXLR<T>,
+pub struct Device<'a> {
+    goxlr: Box<dyn FullGoXLRDevice>,
     hardware: HardwareStatus,
     last_buttons: EnumSet<Buttons>,
     button_states: EnumMap<Buttons, ButtonState>,
     profile: ProfileAdapter,
     mic_profile: MicProfileAdapter,
     audio_handler: Option<AudioHandler>,
+    held_timeout: u16,
     settings: &'a SettingsHandle,
 }
 
@@ -50,9 +50,9 @@ struct ButtonState {
     hold_handled: bool,
 }
 
-impl<'a, T: UsbContext> Device<'a, T> {
+impl<'a> Device<'a> {
     pub fn new(
-        goxlr: GoXLR<T>,
+        goxlr: Box<dyn FullGoXLRDevice>,
         hardware: HardwareStatus,
         profile_name: Option<String>,
         mic_profile_name: Option<String>,
@@ -99,11 +99,13 @@ impl<'a, T: UsbContext> Device<'a, T> {
             audio_handler = Some(audio);
         }
 
+        let hold_time = block_on(settings_handle.get_device_hold_time(&hardware.serial_number));
         let mut device = Self {
             profile,
             mic_profile,
             goxlr,
             hardware,
+            held_timeout: hold_time,
             last_buttons: EnumSet::empty(),
             button_states: EnumMap::default(),
             audio_handler,
@@ -121,15 +123,21 @@ impl<'a, T: UsbContext> Device<'a, T> {
     }
 
     pub fn status(&self) -> MixerStatus {
-        let mut fader_map = [Default::default(); 4];
-        fader_map[FaderName::A as usize] = self.get_fader_state(FaderName::A);
-        fader_map[FaderName::B as usize] = self.get_fader_state(FaderName::B);
-        fader_map[FaderName::C as usize] = self.get_fader_state(FaderName::C);
-        fader_map[FaderName::D as usize] = self.get_fader_state(FaderName::D);
+        //let mut fader_map = [Default::default(); 4];
+        let fader_map = vec![
+            self.get_fader_state(FaderName::A),
+            self.get_fader_state(FaderName::B),
+            self.get_fader_state(FaderName::C),
+            self.get_fader_state(FaderName::D),
+        ];
+
+        // Unbox the Fader Map
+        let boxed = fader_map.into_boxed_slice();
+        let boxed_array: Box<[FaderStatus; 4]> = boxed.try_into().expect("This shouldn't happen!");
 
         MixerStatus {
             hardware: self.hardware.clone(),
-            fader_status: fader_map,
+            fader_status: *boxed_array,
             cough_button: self.profile.get_cough_status(),
             levels: Levels {
                 volumes: self.profile.get_volumes(),
@@ -169,16 +177,30 @@ impl<'a, T: UsbContext> Device<'a, T> {
         &self.mic_profile
     }
 
-    pub async fn monitor_inputs(&mut self) -> Result<()> {
-        self.hardware.usb_device.has_kernel_driver_attached =
-            self.goxlr.usb_device_has_kernel_driver_active()?;
-
-        // Let the audio handle handle stuff..
+    pub async fn update_state(&mut self) -> Result<()> {
+        // Update any audio related states..
         if let Some(audio_handler) = &mut self.audio_handler {
             audio_handler.check_playing().await;
             self.sync_sample_lighting().await?;
         }
 
+        // Find any buttons that have been held, and action if needed.
+        for button in self.last_buttons {
+            if !self.button_states[button].hold_handled {
+                let now = self.get_epoch_ms();
+                if (now - self.button_states[button].press_time) > self.held_timeout.into() {
+                    if let Err(error) = self.on_button_hold(button).await {
+                        error!("{}", error);
+                    }
+                    self.button_states[button].hold_handled = true;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    pub async fn monitor_inputs(&mut self) -> Result<()> {
         let state = self.goxlr.get_button_states()?;
         self.update_volumes_to(state.volumes)?;
         self.update_encoders_to(state.encoders)?;
@@ -208,26 +230,6 @@ impl<'a, T: UsbContext> Device<'a, T> {
             self.button_states[button] = ButtonState {
                 press_time: 0,
                 hold_handled: false,
-            }
-        }
-
-        // Finally, iterate over our existing button states, and see if any have been
-        // pressed for more than half a second and not handled.
-        for button in state.pressed {
-            if !self.button_states[button].hold_handled {
-                let now = self.get_epoch_ms();
-                if (now - self.button_states[button].press_time)
-                    > self
-                        .settings
-                        .get_device_hold_time(self.serial())
-                        .await
-                        .into()
-                {
-                    if let Err(error) = self.on_button_hold(button).await {
-                        error!("{}", error);
-                    }
-                    self.button_states[button].hold_handled = true;
-                }
             }
         }
 
@@ -1654,6 +1656,23 @@ impl<'a, T: UsbContext> Device<'a, T> {
                 self.stop_sample_playback(bank, button).await?;
             }
 
+            GoXLRCommand::SetScribbleIcon(fader, icon) => {
+                self.profile.set_scribble_icon(fader, icon);
+                self.apply_scribble(fader)?;
+            }
+            GoXLRCommand::SetScribbleText(fader, text) => {
+                self.profile.set_scribble_text(fader, text);
+                self.apply_scribble(fader)?;
+            }
+            GoXLRCommand::SetScribbleNumber(fader, number) => {
+                self.profile.set_scribble_number(fader, number);
+                self.apply_scribble(fader)?;
+            }
+            GoXLRCommand::SetScribbleInvert(fader, inverted) => {
+                self.profile.set_scribble_inverted(fader, inverted);
+                self.apply_scribble(fader)?;
+            }
+
             // Profiles
             GoXLRCommand::NewProfile(profile_name) => {
                 let profile_directory = self.settings.get_profile_directory().await;
@@ -2055,6 +2074,9 @@ impl<'a, T: UsbContext> Device<'a, T> {
         self.goxlr.set_fader(fader, new_channel)?;
         self.goxlr.set_fader(fader_to_switch, existing_channel)?;
 
+        self.apply_scribble(fader)?;
+        self.apply_scribble(fader_to_switch)?;
+
         // Finally update the button colours..
         self.update_button_states()?;
 
@@ -2065,6 +2087,9 @@ impl<'a, T: UsbContext> Device<'a, T> {
         FaderStatus {
             channel: self.profile().get_fader_assignment(fader),
             mute_type: self.profile().get_mute_button_behaviour(fader),
+            scribble: self
+                .profile()
+                .get_scribble_ipc(fader, self.hardware.device_type == DeviceType::Mini),
         }
     }
 
@@ -2123,6 +2148,10 @@ impl<'a, T: UsbContext> Device<'a, T> {
 
             debug!("Applying Mute Profile for {}", fader);
             self.apply_mute_from_profile(fader)?;
+
+            if self.hardware.device_type == DeviceType::Full {
+                self.apply_scribble(fader)?;
+            }
         }
 
         debug!("Applying Cough button settings..");
@@ -2242,6 +2271,15 @@ impl<'a, T: UsbContext> Device<'a, T> {
         Ok(())
     }
 
+    fn apply_scribble(&mut self, fader: FaderName) -> Result<()> {
+        let icon_path = block_on(self.settings.get_icons_directory());
+
+        let scribble = self.profile.get_scribble_image(fader, &icon_path);
+        self.goxlr.set_fader_scribble(fader, scribble)?;
+
+        Ok(())
+    }
+
     fn set_pitch_mode(&mut self) -> Result<()> {
         if self.hardware.device_type != DeviceType::Full {
             // Not a Full GoXLR, nothing to do.
@@ -2262,9 +2300,5 @@ impl<'a, T: UsbContext> Device<'a, T> {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_millis()
-    }
-
-    pub fn is_connected(&mut self) -> bool {
-        self.goxlr.is_connected()
     }
 }

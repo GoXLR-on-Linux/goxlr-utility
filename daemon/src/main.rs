@@ -1,37 +1,29 @@
-mod audio;
-mod cli;
-mod communication;
-mod device;
-mod files;
-mod http_server;
-mod mic_profile;
-mod primary_worker;
-mod profile;
-mod settings;
-mod shutdown;
+use actix_web::dev::ServerHandle;
+use anyhow::{bail, Context, Result};
+use clap::Parser;
+use log::{error, info, warn};
+use simplelog::{ColorChoice, CombinedLogger, Config, TermLogger, TerminalMode};
+use tokio::sync::mpsc;
+use tokio::{join, signal};
 
 use crate::cli::{Cli, LevelFilter};
 use crate::files::FileManager;
-use crate::http_server::launch_httpd;
 use crate::primary_worker::handle_changes;
+use crate::servers::http_server::launch_httpd;
+use crate::servers::ipc_server::{bind_socket, run_server};
 use crate::settings::SettingsHandle;
 use crate::shutdown::Shutdown;
-use actix_web::dev::ServerHandle;
-use anyhow::{anyhow, Context, Result};
-use clap::Parser;
-use communication::listen_for_connections;
-use goxlr_ipc::Socket;
-use goxlr_ipc::{DaemonRequest, DaemonResponse};
-use log::{error, info, warn};
-use nix::unistd::Uid;
-use simplelog::{ColorChoice, CombinedLogger, Config, TermLogger, TerminalMode};
-use std::fs;
-use std::fs::remove_file;
-use std::os::unix::fs::PermissionsExt;
-use std::path::Path;
-use tokio::net::{UnixListener, UnixStream};
-use tokio::sync::mpsc;
-use tokio::{join, signal};
+
+mod audio;
+mod cli;
+mod device;
+mod files;
+mod mic_profile;
+mod primary_worker;
+mod profile;
+mod servers;
+mod settings;
+mod shutdown;
 
 // This can probably go somewhere else, but for now..
 const DISTRIBUTABLE_ROOT: &str = "/usr/share/goxlr/";
@@ -56,7 +48,7 @@ async fn main() -> Result<()> {
     )])
     .context("Could not configure the logger")?;
 
-    if Uid::effective().is_root() {
+    if is_root() {
         if args.force_root {
             error!("GoXLR Utility running as root, this is generally considered bad.");
         } else {
@@ -72,11 +64,6 @@ async fn main() -> Result<()> {
 
     info!("Starting GoXLR Daemon v{}", VERSION);
     let settings = SettingsHandle::load(args.config).await?;
-    let listener = create_listener("/tmp/goxlr.socket").await?;
-
-    let mut perms = fs::metadata("/tmp/goxlr.socket")?.permissions();
-    perms.set_mode(0o777);
-    fs::set_permissions("/tmp/goxlr.socket", perms)?;
 
     let mut shutdown = Shutdown::new();
     let file_manager = FileManager::new();
@@ -88,11 +75,14 @@ async fn main() -> Result<()> {
         file_manager,
     ));
 
-    let communications_handle = tokio::spawn(listen_for_connections(
-        listener,
-        usb_tx.clone(),
-        shutdown.clone(),
-    ));
+    let ipc_socket = bind_socket().await;
+    if ipc_socket.is_err() {
+        error!("Error Starting Daemon: ");
+        bail!("{}", ipc_socket.err().unwrap());
+    }
+    let ipc_socket = ipc_socket.unwrap();
+    let communications_handle =
+        tokio::spawn(run_server(ipc_socket, usb_tx.clone(), shutdown.clone()));
 
     let mut http_server: Option<ServerHandle> = None;
     if !args.http_disable {
@@ -121,8 +111,6 @@ async fn main() -> Result<()> {
         let _ = join!(usb_handle, communications_handle);
     }
 
-    info!("Removing Socket");
-    remove_file("/tmp/goxlr.socket")?;
     shutdown.recv().await;
     Ok(())
 }
@@ -133,44 +121,13 @@ async fn await_ctrl_c(shutdown: Shutdown) {
     }
 }
 
-async fn create_listener<P: AsRef<Path>>(path: P) -> Result<UnixListener> {
-    let path = path.as_ref();
-    let mut error = anyhow!("Could not create Unix socket listener");
-
-    for _ in 0..3 {
-        if path.exists() {
-            if is_already_running(path).await {
-                return Err(anyhow!("A GoXLR daemon is already running"));
-            } else {
-                warn!("Removing unused socket file {}", path.to_string_lossy());
-                let _ = remove_file(path);
-            }
-        }
-        match UnixListener::bind(path) {
-            Ok(listener) => return Ok(listener),
-            Err(e) => {
-                error = anyhow::Error::from(e).context("Could not bind the Unix socket");
-            }
-        }
-    }
-
-    Err(error)
+#[cfg(target_family = "unix")]
+fn is_root() -> bool {
+    nix::unistd::Uid::effective().is_root()
 }
 
-async fn is_already_running(path: &Path) -> bool {
-    let stream = match UnixStream::connect(path).await {
-        Ok(stream) => stream,
-        Err(_) => return false,
-    };
-    let address = match stream.peer_addr() {
-        Ok(address) => address,
-        Err(_) => return false,
-    };
-    let mut socket: Socket<DaemonResponse, DaemonRequest> = Socket::new(address, stream);
-
-    if socket.send(DaemonRequest::Ping).await.is_err() {
-        return false;
-    }
-
-    socket.read().await.is_some()
+#[cfg(not(target_family = "unix"))]
+fn is_root() -> bool {
+    // On non-unix systems, we can't root check, assume we're good!
+    false
 }

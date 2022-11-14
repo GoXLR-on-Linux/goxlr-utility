@@ -1,6 +1,6 @@
 [package]
 name = "goxlr-usb"
-version = "0.6.0"
+version = "0.7.0"
 edition = "2021"
 authors = ["Nathan Adams <dinnerbone@dinnerbone.com>", "Craig McLure <craig@mclure.net>", "Lars Mühlbauer <lm41@dismail.de>"]
 description = "A direct interface to the TC-Helicon GoXLR & GoXLR Mini via usb."
@@ -19,3 +19,8 @@ log = "0.4.14"
 enumset = "1.0.8"
 strum = "0.23.0"
 enum-map = "2.1.0"
+anyhow = "1.0.66"
+
+# New, some fun async stuff..
+tokio = { version = "1.21.2", features = ["sync", "rt", "time"] }
+futures = "0.3.25"

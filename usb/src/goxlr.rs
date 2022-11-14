@@ -15,8 +15,7 @@ use goxlr_types::{
 use log::{debug, error, info, warn};
 use rusb::Error::Pipe;
 use rusb::{
-    Device, DeviceDescriptor, DeviceHandle, Direction, GlobalContext, Language, Recipient,
-    RequestType, UsbContext,
+    Device, DeviceDescriptor, DeviceHandle, Direction, Language, Recipient, RequestType, UsbContext,
 };
 use std::io::{Cursor, Write};
 use std::thread::sleep;
@@ -36,27 +35,6 @@ pub struct GoXLR<T: UsbContext> {
 pub const VID_GOXLR: u16 = 0x1220;
 pub const PID_GOXLR_MINI: u16 = 0x8fe4;
 pub const PID_GOXLR_FULL: u16 = 0x8fe0;
-
-impl GoXLR<GlobalContext> {
-    pub fn open() -> Result<Self, ConnectError> {
-        let mut error = ConnectError::DeviceNotFound;
-        for device in rusb::devices()?.iter() {
-            if let Ok(descriptor) = device.device_descriptor() {
-                if descriptor.vendor_id() == VID_GOXLR
-                    && (descriptor.product_id() == PID_GOXLR_FULL
-                        || descriptor.product_id() == PID_GOXLR_MINI)
-                {
-                    match device.open() {
-                        Ok(handle) => return GoXLR::from_device(handle, descriptor),
-                        Err(e) => error = e.into(),
-                    }
-                }
-            }
-        }
-
-        Err(error)
-    }
-}
 
 impl<T: UsbContext> GoXLR<T> {
     pub fn from_device(
@@ -461,8 +439,8 @@ impl<T: UsbContext> GoXLR<T> {
         meter: bool,
     ) -> Result<(), rusb::Error> {
         // This one really doesn't need anything fancy..
-        let gradient_byte: u8 = if gradient { 0x01 } else { 0x00 };
-        let meter_byte: u8 = if meter { 0x01 } else { 0x00 };
+        let gradient_byte = u8::from(gradient);
+        let meter_byte = u8::from(meter);
 
         // TODO: Seemingly broken?
         self.request_data(

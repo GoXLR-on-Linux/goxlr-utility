@@ -705,7 +705,7 @@ impl ProfileSettings {
         &self.mixer
     }
 
-    pub fn faders(&mut self) -> &mut EnumMap<Faders, Option<Fader>> {
+    pub fn faders_mut(&mut self) -> &mut EnumMap<Faders, Option<Fader>> {
         &mut self.faders
     }
 
@@ -729,7 +729,7 @@ impl ProfileSettings {
         self.mute_buttons[fader].as_ref().unwrap()
     }
 
-    pub fn scribbles(&mut self) -> &mut EnumMap<Faders, Option<Scribble>> {
+    pub fn scribbles_mut(&mut self) -> &mut EnumMap<Faders, Option<Scribble>> {
         &mut self.scribbles
     }
 
