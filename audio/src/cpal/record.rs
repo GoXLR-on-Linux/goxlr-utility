@@ -28,7 +28,7 @@ impl CpalAudioInput {
                 if let Some(host_id) = host_id {
                     if let Ok(host) = cpal::host_from_id(*host_id) {
                         // We have found our host, now try to find the device..
-                        if let Ok(mut devices) = host.output_devices() {
+                        if let Ok(mut devices) = host.input_devices() {
                             if let Some(device) = devices.find(|x| {
                                 x.name().unwrap_or_else(|_| "UNKNOWN".to_string()) == str_device
                             }) {
