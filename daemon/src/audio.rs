@@ -295,19 +295,15 @@ impl AudioHandler {
                 }
             });
 
-            if let Some(file_name) = path.file_name() {
-                self.active_streams[bank][button] = Some(StateManager {
-                    stream_type: StreamType::Recording,
-                    recording: Some(AudioRecordingState {
-                        file: path,
-                        handle: Some(handler),
-                        state,
-                    }),
-                    playback: None,
-                });
-            } else {
-                bail!("Unable to Extract Filename, something is wrong..");
-            }
+            self.active_streams[bank][button] = Some(StateManager {
+                stream_type: StreamType::Recording,
+                recording: Some(AudioRecordingState {
+                    file: path,
+                    handle: Some(handler),
+                    state,
+                }),
+                playback: None,
+            });
         } else {
             bail!("No valid Input Device was Found");
         }
