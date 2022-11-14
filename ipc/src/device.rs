@@ -14,6 +14,7 @@ use strum::EnumCount;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct DaemonStatus {
+    pub daemon_version: String,
     pub mixers: HashMap<String, MixerStatus>,
     pub paths: Paths,
     pub files: Files,

@@ -1,6 +1,6 @@
 use crate::device::Device;
 use crate::files::create_path;
-use crate::{FileManager, SettingsHandle, Shutdown};
+use crate::{FileManager, SettingsHandle, Shutdown, VERSION};
 use anyhow::{anyhow, Result};
 use goxlr_ipc::{
     DaemonResponse, DaemonStatus, DeviceType, Files, GoXLRCommand, HardwareStatus, PathTypes,
@@ -129,6 +129,7 @@ pub async fn handle_changes(
                 match command {
                     DeviceCommand::SendDaemonStatus(sender) => {
                         let mut status = DaemonStatus {
+                            daemon_version: String::from(VERSION),
                             paths: Paths {
                                 profile_directory: settings.get_profile_directory().await,
                                 mic_profile_directory: settings.get_mic_profile_directory().await,
