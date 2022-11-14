@@ -38,7 +38,7 @@ struct AudioPlaybackState {
 
 #[derive(Debug)]
 struct AudioRecordingState {
-    file_name: String,
+    file: PathBuf,
     handle: Option<JoinHandle<()>>,
     state: RecorderState,
 }
@@ -299,7 +299,7 @@ impl AudioHandler {
                 self.active_streams[bank][button] = Some(StateManager {
                     stream_type: StreamType::Recording,
                     recording: Some(AudioRecordingState {
-                        file_name: String::from(file_name.to_string_lossy()),
+                        file: path,
                         handle: Some(handler),
                         state,
                     }),
@@ -322,14 +322,24 @@ impl AudioHandler {
     ) -> Result<Option<String>> {
         if let Some(player) = &mut self.active_streams[bank][button] {
             if player.stream_type == StreamType::Playback {
-                return Err(anyhow!("Attempted to Stop Recording on Playback Stream.."));
+                bail!("Attempted to Stop Recording on Playback Stream..");
             }
 
             if let Some(recording_state) = &mut player.recording {
                 recording_state.state.stop.store(true, Ordering::Relaxed);
                 recording_state.wait();
 
-                return Ok(Some(recording_state.file_name.clone()));
+                // Recording Complete, check the file was made...
+                if recording_state.file.exists() {
+                    if let Some(file_name) = recording_state.file.file_name() {
+                        return Ok(Some(String::from(file_name.to_string_lossy())));
+                    } else {
+                        bail!("Unable to Extract Filename from Path! (This shouldn't be possible!)")
+                    }
+                }
+
+                // If we get here, the file was never made.
+                return Ok(None);
             }
         }
         bail!("Attempted to stop inactive recording..");
