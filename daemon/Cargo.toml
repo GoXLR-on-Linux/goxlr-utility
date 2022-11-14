@@ -33,7 +33,6 @@ futures = "0.3.21"
 ritelinked = "0.3.2"
 clap = { version = "3.0.0", features = ["derive"] }
 opener = "0.5.0"
-md5 = "0.7.0"
 regex = "1.6.0"
 chrono = "0.4.22"
 glob = "0.3.0"
