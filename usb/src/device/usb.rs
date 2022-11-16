@@ -234,13 +234,14 @@ impl AttachGoXLR for GoXLRUSB {
                     break;
                 }
                 let event = event_id.clone();
-                tokio::time::sleep(Duration::from_millis(100)).await;
                 if !sender.is_closed() {
                     sender.send(event).await.expect("Error Sending Event");
                 } else {
                     warn!("Sender Closed for {}", event);
                     break;
                 }
+
+                tokio::time::sleep(Duration::from_millis(100)).await;
             }
         });
     }
