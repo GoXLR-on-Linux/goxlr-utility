@@ -29,6 +29,7 @@ pub struct GoXLRUSB {
     identifier: Option<String>,
 
     stopping: Arc<AtomicBool>,
+    disconnecting: bool,
 
     language: Language,
     command_count: u16,
@@ -52,7 +53,18 @@ impl GoXLRUSB {
     }
 
     fn trigger_disconnect(&mut self) -> Result<()> {
+        // If this function has already been called further up the stack, don't run it.
+        if self.disconnecting {
+            return Ok(());
+        }
+
+        // Flag this device as possibly disconnecting..
+        self.disconnecting = true;
+
+        // Perform a connection Check, and reset if needed..
         if self.is_connected() {
+            // We're still connected, reset the disconnecting flag
+            self.disconnecting = false;
             return Ok(());
         }
 
@@ -160,6 +172,7 @@ impl AttachGoXLR for GoXLRUSB {
             identifier: None,
             command_count: 0,
             stopping: Arc::new(AtomicBool::new(false)),
+            disconnecting: false,
             timeout,
         };
 
@@ -296,7 +309,6 @@ impl ExecutableGoXLR for GoXLRUSB {
                 } else {
                     // We can't read from this GoXLR, flag as disconnected.
                     self.trigger_disconnect()?;
-
                     debug!("Failed to receive response (Attempt 20 of 20), possible Dead GoXLR?");
                     return Err(Error::from(response_value.err().unwrap()));
                 }
