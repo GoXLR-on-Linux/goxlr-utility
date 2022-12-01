@@ -435,19 +435,24 @@ impl<'a> Device<'a> {
                 return Ok(());
             }
 
-            self.profile
-                .set_mute_button_previous_volume(fader, current_volume)?;
-
-            self.goxlr.set_volume(channel, 0)?;
-            self.goxlr.set_channel_state(channel, Muted)?;
-
-            self.profile.set_mute_button_on(fader, true)?;
+            if !(muted_to_x && mute_function == MuteFunction::All) {
+                // If we did this on Mute to X, we don't need to do it again..
+                self.profile
+                    .set_mute_button_previous_volume(fader, current_volume)?;
+                self.goxlr.set_volume(channel, 0)?;
+                self.goxlr.set_channel_state(channel, Muted)?;
+                self.profile.set_mute_button_on(fader, true)?;
+            }
 
             if held {
                 self.profile.set_mute_button_blink(fader, true)?;
             }
-
             self.profile.set_channel_volume(channel, 0)?;
+
+            // If we're Chat, we may need to transiently route the Microphone..
+            if channel == ChannelName::Chat {
+                self.apply_routing(BasicInputDevice::Microphone)?;
+            }
 
             return Ok(());
         }
@@ -469,7 +474,15 @@ impl<'a> Device<'a> {
                 {
                     self.goxlr.set_channel_state(channel, Unmuted)?;
                 }
-            } else if basic_input.is_some() {
+
+                // As before, we might need transient Mic Routing..
+                if channel == ChannelName::Chat {
+                    self.apply_routing(BasicInputDevice::Microphone)?;
+                }
+            }
+
+            // Always do a Transient Routing update, just in case we went from Mute to X -> Mute to All
+            if mute_function != MuteFunction::All && basic_input.is_some() {
                 self.apply_routing(basic_input.unwrap())?;
             }
 
@@ -1909,7 +1922,7 @@ impl<'a> Device<'a> {
         &self,
         input: BasicInputDevice,
         router: &mut EnumMap<BasicOutputDevice, bool>,
-    ) {
+    ) -> Result<()> {
         // Not all channels are routable, so map the inputs to channels before checking..
         let channel_name = match input {
             BasicInputDevice::Microphone => ChannelName::Mic,
@@ -1924,27 +1937,62 @@ impl<'a> Device<'a> {
 
         for fader in FaderName::iter() {
             if self.profile.get_fader_assignment(fader) == channel_name {
-                self.apply_transient_fader_routing(fader, router);
+                self.apply_transient_fader_routing(fader, router)?;
             }
         }
-        self.apply_transient_cough_routing(router);
+
+        // Chat Mic has a Transient routing option related to the Voice Chat channel, we need
+        // to ensure that if we're handling the mic, we handle it here.
+        if channel_name == ChannelName::Mic {
+            self.apply_transient_chat_mic_mute(router)?;
+        }
+
+        self.apply_transient_cough_routing(router)
     }
 
     fn apply_transient_fader_routing(
         &self,
         fader: FaderName,
         router: &mut EnumMap<BasicOutputDevice, bool>,
-    ) {
+    ) -> Result<()> {
         let (muted_to_x, muted_to_all, mute_function) = self.profile.get_mute_button_state(fader);
-        self.apply_transient_channel_routing(muted_to_x, muted_to_all, mute_function, router);
+        self.apply_transient_channel_routing(muted_to_x, muted_to_all, mute_function, router)
     }
 
-    fn apply_transient_cough_routing(&self, router: &mut EnumMap<BasicOutputDevice, bool>) {
+    fn apply_transient_cough_routing(
+        &self,
+        router: &mut EnumMap<BasicOutputDevice, bool>,
+    ) -> Result<()> {
         // Same deal, pull out the current state, make needed changes.
         let (_mute_toggle, muted_to_x, muted_to_all, mute_function) =
             self.profile.get_mute_chat_button_state();
 
-        self.apply_transient_channel_routing(muted_to_x, muted_to_all, mute_function, router);
+        self.apply_transient_channel_routing(muted_to_x, muted_to_all, mute_function, router)
+    }
+
+    fn apply_transient_chat_mic_mute(
+        &self,
+        router: &mut EnumMap<BasicOutputDevice, bool>,
+    ) -> Result<()> {
+        // Kinda annoying, try to locate the fader with the Chat Mic Assigned..
+        for fader in FaderName::iter() {
+            if self.profile.get_fader_assignment(fader) == ChannelName::Chat {
+                // Get the Mute State..
+                let (muted_to_x, muted_to_all, mute_function) =
+                    self.profile.get_mute_button_state(fader);
+                if muted_to_all || (muted_to_x && mute_function == MuteFunction::All) {
+                    let mute_to_chat = block_on(
+                        self.settings
+                            .get_device_chat_mute_mutes_mic_to_chat(&self.hardware.serial_number),
+                    );
+                    if mute_to_chat {
+                        router[BasicOutputDevice::ChatMic] = false;
+                    }
+                }
+            }
+        }
+
+        Ok(())
     }
 
     fn apply_transient_channel_routing(
@@ -1953,9 +2001,9 @@ impl<'a> Device<'a> {
         muted_to_all: bool,
         mute_function: MuteFunction,
         router: &mut EnumMap<BasicOutputDevice, bool>,
-    ) {
+    ) -> Result<()> {
         if !muted_to_x || muted_to_all || mute_function == MuteFunction::All {
-            return;
+            return Ok(());
         }
 
         match mute_function {
@@ -1964,13 +2012,15 @@ impl<'a> Device<'a> {
             MuteFunction::ToVoiceChat => router[BasicOutputDevice::ChatMic] = false,
             MuteFunction::ToPhones => router[BasicOutputDevice::Headphones] = false,
             MuteFunction::ToLineOut => router[BasicOutputDevice::LineOut] = false,
-        }
+        };
+
+        Ok(())
     }
 
     fn apply_routing(&mut self, input: BasicInputDevice) -> Result<()> {
         // Load the routing for this channel from the profile..
         let mut router = self.profile.get_router(input);
-        self.apply_transient_routing(input, &mut router);
+        self.apply_transient_routing(input, &mut router)?;
         debug!("Applying Routing to {:?}:", input);
         debug!("{:?}", router);
 
