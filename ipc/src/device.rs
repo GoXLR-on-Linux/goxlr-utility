@@ -8,7 +8,7 @@ use goxlr_types::{
     SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
 use strum::EnumCount;
 
@@ -304,11 +304,11 @@ pub struct Paths {
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Files {
-    pub profiles: HashSet<String>,
-    pub mic_profiles: HashSet<String>,
-    pub presets: HashSet<String>,
-    pub samples: HashMap<String, String>,
-    pub icons: HashSet<String>,
+    pub profiles: Vec<String>,
+    pub mic_profiles: Vec<String>,
+    pub presets: Vec<String>,
+    pub samples: BTreeMap<String, String>,
+    pub icons: Vec<String>,
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]

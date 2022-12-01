@@ -35,6 +35,9 @@ impl Client {
             }
             DaemonResponse::Ok => Ok(()),
             DaemonResponse::Error(error) => Err(anyhow!("{}", error)),
+            DaemonResponse::Patch(_patch) => {
+                Err(anyhow!("Received Patch as response, shouldn't happen!"))
+            }
         }
     }
 

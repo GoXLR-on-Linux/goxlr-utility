@@ -1,3 +1,4 @@
+use json_patch::Patch;
 use serde::{Deserialize, Serialize};
 
 pub mod client;
@@ -18,21 +19,20 @@ use goxlr_types::{
 pub enum DaemonRequest {
     Ping,
     GetStatus,
-    InvalidateCaches,
     OpenPath(PathTypes),
     Command(String, GoXLRCommand),
 }
 
 // TODO: Check this..
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[allow(clippy::large_enum_variant)]
 pub enum DaemonResponse {
     Ok,
     Error(String),
     Status(DaemonStatus),
+    Patch(Patch),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub enum PathTypes {
     Profiles,
     MicProfiles,

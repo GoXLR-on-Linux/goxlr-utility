@@ -177,11 +177,13 @@ impl<'a> Device<'a> {
         &self.mic_profile
     }
 
-    pub async fn update_state(&mut self) -> Result<()> {
+    pub async fn update_state(&mut self) -> Result<bool> {
+        let mut state_updated = false;
+
         // Update any audio related states..
         if let Some(audio_handler) = &mut self.audio_handler {
             audio_handler.check_playing().await;
-            self.sync_sample_lighting().await?;
+            state_updated = self.sync_sample_lighting().await?;
         }
 
         // Find any buttons that have been held, and action if needed.
@@ -197,13 +199,17 @@ impl<'a> Device<'a> {
             }
         }
 
-        Ok(())
+        Ok(state_updated)
     }
 
-    pub async fn monitor_inputs(&mut self) -> Result<()> {
+    pub async fn monitor_inputs(&mut self) -> Result<bool> {
         let state = self.goxlr.get_button_states()?;
-        self.update_volumes_to(state.volumes)?;
-        self.update_encoders_to(state.encoders)?;
+        let mut changed = self.update_volumes_to(state.volumes)?;
+        let result = self.update_encoders_to(state.encoders)?;
+        if !changed {
+            // Only change the value if it's not already true..
+            changed = result;
+        }
 
         let pressed_buttons = state.pressed.difference(self.last_buttons);
         for button in pressed_buttons {
@@ -216,6 +222,8 @@ impl<'a> Device<'a> {
             if let Err(error) = self.on_button_down(button).await {
                 error!("{}", error);
             }
+
+            changed = true;
         }
 
         let released_buttons = self.last_buttons.difference(state.pressed);
@@ -230,12 +238,13 @@ impl<'a> Device<'a> {
             self.button_states[button] = ButtonState {
                 press_time: 0,
                 hold_handled: false,
-            }
+            };
+
+            changed = true;
         }
 
         self.last_buttons = state.pressed;
-
-        Ok(())
+        Ok(changed)
     }
 
     async fn on_button_down(&mut self, button: Buttons) -> Result<()> {
@@ -824,10 +833,10 @@ impl<'a> Device<'a> {
         bail!("Sample Not Found");
     }
 
-    async fn sync_sample_lighting(&mut self) -> Result<()> {
+    async fn sync_sample_lighting(&mut self) -> Result<bool> {
         if self.audio_handler.is_none() {
             // No audio handler, no point.
-            return Ok(());
+            return Ok(false);
         }
 
         let mut changed = false;
@@ -848,7 +857,7 @@ impl<'a> Device<'a> {
             self.update_button_states()?;
         }
 
-        Ok(())
+        Ok(changed)
     }
 
     async fn load_effect_bank(&mut self, preset: EffectBankPresets) -> Result<()> {
@@ -931,7 +940,9 @@ impl<'a> Device<'a> {
         muted_to_all || (muted_to_x && mute_function == MuteFunction::All)
     }
 
-    fn update_volumes_to(&mut self, volumes: [u8; 4]) -> Result<()> {
+    fn update_volumes_to(&mut self, volumes: [u8; 4]) -> Result<bool> {
+        let mut value_changed = false;
+
         for fader in FaderName::iter() {
             let channel = self.profile.get_fader_assignment(fader);
             let old_volume = self.profile.get_channel_volume(channel);
@@ -942,15 +953,18 @@ impl<'a> Device<'a> {
                     "Updating {} volume from {} to {} as a human moved the fader",
                     channel, old_volume, new_volume
                 );
+                value_changed = true;
                 self.profile.set_channel_volume(channel, new_volume)?;
             }
         }
-        Ok(())
+        Ok(value_changed)
     }
 
-    fn update_encoders_to(&mut self, encoders: [i8; 4]) -> Result<()> {
+    fn update_encoders_to(&mut self, encoders: [i8; 4]) -> Result<bool> {
         // Ok, this is funky, due to the way pitch works, the encoder 'value' doesn't match
         // the profile value if hardtune is enabled, so we'll pre-emptively calculate pitch here..
+        let mut value_changed = false;
+
         if self.profile.calculate_pitch_knob_position(encoders[0])
             != self.profile.get_pitch_knob_position()
         {
@@ -959,7 +973,7 @@ impl<'a> Device<'a> {
                 self.profile.get_pitch_knob_position(),
                 encoders[0]
             );
-
+            value_changed = true;
             self.profile.set_pitch_knob_position(encoders[0])?;
             self.apply_effects(LinkedHashSet::from_iter([EffectKey::PitchAmount]))?;
         }
@@ -970,6 +984,7 @@ impl<'a> Device<'a> {
                 self.profile.get_gender_value(),
                 encoders[1]
             );
+            value_changed = true;
             self.profile.set_gender_value(encoders[1])?;
             self.apply_effects(LinkedHashSet::from_iter([EffectKey::GenderAmount]))?;
         }
@@ -980,6 +995,7 @@ impl<'a> Device<'a> {
                 self.profile.get_reverb_value(),
                 encoders[2]
             );
+            value_changed = true;
             self.profile.set_reverb_value(encoders[2])?;
             self.apply_effects(LinkedHashSet::from_iter([EffectKey::ReverbAmount]))?;
         }
@@ -990,11 +1006,12 @@ impl<'a> Device<'a> {
                 self.profile.get_echo_value(),
                 encoders[3]
             );
+            value_changed = true;
             self.profile.set_echo_value(encoders[3])?;
             self.apply_effects(LinkedHashSet::from_iter([EffectKey::EchoAmount]))?;
         }
 
-        Ok(())
+        Ok(value_changed)
     }
 
     pub async fn perform_command(&mut self, command: GoXLRCommand) -> Result<()> {

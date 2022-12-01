@@ -15,10 +15,12 @@ use actix_web_actors::ws::CloseCode;
 use anyhow::{anyhow, Result};
 use futures::lock::Mutex;
 use include_dir::{include_dir, Dir};
-use log::{info, warn};
+use log::{error, info, warn};
 use mime_guess::MimeGuess;
+use tokio::sync::broadcast::Sender as BroadcastSender;
 use tokio::sync::oneshot::Sender;
 
+use crate::PatchEvent;
 use goxlr_ipc::{DaemonRequest, DaemonResponse, DaemonStatus};
 
 use crate::primary_worker::DeviceSender;
@@ -27,11 +29,41 @@ use crate::servers::server_packet::handle_packet;
 const WEB_CONTENT: Dir = include_dir!("./daemon/web-content/");
 
 struct Websocket {
-    sender: DeviceSender,
+    usb_tx: DeviceSender,
+    broadcast_tx: BroadcastSender<PatchEvent>,
 }
 
 impl Actor for Websocket {
     type Context = ws::WebsocketContext<Self>;
+
+    fn started(&mut self, ctx: &mut Self::Context) {
+        let address = ctx.address();
+        let mut broadcast_rx = self.broadcast_tx.subscribe();
+
+        // Create a future that simply monitors the global broadcast bus, and pushes any changes
+        // out to the WebSocket.
+        let future = Box::pin(async move {
+            loop {
+                if let Ok(event) = broadcast_rx.recv().await {
+                    // We've received a message, attempt to trigger the WsMessage Handle..
+                    if let Err(error) = address
+                        .clone()
+                        .try_send(WsResponse(DaemonResponse::Patch(event.data)))
+                    {
+                        error!(
+                            "Error Occurred when sending message to websocket: {:?}",
+                            error
+                        );
+                        warn!("Aborting Websocket pushes for this client.");
+                        break;
+                    }
+                }
+            }
+        });
+
+        let future = future.into_actor(self);
+        ctx.spawn(future);
+    }
 }
 
 #[derive(Message)]
@@ -56,7 +88,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for Websocket {
                 match serde_json::from_slice::<DaemonRequest>(text.as_ref()) {
                     Ok(request) => {
                         let recipient = ctx.address().recipient();
-                        let mut usb_tx = self.sender.clone();
+                        let mut usb_tx = self.usb_tx.clone();
                         let future = async move {
                             let result = handle_packet(request, &mut usb_tx).await;
                             match result {
@@ -69,6 +101,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for Websocket {
                                         recipient
                                             .do_send(WsResponse(DaemonResponse::Status(status)));
                                     }
+                                    _ => {}
                                 },
                                 Err(error) => {
                                     recipient.do_send(WsResponse(DaemonResponse::Error(
@@ -96,9 +129,15 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for Websocket {
     }
 }
 
+struct AppData {
+    usb_tx: DeviceSender,
+    broadcast_tx: BroadcastSender<PatchEvent>,
+}
+
 pub async fn launch_httpd(
     usb_tx: DeviceSender,
     handle_tx: Sender<ServerHandle>,
+    broadcast_tx: tokio::sync::broadcast::Sender<PatchEvent>,
     port: u16,
     with_cors: bool,
 ) -> Result<()> {
@@ -113,7 +152,10 @@ pub async fn launch_httpd(
             .max_age(300);
         App::new()
             .wrap(Condition::new(with_cors, cors))
-            .app_data(Data::new(Mutex::new(usb_tx.clone())))
+            .app_data(Data::new(Mutex::new(AppData {
+                broadcast_tx: broadcast_tx.clone(),
+                usb_tx: usb_tx.clone(),
+            })))
             .service(execute_command)
             .service(get_devices)
             .service(websocket)
@@ -134,13 +176,16 @@ pub async fn launch_httpd(
 
 #[get("/api/websocket")]
 async fn websocket(
-    usb_mutex: Data<Mutex<DeviceSender>>,
+    usb_mutex: Data<Mutex<AppData>>,
     req: HttpRequest,
     stream: web::Payload,
 ) -> Result<HttpResponse, actix_web::Error> {
+    let data = usb_mutex.lock().await;
+
     ws::start(
         Websocket {
-            sender: usb_mutex.lock().await.clone(),
+            usb_tx: data.usb_tx.clone(),
+            broadcast_tx: data.broadcast_tx.clone(),
         },
         &req,
         stream,
@@ -152,21 +197,21 @@ async fn websocket(
 #[post("/api/command")]
 async fn execute_command(
     request: web::Json<DaemonRequest>,
-    usb_mutex: Data<Mutex<DeviceSender>>,
+    app_data: Data<Mutex<AppData>>,
 ) -> HttpResponse {
-    let mut guard = usb_mutex.lock().await;
+    let mut guard = app_data.lock().await;
     let sender = guard.deref_mut();
 
     // Errors propagate weirdly in the javascript world, so send all as OK, and handle there.
-    match handle_packet(request.0, sender).await {
+    match handle_packet(request.0, &mut sender.usb_tx).await {
         Ok(result) => HttpResponse::Ok().json(result),
         Err(error) => HttpResponse::Ok().json(DaemonResponse::Error(error.to_string())),
     }
 }
 
 #[get("/api/get-devices")]
-async fn get_devices(usb_mutex: Data<Mutex<DeviceSender>>) -> HttpResponse {
-    if let Ok(response) = get_status(usb_mutex).await {
+async fn get_devices(app_data: Data<Mutex<AppData>>) -> HttpResponse {
+    if let Ok(response) = get_status(app_data).await {
         return HttpResponse::Ok().json(&response);
     }
     HttpResponse::InternalServerError().finish()
@@ -190,14 +235,14 @@ async fn default(req: HttpRequest) -> HttpResponse {
     }
 }
 
-async fn get_status(usb_tx: Data<Mutex<DeviceSender>>) -> Result<DaemonStatus> {
+async fn get_status(app_data: Data<Mutex<AppData>>) -> Result<DaemonStatus> {
     // Unwrap the Mutex Guard..
-    let mut guard = usb_tx.lock().await;
+    let mut guard = app_data.lock().await;
     let sender = guard.deref_mut();
 
     let request = DaemonRequest::GetStatus;
 
-    let result = handle_packet(request, sender).await?;
+    let result = handle_packet(request, &mut sender.usb_tx).await?;
     match result {
         DaemonResponse::Status(status) => Ok(status),
         _ => Err(anyhow!("Unexpected Daemon Status Result: {:?}", result)),
