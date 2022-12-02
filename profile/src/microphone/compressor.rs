@@ -133,8 +133,8 @@ impl Compressor {
         Ok(())
     }
     pub fn set_makeup_gain(&mut self, makeup_gain: i8) -> Result<()> {
-        if !(-4..=24).contains(&makeup_gain) {
-            return Err(anyhow!("Makeup Gain should be between -4 and 24dB"));
+        if !(-6..=24).contains(&makeup_gain) {
+            return Err(anyhow!("Makeup Gain should be between -6 and 24dB"));
         }
         self.makeup_gain = makeup_gain;
         Ok(())

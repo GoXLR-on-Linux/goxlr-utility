@@ -449,7 +449,7 @@ fn parse_compressor_makeup(s: &str) -> Result<i8, String> {
     }
 
     let value = value.unwrap();
-    if !(-4..=24).contains(&value) {
+    if !(-6..=24).contains(&value) {
         return Err(String::from("Value must between -4 and 24"));
     }
     Ok(value)
