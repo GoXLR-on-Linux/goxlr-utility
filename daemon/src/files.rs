@@ -240,10 +240,12 @@ pub async fn run_notification_service(
                                 // Triggered on the Creation of a file / folder..
                                 EventKind::Create(CreateKind::File) |
                                 EventKind::Create(CreateKind::Folder) |
+                                EventKind::Create(CreateKind::Any) |
 
                                 // Triggered on the Removal of a File / Folder
                                 EventKind::Remove(RemoveKind::File) |
                                 EventKind::Remove(RemoveKind::Folder) |
+                                EventKind::Remove(RemoveKind::Any) |
 
                                 // Triggered on Rename / Move of a file
                                 EventKind::Modify(ModifyKind::Name(RenameMode::From)) |
