@@ -132,75 +132,59 @@ impl MicProfileAdapter {
     }
 
     pub fn get_gate_display_mode(&self) -> DisplayMode {
-        return if self.profile.ui_setup().gate_advanced() {
+        if self.profile.ui_setup().gate_advanced() {
             DisplayMode::Advanced
         } else {
             DisplayMode::Simple
-        };
+        }
     }
 
     pub fn set_gate_display_mode(&mut self, display_mode: DisplayMode) {
         self.profile
             .ui_setup_mut()
-            .set_gate_advanced(if display_mode == DisplayMode::Simple {
-                false
-            } else {
-                true
-            });
+            .set_gate_advanced(display_mode != DisplayMode::Simple);
     }
 
     pub fn get_compressor_display_mode(&self) -> DisplayMode {
-        return if self.profile.ui_setup().comp_advanced() {
+        if self.profile.ui_setup().comp_advanced() {
             DisplayMode::Advanced
         } else {
             DisplayMode::Simple
-        };
+        }
     }
 
     pub fn set_compressor_display_mode(&mut self, display_mode: DisplayMode) {
         self.profile
             .ui_setup_mut()
-            .set_comp_advanced(if display_mode == DisplayMode::Simple {
-                false
-            } else {
-                true
-            });
+            .set_comp_advanced(display_mode != DisplayMode::Simple);
     }
 
     pub fn get_eq_display_mode(&self) -> DisplayMode {
-        return if self.profile.ui_setup().eq_advanced() {
+        if self.profile.ui_setup().eq_advanced() {
             DisplayMode::Advanced
         } else {
             DisplayMode::Simple
-        };
+        }
     }
 
     pub fn set_eq_display_mode(&mut self, display_mode: DisplayMode) {
         self.profile
             .ui_setup_mut()
-            .set_eq_advanced(if display_mode == DisplayMode::Simple {
-                false
-            } else {
-                true
-            });
+            .set_eq_advanced(display_mode != DisplayMode::Simple);
     }
 
     pub fn get_eq_fine_display_mode(&self) -> DisplayMode {
-        return if self.profile.ui_setup().eq_fine_tune() {
+        if self.profile.ui_setup().eq_fine_tune() {
             DisplayMode::Advanced
         } else {
             DisplayMode::Simple
-        };
+        }
     }
 
     pub fn set_eq_fine_display_mode(&mut self, display_mode: DisplayMode) {
         self.profile
             .ui_setup_mut()
-            .set_eq_fine_tune(if display_mode == DisplayMode::Simple {
-                false
-            } else {
-                true
-            });
+            .set_eq_fine_tune(display_mode != DisplayMode::Simple);
     }
 
     pub fn noise_gate_ipc(&self) -> NoiseGate {
