@@ -134,7 +134,7 @@ pub async fn handle_changes(
                                 change_found = changed;
                             }
 
-                            if let Err(error) = device.monitor_inputs().await {
+                            if let Err(error) = result {
                                 warn!("Error Received from {}: {}", device.serial(), error);
                             }
                         } else {
