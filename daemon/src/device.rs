@@ -2063,6 +2063,7 @@ impl<'a> Device<'a> {
         if muted_to_all || (muted_to_x && mute_function == MuteFunction::All) {
             // This channel should be fully muted
             self.goxlr.set_channel_state(channel, Muted)?;
+            return Ok(());
         }
 
         // This channel isn't supposed to be muted (The Router will handle anything else).
