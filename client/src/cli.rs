@@ -421,7 +421,7 @@ pub enum CompressorCommands {
     },
     MakeUp {
         #[clap(parse(try_from_str=parse_compressor_makeup))]
-        value: u8,
+        value: i8,
     },
 }
 
@@ -442,15 +442,15 @@ fn parse_compressor_threshold(s: &str) -> Result<i8, String> {
     Ok(value)
 }
 
-fn parse_compressor_makeup(s: &str) -> Result<u8, String> {
-    let value = u8::from_str(s);
+fn parse_compressor_makeup(s: &str) -> Result<i8, String> {
+    let value = i8::from_str(s);
     if value.is_err() {
         return Err(String::from("Value must be between 0 and 24"));
     }
 
     let value = value.unwrap();
-    if value > 24 {
-        return Err(String::from("Value must be 24 or lower"));
+    if !(-4..=24).contains(&value) {
+        return Err(String::from("Value must between -4 and 24"));
     }
     Ok(value)
 }

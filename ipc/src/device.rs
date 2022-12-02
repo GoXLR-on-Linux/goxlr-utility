@@ -128,7 +128,7 @@ pub struct Compressor {
     pub ratio: CompressorRatio,
     pub attack: CompressorAttackTime,
     pub release: CompressorReleaseTime,
-    pub makeup_gain: u8,
+    pub makeup_gain: i8,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

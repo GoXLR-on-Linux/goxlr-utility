@@ -5,9 +5,8 @@ use byteorder::{ByteOrder, LittleEndian};
 use goxlr_ipc::{Compressor, Equaliser, EqualiserMini, NoiseGate};
 use goxlr_profile_loader::mic_profile::MicProfileSettings;
 use goxlr_types::{
-    CompressorAttackTime, CompressorRatio, CompressorReleaseTime, DisplayMode,
-    DisplayModeComponents, EffectKey, EqFrequencies, GateTimes, MicrophoneParamKey, MicrophoneType,
-    MiniEqFrequencies,
+    CompressorAttackTime, CompressorRatio, CompressorReleaseTime, DisplayMode, EffectKey,
+    EqFrequencies, GateTimes, MicrophoneParamKey, MicrophoneType, MiniEqFrequencies,
 };
 use log::error;
 use ritelinked::LinkedHashSet;
@@ -529,7 +528,7 @@ impl MicProfileAdapter {
         self.profile.compressor_mut().set_release(value as u8)
     }
 
-    pub fn set_compressor_makeup(&mut self, value: u8) -> Result<()> {
+    pub fn set_compressor_makeup(&mut self, value: i8) -> Result<()> {
         self.profile.compressor_mut().set_makeup_gain(value)
     }
 
@@ -582,7 +581,7 @@ impl MicProfileAdapter {
                 self.u8_to_f32(self.profile.compressor().release())
             }
             MicrophoneParamKey::CompressorMakeUpGain => {
-                self.u8_to_f32(self.profile.compressor().makeup())
+                self.i8_to_f32(self.profile.compressor().makeup())
             }
             MicrophoneParamKey::BleepLevel => self.calculate_bleep(self.profile.bleep_level()),
             MicrophoneParamKey::Equalizer90HzFrequency => {

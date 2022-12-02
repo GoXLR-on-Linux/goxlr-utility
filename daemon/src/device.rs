@@ -1156,7 +1156,7 @@ impl<'a> Device<'a> {
                 self.apply_effects(LinkedHashSet::from_iter([EffectKey::GateEnabled]))?;
             }
 
-            GoXLRCommand::SetCompressorAmount(value) => {
+            GoXLRCommand::SetCompressorAmount(_value) => {
                 // TODO
             }
 

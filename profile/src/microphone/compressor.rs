@@ -20,7 +20,7 @@ pub struct Compressor {
     ratio: u8,
     attack: u8,
     release: u8,
-    makeup_gain: u8,
+    makeup_gain: i8,
 }
 
 impl Default for Compressor {
@@ -63,7 +63,7 @@ impl Compressor {
             }
 
             if attr.name.local_name == "MIC_COMP_MAKEUPGAIN" {
-                self.set_makeup_gain(attr.value.parse::<c_float>()? as u8)?;
+                self.set_makeup_gain(attr.value.parse::<c_float>()? as i8)?;
                 continue;
             }
         }
@@ -97,7 +97,7 @@ impl Compressor {
     pub fn release(&self) -> u8 {
         self.release
     }
-    pub fn makeup(&self) -> u8 {
+    pub fn makeup(&self) -> i8 {
         self.makeup_gain
     }
 
@@ -132,9 +132,9 @@ impl Compressor {
         self.release = release;
         Ok(())
     }
-    pub fn set_makeup_gain(&mut self, makeup_gain: u8) -> Result<()> {
-        if makeup_gain > 24 {
-            return Err(anyhow!("Makeup Gain should be between 0 and 24dB"));
+    pub fn set_makeup_gain(&mut self, makeup_gain: i8) -> Result<()> {
+        if !(-4..=24).contains(&makeup_gain) {
+            return Err(anyhow!("Makeup Gain should be between -4 and 24dB"));
         }
         self.makeup_gain = makeup_gain;
         Ok(())

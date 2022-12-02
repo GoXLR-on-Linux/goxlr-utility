@@ -78,7 +78,7 @@ pub enum GoXLRCommand {
     SetCompressorRatio(CompressorRatio),
     SetCompressorAttack(CompressorAttackTime),
     SetCompressorReleaseTime(CompressorReleaseTime),
-    SetCompressorMakeupGain(u8),
+    SetCompressorMakeupGain(i8),
 
     // Used to switch between display modes..
     SetElementDisplayMode(DisplayModeComponents, DisplayMode),
