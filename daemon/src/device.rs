@@ -2230,15 +2230,20 @@ impl<'a> Device<'a> {
         debug!("Applying Profile..");
 
         debug!("Setting Faders..");
+        let mut mic_assigned_to_fader = false;
+
         // Prepare the faders, and configure channel mute states
         for fader in FaderName::iter() {
-            debug!(
-                "Setting Fader {} to {:?}",
-                fader,
-                self.profile.get_fader_assignment(fader)
-            );
-            self.goxlr
-                .set_fader(fader, self.profile.get_fader_assignment(fader))?;
+            let assignment = self.profile.get_fader_assignment(fader);
+
+            debug!("Setting Fader {} to {:?}", fader, assignment);
+            self.goxlr.set_fader(fader, assignment)?;
+
+            // Force Mic Fader Assignment
+            if assignment == ChannelName::Mic {
+                mic_assigned_to_fader = true;
+                self.profile.set_mic_fader(fader);
+            }
 
             debug!("Applying Mute Profile for {}", fader);
             self.apply_mute_from_profile(fader)?;
@@ -2246,6 +2251,10 @@ impl<'a> Device<'a> {
             if self.hardware.device_type == DeviceType::Full {
                 self.apply_scribble(fader)?;
             }
+        }
+
+        if !mic_assigned_to_fader {
+            self.profile.clear_mic_fader()?;
         }
 
         debug!("Applying Cough button settings..");
