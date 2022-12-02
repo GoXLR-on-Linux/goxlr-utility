@@ -2088,7 +2088,7 @@ impl<'a> Device<'a> {
             let fader = self.profile.get_mic_fader();
             let (muted_to_x, muted_to_all, mute_function) =
                 self.profile.get_mute_button_state(fader);
-            muted_to_all || muted_to_x && mute_function == MuteFunction::All
+            muted_to_all || (muted_to_x && mute_function == MuteFunction::All)
         } else {
             false
         };
