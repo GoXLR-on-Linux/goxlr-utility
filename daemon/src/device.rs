@@ -2242,7 +2242,7 @@ impl<'a> Device<'a> {
             // Force Mic Fader Assignment
             if assignment == ChannelName::Mic {
                 mic_assigned_to_fader = true;
-                self.profile.set_mic_fader(fader);
+                self.profile.set_mic_fader(fader)?;
             }
 
             debug!("Applying Mute Profile for {}", fader);
@@ -2254,7 +2254,7 @@ impl<'a> Device<'a> {
         }
 
         if !mic_assigned_to_fader {
-            self.profile.clear_mic_fader()?;
+            self.profile.clear_mic_fader();
         }
 
         debug!("Applying Cough button settings..");
