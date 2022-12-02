@@ -5,8 +5,9 @@ use byteorder::{ByteOrder, LittleEndian};
 use goxlr_ipc::{Compressor, Equaliser, EqualiserMini, NoiseGate};
 use goxlr_profile_loader::mic_profile::MicProfileSettings;
 use goxlr_types::{
-    CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EffectKey, EqFrequencies,
-    GateTimes, MicrophoneParamKey, MicrophoneType, MiniEqFrequencies,
+    CompressorAttackTime, CompressorRatio, CompressorReleaseTime, DisplayMode,
+    DisplayModeComponents, EffectKey, EqFrequencies, GateTimes, MicrophoneParamKey, MicrophoneType,
+    MiniEqFrequencies,
 };
 use log::error;
 use ritelinked::LinkedHashSet;
@@ -129,6 +130,78 @@ impl MicProfileAdapter {
             2 => MicrophoneType::Jack,
             _ => MicrophoneType::Jack, // default
         }
+    }
+
+    pub fn get_gate_display_mode(&self) -> DisplayMode {
+        return if self.profile.ui_setup().gate_advanced() {
+            DisplayMode::Advanced
+        } else {
+            DisplayMode::Simple
+        };
+    }
+
+    pub fn set_gate_display_mode(&mut self, display_mode: DisplayMode) {
+        self.profile
+            .ui_setup_mut()
+            .set_gate_advanced(if display_mode == DisplayMode::Simple {
+                false
+            } else {
+                true
+            });
+    }
+
+    pub fn get_compressor_display_mode(&self) -> DisplayMode {
+        return if self.profile.ui_setup().comp_advanced() {
+            DisplayMode::Advanced
+        } else {
+            DisplayMode::Simple
+        };
+    }
+
+    pub fn set_compressor_display_mode(&mut self, display_mode: DisplayMode) {
+        self.profile
+            .ui_setup_mut()
+            .set_comp_advanced(if display_mode == DisplayMode::Simple {
+                false
+            } else {
+                true
+            });
+    }
+
+    pub fn get_eq_display_mode(&self) -> DisplayMode {
+        return if self.profile.ui_setup().eq_advanced() {
+            DisplayMode::Advanced
+        } else {
+            DisplayMode::Simple
+        };
+    }
+
+    pub fn set_eq_display_mode(&mut self, display_mode: DisplayMode) {
+        self.profile
+            .ui_setup_mut()
+            .set_eq_advanced(if display_mode == DisplayMode::Simple {
+                false
+            } else {
+                true
+            });
+    }
+
+    pub fn get_eq_fine_display_mode(&self) -> DisplayMode {
+        return if self.profile.ui_setup().eq_fine_tune() {
+            DisplayMode::Advanced
+        } else {
+            DisplayMode::Simple
+        };
+    }
+
+    pub fn set_eq_fine_display_mode(&mut self, display_mode: DisplayMode) {
+        self.profile
+            .ui_setup_mut()
+            .set_eq_fine_tune(if display_mode == DisplayMode::Simple {
+                false
+            } else {
+                true
+            });
     }
 
     pub fn noise_gate_ipc(&self) -> NoiseGate {

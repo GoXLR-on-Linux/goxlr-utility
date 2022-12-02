@@ -1,11 +1,11 @@
 use enumset::EnumSet;
 use goxlr_types::{
     ButtonColourOffStyle, ButtonColourTargets, ChannelName, CompressorAttackTime, CompressorRatio,
-    CompressorReleaseTime, EchoStyle, EffectBankPresets, EncoderColourTargets, EqFrequencies,
-    FaderDisplayStyle, FaderName, FirmwareVersions, GateTimes, GenderStyle, HardTuneSource,
-    HardTuneStyle, InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies, MuteFunction,
-    OutputDevice, PitchStyle, ReverbStyle, RobotStyle, SampleBank, SampleButtons, SamplePlayOrder,
-    SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets,
+    CompressorReleaseTime, DisplayMode, EchoStyle, EffectBankPresets, EncoderColourTargets,
+    EqFrequencies, FaderDisplayStyle, FaderName, FirmwareVersions, GateTimes, GenderStyle,
+    HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies,
+    MuteFunction, OutputDevice, PitchStyle, ReverbStyle, RobotStyle, SampleBank, SampleButtons,
+    SamplePlayOrder, SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
@@ -32,6 +32,7 @@ pub struct MixerStatus {
     pub lighting: Lighting,
     pub effects: Option<Effects>,
     pub sampler: Option<Sampler>,
+    pub settings: Settings,
     pub profile_name: String,
     pub mic_profile_name: String,
 }
@@ -291,6 +292,19 @@ pub struct Sample {
     pub name: String,
     pub start_pct: f32,
     pub stop_pct: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Settings {
+    pub display: Display,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Display {
+    pub gate: DisplayMode,
+    pub compressor: DisplayMode,
+    pub equaliser: DisplayMode,
+    pub equaliser_fine: DisplayMode,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

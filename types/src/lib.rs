@@ -696,3 +696,21 @@ pub enum SamplePlayOrder {
     Sequential,
     Random,
 }
+
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum DisplayMode {
+    Simple,
+    Advanced,
+}
+
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum DisplayModeComponents {
+    NoiseGate,
+    Equaliser,
+    Compressor,
+    EqFineTune,
+}

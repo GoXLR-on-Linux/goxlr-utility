@@ -12,13 +12,15 @@ use ritelinked::LinkedHashSet;
 use strum::IntoEnumIterator;
 
 use goxlr_ipc::{
-    DeviceType, FaderStatus, GoXLRCommand, HardwareStatus, Levels, MicSettings, MixerStatus,
+    DeviceType, Display, FaderStatus, GoXLRCommand, HardwareStatus, Levels, MicSettings,
+    MixerStatus, Settings,
 };
 use goxlr_profile_loader::components::mute::MuteFunction;
 use goxlr_types::{
-    ChannelName, EffectBankPresets, EffectKey, EncoderName, FaderName, HardTuneSource,
-    InputDevice as BasicInputDevice, MicrophoneParamKey, OutputDevice as BasicOutputDevice,
-    RobotRange, SampleBank, SampleButtons, SamplePlaybackMode, VersionNumber,
+    ChannelName, DisplayModeComponents, EffectBankPresets, EffectKey, EncoderName, FaderName,
+    HardTuneSource, InputDevice as BasicInputDevice, MicrophoneParamKey,
+    OutputDevice as BasicOutputDevice, RobotRange, SampleBank, SampleButtons, SamplePlaybackMode,
+    VersionNumber,
 };
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::channelstate::ChannelState::{Muted, Unmuted};
@@ -164,6 +166,14 @@ impl<'a> Device<'a> {
                 self.hardware.device_type == DeviceType::Mini,
                 &self.audio_handler,
             ),
+            settings: Settings {
+                display: Display {
+                    gate: self.mic_profile.get_gate_display_mode(),
+                    compressor: self.mic_profile.get_compressor_display_mode(),
+                    equaliser: self.mic_profile.get_eq_display_mode(),
+                    equaliser_fine: self.mic_profile.get_eq_fine_display_mode(),
+                },
+            },
             profile_name: self.profile.name().to_owned(),
             mic_profile_name: self.mic_profile.name().to_owned(),
         }
@@ -1084,6 +1094,22 @@ impl<'a> Device<'a> {
                 self.apply_routing(input)?;
             }
 
+            GoXLRCommand::SetElementDisplayMode(element, display) => match element {
+                DisplayModeComponents::NoiseGate => {
+                    self.mic_profile.set_gate_display_mode(display);
+                }
+                DisplayModeComponents::Equaliser => {
+                    self.mic_profile.set_eq_display_mode(display);
+                }
+                DisplayModeComponents::Compressor => {
+                    // TODO: Apply 'Simple' compressor values..
+                    self.mic_profile.set_compressor_display_mode(display);
+                }
+                DisplayModeComponents::EqFineTune => {
+                    self.mic_profile.set_eq_fine_display_mode(display);
+                }
+            },
+
             // Equaliser
             GoXLRCommand::SetEqMiniGain(gain, value) => {
                 let param = self.mic_profile.set_mini_eq_gain(gain, value)?;
@@ -1128,6 +1154,10 @@ impl<'a> Device<'a> {
 
                 // GateEnabled appears to only be an effect key.
                 self.apply_effects(LinkedHashSet::from_iter([EffectKey::GateEnabled]))?;
+            }
+
+            GoXLRCommand::SetCompressorAmount(value) => {
+                // TODO
             }
 
             // Compressor

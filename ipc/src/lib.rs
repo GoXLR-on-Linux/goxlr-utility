@@ -8,11 +8,12 @@ pub mod ipc_socket;
 pub use device::*;
 use goxlr_types::{
     ButtonColourGroups, ButtonColourOffStyle, ButtonColourTargets, ChannelName,
-    CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EchoStyle, EffectBankPresets,
-    EncoderColourTargets, EqFrequencies, FaderDisplayStyle, FaderName, GateTimes, GenderStyle,
-    HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies,
-    MuteFunction, OutputDevice, PitchStyle, ReverbStyle, RobotRange, RobotStyle, SampleBank,
-    SampleButtons, SamplePlayOrder, SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets,
+    CompressorAttackTime, CompressorRatio, CompressorReleaseTime, DisplayMode,
+    DisplayModeComponents, EchoStyle, EffectBankPresets, EncoderColourTargets, EqFrequencies,
+    FaderDisplayStyle, FaderName, GateTimes, GenderStyle, HardTuneSource, HardTuneStyle,
+    InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies, MuteFunction, OutputDevice,
+    PitchStyle, ReverbStyle, RobotRange, RobotStyle, SampleBank, SampleButtons, SamplePlayOrder,
+    SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -72,11 +73,15 @@ pub enum GoXLRCommand {
     SetGateActive(bool),
 
     // Compressor..
+    SetCompressorAmount(u8),
     SetCompressorThreshold(i8),
     SetCompressorRatio(CompressorRatio),
     SetCompressorAttack(CompressorAttackTime),
     SetCompressorReleaseTime(CompressorReleaseTime),
     SetCompressorMakeupGain(u8),
+
+    // Used to switch between display modes..
+    SetElementDisplayMode(DisplayModeComponents, DisplayMode),
 
     // DeEss
     SetDeeser(u8),
