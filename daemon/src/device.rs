@@ -1156,10 +1156,6 @@ impl<'a> Device<'a> {
                 self.apply_effects(LinkedHashSet::from_iter([EffectKey::GateEnabled]))?;
             }
 
-            GoXLRCommand::SetCompressorAmount(_value) => {
-                // TODO
-            }
-
             // Compressor
             GoXLRCommand::SetCompressorThreshold(value) => {
                 self.mic_profile.set_compressor_threshold(value)?;

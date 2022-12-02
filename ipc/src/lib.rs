@@ -73,7 +73,6 @@ pub enum GoXLRCommand {
     SetGateActive(bool),
 
     // Compressor..
-    SetCompressorAmount(u8),
     SetCompressorThreshold(i8),
     SetCompressorRatio(CompressorRatio),
     SetCompressorAttack(CompressorAttackTime),
