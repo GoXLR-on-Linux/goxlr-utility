@@ -6,7 +6,8 @@ use goxlr_ipc::{
     DaemonResponse, DaemonStatus, DeviceType, Files, GoXLRCommand, HardwareStatus, PathTypes,
     Paths, UsbProductInformation,
 };
-use goxlr_usb::device::base::{find_devices, from_device, GoXLRDevice};
+use goxlr_usb::device::base::GoXLRDevice;
+use goxlr_usb::device::{find_devices, from_device};
 use goxlr_usb::{PID_GOXLR_FULL, PID_GOXLR_MINI};
 use json_patch::diff;
 use log::{error, info, warn};

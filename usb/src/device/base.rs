@@ -3,7 +3,6 @@ use crate::channelstate::ChannelState;
 use crate::commands::SystemInfoCommand::SupportsDCPCategory;
 use crate::commands::{Command, HardwareInfoCommand, SystemInfoCommand};
 use crate::dcp::DCPCategory;
-use crate::device::usb::GoXLRUSB;
 use crate::routing::InputDevice;
 use anyhow::Result;
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
@@ -305,16 +304,4 @@ impl UsbData {
     pub fn product_name(&self) -> String {
         self.product_name.clone()
     }
-}
-
-pub fn find_devices() -> Vec<GoXLRDevice> {
-    crate::device::usb::find_devices()
-}
-
-pub fn from_device(
-    device: GoXLRDevice,
-    disconnect_sender: Sender<String>,
-    event_sender: Sender<String>,
-) -> Result<Box<dyn FullGoXLRDevice>> {
-    GoXLRUSB::from_device(device, disconnect_sender, event_sender)
 }
