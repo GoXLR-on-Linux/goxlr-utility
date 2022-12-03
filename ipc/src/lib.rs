@@ -24,13 +24,24 @@ pub enum DaemonRequest {
     Command(String, GoXLRCommand),
 }
 
-// TODO: Check this..
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DaemonResponse {
     Ok,
     Error(String),
     Status(DaemonStatus),
     Patch(Patch),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WebsocketRequest {
+    pub id: String,
+    pub data: DaemonRequest,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WebsocketResponse {
+    pub id: String,
+    pub data: DaemonResponse,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]

@@ -21,7 +21,7 @@ use tokio::sync::broadcast::Sender as BroadcastSender;
 use tokio::sync::oneshot::Sender;
 
 use crate::PatchEvent;
-use goxlr_ipc::{DaemonRequest, DaemonResponse, DaemonStatus};
+use goxlr_ipc::{DaemonRequest, DaemonResponse, DaemonStatus, WebsocketRequest, WebsocketResponse};
 
 use crate::primary_worker::DeviceSender;
 use crate::servers::server_packet::handle_packet;
@@ -46,10 +46,10 @@ impl Actor for Websocket {
             loop {
                 if let Ok(event) = broadcast_rx.recv().await {
                     // We've received a message, attempt to trigger the WsMessage Handle..
-                    if let Err(error) = address
-                        .clone()
-                        .try_send(WsResponse(DaemonResponse::Patch(event.data)))
-                    {
+                    if let Err(error) = address.clone().try_send(WsResponse(WebsocketResponse {
+                        id: String::from(""),
+                        data: DaemonResponse::Patch(event.data),
+                    })) {
                         error!(
                             "Error Occurred when sending message to websocket: {:?}",
                             error
@@ -68,7 +68,7 @@ impl Actor for Websocket {
 
 #[derive(Message)]
 #[rtype(result = "()")]
-struct WsResponse(DaemonResponse);
+struct WsResponse(WebsocketResponse);
 
 impl Handler<WsResponse> for Websocket {
     type Result = ();
@@ -85,28 +85,40 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for Websocket {
         match msg {
             Ok(ws::Message::Ping(msg)) => ctx.pong(&msg),
             Ok(ws::Message::Text(text)) => {
-                match serde_json::from_slice::<DaemonRequest>(text.as_ref()) {
+                match serde_json::from_slice::<WebsocketRequest>(text.as_ref()) {
                     Ok(request) => {
                         let recipient = ctx.address().recipient();
                         let mut usb_tx = self.usb_tx.clone();
                         let future = async move {
-                            let result = handle_packet(request, &mut usb_tx).await;
+                            let request_id = request.id;
+                            let result = handle_packet(request.data, &mut usb_tx).await;
                             match result {
                                 Ok(resp) => match resp {
-                                    DaemonResponse::Ok => {}
+                                    DaemonResponse::Ok => {
+                                        recipient.do_send(WsResponse(WebsocketResponse {
+                                            id: request_id,
+                                            data: DaemonResponse::Ok,
+                                        }));
+                                    }
                                     DaemonResponse::Error(error) => {
-                                        recipient.do_send(WsResponse(DaemonResponse::Error(error)));
+                                        recipient.do_send(WsResponse(WebsocketResponse {
+                                            id: request_id,
+                                            data: DaemonResponse::Error(error),
+                                        }));
                                     }
                                     DaemonResponse::Status(status) => {
-                                        recipient
-                                            .do_send(WsResponse(DaemonResponse::Status(status)));
+                                        recipient.do_send(WsResponse(WebsocketResponse {
+                                            id: request_id,
+                                            data: DaemonResponse::Status(status),
+                                        }));
                                     }
                                     _ => {}
                                 },
                                 Err(error) => {
-                                    recipient.do_send(WsResponse(DaemonResponse::Error(
-                                        error.to_string(),
-                                    )));
+                                    recipient.do_send(WsResponse(WebsocketResponse {
+                                        id: request_id,
+                                        data: DaemonResponse::Error(error.to_string()),
+                                    }));
                                 }
                             }
                         };
