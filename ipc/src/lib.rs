@@ -34,13 +34,13 @@ pub enum DaemonResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WebsocketRequest {
-    pub id: String,
+    pub id: u32,
     pub data: DaemonRequest,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WebsocketResponse {
-    pub id: String,
+    pub id: u32,
     pub data: DaemonResponse,
 }
 

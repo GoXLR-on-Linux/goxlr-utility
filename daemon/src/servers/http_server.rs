@@ -47,7 +47,7 @@ impl Actor for Websocket {
                 if let Ok(event) = broadcast_rx.recv().await {
                     // We've received a message, attempt to trigger the WsMessage Handle..
                     if let Err(error) = address.clone().try_send(WsResponse(WebsocketResponse {
-                        id: String::from(""),
+                        id: u32::MAX,
                         data: DaemonResponse::Patch(event.data),
                     })) {
                         error!(
