@@ -234,14 +234,18 @@ impl AttachGoXLR for GoXLRUSB {
                     break;
                 }
                 let event = event_id.clone();
-                if !sender.is_closed() {
-                    sender.send(event).await.expect("Error Sending Event");
-                } else {
-                    warn!("Sender Closed for {}", event);
-                    break;
+
+                // Only send an event if we have the capacity to do so..
+                if sender.capacity() > 0 {
+                    if !sender.is_closed() {
+                        sender.send(event).await.expect("Error Sending Event");
+                    } else {
+                        warn!("Sender Closed for {}", event);
+                        break;
+                    }
                 }
 
-                tokio::time::sleep(Duration::from_millis(100)).await;
+                tokio::time::sleep(Duration::from_millis(20)).await;
             }
         });
     }
@@ -295,11 +299,7 @@ impl ExecutableGoXLR for GoXLRUSB {
         }
         sleep(sleep_time);
 
-        // Interrupt reading doesnt work, because we can't claim the interface.
-        //self.await_interrupt(Duration::from_secs(2));
-
         let mut response = vec![];
-
         for i in 0..20 {
             let response_value = self.read_control(3, 0, 0, 1040);
             if response_value == Err(Pipe) {
