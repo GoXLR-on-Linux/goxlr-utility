@@ -182,6 +182,7 @@ pub struct ThreeColours {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Effects {
+    pub is_enabled: bool,
     pub active_preset: EffectBankPresets,
     pub preset_names: HashMap<EffectBankPresets, String>,
     pub current: ActiveEffects,

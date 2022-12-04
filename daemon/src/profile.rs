@@ -705,7 +705,9 @@ impl ProfileAdapter {
             ),
         };
 
+        let is_enabled = self.is_fx_enabled();
         Some(Effects {
+            is_enabled,
             active_preset,
             preset_names,
             current: ActiveEffects {
