@@ -942,7 +942,6 @@ impl ProfileAdapter {
 
     pub fn get_cough_status(&self) -> CoughButton {
         let (_, muted_to_x, muted_to_all, _) = self.get_mute_chat_button_state();
-        debug!("{} - {}", muted_to_x, muted_to_all);
         let mic_state = if muted_to_all {
             MuteState::MutedToAll
         } else if muted_to_x {
