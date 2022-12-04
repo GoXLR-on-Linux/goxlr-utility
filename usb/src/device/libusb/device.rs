@@ -228,6 +228,9 @@ impl AttachGoXLR for GoXLRUSB {
         let sender = self.event_sender.clone();
         let stopping = self.stopping.clone();
 
+        let is_mini = self.descriptor.product_id() == PID_GOXLR_MINI;
+        let poll_millis = if is_mini { 40 } else { 20 };
+
         task::spawn(async move {
             loop {
                 if stopping.load(Ordering::Relaxed) {
@@ -245,7 +248,7 @@ impl AttachGoXLR for GoXLRUSB {
                     }
                 }
 
-                tokio::time::sleep(Duration::from_millis(20)).await;
+                tokio::time::sleep(Duration::from_millis(poll_millis)).await;
             }
         });
     }
