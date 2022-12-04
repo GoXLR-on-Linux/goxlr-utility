@@ -13,7 +13,7 @@ use rusb::{
     RequestType,
 };
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::thread::sleep;
 use std::time::Duration;
 use tokio::sync::mpsc::Sender;
@@ -242,6 +242,7 @@ impl AttachGoXLR for GoXLRUSB {
                 }
 
                 if paused.load(Ordering::Relaxed) {
+                    debug!("Command In Progress, Waiting..");
                     tokio::time::sleep(Duration::from_millis(poll_millis)).await;
                     continue;
                 }
