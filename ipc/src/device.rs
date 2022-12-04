@@ -73,6 +73,7 @@ pub struct FaderStatus {
 pub struct CoughButton {
     pub is_toggle: bool,
     pub mute_type: MuteFunction,
+    pub state: MuteState,
 }
 
 impl Default for FaderStatus {
