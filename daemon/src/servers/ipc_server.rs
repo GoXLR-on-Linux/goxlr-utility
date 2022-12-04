@@ -104,7 +104,7 @@ async fn handle_connection(
 ) {
     while let Some(msg) = socket.read().await {
         match msg {
-            Ok(msg) => match handle_packet(&http_settings, msg, &mut usb_tx).await {
+            Ok(msg) => match handle_packet(http_settings, msg, &mut usb_tx).await {
                 Ok(response) => {
                     if let Err(e) = socket.send(response).await {
                         warn!("Couldn't reply to {:?}: {}", socket.address(), e);

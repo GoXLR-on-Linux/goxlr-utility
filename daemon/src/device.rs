@@ -149,7 +149,7 @@ impl<'a> Device<'a> {
             fader_status: fader_map,
             cough_button: self.profile.get_cough_status(),
             levels: Levels {
-                volumes: volumes,
+                volumes,
                 bleep: self.mic_profile.bleep_level(),
                 deess: self.mic_profile.get_deesser(),
             },
