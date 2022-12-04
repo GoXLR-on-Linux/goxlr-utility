@@ -2184,6 +2184,7 @@ impl<'a> Device<'a> {
             scribble: self
                 .profile()
                 .get_scribble_ipc(fader, self.hardware.device_type == DeviceType::Mini),
+            mute_state: self.profile.get_ipc_mute_state(fader),
         }
     }
 

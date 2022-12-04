@@ -1,11 +1,12 @@
 use enumset::EnumSet;
+use goxlr_types::MuteState::Unmuted;
 use goxlr_types::{
     ButtonColourOffStyle, ButtonColourTargets, ChannelName, CompressorAttackTime, CompressorRatio,
     CompressorReleaseTime, DisplayMode, EchoStyle, EffectBankPresets, EncoderColourTargets,
     EqFrequencies, FaderDisplayStyle, FaderName, FirmwareVersions, GateTimes, GenderStyle,
     HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies,
-    MuteFunction, OutputDevice, PitchStyle, ReverbStyle, RobotStyle, SampleBank, SampleButtons,
-    SamplePlayOrder, SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets,
+    MuteFunction, MuteState, OutputDevice, PitchStyle, ReverbStyle, RobotStyle, SampleBank,
+    SampleButtons, SamplePlayOrder, SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
@@ -65,6 +66,7 @@ pub struct FaderStatus {
     pub channel: ChannelName,
     pub mute_type: MuteFunction,
     pub scribble: Option<Scribble>,
+    pub mute_state: MuteState,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Copy)]
@@ -79,6 +81,7 @@ impl Default for FaderStatus {
             channel: ChannelName::Mic,
             mute_type: MuteFunction::All,
             scribble: None,
+            mute_state: Unmuted,
         }
     }
 }

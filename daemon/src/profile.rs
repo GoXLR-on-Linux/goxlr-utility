@@ -39,8 +39,8 @@ use goxlr_scribbles::get_scribble;
 use goxlr_types::{
     ButtonColourGroups, ButtonColourOffStyle as BasicColourOffStyle, ButtonColourTargets,
     ChannelName, EffectBankPresets, EncoderColourTargets, FaderDisplayStyle as BasicColourDisplay,
-    FaderName, InputDevice, MuteFunction as BasicMuteFunction, OutputDevice, SamplePlayOrder,
-    SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets, VersionNumber,
+    FaderName, InputDevice, MuteFunction as BasicMuteFunction, MuteState, OutputDevice,
+    SamplePlayOrder, SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets, VersionNumber,
 };
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::colouring::ColourTargets;
@@ -808,6 +808,18 @@ impl ProfileAdapter {
     pub fn get_mute_button_behaviour(&self, fader: FaderName) -> BasicMuteFunction {
         let mute_config = self.get_mute_button(fader);
         return profile_to_standard_mute_function(*mute_config.mute_function());
+    }
+
+    pub fn get_ipc_mute_state(&self, fader: FaderName) -> MuteState {
+        let (muted_to_x, muted_to_all, _) = self.get_mute_button_state(fader);
+        if muted_to_all {
+            return MuteState::MutedToAll;
+        }
+        if muted_to_x {
+            return MuteState::MutedToX;
+        }
+
+        MuteState::Unmuted
     }
 
     pub fn set_mute_button_behaviour(&mut self, fader: FaderName, behaviour: BasicMuteFunction) {
