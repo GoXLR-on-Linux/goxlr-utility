@@ -37,10 +37,10 @@ use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLef
 use goxlr_profile_loader::{Faders, Preset, SampleButtons};
 use goxlr_scribbles::get_scribble;
 use goxlr_types::{
-    ButtonColourGroups, ButtonColourOffStyle as BasicColourOffStyle, ButtonColourTargets,
-    ChannelName, EffectBankPresets, EncoderColourTargets, FaderDisplayStyle as BasicColourDisplay,
-    FaderName, InputDevice, MuteFunction as BasicMuteFunction, MuteState, OutputDevice,
-    SamplePlayOrder, SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets, VersionNumber,
+    Button, ButtonColourGroups, ButtonColourOffStyle as BasicColourOffStyle, ChannelName,
+    EffectBankPresets, EncoderColourTargets, FaderDisplayStyle as BasicColourDisplay, FaderName,
+    InputDevice, MuteFunction as BasicMuteFunction, MuteState, OutputDevice, SamplePlayOrder,
+    SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets, VersionNumber,
 };
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::colouring::ColourTargets;
@@ -483,12 +483,12 @@ impl ProfileAdapter {
             );
         }
 
-        let mut button_map: HashMap<ButtonColourTargets, ButtonLighting> = HashMap::new();
+        let mut button_map: HashMap<Button, ButtonLighting> = HashMap::new();
 
         let buttons = if is_device_mini {
             get_mini_colour_targets()
         } else {
-            ButtonColourTargets::iter().collect()
+            Button::iter().collect()
         };
 
         let mut ignore_buttons = vec![];
@@ -1690,7 +1690,7 @@ impl ProfileAdapter {
     /** Colour Changing Code **/
     pub fn set_button_colours(
         &mut self,
-        target: ButtonColourTargets,
+        target: Button,
         colour_one: String,
         colour_two: Option<&String>,
     ) -> Result<()> {
@@ -1881,7 +1881,7 @@ impl ProfileAdapter {
 
     pub fn set_button_off_style(
         &mut self,
-        target: ButtonColourTargets,
+        target: Button,
         off_style: BasicColourOffStyle,
     ) -> Result<()> {
         let colour_target = standard_to_colour_target(target);
@@ -1899,101 +1899,85 @@ impl ProfileAdapter {
         match group {
             ButtonColourGroups::FaderMute => {
                 self.set_button_colours(
-                    ButtonColourTargets::Fader1Mute,
+                    Button::Fader1Mute,
                     colour_one.clone(),
                     colour_two.as_ref(),
                 )?;
                 self.set_button_colours(
-                    ButtonColourTargets::Fader2Mute,
+                    Button::Fader2Mute,
                     colour_one.clone(),
                     colour_two.as_ref(),
                 )?;
                 self.set_button_colours(
-                    ButtonColourTargets::Fader3Mute,
+                    Button::Fader3Mute,
                     colour_one.clone(),
                     colour_two.as_ref(),
                 )?;
-                self.set_button_colours(
-                    ButtonColourTargets::Fader4Mute,
-                    colour_one,
-                    colour_two.as_ref(),
-                )?;
+                self.set_button_colours(Button::Fader4Mute, colour_one, colour_two.as_ref())?;
             }
             ButtonColourGroups::EffectSelector => {
                 self.set_button_colours(
-                    ButtonColourTargets::EffectSelect1,
+                    Button::EffectSelect1,
                     colour_one.clone(),
                     colour_two.as_ref(),
                 )?;
                 self.set_button_colours(
-                    ButtonColourTargets::EffectSelect2,
+                    Button::EffectSelect2,
                     colour_one.clone(),
                     colour_two.as_ref(),
                 )?;
                 self.set_button_colours(
-                    ButtonColourTargets::EffectSelect3,
+                    Button::EffectSelect3,
                     colour_one.clone(),
                     colour_two.as_ref(),
                 )?;
                 self.set_button_colours(
-                    ButtonColourTargets::EffectSelect4,
+                    Button::EffectSelect4,
                     colour_one.clone(),
                     colour_two.as_ref(),
                 )?;
                 self.set_button_colours(
-                    ButtonColourTargets::EffectSelect5,
+                    Button::EffectSelect5,
                     colour_one.clone(),
                     colour_two.as_ref(),
                 )?;
-                self.set_button_colours(
-                    ButtonColourTargets::EffectSelect6,
-                    colour_one,
-                    colour_two.as_ref(),
-                )?;
+                self.set_button_colours(Button::EffectSelect6, colour_one, colour_two.as_ref())?;
             }
             ButtonColourGroups::SampleBankSelector => {
                 self.set_button_colours(
-                    ButtonColourTargets::SamplerSelectA,
+                    Button::SamplerSelectA,
                     colour_one.clone(),
                     colour_two.as_ref(),
                 )?;
                 self.set_button_colours(
-                    ButtonColourTargets::SamplerSelectB,
+                    Button::SamplerSelectB,
                     colour_one.clone(),
                     colour_two.as_ref(),
                 )?;
-                self.set_button_colours(
-                    ButtonColourTargets::SamplerSelectC,
-                    colour_one,
-                    colour_two.as_ref(),
-                )?;
+                self.set_button_colours(Button::SamplerSelectC, colour_one, colour_two.as_ref())?;
             }
             ButtonColourGroups::SamplerButtons => {
                 self.set_button_colours(
-                    ButtonColourTargets::SamplerTopLeft,
+                    Button::SamplerTopLeft,
                     colour_one.clone(),
                     colour_two.as_ref(),
                 )?;
                 self.set_button_colours(
-                    ButtonColourTargets::SamplerTopRight,
+                    Button::SamplerTopRight,
                     colour_one.clone(),
                     colour_two.as_ref(),
                 )?;
                 self.set_button_colours(
-                    ButtonColourTargets::SamplerBottomLeft,
+                    Button::SamplerBottomLeft,
                     colour_one.clone(),
                     colour_two.as_ref(),
                 )?;
                 self.set_button_colours(
-                    ButtonColourTargets::SamplerBottomRight,
+                    Button::SamplerBottomRight,
                     colour_one.clone(),
                     colour_two.as_ref(),
                 )?;
-                self.set_button_colours(
-                    ButtonColourTargets::SamplerClear,
-                    colour_one,
-                    colour_two.as_ref(),
-                )?;
+                self.set_button_colours(Button::SamplerClear, colour_one, colour_two.as_ref())?;
             }
         }
 
@@ -2007,30 +1991,30 @@ impl ProfileAdapter {
     ) -> Result<()> {
         match target {
             ButtonColourGroups::FaderMute => {
-                self.set_button_off_style(ButtonColourTargets::Fader1Mute, off_style)?;
-                self.set_button_off_style(ButtonColourTargets::Fader2Mute, off_style)?;
-                self.set_button_off_style(ButtonColourTargets::Fader3Mute, off_style)?;
-                self.set_button_off_style(ButtonColourTargets::Fader4Mute, off_style)?;
+                self.set_button_off_style(Button::Fader1Mute, off_style)?;
+                self.set_button_off_style(Button::Fader2Mute, off_style)?;
+                self.set_button_off_style(Button::Fader3Mute, off_style)?;
+                self.set_button_off_style(Button::Fader4Mute, off_style)?;
             }
             ButtonColourGroups::EffectSelector => {
-                self.set_button_off_style(ButtonColourTargets::EffectSelect1, off_style)?;
-                self.set_button_off_style(ButtonColourTargets::EffectSelect2, off_style)?;
-                self.set_button_off_style(ButtonColourTargets::EffectSelect3, off_style)?;
-                self.set_button_off_style(ButtonColourTargets::EffectSelect4, off_style)?;
-                self.set_button_off_style(ButtonColourTargets::EffectSelect5, off_style)?;
-                self.set_button_off_style(ButtonColourTargets::EffectSelect6, off_style)?;
+                self.set_button_off_style(Button::EffectSelect1, off_style)?;
+                self.set_button_off_style(Button::EffectSelect2, off_style)?;
+                self.set_button_off_style(Button::EffectSelect3, off_style)?;
+                self.set_button_off_style(Button::EffectSelect4, off_style)?;
+                self.set_button_off_style(Button::EffectSelect5, off_style)?;
+                self.set_button_off_style(Button::EffectSelect6, off_style)?;
             }
             ButtonColourGroups::SampleBankSelector => {
-                self.set_button_off_style(ButtonColourTargets::SamplerSelectA, off_style)?;
-                self.set_button_off_style(ButtonColourTargets::SamplerSelectB, off_style)?;
-                self.set_button_off_style(ButtonColourTargets::SamplerSelectC, off_style)?;
+                self.set_button_off_style(Button::SamplerSelectA, off_style)?;
+                self.set_button_off_style(Button::SamplerSelectB, off_style)?;
+                self.set_button_off_style(Button::SamplerSelectC, off_style)?;
             }
             ButtonColourGroups::SamplerButtons => {
-                self.set_button_off_style(ButtonColourTargets::SamplerTopLeft, off_style)?;
-                self.set_button_off_style(ButtonColourTargets::SamplerTopRight, off_style)?;
-                self.set_button_off_style(ButtonColourTargets::SamplerBottomLeft, off_style)?;
-                self.set_button_off_style(ButtonColourTargets::SamplerBottomRight, off_style)?;
-                self.set_button_off_style(ButtonColourTargets::SamplerClear, off_style)?;
+                self.set_button_off_style(Button::SamplerTopLeft, off_style)?;
+                self.set_button_off_style(Button::SamplerTopRight, off_style)?;
+                self.set_button_off_style(Button::SamplerBottomLeft, off_style)?;
+                self.set_button_off_style(Button::SamplerBottomRight, off_style)?;
+                self.set_button_off_style(Button::SamplerClear, off_style)?;
             }
         }
         Ok(())
@@ -2476,61 +2460,61 @@ fn get_profile_colour_map_mut(
     }
 }
 
-pub fn standard_to_colour_target(target: ButtonColourTargets) -> ColourTargets {
+pub fn standard_to_colour_target(target: Button) -> ColourTargets {
     match target {
-        ButtonColourTargets::Fader1Mute => ColourTargets::Fader1Mute,
-        ButtonColourTargets::Fader2Mute => ColourTargets::Fader2Mute,
-        ButtonColourTargets::Fader3Mute => ColourTargets::Fader3Mute,
-        ButtonColourTargets::Fader4Mute => ColourTargets::Fader4Mute,
-        ButtonColourTargets::Bleep => ColourTargets::Bleep,
-        ButtonColourTargets::Cough => ColourTargets::MicrophoneMute,
-        ButtonColourTargets::EffectSelect1 => ColourTargets::EffectSelect1,
-        ButtonColourTargets::EffectSelect2 => ColourTargets::EffectSelect2,
-        ButtonColourTargets::EffectSelect3 => ColourTargets::EffectSelect3,
-        ButtonColourTargets::EffectSelect4 => ColourTargets::EffectSelect4,
-        ButtonColourTargets::EffectSelect5 => ColourTargets::EffectSelect5,
-        ButtonColourTargets::EffectSelect6 => ColourTargets::EffectSelect6,
-        ButtonColourTargets::EffectFx => ColourTargets::EffectFx,
-        ButtonColourTargets::EffectMegaphone => ColourTargets::EffectMegaphone,
-        ButtonColourTargets::EffectRobot => ColourTargets::EffectRobot,
-        ButtonColourTargets::EffectHardTune => ColourTargets::EffectHardTune,
-        ButtonColourTargets::SamplerSelectA => ColourTargets::SamplerSelectA,
-        ButtonColourTargets::SamplerSelectB => ColourTargets::SamplerSelectB,
-        ButtonColourTargets::SamplerSelectC => ColourTargets::SamplerSelectC,
-        ButtonColourTargets::SamplerTopLeft => ColourTargets::SamplerTopLeft,
-        ButtonColourTargets::SamplerTopRight => ColourTargets::SamplerTopRight,
-        ButtonColourTargets::SamplerBottomLeft => ColourTargets::SamplerBottomLeft,
-        ButtonColourTargets::SamplerBottomRight => ColourTargets::SamplerBottomRight,
-        ButtonColourTargets::SamplerClear => ColourTargets::SamplerClear,
+        Button::Fader1Mute => ColourTargets::Fader1Mute,
+        Button::Fader2Mute => ColourTargets::Fader2Mute,
+        Button::Fader3Mute => ColourTargets::Fader3Mute,
+        Button::Fader4Mute => ColourTargets::Fader4Mute,
+        Button::Bleep => ColourTargets::Bleep,
+        Button::Cough => ColourTargets::MicrophoneMute,
+        Button::EffectSelect1 => ColourTargets::EffectSelect1,
+        Button::EffectSelect2 => ColourTargets::EffectSelect2,
+        Button::EffectSelect3 => ColourTargets::EffectSelect3,
+        Button::EffectSelect4 => ColourTargets::EffectSelect4,
+        Button::EffectSelect5 => ColourTargets::EffectSelect5,
+        Button::EffectSelect6 => ColourTargets::EffectSelect6,
+        Button::EffectFx => ColourTargets::EffectFx,
+        Button::EffectMegaphone => ColourTargets::EffectMegaphone,
+        Button::EffectRobot => ColourTargets::EffectRobot,
+        Button::EffectHardTune => ColourTargets::EffectHardTune,
+        Button::SamplerSelectA => ColourTargets::SamplerSelectA,
+        Button::SamplerSelectB => ColourTargets::SamplerSelectB,
+        Button::SamplerSelectC => ColourTargets::SamplerSelectC,
+        Button::SamplerTopLeft => ColourTargets::SamplerTopLeft,
+        Button::SamplerTopRight => ColourTargets::SamplerTopRight,
+        Button::SamplerBottomLeft => ColourTargets::SamplerBottomLeft,
+        Button::SamplerBottomRight => ColourTargets::SamplerBottomRight,
+        Button::SamplerClear => ColourTargets::SamplerClear,
     }
 }
 
-pub fn get_mini_colour_targets() -> Vec<ButtonColourTargets> {
+pub fn get_mini_colour_targets() -> Vec<Button> {
     vec![
-        ButtonColourTargets::Fader1Mute,
-        ButtonColourTargets::Fader2Mute,
-        ButtonColourTargets::Fader3Mute,
-        ButtonColourTargets::Fader4Mute,
-        ButtonColourTargets::Bleep,
-        ButtonColourTargets::Cough,
+        Button::Fader1Mute,
+        Button::Fader2Mute,
+        Button::Fader3Mute,
+        Button::Fader4Mute,
+        Button::Bleep,
+        Button::Cough,
     ]
 }
 
-pub fn get_sampler_colour_targets() -> Vec<ButtonColourTargets> {
+pub fn get_sampler_colour_targets() -> Vec<Button> {
     vec![
-        ButtonColourTargets::SamplerTopLeft,
-        ButtonColourTargets::SamplerTopRight,
-        ButtonColourTargets::SamplerBottomLeft,
-        ButtonColourTargets::SamplerBottomRight,
-        ButtonColourTargets::SamplerClear,
+        Button::SamplerTopLeft,
+        Button::SamplerTopRight,
+        Button::SamplerBottomLeft,
+        Button::SamplerBottomRight,
+        Button::SamplerClear,
     ]
 }
 
-pub fn get_sampler_selector_colour_targets() -> Vec<ButtonColourTargets> {
+pub fn get_sampler_selector_colour_targets() -> Vec<Button> {
     vec![
-        ButtonColourTargets::SamplerSelectA,
-        ButtonColourTargets::SamplerSelectB,
-        ButtonColourTargets::SamplerSelectC,
+        Button::SamplerSelectA,
+        Button::SamplerSelectB,
+        Button::SamplerSelectC,
     ]
 }
 

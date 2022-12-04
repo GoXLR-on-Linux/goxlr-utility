@@ -7,13 +7,13 @@ pub mod ipc_socket;
 
 pub use device::*;
 use goxlr_types::{
-    ButtonColourGroups, ButtonColourOffStyle, ButtonColourTargets, ChannelName,
-    CompressorAttackTime, CompressorRatio, CompressorReleaseTime, DisplayMode,
-    DisplayModeComponents, EchoStyle, EffectBankPresets, EncoderColourTargets, EqFrequencies,
-    FaderDisplayStyle, FaderName, GateTimes, GenderStyle, HardTuneSource, HardTuneStyle,
-    InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies, MuteFunction, OutputDevice,
-    PitchStyle, ReverbStyle, RobotRange, RobotStyle, SampleBank, SampleButtons, SamplePlayOrder,
-    SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets,
+    Button, ButtonColourGroups, ButtonColourOffStyle, ChannelName, CompressorAttackTime,
+    CompressorRatio, CompressorReleaseTime, DisplayMode, DisplayModeComponents, EchoStyle,
+    EffectBankPresets, EncoderColourTargets, EqFrequencies, FaderDisplayStyle, FaderName,
+    GateTimes, GenderStyle, HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle,
+    MicrophoneType, MiniEqFrequencies, MuteFunction, OutputDevice, PitchStyle, ReverbStyle,
+    RobotRange, RobotStyle, SampleBank, SampleButtons, SamplePlayOrder, SamplePlaybackMode,
+    SamplerColourTargets, SimpleColourTargets,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -102,8 +102,8 @@ pub enum GoXLRCommand {
     SetAllFaderColours(String, String),
     SetAllFaderDisplayStyle(FaderDisplayStyle),
 
-    SetButtonColours(ButtonColourTargets, String, Option<String>),
-    SetButtonOffStyle(ButtonColourTargets, ButtonColourOffStyle),
+    SetButtonColours(Button, String, Option<String>),
+    SetButtonOffStyle(Button, ButtonColourOffStyle),
     SetButtonGroupColours(ButtonColourGroups, String, Option<String>),
     SetButtonGroupOffStyle(ButtonColourGroups, ButtonColourOffStyle),
 

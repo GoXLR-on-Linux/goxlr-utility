@@ -1,7 +1,7 @@
 use enumset::EnumSet;
 use goxlr_types::MuteState::Unmuted;
 use goxlr_types::{
-    ButtonColourOffStyle, ButtonColourTargets, ChannelName, CompressorAttackTime, CompressorRatio,
+    Button, ButtonColourOffStyle, ChannelName, CompressorAttackTime, CompressorRatio,
     CompressorReleaseTime, DisplayMode, EchoStyle, EffectBankPresets, EncoderColourTargets,
     EqFrequencies, FaderDisplayStyle, FaderName, FirmwareVersions, GateTimes, GenderStyle,
     HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies,
@@ -138,7 +138,7 @@ pub struct Compressor {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Lighting {
     pub faders: HashMap<FaderName, FaderLighting>,
-    pub buttons: HashMap<ButtonColourTargets, ButtonLighting>,
+    pub buttons: HashMap<Button, ButtonLighting>,
     pub simple: HashMap<SimpleColourTargets, OneColour>,
     pub sampler: HashMap<SamplerColourTargets, SamplerLighting>,
     pub encoders: HashMap<EncoderColourTargets, ThreeColours>,

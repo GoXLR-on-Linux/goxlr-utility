@@ -1,11 +1,11 @@
 use clap::{AppSettings, Args, Parser, Subcommand};
 use goxlr_types::{
-    ButtonColourGroups, ButtonColourOffStyle, ButtonColourTargets, ChannelName,
-    CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EchoStyle, EffectBankPresets,
-    EncoderColourTargets, EqFrequencies, FaderDisplayStyle, FaderName, GateTimes, GenderStyle,
-    HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle, MiniEqFrequencies, MuteFunction,
-    OutputDevice, PitchStyle, ReverbStyle, RobotRange, RobotStyle, SampleBank, SampleButtons,
-    SamplePlayOrder, SamplePlaybackMode, SimpleColourTargets,
+    Button, ButtonColourGroups, ButtonColourOffStyle, ChannelName, CompressorAttackTime,
+    CompressorRatio, CompressorReleaseTime, EchoStyle, EffectBankPresets, EncoderColourTargets,
+    EqFrequencies, FaderDisplayStyle, FaderName, GateTimes, GenderStyle, HardTuneSource,
+    HardTuneStyle, InputDevice, MegaphoneStyle, MiniEqFrequencies, MuteFunction, OutputDevice,
+    PitchStyle, ReverbStyle, RobotRange, RobotStyle, SampleBank, SampleButtons, SamplePlayOrder,
+    SamplePlaybackMode, SimpleColourTargets,
 };
 use std::str::FromStr;
 
@@ -630,7 +630,7 @@ pub enum ButtonLightingCommands {
     Colour {
         /// The Button to change
         #[clap(arg_enum)]
-        button: ButtonColourTargets,
+        button: Button,
 
         /// The primary button colour [RRGGBB]
         colour_one: String,
@@ -642,7 +642,7 @@ pub enum ButtonLightingCommands {
     OffStyle {
         /// The Button to change
         #[clap(arg_enum)]
-        button: ButtonColourTargets,
+        button: Button,
 
         /// How the button should be presented when 'off'
         #[clap(arg_enum)]

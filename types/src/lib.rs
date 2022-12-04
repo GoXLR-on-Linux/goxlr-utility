@@ -267,7 +267,7 @@ pub enum FaderDisplayStyle {
 #[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub enum ButtonColourTargets {
+pub enum Button {
     // These are all the buttons from the GoXLR Mini.
     Fader1Mute,
     Fader2Mute,
