@@ -21,6 +21,7 @@ serde_repr = "0.1"
 futures = "0.3.19"
 strum = { version = "0.23"}
 enumset = "1.0.8"
+enum-map = { version = "2.4.1", features=["serde"] }
 anyhow = "1.0"
 
 # Used to handle 'Patch' events..

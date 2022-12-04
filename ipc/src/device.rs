@@ -1,3 +1,4 @@
+use enum_map::EnumMap;
 use enumset::EnumSet;
 use goxlr_types::MuteState::Unmuted;
 use goxlr_types::{
@@ -24,7 +25,7 @@ pub struct DaemonStatus {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MixerStatus {
     pub hardware: HardwareStatus,
-    pub fader_status: [FaderStatus; 4], // TODO: Does this need to be an array? :p
+    pub fader_status: [FaderStatus; 4], // TODO: Does this need to be an array? Move to EnumMap
     pub mic_status: MicSettings,
     pub levels: Levels,
     pub router: [EnumSet<OutputDevice>; InputDevice::COUNT],
@@ -34,6 +35,7 @@ pub struct MixerStatus {
     pub effects: Option<Effects>,
     pub sampler: Option<Sampler>,
     pub settings: Settings,
+    pub button_down: EnumMap<Button, bool>,
     pub profile_name: String,
     pub mic_profile_name: String,
 }

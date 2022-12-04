@@ -264,7 +264,7 @@ pub enum FaderDisplayStyle {
     GradientMeter,
 }
 
-#[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq, Hash)]
+#[derive(Debug, Display, Enum, EnumIter, EnumCount, EnumSetType, Hash)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Button {

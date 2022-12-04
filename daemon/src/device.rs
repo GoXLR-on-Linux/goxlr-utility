@@ -17,8 +17,8 @@ use goxlr_ipc::{
 };
 use goxlr_profile_loader::components::mute::MuteFunction;
 use goxlr_types::{
-    ChannelName, DisplayModeComponents, EffectBankPresets, EffectKey, EncoderName, FaderName,
-    HardTuneSource, InputDevice as BasicInputDevice, MicrophoneParamKey,
+    Button, ChannelName, DisplayModeComponents, EffectBankPresets, EffectKey, EncoderName,
+    FaderName, HardTuneSource, InputDevice as BasicInputDevice, MicrophoneParamKey,
     OutputDevice as BasicOutputDevice, RobotRange, SampleBank, SampleButtons, SamplePlaybackMode,
     VersionNumber,
 };
@@ -30,7 +30,9 @@ use goxlr_usb::routing::{InputDevice, OutputDevice};
 use crate::audio::{AudioFile, AudioHandler};
 use crate::files::find_file_in_path;
 use crate::mic_profile::{MicProfileAdapter, DEFAULT_MIC_PROFILE_NAME};
-use crate::profile::{version_newer_or_equal_to, ProfileAdapter, DEFAULT_PROFILE_NAME};
+use crate::profile::{
+    usb_to_standard_button, version_newer_or_equal_to, ProfileAdapter, DEFAULT_PROFILE_NAME,
+};
 use crate::{SettingsHandle, DISTRIBUTABLE_ROOT};
 
 pub struct Device<'a> {
@@ -137,6 +139,13 @@ impl<'a> Device<'a> {
         let boxed = fader_map.into_boxed_slice();
         let boxed_array: Box<[FaderStatus; 4]> = boxed.try_into().expect("This shouldn't happen!");
 
+        let mut button_states: EnumMap<Button, bool> = Default::default();
+        for (button, state) in self.button_states.iter() {
+            if state.press_time > 0 {
+                button_states[usb_to_standard_button(button)] = true;
+            }
+        }
+
         MixerStatus {
             hardware: self.hardware.clone(),
             fader_status: *boxed_array,
@@ -174,6 +183,7 @@ impl<'a> Device<'a> {
                     equaliser_fine: self.mic_profile.get_eq_fine_display_mode(),
                 },
             },
+            button_down: button_states,
             profile_name: self.profile.name().to_owned(),
             mic_profile_name: self.mic_profile.name().to_owned(),
         }

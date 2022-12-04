@@ -2719,6 +2719,35 @@ fn profile_to_standard_hard_tune_source(source: &HardTuneSource) -> goxlr_types:
     }
 }
 
+pub fn usb_to_standard_button(source: Buttons) -> Button {
+    match source {
+        Buttons::Fader1Mute => Button::Fader1Mute,
+        Buttons::Fader2Mute => Button::Fader2Mute,
+        Buttons::Fader3Mute => Button::Fader3Mute,
+        Buttons::Fader4Mute => Button::Fader4Mute,
+        Buttons::Bleep => Button::Bleep,
+        Buttons::MicrophoneMute => Button::Cough,
+        Buttons::EffectSelect1 => Button::EffectSelect1,
+        Buttons::EffectSelect2 => Button::EffectSelect2,
+        Buttons::EffectSelect3 => Button::EffectSelect3,
+        Buttons::EffectSelect4 => Button::EffectSelect4,
+        Buttons::EffectSelect5 => Button::EffectSelect5,
+        Buttons::EffectSelect6 => Button::EffectSelect6,
+        Buttons::EffectFx => Button::EffectFx,
+        Buttons::EffectMegaphone => Button::EffectMegaphone,
+        Buttons::EffectRobot => Button::EffectRobot,
+        Buttons::EffectHardTune => Button::EffectHardTune,
+        Buttons::SamplerSelectA => Button::SamplerSelectA,
+        Buttons::SamplerSelectB => Button::SamplerSelectB,
+        Buttons::SamplerSelectC => Button::SamplerSelectC,
+        Buttons::SamplerTopLeft => Button::SamplerTopLeft,
+        Buttons::SamplerTopRight => Button::SamplerTopRight,
+        Buttons::SamplerBottomLeft => Button::SamplerBottomLeft,
+        Buttons::SamplerBottomRight => Button::SamplerBottomRight,
+        Buttons::SamplerClear => Button::SamplerClear,
+    }
+}
+
 pub fn version_newer_or_equal_to(version: &VersionNumber, comparison: VersionNumber) -> bool {
     match version.0.cmp(&comparison.0) {
         Ordering::Greater => return true,
