@@ -127,17 +127,10 @@ impl<'a> Device<'a> {
     }
 
     pub fn status(&self) -> MixerStatus {
-        //let mut fader_map = [Default::default(); 4];
-        let fader_map = vec![
-            self.get_fader_state(FaderName::A),
-            self.get_fader_state(FaderName::B),
-            self.get_fader_state(FaderName::C),
-            self.get_fader_state(FaderName::D),
-        ];
-
-        // Unbox the Fader Map
-        let boxed = fader_map.into_boxed_slice();
-        let boxed_array: Box<[FaderStatus; 4]> = boxed.try_into().expect("This shouldn't happen!");
+        let mut fader_map: EnumMap<FaderName, FaderStatus> = Default::default();
+        for name in FaderName::iter() {
+            fader_map[name] = self.get_fader_state(name);
+        }
 
         let mut button_states: EnumMap<Button, bool> = Default::default();
         for (button, state) in self.button_states.iter() {
@@ -148,7 +141,7 @@ impl<'a> Device<'a> {
 
         MixerStatus {
             hardware: self.hardware.clone(),
-            fader_status: *boxed_array,
+            fader_status: fader_map,
             cough_button: self.profile.get_cough_status(),
             levels: Levels {
                 volumes: self.profile.get_volumes(),

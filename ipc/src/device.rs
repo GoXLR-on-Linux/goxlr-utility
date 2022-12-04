@@ -25,7 +25,7 @@ pub struct DaemonStatus {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MixerStatus {
     pub hardware: HardwareStatus,
-    pub fader_status: [FaderStatus; 4], // TODO: Does this need to be an array? Move to EnumMap
+    pub fader_status: EnumMap<FaderName, FaderStatus>,
     pub mic_status: MicSettings,
     pub levels: Levels,
     pub router: [EnumSet<OutputDevice>; InputDevice::COUNT],
@@ -42,7 +42,7 @@ pub struct MixerStatus {
 
 impl MixerStatus {
     pub fn get_fader_status(&self, fader: FaderName) -> &FaderStatus {
-        &self.fader_status[fader as usize]
+        &self.fader_status[fader]
     }
 
     pub fn get_channel_volume(&self, channel: ChannelName) -> u8 {

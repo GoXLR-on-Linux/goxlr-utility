@@ -26,7 +26,8 @@ pub enum ChannelName {
     LineOut,
 }
 
-#[derive(Copy, Clone, Debug, Display, EnumIter, EnumCount, PartialEq, Eq, Hash)]
+#[allow(clippy::derive_hash_xor_eq)]
+#[derive(Debug, Display, Enum, EnumIter, EnumCount, EnumSetType, Hash)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum FaderName {
