@@ -21,7 +21,9 @@ use tokio::sync::broadcast::Sender as BroadcastSender;
 use tokio::sync::oneshot::Sender;
 
 use crate::PatchEvent;
-use goxlr_ipc::{DaemonRequest, DaemonResponse, DaemonStatus, WebsocketRequest, WebsocketResponse};
+use goxlr_ipc::{
+    DaemonRequest, DaemonResponse, DaemonStatus, HttpSettings, WebsocketRequest, WebsocketResponse,
+};
 
 use crate::primary_worker::DeviceSender;
 use crate::servers::server_packet::handle_packet;
@@ -31,6 +33,7 @@ const WEB_CONTENT: Dir = include_dir!("./daemon/web-content/");
 struct Websocket {
     usb_tx: DeviceSender,
     broadcast_tx: BroadcastSender<PatchEvent>,
+    http_settings: HttpSettings,
 }
 
 impl Actor for Websocket {
@@ -89,11 +92,19 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for Websocket {
                     Ok(request) => {
                         let recipient = ctx.address().recipient();
                         let mut usb_tx = self.usb_tx.clone();
+                        let http_settings = self.http_settings.clone();
                         let future = async move {
                             let request_id = request.id;
-                            let result = handle_packet(request.data, &mut usb_tx).await;
+                            let result =
+                                handle_packet(&http_settings, request.data, &mut usb_tx).await;
                             match result {
                                 Ok(resp) => match resp {
+                                    DaemonResponse::HttpState(state) => {
+                                        recipient.do_send(WsResponse(WebsocketResponse {
+                                            id: request_id,
+                                            data: DaemonResponse::HttpState(state),
+                                        }))
+                                    }
                                     DaemonResponse::Ok => {
                                         recipient.do_send(WsResponse(WebsocketResponse {
                                             id: request_id,
@@ -144,15 +155,17 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for Websocket {
 struct AppData {
     usb_tx: DeviceSender,
     broadcast_tx: BroadcastSender<PatchEvent>,
+    http_settings: HttpSettings,
 }
 
 pub async fn launch_httpd(
     usb_tx: DeviceSender,
     handle_tx: Sender<ServerHandle>,
     broadcast_tx: tokio::sync::broadcast::Sender<PatchEvent>,
-    port: u16,
-    with_cors: bool,
+    settings: HttpSettings,
 ) -> Result<()> {
+    let settings_clone = settings.clone();
+
     let server = HttpServer::new(move || {
         let cors = Cors::default()
             .allowed_origin_fn(|origin, _req_head| {
@@ -163,22 +176,24 @@ pub async fn launch_httpd(
             .allow_any_header()
             .max_age(300);
         App::new()
-            .wrap(Condition::new(with_cors, cors))
+            .wrap(Condition::new(settings.cors_enabled, cors))
             .app_data(Data::new(Mutex::new(AppData {
                 broadcast_tx: broadcast_tx.clone(),
                 usb_tx: usb_tx.clone(),
+                http_settings: settings_clone.clone(),
             })))
             .service(execute_command)
             .service(get_devices)
             .service(websocket)
             .default_service(web::to(default))
     })
-    .bind(("127.0.0.1", port))?
+    .bind((settings.bind_address.clone(), settings.port))?
     .run();
 
     info!(
-        "Started GoXLR configuration interface at http://127.0.0.1:{}/",
-        port
+        "Started GoXLR configuration interface at http://{}:{}/",
+        settings.bind_address.as_str(),
+        settings.port,
     );
 
     let _ = handle_tx.send(server.handle());
@@ -196,6 +211,7 @@ async fn websocket(
 
     ws::start(
         Websocket {
+            http_settings: data.http_settings.clone(),
             usb_tx: data.usb_tx.clone(),
             broadcast_tx: data.broadcast_tx.clone(),
         },
@@ -215,7 +231,7 @@ async fn execute_command(
     let sender = guard.deref_mut();
 
     // Errors propagate weirdly in the javascript world, so send all as OK, and handle there.
-    match handle_packet(request.0, &mut sender.usb_tx).await {
+    match handle_packet(&sender.http_settings, request.0, &mut sender.usb_tx).await {
         Ok(result) => HttpResponse::Ok().json(result),
         Err(error) => HttpResponse::Ok().json(DaemonResponse::Error(error.to_string())),
     }
@@ -254,7 +270,7 @@ async fn get_status(app_data: Data<Mutex<AppData>>) -> Result<DaemonStatus> {
 
     let request = DaemonRequest::GetStatus;
 
-    let result = handle_packet(request, &mut sender.usb_tx).await?;
+    let result = handle_packet(&sender.http_settings, request, &mut sender.usb_tx).await?;
     match result {
         DaemonResponse::Status(status) => Ok(status),
         _ => Err(anyhow!("Unexpected Daemon Status Result: {:?}", result)),

@@ -20,6 +20,7 @@ use goxlr_types::{
 pub enum DaemonRequest {
     Ping,
     GetStatus,
+    GetHttpState,
     OpenPath(PathTypes),
     Command(String, GoXLRCommand),
 }
@@ -28,6 +29,7 @@ pub enum DaemonRequest {
 pub enum DaemonResponse {
     Ok,
     Error(String),
+    HttpState(HttpSettings),
     Status(DaemonStatus),
     Patch(Patch),
 }

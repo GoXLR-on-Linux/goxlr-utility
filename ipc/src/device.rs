@@ -20,6 +20,14 @@ pub struct DaemonStatus {
     pub files: Files,
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct HttpSettings {
+    pub enabled: bool,
+    pub bind_address: String,
+    pub cors_enabled: bool,
+    pub port: u16,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MixerStatus {
     pub hardware: HardwareStatus,

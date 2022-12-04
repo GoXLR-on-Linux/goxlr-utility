@@ -1,11 +1,12 @@
 use crate::ipc_socket::Socket;
-use crate::{DaemonRequest, DaemonResponse, DaemonStatus, GoXLRCommand};
+use crate::{DaemonRequest, DaemonResponse, DaemonStatus, GoXLRCommand, HttpSettings};
 use anyhow::{anyhow, Context, Result};
 
 #[derive(Debug)]
 pub struct Client {
     socket: Socket<DaemonResponse, DaemonRequest>,
     status: DaemonStatus,
+    http_state: HttpSettings,
 }
 
 impl Client {
@@ -13,6 +14,7 @@ impl Client {
         Self {
             socket,
             status: DaemonStatus::default(),
+            http_state: Default::default(),
         }
     }
 
@@ -29,6 +31,10 @@ impl Client {
             .context("Failed to parse the command result from the GoXLR daemon process")?;
 
         match result {
+            DaemonResponse::HttpState(state) => {
+                self.http_state = state;
+                Ok(())
+            }
             DaemonResponse::Status(status) => {
                 self.status = status;
                 Ok(())

@@ -1,6 +1,7 @@
 use actix_web::dev::ServerHandle;
 use anyhow::{bail, Context, Result};
 use clap::Parser;
+use goxlr_ipc::HttpSettings;
 use json_patch::Patch;
 use log::{error, info, warn};
 use simplelog::{ColorChoice, CombinedLogger, Config, TermLogger, TerminalMode};
@@ -69,6 +70,13 @@ async fn main() -> Result<()> {
         }
     }
 
+    let http_settings = HttpSettings {
+        enabled: !args.http_disable,
+        bind_address: args.http_bind_address,
+        cors_enabled: args.http_enable_cors,
+        port: args.http_port,
+    };
+
     info!("Starting GoXLR Daemon v{}", VERSION);
     let settings = SettingsHandle::load(args.config).await?;
 
@@ -106,12 +114,16 @@ async fn main() -> Result<()> {
         bail!("{}", ipc_socket.err().unwrap());
     }
     let ipc_socket = ipc_socket.unwrap();
-    let communications_handle =
-        tokio::spawn(run_server(ipc_socket, usb_tx.clone(), shutdown.clone()));
+    let communications_handle = tokio::spawn(run_server(
+        ipc_socket,
+        http_settings.clone(),
+        usb_tx.clone(),
+        shutdown.clone(),
+    ));
 
     let mut http_server: Option<ServerHandle> = None;
-    if !args.http_disable {
-        if args.http_enable_cors {
+    if http_settings.enabled {
+        if http_settings.cors_enabled {
             warn!("HTTP Cross Origin Requests enabled, this may be a security risk.");
         }
         let (httpd_tx, httpd_rx) = tokio::sync::oneshot::channel();
@@ -119,8 +131,7 @@ async fn main() -> Result<()> {
             usb_tx.clone(),
             httpd_tx,
             broadcast_tx.clone(),
-            args.http_port,
-            args.http_enable_cors,
+            http_settings,
         ));
         http_server = Some(httpd_rx.await?);
     } else {
