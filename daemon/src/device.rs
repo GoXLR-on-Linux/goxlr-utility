@@ -139,12 +139,17 @@ impl<'a> Device<'a> {
             }
         }
 
+        let mut volumes: EnumMap<ChannelName, u8> = Default::default();
+        for channel in ChannelName::iter() {
+            volumes[channel] = self.profile.get_channel_volume(channel);
+        }
+
         MixerStatus {
             hardware: self.hardware.clone(),
             fader_status: fader_map,
             cough_button: self.profile.get_cough_status(),
             levels: Levels {
-                volumes: self.profile.get_volumes(),
+                volumes: volumes,
                 bleep: self.mic_profile.bleep_level(),
                 deess: self.mic_profile.get_deesser(),
             },

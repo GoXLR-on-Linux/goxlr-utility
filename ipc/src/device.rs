@@ -44,11 +44,11 @@ impl MixerStatus {
     }
 
     pub fn get_channel_volume(&self, channel: ChannelName) -> u8 {
-        self.levels.volumes[channel as usize]
+        self.levels.volumes[channel]
     }
 
     pub fn set_channel_volume(&mut self, channel: ChannelName, volume: u8) {
-        self.levels.volumes[channel as usize] = volume;
+        self.levels.volumes[channel] = volume;
     }
 }
 
@@ -100,7 +100,7 @@ pub struct MicSettings {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Levels {
-    pub volumes: [u8; ChannelName::COUNT],
+    pub volumes: EnumMap<ChannelName, u8>,
     pub bleep: i8,
     pub deess: u8,
 }

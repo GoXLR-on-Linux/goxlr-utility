@@ -8,7 +8,6 @@ use std::path::{Path, PathBuf};
 use anyhow::{anyhow, bail, Context, Result};
 use enum_map::EnumMap;
 use log::{debug, error, warn};
-use strum::EnumCount;
 use strum::IntoEnumIterator;
 
 use crate::audio::{AudioFile, AudioHandler};
@@ -350,15 +349,6 @@ impl ProfileAdapter {
             .settings()
             .mixer()
             .channel_volume(standard_to_profile_channel(channel))
-    }
-
-    pub fn get_volumes(&self) -> [u8; ChannelName::COUNT] {
-        let mut volumes = [255; ChannelName::COUNT];
-        for channel in ChannelName::iter() {
-            volumes[channel as usize] = self.get_channel_volume(channel);
-        }
-
-        volumes
     }
 
     pub fn set_channel_volume(&mut self, channel: ChannelName, volume: u8) -> Result<()> {

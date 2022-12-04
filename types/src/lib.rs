@@ -2,14 +2,13 @@
 use clap::ArgEnum;
 use derivative::Derivative;
 use enum_map::Enum;
-use enumset::EnumSetType;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::fmt::Formatter;
 use strum::{Display, EnumCount, EnumIter};
 
-#[derive(Copy, Clone, Debug, Display, EnumIter, EnumCount, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, Display, Enum, EnumIter, EnumCount, PartialEq, Eq)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ChannelName {
@@ -26,8 +25,7 @@ pub enum ChannelName {
     LineOut,
 }
 
-#[allow(clippy::derive_hash_xor_eq)]
-#[derive(Debug, Display, Enum, EnumIter, EnumCount, EnumSetType, Hash)]
+#[derive(Debug, Copy, Clone, Display, Enum, EnumIter, EnumCount, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum FaderName {
@@ -71,7 +69,7 @@ impl std::fmt::Debug for VersionNumber {
     }
 }
 
-#[derive(Debug, Display, Enum, EnumIter, EnumCount, EnumSetType)]
+#[derive(Debug, Copy, Clone, Display, Enum, EnumIter, EnumCount, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum OutputDevice {
@@ -82,7 +80,7 @@ pub enum OutputDevice {
     Sampler,
 }
 
-#[derive(Debug, Display, Enum, EnumIter, EnumCount, EnumSetType)]
+#[derive(Debug, Copy, Clone, Display, Enum, EnumIter, EnumCount, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum InputDevice {
@@ -260,11 +258,7 @@ pub enum FaderDisplayStyle {
     GradientMeter,
 }
 
-// EnumSetType gets a little weird with Hash, but without Hash the code doesn't compile
-// and without EnumSetType the code doesn't compile (different use-cases)..
-// So we'll quiet this warning.
-#[allow(clippy::derive_hash_xor_eq)]
-#[derive(Debug, Display, Enum, EnumIter, EnumCount, EnumSetType, Hash)]
+#[derive(Debug, Copy, Clone, Display, Enum, EnumIter, EnumCount, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Button {
