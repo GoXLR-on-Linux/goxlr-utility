@@ -1,5 +1,4 @@
 use enum_map::EnumMap;
-use enumset::EnumSet;
 use goxlr_types::MuteState::Unmuted;
 use goxlr_types::{
     Button, ButtonColourOffStyle, ChannelName, CompressorAttackTime, CompressorRatio,
@@ -28,8 +27,7 @@ pub struct MixerStatus {
     pub fader_status: EnumMap<FaderName, FaderStatus>,
     pub mic_status: MicSettings,
     pub levels: Levels,
-    pub router: [EnumSet<OutputDevice>; InputDevice::COUNT],
-    pub router_table: [[bool; OutputDevice::COUNT]; InputDevice::COUNT],
+    pub router: EnumMap<InputDevice, EnumMap<OutputDevice, bool>>,
     pub cough_button: CoughButton,
     pub lighting: Lighting,
     pub effects: Option<Effects>,

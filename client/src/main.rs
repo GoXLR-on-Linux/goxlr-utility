@@ -986,13 +986,8 @@ fn print_mixer_info(mixer: &MixerStatus) {
         print!("|{}{}|", " ".repeat(max_col_len - row_name.len()), row_name,);
         for input in InputDevice::iter() {
             let col_name = input.to_string();
-            if mixer.router[input as usize].contains(output) {
-                let len = col_name.len() + 1;
-                print!("{}X{} ", " ".repeat(len / 2), " ".repeat(len - (len / 2)));
-            } else {
-                let len = col_name.len() + 2;
-                print!("{} ", " ".repeat(len));
-            }
+            let len = col_name.len() + 1;
+            print!("{}X{} ", " ".repeat(len / 2), " ".repeat(len - (len / 2)));
         }
         println!();
     }

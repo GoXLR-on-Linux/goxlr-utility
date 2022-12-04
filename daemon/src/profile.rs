@@ -1,12 +1,12 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::default::Default;
 use std::fs::{remove_file, File};
 use std::io::{Cursor, Read, Seek};
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, bail, Context, Result};
 use enum_map::EnumMap;
-use enumset::EnumSet;
 use log::{debug, error, warn};
 use strum::EnumCount;
 use strum::IntoEnumIterator;
@@ -184,36 +184,17 @@ impl ProfileAdapter {
         ))
     }
 
-    pub fn create_router(&self) -> [EnumSet<OutputDevice>; InputDevice::COUNT] {
-        let mut router = [EnumSet::empty(); InputDevice::COUNT];
-
+    pub fn create_router(&self) -> EnumMap<InputDevice, EnumMap<OutputDevice, bool>> {
+        // Create the main EnumMap..
+        let mut router: EnumMap<InputDevice, EnumMap<OutputDevice, bool>> = EnumMap::default();
         for (input, potential_outputs) in self.profile.settings().mixer().mixer_table().iter() {
-            let mut outputs = EnumSet::empty();
-
+            let mut outputs: EnumMap<OutputDevice, bool> = EnumMap::default();
             for (channel, volume) in potential_outputs.iter() {
                 if *volume > 0 {
-                    outputs.insert(profile_to_standard_output(channel));
+                    outputs[profile_to_standard_output(channel)] = true;
                 }
             }
-
-            router[profile_to_standard_input(input) as usize] = outputs;
-        }
-        router
-    }
-
-    // This is similar to above, but provides a slightly 'nicer' true / false for lookups, which
-    // maps slightly better when converting to something like JSON, this may fully replace the above
-    // but for now will sit along side
-    pub fn create_router_table(&self) -> [[bool; OutputDevice::COUNT]; InputDevice::COUNT] {
-        let mut router = [[false; OutputDevice::COUNT]; InputDevice::COUNT];
-
-        for (input, potential_outputs) in self.profile.settings().mixer().mixer_table().iter() {
-            for (channel, volume) in potential_outputs.iter() {
-                if *volume > 0 {
-                    router[profile_to_standard_input(input) as usize]
-                        [profile_to_standard_output(channel) as usize] = true;
-                }
-            }
+            router[profile_to_standard_input(input)] = outputs;
         }
         router
     }

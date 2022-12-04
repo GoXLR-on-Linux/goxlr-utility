@@ -149,7 +149,6 @@ impl<'a> Device<'a> {
                 deess: self.mic_profile.get_deesser(),
             },
             router: self.profile.create_router(),
-            router_table: self.profile.create_router_table(),
             mic_status: MicSettings {
                 mic_type: self.mic_profile.mic_type(),
                 mic_gains: self.mic_profile.mic_gains(),
