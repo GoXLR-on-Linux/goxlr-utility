@@ -17,11 +17,7 @@ default = []
 strum = { version = "0.23", features = ["derive"] }
 serde = { version = "1.0", features = ["derive"], optional = true}
 clap = { version = "3.0.0", features = ["derive"], optional = true}
-enumset = { version = "1.0.8", optional = true }
 serde_repr = "0.1"
 enum-map = "2.1.0"
+enumset = "1.0.12"
 derivative = "2.2.0"
-
-[target.'cfg(serde)'.dependencies.enumset]
-version = "1.0.8"
-features = ["serde"]

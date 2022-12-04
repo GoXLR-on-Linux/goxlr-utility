@@ -2,7 +2,6 @@
 use clap::ArgEnum;
 use derivative::Derivative;
 use enum_map::Enum;
-#[cfg(feature = "enumset")]
 use enumset::EnumSetType;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -71,11 +70,9 @@ impl std::fmt::Debug for VersionNumber {
     }
 }
 
-#[derive(Debug, Display, Enum, EnumIter, EnumCount)]
+#[derive(Debug, Display, Enum, EnumIter, EnumCount, EnumSetType)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "enumset", derive(EnumSetType))]
-#[cfg_attr(not(feature = "enumset"), derive(Copy, Clone))]
 pub enum OutputDevice {
     Headphones,
     BroadcastMix,
@@ -84,11 +81,9 @@ pub enum OutputDevice {
     Sampler,
 }
 
-#[derive(Debug, Display, Enum, EnumIter, EnumCount)]
+#[derive(Debug, Display, Enum, EnumIter, EnumCount, EnumSetType)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "enumset", derive(EnumSetType))]
-#[cfg_attr(not(feature = "enumset"), derive(Copy, Clone))]
 pub enum InputDevice {
     Microphone,
     Chat,
