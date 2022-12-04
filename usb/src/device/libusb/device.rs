@@ -13,7 +13,7 @@ use rusb::{
     RequestType,
 };
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::thread::sleep;
 use std::time::Duration;
 use tokio::sync::mpsc::Sender;
@@ -27,6 +27,8 @@ pub struct GoXLRUSB {
     disconnect_sender: Sender<String>,
     event_sender: Sender<String>,
     identifier: Option<String>,
+
+    pause_polling: Arc<AtomicBool>,
 
     stopping: Arc<AtomicBool>,
     disconnecting: bool,
@@ -174,6 +176,7 @@ impl AttachGoXLR for GoXLRUSB {
             stopping: Arc::new(AtomicBool::new(false)),
             disconnecting: false,
             timeout,
+            pause_polling: Arc::new(AtomicBool::new(false)),
         };
 
         // Resets the state of the device (unconfirmed - Might just be the command id counter)
@@ -227,6 +230,7 @@ impl AttachGoXLR for GoXLRUSB {
 
         let sender = self.event_sender.clone();
         let stopping = self.stopping.clone();
+        let paused = self.pause_polling.clone();
 
         let is_mini = self.descriptor.product_id() == PID_GOXLR_MINI;
         let poll_millis = if is_mini { 40 } else { 20 };
@@ -236,6 +240,12 @@ impl AttachGoXLR for GoXLRUSB {
                 if stopping.load(Ordering::Relaxed) {
                     break;
                 }
+
+                if paused.load(Ordering::Relaxed) {
+                    tokio::time::sleep(Duration::from_millis(poll_millis)).await;
+                    continue;
+                }
+
                 let event = event_id.clone();
 
                 // Only send an event if we have the capacity to do so..
@@ -272,11 +282,17 @@ impl AttachGoXLR for GoXLRUSB {
 
 impl ExecutableGoXLR for GoXLRUSB {
     fn perform_request(&mut self, command: Command, body: &[u8], retry: bool) -> Result<Vec<u8>> {
+        self.pause_polling.store(true, Ordering::Relaxed);
+
         if command == Command::ResetCommandIndex {
             self.command_count = 0;
         } else {
             if self.command_count == u16::MAX {
-                let _ = self.request_data(Command::ResetCommandIndex, &[])?;
+                let result = self.request_data(Command::ResetCommandIndex, &[]);
+                if result.is_err() {
+                    self.pause_polling.store(false, Ordering::Relaxed);
+                    return result;
+                }
             }
             self.command_count += 1;
         }
@@ -290,6 +306,7 @@ impl ExecutableGoXLR for GoXLRUSB {
 
         if let Err(error) = self.write_control(2, 0, 0, &full_request) {
             debug!("Error when attempting to write control.");
+            self.pause_polling.store(false, Ordering::Relaxed);
             self.trigger_disconnect()?;
             bail!(error);
         }
@@ -312,6 +329,7 @@ impl ExecutableGoXLR for GoXLRUSB {
                     continue;
                 } else {
                     // We can't read from this GoXLR, flag as disconnected.
+                    self.pause_polling.store(false, Ordering::Relaxed);
                     self.trigger_disconnect()?;
                     warn!("Failed to receive response (Attempt 20 of 20), possible Dead GoXLR?");
                     return Err(Error::from(response_value.err().unwrap()));
@@ -321,6 +339,7 @@ impl ExecutableGoXLR for GoXLRUSB {
                 let err = response_value.err().unwrap();
                 debug!("Error Occurred during packet read: {}", err);
 
+                self.pause_polling.store(false, Ordering::Relaxed);
                 self.trigger_disconnect()?;
                 return Err(Error::from(err));
             }
@@ -331,6 +350,7 @@ impl ExecutableGoXLR for GoXLRUSB {
                     "Invalid Response received from the GoXLR, Expected: 16, Received: {}",
                     response_header.len()
                 );
+                self.pause_polling.store(false, Ordering::Relaxed);
                 self.trigger_disconnect()?;
                 return Err(Error::from(Pipe));
             }
@@ -351,12 +371,21 @@ impl ExecutableGoXLR for GoXLRUSB {
 
                 return if !retry {
                     debug!("Attempting Resync and Retry");
-                    let _ = self.perform_request(Command::ResetCommandIndex, &[], true)?;
+                    let result = self.perform_request(Command::ResetCommandIndex, &[], true);
+                    if result.is_err() {
+                        self.pause_polling.store(false, Ordering::Relaxed);
+                        return result;
+                    }
 
                     debug!("Resync complete, retrying Command..");
-                    self.perform_request(command, body, true)
+                    let result = self.perform_request(command, body, true);
+                    if result.is_err() {
+                        self.pause_polling.store(false, Ordering::Relaxed);
+                    }
+                    return result;
                 } else {
                     debug!("Resync Failed, Throwing Error..");
+                    self.pause_polling.store(false, Ordering::Relaxed);
                     self.trigger_disconnect()?;
                     Err(Error::from(rusb::Error::Other))
                 };
@@ -366,6 +395,7 @@ impl ExecutableGoXLR for GoXLRUSB {
             break;
         }
 
+        self.pause_polling.store(false, Ordering::Relaxed);
         Ok(response)
     }
 
