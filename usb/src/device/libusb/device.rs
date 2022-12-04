@@ -232,9 +232,7 @@ impl AttachGoXLR for GoXLRUSB {
         let stopping = self.stopping.clone();
         let paused = self.pause_polling.clone();
 
-        let is_mini = self.descriptor.product_id() == PID_GOXLR_MINI;
-        let poll_millis = if is_mini { 40 } else { 20 };
-
+        let poll_millis = 20;
         task::spawn(async move {
             loop {
                 if stopping.load(Ordering::Relaxed) {
