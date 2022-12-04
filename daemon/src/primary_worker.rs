@@ -10,7 +10,7 @@ use goxlr_usb::device::base::GoXLRDevice;
 use goxlr_usb::device::{find_devices, from_device};
 use goxlr_usb::{PID_GOXLR_FULL, PID_GOXLR_MINI};
 use json_patch::diff;
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use tokio::sync::broadcast::Sender as BroadcastSender;
@@ -81,108 +81,105 @@ pub async fn handle_changes(
     loop {
         let mut change_found = false;
         tokio::select! {
-                    () = &mut detection_sleep => {
-                        if let Some(device) = find_new_device(&devices, &ignore_list) {
-                            let existing_serials: Vec<String> = get_all_serials(&devices);
-                            let bus_number = device.bus_number();
-                            let address = device.address();
+            () = &mut detection_sleep => {
+                if let Some(device) = find_new_device(&daemon_status, &ignore_list) {
+                    let existing_serials: Vec<String> = get_all_serials(&devices);
+                    let bus_number = device.bus_number();
+                    let address = device.address();
 
-                            let mut device_identifier = None;
-                            if let Some(identifier) = device.identifier() {
-                                device_identifier = Some(identifier.clone());
-                            }
-
-                            match load_device(device, existing_serials, disconnect_sender.clone(), event_sender.clone(), &settings).await {
-                                Ok(device) => {
-                                    devices.insert(device.serial().to_owned(), device);
-                                    change_found = true;
-                                }
-                                Err(e) => {
-                                    error!(
-                                        "Couldn't load potential GoXLR on bus {} address {}: {}",
-                                        bus_number, address, e
-                                    );
-                                    ignore_list
-                                        .insert((bus_number, address, device_identifier), Instant::now() + Duration::from_secs(10));
-                                }
-                            };
-                        }
-                        detection_sleep.as_mut().reset(tokio::time::Instant::now() + detection_duration);
-                    },
-                    () = &mut update_sleep => {
-                        for device in devices.values_mut() {
-                            let updated = device.update_state().await;
-
-                            if let Ok(result) = updated {
-                                change_found = result;
-                            }
-
-                            if let Err(error) = updated {
-                                warn!("Error Received from {} while updating state: {}", device.serial(), error);
-                            }
-                        }
-                        update_sleep.as_mut().reset(tokio::time::Instant::now() + update_duration);
+                    let mut device_identifier = None;
+                    if let Some(identifier) = device.identifier() {
+                        device_identifier = Some(identifier.clone());
                     }
-                    Some(serial) = disconnect_receiver.recv() => {
-                        info!("[{}] Device Disconnected", serial);
-                        devices.remove(&serial);
-                        change_found = true;
-                    },
-                    Some(serial) = event_receiver.recv() => {
-                        if let Some(device) = devices.get_mut(&serial) {
-                            let result = device.monitor_inputs().await;
-                            if let Ok(changed) = result {
-                                change_found = changed;
-                            }
 
-                            if let Err(error) = result {
-                                warn!("Error Received from {}: {}", device.serial(), error);
-                            }
+                    match load_device(device, existing_serials, disconnect_sender.clone(), event_sender.clone(), &settings).await {
+                        Ok(device) => {
+                            devices.insert(device.serial().to_owned(), device);
+                            change_found = true;
+                        }
+                        Err(e) => {
+                            error!(
+                                "Couldn't load potential GoXLR on bus {} address {}: {}",
+                                bus_number, address, e
+                            );
+                            ignore_list
+                                .insert((bus_number, address, device_identifier), Instant::now() + Duration::from_secs(10));
+                        }
+                    };
+                }
+                detection_sleep.as_mut().reset(tokio::time::Instant::now() + detection_duration);
+            },
+            () = &mut update_sleep => {
+                for device in devices.values_mut() {
+                    let updated = device.update_state().await;
+
+                    if let Ok(result) = updated {
+                        change_found = result;
+                    }
+
+                    if let Err(error) = updated {
+                        warn!("Error Received from {} while updating state: {}", device.serial(), error);
+                    }
+                }
+                update_sleep.as_mut().reset(tokio::time::Instant::now() + update_duration);
+            }
+            Some(serial) = disconnect_receiver.recv() => {
+                info!("[{}] Device Disconnected", serial);
+                devices.remove(&serial);
+                change_found = true;
+            },
+            Some(serial) = event_receiver.recv() => {
+                if let Some(device) = devices.get_mut(&serial) {
+                    let result = device.monitor_inputs().await;
+                    if let Ok(changed) = result {
+                        change_found = changed;
+                    }
+
+                    if let Err(error) = result {
+                        warn!("Error Received from {}: {}", device.serial(), error);
+                    }
+                } else {
+                    warn!("Cannot find registered device with serial: {}", &serial);
+                }
+            }
+            () = shutdown.recv() => {
+                info!("Shutting down device worker");
+                return;
+            },
+            Some(command) = command_rx.recv() => {
+                match command {
+                    DeviceCommand::SendDaemonStatus(sender) => {
+                        let _ = sender.send(daemon_status.clone());
+                    },
+                    DeviceCommand::OpenPath(path_type, sender) => {
+                        let result = opener::open(match path_type {
+                            PathTypes::Profiles => settings.get_profile_directory().await,
+                            PathTypes::MicProfiles => settings.get_mic_profile_directory().await,
+                            PathTypes::Presets => settings.get_presets_directory().await,
+                            PathTypes::Samples => settings.get_samples_directory().await,
+                            PathTypes::Icons => settings.get_icons_directory().await,
+                        });
+                        if result.is_err() {
+                            let _ = sender.send(DaemonResponse::Error("Unable to Open".to_string()));
                         } else {
-                            warn!("Cannot find registered device with serial: {}", &serial);
+                            let _ = sender.send(DaemonResponse::Ok);
                         }
                     }
-                    () = shutdown.recv() => {
-                        info!("Shutting down device worker");
-                        return;
-                    },
-                    Some(command) = command_rx.recv() => {
-                        match command {
-                            DeviceCommand::SendDaemonStatus(sender) => {
-        //                        let mut status = DaemonStatus {
-        //                            daemon_version: String::from(VERSION),
-        //                        }
-                                let _ = sender.send(daemon_status.clone());
-                            },
-                            DeviceCommand::OpenPath(path_type, sender) => {
-                                let result = opener::open(match path_type {
-                                    PathTypes::Profiles => settings.get_profile_directory().await,
-                                    PathTypes::MicProfiles => settings.get_mic_profile_directory().await,
-                                    PathTypes::Presets => settings.get_presets_directory().await,
-                                    PathTypes::Samples => settings.get_samples_directory().await,
-                                    PathTypes::Icons => settings.get_icons_directory().await,
-                                });
-                                if result.is_err() {
-                                    let _ = sender.send(DaemonResponse::Error("Unable to Open".to_string()));
-                                } else {
-                                    let _ = sender.send(DaemonResponse::Ok);
-                                }
-                            }
-                            DeviceCommand::RunDeviceCommand(serial, command, sender) => {
-                                if let Some(device) = devices.get_mut(&serial) {
-                                    let _ = sender.send(device.perform_command(command).await);
-                                    change_found = true;
-                                } else {
-                                    let _ = sender.send(Err(anyhow!("Device {} is not connected", serial)));
-                                }
-                            },
+                    DeviceCommand::RunDeviceCommand(serial, command, sender) => {
+                        if let Some(device) = devices.get_mut(&serial) {
+                            let _ = sender.send(device.perform_command(command).await);
+                            change_found = true;
+                        } else {
+                            let _ = sender.send(Err(anyhow!("Device {} is not connected", serial)));
                         }
                     },
-                    Some(path) = file_rx.recv() => {
-                        files = update_files(files, path, &mut file_manager).await;
-                        change_found = true;
-                    }
-                };
+                }
+            },
+            Some(path) = file_rx.recv() => {
+                files = update_files(files, path, &mut file_manager).await;
+                change_found = true;
+            }
+        };
 
         if change_found {
             let new_status = get_daemon_status(&devices, &settings, files.clone()).await;
@@ -276,22 +273,22 @@ async fn update_files(files: Files, file_type: PathTypes, file_manager: &mut Fil
 }
 
 fn find_new_device(
-    existing_devices: &HashMap<String, Device>,
+    current_status: &DaemonStatus,
     devices_to_ignore: &HashMap<(u8, u8, Option<String>), Instant>,
 ) -> Option<GoXLRDevice> {
     let now = Instant::now();
 
     let goxlr_devices = find_devices();
     goxlr_devices.into_iter().find(|device| {
-        !existing_devices.values().any(|d| {
+        // Check the Mixers on the existing DaemonStatus..
+        !current_status.mixers.values().any(|d| {
             if let Some(identifier) = device.identifier() {
-                if let Some(device_identifier) = d.status().hardware.usb_device.identifier {
-                    return identifier.clone() == device_identifier;
+                if let Some(device_identifier) = &d.hardware.usb_device.identifier {
+                    return identifier.clone() == device_identifier.clone();
                 }
             }
-
-            d.status().hardware.usb_device.bus_number == device.bus_number()
-                && d.status().hardware.usb_device.address == device.address()
+            d.hardware.usb_device.bus_number == device.bus_number()
+                && d.hardware.usb_device.address == device.address()
         }) && !devices_to_ignore
             .iter()
             .any(|((bus_number, address, identifier), expires)| {
@@ -300,7 +297,6 @@ fn find_new_device(
                         return identifier == device_identifier && expires > &now;
                     }
                 }
-
                 *bus_number == device.bus_number() && *address == device.address() && expires > &now
             })
     })
