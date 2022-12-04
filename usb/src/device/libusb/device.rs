@@ -303,14 +303,14 @@ impl ExecutableGoXLR for GoXLRUSB {
         for i in 0..20 {
             let response_value = self.read_control(3, 0, 0, 1040);
             if response_value == Err(Pipe) {
-                if i < 20 {
+                if i < 19 {
                     debug!("Response not arrived yet for {:?}, sleeping and retrying (Attempt {} of 20)", command, i + 1);
                     sleep(sleep_time);
                     continue;
                 } else {
                     // We can't read from this GoXLR, flag as disconnected.
                     self.trigger_disconnect()?;
-                    debug!("Failed to receive response (Attempt 20 of 20), possible Dead GoXLR?");
+                    warn!("Failed to receive response (Attempt 20 of 20), possible Dead GoXLR?");
                     return Err(Error::from(response_value.err().unwrap()));
                 }
             }
