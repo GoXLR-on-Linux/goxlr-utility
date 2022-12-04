@@ -2327,7 +2327,7 @@ impl<'a> Device<'a> {
 
     fn apply_mic_gain(&mut self) -> Result<()> {
         let mic_type = self.mic_profile.mic_type();
-        let gain = self.mic_profile.mic_gains()[mic_type as usize];
+        let gain = self.mic_profile.mic_gains()[mic_type];
         self.goxlr.set_microphone_gain(mic_type, gain)?;
 
         Ok(())

@@ -2,6 +2,7 @@ use crate::files::{can_create_new_file, create_path};
 use crate::profile::ProfileAdapter;
 use anyhow::{anyhow, Context, Result};
 use byteorder::{ByteOrder, LittleEndian};
+use enum_map::EnumMap;
 use goxlr_ipc::{Compressor, Equaliser, EqualiserMini, NoiseGate};
 use goxlr_profile_loader::mic_profile::MicProfileSettings;
 use goxlr_types::{
@@ -114,12 +115,13 @@ impl MicProfileAdapter {
         &self.name
     }
 
-    pub fn mic_gains(&self) -> [u16; 3] {
-        [
-            self.profile.setup().dynamic_mic_gain() as u16,
-            self.profile.setup().condenser_mic_gain() as u16,
-            self.profile.setup().trs_mic_gain() as u16,
-        ]
+    pub fn mic_gains(&self) -> EnumMap<MicrophoneType, u16> {
+        let mut gains = EnumMap::default();
+        gains[MicrophoneType::Condenser] = self.profile.setup().condenser_mic_gain() as u16;
+        gains[MicrophoneType::Dynamic] = self.profile.setup().dynamic_mic_gain() as u16;
+        gains[MicrophoneType::Jack] = self.profile.setup().trs_mic_gain() as u16;
+
+        gains
     }
 
     pub fn mic_type(&self) -> MicrophoneType {
@@ -530,6 +532,8 @@ impl MicProfileAdapter {
 
     /// The uber method, fetches the relevant setting from the profile and returns it..
     pub fn get_param_value(&self, param: MicrophoneParamKey) -> [u8; 4] {
+        let gains = self.mic_gains();
+
         match param {
             MicrophoneParamKey::MicType => {
                 let microphone_type: MicrophoneType = self.mic_type();
@@ -538,15 +542,9 @@ impl MicProfileAdapter {
                     false => [0, 0, 0, 0],
                 }
             }
-            MicrophoneParamKey::DynamicGain => {
-                self.gain_value(self.mic_gains()[MicrophoneType::Dynamic as usize])
-            }
-            MicrophoneParamKey::CondenserGain => {
-                self.gain_value(self.mic_gains()[MicrophoneType::Condenser as usize])
-            }
-            MicrophoneParamKey::JackGain => {
-                self.gain_value(self.mic_gains()[MicrophoneType::Jack as usize])
-            }
+            MicrophoneParamKey::DynamicGain => self.gain_value(gains[MicrophoneType::Dynamic]),
+            MicrophoneParamKey::CondenserGain => self.gain_value(gains[MicrophoneType::Condenser]),
+            MicrophoneParamKey::JackGain => self.gain_value(gains[MicrophoneType::Jack]),
             MicrophoneParamKey::GateThreshold => self.i8_to_f32(self.profile.gate().threshold()),
             MicrophoneParamKey::GateAttack => self.u8_to_f32(self.profile.gate().attack()),
             MicrophoneParamKey::GateRelease => self.u8_to_f32(self.profile.gate().release()),

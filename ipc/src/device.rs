@@ -11,7 +11,6 @@ use goxlr_types::{
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
-use strum::EnumCount;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct DaemonStatus {
@@ -90,7 +89,7 @@ impl Default for FaderStatus {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MicSettings {
     pub mic_type: MicrophoneType,
-    pub mic_gains: [u16; MicrophoneType::COUNT],
+    pub mic_gains: EnumMap<MicrophoneType, u16>,
 
     pub equaliser: Equaliser,
     pub equaliser_mini: EqualiserMini,
