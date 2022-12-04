@@ -264,6 +264,10 @@ pub enum FaderDisplayStyle {
     GradientMeter,
 }
 
+// EnumSetType gets a little weird with Hash, but without Hash the code doesn't compile
+// and without EnumSetType the code doesn't compile (different use-cases)..
+// So we'll quiet this warning.
+#[allow(clippy::derive_hash_xor_eq)]
 #[derive(Debug, Display, Enum, EnumIter, EnumCount, EnumSetType, Hash)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
