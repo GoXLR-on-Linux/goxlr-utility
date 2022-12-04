@@ -240,7 +240,6 @@ impl AttachGoXLR for GoXLRUSB {
                 }
 
                 if paused.load(Ordering::Relaxed) {
-                    debug!("Command In Progress, Waiting..");
                     tokio::time::sleep(Duration::from_millis(poll_millis)).await;
                     continue;
                 }
