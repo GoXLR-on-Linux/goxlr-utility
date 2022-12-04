@@ -26,6 +26,9 @@ pub struct Cli {
     #[clap(long)]
     pub status_json: bool,
 
+    #[clap(long)]
+    pub status_http: bool,
+
     #[clap(flatten, help_heading = "Microphone controls")]
     pub microphone_controls: MicrophoneControls,
 

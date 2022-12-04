@@ -6,7 +6,7 @@ use anyhow::{anyhow, Context, Result};
 pub struct Client {
     socket: Socket<DaemonResponse, DaemonRequest>,
     status: DaemonStatus,
-    http_state: HttpSettings,
+    http_settings: HttpSettings,
 }
 
 impl Client {
@@ -14,7 +14,7 @@ impl Client {
         Self {
             socket,
             status: DaemonStatus::default(),
-            http_state: Default::default(),
+            http_settings: Default::default(),
         }
     }
 
@@ -32,7 +32,7 @@ impl Client {
 
         match result {
             DaemonResponse::HttpState(state) => {
-                self.http_state = state;
+                self.http_settings = state;
                 Ok(())
             }
             DaemonResponse::Status(status) => {
@@ -51,6 +51,10 @@ impl Client {
         self.send(DaemonRequest::GetStatus).await
     }
 
+    pub async fn poll_http_status(&mut self) -> Result<()> {
+        self.send(DaemonRequest::GetHttpState).await
+    }
+
     pub async fn command(&mut self, serial: &str, command: GoXLRCommand) -> Result<()> {
         self.send(DaemonRequest::Command(serial.to_string(), command))
             .await
@@ -58,5 +62,9 @@ impl Client {
 
     pub fn status(&self) -> &DaemonStatus {
         &self.status
+    }
+
+    pub fn http_status(&self) -> &HttpSettings {
+        &self.http_settings
     }
 }
