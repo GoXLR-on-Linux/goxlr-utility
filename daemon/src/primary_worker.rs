@@ -192,8 +192,12 @@ pub async fn handle_changes(
             let json_new = serde_json::to_value(&new_status).unwrap();
             let patch = diff(&json_old, &json_new);
 
+            // Only send a patch if something has changed..
+            if !patch.0.is_empty() {
+                let _ = broadcast_tx.send(PatchEvent { data: patch });
+            }
+
             // Send the patch to the tokio broadcaster, for handling by clients..
-            let _ = broadcast_tx.send(PatchEvent { data: patch });
             daemon_status = new_status;
         }
     }
