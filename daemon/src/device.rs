@@ -951,16 +951,14 @@ impl<'a> Device<'a> {
 
     fn mic_muted_by_fader(&self) -> bool {
         // Is the mute button even assigned to a fader?
-        let mic_fader_id = self.profile.get_mic_fader_id();
+        if self.profile.is_mic_on_fader() {
+            let fader = self.profile.get_mic_fader();
+            let (muted_to_x, muted_to_all, mute_function) =
+                self.profile.get_mute_button_state(fader);
 
-        if mic_fader_id == 4 {
-            return false;
+            return muted_to_all || (muted_to_x && mute_function == MuteFunction::All);
         }
-
-        let fader = self.profile.fader_from_id(mic_fader_id);
-        let (muted_to_x, muted_to_all, mute_function) = self.profile.get_mute_button_state(fader);
-
-        muted_to_all || (muted_to_x && mute_function == MuteFunction::All)
+        false
     }
 
     fn mic_muted_by_cough(&self) -> bool {
@@ -2114,7 +2112,7 @@ impl<'a> Device<'a> {
             return Ok(());
         }
 
-        let muted_by_fader = if self.profile.get_mic_fader_id() != 4 {
+        let muted_by_fader = if self.profile.is_mic_on_fader() {
             // We need to check this fader's mute button..
             let fader = self.profile.get_mic_fader();
             let (muted_to_x, muted_to_all, mute_function) =

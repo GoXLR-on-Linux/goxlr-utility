@@ -933,8 +933,8 @@ impl ProfileAdapter {
     }
 
     /** Fader Stuff */
-    pub fn get_mic_fader_id(&self) -> u8 {
-        self.profile.settings().mute_chat().mic_fader_id()
+    pub fn is_mic_on_fader(&self) -> bool {
+        self.profile.settings().mute_chat().mic_fader_id() != 4
     }
 
     pub fn get_mic_fader(&self) -> FaderName {
