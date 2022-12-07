@@ -471,6 +471,10 @@ impl<'a> Device<'a> {
                 self.apply_routing(BasicInputDevice::Microphone)?;
             }
 
+            if channel == ChannelName::Mic {
+                self.apply_routing(BasicInputDevice::Microphone)?;
+            }
+
             return Ok(());
         }
 
@@ -494,6 +498,10 @@ impl<'a> Device<'a> {
 
                 // As before, we might need transient Mic Routing..
                 if channel == ChannelName::Chat {
+                    self.apply_routing(BasicInputDevice::Microphone)?;
+                }
+
+                if channel == ChannelName::Mic {
                     self.apply_routing(BasicInputDevice::Microphone)?;
                 }
             }
@@ -564,7 +572,6 @@ impl<'a> Device<'a> {
             if mute_function == MuteFunction::All {
                 // In this scenario, we should just set cough_button_on and mute the channel.
                 self.goxlr.set_channel_state(ChannelName::Mic, Muted)?;
-                return Ok(());
             }
 
             self.apply_routing(BasicInputDevice::Microphone)?;
@@ -604,10 +611,7 @@ impl<'a> Device<'a> {
                         self.goxlr.set_channel_state(ChannelName::Mic, Unmuted)?;
                     }
 
-                    if muted_to_x && mute_function != MuteFunction::All {
-                        self.apply_routing(BasicInputDevice::Microphone)?;
-                    }
-
+                    self.apply_routing(BasicInputDevice::Microphone)?;
                     return Ok(());
                 }
 
@@ -616,7 +620,6 @@ impl<'a> Device<'a> {
 
                 if mute_function == MuteFunction::All {
                     self.goxlr.set_channel_state(ChannelName::Mic, Muted)?;
-                    return Ok(());
                 }
 
                 // Update the transient routing..
@@ -625,11 +628,8 @@ impl<'a> Device<'a> {
             }
 
             self.profile.set_mute_chat_button_on(false);
-            if mute_function == MuteFunction::All {
-                if !self.mic_muted_by_fader() {
-                    self.goxlr.set_channel_state(ChannelName::Mic, Unmuted)?;
-                }
-                return Ok(());
+            if mute_function == MuteFunction::All && !self.mic_muted_by_fader() {
+                self.goxlr.set_channel_state(ChannelName::Mic, Unmuted)?;
             }
 
             // Disable button and refresh transient routing
@@ -1970,7 +1970,7 @@ impl<'a> Device<'a> {
 
         for fader in FaderName::iter() {
             if self.profile.get_fader_assignment(fader) == channel_name {
-                self.apply_transient_fader_routing(fader, router)?;
+                self.apply_transient_fader_routing(channel_name, fader, router)?;
             }
         }
 
@@ -1980,27 +1980,41 @@ impl<'a> Device<'a> {
             self.apply_transient_chat_mic_mute(router)?;
         }
 
-        self.apply_transient_cough_routing(router)
+        self.apply_transient_cough_routing(channel_name, router)
     }
 
     fn apply_transient_fader_routing(
         &self,
+        channel_name: ChannelName,
         fader: FaderName,
         router: &mut EnumMap<BasicOutputDevice, bool>,
     ) -> Result<()> {
         let (muted_to_x, muted_to_all, mute_function) = self.profile.get_mute_button_state(fader);
-        self.apply_transient_channel_routing(muted_to_x, muted_to_all, mute_function, router)
+        self.apply_transient_channel_routing(
+            channel_name,
+            muted_to_x,
+            muted_to_all,
+            mute_function,
+            router,
+        )
     }
 
     fn apply_transient_cough_routing(
         &self,
+        channel_name: ChannelName,
         router: &mut EnumMap<BasicOutputDevice, bool>,
     ) -> Result<()> {
         // Same deal, pull out the current state, make needed changes.
         let (_mute_toggle, muted_to_x, muted_to_all, mute_function) =
             self.profile.get_mute_chat_button_state();
 
-        self.apply_transient_channel_routing(muted_to_x, muted_to_all, mute_function, router)
+        self.apply_transient_channel_routing(
+            channel_name,
+            muted_to_x,
+            muted_to_all,
+            mute_function,
+            router,
+        )
     }
 
     fn apply_transient_chat_mic_mute(
@@ -2030,12 +2044,22 @@ impl<'a> Device<'a> {
 
     fn apply_transient_channel_routing(
         &self,
+        channel_name: ChannelName,
         muted_to_x: bool,
         muted_to_all: bool,
         mute_function: MuteFunction,
         router: &mut EnumMap<BasicOutputDevice, bool>,
     ) -> Result<()> {
         if !muted_to_x || muted_to_all || mute_function == MuteFunction::All {
+            if channel_name == ChannelName::Mic
+                && (muted_to_all || (muted_to_x && mute_function == MuteFunction::All))
+            {
+                // In the case of the mic, if we're muted to all, we should drop routing to All other channels..
+                router[BasicOutputDevice::Headphones] = false;
+                router[BasicOutputDevice::ChatMic] = false;
+                router[BasicOutputDevice::LineOut] = false;
+                router[BasicOutputDevice::BroadcastMix] = false;
+            }
             return Ok(());
         }
 
