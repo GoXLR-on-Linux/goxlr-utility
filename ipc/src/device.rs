@@ -309,6 +309,8 @@ pub struct Sample {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
     pub display: Display,
+    pub mute_hold_duration: u16,
+    pub vc_mute_also_mute_cm: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

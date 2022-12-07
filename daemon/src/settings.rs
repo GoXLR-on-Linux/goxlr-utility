@@ -158,6 +158,24 @@ impl SettingsHandle {
             .or_insert_with(DeviceSettings::default);
         entry.mic_profile = mic_profile_name.to_owned();
     }
+
+    pub async fn set_device_mute_hold_duration(&self, device_serial: &str, duration: u16) {
+        let mut settings = self.settings.write().await;
+        let entry = settings
+            .devices
+            .entry(device_serial.to_owned())
+            .or_insert_with(DeviceSettings::default);
+        entry.hold_delay = Some(duration);
+    }
+
+    pub async fn set_device_vc_mute_also_mute_cm(&self, device_serial: &str, setting: bool) {
+        let mut settings = self.settings.write().await;
+        let entry = settings
+            .devices
+            .entry(device_serial.to_owned())
+            .or_insert_with(DeviceSettings::default);
+        entry.chat_mute_mutes_mic_to_chat = Some(setting);
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

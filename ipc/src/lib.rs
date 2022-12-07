@@ -206,4 +206,8 @@ pub enum GoXLRCommand {
     SaveMicProfile(),
     SaveMicProfileAs(String),
     DeleteMicProfile(String),
+
+    // General Settings
+    SetMuteHoldDuration(u16),
+    SetVCMuteAlsoMuteCM(bool),
 }

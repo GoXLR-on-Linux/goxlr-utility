@@ -43,7 +43,8 @@ pub struct Device<'a> {
     profile: ProfileAdapter,
     mic_profile: MicProfileAdapter,
     audio_handler: Option<AudioHandler>,
-    held_timeout: u16,
+    hold_time: u16,
+    vc_mute_also_mute_cm: bool,
     settings: &'a SettingsHandle,
 }
 
@@ -104,12 +105,16 @@ impl<'a> Device<'a> {
         }
 
         let hold_time = block_on(settings_handle.get_device_hold_time(&hardware.serial_number));
+        let vc_mute_also_mute_cm = block_on(
+            settings_handle.get_device_chat_mute_mutes_mic_to_chat(&hardware.serial_number),
+        );
         let mut device = Self {
             profile,
             mic_profile,
             goxlr,
             hardware,
-            held_timeout: hold_time,
+            hold_time,
+            vc_mute_also_mute_cm,
             last_buttons: EnumSet::empty(),
             button_states: EnumMap::default(),
             audio_handler,
@@ -179,6 +184,8 @@ impl<'a> Device<'a> {
                     equaliser: self.mic_profile.get_eq_display_mode(),
                     equaliser_fine: self.mic_profile.get_eq_fine_display_mode(),
                 },
+                mute_hold_duration: self.hold_time,
+                vc_mute_also_mute_cm: self.vc_mute_also_mute_cm,
             },
             button_down: button_states,
             profile_name: self.profile.name().to_owned(),
@@ -207,7 +214,7 @@ impl<'a> Device<'a> {
         for button in self.last_buttons {
             if !self.button_states[button].hold_handled {
                 let now = self.get_epoch_ms();
-                if (now - self.button_states[button].press_time) > self.held_timeout.into() {
+                if (now - self.button_states[button].press_time) > self.hold_time.into() {
                     if let Err(error) = self.on_button_hold(button).await {
                         error!("{}", error);
                     }
@@ -1878,6 +1885,22 @@ impl<'a> Device<'a> {
                 self.mic_profile
                     .delete_profile(profile_name.clone(), &profile_directory)?;
             }
+
+            GoXLRCommand::SetMuteHoldDuration(duration) => {
+                self.hold_time = duration;
+                self.settings
+                    .set_device_mute_hold_duration(self.serial(), duration)
+                    .await;
+                self.settings.save().await;
+            }
+
+            GoXLRCommand::SetVCMuteAlsoMuteCM(value) => {
+                self.vc_mute_also_mute_cm = value;
+                self.settings
+                    .set_device_vc_mute_also_mute_cm(self.serial(), value)
+                    .await;
+                self.settings.save().await;
+            }
         }
 
         Ok(())
@@ -2026,10 +2049,7 @@ impl<'a> Device<'a> {
                 let (muted_to_x, muted_to_all, mute_function) =
                     self.profile.get_mute_button_state(fader);
                 if muted_to_all || (muted_to_x && mute_function == MuteFunction::All) {
-                    let mute_to_chat = block_on(
-                        self.settings
-                            .get_device_chat_mute_mutes_mic_to_chat(&self.hardware.serial_number),
-                    );
+                    let mute_to_chat = self.vc_mute_also_mute_cm;
                     if mute_to_chat {
                         router[BasicOutputDevice::ChatMic] = false;
                     }
