@@ -78,7 +78,7 @@ assets = [
 maintainer-scripts = "../ci/distrib/DEBIAN/"
 section = "sound"
 priority = "optional"
-depends = "libusb-1.0-0,libpulse0,$auto"
+depends = "libpulse0 (>= 0.99.4), libc6 (>= 2.28), libc6 (>= 2.29), libusb-1.0.0"
 extended-description = """\
 A utility for monitoring and controlling a TC-Helicon GoXLR or GoXLR Mini.
 """
