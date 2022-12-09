@@ -1,17 +1,20 @@
 use crate::device::Device;
 use crate::files::create_path;
-use crate::{FileManager, SettingsHandle, Shutdown};
+use crate::{FileManager, PatchEvent, SettingsHandle, Shutdown, VERSION};
 use anyhow::{anyhow, Result};
 use goxlr_ipc::{
     DaemonResponse, DaemonStatus, DeviceType, Files, GoXLRCommand, HardwareStatus, PathTypes,
     Paths, UsbProductInformation,
 };
-use goxlr_usb::device::base::{find_devices, from_device, GoXLRDevice};
+use goxlr_usb::device::base::GoXLRDevice;
+use goxlr_usb::device::{find_devices, from_device};
 use goxlr_usb::{PID_GOXLR_FULL, PID_GOXLR_MINI};
+use json_patch::diff;
 use log::{error, info, warn};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
-use tokio::sync::mpsc::Sender;
+use tokio::sync::broadcast::Sender as BroadcastSender;
+use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::sync::{mpsc, oneshot};
 use tokio::time::sleep;
 
@@ -20,7 +23,6 @@ use tokio::time::sleep;
 #[allow(clippy::enum_variant_names)]
 pub enum DeviceCommand {
     SendDaemonStatus(oneshot::Sender<DaemonStatus>),
-    InvalidateCaches(oneshot::Sender<DaemonResponse>),
     OpenPath(PathTypes, oneshot::Sender<DaemonResponse>),
     RunDeviceCommand(String, GoXLRCommand, oneshot::Sender<Result<()>>),
 }
@@ -29,7 +31,9 @@ pub type DeviceSender = mpsc::Sender<DeviceCommand>;
 pub type DeviceReceiver = mpsc::Receiver<DeviceCommand>;
 
 pub async fn handle_changes(
-    mut rx: DeviceReceiver,
+    mut command_rx: DeviceReceiver,
+    mut file_rx: Receiver<PathTypes>,
+    broadcast_tx: BroadcastSender<PatchEvent>,
     mut shutdown: Shutdown,
     settings: SettingsHandle,
     mut file_manager: FileManager,
@@ -49,7 +53,7 @@ pub async fn handle_changes(
     tokio::pin!(update_sleep);
 
     // Create the Primary Device List, and 'Ignore' list..
-    let mut devices = HashMap::new();
+    let mut devices: HashMap<String, Device> = HashMap::new();
     let mut ignore_list = HashMap::new();
 
     // Attempt to create the needed paths..
@@ -71,10 +75,14 @@ pub async fn handle_changes(
         warn!("Unable to create samples directory: {}", error);
     }
 
+    let mut files = get_files(&mut file_manager).await;
+    let mut daemon_status = get_daemon_status(&devices, &settings, files.clone()).await;
+
     loop {
+        let mut change_found = false;
         tokio::select! {
             () = &mut detection_sleep => {
-                if let Some(device) = find_new_device(&devices, &ignore_list) {
+                if let Some(device) = find_new_device(&daemon_status, &ignore_list) {
                     let existing_serials: Vec<String> = get_all_serials(&devices);
                     let bus_number = device.bus_number();
                     let address = device.address();
@@ -87,6 +95,7 @@ pub async fn handle_changes(
                     match load_device(device, existing_serials, disconnect_sender.clone(), event_sender.clone(), &settings).await {
                         Ok(device) => {
                             devices.insert(device.serial().to_owned(), device);
+                            change_found = true;
                         }
                         Err(e) => {
                             error!(
@@ -102,7 +111,13 @@ pub async fn handle_changes(
             },
             () = &mut update_sleep => {
                 for device in devices.values_mut() {
-                     if let Err(error) = device.update_state().await {
+                    let updated = device.update_state().await;
+
+                    if let Ok(result) = updated {
+                        change_found = result;
+                    }
+
+                    if let Err(error) = updated {
                         warn!("Error Received from {} while updating state: {}", device.serial(), error);
                     }
                 }
@@ -111,10 +126,16 @@ pub async fn handle_changes(
             Some(serial) = disconnect_receiver.recv() => {
                 info!("[{}] Device Disconnected", serial);
                 devices.remove(&serial);
+                change_found = true;
             },
             Some(serial) = event_receiver.recv() => {
                 if let Some(device) = devices.get_mut(&serial) {
-                    if let Err(error) = device.monitor_inputs().await {
+                    let result = device.monitor_inputs().await;
+                    if let Ok(changed) = result {
+                        change_found = changed;
+                    }
+
+                    if let Err(error) = result {
                         warn!("Error Received from {}: {}", device.serial(), error);
                     }
                 } else {
@@ -125,35 +146,11 @@ pub async fn handle_changes(
                 info!("Shutting down device worker");
                 return;
             },
-            Some(command) = rx.recv() => {
+            Some(command) = command_rx.recv() => {
                 match command {
                     DeviceCommand::SendDaemonStatus(sender) => {
-                        let mut status = DaemonStatus {
-                            paths: Paths {
-                                profile_directory: settings.get_profile_directory().await,
-                                mic_profile_directory: settings.get_mic_profile_directory().await,
-                                samples_directory: settings.get_samples_directory().await,
-                                presets_directory: settings.get_presets_directory().await,
-                                icons_directory: settings.get_icons_directory().await,
-                            },
-                            files: Files {
-                                profiles: file_manager.get_profiles(&settings),
-                                mic_profiles: file_manager.get_mic_profiles(&settings),
-                                presets: file_manager.get_presets(&settings),
-                                samples: file_manager.get_samples(&settings),
-                                icons: file_manager.get_icons(&settings),
-                            },
-                            ..Default::default()
-                        };
-                        for (serial, device) in &devices {
-                            status.mixers.insert(serial.to_owned(), device.status().clone());
-                        }
-                        let _ = sender.send(status);
+                        let _ = sender.send(daemon_status.clone());
                     },
-                    DeviceCommand::InvalidateCaches(sender) => {
-                        file_manager.invalidate_caches();
-                        let _ = sender.send(DaemonResponse::Ok);
-                    }
                     DeviceCommand::OpenPath(path_type, sender) => {
                         let result = opener::open(match path_type {
                             PathTypes::Profiles => settings.get_profile_directory().await,
@@ -171,33 +168,127 @@ pub async fn handle_changes(
                     DeviceCommand::RunDeviceCommand(serial, command, sender) => {
                         if let Some(device) = devices.get_mut(&serial) {
                             let _ = sender.send(device.perform_command(command).await);
+                            change_found = true;
                         } else {
                             let _ = sender.send(Err(anyhow!("Device {} is not connected", serial)));
                         }
                     },
                 }
             },
+            Some(path) = file_rx.recv() => {
+                files = update_files(files, path, &mut file_manager).await;
+                change_found = true;
+            }
         };
+
+        if change_found {
+            let new_status = get_daemon_status(&devices, &settings, files.clone()).await;
+
+            // Convert them to JSON..
+            let json_old = serde_json::to_value(&daemon_status).unwrap();
+            let json_new = serde_json::to_value(&new_status).unwrap();
+            let patch = diff(&json_old, &json_new);
+
+            // Only send a patch if something has changed..
+            if !patch.0.is_empty() {
+                let _ = broadcast_tx.send(PatchEvent { data: patch });
+            }
+
+            // Send the patch to the tokio broadcaster, for handling by clients..
+            daemon_status = new_status;
+        }
+    }
+}
+
+async fn get_daemon_status(
+    devices: &HashMap<String, Device<'_>>,
+    settings: &SettingsHandle,
+    files: Files,
+) -> DaemonStatus {
+    let mut status = DaemonStatus {
+        daemon_version: String::from(VERSION),
+        paths: Paths {
+            profile_directory: settings.get_profile_directory().await,
+            mic_profile_directory: settings.get_mic_profile_directory().await,
+            samples_directory: settings.get_samples_directory().await,
+            presets_directory: settings.get_presets_directory().await,
+            icons_directory: settings.get_icons_directory().await,
+        },
+        files,
+        ..Default::default()
+    };
+
+    for (serial, device) in devices {
+        status
+            .mixers
+            .insert(serial.to_owned(), device.status().clone());
+    }
+
+    status
+}
+
+async fn get_files(file_manager: &mut FileManager) -> Files {
+    Files {
+        profiles: file_manager.get_profiles(),
+        mic_profiles: file_manager.get_mic_profiles(),
+        presets: file_manager.get_presets(),
+        samples: file_manager.get_samples(),
+        icons: file_manager.get_icons(),
+    }
+}
+
+async fn update_files(files: Files, file_type: PathTypes, file_manager: &mut FileManager) -> Files {
+    // Only re-poll for the changed type.
+    Files {
+        profiles: if file_type != PathTypes::Profiles {
+            files.profiles
+        } else {
+            file_manager.get_profiles()
+        },
+
+        mic_profiles: if file_type != PathTypes::MicProfiles {
+            files.mic_profiles
+        } else {
+            file_manager.get_mic_profiles()
+        },
+
+        presets: if file_type != PathTypes::Presets {
+            files.presets
+        } else {
+            file_manager.get_presets()
+        },
+
+        samples: if file_type != PathTypes::Samples {
+            files.samples
+        } else {
+            file_manager.get_samples()
+        },
+
+        icons: if file_type != PathTypes::Icons {
+            files.icons
+        } else {
+            file_manager.get_icons()
+        },
     }
 }
 
 fn find_new_device(
-    existing_devices: &HashMap<String, Device>,
+    current_status: &DaemonStatus,
     devices_to_ignore: &HashMap<(u8, u8, Option<String>), Instant>,
 ) -> Option<GoXLRDevice> {
     let now = Instant::now();
 
     let goxlr_devices = find_devices();
     goxlr_devices.into_iter().find(|device| {
-        !existing_devices.values().any(|d| {
+        // Check the Mixers on the existing DaemonStatus..
+        !current_status.mixers.values().any(|d| {
             if let Some(identifier) = device.identifier() {
-                if let Some(device_identifier) = d.status().hardware.usb_device.identifier {
-                    return identifier.clone() == device_identifier;
+                if let Some(device_identifier) = &d.hardware.usb_device.identifier {
+                    return identifier.clone() == device_identifier.clone();
                 }
             }
-
-            d.status().hardware.usb_device.bus_number == device.bus_number()
-                && d.status().hardware.usb_device.address == device.address()
+            d.hardware.usb_device.bus_number == device.bus_number()
+                && d.hardware.usb_device.address == device.address()
         }) && !devices_to_ignore
             .iter()
             .any(|((bus_number, address, identifier), expires)| {
@@ -206,7 +297,6 @@ fn find_new_device(
                         return identifier == device_identifier && expires > &now;
                     }
                 }
-
                 *bus_number == device.bus_number() && *address == device.address() && expires > &now
             })
     })

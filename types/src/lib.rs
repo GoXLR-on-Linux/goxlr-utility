@@ -2,15 +2,13 @@
 use clap::ArgEnum;
 use derivative::Derivative;
 use enum_map::Enum;
-#[cfg(feature = "enumset")]
-use enumset::EnumSetType;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::fmt::Formatter;
 use strum::{Display, EnumCount, EnumIter};
 
-#[derive(Copy, Clone, Debug, Display, EnumIter, EnumCount, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, Display, Enum, EnumIter, EnumCount, PartialEq, Eq)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ChannelName {
@@ -27,7 +25,7 @@ pub enum ChannelName {
     LineOut,
 }
 
-#[derive(Copy, Clone, Debug, Display, EnumIter, EnumCount, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, Display, Enum, EnumIter, EnumCount, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum FaderName {
@@ -71,11 +69,9 @@ impl std::fmt::Debug for VersionNumber {
     }
 }
 
-#[derive(Debug, Display, Enum, EnumIter, EnumCount)]
+#[derive(Debug, Copy, Clone, Display, Enum, EnumIter, EnumCount, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "enumset", derive(EnumSetType))]
-#[cfg_attr(not(feature = "enumset"), derive(Copy, Clone))]
 pub enum OutputDevice {
     Headphones,
     BroadcastMix,
@@ -84,11 +80,9 @@ pub enum OutputDevice {
     Sampler,
 }
 
-#[derive(Debug, Display, Enum, EnumIter, EnumCount)]
+#[derive(Debug, Copy, Clone, Display, Enum, EnumIter, EnumCount, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "enumset", derive(EnumSetType))]
-#[cfg_attr(not(feature = "enumset"), derive(Copy, Clone))]
 pub enum InputDevice {
     Microphone,
     Chat,
@@ -264,10 +258,10 @@ pub enum FaderDisplayStyle {
     GradientMeter,
 }
 
-#[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, Display, Enum, EnumIter, EnumCount, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub enum ButtonColourTargets {
+pub enum Button {
     // These are all the buttons from the GoXLR Mini.
     Fader1Mute,
     Fader2Mute,
@@ -363,7 +357,7 @@ pub enum MuteFunction {
     ToLineOut,
 }
 
-#[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, Display, Enum, EnumIter, EnumCount, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum MicrophoneType {
@@ -695,4 +689,31 @@ pub enum SamplePlaybackMode {
 pub enum SamplePlayOrder {
     Sequential,
     Random,
+}
+
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum DisplayMode {
+    Simple,
+    Advanced,
+}
+
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum DisplayModeComponents {
+    NoiseGate,
+    Equaliser,
+    Compressor,
+    EqFineTune,
+}
+
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum MuteState {
+    Unmuted,
+    MutedToX,
+    MutedToAll,
 }

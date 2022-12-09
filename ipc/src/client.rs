@@ -1,11 +1,12 @@
 use crate::ipc_socket::Socket;
-use crate::{DaemonRequest, DaemonResponse, DaemonStatus, GoXLRCommand};
+use crate::{DaemonRequest, DaemonResponse, DaemonStatus, GoXLRCommand, HttpSettings};
 use anyhow::{anyhow, Context, Result};
 
 #[derive(Debug)]
 pub struct Client {
     socket: Socket<DaemonResponse, DaemonRequest>,
     status: DaemonStatus,
+    http_settings: HttpSettings,
 }
 
 impl Client {
@@ -13,6 +14,7 @@ impl Client {
         Self {
             socket,
             status: DaemonStatus::default(),
+            http_settings: Default::default(),
         }
     }
 
@@ -29,17 +31,28 @@ impl Client {
             .context("Failed to parse the command result from the GoXLR daemon process")?;
 
         match result {
+            DaemonResponse::HttpState(state) => {
+                self.http_settings = state;
+                Ok(())
+            }
             DaemonResponse::Status(status) => {
                 self.status = status;
                 Ok(())
             }
             DaemonResponse::Ok => Ok(()),
             DaemonResponse::Error(error) => Err(anyhow!("{}", error)),
+            DaemonResponse::Patch(_patch) => {
+                Err(anyhow!("Received Patch as response, shouldn't happen!"))
+            }
         }
     }
 
     pub async fn poll_status(&mut self) -> Result<()> {
         self.send(DaemonRequest::GetStatus).await
+    }
+
+    pub async fn poll_http_status(&mut self) -> Result<()> {
+        self.send(DaemonRequest::GetHttpState).await
     }
 
     pub async fn command(&mut self, serial: &str, command: GoXLRCommand) -> Result<()> {
@@ -49,5 +62,9 @@ impl Client {
 
     pub fn status(&self) -> &DaemonStatus {
         &self.status
+    }
+
+    pub fn http_status(&self) -> &HttpSettings {
+        &self.http_settings
     }
 }

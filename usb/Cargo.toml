@@ -1,6 +1,6 @@
 [package]
 name = "goxlr-usb"
-version = "0.7.1"
+version = "0.8.0"
 edition = "2021"
 authors = ["Nathan Adams <dinnerbone@dinnerbone.com>", "Craig McLure <craig@mclure.net>", "Lars Mühlbauer <lm41@dismail.de>"]
 description = "A direct interface to the TC-Helicon GoXLR & GoXLR Mini via usb."
@@ -8,10 +8,8 @@ repository = "https://github.com/GoXLR-on-Linux/GoXLR-Utility"
 license = "MIT"
 categories = ["hardware-support", "api-bindings"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-goxlr-types = {path = "../types"}
+goxlr-types = { path = "../types" }
 rusb = "0.9.1"
 thiserror = "1.0"
 byteorder = "1"
@@ -20,7 +18,20 @@ enumset = "1.0.8"
 strum = "0.23.0"
 enum-map = "2.1.0"
 anyhow = "1.0.66"
+cfg-if = "1.0.0"
 
 # New, some fun async stuff..
 tokio = { version = "1.21.2", features = ["sync", "rt", "time"] }
 futures = "0.3.25"
+
+# Dependencies specifically for building under Windows..
+[target.'cfg(target_os = "windows")'.dependencies]
+libloading = "0.7.3"
+widestring = "1.0.2"
+lazy_static = "1.4.0"
+windows = { version = "0.43.0", features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_System_Threading",
+    "Win32_UI_WindowsAndMessaging",
+] }

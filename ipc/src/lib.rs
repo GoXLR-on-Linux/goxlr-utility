@@ -1,3 +1,4 @@
+use json_patch::Patch;
 use serde::{Deserialize, Serialize};
 
 pub mod client;
@@ -6,33 +7,46 @@ pub mod ipc_socket;
 
 pub use device::*;
 use goxlr_types::{
-    ButtonColourGroups, ButtonColourOffStyle, ButtonColourTargets, ChannelName,
-    CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EchoStyle, EffectBankPresets,
-    EncoderColourTargets, EqFrequencies, FaderDisplayStyle, FaderName, GateTimes, GenderStyle,
-    HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies,
-    MuteFunction, OutputDevice, PitchStyle, ReverbStyle, RobotRange, RobotStyle, SampleBank,
-    SampleButtons, SamplePlayOrder, SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets,
+    Button, ButtonColourGroups, ButtonColourOffStyle, ChannelName, CompressorAttackTime,
+    CompressorRatio, CompressorReleaseTime, DisplayMode, DisplayModeComponents, EchoStyle,
+    EffectBankPresets, EncoderColourTargets, EqFrequencies, FaderDisplayStyle, FaderName,
+    GateTimes, GenderStyle, HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle,
+    MicrophoneType, MiniEqFrequencies, MuteFunction, OutputDevice, PitchStyle, ReverbStyle,
+    RobotRange, RobotStyle, SampleBank, SampleButtons, SamplePlayOrder, SamplePlaybackMode,
+    SamplerColourTargets, SimpleColourTargets,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DaemonRequest {
     Ping,
     GetStatus,
-    InvalidateCaches,
+    GetHttpState,
     OpenPath(PathTypes),
     Command(String, GoXLRCommand),
 }
 
-// TODO: Check this..
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[allow(clippy::large_enum_variant)]
 pub enum DaemonResponse {
     Ok,
     Error(String),
+    HttpState(HttpSettings),
     Status(DaemonStatus),
+    Patch(Patch),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WebsocketRequest {
+    pub id: u32,
+    pub data: DaemonRequest,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WebsocketResponse {
+    pub id: u32,
+    pub data: DaemonResponse,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub enum PathTypes {
     Profiles,
     MicProfiles,
@@ -76,7 +90,10 @@ pub enum GoXLRCommand {
     SetCompressorRatio(CompressorRatio),
     SetCompressorAttack(CompressorAttackTime),
     SetCompressorReleaseTime(CompressorReleaseTime),
-    SetCompressorMakeupGain(u8),
+    SetCompressorMakeupGain(i8),
+
+    // Used to switch between display modes..
+    SetElementDisplayMode(DisplayModeComponents, DisplayMode),
 
     // DeEss
     SetDeeser(u8),
@@ -87,8 +104,8 @@ pub enum GoXLRCommand {
     SetAllFaderColours(String, String),
     SetAllFaderDisplayStyle(FaderDisplayStyle),
 
-    SetButtonColours(ButtonColourTargets, String, Option<String>),
-    SetButtonOffStyle(ButtonColourTargets, ButtonColourOffStyle),
+    SetButtonColours(Button, String, Option<String>),
+    SetButtonOffStyle(Button, ButtonColourOffStyle),
     SetButtonGroupColours(ButtonColourGroups, String, Option<String>),
     SetButtonGroupOffStyle(ButtonColourGroups, ButtonColourOffStyle),
 
@@ -189,4 +206,8 @@ pub enum GoXLRCommand {
     SaveMicProfile(),
     SaveMicProfileAs(String),
     DeleteMicProfile(String),
+
+    // General Settings
+    SetMuteHoldDuration(u16),
+    SetVCMuteAlsoMuteCM(bool),
 }

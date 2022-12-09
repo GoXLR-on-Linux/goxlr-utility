@@ -90,7 +90,19 @@ Tab-complete files for your terminal of choice will be available after building.
 
 If you'd prefer not to install, you can use `cargo build` and access the binaries in the `target/` directory.
 
+## Windows Support
+As of 0.8.0, the GoXLR utility can be compiled and run under Windows. It requires the Official GoXLR driver to be
+installed (specifically 5.12) to provide audio and an API interface. 
 
+The util under Windows is a simple console application currently, and doesn't have any real desktop integration
+(systray icon, shortcuts etc.) yet, but is functionally identical with the API and WebUI. This situation will
+likely be improved by the 1.0.0 release.
+
+**NOTE**: Do not attempt to run the official GoXLR App and the Utility at the same time, only run one of the other.
+Running both simultaneously will likely cause both apps to stop functioning correctly, and require restarting.
+
+And finally, a massive shout-out to @oddbear for working out the APIs exported functions, and to TC-Helicon who
+have graciously allowed us to use them!
 
 # Disclaimer
 This project is also not supported by, or affiliated in any way with, TC-Helicon. For the official GoXLR software, 

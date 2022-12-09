@@ -98,4 +98,30 @@ impl UiSetup {
         writer.write(XmlWriterEvent::end_element())?;
         Ok(())
     }
+
+    pub fn eq_advanced(&self) -> bool {
+        self.eq_advanced
+    }
+    pub fn comp_advanced(&self) -> bool {
+        self.comp_advanced
+    }
+    pub fn gate_advanced(&self) -> bool {
+        self.gate_advanced
+    }
+    pub fn eq_fine_tune(&self) -> bool {
+        self.eq_fine_tune
+    }
+
+    pub fn set_eq_advanced(&mut self, eq_advanced: bool) {
+        self.eq_advanced = eq_advanced;
+    }
+    pub fn set_comp_advanced(&mut self, comp_advanced: bool) {
+        self.comp_advanced = comp_advanced;
+    }
+    pub fn set_gate_advanced(&mut self, gate_advanced: bool) {
+        self.gate_advanced = gate_advanced;
+    }
+    pub fn set_eq_fine_tune(&mut self, eq_fine_tune: bool) {
+        self.eq_fine_tune = eq_fine_tune;
+    }
 }

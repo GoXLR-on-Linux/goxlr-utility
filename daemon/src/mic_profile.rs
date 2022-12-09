@@ -2,11 +2,12 @@ use crate::files::{can_create_new_file, create_path};
 use crate::profile::ProfileAdapter;
 use anyhow::{anyhow, Context, Result};
 use byteorder::{ByteOrder, LittleEndian};
+use enum_map::EnumMap;
 use goxlr_ipc::{Compressor, Equaliser, EqualiserMini, NoiseGate};
 use goxlr_profile_loader::mic_profile::MicProfileSettings;
 use goxlr_types::{
-    CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EffectKey, EqFrequencies,
-    GateTimes, MicrophoneParamKey, MicrophoneType, MiniEqFrequencies,
+    CompressorAttackTime, CompressorRatio, CompressorReleaseTime, DisplayMode, EffectKey,
+    EqFrequencies, GateTimes, MicrophoneParamKey, MicrophoneType, MiniEqFrequencies,
 };
 use log::error;
 use ritelinked::LinkedHashSet;
@@ -114,12 +115,13 @@ impl MicProfileAdapter {
         &self.name
     }
 
-    pub fn mic_gains(&self) -> [u16; 3] {
-        [
-            self.profile.setup().dynamic_mic_gain() as u16,
-            self.profile.setup().condenser_mic_gain() as u16,
-            self.profile.setup().trs_mic_gain() as u16,
-        ]
+    pub fn mic_gains(&self) -> EnumMap<MicrophoneType, u16> {
+        let mut gains = EnumMap::default();
+        gains[MicrophoneType::Condenser] = self.profile.setup().condenser_mic_gain() as u16;
+        gains[MicrophoneType::Dynamic] = self.profile.setup().dynamic_mic_gain() as u16;
+        gains[MicrophoneType::Jack] = self.profile.setup().trs_mic_gain() as u16;
+
+        gains
     }
 
     pub fn mic_type(&self) -> MicrophoneType {
@@ -129,6 +131,62 @@ impl MicProfileAdapter {
             2 => MicrophoneType::Jack,
             _ => MicrophoneType::Jack, // default
         }
+    }
+
+    pub fn get_gate_display_mode(&self) -> DisplayMode {
+        if self.profile.ui_setup().gate_advanced() {
+            DisplayMode::Advanced
+        } else {
+            DisplayMode::Simple
+        }
+    }
+
+    pub fn set_gate_display_mode(&mut self, display_mode: DisplayMode) {
+        self.profile
+            .ui_setup_mut()
+            .set_gate_advanced(display_mode != DisplayMode::Simple);
+    }
+
+    pub fn get_compressor_display_mode(&self) -> DisplayMode {
+        if self.profile.ui_setup().comp_advanced() {
+            DisplayMode::Advanced
+        } else {
+            DisplayMode::Simple
+        }
+    }
+
+    pub fn set_compressor_display_mode(&mut self, display_mode: DisplayMode) {
+        self.profile
+            .ui_setup_mut()
+            .set_comp_advanced(display_mode != DisplayMode::Simple);
+    }
+
+    pub fn get_eq_display_mode(&self) -> DisplayMode {
+        if self.profile.ui_setup().eq_advanced() {
+            DisplayMode::Advanced
+        } else {
+            DisplayMode::Simple
+        }
+    }
+
+    pub fn set_eq_display_mode(&mut self, display_mode: DisplayMode) {
+        self.profile
+            .ui_setup_mut()
+            .set_eq_advanced(display_mode != DisplayMode::Simple);
+    }
+
+    pub fn get_eq_fine_display_mode(&self) -> DisplayMode {
+        if self.profile.ui_setup().eq_fine_tune() {
+            DisplayMode::Advanced
+        } else {
+            DisplayMode::Simple
+        }
+    }
+
+    pub fn set_eq_fine_display_mode(&mut self, display_mode: DisplayMode) {
+        self.profile
+            .ui_setup_mut()
+            .set_eq_fine_tune(display_mode != DisplayMode::Simple);
     }
 
     pub fn noise_gate_ipc(&self) -> NoiseGate {
@@ -456,7 +514,7 @@ impl MicProfileAdapter {
         self.profile.compressor_mut().set_release(value as u8)
     }
 
-    pub fn set_compressor_makeup(&mut self, value: u8) -> Result<()> {
+    pub fn set_compressor_makeup(&mut self, value: i8) -> Result<()> {
         self.profile.compressor_mut().set_makeup_gain(value)
     }
 
@@ -474,6 +532,8 @@ impl MicProfileAdapter {
 
     /// The uber method, fetches the relevant setting from the profile and returns it..
     pub fn get_param_value(&self, param: MicrophoneParamKey) -> [u8; 4] {
+        let gains = self.mic_gains();
+
         match param {
             MicrophoneParamKey::MicType => {
                 let microphone_type: MicrophoneType = self.mic_type();
@@ -482,15 +542,9 @@ impl MicProfileAdapter {
                     false => [0, 0, 0, 0],
                 }
             }
-            MicrophoneParamKey::DynamicGain => {
-                self.gain_value(self.mic_gains()[MicrophoneType::Dynamic as usize])
-            }
-            MicrophoneParamKey::CondenserGain => {
-                self.gain_value(self.mic_gains()[MicrophoneType::Condenser as usize])
-            }
-            MicrophoneParamKey::JackGain => {
-                self.gain_value(self.mic_gains()[MicrophoneType::Jack as usize])
-            }
+            MicrophoneParamKey::DynamicGain => self.gain_value(gains[MicrophoneType::Dynamic]),
+            MicrophoneParamKey::CondenserGain => self.gain_value(gains[MicrophoneType::Condenser]),
+            MicrophoneParamKey::JackGain => self.gain_value(gains[MicrophoneType::Jack]),
             MicrophoneParamKey::GateThreshold => self.i8_to_f32(self.profile.gate().threshold()),
             MicrophoneParamKey::GateAttack => self.u8_to_f32(self.profile.gate().attack()),
             MicrophoneParamKey::GateRelease => self.u8_to_f32(self.profile.gate().release()),
@@ -509,7 +563,7 @@ impl MicProfileAdapter {
                 self.u8_to_f32(self.profile.compressor().release())
             }
             MicrophoneParamKey::CompressorMakeUpGain => {
-                self.u8_to_f32(self.profile.compressor().makeup())
+                self.i8_to_f32(self.profile.compressor().makeup())
             }
             MicrophoneParamKey::BleepLevel => self.calculate_bleep(self.profile.bleep_level()),
             MicrophoneParamKey::Equalizer90HzFrequency => {

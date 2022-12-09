@@ -38,6 +38,7 @@ async fn main() -> Result<()> {
     let socket: Socket<DaemonResponse, DaemonRequest> = Socket::new(connection);
     let mut client = Client::new(socket);
     client.poll_status().await?;
+    client.poll_http_status().await?;
 
     let serial = if let Some(serial) = &cli.device {
         serial.to_owned()
@@ -874,6 +875,11 @@ async fn main() -> Result<()> {
         println!("{}", serde_json::to_string_pretty(client.status())?);
     }
 
+    if cli.status_http {
+        client.poll_http_status().await?;
+        println!("{}", serde_json::to_string_pretty(client.http_status())?);
+    }
+
     if cli.status {
         client.poll_status().await?;
         println!(
@@ -957,12 +963,12 @@ fn print_mixer_info(mixer: &MixerStatus) {
         if mixer.mic_status.mic_type == microphone {
             println!(
                 "{} mic gain: {} dB (ACTIVE)",
-                microphone, mixer.mic_status.mic_gains[microphone as usize]
+                microphone, mixer.mic_status.mic_gains[microphone]
             );
         } else {
             println!(
                 "{} mic gain: {} dB (Inactive)",
-                microphone, mixer.mic_status.mic_gains[microphone as usize]
+                microphone, mixer.mic_status.mic_gains[microphone]
             );
         }
     }
@@ -986,13 +992,8 @@ fn print_mixer_info(mixer: &MixerStatus) {
         print!("|{}{}|", " ".repeat(max_col_len - row_name.len()), row_name,);
         for input in InputDevice::iter() {
             let col_name = input.to_string();
-            if mixer.router[input as usize].contains(output) {
-                let len = col_name.len() + 1;
-                print!("{}X{} ", " ".repeat(len / 2), " ".repeat(len - (len / 2)));
-            } else {
-                let len = col_name.len() + 2;
-                print!("{} ", " ".repeat(len));
-            }
+            let len = col_name.len() + 1;
+            print!("{}X{} ", " ".repeat(len / 2), " ".repeat(len - (len / 2)));
         }
         println!();
     }

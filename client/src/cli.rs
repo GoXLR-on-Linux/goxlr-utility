@@ -1,11 +1,11 @@
 use clap::{AppSettings, Args, Parser, Subcommand};
 use goxlr_types::{
-    ButtonColourGroups, ButtonColourOffStyle, ButtonColourTargets, ChannelName,
-    CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EchoStyle, EffectBankPresets,
-    EncoderColourTargets, EqFrequencies, FaderDisplayStyle, FaderName, GateTimes, GenderStyle,
-    HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle, MiniEqFrequencies, MuteFunction,
-    OutputDevice, PitchStyle, ReverbStyle, RobotRange, RobotStyle, SampleBank, SampleButtons,
-    SamplePlayOrder, SamplePlaybackMode, SimpleColourTargets,
+    Button, ButtonColourGroups, ButtonColourOffStyle, ChannelName, CompressorAttackTime,
+    CompressorRatio, CompressorReleaseTime, EchoStyle, EffectBankPresets, EncoderColourTargets,
+    EqFrequencies, FaderDisplayStyle, FaderName, GateTimes, GenderStyle, HardTuneSource,
+    HardTuneStyle, InputDevice, MegaphoneStyle, MiniEqFrequencies, MuteFunction, OutputDevice,
+    PitchStyle, ReverbStyle, RobotRange, RobotStyle, SampleBank, SampleButtons, SamplePlayOrder,
+    SamplePlaybackMode, SimpleColourTargets,
 };
 use std::str::FromStr;
 
@@ -25,6 +25,9 @@ pub struct Cli {
     /// Display device information as JSON after command..
     #[clap(long)]
     pub status_json: bool,
+
+    #[clap(long)]
+    pub status_http: bool,
 
     #[clap(flatten, help_heading = "Microphone controls")]
     pub microphone_controls: MicrophoneControls,
@@ -421,7 +424,7 @@ pub enum CompressorCommands {
     },
     MakeUp {
         #[clap(parse(try_from_str=parse_compressor_makeup))]
-        value: u8,
+        value: i8,
     },
 }
 
@@ -442,15 +445,15 @@ fn parse_compressor_threshold(s: &str) -> Result<i8, String> {
     Ok(value)
 }
 
-fn parse_compressor_makeup(s: &str) -> Result<u8, String> {
-    let value = u8::from_str(s);
+fn parse_compressor_makeup(s: &str) -> Result<i8, String> {
+    let value = i8::from_str(s);
     if value.is_err() {
         return Err(String::from("Value must be between 0 and 24"));
     }
 
     let value = value.unwrap();
-    if value > 24 {
-        return Err(String::from("Value must be 24 or lower"));
+    if !(-6..=24).contains(&value) {
+        return Err(String::from("Value must between -4 and 24"));
     }
     Ok(value)
 }
@@ -630,7 +633,7 @@ pub enum ButtonLightingCommands {
     Colour {
         /// The Button to change
         #[clap(arg_enum)]
-        button: ButtonColourTargets,
+        button: Button,
 
         /// The primary button colour [RRGGBB]
         colour_one: String,
@@ -642,7 +645,7 @@ pub enum ButtonLightingCommands {
     OffStyle {
         /// The Button to change
         #[clap(arg_enum)]
-        button: ButtonColourTargets,
+        button: Button,
 
         /// How the button should be presented when 'off'
         #[clap(arg_enum)]

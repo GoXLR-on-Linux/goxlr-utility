@@ -1,51 +1,61 @@
-use enumset::EnumSet;
+use enum_map::EnumMap;
+use goxlr_types::MuteState::Unmuted;
 use goxlr_types::{
-    ButtonColourOffStyle, ButtonColourTargets, ChannelName, CompressorAttackTime, CompressorRatio,
-    CompressorReleaseTime, EchoStyle, EffectBankPresets, EncoderColourTargets, EqFrequencies,
-    FaderDisplayStyle, FaderName, FirmwareVersions, GateTimes, GenderStyle, HardTuneSource,
-    HardTuneStyle, InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies, MuteFunction,
-    OutputDevice, PitchStyle, ReverbStyle, RobotStyle, SampleBank, SampleButtons, SamplePlayOrder,
-    SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets,
+    Button, ButtonColourOffStyle, ChannelName, CompressorAttackTime, CompressorRatio,
+    CompressorReleaseTime, DisplayMode, EchoStyle, EffectBankPresets, EncoderColourTargets,
+    EqFrequencies, FaderDisplayStyle, FaderName, FirmwareVersions, GateTimes, GenderStyle,
+    HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies,
+    MuteFunction, MuteState, OutputDevice, PitchStyle, ReverbStyle, RobotStyle, SampleBank,
+    SampleButtons, SamplePlayOrder, SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
-use strum::EnumCount;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct DaemonStatus {
+    pub daemon_version: String,
     pub mixers: HashMap<String, MixerStatus>,
     pub paths: Paths,
     pub files: Files,
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct HttpSettings {
+    pub enabled: bool,
+    pub bind_address: String,
+    pub cors_enabled: bool,
+    pub port: u16,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MixerStatus {
     pub hardware: HardwareStatus,
-    pub fader_status: [FaderStatus; 4], // TODO: Does this need to be an array? :p
+    pub fader_status: EnumMap<FaderName, FaderStatus>,
     pub mic_status: MicSettings,
     pub levels: Levels,
-    pub router: [EnumSet<OutputDevice>; InputDevice::COUNT],
-    pub router_table: [[bool; OutputDevice::COUNT]; InputDevice::COUNT],
+    pub router: EnumMap<InputDevice, EnumMap<OutputDevice, bool>>,
     pub cough_button: CoughButton,
     pub lighting: Lighting,
     pub effects: Option<Effects>,
     pub sampler: Option<Sampler>,
+    pub settings: Settings,
+    pub button_down: EnumMap<Button, bool>,
     pub profile_name: String,
     pub mic_profile_name: String,
 }
 
 impl MixerStatus {
     pub fn get_fader_status(&self, fader: FaderName) -> &FaderStatus {
-        &self.fader_status[fader as usize]
+        &self.fader_status[fader]
     }
 
     pub fn get_channel_volume(&self, channel: ChannelName) -> u8 {
-        self.levels.volumes[channel as usize]
+        self.levels.volumes[channel]
     }
 
     pub fn set_channel_volume(&mut self, channel: ChannelName, volume: u8) {
-        self.levels.volumes[channel as usize] = volume;
+        self.levels.volumes[channel] = volume;
     }
 }
 
@@ -63,12 +73,14 @@ pub struct FaderStatus {
     pub channel: ChannelName,
     pub mute_type: MuteFunction,
     pub scribble: Option<Scribble>,
+    pub mute_state: MuteState,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Copy)]
 pub struct CoughButton {
     pub is_toggle: bool,
     pub mute_type: MuteFunction,
+    pub state: MuteState,
 }
 
 impl Default for FaderStatus {
@@ -77,6 +89,7 @@ impl Default for FaderStatus {
             channel: ChannelName::Mic,
             mute_type: MuteFunction::All,
             scribble: None,
+            mute_state: Unmuted,
         }
     }
 }
@@ -84,7 +97,7 @@ impl Default for FaderStatus {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MicSettings {
     pub mic_type: MicrophoneType,
-    pub mic_gains: [u16; MicrophoneType::COUNT],
+    pub mic_gains: EnumMap<MicrophoneType, u16>,
 
     pub equaliser: Equaliser,
     pub equaliser_mini: EqualiserMini,
@@ -94,7 +107,7 @@ pub struct MicSettings {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Levels {
-    pub volumes: [u8; ChannelName::COUNT],
+    pub volumes: EnumMap<ChannelName, u8>,
     pub bleep: i8,
     pub deess: u8,
 }
@@ -126,13 +139,13 @@ pub struct Compressor {
     pub ratio: CompressorRatio,
     pub attack: CompressorAttackTime,
     pub release: CompressorReleaseTime,
-    pub makeup_gain: u8,
+    pub makeup_gain: i8,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Lighting {
     pub faders: HashMap<FaderName, FaderLighting>,
-    pub buttons: HashMap<ButtonColourTargets, ButtonLighting>,
+    pub buttons: HashMap<Button, ButtonLighting>,
     pub simple: HashMap<SimpleColourTargets, OneColour>,
     pub sampler: HashMap<SamplerColourTargets, SamplerLighting>,
     pub encoders: HashMap<EncoderColourTargets, ThreeColours>,
@@ -176,6 +189,7 @@ pub struct ThreeColours {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Effects {
+    pub is_enabled: bool,
     pub active_preset: EffectBankPresets,
     pub preset_names: HashMap<EffectBankPresets, String>,
     pub current: ActiveEffects,
@@ -292,6 +306,21 @@ pub struct Sample {
     pub stop_pct: f32,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Settings {
+    pub display: Display,
+    pub mute_hold_duration: u16,
+    pub vc_mute_also_mute_cm: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Display {
+    pub gate: DisplayMode,
+    pub compressor: DisplayMode,
+    pub equaliser: DisplayMode,
+    pub equaliser_fine: DisplayMode,
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Paths {
     pub profile_directory: PathBuf,
@@ -303,11 +332,11 @@ pub struct Paths {
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Files {
-    pub profiles: HashSet<String>,
-    pub mic_profiles: HashSet<String>,
-    pub presets: HashSet<String>,
-    pub samples: HashMap<String, String>,
-    pub icons: HashSet<String>,
+    pub profiles: Vec<String>,
+    pub mic_profiles: Vec<String>,
+    pub presets: Vec<String>,
+    pub samples: BTreeMap<String, String>,
+    pub icons: Vec<String>,
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]

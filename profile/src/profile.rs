@@ -183,13 +183,6 @@ impl ProfileSettings {
                             println!("XML Version Not Supported: {}", root.get_version());
                             exit(-1);
                         }
-
-                        if root.get_version() < 2 {
-                            println!(
-                                "XML Version {} detected, will be upgraded to v2",
-                                root.get_version()
-                            );
-                        }
                         continue;
                     }
 

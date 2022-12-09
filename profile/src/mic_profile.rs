@@ -175,6 +175,13 @@ impl MicProfileSettings {
         &self.mic_setup
     }
 
+    pub fn ui_setup(&self) -> &UiSetup {
+        &self.ui_setup
+    }
+    pub fn ui_setup_mut(&mut self) -> &mut UiSetup {
+        &mut self.ui_setup
+    }
+
     pub fn gate(&self) -> &Gate {
         &self.gate
     }

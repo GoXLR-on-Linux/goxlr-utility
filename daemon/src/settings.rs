@@ -127,6 +127,20 @@ impl SettingsHandle {
         500
     }
 
+    // I absolutely hate this naming.. O_O
+    pub async fn get_device_chat_mute_mutes_mic_to_chat(&self, device_serial: &str) -> bool {
+        let settings = self.settings.read().await;
+        let value = settings
+            .devices
+            .get(device_serial)
+            .map(|d| d.chat_mute_mutes_mic_to_chat.unwrap_or(true));
+
+        if let Some(value) = value {
+            return value;
+        }
+        true
+    }
+
     pub async fn set_device_profile_name(&self, device_serial: &str, profile_name: &str) {
         let mut settings = self.settings.write().await;
         let entry = settings
@@ -143,6 +157,24 @@ impl SettingsHandle {
             .entry(device_serial.to_owned())
             .or_insert_with(DeviceSettings::default);
         entry.mic_profile = mic_profile_name.to_owned();
+    }
+
+    pub async fn set_device_mute_hold_duration(&self, device_serial: &str, duration: u16) {
+        let mut settings = self.settings.write().await;
+        let entry = settings
+            .devices
+            .entry(device_serial.to_owned())
+            .or_insert_with(DeviceSettings::default);
+        entry.hold_delay = Some(duration);
+    }
+
+    pub async fn set_device_vc_mute_also_mute_cm(&self, device_serial: &str, setting: bool) {
+        let mut settings = self.settings.write().await;
+        let entry = settings
+            .devices
+            .entry(device_serial.to_owned())
+            .or_insert_with(DeviceSettings::default);
+        entry.chat_mute_mutes_mic_to_chat = Some(setting);
     }
 }
 
@@ -201,6 +233,9 @@ struct DeviceSettings {
     mic_profile: String,
 
     hold_delay: Option<u16>,
+
+    // 'Voice Chat Mute All Also Mutes Mic to Chat Mic' O_O
+    chat_mute_mutes_mic_to_chat: Option<bool>,
 }
 
 impl Default for DeviceSettings {
@@ -210,6 +245,7 @@ impl Default for DeviceSettings {
             mic_profile: DEFAULT_MIC_PROFILE_NAME.to_owned(),
 
             hold_delay: Some(500),
+            chat_mute_mutes_mic_to_chat: Some(true),
         }
     }
 }

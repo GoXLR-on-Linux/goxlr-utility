@@ -25,6 +25,10 @@ pub struct Cli {
     #[clap(long)]
     pub http_enable_cors: bool,
 
+    /// Set the HTTP Bind Address (0.0.0.0 for all interfaces)
+    #[clap(long, default_value = "localhost")]
+    pub http_bind_address: String,
+
     /// Force Run the Daemon as Root
     #[clap(long)]
     pub force_root: bool,
