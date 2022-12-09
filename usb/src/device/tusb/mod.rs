@@ -1,2 +1,2 @@
-mod device;
+pub mod device;
 mod tusbaudio;

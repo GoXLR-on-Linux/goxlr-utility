@@ -12,8 +12,8 @@ cfg_if::cfg_if! {
         mod tusb;
         use crate::device::tusb::device;
 
-        pub fn find_device() -> Vec<GoXLRDevice> {
-            device::find_devices();
+        pub fn find_devices() -> Vec<GoXLRDevice> {
+            device::find_devices()
         }
 
         pub fn from_device(

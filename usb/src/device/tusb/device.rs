@@ -2,7 +2,7 @@ use crate::commands::Command;
 use crate::device::base::{
     AttachGoXLR, ExecutableGoXLR, FullGoXLRDevice, GoXLRCommands, GoXLRDevice, UsbData,
 };
-use crate::device::tusbaudio::{
+use crate::device::tusb::tusbaudio::{
     get_devices, DeviceHandle, EventChannelReceiver, EventChannelSender, TUSB_INTERFACE,
 };
 use anyhow::{bail, Result};
