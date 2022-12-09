@@ -17,6 +17,8 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
+      - name: Update Cargo.lock
+        run: cargo update
       - id: version
         run: 'echo "::set-output name=version::$(cargo pkgid -p goxlr-daemon | cut -d@ -f2)"'
 
