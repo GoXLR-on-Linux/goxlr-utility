@@ -1367,7 +1367,7 @@ checksum = "9b919933a397b79c37e33b77bb2aa3dc8eb6e165ad809e58ff75bc7db2e34574"
 
 [[package]]
 name = "goxlr-audio"
-version = "0.7.1"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "cpal",
@@ -1383,7 +1383,7 @@ dependencies = [
 
 [[package]]
 name = "goxlr-client"
-version = "0.7.1"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -1400,7 +1400,7 @@ dependencies = [
 
 [[package]]
 name = "goxlr-daemon"
-version = "0.7.1"
+version = "0.8.0"
 dependencies = [
  "actix",
  "actix-cors",
@@ -1442,7 +1442,7 @@ dependencies = [
 
 [[package]]
 name = "goxlr-initialiser"
-version = "0.7.1"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "rusb",
@@ -1450,7 +1450,7 @@ dependencies = [
 
 [[package]]
 name = "goxlr-ipc"
-version = "0.7.1"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "enum-map",
@@ -1469,7 +1469,7 @@ dependencies = [
 
 [[package]]
 name = "goxlr-profile-loader"
-version = "0.7.1"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -1486,7 +1486,7 @@ dependencies = [
 
 [[package]]
 name = "goxlr-scribbles"
-version = "0.7.1"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "image",
@@ -1497,7 +1497,7 @@ dependencies = [
 
 [[package]]
 name = "goxlr-types"
-version = "0.7.1"
+version = "0.8.0"
 dependencies = [
  "clap",
  "derivative",
@@ -1510,7 +1510,7 @@ dependencies = [
 
 [[package]]
 name = "goxlr-usb"
-version = "0.7.1"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "byteorder",
