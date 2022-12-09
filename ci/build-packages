@@ -35,8 +35,8 @@ mkdir -p "$DEPLOY_DIR"
 cp "$OUT_DIR_DAEMON"/{goxlr-daemon.bash,goxlr-daemon.fish,_goxlr-daemon} "$DEPLOY_DIR/"
 cp "$OUT_DIR_CLIENT"/{goxlr-client.bash,goxlr-client.fish,_goxlr-client} "$DEPLOY_DIR/"
 
-# Now, first build the .deb file..
-cargo deb -p goxlr-daemon
+# Now, first build the .deb file (We don't need to recompile the code here)..
+cargo deb -p goxlr-daemon --no-build
 
 # Then the RPM
 cargo generate-rpm -p daemon
