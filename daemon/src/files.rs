@@ -125,6 +125,7 @@ impl FileManager {
         }
 
         result.sort_by_key(|a| a.to_lowercase());
+        result.dedup();
         result
     }
 
