@@ -33,11 +33,11 @@ impl Gate {
     pub fn new() -> Self {
         Self {
             amount: 0,
-            threshold: 0,
+            threshold: -30,
             attack: 0,
-            release: 0,
+            release: 19,
             enabled: false,
-            attenuation: 0,
+            attenuation: 100,
         }
     }
 
@@ -54,12 +54,21 @@ impl Gate {
             }
 
             if attr.name.local_name == "MIC_GATE_ATTACK" {
-                self.set_attack(attr.value.parse::<c_float>()? as u8)?;
+                let value = attr.value.parse::<c_float>()? as f32;
+                if value > 45. {
+                    // If the value is out of range, use the default.
+                    continue;
+                }
+                self.set_attack(value as u8)?;
                 continue;
             }
 
             if attr.name.local_name == "MIC_GATE_RELEASE" {
-                self.set_release(attr.value.parse::<c_float>()? as u8)?;
+                let value = attr.value.parse::<c_float>()? as f32;
+                if value > 45. {
+                    continue;
+                }
+                self.set_release(value as u8)?;
                 continue;
             }
 

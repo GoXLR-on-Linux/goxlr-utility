@@ -33,9 +33,9 @@ impl Compressor {
     pub fn new() -> Self {
         Self {
             threshold: 0,
-            ratio: 0,
-            attack: 0,
-            release: 0,
+            ratio: 9,
+            attack: 1,
+            release: 9,
             makeup_gain: 0,
         }
     }
@@ -48,17 +48,29 @@ impl Compressor {
             }
 
             if attr.name.local_name == "MIC_COMP_RATIO" {
-                self.set_ratio(attr.value.parse::<c_float>()? as u8)?;
+                let value = attr.value.parse::<c_float>()? as f32;
+                if value > 14. {
+                    continue;
+                }
+                self.set_ratio(value as u8)?;
                 continue;
             }
 
             if attr.name.local_name == "MIC_COMP_ATTACK" {
-                self.set_attack(attr.value.parse::<c_float>()? as u8)?;
+                let value = attr.value.parse::<c_float>()? as f32;
+                if value > 19. {
+                    continue;
+                }
+                self.set_attack(value as u8)?;
                 continue;
             }
 
             if attr.name.local_name == "MIC_COMP_RELEASE" {
-                self.set_release(attr.value.parse::<c_float>()? as u8)?;
+                let value = attr.value.parse::<c_float>()? as f32;
+                if value > 19. {
+                    continue;
+                }
+                self.set_release(value as u8)?;
                 continue;
             }
 
