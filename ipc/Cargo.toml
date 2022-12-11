@@ -25,4 +25,4 @@ enum-map = { version = "2.4.1", features=["serde"] }
 anyhow = "1.0"
 
 # Used to handle 'Patch' events..
-json-patch = "0.2.6"
+json-patch = "0.3.0"
