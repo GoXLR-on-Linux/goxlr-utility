@@ -38,7 +38,7 @@ pub fn handle_tray(shutdown: Arc<AtomicBool>) -> Result<()> {
     event_loop.run_return(move |_event, _, control_flow| {
         // We set this to poll, so we can monitor both the menu, and tray icon..
         if *control_flow != ControlFlow::Exit {
-            control_flow.set_poll();
+            *control_flow = ControlFlow::Poll;
         }
 
         if let Ok(event) = menu_channel.try_recv() {
@@ -54,8 +54,7 @@ pub fn handle_tray(shutdown: Arc<AtomicBool>) -> Result<()> {
 
         if shutdown.load(Ordering::Relaxed) {
             debug!("Shutting down Window Event Handler..");
-            control_flow.set_exit();
-            return;
+            *control_flow = ControlFlow::Exit;
         }
     });
 
