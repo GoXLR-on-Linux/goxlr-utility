@@ -23,7 +23,9 @@ pub fn handle_tray(blocking_shutdown: Arc<AtomicBool>) -> Result<()> {
         {
             // Before we spawn the tray, we need to initialise the app (this doesn't appear to
             // be done by tray-icon)
-            let app = NSApp();
+            unsafe {
+                let app = NSApp();
+            }
         }
         tray_icon::handle_tray(blocking_shutdown)
     }
