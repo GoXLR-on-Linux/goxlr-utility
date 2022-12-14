@@ -2,11 +2,14 @@ use anyhow::Result;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
+#[cfg(target_os = "macos")]
+use cocoa::appkit::NSApp;
+
 #[cfg(target_os = "linux")]
 mod linux;
 
-#[cfg(target_os = "windows")]
-mod windows;
+#[cfg(any(target_os = "windows", target_os = "macos"))]
+mod tray_icon;
 
 pub fn handle_tray(blocking_shutdown: Arc<AtomicBool>) -> Result<()> {
     #[cfg(target_os = "linux")]
@@ -14,12 +17,19 @@ pub fn handle_tray(blocking_shutdown: Arc<AtomicBool>) -> Result<()> {
         ksni::handle_tray(blocking_shutdown)
     }
 
-    #[cfg(target_os = "windows")]
+    #[cfg(any(target_os = "windows", target_os = "macos"))]
     {
-        windows::handle_tray(blocking_shutdown)
+        #[cfg(target_os = "macos")]
+        {
+            // Before we spawn the tray, we need to initialise the app (this doesn't appear to
+            // be done by tray-icon)
+            let app = NSApp();
+        }
+        tray_icon::handle_tray(blocking_shutdown)
     }
 
-    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
+    // For all other platforms, don't attempt to spawn a Tray Icon
+    #[cfg(not(any(target_os = "windows", target_os = "linux", target_os = "macos")))]
     {
         // For now, don't spawn a tray icon.
         Ok(())
