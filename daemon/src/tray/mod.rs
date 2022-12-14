@@ -2,9 +2,6 @@ use anyhow::Result;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
-#[cfg(target_os = "macos")]
-use cocoa::appkit::NSApp;
-
 #[cfg(target_os = "linux")]
 mod linux;
 
@@ -21,11 +18,17 @@ pub fn handle_tray(blocking_shutdown: Arc<AtomicBool>) -> Result<()> {
     {
         #[cfg(target_os = "macos")]
         {
+            use cocoa::appkit::NSApp;
+            use cocoa::appkit::NSApplication;
+            use cocoa::appkit::NSApplicationActivationPolicy;
+
             // Before we spawn the tray, we need to initialise the app (this doesn't appear to
             // be done by tray-icon)
             unsafe {
                 let app = NSApp();
-                app.setActivationPolicy_(cocoa::appkit::NSApplicationActivationPolicy::NSApplicationActivationPolicyProhibited);
+                app.setActivationPolicy_(
+                    NSApplicationActivationPolicy::NSApplicationActivationPolicyProhibited,
+                );
             }
         }
         tray_icon::handle_tray(blocking_shutdown)
