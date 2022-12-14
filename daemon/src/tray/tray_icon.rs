@@ -37,7 +37,7 @@ pub fn handle_tray(shutdown: Arc<AtomicBool>) -> Result<()> {
     let mut event_loop = builder.build();
     event_loop.run_return(move |_event, _, control_flow| {
         // We set this to poll, so we can monitor both the menu, and tray icon..
-        if control_flow != ControlFlow::Exit {
+        if *control_flow != ControlFlow::Exit {
             control_flow.set_poll();
         }
 
