@@ -27,7 +27,7 @@ pub fn handle_tray(blocking_shutdown: Arc<AtomicBool>) -> Result<()> {
             unsafe {
                 let app = NSApp();
                 app.setActivationPolicy_(
-                    NSApplicationActivationPolicy::NSApplicationActivationPolicyProhibited,
+                    NSApplicationActivationPolicy::NSApplicationActivationPolicyAccessory,
                 );
             }
         }
