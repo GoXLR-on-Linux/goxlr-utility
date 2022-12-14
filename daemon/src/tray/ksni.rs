@@ -1,7 +1,7 @@
-use crate::WHITE_ICON;
+use crate::{BLACK_ICON, WHITE_ICON};
 use anyhow::Result;
 use ksni::menu::StandardItem;
-use ksni::{Category, Icon, MenuItem, Status, Tray, TrayService};
+use ksni::{Category, Icon, MenuItem, Status, ToolTip, Tray, TrayService};
 use log::debug;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -14,8 +14,24 @@ pub fn handle_tray(shutdown: Arc<AtomicBool>) -> Result<()> {
     let tray_handle = tray_service.handle();
     tray_service.spawn();
 
+    let mut current_mode = dark_light::detect();
+    let mut count = 0;
+
     while !shutdown.load(Ordering::Relaxed) {
         thread::sleep(Duration::from_millis(10));
+        count += 1;
+
+        // Perform this every second..
+        if count == 100 {
+            let new_mode = dark_light::detect();
+            if new_mode != current_mode {
+                debug!("Dark Mode Changed?");
+                current_mode = new_mode;
+
+                tray_handle.update(|_| {});
+            }
+            count = 0;
+        }
     }
 
     debug!("Shutting Down Tray Handler..");
@@ -63,7 +79,12 @@ impl Tray for GoXLRTray {
     }
 
     fn icon_pixmap(&self) -> Vec<Icon> {
-        let pixmap = Pixmap::decode_png(WHITE_ICON).unwrap();
+        let pixmap = match dark_light::detect() {
+            dark_light::Mode::Dark => Pixmap::decode_png(WHITE_ICON),
+            dark_light::Mode::Light => Pixmap::decode_png(BLACK_ICON),
+        }
+        .unwrap();
+
         let rgba_data = self.rgba_to_argb(pixmap.data());
 
         vec![Icon {
@@ -71,6 +92,14 @@ impl Tray for GoXLRTray {
             height: pixmap.height() as i32,
             data: rgba_data,
         }]
+    }
+
+    fn tool_tip(&self) -> ToolTip {
+        ToolTip {
+            title: String::from("GoXLR Utility"),
+            description: String::from("A Tool for Configuring a GoXLR under Linux"),
+            ..Default::default()
+        }
     }
 
     fn menu(&self) -> Vec<MenuItem<Self>> {

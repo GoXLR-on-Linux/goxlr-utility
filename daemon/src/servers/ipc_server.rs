@@ -72,7 +72,7 @@ pub async fn run_server(
     usb_tx: DeviceSender,
     mut shutdown_signal: Shutdown,
 ) {
-    info!("Running IPC Server");
+    debug!("Running IPC Server..");
     loop {
         let http_settings = http_settings.clone();
         tokio::select! {
