@@ -5,6 +5,7 @@ use winit::event_loop::EventLoopBuilder;
 use winit::platform::run_return::EventLoopExtRunReturn;
 
 use crate::WHITE_ICON;
+use log::debug;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
