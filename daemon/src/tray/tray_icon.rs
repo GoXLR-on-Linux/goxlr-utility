@@ -26,7 +26,7 @@ pub fn handle_tray(shutdown: Arc<AtomicBool>) -> Result<()> {
     let tray_channel = tray_event_receiver();
     let menu_channel = menu_event_receiver();
 
-    let builder = EventLoopBuilder::new();
+    let mut builder = EventLoopBuilder::new();
 
     #[cfg(target_os = "macos")]
     builder.with_activation_policy(ActivationPolicy::Prohibited);
