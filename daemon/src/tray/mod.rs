@@ -25,6 +25,7 @@ pub fn handle_tray(blocking_shutdown: Arc<AtomicBool>) -> Result<()> {
             // be done by tray-icon)
             unsafe {
                 let app = NSApp();
+                app.setActivationPolicy_(cocoa::appkit::NSApplicationActivationPolicy::NSApplicationActivationPolicyProhibited);
             }
         }
         tray_icon::handle_tray(blocking_shutdown)
