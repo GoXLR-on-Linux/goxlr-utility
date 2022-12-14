@@ -42,9 +42,6 @@ interprocess = { version = "1.2.0", features = ["tokio_support"] }
 notify = "5.0.0"
 json-patch = "0.3.0"
 
-# Used in systray icon testing..
-dark-light = "0.2.3"
-
 ## HTTPd Server
 actix = "0.13"
 actix-web-actors = "4.1"

@@ -36,8 +36,7 @@ mod tray;
 const DISTRIBUTABLE_ROOT: &str = "/usr/share/goxlr/";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-const WHITE_ICON: &[u8] = include_bytes!("../resources/goxlr-icon-white.png");
-const BLACK_ICON: &[u8] = include_bytes!("../resources/goxlr-icon-black.png");
+const ICON: &[u8] = include_bytes!("../resources/goxlr-icon-white.png");
 
 // This is for global 'JSON Patches', for when something changes.
 #[derive(Debug, Clone)]

@@ -4,7 +4,7 @@ use tray_icon::{tray_event_receiver, TrayIconBuilder};
 use winit::event_loop::EventLoopBuilder;
 use winit::platform::run_return::EventLoopExtRunReturn;
 
-use crate::WHITE_ICON;
+use crate::ICON;
 use log::debug;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -56,7 +56,7 @@ pub fn handle_tray(shutdown: Arc<AtomicBool>) -> Result<()> {
 
 fn load_icon() -> tray_icon::icon::Icon {
     let (icon_rgba, icon_width, icon_height) = {
-        let image = image::load_from_memory(WHITE_ICON)
+        let image = image::load_from_memory(ICON)
             .expect("Failed to load Icon")
             .into_rgba8();
         let (width, height) = image.dimensions();
