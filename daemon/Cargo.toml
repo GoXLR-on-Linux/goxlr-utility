@@ -60,7 +60,7 @@ tiny-skia = "0.8.2"
 detect-desktop-environment = "0.2.0"
 
 # Under Windows, we use tray-icon for our tray icon..
-[target.'cfg(target_os = "windows")'.dependencies]
+[target.'cfg(any(target_os = "windows", target_os = "macos"))'.dependencies]
 tray-icon = "0.1.1"
 winit = "0.27.5"
 image = "0.24.5"
