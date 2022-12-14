@@ -22,11 +22,11 @@ pub fn handle_tray(shutdown: Arc<AtomicBool>) -> Result<()> {
     let mut count = 0;
 
     while !shutdown.load(Ordering::Relaxed) {
-        thread::sleep(Duration::from_millis(10));
+        thread::sleep(Duration::from_millis(50));
         count += 1;
 
         // Perform this every second..
-        if count == 100 {
+        if count == 20 {
             if environment != DesktopEnvironment::Gnome {
                 let new_mode = dark_light::detect();
                 if new_mode != current_mode {

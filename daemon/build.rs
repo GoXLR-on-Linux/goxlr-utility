@@ -4,6 +4,8 @@ use std::env;
 use std::fs::File;
 use std::io::Error;
 use std::path::Path;
+
+#[cfg(target_os = "windows")]
 use windres::Build;
 
 include!("src/cli.rs");

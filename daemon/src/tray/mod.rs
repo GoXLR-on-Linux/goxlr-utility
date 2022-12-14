@@ -14,7 +14,7 @@ mod tray_icon;
 pub fn handle_tray(blocking_shutdown: Arc<AtomicBool>) -> Result<()> {
     #[cfg(target_os = "linux")]
     {
-        ksni::handle_tray(blocking_shutdown)
+        linux::handle_tray(blocking_shutdown)
     }
 
     #[cfg(any(target_os = "windows", target_os = "macos"))]
