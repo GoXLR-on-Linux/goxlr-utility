@@ -1,5 +1,7 @@
 use crate::{BLACK_ICON, WHITE_ICON};
 use anyhow::Result;
+use dark_light::Mode;
+use detect_desktop_environment::DesktopEnvironment;
 use ksni::menu::StandardItem;
 use ksni::{Category, Icon, MenuItem, Status, ToolTip, Tray, TrayService};
 use log::debug;
@@ -10,7 +12,9 @@ use std::time::Duration;
 use tiny_skia::Pixmap;
 
 pub fn handle_tray(shutdown: Arc<AtomicBool>) -> Result<()> {
-    let tray_service = TrayService::new(GoXLRTray::new());
+    let environment = DesktopEnvironment::detect();
+
+    let tray_service = TrayService::new(GoXLRTray::new(DesktopEnvironment::detect()));
     let tray_handle = tray_service.handle();
     tray_service.spawn();
 
@@ -23,12 +27,14 @@ pub fn handle_tray(shutdown: Arc<AtomicBool>) -> Result<()> {
 
         // Perform this every second..
         if count == 100 {
-            let new_mode = dark_light::detect();
-            if new_mode != current_mode {
-                debug!("Dark Mode Changed?");
-                current_mode = new_mode;
+            if environment != DesktopEnvironment::Gnome {
+                let new_mode = dark_light::detect();
+                if new_mode != current_mode {
+                    debug!("Dark Mode Changed?");
+                    current_mode = new_mode;
 
-                tray_handle.update(|_| {});
+                    tray_handle.update(|_| {});
+                }
             }
             count = 0;
         }
@@ -39,11 +45,13 @@ pub fn handle_tray(shutdown: Arc<AtomicBool>) -> Result<()> {
     Ok(())
 }
 
-struct GoXLRTray {}
+struct GoXLRTray {
+    environment: DesktopEnvironment,
+}
 
 impl GoXLRTray {
-    fn new() -> Self {
-        Self {}
+    fn new(environment: DesktopEnvironment) -> Self {
+        Self { environment }
     }
 
     // Probably a better way to handle this..
@@ -75,13 +83,25 @@ impl Tray for GoXLRTray {
     }
 
     fn status(&self) -> Status {
-        Status::Passive
+        if self.environment == DesktopEnvironment::Kde {
+            // Under KDE, setting this to 'Passive' puts it cleanly in 'Status and Notifications'.
+            return Status::Passive;
+        }
+
+        // Under other DEs (inc gnome), if it's passive, it disappears.
+        Status::Active
     }
 
     fn icon_pixmap(&self) -> Vec<Icon> {
-        let pixmap = match dark_light::detect() {
-            dark_light::Mode::Dark => Pixmap::decode_png(WHITE_ICON),
-            dark_light::Mode::Light => Pixmap::decode_png(BLACK_ICON),
+        let pixmap = if self.environment == DesktopEnvironment::Gnome {
+            // Without user intervention and / or extensions, the Activities bar in Gnome
+            // is always black, so force a white icon.
+            Pixmap::decode_png(WHITE_ICON)
+        } else {
+            match dark_light::detect() {
+                Mode::Dark => Pixmap::decode_png(WHITE_ICON),
+                Mode::Light => Pixmap::decode_png(BLACK_ICON),
+            }
         }
         .unwrap();
 
