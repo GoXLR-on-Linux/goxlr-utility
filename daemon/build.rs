@@ -4,10 +4,16 @@ use std::env;
 use std::fs::File;
 use std::io::Error;
 use std::path::Path;
+use windres::Build;
 
 include!("src/cli.rs");
 
 fn main() -> Result<(), Error> {
+    #[cfg(target_os = "windows")]
+    {
+        Build::new().compile("resources/goxlr-daemon.rc").unwrap();
+    }
+
     let outdir = match env::var_os("OUT_DIR") {
         None => return Ok(()),
         Some(outdir) => outdir,

@@ -3,18 +3,25 @@ use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
 #[cfg(target_os = "linux")]
-mod ksni;
+mod linux;
 
-#[cfg(not(target_os = "linux"))]
-pub mod tray_icon;
+#[cfg(target_os = "windows")]
+mod windows;
 
 pub fn handle_tray(blocking_shutdown: Arc<AtomicBool>) -> Result<()> {
     #[cfg(target_os = "linux")]
     {
         ksni::handle_tray(blocking_shutdown)
     }
-    #[cfg(not(target_os = "linux"))]
+
+    #[cfg(target_os = "windows")]
     {
-        tray_icon::handle_tray(blocking_shutdown)
+        windows::handle_tray(blocking_shutdown)
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
+    {
+        // For now, don't spawn a tray icon.
+        Ok(())
     }
 }
