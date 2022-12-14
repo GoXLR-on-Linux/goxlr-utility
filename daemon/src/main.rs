@@ -6,7 +6,7 @@ use clap::Parser;
 use goxlr_ipc::HttpSettings;
 use json_patch::Patch;
 use log::{error, info, warn};
-use simplelog::{ColorChoice, CombinedLogger, Config, TermLogger, TerminalMode};
+use simplelog::{ColorChoice, CombinedLogger, ConfigBuilder, TermLogger, TerminalMode};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::sync::{broadcast, mpsc};
@@ -49,6 +49,18 @@ pub struct PatchEvent {
 async fn main() -> Result<()> {
     let args: Cli = Cli::parse();
 
+    // We need to ignore a couple of packages log output so create a builder.
+    let mut config = ConfigBuilder::new();
+
+    // The tracing package, when used, will output to INFO from zbus every second..
+    config.add_filter_ignore_str("tracing");
+
+    // Actix is a little noisy on startup and shutdown, so quiet it a bit :)
+    config.add_filter_ignore_str("actix_server::accept");
+    config.add_filter_ignore_str("actix_server::worker");
+    config.add_filter_ignore_str("actix_server::server");
+    config.add_filter_ignore_str("actix_server::builder");
+
     CombinedLogger::init(vec![TermLogger::new(
         match args.log_level {
             LevelFilter::Off => log::LevelFilter::Off,
@@ -58,7 +70,7 @@ async fn main() -> Result<()> {
             LevelFilter::Debug => log::LevelFilter::Debug,
             LevelFilter::Trace => log::LevelFilter::Trace,
         },
-        Config::default(),
+        config.build(),
         TerminalMode::Mixed,
         ColorChoice::Auto,
     )])
