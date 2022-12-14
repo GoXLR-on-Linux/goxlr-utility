@@ -19,16 +19,11 @@ pub fn handle_tray(blocking_shutdown: Arc<AtomicBool>) -> Result<()> {
         #[cfg(target_os = "macos")]
         {
             use cocoa::appkit::NSApp;
-            use cocoa::appkit::NSApplication;
-            use cocoa::appkit::NSApplicationActivationPolicy;
 
             // Before we spawn the tray, we need to initialise the app (this doesn't appear to
             // be done by tray-icon)
             unsafe {
-                let app = NSApp();
-                app.setActivationPolicy_(
-                    NSApplicationActivationPolicy::NSApplicationActivationPolicyAccessory,
-                );
+                let _app = NSApp();
             }
         }
         tray_icon::handle_tray(blocking_shutdown)
