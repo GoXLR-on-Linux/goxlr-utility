@@ -29,7 +29,7 @@ pub fn handle_tray(blocking_shutdown: Arc<AtomicBool>, tx: mpsc::Sender<Message>
                 let _app = NSApp();
             }
         }
-        tray_icon::handle_tray(blocking_shutdown)
+        tray_icon::handle_tray(blocking_shutdown, tx)
     }
 
     // For all other platforms, don't attempt to spawn a Tray Icon

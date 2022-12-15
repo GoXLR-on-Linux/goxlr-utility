@@ -1,5 +1,5 @@
 use anyhow::Result;
-use tray_icon::menu::{menu_event_receiver, Menu, MenuItem, MenuItemType, PredefinedMenuItem};
+use tray_icon::menu::{menu_event_receiver, Menu, MenuItem};
 use tray_icon::{tray_event_receiver, ClickEvent, TrayIconBuilder};
 use winit::event_loop::{ControlFlow, EventLoopBuilder};
 use winit::platform::run_return::EventLoopExtRunReturn;
@@ -9,6 +9,7 @@ use winit::platform::macos::{ActivationPolicy, EventLoopBuilderExtMacOS};
 
 use crate::tray::event_manager::Message;
 use crate::ICON;
+use futures::executor::block_on;
 use log::debug;
 use notify::Event;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -47,7 +48,7 @@ pub fn handle_tray(shutdown: Arc<AtomicBool>, tx: mpsc::Sender<Message>) -> Resu
         if let Ok(event) = menu_channel.try_recv() {
             if event.id == configure.id() {
                 debug!("Configure Button Pressed");
-                let _ = tx.blocking_send(Message::Open);
+                let _ = block_on(tx.send(Message::Open));
             }
             debug!("{:?}", event);
         }
@@ -57,7 +58,7 @@ pub fn handle_tray(shutdown: Arc<AtomicBool>, tx: mpsc::Sender<Message>) -> Resu
             if event.event == ClickEvent::Left {
                 // Is this windows?
                 if cfg!(target_os = "windows") {
-                    let _ = tx.blocking_send(Message::Open);
+                    let _ = block_on(tx.send(Message::Open));
                 }
             }
 
