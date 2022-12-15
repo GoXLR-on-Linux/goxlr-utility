@@ -69,7 +69,7 @@ impl GoXLRTray {
 
 impl Tray for GoXLRTray {
     fn activate(&mut self, _x: i32, _y: i32) {
-        debug!("Icon Pressed!");
+        let _ = self.tx.blocking_send(Message::Open);
     }
 
     fn category(&self) -> Category {
