@@ -1,17 +1,20 @@
+use crate::tray::event_manager::Message;
 use anyhow::Result;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use tokio::sync::mpsc;
 
 #[cfg(target_os = "linux")]
 mod linux;
 
+pub mod event_manager;
 #[cfg(any(target_os = "windows", target_os = "macos"))]
 mod tray_icon;
 
-pub fn handle_tray(blocking_shutdown: Arc<AtomicBool>) -> Result<()> {
+pub fn handle_tray(blocking_shutdown: Arc<AtomicBool>, tx: mpsc::Sender<Message>) -> Result<()> {
     #[cfg(target_os = "linux")]
     {
-        linux::handle_tray(blocking_shutdown)
+        linux::handle_tray(blocking_shutdown, tx)
     }
 
     #[cfg(any(target_os = "windows", target_os = "macos"))]

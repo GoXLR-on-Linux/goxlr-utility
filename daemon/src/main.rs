@@ -19,6 +19,7 @@ use crate::servers::http_server::launch_httpd;
 use crate::servers::ipc_server::{bind_socket, run_server};
 use crate::settings::SettingsHandle;
 use crate::shutdown::Shutdown;
+use crate::tray::event_manager::start_event_handler;
 
 mod audio;
 mod cli;
@@ -160,15 +161,18 @@ async fn main() -> Result<()> {
     // Create non-async method of shutting down threads..
     let blocking_shutdown = Arc::new(AtomicBool::new(false));
 
+    let (menu_tx, menu_rx) = mpsc::channel(5);
+
     // Setup Ctrl+C Monitoring..
     tokio::spawn(await_ctrl_c(shutdown.clone(), blocking_shutdown.clone()));
 
+    tokio::spawn(start_event_handler(shutdown.clone(), menu_rx));
     // Spawn the Systray Icon + Menu..
     // Under MacOS the tray is required to be spawned and handled on the main thread, so rust's
     // winit enforces that on all platforms. This means that this call needs to be blocking.
     // We have the blocking_shutdown handler which will be flipped/ when Ctrl+C is hit, allowing it
     // to cleanly exit, allowing the rest of the daemon to shutdown
-    tray::handle_tray(blocking_shutdown.clone())?;
+    tray::handle_tray(blocking_shutdown.clone(), menu_tx)?;
 
     // If the tray handler dies for any reason, we should still make sure we've been asked to
     // shut down.

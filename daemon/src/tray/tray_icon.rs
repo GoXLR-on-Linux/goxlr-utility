@@ -1,21 +1,24 @@
 use anyhow::Result;
-use tray_icon::menu::{menu_event_receiver, Menu, MenuItem};
-use tray_icon::{tray_event_receiver, TrayIconBuilder};
+use tray_icon::menu::{menu_event_receiver, Menu, MenuItem, MenuItemType, PredefinedMenuItem};
+use tray_icon::{tray_event_receiver, ClickEvent, TrayIconBuilder};
 use winit::event_loop::{ControlFlow, EventLoopBuilder};
 use winit::platform::run_return::EventLoopExtRunReturn;
 
 #[cfg(target_os = "macos")]
 use winit::platform::macos::{ActivationPolicy, EventLoopBuilderExtMacOS};
 
+use crate::tray::event_manager::Message;
 use crate::ICON;
 use log::debug;
+use notify::Event;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use tokio::sync::mpsc;
 
-pub fn handle_tray(shutdown: Arc<AtomicBool>) -> Result<()> {
+pub fn handle_tray(shutdown: Arc<AtomicBool>, tx: mpsc::Sender<Message>) -> Result<()> {
     let tray_menu = Menu::new();
-    let hello_menu = MenuItem::new("Hello", true, None);
-    tray_menu.append_items(&[&hello_menu]);
+    let configure = MenuItem::new("Configure GoXLR", true, None);
+    tray_menu.append_items(&[&configure]);
 
     let tray_icon = TrayIconBuilder::new()
         .with_menu(Box::new(tray_menu))
@@ -42,13 +45,22 @@ pub fn handle_tray(shutdown: Arc<AtomicBool>) -> Result<()> {
         }
 
         if let Ok(event) = menu_channel.try_recv() {
-            if event.id == hello_menu.id() {
-                debug!("Hello Button Pressed! :)");
+            if event.id == configure.id() {
+                debug!("Configure Button Pressed");
+                let _ = tx.blocking_send(Message::Open);
             }
             debug!("{:?}", event);
         }
 
         if let Ok(event) = tray_channel.try_recv() {
+            // Did the User left click on the icon?
+            if event.event == ClickEvent::Left {
+                // Is this windows?
+                if cfg!(target_os = "windows") {
+                    let _ = tx.blocking_send(Message::Open);
+                }
+            }
+
             debug!("{:?}", event);
         }
 

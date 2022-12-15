@@ -1,3 +1,4 @@
+use crate::tray::event_manager::Message;
 use crate::ICON;
 use anyhow::{anyhow, Result};
 use detect_desktop_environment::DesktopEnvironment;
@@ -11,12 +12,13 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::{env, thread};
 use tiny_skia::Pixmap;
+use tokio::sync::mpsc;
 
-pub fn handle_tray(shutdown: Arc<AtomicBool>) -> Result<()> {
+pub fn handle_tray(shutdown: Arc<AtomicBool>, tx: mpsc::Sender<Message>) -> Result<()> {
     // Attempt to immediately update the environment..
     let _ = update_environment();
 
-    let tray_service = TrayService::new(GoXLRTray::new());
+    let tray_service = TrayService::new(GoXLRTray::new(tx));
     let tray_handle = tray_service.handle();
     tray_service.spawn();
 
@@ -41,11 +43,13 @@ pub fn handle_tray(shutdown: Arc<AtomicBool>) -> Result<()> {
     Ok(())
 }
 
-struct GoXLRTray {}
+struct GoXLRTray {
+    tx: mpsc::Sender<Message>,
+}
 
 impl GoXLRTray {
-    fn new() -> Self {
-        Self {}
+    fn new(tx: mpsc::Sender<Message>) -> Self {
+        Self { tx }
     }
 
     // Probably a better way to handle this..
@@ -108,10 +112,9 @@ impl Tray for GoXLRTray {
 
     fn menu(&self) -> Vec<MenuItem<Self>> {
         vec![StandardItem {
-            label: String::from("Hello!"),
-            activate: Box::new(|_this: &mut GoXLRTray| {
-                opener::open_browser("http://localhost:14564");
-                debug!("Hello Pressed!");
+            label: String::from("Configure GoXLR"),
+            activate: Box::new(|this: &mut GoXLRTray| {
+                let _ = this.tx.blocking_send(Message::Open);
             }),
             ..Default::default()
         }
