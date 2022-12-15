@@ -1,22 +1,39 @@
 use crate::ICON;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use detect_desktop_environment::DesktopEnvironment;
 use ksni::menu::StandardItem;
 use ksni::{Category, Icon, MenuItem, Status, ToolTip, Tray, TrayService};
 use log::debug;
+use std::collections::HashMap;
+use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use std::thread;
 use std::time::Duration;
+use std::{env, thread};
 use tiny_skia::Pixmap;
 
 pub fn handle_tray(shutdown: Arc<AtomicBool>) -> Result<()> {
-    let tray_service = TrayService::new(GoXLRTray::new(DesktopEnvironment::detect()));
+    // Attempt to immediately update the environment..
+    let _ = update_environment();
+
+    let tray_service = TrayService::new(GoXLRTray::new());
     let tray_handle = tray_service.handle();
     tray_service.spawn();
 
+    let mut count = 0;
     while !shutdown.load(Ordering::Relaxed) {
         thread::sleep(Duration::from_millis(100));
+
+        count += 1;
+        if count == 50 {
+            count = 0;
+
+            // Do an environment update check every 5 seconds..
+            let _ = update_environment();
+
+            // Instruct the icon to update.
+            tray_handle.update(|_| {});
+        }
     }
 
     debug!("Shutting Down Tray Handler..");
@@ -24,13 +41,11 @@ pub fn handle_tray(shutdown: Arc<AtomicBool>) -> Result<()> {
     Ok(())
 }
 
-struct GoXLRTray {
-    environment: DesktopEnvironment,
-}
+struct GoXLRTray {}
 
 impl GoXLRTray {
-    fn new(environment: DesktopEnvironment) -> Self {
-        Self { environment }
+    fn new() -> Self {
+        Self {}
     }
 
     // Probably a better way to handle this..
@@ -62,7 +77,7 @@ impl Tray for GoXLRTray {
     }
 
     fn status(&self) -> Status {
-        if self.environment == DesktopEnvironment::Kde {
+        if DesktopEnvironment::detect() == DesktopEnvironment::Kde {
             // Under KDE, setting this to 'Passive' puts it cleanly in 'Status and Notifications'.
             return Status::Passive;
         }
@@ -95,10 +110,73 @@ impl Tray for GoXLRTray {
         vec![StandardItem {
             label: String::from("Hello!"),
             activate: Box::new(|_this: &mut GoXLRTray| {
+                opener::open_browser("http://localhost:14564");
                 debug!("Hello Pressed!");
             }),
             ..Default::default()
         }
         .into()]
     }
+}
+
+/// This simply attempts to update the Daemon Environment based on what systemd says the
+/// Current ENV is. The main reason for doing this is that during startup, systemd can
+/// launch the Daemon prior to things like BROWSER and XDG_CURRENT_DESKTOP being set, and
+/// we need both of those for things like launching a web browser, and correctly rendering
+/// the System Tray Icon.
+fn update_environment() -> Result<()> {
+    // These variables are used by xdg-open to determine how to launch stuff.
+    let vars: Vec<&str> = Vec::from([
+        "XDG_CURRENT_DESKTOP",
+        "DESKTOP_SESSION",
+        "DISPLAY",
+        "WAYLAND_DISPLAY",
+        "KDE_SESSION_VERSION",
+        "XDG_DATA_HOME",
+        "XDG_DATA_DIRS",
+        "XDG_RUNTIME_DIR",
+        "XDG_SESSION_TYPE",
+        "XAUTHORITY",
+        "BROWSER",
+    ]);
+
+    let env_list = get_current_environment_vars();
+    if env_list.is_err() {
+        // Likely systemctl command failed, ignore gracefully.
+        return Ok(());
+    }
+
+    let env_list = env_list.unwrap();
+    for variable in vars {
+        if env::var(variable).is_err() && env_list.contains_key(variable) {
+            debug!(
+                "Setting Environmental Variable: {} to {}",
+                variable,
+                env_list.get(variable).unwrap()
+            );
+            env::set_var(variable, env_list.get(variable).unwrap());
+        }
+    }
+    Ok(())
+}
+
+fn get_current_environment_vars() -> Result<HashMap<String, String>> {
+    let command = Command::new("systemctl")
+        .arg("--user")
+        .arg("show-environment")
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .output()?;
+
+    if !command.status.success() {
+        return Err(anyhow!("Unable to fetch environment from systemd"));
+    }
+
+    // Grab the output, and split it into key/value pairs..
+    let found = String::from_utf8(command.stdout)?;
+    Ok(found
+        .lines()
+        .map(|s| s.split_at(s.find('=').unwrap()))
+        .map(|(key, val)| (String::from(key), String::from(&val[1..])))
+        .collect())
 }
