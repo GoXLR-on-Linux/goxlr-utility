@@ -1,3 +1,4 @@
+use crate::events::EventTriggers;
 use crate::tray::event_manager::Message;
 use crate::ICON;
 use anyhow::{anyhow, Result};
@@ -14,7 +15,7 @@ use std::{env, thread};
 use tiny_skia::Pixmap;
 use tokio::sync::mpsc;
 
-pub fn handle_tray(shutdown: Arc<AtomicBool>, tx: mpsc::Sender<Message>) -> Result<()> {
+pub fn handle_tray(shutdown: Arc<AtomicBool>, tx: mpsc::Sender<EventTriggers>) -> Result<()> {
     // Attempt to immediately update the environment..
     let _ = update_environment();
 
@@ -44,11 +45,11 @@ pub fn handle_tray(shutdown: Arc<AtomicBool>, tx: mpsc::Sender<Message>) -> Resu
 }
 
 struct GoXLRTray {
-    tx: mpsc::Sender<Message>,
+    tx: mpsc::Sender<EventTriggers>,
 }
 
 impl GoXLRTray {
-    fn new(tx: mpsc::Sender<Message>) -> Self {
+    fn new(tx: mpsc::Sender<EventTriggers>) -> Self {
         Self { tx }
     }
 
@@ -114,7 +115,7 @@ impl Tray for GoXLRTray {
         vec![StandardItem {
             label: String::from("Configure GoXLR"),
             activate: Box::new(|this: &mut GoXLRTray| {
-                let _ = this.tx.blocking_send(Message::Open);
+                let _ = this.tx.blocking_send(EventTriggers::OpenUi);
             }),
             ..Default::default()
         }

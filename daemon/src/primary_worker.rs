@@ -1,4 +1,5 @@
 use crate::device::Device;
+use crate::events::EventTriggers;
 use crate::files::create_path;
 use crate::{FileManager, PatchEvent, SettingsHandle, Shutdown, VERSION};
 use anyhow::{anyhow, Result};
@@ -30,10 +31,11 @@ pub enum DeviceCommand {
 pub type DeviceSender = mpsc::Sender<DeviceCommand>;
 pub type DeviceReceiver = mpsc::Receiver<DeviceCommand>;
 
-pub async fn handle_changes(
+pub async fn spawn_usb_handler(
     mut command_rx: DeviceReceiver,
     mut file_rx: Receiver<PathTypes>,
     broadcast_tx: BroadcastSender<PatchEvent>,
+    global_tx: Sender<EventTriggers>,
     mut shutdown: Shutdown,
     settings: SettingsHandle,
     mut file_manager: FileManager,
@@ -152,18 +154,9 @@ pub async fn handle_changes(
                         let _ = sender.send(daemon_status.clone());
                     },
                     DeviceCommand::OpenPath(path_type, sender) => {
-                        let result = opener::open(match path_type {
-                            PathTypes::Profiles => settings.get_profile_directory().await,
-                            PathTypes::MicProfiles => settings.get_mic_profile_directory().await,
-                            PathTypes::Presets => settings.get_presets_directory().await,
-                            PathTypes::Samples => settings.get_samples_directory().await,
-                            PathTypes::Icons => settings.get_icons_directory().await,
-                        });
-                        if result.is_err() {
-                            let _ = sender.send(DaemonResponse::Error("Unable to Open".to_string()));
-                        } else {
-                            let _ = sender.send(DaemonResponse::Ok);
-                        }
+                        // There's nothing we can really do if this errors..
+                        let _ = global_tx.send(EventTriggers::Open(path_type)).await;
+                        let _ = sender.send(DaemonResponse::Ok);
                     }
                     DeviceCommand::RunDeviceCommand(serial, command, sender) => {
                         if let Some(device) = devices.get_mut(&serial) {

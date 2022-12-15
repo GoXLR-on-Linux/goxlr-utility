@@ -191,7 +191,7 @@ impl FileManager {
 }
 
 //pub async fn run_notification_service(&self, sender: Sender<PathTypes>) -> Result<()> {
-pub async fn run_notification_service(
+pub async fn spawn_file_notification_service(
     paths: FilePaths,
     sender: Sender<PathTypes>,
     mut shutdown_signal: Shutdown,

@@ -1,4 +1,5 @@
-use crate::tray::event_manager::Message;
+use crate::events::EventTriggers;
+use crate::DaemonState;
 use anyhow::Result;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
@@ -7,14 +8,17 @@ use tokio::sync::mpsc;
 #[cfg(target_os = "linux")]
 mod linux;
 
-pub mod event_manager;
 #[cfg(any(target_os = "windows", target_os = "macos"))]
 mod tray_icon;
 
-pub fn handle_tray(blocking_shutdown: Arc<AtomicBool>, tx: mpsc::Sender<Message>) -> Result<()> {
+pub fn handle_tray(
+    blocking_shutdown: Arc<AtomicBool>,
+    tx: mpsc::Sender<EventTriggers>,
+    state: DaemonState,
+) -> Result<()> {
     #[cfg(target_os = "linux")]
     {
-        linux::handle_tray(blocking_shutdown, tx)
+        linux::handle_tray(blocking_shutdown, tx, state)
     }
 
     #[cfg(any(target_os = "windows", target_os = "macos"))]
@@ -29,7 +33,7 @@ pub fn handle_tray(blocking_shutdown: Arc<AtomicBool>, tx: mpsc::Sender<Message>
                 let _app = NSApp();
             }
         }
-        tray_icon::handle_tray(blocking_shutdown, tx)
+        tray_icon::handle_tray(blocking_shutdown, tx, state)
     }
 
     // For all other platforms, don't attempt to spawn a Tray Icon

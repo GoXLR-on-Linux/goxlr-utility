@@ -7,23 +7,24 @@ use goxlr_ipc::HttpSettings;
 use json_patch::Patch;
 use log::{error, info, warn};
 use simplelog::{ColorChoice, CombinedLogger, ConfigBuilder, TermLogger, TerminalMode};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use tokio::join;
 use tokio::sync::{broadcast, mpsc};
-use tokio::{join, signal};
 
 use crate::cli::{Cli, LevelFilter};
-use crate::files::{get_file_paths_from_settings, run_notification_service, FileManager};
-use crate::primary_worker::handle_changes;
-use crate::servers::http_server::launch_httpd;
-use crate::servers::ipc_server::{bind_socket, run_server};
+use crate::events::{spawn_event_handler, DaemonState};
+use crate::files::{get_file_paths_from_settings, spawn_file_notification_service, FileManager};
+use crate::primary_worker::spawn_usb_handler;
+use crate::servers::http_server::spawn_http_server;
+use crate::servers::ipc_server::{bind_socket, spawn_ipc_server};
 use crate::settings::SettingsHandle;
 use crate::shutdown::Shutdown;
-use crate::tray::event_manager::start_event_handler;
 
 mod audio;
 mod cli;
 mod device;
+mod events;
 mod files;
 mod mic_profile;
 mod primary_worker;
@@ -83,7 +84,7 @@ async fn main() -> Result<()> {
             error!("The GoXLR Utility Daemon is not designed to be run as root, and should run");
             error!("as the current active user. If you're having problems with permissions,");
             error!("please consult the 'Permissions' section of the README. Running as root");
-            error!("*WILL* cause issues with the sampler, and may pose a security threat.");
+            error!("*WILL* cause issues with the sampler, and may pose a security risk.");
             error!("");
             error!("To override this message, please start with --force-root");
             std::process::exit(-1);
@@ -100,83 +101,102 @@ async fn main() -> Result<()> {
     info!("Starting GoXLR Daemon v{}", VERSION);
     let settings = SettingsHandle::load(args.config).await?;
 
-    let mut shutdown = Shutdown::new();
+    // Create the Global Event Channel..
+    let (global_tx, global_rx) = mpsc::channel(32);
 
+    // Create the 'Patch' Sending Channel..
+    let (broadcast_tx, broadcast_rx) = broadcast::channel(16);
+    drop(broadcast_rx);
+
+    // Create the USB Event Channel..
+    let (usb_tx, usb_rx) = mpsc::channel(32);
+
+    // Create the HTTP Run Channel..
+    let (httpd_tx, httpd_rx) = tokio::sync::oneshot::channel();
+
+    // Create the Shutdown Signallers..
+    let shutdown = Shutdown::new();
+    let shutdown_blocking = Arc::new(AtomicBool::new(false));
+
+    // Configure Showing the Tray Icon, TODO: From Settings
+    let show_tray = Arc::new(AtomicBool::new(true));
+
+    // Configure, and Start the File Manager Service..
     let file_manager = FileManager::new(&settings);
-
     let (file_tx, file_rx) = mpsc::channel(20);
-    let file_handle = tokio::spawn(run_notification_service(
+    let file_handle = tokio::spawn(spawn_file_notification_service(
         get_file_paths_from_settings(&settings),
         file_tx,
         shutdown.clone(),
     ));
 
-    // This is essentially a SPMC (Single Producer (main worker), Multi-Consumer (IPC and Websocket))
-    // which is triggered by the primary worker in the event of a change.
-    let (broadcast_tx, broadcast_rx) = broadcast::channel(16);
-
-    // we don't use the receiver generated here, so we'll just drop it and subscribe when needed.
-    drop(broadcast_rx);
-
-    let (usb_tx, usb_rx) = mpsc::channel(32);
-    let usb_handle = tokio::spawn(handle_changes(
+    // Start the USB Device Handler
+    let usb_handle = tokio::spawn(spawn_usb_handler(
         usb_rx,
         file_rx,
         broadcast_tx.clone(),
+        global_tx.clone(),
         shutdown.clone(),
-        settings,
+        settings.clone(),
         file_manager,
     ));
 
+    // Spawn the IPC Socket..
     let ipc_socket = bind_socket().await;
     if ipc_socket.is_err() {
         error!("Error Starting Daemon: ");
         bail!("{}", ipc_socket.err().unwrap());
     }
+
+    // Launch the IPC Server..
     let ipc_socket = ipc_socket.unwrap();
-    let communications_handle = tokio::spawn(run_server(
+    let communications_handle = tokio::spawn(spawn_ipc_server(
         ipc_socket,
         http_settings.clone(),
         usb_tx.clone(),
         shutdown.clone(),
     ));
 
+    // Run the HTTP Server (if enabled)..
     let mut http_server: Option<ServerHandle> = None;
     if http_settings.enabled {
+        // Spawn a oneshot channel for managing the HTTP Server
         if http_settings.cors_enabled {
             warn!("HTTP Cross Origin Requests enabled, this may be a security risk.");
         }
-        let (httpd_tx, httpd_rx) = tokio::sync::oneshot::channel();
-        tokio::spawn(launch_httpd(
+
+        tokio::spawn(spawn_http_server(
             usb_tx.clone(),
             httpd_tx,
             broadcast_tx.clone(),
-            http_settings,
+            http_settings.clone(),
         ));
         http_server = Some(httpd_rx.await?);
     } else {
         warn!("HTTP Server Disabled");
     }
 
-    // Create non-async method of shutting down threads..
-    let blocking_shutdown = Arc::new(AtomicBool::new(false));
+    let tray_shutdown = shutdown_blocking.clone();
 
-    let (menu_tx, menu_rx) = mpsc::channel(5);
+    let mut local_shutdown = shutdown.clone();
+    let state = DaemonState {
+        show_tray,
+        shutdown,
+        shutdown_blocking,
 
-    // Setup Ctrl+C Monitoring..
-    tokio::spawn(await_ctrl_c(shutdown.clone(), blocking_shutdown.clone()));
+        settings_handle: settings.clone(),
+        http_settings: http_settings.clone(),
+    };
 
-    tokio::spawn(start_event_handler(shutdown.clone(), menu_rx));
-    // Spawn the Systray Icon + Menu..
-    // Under MacOS the tray is required to be spawned and handled on the main thread, so rust's
-    // winit enforces that on all platforms. This means that this call needs to be blocking.
-    // We have the blocking_shutdown handler which will be flipped/ when Ctrl+C is hit, allowing it
-    // to cleanly exit, allowing the rest of the daemon to shutdown
-    tray::handle_tray(blocking_shutdown.clone(), menu_tx)?;
+    // Spawn the general event handler..
+    let event_handle = tokio::spawn(spawn_event_handler(state.clone(), global_rx));
+
+    // Tray management has to occur on the main thread, so we'll start it now.
+    tray::handle_tray(tray_shutdown, global_tx.clone(), state.clone())?;
 
     // If the tray handler dies for any reason, we should still make sure we've been asked to
     // shut down.
-    shutdown.recv().await;
+    local_shutdown.recv().await;
     info!("Shutting down daemon");
 
     if let Some(server) = http_server {
@@ -185,21 +205,13 @@ async fn main() -> Result<()> {
             usb_handle,
             communications_handle,
             server.stop(true),
-            file_handle
+            file_handle,
+            event_handle
         );
     } else {
-        let _ = join!(usb_handle, communications_handle, file_handle);
+        let _ = join!(usb_handle, communications_handle, file_handle, event_handle);
     }
-
-    shutdown.recv().await;
     Ok(())
-}
-
-async fn await_ctrl_c(shutdown: Shutdown, blocking_shutdown: Arc<AtomicBool>) {
-    if signal::ctrl_c().await.is_ok() {
-        shutdown.trigger();
-        blocking_shutdown.store(true, Ordering::Relaxed);
-    }
 }
 
 #[cfg(target_family = "unix")]

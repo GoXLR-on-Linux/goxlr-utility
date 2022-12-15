@@ -66,7 +66,7 @@ pub async fn bind_socket() -> Result<LocalSocketListener> {
     Ok(listener)
 }
 
-pub async fn run_server(
+pub async fn spawn_ipc_server(
     listener: LocalSocketListener,
     http_settings: HttpSettings,
     usb_tx: DeviceSender,

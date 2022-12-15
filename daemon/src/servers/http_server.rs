@@ -158,7 +158,7 @@ struct AppData {
     http_settings: HttpSettings,
 }
 
-pub async fn launch_httpd(
+pub async fn spawn_http_server(
     usb_tx: DeviceSender,
     handle_tx: Sender<ServerHandle>,
     broadcast_tx: tokio::sync::broadcast::Sender<PatchEvent>,
