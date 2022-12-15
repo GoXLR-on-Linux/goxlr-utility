@@ -5,6 +5,7 @@ use tokio::sync::mpsc::Receiver;
 
 pub enum Message {
     Open,
+    Quit,
 }
 
 pub async fn start_event_handler(mut shutdown: Shutdown, mut rx: Receiver<Message>) {
@@ -22,6 +23,9 @@ pub async fn start_event_handler(mut shutdown: Shutdown, mut rx: Receiver<Messag
                         // TODO: Port / Bind Address
                         let _ = opener::open("http://localhost:14564/");
                     },
+                    Message::Quit => {
+                        debug!("Quit Received.. Not supported!");
+                    }
                 }
             }
         )

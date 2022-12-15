@@ -1,5 +1,5 @@
 use anyhow::Result;
-use tray_icon::menu::{menu_event_receiver, Menu, MenuItem};
+use tray_icon::menu::{menu_event_receiver, Menu, MenuItem, PredefinedMenuItem};
 use tray_icon::{tray_event_receiver, ClickEvent, TrayIconBuilder};
 use winit::event_loop::{ControlFlow, EventLoopBuilder};
 use winit::platform::run_return::EventLoopExtRunReturn;
@@ -19,7 +19,8 @@ use tokio::sync::mpsc;
 pub fn handle_tray(shutdown: Arc<AtomicBool>, tx: mpsc::Sender<Message>) -> Result<()> {
     let tray_menu = Menu::new();
     let configure = MenuItem::new("Configure GoXLR", true, None);
-    tray_menu.append_items(&[&configure]);
+    let quit = MenuItem::new("Quit", true, None);
+    tray_menu.append_items(&[&configure, &PredefinedMenuItem::separator(), &quit]);
 
     let tray_icon = TrayIconBuilder::new()
         .with_menu(Box::new(tray_menu))
@@ -49,6 +50,11 @@ pub fn handle_tray(shutdown: Arc<AtomicBool>, tx: mpsc::Sender<Message>) -> Resu
             if event.id == configure.id() {
                 debug!("Configure Button Pressed");
                 let _ = block_on(tx.send(Message::Open));
+            }
+
+            if event.id == quit.id() {
+                debug!("Quit Button Pressed..");
+                let _ = block_on(tx.send(Message::Quit));
             }
             debug!("{:?}", event);
         }
