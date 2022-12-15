@@ -11,9 +11,9 @@ use crate::tray::event_manager::Message;
 use crate::ICON;
 use futures::executor::block_on;
 use log::debug;
-use notify::Event;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 
 pub fn handle_tray(shutdown: Arc<AtomicBool>, tx: mpsc::Sender<Message>) -> Result<()> {
@@ -42,7 +42,7 @@ pub fn handle_tray(shutdown: Arc<AtomicBool>, tx: mpsc::Sender<Message>) -> Resu
     event_loop.run_return(move |_event, _, control_flow| {
         // We set this to poll, so we can monitor both the menu, and tray icon..
         if *control_flow != ControlFlow::Exit {
-            *control_flow = ControlFlow::Poll;
+            *control_flow = ControlFlow::WaitUntil(Instant::now() + Duration::from_millis(50));
         }
 
         if let Ok(event) = menu_channel.try_recv() {
