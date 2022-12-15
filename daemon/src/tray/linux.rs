@@ -1,6 +1,5 @@
 use crate::events::EventTriggers;
-use crate::tray::event_manager::Message;
-use crate::ICON;
+use crate::{DaemonState, ICON};
 use anyhow::{anyhow, Result};
 use detect_desktop_environment::DesktopEnvironment;
 use ksni::menu::StandardItem;
@@ -15,7 +14,11 @@ use std::{env, thread};
 use tiny_skia::Pixmap;
 use tokio::sync::mpsc;
 
-pub fn handle_tray(shutdown: Arc<AtomicBool>, tx: mpsc::Sender<EventTriggers>) -> Result<()> {
+pub fn handle_tray(
+    shutdown: Arc<AtomicBool>,
+    tx: mpsc::Sender<EventTriggers>,
+    state: DaemonState,
+) -> Result<()> {
     // Attempt to immediately update the environment..
     let _ = update_environment();
 
@@ -70,7 +73,7 @@ impl GoXLRTray {
 
 impl Tray for GoXLRTray {
     fn activate(&mut self, _x: i32, _y: i32) {
-        let _ = self.tx.blocking_send(Message::Open);
+        let _ = self.tx.blocking_send(EventTriggers::OpenUi);
     }
 
     fn category(&self) -> Category {
