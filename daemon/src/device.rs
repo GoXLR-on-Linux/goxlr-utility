@@ -2176,13 +2176,7 @@ impl<'a> Device<'a> {
         if fader_to_switch.is_none() {
             // Whatever is on the fader already is going away, per windows behaviour we need to
             // ensure any mute behaviour is restored as it can no longer be tracked.
-            let (muted_to_x, _muted_to_all, _mute_function) =
-                self.profile.get_mute_button_state(fader);
-
-            if muted_to_x {
-                // Simulate a mute button tap, this should restore everything..
-                self.handle_fader_mute(fader, false).await?;
-            }
+            self.unmute_if_muted(fader).await?;
 
             // Check to see if we are dispatching of the mic channel, if so set the id.
             if existing_channel == ChannelName::Mic {
@@ -2192,6 +2186,9 @@ impl<'a> Device<'a> {
             // Now set the new fader..
             self.profile.set_fader_assignment(fader, new_channel);
             self.goxlr.set_fader(fader, new_channel)?;
+
+            // Remember to update the button states after change..
+            self.update_button_states()?;
 
             return Ok(());
         }
