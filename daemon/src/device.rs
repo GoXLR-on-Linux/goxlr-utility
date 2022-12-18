@@ -2192,7 +2192,7 @@ impl<'a> Device<'a> {
             self.goxlr.set_volume(
                 existing_channel,
                 self.profile.get_channel_volume(existing_channel),
-            );
+            )?;
 
             // Remember to update the button states after change..
             self.update_button_states()?;

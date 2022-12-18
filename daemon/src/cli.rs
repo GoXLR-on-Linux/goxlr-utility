@@ -29,6 +29,10 @@ pub struct Cli {
     #[clap(long, default_value = "localhost")]
     pub http_bind_address: String,
 
+    /// Disable the Tray Icon
+    #[clap(long)]
+    pub disable_tray: bool,
+
     /// Force Run the Daemon as Root
     #[clap(long)]
     pub force_root: bool,

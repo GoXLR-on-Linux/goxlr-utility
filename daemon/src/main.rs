@@ -189,8 +189,10 @@ async fn main() -> Result<()> {
     // Spawn the general event handler..
     let event_handle = tokio::spawn(spawn_event_handler(state.clone(), global_rx));
 
-    // Tray management has to occur on the main thread, so we'll start it now.
-    tray::handle_tray(state.clone(), global_tx.clone())?;
+    if !args.disable_tray {
+        // Tray management has to occur on the main thread, so we'll start it now.
+        tray::handle_tray(state.clone(), global_tx.clone())?;
+    }
 
     // If the tray handler dies for any reason, we should still make sure we've been asked to
     // shut down.
