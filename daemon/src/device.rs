@@ -2187,6 +2187,13 @@ impl<'a> Device<'a> {
             self.profile.set_fader_assignment(fader, new_channel);
             self.goxlr.set_fader(fader, new_channel)?;
 
+            // Due to motorised faders, the internal 'old' channel may be incorrectly set,
+            // despite our config here being valid. So we'll force update the old channel.
+            self.goxlr.set_volume(
+                existing_channel,
+                self.profile.get_channel_volume(existing_channel),
+            );
+
             // Remember to update the button states after change..
             self.update_button_states()?;
 
