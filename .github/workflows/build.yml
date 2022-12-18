@@ -60,9 +60,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "Install Dependencies"
-          run: |
-            sudo apt-get update
-            sudo apt-get install libdbus-1-dev pkg-config
+        run: |
+          sudo apt-get update
+          sudo apt-get install libdbus-1-dev pkg-config
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
