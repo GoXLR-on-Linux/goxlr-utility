@@ -49,7 +49,7 @@ pub fn handle_tray(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Resul
     tray_menu.add_native_item(Separator);
     let quit = tray_menu.add_item(MenuItemAttributes::new("Quit"));
 
-    let system_tray = SystemTrayBuilder::new(icon.clone(), Some(tray_menu))
+    let system_tray = SystemTrayBuilder::new(icon, Some(tray_menu))
         .with_id(tray_id)
         .with_tooltip("GoXLR Utility")
         .build(&event_loop)?;

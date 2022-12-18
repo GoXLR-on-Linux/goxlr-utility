@@ -446,7 +446,7 @@ impl Equalizer {
     }
 
     fn freq_value(&self, freq: f32) -> i32 {
-        ((24.0 * (freq / 20.0).log2()) as f32).round() as i32
+        (24.0 * (freq / 20.0).log2()).round() as i32
     }
 }
 

@@ -196,9 +196,9 @@ impl GenderEncoder {
         let knob_position = (self.knob_position + 24) as i32; // Between 0 and 48..
 
         match self.style {
-            GenderStyle::Narrow => ((24 * knob_position as i32) / 48 - 12) as i8,
-            GenderStyle::Medium => ((50 * knob_position as i32) / 48 - 25) as i8,
-            GenderStyle::Wide => ((100 * knob_position as i32) / 48 - 50) as i8,
+            GenderStyle::Narrow => ((24 * knob_position) / 48 - 12) as i8,
+            GenderStyle::Medium => ((50 * knob_position) / 48 - 25) as i8,
+            GenderStyle::Wide => ((100 * knob_position) / 48 - 50) as i8,
         }
     }
 

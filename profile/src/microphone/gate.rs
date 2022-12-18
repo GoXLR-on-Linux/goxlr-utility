@@ -54,7 +54,7 @@ impl Gate {
             }
 
             if attr.name.local_name == "MIC_GATE_ATTACK" {
-                let value = attr.value.parse::<c_float>()? as f32;
+                let value = attr.value.parse::<c_float>()?;
                 if value > 45. {
                     // If the value is out of range, use the default.
                     continue;
@@ -64,7 +64,7 @@ impl Gate {
             }
 
             if attr.name.local_name == "MIC_GATE_RELEASE" {
-                let value = attr.value.parse::<c_float>()? as f32;
+                let value = attr.value.parse::<c_float>()?;
                 if value > 45. {
                     continue;
                 }

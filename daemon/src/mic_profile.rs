@@ -117,9 +117,9 @@ impl MicProfileAdapter {
 
     pub fn mic_gains(&self) -> EnumMap<MicrophoneType, u16> {
         let mut gains = EnumMap::default();
-        gains[MicrophoneType::Condenser] = self.profile.setup().condenser_mic_gain() as u16;
-        gains[MicrophoneType::Dynamic] = self.profile.setup().dynamic_mic_gain() as u16;
-        gains[MicrophoneType::Jack] = self.profile.setup().trs_mic_gain() as u16;
+        gains[MicrophoneType::Condenser] = self.profile.setup().condenser_mic_gain();
+        gains[MicrophoneType::Dynamic] = self.profile.setup().dynamic_mic_gain();
+        gains[MicrophoneType::Jack] = self.profile.setup().trs_mic_gain();
 
         gains
     }

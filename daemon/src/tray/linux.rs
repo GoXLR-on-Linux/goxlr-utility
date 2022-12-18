@@ -12,7 +12,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 use std::{env, thread};
-use tao::window::CursorIcon::Default;
 use tiny_skia::Pixmap;
 use tokio::sync::mpsc;
 

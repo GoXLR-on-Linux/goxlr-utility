@@ -253,7 +253,7 @@ async fn main() -> Result<()> {
                     client
                         .command(
                             &serial,
-                            GoXLRCommand::SetSwearButtonVolume((value as i8 - 34) as i8),
+                            GoXLRCommand::SetSwearButtonVolume(value as i8 - 34),
                         )
                         .await?;
                 }

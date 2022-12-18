@@ -48,7 +48,7 @@ impl Compressor {
             }
 
             if attr.name.local_name == "MIC_COMP_RATIO" {
-                let value = attr.value.parse::<c_float>()? as f32;
+                let value = attr.value.parse::<c_float>()?;
                 if value > 14. {
                     continue;
                 }
@@ -57,7 +57,7 @@ impl Compressor {
             }
 
             if attr.name.local_name == "MIC_COMP_ATTACK" {
-                let value = attr.value.parse::<c_float>()? as f32;
+                let value = attr.value.parse::<c_float>()?;
                 if value > 19. {
                     continue;
                 }
@@ -66,7 +66,7 @@ impl Compressor {
             }
 
             if attr.name.local_name == "MIC_COMP_RELEASE" {
-                let value = attr.value.parse::<c_float>()? as f32;
+                let value = attr.value.parse::<c_float>()?;
                 if value > 19. {
                     continue;
                 }
