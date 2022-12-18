@@ -576,7 +576,7 @@ impl<'a> Device<'a> {
     }
 
     async fn mute_fader_to_x(&mut self, fader: FaderName) -> Result<()> {
-        let (muted_to_x, muted_to_all, mute_function) = self.profile.get_mute_button_state(fader);
+        let (muted_to_x, muted_to_all, _mute_function) = self.profile.get_mute_button_state(fader);
         let channel = self.profile.get_fader_assignment(fader);
         if muted_to_x || muted_to_all {
             return Ok(());
@@ -624,7 +624,7 @@ impl<'a> Device<'a> {
         }
 
         self.update_button_states()?;
-        return Ok(());
+        Ok(())
     }
 
     async fn unmute_fader(&mut self, fader: FaderName) -> Result<()> {
@@ -671,7 +671,7 @@ impl<'a> Device<'a> {
         }
 
         self.update_button_states()?;
-        return Ok(());
+        Ok(())
     }
 
     fn get_basic_input_from_channel(&self, channel: ChannelName) -> Option<BasicInputDevice> {
@@ -967,7 +967,7 @@ impl<'a> Device<'a> {
     }
 
     async fn set_hardtune(&mut self, enabled: bool) -> Result<()> {
-        self.profile.set_hardtune(enabled);
+        self.profile.set_hardtune(enabled)?;
         self.apply_effects(LinkedHashSet::from_iter([EffectKey::HardTuneEnabled]))?;
         self.set_pitch_mode()?;
 
