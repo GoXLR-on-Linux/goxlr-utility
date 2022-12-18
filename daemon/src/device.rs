@@ -578,7 +578,7 @@ impl<'a> Device<'a> {
     async fn mute_fader_to_x(&mut self, fader: FaderName) -> Result<()> {
         let (muted_to_x, muted_to_all, mute_function) = self.profile.get_mute_button_state(fader);
         let channel = self.profile.get_fader_assignment(fader);
-        if muted_to_x {
+        if muted_to_x || muted_to_all {
             return Ok(());
         }
 
@@ -1946,12 +1946,21 @@ impl<'a> Device<'a> {
                 self.load_colour_map()?;
             }
             GoXLRCommand::SetMegaphoneEnabled(enabled) => {
-                self.profile.set_megaphone(enabled)?;
-                self.load_colour_map()?;
+                self.set_megaphone(enabled).await?;
+                self.update_button_states()?;
             }
-            GoXLRCommand::SetRobotEnabled(_enabled) => {}
-            GoXLRCommand::SetHardTuneEnabled(_enabled) => {}
-            GoXLRCommand::SetFXEnabled(_enabled) => {}
+            GoXLRCommand::SetRobotEnabled(enabled) => {
+                self.set_robot(enabled).await?;
+                self.update_button_states()?;
+            }
+            GoXLRCommand::SetHardTuneEnabled(enabled) => {
+                self.set_hardtune(enabled).await?;
+                self.update_button_states()?;
+            }
+            GoXLRCommand::SetFXEnabled(enabled) => {
+                self.set_effects(enabled).await?;
+                self.update_button_states()?;
+            }
             GoXLRCommand::SetFaderMuteState(fader, state) => match state {
                 MuteState::Unmuted => self.unmute_fader(fader).await?,
                 MuteState::MutedToX => self.mute_fader_to_x(fader).await?,
