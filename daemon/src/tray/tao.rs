@@ -7,6 +7,7 @@ use crate::events::EventTriggers;
 use crate::{DaemonState, ICON};
 use futures::executor::block_on;
 use log::debug;
+use std::time::{Duration, Instant};
 use tao::event::Event;
 use tao::event::TrayEvent::LeftClick;
 use tao::menu::MenuItem::Separator;
@@ -59,8 +60,7 @@ pub fn handle_tray(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Resul
     // handle being changed, so we can exit gracefully when Ctrl+C is hit.
     event_loop.run_return(move |event, _event_loop, control_flow| {
         // We set this to poll, so we can monitor both the menu, and tray icon..
-        //*control_flow = ControlFlow::WaitUntil(Instant::now() + Duration::from_millis(50));
-        *control_flow = ControlFlow::Poll;
+        *control_flow = ControlFlow::WaitUntil(Instant::now() + Duration::from_millis(50));
 
         match event {
             Event::MenuEvent {
