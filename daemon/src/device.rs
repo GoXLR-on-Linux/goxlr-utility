@@ -305,18 +305,24 @@ impl<'a> Device<'a> {
 
     async fn on_button_hold(&mut self, button: Buttons) -> Result<()> {
         debug!("Handling Button Hold: {:?}", button);
+
+        // Fader mute buttons maintain their own state check, so it can be programmatically called.
         match button {
             Buttons::Fader1Mute => {
                 self.handle_fader_mute(FaderName::A, true).await?;
+                return Ok(());
             }
             Buttons::Fader2Mute => {
                 self.handle_fader_mute(FaderName::B, true).await?;
+                return Ok(());
             }
             Buttons::Fader3Mute => {
                 self.handle_fader_mute(FaderName::C, true).await?;
+                return Ok(());
             }
             Buttons::Fader4Mute => {
                 self.handle_fader_mute(FaderName::D, true).await?;
+                return Ok(());
             }
             Buttons::MicrophoneMute => {
                 self.handle_cough_mute(false, false, true, false).await?;
@@ -336,21 +342,25 @@ impl<'a> Device<'a> {
             Buttons::Fader1Mute => {
                 if !state.hold_handled {
                     self.handle_fader_mute(FaderName::A, false).await?;
+                    return Ok(());
                 }
             }
             Buttons::Fader2Mute => {
                 if !state.hold_handled {
                     self.handle_fader_mute(FaderName::B, false).await?;
+                    return Ok(());
                 }
             }
             Buttons::Fader3Mute => {
                 if !state.hold_handled {
                     self.handle_fader_mute(FaderName::C, false).await?;
+                    return Ok(());
                 }
             }
             Buttons::Fader4Mute => {
                 if !state.hold_handled {
                     self.handle_fader_mute(FaderName::D, false).await?;
+                    return Ok(());
                 }
             }
             Buttons::MicrophoneMute => {
@@ -434,23 +444,7 @@ impl<'a> Device<'a> {
 
     async fn handle_fader_mute(&mut self, fader: FaderName, held: bool) -> Result<()> {
         // OK, so a fader button has been pressed, we need to determine behaviour, based on the colour map..
-        let channel = self.profile.get_fader_assignment(fader);
-        let current_volume = self.profile.get_channel_volume(channel);
-
         let (muted_to_x, muted_to_all, mute_function) = self.profile.get_mute_button_state(fader);
-
-        // Map the channel to BasicInputDevice in case we need it later..
-        let basic_input = match channel {
-            ChannelName::Mic => Some(BasicInputDevice::Microphone),
-            ChannelName::LineIn => Some(BasicInputDevice::LineIn),
-            ChannelName::Console => Some(BasicInputDevice::Console),
-            ChannelName::System => Some(BasicInputDevice::System),
-            ChannelName::Game => Some(BasicInputDevice::Game),
-            ChannelName::Chat => Some(BasicInputDevice::Chat),
-            ChannelName::Sample => Some(BasicInputDevice::Samples),
-            ChannelName::Music => Some(BasicInputDevice::Music),
-            _ => None,
-        };
 
         // Should we be muting this fader to all channels?
         if held || (!muted_to_x && mute_function == MuteFunction::All) {
@@ -458,86 +452,18 @@ impl<'a> Device<'a> {
                 // Holding the button when it's already muted to all does nothing.
                 return Ok(());
             }
-
-            if !(muted_to_x && mute_function == MuteFunction::All) {
-                // If we did this on Mute to X, we don't need to do it again..
-                self.profile
-                    .set_mute_button_previous_volume(fader, current_volume)?;
-                self.goxlr.set_volume(channel, 0)?;
-                self.goxlr.set_channel_state(channel, Muted)?;
-                self.profile.set_mute_button_on(fader, true)?;
-            }
-
-            if held {
-                self.profile.set_mute_button_blink(fader, true)?;
-            }
-            self.profile.set_channel_volume(channel, 0)?;
-
-            // If we're Chat, we may need to transiently route the Microphone..
-            if channel == ChannelName::Chat {
-                self.apply_routing(BasicInputDevice::Microphone)?;
-            }
-
-            if channel == ChannelName::Mic {
-                self.apply_routing(BasicInputDevice::Microphone)?;
-            }
-
-            return Ok(());
+            self.mute_fader_to_all(fader, held).await?;
         }
 
         // Button has been pressed, and we're already in some kind of muted state..
         if !held && muted_to_x {
-            // Disable the lighting regardless of action
-            self.profile.set_mute_button_on(fader, false)?;
-            self.profile.set_mute_button_blink(fader, false)?;
-
-            if muted_to_all || mute_function == MuteFunction::All {
-                let previous_volume = self.profile.get_mute_button_previous_volume(fader);
-
-                self.goxlr.set_volume(channel, previous_volume)?;
-                self.profile.set_channel_volume(channel, previous_volume)?;
-
-                if channel != ChannelName::Mic
-                    || (channel == ChannelName::Mic && !self.mic_muted_by_cough())
-                {
-                    self.goxlr.set_channel_state(channel, Unmuted)?;
-                }
-
-                // As before, we might need transient Mic Routing..
-                if channel == ChannelName::Chat {
-                    self.apply_routing(BasicInputDevice::Microphone)?;
-                }
-
-                if channel == ChannelName::Mic {
-                    self.apply_routing(BasicInputDevice::Microphone)?;
-                }
-            }
-
-            // Always do a Transient Routing update, just in case we went from Mute to X -> Mute to All
-            if mute_function != MuteFunction::All && basic_input.is_some() {
-                self.apply_routing(basic_input.unwrap())?;
-            }
-
-            return Ok(());
+            self.unmute_fader(fader).await?;
         }
 
+        // Button has been pressed, we're not muted, and we need to transient mute..
         if !held && !muted_to_x && mute_function != MuteFunction::All {
-            // Mute channel to X via transient routing table update
-            self.profile.set_mute_button_on(fader, true)?;
-            if basic_input.is_some() {
-                self.apply_routing(basic_input.unwrap())?;
-            }
+            self.mute_fader_to_x(fader).await?;
         }
-        Ok(())
-    }
-
-    async fn unmute_if_muted(&mut self, fader: FaderName) -> Result<()> {
-        let (muted_to_x, muted_to_all, _mute_function) = self.profile.get_mute_button_state(fader);
-
-        if muted_to_x || muted_to_all {
-            self.handle_fader_mute(fader, false).await?;
-        }
-
         Ok(())
     }
 
@@ -645,6 +571,119 @@ impl<'a> Device<'a> {
         }
 
         Ok(())
+    }
+
+    async fn mute_fader_to_x(&mut self, fader: FaderName) -> Result<()> {
+        let (muted_to_x, muted_to_all, mute_function) = self.profile.get_mute_button_state(fader);
+        let channel = self.profile.get_fader_assignment(fader);
+        if muted_to_x {
+            return Ok(());
+        }
+
+        let input = self.get_basic_input_from_channel(channel);
+        self.profile.set_mute_button_on(fader, true)?;
+        if input.is_some() {
+            self.apply_routing(input.unwrap())?;
+        }
+        self.update_button_states()?;
+        Ok(())
+    }
+
+    async fn mute_fader_to_all(&mut self, fader: FaderName, blink: bool) -> Result<()> {
+        let (muted_to_x, muted_to_all, mute_function) = self.profile.get_mute_button_state(fader);
+        let channel = self.profile.get_fader_assignment(fader);
+
+        // Are we already muted to all?
+        if muted_to_all {
+            return Ok(());
+        }
+
+        // If we did this on Mute to X, we don't need to do it again..
+        if !(muted_to_x && mute_function == MuteFunction::All) {
+            let volume = self.profile.get_channel_volume(channel);
+            self.profile.set_mute_previous_volume(fader, volume)?;
+            self.goxlr.set_volume(channel, 0)?;
+            self.goxlr.set_channel_state(channel, Muted)?;
+            self.profile.set_mute_button_on(fader, true)?;
+        }
+
+        if blink {
+            self.profile.set_mute_button_blink(fader, true)?;
+        }
+        self.profile.set_channel_volume(channel, 0)?;
+
+        // If we're Chat, we may need to transiently route the Microphone..
+        if channel == ChannelName::Chat {
+            self.apply_routing(BasicInputDevice::Microphone)?;
+        }
+
+        if channel == ChannelName::Mic {
+            self.apply_routing(BasicInputDevice::Microphone)?;
+        }
+
+        self.update_button_states()?;
+        return Ok(());
+    }
+
+    async fn unmute_fader(&mut self, fader: FaderName) -> Result<()> {
+        let (muted_to_x, muted_to_all, mute_function) = self.profile.get_mute_button_state(fader);
+        let channel = self.profile.get_fader_assignment(fader);
+
+        if !muted_to_x && !muted_to_all {
+            // Nothing to do.
+            debug!("Doing Nothing?");
+            return Ok(());
+        }
+
+        // Disable the lighting regardless of action
+        self.profile.set_mute_button_on(fader, false)?;
+        self.profile.set_mute_button_blink(fader, false)?;
+
+        if muted_to_all || mute_function == MuteFunction::All {
+            // This fader has previously been 'Muted to All', we need to restore the volume..
+            let previous_volume = self.profile.get_mute_button_previous_volume(fader);
+
+            self.goxlr.set_volume(channel, previous_volume)?;
+            self.profile.set_channel_volume(channel, previous_volume)?;
+
+            if channel != ChannelName::Mic
+                || (channel == ChannelName::Mic && !self.mic_muted_by_cough())
+            {
+                self.goxlr.set_channel_state(channel, Unmuted)?;
+            }
+
+            // As before, we might need transient Mic Routing..
+            if channel == ChannelName::Chat {
+                self.apply_routing(BasicInputDevice::Microphone)?;
+            }
+
+            if channel == ChannelName::Mic {
+                self.apply_routing(BasicInputDevice::Microphone)?;
+            }
+        }
+
+        // Always do a Transient Routing update, just in case we went from Mute to X -> Mute to All
+        let input = self.get_basic_input_from_channel(channel);
+        if mute_function != MuteFunction::All && input.is_some() {
+            self.apply_routing(input.unwrap())?;
+        }
+
+        self.update_button_states()?;
+        return Ok(());
+    }
+
+    fn get_basic_input_from_channel(&self, channel: ChannelName) -> Option<BasicInputDevice> {
+        match channel {
+            ChannelName::Mic => Some(BasicInputDevice::Microphone),
+            ChannelName::LineIn => Some(BasicInputDevice::LineIn),
+            ChannelName::Console => Some(BasicInputDevice::Console),
+            ChannelName::System => Some(BasicInputDevice::System),
+            ChannelName::Game => Some(BasicInputDevice::Game),
+            ChannelName::Chat => Some(BasicInputDevice::Chat),
+            ChannelName::Sample => Some(BasicInputDevice::Samples),
+            ChannelName::Music => Some(BasicInputDevice::Music),
+            _ => None,
+        }
     }
 
     async fn handle_swear_button(&mut self, press: bool) -> Result<()> {
@@ -1061,7 +1100,7 @@ impl<'a> Device<'a> {
                 }
 
                 // Unmute the channel to prevent weirdness, then set new behaviour
-                self.unmute_if_muted(fader).await?;
+                self.unmute_fader(fader).await?;
                 self.profile.set_mute_button_behaviour(fader, behaviour);
             }
 
@@ -2187,7 +2226,7 @@ impl<'a> Device<'a> {
         if fader_to_switch.is_none() {
             // Whatever is on the fader already is going away, per windows behaviour we need to
             // ensure any mute behaviour is restored as it can no longer be tracked.
-            self.unmute_if_muted(fader).await?;
+            self.unmute_fader(fader).await?;
 
             // Check to see if we are dispatching of the mic channel, if so set the id.
             if existing_channel == ChannelName::Mic {

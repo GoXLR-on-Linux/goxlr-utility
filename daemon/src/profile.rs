@@ -816,7 +816,7 @@ impl ProfileAdapter {
         self.get_mute_button(fader).previous_volume()
     }
 
-    pub fn set_mute_button_previous_volume(&mut self, fader: FaderName, volume: u8) -> Result<()> {
+    pub fn set_mute_previous_volume(&mut self, fader: FaderName, volume: u8) -> Result<()> {
         self.get_mute_button_mut(fader).set_previous_volume(volume)
     }
 
