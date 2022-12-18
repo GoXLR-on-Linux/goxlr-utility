@@ -1291,12 +1291,6 @@ impl<'a> Device<'a> {
                 self.update_button_states()?;
             }
 
-            GoXLRCommand::SetActiveEffectPreset(preset) => {
-                // Welp, this one is simple :)
-                self.load_effect_bank(preset).await?;
-                self.update_button_states()?;
-            }
-
             GoXLRCommand::RenameActivePreset(name) => {
                 let current_bank = self
                     .profile
@@ -1901,8 +1895,25 @@ impl<'a> Device<'a> {
                     .await;
                 self.settings.save().await;
             }
-        }
 
+            GoXLRCommand::SetActiveEffectPreset(preset) => {
+                self.load_effect_bank(preset).await?;
+                self.update_button_states()?;
+            }
+            GoXLRCommand::SetActiveSamplerBank(bank) => {
+                self.load_sample_bank(bank).await?;
+                self.load_colour_map()?;
+            }
+            GoXLRCommand::SetMegaphoneEnabled(enabled) => {
+                self.profile.set_megaphone(enabled)?;
+                self.load_colour_map()?;
+            }
+            GoXLRCommand::SetRobotEnabled(_enabled) => {}
+            GoXLRCommand::SetHardTuneEnabled(_enabled) => {}
+            GoXLRCommand::SetFXEnabled(_enabled) => {}
+            GoXLRCommand::SetFaderMuteState(_fader, _state) => {}
+            GoXLRCommand::SetCoughMuteState(_state) => {}
+        }
         Ok(())
     }
 

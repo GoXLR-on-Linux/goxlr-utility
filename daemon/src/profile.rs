@@ -1071,16 +1071,22 @@ impl ProfileAdapter {
             .get_preset(current)
             .state();
 
+        self.set_megaphone(new_state)
+    }
+
+    pub fn set_megaphone(&mut self, enabled: bool) -> Result<()> {
+        let current = self.profile.settings().context().selected_effects();
+
         self.profile
             .settings_mut()
             .megaphone_effect_mut()
             .get_preset_mut(current)
-            .set_state(new_state);
+            .set_state(enabled);
         self.profile
             .settings_mut()
             .megaphone_effect_mut()
             .colour_map_mut()
-            .set_state_on(new_state)
+            .set_state_on(enabled)
     }
 
     pub fn toggle_robot(&mut self) -> Result<()> {

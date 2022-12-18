@@ -11,9 +11,9 @@ use goxlr_types::{
     CompressorRatio, CompressorReleaseTime, DisplayMode, DisplayModeComponents, EchoStyle,
     EffectBankPresets, EncoderColourTargets, EqFrequencies, FaderDisplayStyle, FaderName,
     GateTimes, GenderStyle, HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle,
-    MicrophoneType, MiniEqFrequencies, MuteFunction, OutputDevice, PitchStyle, ReverbStyle,
-    RobotRange, RobotStyle, SampleBank, SampleButtons, SamplePlayOrder, SamplePlaybackMode,
-    SamplerColourTargets, SimpleColourTargets,
+    MicrophoneType, MiniEqFrequencies, MuteFunction, MuteState, OutputDevice, PitchStyle,
+    ReverbStyle, RobotRange, RobotStyle, SampleBank, SampleButtons, SamplePlayOrder,
+    SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -116,7 +116,6 @@ pub enum GoXLRCommand {
 
     // Effect Related Settings..
     LoadEffectPreset(String),
-    SetActiveEffectPreset(EffectBankPresets),
     RenameActivePreset(String),
     SaveActivePreset(),
 
@@ -210,4 +209,14 @@ pub enum GoXLRCommand {
     // General Settings
     SetMuteHoldDuration(u16),
     SetVCMuteAlsoMuteCM(bool),
+
+    // These control the current GoXLR 'State'..
+    SetActiveEffectPreset(EffectBankPresets),
+    SetActiveSamplerBank(SampleBank),
+    SetMegaphoneEnabled(bool),
+    SetRobotEnabled(bool),
+    SetHardTuneEnabled(bool),
+    SetFXEnabled(bool),
+    SetFaderMuteState(FaderName, MuteState),
+    SetCoughMuteState(MuteState),
 }
