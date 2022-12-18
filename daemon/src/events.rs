@@ -40,8 +40,6 @@ pub async fn spawn_event_handler(state: DaemonState, mut rx: Receiver<EventTrigg
                 break;
             },
             Some(event) = rx.recv() => {
-                debug!("{:?}", event);
-
                 match event {
                     EventTriggers::Stop => {
                         // This is essentially the same as Ctrl+C..

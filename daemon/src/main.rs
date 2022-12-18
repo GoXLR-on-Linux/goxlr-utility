@@ -176,8 +176,6 @@ async fn main() -> Result<()> {
         warn!("HTTP Server Disabled");
     }
 
-    let tray_shutdown = shutdown_blocking.clone();
-
     let mut local_shutdown = shutdown.clone();
     let state = DaemonState {
         show_tray,
@@ -192,7 +190,7 @@ async fn main() -> Result<()> {
     let event_handle = tokio::spawn(spawn_event_handler(state.clone(), global_rx));
 
     // Tray management has to occur on the main thread, so we'll start it now.
-    tray::handle_tray(tray_shutdown, global_tx.clone(), state.clone())?;
+    tray::handle_tray(state.clone(), global_tx.clone())?;
 
     // If the tray handler dies for any reason, we should still make sure we've been asked to
     // shut down.

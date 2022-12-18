@@ -2,7 +2,8 @@ use crate::events::EventTriggers;
 use crate::{DaemonState, ICON};
 use anyhow::{anyhow, Result};
 use detect_desktop_environment::DesktopEnvironment;
-use ksni::menu::StandardItem;
+use goxlr_ipc::PathTypes::{Icons, MicProfiles, Presets, Profiles, Samples};
+use ksni::menu::{StandardItem, SubMenu};
 use ksni::{Category, Icon, MenuItem, Status, ToolTip, Tray, TrayService};
 use log::debug;
 use std::collections::HashMap;
@@ -11,14 +12,11 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 use std::{env, thread};
+use tao::window::CursorIcon::Default;
 use tiny_skia::Pixmap;
 use tokio::sync::mpsc;
 
-pub fn handle_tray(
-    shutdown: Arc<AtomicBool>,
-    tx: mpsc::Sender<EventTriggers>,
-    state: DaemonState,
-) -> Result<()> {
+pub fn handle_tray(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Result<()> {
     // Attempt to immediately update the environment..
     let _ = update_environment();
 
@@ -27,7 +25,7 @@ pub fn handle_tray(
     tray_service.spawn();
 
     let mut count = 0;
-    while !shutdown.load(Ordering::Relaxed) {
+    while !state.shutdown_blocking.load(Ordering::Relaxed) {
         thread::sleep(Duration::from_millis(100));
 
         count += 1;
@@ -115,14 +113,74 @@ impl Tray for GoXLRTray {
     }
 
     fn menu(&self) -> Vec<MenuItem<Self>> {
-        vec![StandardItem {
-            label: String::from("Configure GoXLR"),
-            activate: Box::new(|this: &mut GoXLRTray| {
-                let _ = this.tx.blocking_send(EventTriggers::OpenUi);
-            }),
-            ..Default::default()
-        }
-        .into()]
+        vec![
+            StandardItem {
+                label: String::from("Configure GoXLR"),
+                activate: Box::new(|this: &mut GoXLRTray| {
+                    let _ = this.tx.blocking_send(EventTriggers::OpenUi);
+                }),
+                ..Default::default()
+            }
+            .into(),
+            MenuItem::Separator,
+            SubMenu {
+                label: String::from("Open Path"),
+                submenu: vec![
+                    StandardItem {
+                        label: String::from("Profiles"),
+                        activate: Box::new(|this: &mut GoXLRTray| {
+                            let _ = this.tx.blocking_send(EventTriggers::Open(Profiles));
+                        }),
+                        ..Default::default()
+                    }
+                    .into(),
+                    StandardItem {
+                        label: String::from("Mic Profiles"),
+                        activate: Box::new(|this: &mut GoXLRTray| {
+                            let _ = this.tx.blocking_send(EventTriggers::Open(MicProfiles));
+                        }),
+                        ..Default::default()
+                    }
+                    .into(),
+                    MenuItem::Separator,
+                    StandardItem {
+                        label: String::from("Presets"),
+                        activate: Box::new(|this: &mut GoXLRTray| {
+                            let _ = this.tx.blocking_send(EventTriggers::Open(Presets));
+                        }),
+                        ..Default::default()
+                    }
+                    .into(),
+                    StandardItem {
+                        label: String::from("Samples"),
+                        activate: Box::new(|this: &mut GoXLRTray| {
+                            let _ = this.tx.blocking_send(EventTriggers::Open(Samples));
+                        }),
+                        ..Default::default()
+                    }
+                    .into(),
+                    StandardItem {
+                        label: String::from("Icons"),
+                        activate: Box::new(|this: &mut GoXLRTray| {
+                            let _ = this.tx.blocking_send(EventTriggers::Open(Icons));
+                        }),
+                        ..Default::default()
+                    }
+                    .into(),
+                ],
+                ..Default::default()
+            }
+            .into(),
+            MenuItem::Separator,
+            StandardItem {
+                label: String::from("Quit"),
+                activate: Box::new(|this: &mut GoXLRTray| {
+                    let _ = this.tx.blocking_send(EventTriggers::Stop);
+                }),
+                ..Default::default()
+            }
+            .into(),
+        ]
     }
 }
 
