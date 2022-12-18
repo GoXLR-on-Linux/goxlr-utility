@@ -18,7 +18,7 @@ use goxlr_ipc::{
 use goxlr_profile_loader::components::mute::MuteFunction;
 use goxlr_types::{
     Button, ChannelName, DisplayModeComponents, EffectBankPresets, EffectKey, EncoderName,
-    FaderName, HardTuneSource, InputDevice as BasicInputDevice, MicrophoneParamKey,
+    FaderName, HardTuneSource, InputDevice as BasicInputDevice, MicrophoneParamKey, MuteState,
     OutputDevice as BasicOutputDevice, RobotRange, SampleBank, SampleButtons, SamplePlaybackMode,
     VersionNumber,
 };
@@ -392,16 +392,18 @@ impl<'a> Device<'a> {
             // The following 3 are simple, but will need more work once effects are
             // actually applied!
             Buttons::EffectMegaphone => {
-                self.toggle_megaphone().await?;
+                self.set_megaphone(!self.profile.is_megaphone_enabled(true))
+                    .await?;
             }
             Buttons::EffectRobot => {
-                self.toggle_robot().await?;
+                self.set_robot(!self.profile.is_robot_enabled(true)).await?;
             }
             Buttons::EffectHardTune => {
-                self.toggle_hardtune().await?;
+                self.set_hardtune(!self.profile.is_hardtune_enabled(true))
+                    .await?;
             }
             Buttons::EffectFx => {
-                self.toggle_effects().await?;
+                self.set_effects(!self.profile.is_fx_enabled()).await?;
             }
 
             Buttons::SamplerSelectA => {
@@ -952,20 +954,20 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
-    async fn toggle_megaphone(&mut self) -> Result<()> {
-        self.profile.toggle_megaphone()?;
+    async fn set_megaphone(&mut self, enabled: bool) -> Result<()> {
+        self.profile.set_megaphone(enabled)?;
         self.apply_effects(LinkedHashSet::from_iter([EffectKey::MegaphoneEnabled]))?;
         Ok(())
     }
 
-    async fn toggle_robot(&mut self) -> Result<()> {
-        self.profile.toggle_robot()?;
+    async fn set_robot(&mut self, enabled: bool) -> Result<()> {
+        self.profile.set_robot(enabled)?;
         self.apply_effects(LinkedHashSet::from_iter([EffectKey::RobotEnabled]))?;
         Ok(())
     }
 
-    async fn toggle_hardtune(&mut self) -> Result<()> {
-        self.profile.toggle_hardtune()?;
+    async fn set_hardtune(&mut self, enabled: bool) -> Result<()> {
+        self.profile.set_hardtune(enabled);
         self.apply_effects(LinkedHashSet::from_iter([EffectKey::HardTuneEnabled]))?;
         self.set_pitch_mode()?;
 
@@ -977,8 +979,8 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
-    async fn toggle_effects(&mut self) -> Result<()> {
-        self.profile.toggle_effects()?;
+    async fn set_effects(&mut self, enabled: bool) -> Result<()> {
+        self.profile.set_effects(enabled)?;
 
         // When this changes, we need to update all the 'Enabled' keys..
         let mut key_updates = LinkedHashSet::new();
@@ -1950,7 +1952,11 @@ impl<'a> Device<'a> {
             GoXLRCommand::SetRobotEnabled(_enabled) => {}
             GoXLRCommand::SetHardTuneEnabled(_enabled) => {}
             GoXLRCommand::SetFXEnabled(_enabled) => {}
-            GoXLRCommand::SetFaderMuteState(_fader, _state) => {}
+            GoXLRCommand::SetFaderMuteState(fader, state) => match state {
+                MuteState::Unmuted => self.unmute_fader(fader).await?,
+                MuteState::MutedToX => self.mute_fader_to_x(fader).await?,
+                MuteState::MutedToAll => self.mute_fader_to_all(fader, true).await?,
+            },
             GoXLRCommand::SetCoughMuteState(_state) => {}
         }
         Ok(())

@@ -1061,19 +1061,6 @@ impl ProfileAdapter {
         Ok(())
     }
 
-    pub fn toggle_megaphone(&mut self) -> Result<()> {
-        let current = self.profile.settings().context().selected_effects();
-
-        let new_state = !self
-            .profile
-            .settings()
-            .megaphone_effect()
-            .get_preset(current)
-            .state();
-
-        self.set_megaphone(new_state)
-    }
-
     pub fn set_megaphone(&mut self, enabled: bool) -> Result<()> {
         let current = self.profile.settings().context().selected_effects();
 
@@ -1089,61 +1076,41 @@ impl ProfileAdapter {
             .set_state_on(enabled)
     }
 
-    pub fn toggle_robot(&mut self) -> Result<()> {
+    pub fn set_robot(&mut self, enable: bool) -> Result<()> {
         let current = self.profile.settings().context().selected_effects();
-
-        let new_state = !self
-            .profile
-            .settings()
-            .robot_effect()
-            .get_preset(current)
-            .state();
-
         self.profile
             .settings_mut()
             .robot_effect_mut()
             .get_preset_mut(current)
-            .set_state(new_state);
+            .set_state(enable);
         self.profile
             .settings_mut()
             .robot_effect_mut()
             .colour_map_mut()
-            .set_state_on(new_state)
+            .set_state_on(enable)
     }
 
-    pub fn toggle_hardtune(&mut self) -> Result<()> {
+    pub fn set_hardtune(&mut self, enabled: bool) -> Result<()> {
         let current = self.profile.settings().context().selected_effects();
 
-        let new_state = !self
-            .profile
-            .settings()
-            .hardtune_effect()
-            .get_preset(current)
-            .state();
         self.profile
             .settings_mut()
             .hardtune_effect_mut()
             .get_preset_mut(current)
-            .set_state(new_state);
+            .set_state(enabled);
         self.profile
             .settings_mut()
             .hardtune_effect_mut()
             .colour_map_mut()
-            .set_state_on(new_state)
+            .set_state_on(enabled)
     }
 
-    pub fn toggle_effects(&mut self) -> Result<()> {
-        let state = !self
-            .profile
-            .settings()
-            .simple_element(SimpleElements::FxClear)
-            .colour_map()
-            .get_state();
+    pub fn set_effects(&mut self, enabled: bool) -> Result<()> {
         self.profile
             .settings_mut()
             .simple_element_mut(SimpleElements::FxClear)
             .colour_map_mut()
-            .set_state_on(state)
+            .set_state_on(enabled)
     }
 
     pub fn get_pitch_knob_position(&self) -> i8 {
