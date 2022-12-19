@@ -181,6 +181,11 @@ async fn main() -> Result<()> {
                             )
                             .await?;
                     }
+                    FaderCommands::MuteState { fader, state } => {
+                        client
+                            .command(&serial, GoXLRCommand::SetFaderMuteState(*fader, *state))
+                            .await?;
+                    }
                     FaderCommands::Scribbles { command } => match command {
                         Scribbles::Icon { fader, name } => {
                             client
@@ -679,6 +684,11 @@ async fn main() -> Result<()> {
                                 .await
                                 .context("Unable to Set Megaphone Post-Gain")?;
                         }
+                        Megaphone::State { enabled } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetMegaphoneEnabled(*enabled))
+                                .await?;
+                        }
                     },
                     EffectsCommands::Robot { command } => match command {
                         Robot::Style { style } => {
@@ -729,6 +739,11 @@ async fn main() -> Result<()> {
                                 .await
                                 .context("Unable to set Robot Dry Mix")?;
                         }
+                        Robot::State { enabled } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetRobotEnabled(*enabled))
+                                .await?;
+                        }
                     },
                     EffectsCommands::HardTune { command } => match command {
                         HardTune::Style { style } => {
@@ -761,7 +776,17 @@ async fn main() -> Result<()> {
                                 .await
                                 .context("Unable to set HardTune Source")?;
                         }
+                        HardTune::State { enabled } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetHardTuneEnabled(*enabled))
+                                .await?;
+                        }
                     },
+                    EffectsCommands::State { enabled } => {
+                        client
+                            .command(&serial, GoXLRCommand::SetFXEnabled(*enabled))
+                            .await?;
+                    }
                 },
                 SubCommands::Sampler { command } => match command {
                     SamplerCommands::Add { bank, button, file } => {

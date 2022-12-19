@@ -3,9 +3,9 @@ use goxlr_types::{
     Button, ButtonColourGroups, ButtonColourOffStyle, ChannelName, CompressorAttackTime,
     CompressorRatio, CompressorReleaseTime, EchoStyle, EffectBankPresets, EncoderColourTargets,
     EqFrequencies, FaderDisplayStyle, FaderName, GateTimes, GenderStyle, HardTuneSource,
-    HardTuneStyle, InputDevice, MegaphoneStyle, MiniEqFrequencies, MuteFunction, OutputDevice,
-    PitchStyle, ReverbStyle, RobotRange, RobotStyle, SampleBank, SampleButtons, SamplePlayOrder,
-    SamplePlaybackMode, SimpleColourTargets,
+    HardTuneStyle, InputDevice, MegaphoneStyle, MiniEqFrequencies, MuteFunction, MuteState,
+    OutputDevice, PitchStyle, ReverbStyle, RobotRange, RobotStyle, SampleBank, SampleButtons,
+    SamplePlayOrder, SamplePlaybackMode, SimpleColourTargets,
 };
 use std::str::FromStr;
 
@@ -484,6 +484,17 @@ pub enum FaderCommands {
         mute_behaviour: MuteFunction,
     },
 
+    /// Sets the Current Mute State of the Fader
+    MuteState {
+        /// The Fader to Change
+        #[clap(arg_enum)]
+        fader: FaderName,
+
+        /// The new State
+        #[clap(arg_enum)]
+        state: MuteState,
+    },
+
     Scribbles {
         #[clap(subcommand)]
         command: Scribbles,
@@ -757,6 +768,11 @@ pub enum EffectsCommands {
         #[clap(subcommand)]
         command: HardTune,
     },
+
+    /// Sets the current state of the FX
+    State {
+        enabled: bool,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -881,6 +897,9 @@ pub enum Megaphone {
 
     /// Set the Post Processing Gain
     PostGain { gain: i8 },
+
+    /// Sets the State of the Megaphone Button
+    State { enabled: bool },
 }
 
 #[derive(Subcommand, Debug)]
@@ -930,13 +949,16 @@ pub enum Robot {
 
     /// Sets the Robot Dry Mix
     DryMix { dry_mix: i8 },
+
+    /// Sets the Current state of the Robot Button
+    State { enabled: bool },
 }
 
 #[derive(Subcommand, Debug)]
 #[clap(setting = AppSettings::DeriveDisplayOrder)]
 #[clap(setting = AppSettings::ArgRequiredElseHelp)]
 pub enum HardTune {
-    /// Sets the Hard Tune Style    
+    /// Sets the Hard Tune Style
     Style {
         #[clap(arg_enum)]
         style: HardTuneStyle,
@@ -956,6 +978,9 @@ pub enum HardTune {
         #[clap(arg_enum)]
         source: HardTuneSource,
     },
+
+    /// Sets the current state of the HardTune Button
+    State { enabled: bool },
 }
 
 #[derive(Subcommand, Debug)]
