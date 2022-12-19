@@ -184,6 +184,7 @@ pub enum GoXLRCommand {
     SetSampleStopPercent(SampleBank, SampleButtons, usize, f32),
     RemoveSampleByIndex(SampleBank, SampleButtons, usize),
     PlaySampleByIndex(SampleBank, SampleButtons, usize),
+    PlayNextSample(SampleBank, SampleButtons),
     StopSamplePlayback(SampleBank, SampleButtons),
 
     // Scribbles

@@ -1764,6 +1764,10 @@ impl<'a> Device<'a> {
                 )
                 .await?;
             }
+            GoXLRCommand::PlayNextSample(bank, button) => {
+                let track = self.profile.get_track_by_bank_button(bank, button)?;
+                self.play_audio_file(bank, button, track, false).await?;
+            }
             GoXLRCommand::StopSamplePlayback(bank, button) => {
                 self.stop_sample_playback(bank, button).await?;
             }

@@ -1547,6 +1547,24 @@ impl ProfileAdapter {
         bail!("Unable to find track");
     }
 
+    pub fn get_track_by_bank_button(
+        &mut self,
+        bank: goxlr_types::SampleBank,
+        button: goxlr_types::SampleButtons,
+    ) -> Result<AudioFile> {
+        let track = self
+            .profile
+            .settings_mut()
+            .sample_button_mut(standard_to_profile_sample_button(button))
+            .get_stack_mut(standard_to_profile_sample_bank(bank))
+            .get_next_track();
+
+        if let Some(track) = track {
+            return Ok(ProfileAdapter::track_to_audio(track));
+        }
+        bail!("Unable to find track");
+    }
+
     pub fn track_to_audio(track: &Track) -> AudioFile {
         let mut gain = None;
         let mut start_pct = None;
