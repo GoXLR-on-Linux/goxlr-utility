@@ -98,7 +98,7 @@ impl CpalAudioOutputImpl {
         );
 
         if stream_result.is_err() {
-            return Err(anyhow!("Unable to open Stream"));
+            return Err(anyhow!("Unable to open Stream: {:?}", stream_result.err()));
         }
 
         let stream = stream_result.unwrap();
