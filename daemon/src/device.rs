@@ -1763,13 +1763,16 @@ impl<'a> Device<'a> {
                     false,
                 )
                 .await?;
+                self.update_button_states()?;
             }
             GoXLRCommand::PlayNextSample(bank, button) => {
                 let track = self.profile.get_track_by_bank_button(bank, button)?;
                 self.play_audio_file(bank, button, track, false).await?;
+                self.update_button_states()?;
             }
             GoXLRCommand::StopSamplePlayback(bank, button) => {
                 self.stop_sample_playback(bank, button).await?;
+                self.update_button_states()?;
             }
 
             GoXLRCommand::SetScribbleIcon(fader, icon) => {
