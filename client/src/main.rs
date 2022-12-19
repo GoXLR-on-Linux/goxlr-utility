@@ -684,7 +684,7 @@ async fn main() -> Result<()> {
                                 .await
                                 .context("Unable to Set Megaphone Post-Gain")?;
                         }
-                        Megaphone::State { enabled } => {
+                        Megaphone::Enabled { enabled } => {
                             client
                                 .command(&serial, GoXLRCommand::SetMegaphoneEnabled(*enabled))
                                 .await?;
@@ -739,7 +739,7 @@ async fn main() -> Result<()> {
                                 .await
                                 .context("Unable to set Robot Dry Mix")?;
                         }
-                        Robot::State { enabled } => {
+                        Robot::Enabled { enabled } => {
                             client
                                 .command(&serial, GoXLRCommand::SetRobotEnabled(*enabled))
                                 .await?;
@@ -776,13 +776,13 @@ async fn main() -> Result<()> {
                                 .await
                                 .context("Unable to set HardTune Source")?;
                         }
-                        HardTune::State { enabled } => {
+                        HardTune::Enabled { enabled } => {
                             client
                                 .command(&serial, GoXLRCommand::SetHardTuneEnabled(*enabled))
                                 .await?;
                         }
                     },
-                    EffectsCommands::State { enabled } => {
+                    EffectsCommands::Enabled { enabled } => {
                         client
                             .command(&serial, GoXLRCommand::SetFXEnabled(*enabled))
                             .await?;

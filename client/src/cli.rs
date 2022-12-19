@@ -523,6 +523,8 @@ pub enum Scribbles {
     Invert {
         #[clap(arg_enum)]
         fader: FaderName,
+
+        #[clap(parse(try_from_str))]
         inverted: bool,
     },
 }
@@ -770,7 +772,8 @@ pub enum EffectsCommands {
     },
 
     /// Sets the current state of the FX
-    State {
+    Enabled {
+        #[clap(parse(try_from_str))]
         enabled: bool,
     },
 }
@@ -899,7 +902,10 @@ pub enum Megaphone {
     PostGain { gain: i8 },
 
     /// Sets the State of the Megaphone Button
-    State { enabled: bool },
+    Enabled {
+        #[clap(parse(try_from_str))]
+        enabled: bool,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -951,7 +957,10 @@ pub enum Robot {
     DryMix { dry_mix: i8 },
 
     /// Sets the Current state of the Robot Button
-    State { enabled: bool },
+    Enabled {
+        #[clap(parse(try_from_str))]
+        enabled: bool,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -980,7 +989,10 @@ pub enum HardTune {
     },
 
     /// Sets the current state of the HardTune Button
-    State { enabled: bool },
+    Enabled {
+        #[clap(parse(try_from_str))]
+        enabled: bool,
+    },
 }
 
 #[derive(Subcommand, Debug)]
