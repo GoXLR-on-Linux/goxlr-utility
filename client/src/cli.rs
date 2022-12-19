@@ -1038,6 +1038,14 @@ pub enum SamplerCommands {
         index: usize,
     },
 
+    PlayNextTrack {
+        #[clap(arg_enum)]
+        bank: SampleBank,
+
+        #[clap(arg_enum)]
+        button: SampleButtons,
+    },
+
     StopPlayback {
         #[clap(arg_enum)]
         bank: SampleBank,

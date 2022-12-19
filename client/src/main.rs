@@ -824,6 +824,11 @@ async fn main() -> Result<()> {
                             .await
                             .context("Unable to Play Sample")?;
                     }
+                    SamplerCommands::PlayNextTrack { bank, button } => {
+                        client
+                            .command(&serial, GoXLRCommand::PlayNextSample(*bank, *button))
+                            .await?;
+                    }
                     SamplerCommands::StopPlayback { bank, button } => {
                         client
                             .command(&serial, GoXLRCommand::StopSamplePlayback(*bank, *button))
