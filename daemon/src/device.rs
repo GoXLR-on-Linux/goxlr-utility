@@ -576,10 +576,15 @@ impl<'a> Device<'a> {
     }
 
     async fn mute_fader_to_x(&mut self, fader: FaderName) -> Result<()> {
-        let (muted_to_x, muted_to_all, _mute_function) = self.profile.get_mute_button_state(fader);
+        let (muted_to_x, muted_to_all, mute_function) = self.profile.get_mute_button_state(fader);
         let channel = self.profile.get_fader_assignment(fader);
         if muted_to_x || muted_to_all {
             return Ok(());
+        }
+
+        if mute_function == MuteFunction::All {
+            // Throw this across to the 'Mute to All' code..
+            return self.mute_fader_to_all(fader, false).await;
         }
 
         let input = self.get_basic_input_from_channel(channel);
