@@ -578,6 +578,10 @@ impl<'a> Device<'a> {
     async fn mute_fader_to_x(&mut self, fader: FaderName) -> Result<()> {
         let (muted_to_x, muted_to_all, mute_function) = self.profile.get_mute_button_state(fader);
         let channel = self.profile.get_fader_assignment(fader);
+        if muted_to_all {
+            bail!("Unable to Transition from MutedToAll to MutedToX");
+        }
+
         if muted_to_x || muted_to_all {
             return Ok(());
         }
