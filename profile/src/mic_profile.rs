@@ -222,7 +222,7 @@ impl MicProfileSettings {
         self.bleep_level
     }
     pub fn set_bleep_level(&mut self, bleep_level: i8) -> Result<()> {
-        if !(-34..=0).contains(&bleep_level) {
+        if !(-36..=0).contains(&bleep_level) {
             return Err(anyhow!("Bleep level should be between -34 and 0"));
         }
         self.bleep_level = bleep_level;
