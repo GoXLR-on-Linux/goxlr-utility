@@ -14,7 +14,7 @@ use std::fs::{create_dir_all, File};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use futures::channel::mpsc::{channel, Receiver};
 use futures::executor::block_on;
 use futures::{SinkExt, StreamExt};
@@ -28,6 +28,7 @@ use tokio::sync::mpsc::Sender;
 
 use crate::{SettingsHandle, Shutdown, DISTRIBUTABLE_ROOT};
 
+// This should probably be handled with an EnumSet..
 #[derive(Debug)]
 pub struct FilePaths {
     profiles: PathBuf,
@@ -44,8 +45,52 @@ pub struct FileManager {
 
 impl FileManager {
     pub fn new(settings: &SettingsHandle) -> Self {
-        Self {
-            paths: get_file_paths_from_settings(settings),
+        let paths = get_file_paths_from_settings(settings);
+        FileManager::create_paths(&paths);
+
+        Self { paths }
+    }
+
+    pub fn create_paths(paths: &FilePaths) {
+        if !paths.profiles.exists() {
+            if let Err(e) = create_path(&paths.profiles) {
+                warn!("Unable to Create Path: {:?}, {}", &paths.profiles, e);
+            } else if let Err(e) = extract_defaults(PathTypes::Profiles, &paths.profiles) {
+                warn!("Unable to Extract Default Profiles: {}", e);
+            }
+        }
+
+        // Microphone Path..
+        if !&paths.mic_profiles.exists() {
+            if let Err(e) = create_path(&paths.mic_profiles) {
+                warn!("Unable to Create Path: {:?}, {}", &paths.mic_profiles, e);
+            }
+        }
+
+        // Presets Path..
+        if !&paths.presets.exists() {
+            if let Err(e) = create_path(&paths.presets) {
+                warn!("Unable to Create Path: {:?}, {}", &paths.presets, e);
+            } else if let Err(e) = extract_defaults(PathTypes::Presets, &paths.presets) {
+                warn!("Unable to Extract Default Presets: {}", e);
+            }
+        }
+
+        // Icons..
+        if !&paths.icons.exists() {
+            if let Err(e) = create_path(&paths.icons) {
+                warn!("Unable to Create Path: {:?}, {}", &paths.icons, e);
+            } else if let Err(e) = extract_defaults(PathTypes::Icons, &paths.icons) {
+                warn!("Unable to Extract Default Icons: {}", e);
+            }
+        }
+
+        // This will create the Samples and Samples/Recorded directories
+        let recorded_path = &paths.samples.join("Recorded");
+        if !recorded_path.exists() {
+            if let Err(e) = create_path(recorded_path) {
+                warn!("Unable to Create Path: {:?}, {}", recorded_path, e);
+            }
         }
     }
 
@@ -135,14 +180,6 @@ impl FileManager {
         extensions: Vec<&str>,
         with_extension: bool,
     ) -> Vec<String> {
-        if let Err(error) = create_path(&path) {
-            warn!(
-                "Unable to create path: {}: {}",
-                &path.to_string_lossy(),
-                error
-            );
-        }
-
         if let Ok(list) = path.read_dir() {
             return list
                 .filter_map(|entry| {
@@ -190,7 +227,6 @@ impl FileManager {
     }
 }
 
-//pub async fn run_notification_service(&self, sender: Sender<PathTypes>) -> Result<()> {
 pub async fn spawn_file_notification_service(
     paths: FilePaths,
     sender: Sender<PathTypes>,
@@ -208,17 +244,16 @@ pub async fn spawn_file_notification_service(
     // Add the Paths to the Watcher..
     if let Err(error) = watcher.watch(&paths.profiles, RecursiveMode::NonRecursive) {
         warn!("Unable to Monitor Profiles Path: {:?}", error);
-    };
+    }
     if let Err(error) = watcher.watch(&paths.mic_profiles, RecursiveMode::NonRecursive) {
         warn!("Unable to Monitor the Microphone Profile Path {:?}", error);
-    };
+    }
     if let Err(error) = watcher.watch(&paths.presets, RecursiveMode::NonRecursive) {
         warn!("Unable to Monitor the Presets Path: {:?}", error)
-    };
+    }
     if let Err(error) = watcher.watch(&paths.icons, RecursiveMode::NonRecursive) {
         warn!("Unable to monitor the Icons Path: {:?}", error);
     }
-
     if let Err(error) = watcher.watch(&paths.samples, RecursiveMode::Recursive) {
         warn!("Unable to Monitor the Samples Path: {:?}", error);
     }
@@ -357,7 +392,9 @@ pub fn create_path(path: &Path) -> Result<()> {
 
 pub fn can_create_new_file(path: PathBuf) -> Result<()> {
     if let Some(parent) = path.parent() {
-        create_path(parent)?;
+        if !parent.exists() {
+            bail!("Parent Directory doesn't exist");
+        }
     }
 
     if path.exists() {
@@ -370,5 +407,9 @@ pub fn can_create_new_file(path: PathBuf) -> Result<()> {
     // Remove the file again.
     fs::remove_file(&path)?;
 
+    Ok(())
+}
+
+fn extract_defaults(_file_type: PathTypes, _path: &Path) -> Result<()> {
     Ok(())
 }

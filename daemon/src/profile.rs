@@ -44,7 +44,7 @@ use goxlr_types::{
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::colouring::ColourTargets;
 
-use crate::files::{can_create_new_file, create_path};
+use crate::files::can_create_new_file;
 
 pub const DEFAULT_PROFILE_NAME: &str = "DEFAULT";
 const DEFAULT_PROFILE: &[u8] = include_bytes!("../profiles/DEFAULT.goxlr");
@@ -114,8 +114,6 @@ impl ProfileAdapter {
 
     pub fn write_profile(&mut self, name: String, directory: &Path, overwrite: bool) -> Result<()> {
         let path = directory.join(format!("{}.goxlr", name));
-        create_path(directory)?;
-
         if !overwrite && path.is_file() {
             return Err(anyhow!("Profile exists, will not overwrite"));
         }
@@ -133,7 +131,6 @@ impl ProfileAdapter {
 
     pub fn write_preset(&mut self, name: String, directory: &Path) -> Result<()> {
         let path = directory.join(format!("{}.preset", name));
-        create_path(directory)?;
         self.profile.save_preset(path)?;
         Ok(())
     }

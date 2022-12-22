@@ -1,6 +1,5 @@
 use crate::device::Device;
 use crate::events::EventTriggers;
-use crate::files::create_path;
 use crate::{FileManager, PatchEvent, SettingsHandle, Shutdown, VERSION};
 use anyhow::{anyhow, Result};
 use goxlr_ipc::{
@@ -57,25 +56,6 @@ pub async fn spawn_usb_handler(
     // Create the Primary Device List, and 'Ignore' list..
     let mut devices: HashMap<String, Device> = HashMap::new();
     let mut ignore_list = HashMap::new();
-
-    // Attempt to create the needed paths..
-    if let Err(error) = create_path(&settings.get_profile_directory().await) {
-        warn!("Unable to create profile directory: {}", error);
-    }
-
-    if let Err(error) = create_path(&settings.get_mic_profile_directory().await) {
-        warn!("Unable to create mic profile directory: {}", error);
-    }
-
-    let samples_path = &settings.get_samples_directory().await;
-    if let Err(error) = create_path(samples_path) {
-        warn!("Unable to create samples directory: {}", error);
-    }
-
-    let recorded_path = samples_path.join("Recorded/");
-    if let Err(error) = create_path(&recorded_path) {
-        warn!("Unable to create samples directory: {}", error);
-    }
 
     let mut files = get_files(&mut file_manager).await;
     let mut daemon_status = get_daemon_status(&devices, &settings, files.clone()).await;

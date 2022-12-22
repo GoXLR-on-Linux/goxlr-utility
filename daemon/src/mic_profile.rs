@@ -1,4 +1,4 @@
-use crate::files::{can_create_new_file, create_path};
+use crate::files::can_create_new_file;
 use crate::profile::ProfileAdapter;
 use anyhow::{anyhow, Context, Result};
 use byteorder::{ByteOrder, LittleEndian};
@@ -86,8 +86,6 @@ impl MicProfileAdapter {
 
     pub fn write_profile(&mut self, name: String, directory: &Path, overwrite: bool) -> Result<()> {
         let path = directory.join(format!("{}.goxlrMicProfile", name));
-        create_path(directory)?;
-
         if !overwrite && path.is_file() {
             return Err(anyhow!("Profile exists, will not overwrite"));
         }
