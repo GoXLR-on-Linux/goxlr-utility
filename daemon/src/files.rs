@@ -9,9 +9,11 @@ secondly because it's managing different types of files
  */
 
 use std::collections::BTreeMap;
+use std::ffi::OsString;
 use std::fs;
 use std::fs::{create_dir_all, File};
 use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
 use anyhow::{anyhow, bail, Context, Result};
@@ -410,6 +412,62 @@ pub fn can_create_new_file(path: PathBuf) -> Result<()> {
     Ok(())
 }
 
-fn extract_defaults(_file_type: PathTypes, _path: &Path) -> Result<()> {
+const ASSET_BINARY: &str = "goxlr-assets";
+fn extract_defaults(_file_type: PathTypes, path: &Path) -> Result<()> {
+    let binary_name = if cfg!(target_os = "windows") {
+        format!("{}.exe", ASSET_BINARY)
+    } else {
+        String::from(ASSET_BINARY)
+    };
+
+    let mut binary_path = None;
+
+    // There are three possible places to check for this, the CWD, the binary WD, and $PATH
+    let cwd = std::env::current_dir()?.join(binary_name.clone());
+    if cwd.exists() {
+        binary_path.replace(cwd);
+    }
+
+    if binary_path.is_none() {
+        if let Some(parent) = std::env::current_exe()?.parent() {
+            let bin = parent.join(binary_name.clone());
+            if bin.exists() {
+                binary_path.replace(bin);
+            }
+        }
+    }
+
+    let final_bin = if let Some(path) = binary_path {
+        path.into_os_string()
+    } else {
+        OsString::from(binary_name)
+    };
+
+    let file_type = match _file_type {
+        PathTypes::Profiles => "profiles",
+        PathTypes::Presets => "presets",
+        PathTypes::Icons => "icons",
+        _ => bail!("Invalid File Type Specified"),
+    };
+
+    let command = Command::new(final_bin)
+        .arg(file_type)
+        .arg(path)
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .output();
+
+    match command {
+        Ok(output) => {
+            if !output.status.success() {
+                if let Some(code) = output.status.code() {
+                    bail!("Unable to extract asset, Error Code: {}", code);
+                }
+            }
+        }
+        Err(error) => {
+            bail!("Unable to run Asset extractor: {}", error);
+        }
+    }
     Ok(())
 }
