@@ -94,10 +94,6 @@ assets = [
     ["../deployment/deb/goxlr-daemon.bash", "usr/share/bash-completion/completions/", "644"],
     ["../deployment/deb/goxlr-daemon.fish", "usr/share/fish/vendor_completions.d/", "644"],
     ["../deployment/deb/_goxlr-daemon", "usr/share/zsh/vendor-completions/", "644"],
-    ["../ci/distrib/profiles/Default - Red.goxlr", "usr/share/goxlr/profiles/", "644"],
-    ["../ci/distrib/profiles/Default - Teal Blue.goxlr", "usr/share/goxlr/profiles/", "644"],
-    ["../ci/distrib/profiles/Default - Vaporwave.goxlr", "usr/share/goxlr/profiles/", "644"],
-    ["../ci/distrib/profiles/Sleep.goxlr", "usr/share/goxlr/profiles/", "644"],
 ]
 maintainer-scripts = "../ci/distrib/DEBIAN/"
 section = "sound"
@@ -120,10 +116,7 @@ assets = [
     { source = "../deployment/deb/goxlr-daemon.bash", dest = "/usr/share/bash-completion/completions/goxlr-daemon.bash", mode = "0644" },
     { source = "../deployment/deb/goxlr-daemon.fish", dest = "/usr/share/fish/vendor_completions.d/goxlr-daemon.fish", mode = "0644" },
     { source = "../deployment/deb/_goxlr-daemon", dest = "/usr/share/zsh/vendor-completions/_goxlr-daemon", mode = "0644" },
-    { source = "../ci/distrib/profiles/Default - Red.goxlr", dest = "/usr/share/goxlr/profiles/Default - Red.goxlr", mode = "0644" },
-    { source = "../ci/distrib/profiles/Default - Teal Blue.goxlr", dest = "/usr/share/goxlr/profiles/Default - Teal Blue.goxlr", mode = "0644" },
-    { source = "../ci/distrib/profiles/Default - Vaporwave.goxlr", dest = "/usr/share/goxlr/profiles/Default - Vaporwave.goxlr", mode = "0644" },
-    { source = "../ci/distrib/profiles/Sleep.goxlr", dest = "/usr/share/goxlr/profiles/Sleep.goxlr", mode = "0644" }
+
 ]
 #auto-req = "no"
 

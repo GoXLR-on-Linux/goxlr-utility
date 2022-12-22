@@ -56,9 +56,9 @@ pub struct ProfileAdapter {
 }
 
 impl ProfileAdapter {
-    pub fn from_named_or_default(name: Option<String>, directories: Vec<&Path>) -> Self {
+    pub fn from_named_or_default(name: Option<String>, directory: &Path) -> Self {
         if let Some(name) = name {
-            match ProfileAdapter::from_named(name.clone(), directories) {
+            match ProfileAdapter::from_named(name.clone(), directory) {
                 Ok(result) => return result,
                 Err(error) => error!("Couldn't load profile {}: {}", name, error),
             }
@@ -67,19 +67,12 @@ impl ProfileAdapter {
         ProfileAdapter::default()
     }
 
-    pub fn from_named(name: String, directories: Vec<&Path>) -> Result<Self> {
-        let mut dir_list = "".to_string();
-
-        // Loop through the provided directories, and try to find the profile..
-        for directory in directories {
-            let path = directory.join(format!("{}.goxlr", name));
-
-            if path.is_file() {
-                debug!("Loading Profile From {}", path.to_string_lossy());
-                let file = File::open(path).context("Couldn't open profile for reading")?;
-                return ProfileAdapter::from_reader(name, file);
-            }
-            dir_list = format!("{}, {}", dir_list, directory.to_string_lossy());
+    pub fn from_named(name: String, directory: &Path) -> Result<Self> {
+        let path = directory.join(format!("{}.goxlr", name));
+        if path.is_file() {
+            debug!("Loading Profile From {}", path.to_string_lossy());
+            let file = File::open(path).context("Couldn't open profile for reading")?;
+            return ProfileAdapter::from_reader(name, file);
         }
 
         if name == DEFAULT_PROFILE_NAME {
@@ -90,7 +83,7 @@ impl ProfileAdapter {
         Err(anyhow!(
             "Profile {} does not exist inside {:?}",
             name,
-            dir_list
+            directory.to_string_lossy()
         ))
     }
 

@@ -37,10 +37,7 @@ mod settings;
 mod shutdown;
 mod tray;
 
-// This can probably go somewhere else, but for now..
-const DISTRIBUTABLE_ROOT: &str = "/usr/share/goxlr/";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
-
 const ICON: &[u8] = include_bytes!("../resources/goxlr-icon-white.png");
 
 // This is for global 'JSON Patches', for when something changes.

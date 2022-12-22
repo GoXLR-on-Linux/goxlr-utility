@@ -33,7 +33,7 @@ use crate::mic_profile::{MicProfileAdapter, DEFAULT_MIC_PROFILE_NAME};
 use crate::profile::{
     usb_to_standard_button, version_newer_or_equal_to, ProfileAdapter, DEFAULT_PROFILE_NAME,
 };
-use crate::{SettingsHandle, DISTRIBUTABLE_ROOT};
+use crate::SettingsHandle;
 
 pub struct Device<'a> {
     goxlr: Box<dyn FullGoXLRDevice>,
@@ -82,13 +82,9 @@ impl<'a> Device<'a> {
             device_type, profile, mic_profile
         );
 
-        let distrib_path = Path::new(DISTRIBUTABLE_ROOT).join("profiles/");
-        let profile = ProfileAdapter::from_named_or_default(
-            profile_name,
-            vec![profile_directory, &distrib_path],
-        );
+        let profile = ProfileAdapter::from_named_or_default(profile_name, profile_directory);
         let mic_profile =
-            MicProfileAdapter::from_named_or_default(mic_profile_name, vec![mic_profile_directory]);
+            MicProfileAdapter::from_named_or_default(mic_profile_name, mic_profile_directory);
 
         let audio_loader = AudioHandler::new();
         debug!("Created Audio Handler..");
@@ -1327,10 +1323,7 @@ impl<'a> Device<'a> {
             // Effects
             GoXLRCommand::LoadEffectPreset(name) => {
                 let presets_directory = self.settings.get_presets_directory().await;
-                let distrib_path = Path::new(DISTRIBUTABLE_ROOT).join("presets/");
-
-                self.profile
-                    .load_preset(name, vec![&presets_directory, &distrib_path])?;
+                self.profile.load_preset(name, vec![&presets_directory])?;
 
                 let current_effect_bank = self.profile.get_active_effect_bank();
 
@@ -1815,12 +1808,8 @@ impl<'a> Device<'a> {
             }
             GoXLRCommand::LoadProfile(profile_name) => {
                 let profile_directory = self.settings.get_profile_directory().await;
-                let distrib_path = Path::new(DISTRIBUTABLE_ROOT).join("profiles/");
 
-                self.profile = ProfileAdapter::from_named(
-                    profile_name,
-                    vec![&profile_directory, &distrib_path],
-                )?;
+                self.profile = ProfileAdapter::from_named(profile_name, &profile_directory)?;
                 self.apply_profile()?;
                 self.settings
                     .set_device_profile_name(self.serial(), self.profile.name())
@@ -1829,12 +1818,7 @@ impl<'a> Device<'a> {
             }
             GoXLRCommand::LoadProfileColours(profile_name) => {
                 let profile_directory = self.settings.get_profile_directory().await;
-                let distrib_path = Path::new(DISTRIBUTABLE_ROOT).join("profiles/");
-
-                let profile = ProfileAdapter::from_named(
-                    profile_name,
-                    vec![&profile_directory, &distrib_path],
-                )?;
+                let profile = ProfileAdapter::from_named(profile_name, &profile_directory)?;
                 self.profile.load_colour_profile(profile);
                 self.load_colour_map()?;
                 self.update_button_states()?;
@@ -1897,7 +1881,7 @@ impl<'a> Device<'a> {
             GoXLRCommand::LoadMicProfile(mic_profile_name) => {
                 let mic_profile_directory = self.settings.get_mic_profile_directory().await;
                 self.mic_profile =
-                    MicProfileAdapter::from_named(mic_profile_name, vec![&mic_profile_directory])?;
+                    MicProfileAdapter::from_named(mic_profile_name, &mic_profile_directory)?;
                 self.apply_mic_profile()?;
                 self.settings
                     .set_device_mic_profile_name(self.serial(), self.mic_profile.name())

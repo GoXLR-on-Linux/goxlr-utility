@@ -28,7 +28,7 @@ use notify::event::{CreateKind, ModifyKind, RemoveKind, RenameMode};
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use tokio::sync::mpsc::Sender;
 
-use crate::{SettingsHandle, Shutdown, DISTRIBUTABLE_ROOT};
+use crate::{SettingsHandle, Shutdown};
 
 // This should probably be handled with an EnumSet..
 #[derive(Debug)]
@@ -99,24 +99,21 @@ impl FileManager {
     pub fn get_profiles(&mut self) -> Vec<String> {
         let path = self.paths.profiles.clone();
         let extension = ["goxlr"].to_vec();
-
-        let distrib_path = Path::new(DISTRIBUTABLE_ROOT).join("profiles/");
-        self.get_files_from_paths(vec![distrib_path, path], extension, false)
+        self.get_files_from_path(path, extension, false)
     }
 
     pub fn get_mic_profiles(&mut self) -> Vec<String> {
         let path = self.paths.mic_profiles.clone();
         let extension = ["goxlrMicProfile"].to_vec();
 
-        self.get_files_from_paths(vec![path], extension, false)
+        self.get_files_from_path(path, extension, false)
     }
 
     pub fn get_presets(&mut self) -> Vec<String> {
         let path = self.paths.presets.clone();
-        let distrib_path = Path::new(DISTRIBUTABLE_ROOT).join("presets/");
         let extension = ["preset"].to_vec();
 
-        self.get_files_from_paths(vec![path, distrib_path], extension, false)
+        self.get_files_from_path(path, extension, false)
     }
 
     pub fn get_samples(&mut self) -> BTreeMap<String, String> {
@@ -130,7 +127,7 @@ impl FileManager {
         let path = self.paths.icons.clone();
         let extension = ["gif", "jpg", "png"].to_vec();
 
-        self.get_files_from_paths(vec![path], extension, true)
+        self.get_files_from_path(path, extension, true)
     }
 
     fn get_recursive_file_list(
@@ -159,18 +156,13 @@ impl FileManager {
         map
     }
 
-    fn get_files_from_paths(
+    fn get_files_from_path(
         &self,
-        paths: Vec<PathBuf>,
+        path: PathBuf,
         extensions: Vec<&str>,
         with_extension: bool,
     ) -> Vec<String> {
-        let mut result = Vec::new();
-
-        for path in paths {
-            result.extend(self.get_files_from_drive(path, extensions.clone(), with_extension));
-        }
-
+        let mut result = self.get_files_from_drive(path, extensions.clone(), with_extension);
         result.sort_by_key(|a| a.to_lowercase());
         result.dedup();
         result
@@ -216,13 +208,6 @@ impl FileManager {
                     // Collect the result.
                 })
                 .collect::<Vec<String>>();
-        }
-
-        if !path.starts_with(Path::new(DISTRIBUTABLE_ROOT)) {
-            debug!(
-                "Path not found, or unable to read: {:?}",
-                path.to_string_lossy()
-            );
         }
 
         Vec::new()
@@ -378,9 +363,6 @@ pub fn find_file_in_path(path: PathBuf, file: PathBuf) -> Option<PathBuf> {
 }
 
 pub fn create_path(path: &Path) -> Result<()> {
-    if path.starts_with(Path::new(DISTRIBUTABLE_ROOT)) {
-        return Ok(());
-    }
     if !path.exists() {
         // Attempt to create the profile directory..
         if let Err(e) = create_dir_all(path) {
