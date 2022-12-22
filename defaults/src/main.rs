@@ -5,9 +5,9 @@ use std::fs;
 use include_dir::{include_dir, Dir};
 use std::path::PathBuf;
 
-const PROFILES: Dir = include_dir!("./assets/resources/profiles");
-const PRESETS: Dir = include_dir!("./assets/resources/presets");
-const ICONS: Dir = include_dir!("./assets/resources/icons");
+const PROFILES: Dir = include_dir!("./defaults/resources/profiles");
+const PRESETS: Dir = include_dir!("./defaults/resources/presets");
+const ICONS: Dir = include_dir!("./defaults/resources/icons");
 
 fn main() -> Result<()> {
     let args: Cli = Cli::parse();

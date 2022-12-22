@@ -87,7 +87,7 @@ name = "goxlr-utility"
 assets = [
     ["../target/release/goxlr-daemon", "usr/bin/", "755"],
     ["../target/release/goxlr-client", "usr/bin/", "755"],
-    ["../target/release/goxlr-assets", "usr/bin/", "755"],
+    ["../target/release/goxlr-defaults", "usr/bin/", "755"],
     ["../50-goxlr.rules", "etc/udev/rules.d/", "644"],
     ["../deployment/deb/goxlr-client.bash", "usr/share/bash-completion/completions/", "644"],
     ["../deployment/deb/goxlr-client.fish", "usr/share/fish/vendor_completions.d/", "644"],
@@ -110,7 +110,7 @@ name = "goxlr-utility"
 assets = [
     { source = "../target/release/goxlr-daemon", dest = "/usr/bin/goxlr-daemon", mode = "0755" },
     { source = "../target/release/goxlr-client", dest = "/usr/bin/goxlr-client", mode = "0755" },
-    { source = "../target/release/goxlr-assets", dest = "/usr/bin/goxlr-assets", mode = "0755" },
+    { source = "../target/release/goxlr-defaults", dest = "/usr/bin/goxlr-defaults", mode = "0755" },
     { source = "../50-goxlr.rules", dest = "/etc/udev/rules.d/50-goxlr.rules", mode = "0644" },
     { source = "../deployment/deb/goxlr-client.bash", dest = "/usr/share/bash-completion/completions/goxlr-client.bash", mode = "0644" },
     { source = "../deployment/deb/goxlr-client.fish", dest = "/usr/share/fish/vendor_completions.d/goxlr-client.fish", mode = "0644" },

@@ -1,5 +1,5 @@
 [package]
-name = "goxlr-assets"
+name = "goxlr-defaults"
 version = "0.8.1"
 edition = "2021"
 

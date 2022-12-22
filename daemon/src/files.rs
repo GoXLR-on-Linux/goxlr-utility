@@ -382,12 +382,12 @@ pub fn can_create_new_file(path: PathBuf) -> Result<()> {
     Ok(())
 }
 
-const ASSET_BINARY: &str = "goxlr-assets";
+const DEFAULTS_BINARY: &str = "goxlr-defaults";
 pub fn extract_defaults(file_type: PathTypes, path: &Path) -> Result<()> {
     let binary_name = if cfg!(target_os = "windows") {
-        format!("{}.exe", ASSET_BINARY)
+        format!("{}.exe", DEFAULTS_BINARY)
     } else {
-        String::from(ASSET_BINARY)
+        String::from(DEFAULTS_BINARY)
     };
 
     let mut binary_path = None;
@@ -431,12 +431,12 @@ pub fn extract_defaults(file_type: PathTypes, path: &Path) -> Result<()> {
         Ok(output) => {
             if !output.status.success() {
                 if let Some(code) = output.status.code() {
-                    bail!("Unable to extract asset, Error Code: {}", code);
+                    bail!("Unable to extract defaults, Error Code: {}", code);
                 }
             }
         }
         Err(error) => {
-            bail!("Unable to run Asset extractor: {}", error);
+            bail!("Unable to run Default extractor: {}", error);
         }
     }
     Ok(())
