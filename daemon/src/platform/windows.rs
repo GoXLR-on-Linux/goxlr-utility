@@ -129,12 +129,10 @@ fn get_startup_dir() -> Option<PathBuf> {
     let reg_path = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders";
 
     // Get %USERPROFILE% from the ENV..
-    if let Ok(profile) = std::env::var("USERPROFILE") {
+    if let Ok(profile) = env::var("USERPROFILE") {
         let local_user = RegKey::predef(HKEY_CURRENT_USER);
         if let Ok(folders) = local_user.open_subkey(reg_path) {
             if let Ok(startup) = folders.get_value::<String, &str>("Startup") {
-                let startup = startup as String;
-
                 let full_path = startup.replace("%USERPROFILE%", &profile);
                 let path_buf = PathBuf::from(&full_path);
 
