@@ -14,7 +14,6 @@ use std::fs;
 use std::fs::{create_dir_all, File};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::time::{Duration, Instant};
 
 use anyhow::{anyhow, bail, Context, Result};
 use futures::channel::mpsc::{channel, Receiver};
@@ -245,8 +244,6 @@ pub async fn spawn_file_notification_service(
         warn!("Unable to Monitor the Samples Path: {:?}", error);
     }
 
-    let mut last_send = Instant::now();
-
     // Wait for any changes..
     loop {
         tokio::select! {
@@ -258,7 +255,6 @@ pub async fn spawn_file_notification_service(
                 if let Some(result) = result {
                     match result {
                         Ok(event) => {
-                            debug!("{:?}", event);
                             match event.kind {
                                 // Triggered on the Creation of a file / folder..
                                 EventKind::Create(CreateKind::File) |
@@ -275,38 +271,30 @@ pub async fn spawn_file_notification_service(
                                 EventKind::Modify(ModifyKind::Name(RenameMode::To)) |
                                 EventKind::Modify(ModifyKind::Name(RenameMode::Both)) => {
 
-                                    // Things like file creation, moving and deletion can send multiple
-                                    // valid events, we don't need to spam all of them up, so use a small buffer.
-                                    if last_send + Duration::from_millis(50) < Instant::now() {
-                                        debug!("Useful Event Received! {:?}", event);
-                                        last_send = Instant::now();
+                                    let path = &event.paths[0];
+                                    if path.starts_with(&paths.profiles) {
+                                        let _ = sender.send(PathTypes::Profiles).await;
+                                        continue;
+                                    }
 
-                                        let path = &event.paths[0];
-                                        if path.starts_with(&paths.profiles) {
-                                            let _ = sender.send(PathTypes::Profiles).await;
-                                            continue;
-                                        }
+                                    if path.starts_with(&paths.mic_profiles) {
+                                        let _ = sender.send(PathTypes::MicProfiles).await;
+                                        continue;
+                                    }
 
-                                        if path.starts_with(&paths.mic_profiles) {
-                                            let result = sender.send(PathTypes::MicProfiles).await;
-                                            debug!("{:?}", result);
-                                            continue;
-                                        }
+                                    if path.starts_with(&paths.icons) {
+                                        let _ = sender.send(PathTypes::Icons).await;
+                                        continue;
+                                    }
 
-                                        if path.starts_with(&paths.icons) {
-                                            let _ = sender.send(PathTypes::Icons).await;
-                                            continue;
-                                        }
+                                    if path.starts_with(&paths.presets) {
+                                        let _ = sender.send(PathTypes::Presets).await;
+                                        continue;
+                                    }
 
-                                        if path.starts_with(&paths.presets) {
-                                            let _ = sender.send(PathTypes::Presets).await;
-                                            continue;
-                                        }
-
-                                        if path.starts_with(&paths.samples) {
-                                            let _ = sender.send(PathTypes::Samples).await;
-                                            continue;
-                                        }
+                                    if path.starts_with(&paths.samples) {
+                                        let _ = sender.send(PathTypes::Samples).await;
+                                        continue;
                                     }
                                 },
 
