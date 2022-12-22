@@ -60,7 +60,14 @@ tiny-skia = "0.8.2"
 detect-desktop-environment = "0.2.0"
 
 # Under Windows and MacOS, we use tao's tray feature
-[target.'cfg(any(target_os = "windows", target_os = "macos"))'.dependencies]
+[target.'cfg(target_os = "windows")'.dependencies]
+tao = { version = "0.15.7", features=["tray"] }
+image = "0.24.5"
+sysinfo = "0.27.1"
+winrt-notification = "0.5.1"
+notifica = "3.0.2"
+
+[target.'cfg(target_os = "macos")'.dependencies]
 tao = { version = "0.15.7", features=["tray"] }
 image = "0.24.5"
 

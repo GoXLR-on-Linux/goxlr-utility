@@ -15,6 +15,8 @@ use tokio::sync::{broadcast, mpsc};
 use crate::cli::{Cli, LevelFilter};
 use crate::events::{spawn_event_handler, DaemonState};
 use crate::files::{get_file_paths_from_settings, spawn_file_notification_service, FileManager};
+use crate::platform::perform_preflight;
+use crate::platform::spawn_runtime;
 use crate::primary_worker::spawn_usb_handler;
 use crate::servers::http_server::spawn_http_server;
 use crate::servers::ipc_server::{bind_socket, spawn_ipc_server};
@@ -27,6 +29,7 @@ mod device;
 mod events;
 mod files;
 mod mic_profile;
+mod platform;
 mod primary_worker;
 mod profile;
 mod servers;
@@ -99,6 +102,12 @@ async fn main() -> Result<()> {
     };
 
     info!("Starting GoXLR Daemon v{}", VERSION);
+
+    // Before we do anything, perform platform pre-flight to make
+    // sure we're allowed to start.
+    info!("Performing Platform Preflight...");
+    perform_preflight()?;
+
     let settings = SettingsHandle::load(args.config).await?;
 
     // Create the Global Event Channel..
@@ -189,6 +198,9 @@ async fn main() -> Result<()> {
     // Spawn the general event handler..
     let event_handle = tokio::spawn(spawn_event_handler(state.clone(), global_rx));
 
+    // Spawn the Platform Runtime (if needed)
+    let platform_handle = tokio::spawn(spawn_runtime(state.clone(), global_tx.clone()));
+
     if !args.disable_tray {
         // Tray management has to occur on the main thread, so we'll start it now.
         tray::handle_tray(state.clone(), global_tx.clone())?;
@@ -206,10 +218,17 @@ async fn main() -> Result<()> {
             communications_handle,
             server.stop(true),
             file_handle,
-            event_handle
+            event_handle,
+            platform_handle
         );
     } else {
-        let _ = join!(usb_handle, communications_handle, file_handle, event_handle);
+        let _ = join!(
+            usb_handle,
+            communications_handle,
+            file_handle,
+            event_handle,
+            platform_handle
+        );
     }
     Ok(())
 }
