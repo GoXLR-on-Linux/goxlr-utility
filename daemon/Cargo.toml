@@ -125,7 +125,7 @@ assets = [
 # Tiny scriptlet, should reload udevadm.
 post_install_script = """
 udevadm control --reload-rules
-echo "You may need to replug your GoXLR before running the Daemon"
+udevadm trigger
 """
 
 #[package.metadata.generate-rpm.requires]
