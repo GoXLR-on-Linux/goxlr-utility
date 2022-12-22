@@ -20,11 +20,11 @@ pub async fn spawn_runtime(state: DaemonState, tx: mpsc::Sender<EventTriggers>) 
 }
 
 #[cfg(not(target_os = "windows"))]
-pub fn perform_reflight() -> Result<()> {
+pub fn perform_preflight() -> Result<()> {
     default::perform_platform_preflight()
 }
 
 #[cfg(not(target_os = "windows"))]
-pub async fn perform_runtime(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Result<()> {
-    default::spawn_platform_runtime(state, tx)
+pub async fn spawn_runtime(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Result<()> {
+    default::spawn_platform_runtime(state, tx).await
 }
