@@ -78,7 +78,6 @@ fn throw_notification() {
         .expect("Unable to Launch Toast");
 }
 
-#[allow(dead_code)]
 pub fn has_autostart() -> bool {
     if let Some(path) = &*STARTUP_PATH {
         return path.join(AUTOSTART_FILENAME).exists();
@@ -87,8 +86,7 @@ pub fn has_autostart() -> bool {
     false
 }
 
-#[allow(dead_code)]
-fn remove_startup_link() -> Result<()> {
+pub fn remove_startup_link() -> Result<()> {
     if let Some(path) = &*STARTUP_PATH {
         let file = path.join(AUTOSTART_FILENAME);
         if !file.exists() {
@@ -102,8 +100,7 @@ fn remove_startup_link() -> Result<()> {
     Ok(())
 }
 
-#[allow(dead_code)]
-fn create_startup_link() -> Result<()> {
+pub fn create_startup_link() -> Result<()> {
     if let Some(path) = &*STARTUP_PATH {
         let file = path.join(AUTOSTART_FILENAME);
         if file.exists() {
@@ -120,11 +117,11 @@ fn create_startup_link() -> Result<()> {
         // Create the Symlink to our current path..
         let link = ShellLink::new(executable)?;
         link.create_lnk(file)?;
+        return Ok(());
     }
-    Ok(())
+    bail!("Error Finding Startup Path, unable to create link");
 }
 
-#[allow(dead_code)]
 fn get_startup_dir() -> Option<PathBuf> {
     let reg_path = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders";
 
