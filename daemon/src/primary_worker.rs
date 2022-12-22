@@ -1,5 +1,6 @@
 use crate::device::Device;
 use crate::events::EventTriggers;
+use crate::files::extract_defaults;
 use crate::{FileManager, PatchEvent, SettingsHandle, Shutdown, VERSION};
 use anyhow::{anyhow, Result};
 use goxlr_ipc::{
@@ -24,6 +25,7 @@ use tokio::time::sleep;
 pub enum DeviceCommand {
     SendDaemonStatus(oneshot::Sender<DaemonStatus>),
     OpenPath(PathTypes, oneshot::Sender<DaemonResponse>),
+    RecoverDefaults(PathTypes, oneshot::Sender<DaemonResponse>),
     RunDeviceCommand(String, GoXLRCommand, oneshot::Sender<Result<()>>),
 }
 
@@ -132,7 +134,27 @@ pub async fn spawn_usb_handler(
                 match command {
                     DeviceCommand::SendDaemonStatus(sender) => {
                         let _ = sender.send(daemon_status.clone());
-                    },
+                    }
+                    DeviceCommand::RecoverDefaults(path_type, sender) => {
+                        let path = match path_type {
+                            PathTypes::Profiles => settings.get_profile_directory().await,
+                            PathTypes::Presets => settings.get_presets_directory().await,
+                            PathTypes::Icons => settings.get_icons_directory().await,
+                            _ => {
+                                let _ = sender.send(DaemonResponse::Error("Invalid Path type Sent".into()));
+                                return;
+                            }
+                        };
+                        let result = extract_defaults(path_type, &path);
+                        match result {
+                            Ok(_) => {
+                                let _ = sender.send(DaemonResponse::Ok);
+                            },
+                            Err(e) => {
+                                let _ = sender.send(DaemonResponse::Error(format!("Error Extracting Defaults: {}", e)));
+                            }
+                        }
+                    }
                     DeviceCommand::OpenPath(path_type, sender) => {
                         // There's nothing we can really do if this errors..
                         let _ = global_tx.send(EventTriggers::Open(path_type)).await;

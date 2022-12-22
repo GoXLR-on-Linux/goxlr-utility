@@ -395,7 +395,7 @@ pub fn can_create_new_file(path: PathBuf) -> Result<()> {
 }
 
 const ASSET_BINARY: &str = "goxlr-assets";
-fn extract_defaults(_file_type: PathTypes, path: &Path) -> Result<()> {
+pub fn extract_defaults(file_type: PathTypes, path: &Path) -> Result<()> {
     let binary_name = if cfg!(target_os = "windows") {
         format!("{}.exe", ASSET_BINARY)
     } else {
@@ -425,7 +425,7 @@ fn extract_defaults(_file_type: PathTypes, path: &Path) -> Result<()> {
         OsString::from(binary_name)
     };
 
-    let file_type = match _file_type {
+    let file_type = match file_type {
         PathTypes::Profiles => "profiles",
         PathTypes::Presets => "presets",
         PathTypes::Icons => "icons",

@@ -1,6 +1,6 @@
 use crate::primary_worker::{DeviceCommand, DeviceSender};
 use anyhow::{anyhow, Context, Result};
-use goxlr_ipc::{DaemonRequest, DaemonResponse, HttpSettings};
+use goxlr_ipc::{DaemonRequest, DaemonResponse, HttpSettings, PathTypes};
 use tokio::sync::oneshot;
 
 pub async fn handle_packet(
@@ -11,6 +11,15 @@ pub async fn handle_packet(
     match request {
         DaemonRequest::Ping => Ok(DaemonResponse::Ok),
         DaemonRequest::GetHttpState => Ok(DaemonResponse::HttpState(http_settings.clone())),
+        DaemonRequest::RecoverDefaults(path_type) => {
+            let (tx, rx) = oneshot::channel();
+            usb_tx
+                .send(DeviceCommand::RecoverDefaults(path_type, tx))
+                .await
+                .map_err(|e| anyhow!(e.to_string()))
+                .context("Cound not communicate with the device task")?;
+            Ok(rx.await?)
+        }
         DaemonRequest::GetStatus => {
             let (tx, rx) = oneshot::channel();
             usb_tx

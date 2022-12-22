@@ -22,6 +22,7 @@ pub enum DaemonRequest {
     GetStatus,
     GetHttpState,
     OpenPath(PathTypes),
+    RecoverDefaults(PathTypes),
     Command(String, GoXLRCommand),
 }
 
