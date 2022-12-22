@@ -2,14 +2,25 @@ use crate::events::EventTriggers;
 use crate::DaemonState;
 use anyhow::{bail, Result};
 use futures::executor::block_on;
+use lazy_static::lazy_static;
 use log::{debug, error};
+use mslnk::ShellLink;
+use std::path::PathBuf;
+use std::{env, fs};
 use sysinfo::{ProcessRefreshKind, RefreshKind, System, SystemExt};
 use tokio::sync::mpsc;
 use tokio::time::Duration;
 use tokio::{select, time};
+use winreg::enums::HKEY_CURRENT_USER;
+use winreg::RegKey;
 use winrt_notification::{Sound, Toast};
 
 const GOXLR_APP_NAME: &str = "GoXLR App.exe";
+const AUTOSTART_FILENAME: &str = "GoXLR Utility.lnk";
+
+lazy_static! {
+    static ref STARTUP_PATH: Option<PathBuf> = get_startup_dir();
+}
 
 pub fn perform_platform_preflight() -> Result<()> {
     let system = System::new_all();
@@ -33,6 +44,7 @@ pub async fn spawn_platform_runtime(
 
     let refresh_kind = RefreshKind::new().with_processes(ProcessRefreshKind::new().with_user());
     let mut system = System::new_with_specifics(refresh_kind);
+
     loop {
         select! {
             _ = duration.tick() => {
@@ -64,4 +76,74 @@ fn throw_notification() {
         .duration(winrt_notification::Duration::Short)
         .show()
         .expect("Unable to Launch Toast");
+}
+
+#[allow(dead_code)]
+pub fn has_autostart() -> bool {
+    if let Some(path) = &*STARTUP_PATH {
+        return path.join(AUTOSTART_FILENAME).exists();
+    }
+
+    false
+}
+
+#[allow(dead_code)]
+fn remove_startup_link() -> Result<()> {
+    if let Some(path) = &*STARTUP_PATH {
+        let file = path.join(AUTOSTART_FILENAME);
+        if !file.exists() {
+            debug!("Attempted to remove link on non-existent file");
+            return Ok(());
+        }
+
+        // Remove the file.
+        fs::remove_file(file)?;
+    }
+    Ok(())
+}
+
+#[allow(dead_code)]
+fn create_startup_link() -> Result<()> {
+    if let Some(path) = &*STARTUP_PATH {
+        let file = path.join(AUTOSTART_FILENAME);
+        if file.exists() {
+            // File already exists, we're done?
+            return Ok(());
+        }
+
+        // Get our executable filename..
+        let executable = env::current_exe()?;
+
+        // Remove any UNC Prefix from the executable path when safe..
+        let executable = dunce::simplified(&executable);
+
+        // Create the Symlink to our current path..
+        let link = ShellLink::new(executable)?;
+        link.create_lnk(file)?;
+    }
+    Ok(())
+}
+
+#[allow(dead_code)]
+fn get_startup_dir() -> Option<PathBuf> {
+    let reg_path = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders";
+
+    // Get %USERPROFILE% from the ENV..
+    if let Ok(profile) = std::env::var("USERPROFILE") {
+        let local_user = RegKey::predef(HKEY_CURRENT_USER);
+        if let Ok(folders) = local_user.open_subkey(reg_path) {
+            if let Ok(startup) = folders.get_value::<String, &str>("Startup") {
+                let startup = startup as String;
+
+                let full_path = startup.replace("%USERPROFILE%", &profile);
+                let path_buf = PathBuf::from(&full_path);
+
+                if path_buf.exists() {
+                    debug!("Setting Startup Path: {:?}", path_buf);
+                    return Some(path_buf);
+                }
+            }
+        }
+    }
+    None
 }

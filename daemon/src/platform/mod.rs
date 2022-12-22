@@ -9,6 +9,8 @@ mod windows;
 #[cfg(not(target_os = "windows"))]
 mod default;
 
+// TODO: Dump this all into a struct, use cfg-if then use x as platform..
+
 #[cfg(target_os = "windows")]
 pub fn perform_preflight() -> Result<()> {
     windows::perform_platform_preflight()
