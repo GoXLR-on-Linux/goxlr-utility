@@ -45,7 +45,7 @@ pub fn create_startup_link() -> Result<()> {
             conf.with_section(Some("Desktop Entry"))
                 .set("Type", "Application")
                 .set("Name", "GoXLR Utility")
-                .set("Comment", "A tool for configuring the GoXLR on Linux")
+                .set("Comment", "A Tool for Configuring a GoXLR")
                 .set("Path", parent.to_string_lossy())
                 .set("Exec", executable.to_string_lossy())
                 .set("Terminal", "false");

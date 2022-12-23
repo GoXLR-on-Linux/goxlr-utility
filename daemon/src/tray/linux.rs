@@ -82,7 +82,7 @@ impl Tray for GoXLRTray {
     fn tool_tip(&self) -> ToolTip {
         ToolTip {
             title: String::from("GoXLR Utility"),
-            description: String::from("A Tool for Configuring a GoXLR under Linux"),
+            description: String::from("A Tool for Configuring a GoXLR"),
             ..Default::default()
         }
     }
