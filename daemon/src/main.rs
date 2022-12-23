@@ -38,7 +38,7 @@ mod shutdown;
 mod tray;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
-const ICON: &[u8] = include_bytes!("../resources/goxlr-icon-white.png");
+const ICON: &[u8] = include_bytes!("../resources/goxlr-utility-large.png");
 
 // This is for global 'JSON Patches', for when something changes.
 #[derive(Debug, Clone)]
