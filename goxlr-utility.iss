@@ -7,8 +7,8 @@ WizardStyle=modern
 DefaultDirName={autopf}\GoXLR Utility
 DefaultGroupName=GoXLR Utility
 UninstallDisplayIcon={app}\goxlr-daemon.exe
-Compression=lzma2
-SolidCompression=yes
+Compression=bzip
+SolidCompression=no
 LicenseFile=LICENSE
 OutputBaseFilename=goxlr-utility
 ArchitecturesAllowed=x64
@@ -34,9 +34,6 @@ Name: "{userstartup}\GoXLR Utility"; Filename: "{app}\goxlr-daemon.exe"; Tasks: 
 
 [Run]
 Filename: "{app}\goxlr-launcher.exe"; Flags: shellexec skipifsilent nowait; Tasks: StartAfterInstall
-
-[UninstallRun]
-Filename: "{cmd}"; Parameters: "/C ""taskkill /im goxlr-daemon.exe /f /t"; RunOnceId: "Uninstall"
 
 [Code]
 // Display two license pages
