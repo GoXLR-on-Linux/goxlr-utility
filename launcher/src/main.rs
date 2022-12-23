@@ -100,8 +100,9 @@ async fn open_ui() -> Result<()> {
         let socket: Socket<DaemonResponse, DaemonRequest> = Socket::new(connection);
         let mut client = Client::new(socket);
         client.send(DaemonRequest::OpenUi).await?;
+        return Ok(());
     }
-    Ok(())
+    bail!("Unable to make a connection with the Daemon");
 }
 
 fn is_daemon_running() -> bool {
