@@ -1,5 +1,5 @@
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 use anyhow::{bail, Result};
-use fork::{daemon, Fork};
 use std::path::PathBuf;
 use std::process::{exit, Command, Stdio};
 
@@ -36,6 +36,7 @@ async fn get_connection() -> std::io::Result<LocalSocketStream> {
 
 #[cfg(target_os = "linux")]
 fn launch_daemon() -> Result<()> {
+    use fork::{daemon, Fork};
     if let Some(path) = locate_daemon_binary() {
         let mut command = Command::new(&path);
         command.arg("--start-ui");
@@ -63,7 +64,23 @@ fn launch_daemon() -> Result<()> {
 
 #[cfg(windows)]
 fn launch_daemon() -> Result<()> {
-    Ok(())
+    // Ok, try a simple spawn and exit..
+    if let Some(path) = locate_daemon_binary() {
+        let mut command = Command::new(&path);
+        command.arg("--start-ui");
+        command.stdin(Stdio::null());
+        command.stdout(Stdio::null());
+        command.stderr(Stdio::null());
+
+        if let Some(parent) = path.parent() {
+            command.current_dir(parent);
+        }
+
+        command.spawn().expect("Unable to Launch Child Process");
+        exit(0);
+    }
+
+    bail!("Unable to Locate GoXLR Daemon Binary");
 }
 
 #[cfg(not(any(windows, target_os = "linux")))]
