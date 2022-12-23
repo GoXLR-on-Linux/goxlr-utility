@@ -136,6 +136,13 @@ async fn main() -> Result<()> {
         shutdown.clone(),
     ));
 
+    // Spawn the IPC Socket..
+    let ipc_socket = bind_socket().await;
+    if ipc_socket.is_err() {
+        error!("Error Starting Daemon: ");
+        bail!("{}", ipc_socket.err().unwrap());
+    }
+
     // Start the USB Device Handler
     let usb_handle = tokio::spawn(spawn_usb_handler(
         usb_rx,
@@ -146,13 +153,6 @@ async fn main() -> Result<()> {
         settings.clone(),
         file_manager,
     ));
-
-    // Spawn the IPC Socket..
-    let ipc_socket = bind_socket().await;
-    if ipc_socket.is_err() {
-        error!("Error Starting Daemon: ");
-        bail!("{}", ipc_socket.err().unwrap());
-    }
 
     // Launch the IPC Server..
     let ipc_socket = ipc_socket.unwrap();
