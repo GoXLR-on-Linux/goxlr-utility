@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
+    "launcher",
     "usb",
     "daemon",
     "audio",
