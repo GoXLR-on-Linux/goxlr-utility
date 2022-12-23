@@ -8,7 +8,7 @@ use mslnk::ShellLink;
 use std::path::PathBuf;
 use std::{env, fs};
 use sysinfo::{ProcessRefreshKind, RefreshKind, System, SystemExt};
-use tokio::signal::windows::ctrl_break;
+use tokio::signal::windows::{ctrl_break, ctrl_c, ctrl_close, ctrl_shutdown};
 use tokio::sync::mpsc;
 use tokio::time::Duration;
 use tokio::{select, time};
@@ -47,6 +47,7 @@ pub async fn spawn_platform_runtime(
     let mut system = System::new_with_specifics(refresh_kind);
 
     let mut ctrl_break = ctrl_break()?;
+    let mut ctrl_close = ctrl_close()?;
 
     loop {
         select! {
@@ -64,6 +65,10 @@ pub async fn spawn_platform_runtime(
             Some(_) = ctrl_break.recv() => {
                 block_on(tx.send(EventTriggers::Stop))?;
             },
+            Some(_) = ctrl_close.recv() => {
+                debug!("Hit Ctrl+Close");
+                block_on(tx.send(EventTriggers::Stop))?;
+            }
             () = shutdown.recv() => {
                 debug!("Shutting down Platform Runtime..");
                 break;
