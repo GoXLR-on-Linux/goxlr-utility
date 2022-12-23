@@ -36,6 +36,10 @@ pub struct Cli {
     /// Force Run the Daemon as Root
     #[clap(long)]
     pub force_root: bool,
+
+    /// Automatically Launch the UI on Start..
+    #[clap(long)]
+    pub start_ui: bool,
 }
 
 fn default_config_location() -> PathBuf {

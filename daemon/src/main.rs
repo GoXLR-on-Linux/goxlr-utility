@@ -13,7 +13,7 @@ use tokio::join;
 use tokio::sync::{broadcast, mpsc};
 
 use crate::cli::{Cli, LevelFilter};
-use crate::events::{spawn_event_handler, DaemonState};
+use crate::events::{spawn_event_handler, DaemonState, EventTriggers};
 use crate::files::{get_file_paths_from_settings, spawn_file_notification_service, FileManager};
 use crate::platform::perform_preflight;
 use crate::platform::spawn_runtime;
@@ -197,6 +197,11 @@ async fn main() -> Result<()> {
 
     // Spawn the Platform Runtime (if needed)
     let platform_handle = tokio::spawn(spawn_runtime(state.clone(), global_tx.clone()));
+
+    if args.start_ui {
+        //thread::sleep(Duration::from_millis(250));
+        let _ = global_tx.send(EventTriggers::OpenUi).await;
+    }
 
     if !args.disable_tray {
         // Tray management has to occur on the main thread, so we'll start it now.
