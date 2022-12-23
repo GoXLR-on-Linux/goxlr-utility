@@ -50,7 +50,7 @@ pub async fn spawn_usb_handler(
 
     // Create the device detection Sleep Timer..
     let detection_duration = Duration::from_millis(1000);
-    let detection_sleep = sleep(detection_duration);
+    let detection_sleep = sleep(Duration::from_millis(0));
     tokio::pin!(detection_sleep);
 
     // Create the State update Sleep Timer..
