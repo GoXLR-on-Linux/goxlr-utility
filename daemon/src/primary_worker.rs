@@ -1,11 +1,12 @@
 use crate::device::Device;
 use crate::events::EventTriggers;
 use crate::files::extract_defaults;
+use crate::platform::{has_autostart, set_autostart};
 use crate::{FileManager, PatchEvent, SettingsHandle, Shutdown, VERSION};
 use anyhow::{anyhow, Result};
 use goxlr_ipc::{
-    DaemonResponse, DaemonStatus, DeviceType, Files, GoXLRCommand, HardwareStatus, PathTypes,
-    Paths, UsbProductInformation,
+    DaemonConfig, DaemonResponse, DaemonStatus, DeviceType, Files, GoXLRCommand, HardwareStatus,
+    PathTypes, Paths, UsbProductInformation,
 };
 use goxlr_usb::device::base::GoXLRDevice;
 use goxlr_usb::device::{find_devices, from_device};
@@ -26,6 +27,7 @@ pub enum DeviceCommand {
     SendDaemonStatus(oneshot::Sender<DaemonStatus>),
     OpenPath(PathTypes, oneshot::Sender<DaemonResponse>),
     RecoverDefaults(PathTypes, oneshot::Sender<DaemonResponse>),
+    SetAutoStartEnabled(bool, oneshot::Sender<DaemonResponse>),
     RunDeviceCommand(String, GoXLRCommand, oneshot::Sender<Result<()>>),
 }
 
@@ -155,6 +157,18 @@ pub async fn spawn_usb_handler(
                             }
                         }
                     }
+                    DeviceCommand::SetAutoStartEnabled(enabled, sender) => {
+                        let result = set_autostart(enabled);
+                        match result {
+                            Ok(_) => {
+                                let _ = sender.send(DaemonResponse::Ok);
+                                change_found = true;
+                            }
+                            Err(e) => {
+                                let _ = sender.send(DaemonResponse::Error(format!("Unable to Set AutoStart: {}", e)));
+                            }
+                        }
+                    }
                     DeviceCommand::OpenPath(path_type, sender) => {
                         // There's nothing we can really do if this errors..
                         let _ = global_tx.send(EventTriggers::Open(path_type)).await;
@@ -201,7 +215,10 @@ async fn get_daemon_status(
     files: Files,
 ) -> DaemonStatus {
     let mut status = DaemonStatus {
-        daemon_version: String::from(VERSION),
+        config: DaemonConfig {
+            daemon_version: String::from(VERSION),
+            autostart_enabled: has_autostart(),
+        },
         paths: Paths {
             profile_directory: settings.get_profile_directory().await,
             mic_profile_directory: settings.get_mic_profile_directory().await,

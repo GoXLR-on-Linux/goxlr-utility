@@ -36,6 +36,8 @@ opener = "0.5.0"
 regex = "1.6.0"
 chrono = "0.4.22"
 glob = "0.3.0"
+cfg-if = "1.0.0"
+lazy_static = "1.4.0"
 
 interprocess = { version = "1.2.0", features = ["tokio_support"] }
 
@@ -58,6 +60,7 @@ nix = { version = "0.25.0", features = ["user"] }
 ksni = "0.2.0"
 tiny-skia = "0.8.2"
 detect-desktop-environment = "0.2.0"
+rust-ini = "0.18.0"
 
 # Under Windows and MacOS, we use tao's tray feature
 [target.'cfg(target_os = "windows")'.dependencies]
@@ -68,7 +71,6 @@ winrt-notification = "0.5.1"
 winreg = "0.10.1"
 mslnk = "0.1.8"
 dunce = "1.0.3"
-lazy_static = "1.4.0"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 tao = { version = "0.15.7", features=["tray"] }

@@ -1,32 +1,67 @@
 use crate::events::EventTriggers;
 use crate::DaemonState;
 use anyhow::Result;
+use cfg_if::cfg_if;
 use tokio::sync::mpsc;
 
-#[cfg(target_os = "windows")]
-mod windows;
+cfg_if! {
+    if #[cfg(windows)] {
+        mod windows;
+        pub fn perform_preflight() -> Result<()> {
+            windows::perform_platform_preflight()
+        }
 
-#[cfg(not(target_os = "windows"))]
-mod default;
+        pub async fn spawn_runtime(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Result<()> {
+            windows::spawn_platform_runtime(state, tx).await
+        }
 
-// TODO: Dump this all into a struct, use cfg-if then use x as platform..
+        pub fn has_autostart() -> bool {
+            windows::has_autostart()
+        }
 
-#[cfg(target_os = "windows")]
-pub fn perform_preflight() -> Result<()> {
-    windows::perform_platform_preflight()
-}
+        pub fn set_autostart(enabled: bool) -> Result<()> {
+            if enabled {
+                return windows::create_startup_link();
+            }
+            windows::remove_startup_link()
+        }
+    } else if #[cfg(target_os = "linux")] {
+        mod linux;
+        pub fn perform_preflight() -> Result<()> {
+            Ok(())
+        }
 
-#[cfg(target_os = "windows")]
-pub async fn spawn_runtime(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Result<()> {
-    windows::spawn_platform_runtime(state, tx).await
-}
+        pub async fn spawn_runtime(_state: DaemonState, _tx: mpsc::Sender<EventTriggers>) -> Result<()> {
+            Ok(())
+        }
 
-#[cfg(not(target_os = "windows"))]
-pub fn perform_preflight() -> Result<()> {
-    default::perform_platform_preflight()
-}
+        pub fn has_autostart() -> bool {
+            linux::has_autostart()
+        }
 
-#[cfg(not(target_os = "windows"))]
-pub async fn spawn_runtime(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Result<()> {
-    default::spawn_platform_runtime(state, tx).await
+        pub fn set_autostart(enabled: bool) -> Result<()> {
+            if enabled {
+                return linux::create_startup_link();
+            }
+            linux::remove_startup_link()
+        }
+    } else {
+        use anyhow::bail;
+
+        pub fn perform_preflight() -> Result<()> {
+            Ok(())
+        }
+
+        pub async fn spawn_runtime(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Result<()> {
+            Ok(())
+        }
+
+        pub fn has_autostart() -> bool {
+            false
+        }
+
+        pub fn set_autostart(enabled: bool) -> Result<()> {
+            bail!("Autostart Not Supported on this Platform");
+        }
+    }
 }
