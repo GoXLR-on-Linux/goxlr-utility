@@ -8,6 +8,7 @@ use mslnk::ShellLink;
 use std::path::PathBuf;
 use std::{env, fs};
 use sysinfo::{ProcessRefreshKind, RefreshKind, System, SystemExt};
+use tokio::signal::windows::ctrl_break;
 use tokio::sync::mpsc;
 use tokio::time::Duration;
 use tokio::{select, time};
@@ -45,6 +46,8 @@ pub async fn spawn_platform_runtime(
     let refresh_kind = RefreshKind::new().with_processes(ProcessRefreshKind::new().with_user());
     let mut system = System::new_with_specifics(refresh_kind);
 
+    let mut ctrl_break = ctrl_break()?;
+
     loop {
         select! {
             _ = duration.tick() => {
@@ -57,6 +60,9 @@ pub async fn spawn_platform_runtime(
                     block_on(tx.send(EventTriggers::Stop))?;
                     break;
                 }
+            },
+            Some(_) = ctrl_break.recv() => {
+                block_on(tx.send(EventTriggers::Stop))?;
             },
             () = shutdown.recv() => {
                 debug!("Shutting down Platform Runtime..");
