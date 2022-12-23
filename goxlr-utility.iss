@@ -10,11 +10,13 @@ UninstallDisplayIcon={app}\goxlr-daemon.exe
 Compression=bzip
 SolidCompression=no
 LicenseFile=LICENSE
-OutputBaseFilename=goxlr-utility
+OutputBaseFilename=goxlr-utility-setup
 ArchitecturesAllowed=x64
 ArchitecturesInstallIn64BitMode=x64
 SetupIconFile=daemon/resources/goxlr-utility.ico
 CloseApplications=force
+AppPublisher=The GoXLR on Linux Team
+AppPublisherURL=http://github.com/GoXLR-on-Linux
 
 [Files]
 Source: "target\release\goxlr-daemon.exe";    DestDir: "{app}";       DestName: "goxlr-daemon.exe"
@@ -26,14 +28,16 @@ Source: "LICENSE-3RD-PARTY";                  DestDir: "{app}";       DestName: 
 
 [Tasks]
 Name: StartOnLogin; Description: Automatically start the GoXLR Utility on Login
-Name: StartAfterInstall; Description: Run the Utility when Installation is Complete
 
 [Icons]
 Name: "{group}\GoXLR Utility"; Filename: "{app}\goxlr-launcher.exe";
 Name: "{userstartup}\GoXLR Utility"; Filename: "{app}\goxlr-daemon.exe"; Tasks: StartOnLogin
 
 [Run]
-Filename: "{app}\goxlr-launcher.exe"; Flags: shellexec skipifsilent nowait; Tasks: StartAfterInstall
+Filename: "{app}\goxlr-launcher.exe"; Description: "Run the GoXLR Utility"; Flags: shellexec skipifsilent nowait postinstall;
+
+[UninstallRun]
+Filename: "taskkill"; Parameters: "/im ""goxlr-daemon.exe"" /f"; Flags: runhidden; RunOnceId: Uninstaller
 
 [Code]
 // Display two license pages
