@@ -40,6 +40,7 @@ pub struct Device<'a> {
     hardware: HardwareStatus,
     last_buttons: EnumSet<Buttons>,
     button_states: EnumMap<Buttons, ButtonState>,
+    fader_last_seen: EnumMap<FaderName, u8>,
     profile: ProfileAdapter,
     mic_profile: MicProfileAdapter,
     audio_handler: Option<AudioHandler>,
@@ -113,6 +114,7 @@ impl<'a> Device<'a> {
             vc_mute_also_mute_cm,
             last_buttons: EnumSet::empty(),
             button_states: EnumMap::default(),
+            fader_last_seen: EnumMap::default(),
             audio_handler,
             settings: settings_handle,
         };
@@ -1025,10 +1027,17 @@ impl<'a> Device<'a> {
         let mut value_changed = false;
 
         for fader in FaderName::iter() {
+            let new_volume = volumes[fader as usize];
+            if self.hardware.device_type == DeviceType::Mini
+                && new_volume == self.fader_last_seen[fader]
+            {
+                continue;
+            }
+            self.fader_last_seen[fader] = new_volume;
+
             let channel = self.profile.get_fader_assignment(fader);
             let old_volume = self.profile.get_channel_volume(channel);
 
-            let new_volume = volumes[fader as usize];
             if new_volume != old_volume {
                 debug!(
                     "Updating {} volume from {} to {} as a human moved the fader",
