@@ -62,7 +62,7 @@ cfg_if! {
             false
         }
 
-        pub fn set_autostart(enabled: bool) -> Result<()> {
+        pub fn set_autostart(_enabled: bool) -> Result<()> {
             bail!("Autostart Not Supported on this Platform");
         }
     } else {
@@ -72,7 +72,7 @@ cfg_if! {
             Ok(())
         }
 
-        pub async fn spawn_runtime(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Result<()> {
+        pub async fn spawn_runtime(_state: DaemonState, _tx: mpsc::Sender<EventTriggers>) -> Result<()> {
             Ok(())
         }
 
@@ -80,7 +80,7 @@ cfg_if! {
             false
         }
 
-        pub fn set_autostart(enabled: bool) -> Result<()> {
+        pub fn set_autostart(_enabled: bool) -> Result<()> {
             bail!("Autostart Not Supported on this Platform");
         }
     }

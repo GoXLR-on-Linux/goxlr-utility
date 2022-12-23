@@ -18,9 +18,7 @@ use tokio::sync::mpsc;
 
 use goxlr_ipc::PathTypes::{Icons, MicProfiles, Presets, Profiles, Samples};
 #[cfg(target_os = "macos")]
-use tao::platform::macos::{
-    ActivationPolicy, EventLoopExtMacOS, SystemTrayBuilderExtMacOS, SystemTrayExtMacOS,
-};
+use tao::platform::macos::{ActivationPolicy, EventLoopExtMacOS};
 
 pub fn handle_tray(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Result<()> {
     let mut event_loop = EventLoop::new();
