@@ -218,7 +218,7 @@ async fn main() -> Result<()> {
         let _ = join!(
             usb_handle,
             communications_handle,
-            server.stop(true),
+            server.stop(false),
             file_handle,
             event_handle,
             platform_handle
