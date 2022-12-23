@@ -96,7 +96,7 @@ pub fn handle_tray(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Resul
             }
             Event::TrayEvent { event, .. } => {
                 // Left click on Mac opens the menu, so we don't want to trigger this.
-                if event == LeftClick && !cfg!(macos) {
+                if event == LeftClick && cfg!(not(target_os = "macos")) {
                     let _ = block_on(tx.send(EventTriggers::OpenUi));
                 }
             }
