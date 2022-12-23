@@ -11,6 +11,15 @@ pub async fn handle_packet(
     match request {
         DaemonRequest::Ping => Ok(DaemonResponse::Ok),
         DaemonRequest::GetHttpState => Ok(DaemonResponse::HttpState(http_settings.clone())),
+        DaemonRequest::OpenUi => {
+            let (tx, rx) = oneshot::channel();
+            usb_tx
+                .send(DeviceCommand::OpenUi(tx))
+                .await
+                .map_err(|e| anyhow!(e.to_string()))
+                .context("Cound not communicate with the device task")?;
+            Ok(rx.await?)
+        }
         DaemonRequest::RecoverDefaults(path_type) => {
             let (tx, rx) = oneshot::channel();
             usb_tx

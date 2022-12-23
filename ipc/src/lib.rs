@@ -19,6 +19,7 @@ use goxlr_types::{
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DaemonRequest {
     Ping,
+    OpenUi,
     GetStatus,
     GetHttpState,
     OpenPath(PathTypes),
