@@ -90,7 +90,14 @@ assets = [
     ["../target/release/goxlr-daemon", "usr/bin/", "755"],
     ["../target/release/goxlr-client", "usr/bin/", "755"],
     ["../target/release/goxlr-defaults", "usr/bin/", "755"],
+    ["../target/release/goxlr-launcher", "usr/bin", "755"],
+
     ["../50-goxlr.rules", "etc/udev/rules.d/", "644"],
+
+    ["../daemon/resources/goxlr-utility.png", "usr/share/icons/hicolor/48x48/apps/", "644"],
+    ["../daemon/resources/goxlr-utility-large.png", "usr/share/pixmaps/goxlr-utility.png", "644"],
+    ["../daemon/resources/goxlr-utility.svg", "usr/share/icons/hicolor/scalable/apps/", "644"],
+
     ["../deployment/deb/goxlr-client.bash", "usr/share/bash-completion/completions/", "644"],
     ["../deployment/deb/goxlr-client.fish", "usr/share/fish/vendor_completions.d/", "644"],
     ["../deployment/deb/_goxlr-client", "usr/share/zsh/vendor-completions/", "644"],
@@ -113,7 +120,14 @@ assets = [
     { source = "../target/release/goxlr-daemon", dest = "/usr/bin/goxlr-daemon", mode = "0755" },
     { source = "../target/release/goxlr-client", dest = "/usr/bin/goxlr-client", mode = "0755" },
     { source = "../target/release/goxlr-defaults", dest = "/usr/bin/goxlr-defaults", mode = "0755" },
+    { source = "../target/release/goxlr-launcher", dest = "/usr/bin/goxlr-launcher", mode = "0755" },
+
     { source = "../50-goxlr.rules", dest = "/etc/udev/rules.d/50-goxlr.rules", mode = "0644" },
+
+    { source = "../daemon/resources/goxlr-utility.png", dest = "/usr/share/icons/hicolor/48x48/apps/goxlr-utility.png", mode = "0644" },
+    { source = "../daemon/resources/goxlr-utility-large.png", dest = "/usr/share/pixmaps/goxlr-utility.png", mode = "0644" },
+    { source = "../daemon/resources/goxlr-utility.svg", dest = "/usr/share/icons/hicolor/scalable/apps/goxlr-utility.svg", mode = "0644" },
+
     { source = "../deployment/deb/goxlr-client.bash", dest = "/usr/share/bash-completion/completions/goxlr-client.bash", mode = "0644" },
     { source = "../deployment/deb/goxlr-client.fish", dest = "/usr/share/fish/vendor_completions.d/goxlr-client.fish", mode = "0644" },
     { source = "../deployment/deb/_goxlr-client", dest = "/usr/share/zsh/vendor-completions/_goxlr-client", mode = "0644" },
