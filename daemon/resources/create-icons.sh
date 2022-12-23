@@ -18,12 +18,9 @@ rm -r tmp/
 
 # For Linux, we need to add a margin to the icon so it looks clean in things like system trays, we'll use around 10%
 # We need:
-# 32x32 XPM in /usr/share/pixmaps/
+# 128x128 PNG in /usr/share/pixmaps
 # 48x48 PNG in /usr/share/icons/hicolor/48x48/apps/
 # SVG to /usr/share/icons/hicolor/scalable/apps/
 # And a 128x128 png for embedding
 inkscape goxlr-utility.svg --export-filename=goxlr-utility-large.png -w 128 -h 128 --export-area=-25:-25:281:281
 inkscape goxlr-utility.svg --export-filename=goxlr-utility.png -w 48 -h 48 --export-area=-25:-25:281:281
-inkscape goxlr-utility.svg --export-filename=tmp.png -w 32 -h 32 --export-area=-25:-25:281:281
-convert tmp.png goxlr-utility.xpm
-rm tmp.png
