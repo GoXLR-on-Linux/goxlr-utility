@@ -11,22 +11,22 @@ categories = ["hardware-support", "api-bindings"]
 [dependencies]
 goxlr-types = { path = "../types" }
 rusb = "0.9.1"
-thiserror = "1.0"
-byteorder = "1"
-log = "0.4.14"
-enumset = "1.0.8"
+thiserror = "1.0.38"
+byteorder = "1.4.3"
+log = "0.4.17"
+enumset = "1.0.12"
 strum = "0.24.1"
-enum-map = "2.1.0"
-anyhow = "1.0.66"
+enum-map = "2.4.2"
+anyhow = "1.0.68"
 cfg-if = "1.0.0"
 
 # New, some fun async stuff..
-tokio = { version = "1.21.2", features = ["sync", "rt", "time"] }
+tokio = { version = "1.23.0", features = ["sync", "rt", "time"] }
 futures = "0.3.25"
 
 # Dependencies specifically for building under Windows..
 [target.'cfg(windows)'.dependencies]
-libloading = "0.7.3"
+libloading = "0.7.4"
 widestring = "1.0.2"
 lazy_static = "1.4.0"
 windows = { version = "0.43.0", features = [
