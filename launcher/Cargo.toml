@@ -11,7 +11,7 @@ goxlr-ipc = { path = "../ipc" }
 goxlr-types = { path = "../types" }
 
 interprocess = { version = "1.2.1", features=["tokio_support"] }
-tokio = { version = "1.0.3", features=["full"] }
+tokio = { version = "1.23.0", features=["full"] }
 sysinfo = "0.27.1"
 which = "4.3.0"
 
