@@ -9,5 +9,5 @@ license = "MIT"
 categories = ["hardware-support", "command-line-utilities"]
 
 [dependencies]
-rusb = "0.9"
-anyhow = "1.0"
+rusb = "0.9.1"
+anyhow = "1.0.68"
