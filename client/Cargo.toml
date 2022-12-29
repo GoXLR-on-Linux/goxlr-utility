@@ -14,15 +14,16 @@ categories = ["hardware-support", "command-line-utilities"]
 [dependencies]
 goxlr-ipc = {path = "../ipc"}
 goxlr-types = { path = "../types", features = ["clap"] }
-tokio = {version = "1.0", features=["full"]}
-simplelog = "0.11.1"
+tokio = {version = "1.23.0", features=["full"]}
+simplelog = "0.12.0"
 anyhow = "1.0"
-clap = { version = "3.0.0", features = ["derive"] }
-strum = { version = "0.23"}
-serde_json = { version = "1.0" }
+clap = { version = "4.0.32", features = ["derive"] }
+strum = { version = "0.24.1"}
+serde_json = { version = "1.0.91" }
 tokio-serde = { version = "0.8.0", features=["json"]}
-interprocess = { version = "1.2.0", features=["tokio_support"] }
+interprocess = { version = "1.2.1", features=["tokio_support"] }
+
 [build-dependencies]
-clap = { version = "3.0.0", features = ["derive"] }
-clap_complete = "3.0.0"
+clap = { version = "4.0.32", features = ["derive"] }
+clap_complete = "4.0.7"
 goxlr-types = { path = "../types", features = ["clap"] }

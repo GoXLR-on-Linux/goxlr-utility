@@ -10,8 +10,8 @@ anyhow = "1.0.68"
 goxlr-ipc = { path = "../ipc" }
 goxlr-types = { path = "../types" }
 
-interprocess = { version = "1.2.0", features=["tokio_support"] }
-tokio = { version = "1.0", features=["full"] }
+interprocess = { version = "1.2.1", features=["tokio_support"] }
+tokio = { version = "1.0.3", features=["full"] }
 sysinfo = "0.27.1"
 which = "4.3.0"
 
@@ -19,4 +19,4 @@ which = "4.3.0"
 fork = "0.1.20"
 
 [target.'cfg(target_os = "windows")'.build-dependencies]
-windres = "*"
+windres = "0.2.2"

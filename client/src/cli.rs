@@ -1,4 +1,5 @@
-use clap::{AppSettings, Args, Parser, Subcommand};
+use clap::{ArgAction, Args, Parser, Subcommand};
+
 use goxlr_types::{
     Button, ButtonColourGroups, ButtonColourOffStyle, ChannelName, CompressorAttackTime,
     CompressorRatio, CompressorReleaseTime, EchoStyle, EffectBankPresets, EncoderColourTargets,
@@ -10,29 +11,29 @@ use goxlr_types::{
 use std::str::FromStr;
 
 #[derive(Parser, Debug)]
-#[clap(about, version, author)]
-#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+#[command(about, version, author)]
+#[command(arg_required_else_help = true)]
 pub struct Cli {
     /// The specific device's serial number to execute commands on.
     /// This field is optional if you have exactly one GoXLR, but required if you have more.
-    #[clap(long)]
+    #[arg(long)]
     pub device: Option<String>,
 
     /// Display the device information after any subcommands have been executed.
-    #[clap(long)]
+    #[arg(long)]
     pub status: bool,
 
     /// Display device information as JSON after command..
-    #[clap(long)]
+    #[arg(long)]
     pub status_json: bool,
 
-    #[clap(long)]
+    #[arg(long)]
     pub status_http: bool,
 
-    #[clap(flatten, help_heading = "Microphone controls")]
+    #[command(flatten, next_help_heading = "Microphone controls")]
     pub microphone_controls: MicrophoneControls,
 
-    #[clap(subcommand)]
+    #[command(subcommand)]
     pub subcommands: Option<SubCommands>,
 }
 
@@ -40,90 +41,89 @@ pub struct Cli {
 pub struct MicrophoneControls {
     /// Set the gain of the plugged in dynamic (XLR) microphone.
     /// Value is in decibels and recommended to be lower than 72dB.
-    #[clap(long)]
+    #[arg(long)]
     pub dynamic_gain: Option<u16>,
 
     /// Set the gain of the plugged in condenser (XLR with phantom power) microphone.
     /// Value is in decibels and recommended to be lower than 72dB.
-    #[clap(long)]
+    #[arg(long)]
     pub condenser_gain: Option<u16>,
 
     /// Set the gain of the plugged in jack (3.5mm) microphone.
     /// Value is in decibels and recommended to be lower than 72dB.
-    #[clap(long)]
+    #[arg(long)]
     pub jack_gain: Option<u16>,
 }
 
 #[derive(Subcommand, Debug)]
-#[clap(setting = AppSettings::DeriveDisplayOrder)]
-#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+#[command(arg_required_else_help = true)]
 pub enum SubCommands {
     /// Profile Settings
     Profiles {
-        #[clap(subcommand)]
+        #[command(subcommand)]
         command: ProfileType,
     },
 
     /// Adjust the microphone settings (Eq, Gate and Compressor)
     Microphone {
-        #[clap(subcommand)]
+        #[command(subcommand)]
         command: MicrophoneCommands,
     },
 
     /// Adjust Channel Volumes
     Volume {
         /// The Channel To Change
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         channel: ChannelName,
 
         /// The new volume as a percentage [0 - 100]
-        #[clap(parse(try_from_str=percent_value))]
+        #[arg(value_parser=percent_value)]
         volume_percent: u8,
     },
 
     /// Configure the Bleep Button
     BleepVolume {
         /// Set Bleep Button Volume
-        #[clap(parse(try_from_str=percent_value))]
+        #[arg(value_parser=percent_value)]
         volume_percent: u8,
     },
 
     /// Commands to manipulate the individual GoXLR Faders
     Faders {
-        #[clap(subcommand)]
+        #[command(subcommand)]
         fader: FaderCommands,
     },
 
     /// Commands for configuring the cough button
     CoughButton {
-        #[clap(subcommand)]
+        #[command(subcommand)]
         command: CoughButtonBehaviours,
     },
 
     /// Commands to manipulate the GoXLR Router
     Router {
         /// The input device
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         input: InputDevice,
 
         /// The output device
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         output: OutputDevice,
 
         /// Is routing enabled between these two devices? [true | false]
-        #[clap(parse(try_from_str))]
+        #[arg(value_parser, action = ArgAction::Set)]
         enabled: bool,
     },
 
     /// Commands to control the GoXLR lighting
     Lighting {
-        #[clap(subcommand)]
+        #[command(subcommand)]
         command: LightingCommands,
     },
 
     /// Commands to Control the Effects Panel
     Effects {
-        #[clap(subcommand)]
+        #[command(subcommand)]
         command: EffectsCommands,
     },
 
@@ -161,41 +161,38 @@ fn percent_value_float(s: &str) -> Result<f32, String> {
 }
 
 #[derive(Subcommand, Debug)]
-#[clap(setting = AppSettings::DeriveDisplayOrder)]
-#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+#[command(arg_required_else_help = true)]
 pub enum CoughButtonBehaviours {
     ButtonIsHold {
-        #[clap(parse(try_from_str))]
+        #[arg(value_parser, action = ArgAction::Set)]
         is_hold: bool,
     },
 
     MuteBehaviour {
         /// Where a single press will mute (Hold will always Mute to All)
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         mute_behaviour: MuteFunction,
     },
 }
 
 #[derive(Subcommand, Debug)]
-#[clap(setting = AppSettings::DeriveDisplayOrder)]
-#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+#[command(arg_required_else_help = true)]
 pub enum ProfileType {
     /// General Device Profile
     Device {
-        #[clap(subcommand)]
+        #[command(subcommand)]
         command: ProfileAction,
     },
 
     /// Microphone Profile
     Microphone {
-        #[clap(subcommand)]
+        #[command(subcommand)]
         command: ProfileAction,
     },
 }
 
 #[derive(Subcommand, Debug)]
-#[clap(setting = AppSettings::DeriveDisplayOrder)]
-#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+#[command(arg_required_else_help = true)]
 pub enum ProfileAction {
     /// Create a new profile
     New { profile_name: String },
@@ -213,7 +210,7 @@ pub enum ProfileAction {
     },
 
     /// Save the currently running profile
-    #[clap(unset_setting = AppSettings::ArgRequiredElseHelp)]
+    #[command(arg_required_else_help = true)]
     Save {},
 
     /// Save the currently running profile with a new name
@@ -224,89 +221,86 @@ pub enum ProfileAction {
 }
 
 #[derive(Subcommand, Debug)]
-#[clap(setting = AppSettings::DeriveDisplayOrder)]
-#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+#[command(arg_required_else_help = true)]
 pub enum MicrophoneCommands {
     /// Configure the Equaliser for the Full GoXLR Device
     Equaliser {
-        #[clap(subcommand)]
+        #[command(subcommand)]
         command: EqualiserCommands,
     },
 
     /// Configure the Equaliser for the GoXLR Mini
     EqualiserMini {
-        #[clap(subcommand)]
+        #[command(subcommand)]
         command: EqualiserMiniCommands,
     },
 
     /// Configure the microphone noise gate
     NoiseGate {
-        #[clap(subcommand)]
+        #[command(subcommand)]
         command: NoiseGateCommands,
     },
 
     /// Configure the Microphone Compressor
     Compressor {
-        #[clap(subcommand)]
+        #[command(subcommand)]
         command: CompressorCommands,
     },
 
     /// Set the DeEss percentage
     DeEss {
-        #[clap(parse(try_from_str=percent_value))]
+        #[arg(value_parser=percent_value)]
         level: u8,
     },
 }
 
 #[derive(Subcommand, Debug)]
-#[clap(setting = AppSettings::DeriveDisplayOrder)]
-#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+#[command(arg_required_else_help = true)]
 pub enum EqualiserMiniCommands {
     /// Fine tune the Equaliser Frequencies
     Frequency {
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         /// The Frequency to Modify
         frequency: MiniEqFrequencies,
 
-        #[clap(parse(try_from_str=parse_full_frequency))]
+        #[arg(value_parser=parse_full_frequency)]
         /// The new Frequency
         value: f32,
     },
 
     /// Set the Gain Value for frequencies
     Gain {
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         /// The Frequency to modify
         frequency: MiniEqFrequencies,
 
-        #[clap(parse(try_from_str=parse_gain))]
-        #[clap(allow_hyphen_values = true)]
+        #[arg(value_parser=parse_gain)]
+        #[arg(allow_hyphen_values = true)]
         /// The new Gain Value
         gain: i8,
     },
 }
 
 #[derive(Subcommand, Debug)]
-#[clap(setting = AppSettings::DeriveDisplayOrder)]
-#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+#[command(arg_required_else_help = true)]
 pub enum EqualiserCommands {
     /// Fine tune the Equaliser Frequencies
     Frequency {
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         /// The Frequency to modify
         frequency: EqFrequencies,
 
-        #[clap(parse(try_from_str=parse_full_frequency))]
+        #[arg(value_parser=parse_full_frequency)]
         /// The new frequency
         value: f32,
     },
     Gain {
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         /// The Frequency to Modify
         frequency: EqFrequencies,
 
-        #[clap(parse(try_from_str=parse_gain))]
-        #[clap(allow_hyphen_values = true)]
+        #[arg(value_parser=parse_gain)]
+        #[arg(allow_hyphen_values = true)]
         /// The new Gain Value
         gain: i8,
     },
@@ -348,37 +342,36 @@ fn parse_gain(s: &str) -> Result<i8, String> {
 }
 
 #[derive(Subcommand, Debug)]
-#[clap(setting = AppSettings::DeriveDisplayOrder)]
-#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+#[command(arg_required_else_help = true)]
 pub enum NoiseGateCommands {
     /// Activation Threshold in dB [-59 - 0]
     Threshold {
-        #[clap(parse(try_from_str=parse_gate_threshold))]
-        #[clap(allow_hyphen_values = true)]
+        #[arg(value_parser=parse_gate_threshold)]
+        #[arg(allow_hyphen_values = true)]
         value: i8,
     },
 
     /// Attenuation Percentage [0 - 100]
     Attenuation {
-        #[clap(parse(try_from_str=percent_value))]
+        #[arg(value_parser=percent_value)]
         value: u8,
     },
 
     /// Attack Time
     Attack {
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         value: GateTimes,
     },
 
     /// Release Time
     Release {
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         value: GateTimes,
     },
 
     /// Is Gate Active?
     Active {
-        #[clap(parse(try_from_str))]
+        #[arg(value_parser, action = ArgAction::Set)]
         enabled: bool,
     },
 }
@@ -401,29 +394,28 @@ fn parse_gate_threshold(s: &str) -> Result<i8, String> {
 }
 
 #[derive(Subcommand, Debug)]
-#[clap(setting = AppSettings::DeriveDisplayOrder)]
-#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+#[command(arg_required_else_help = true)]
 pub enum CompressorCommands {
     /// Activation Threshold in dB [-24 - 0]
     Threshold {
-        #[clap(parse(try_from_str=parse_compressor_threshold))]
-        #[clap(allow_hyphen_values = true)]
+        #[arg(value_parser=parse_compressor_threshold)]
+        #[arg(allow_hyphen_values = true)]
         value: i8,
     },
     Ratio {
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         value: CompressorRatio,
     },
     Attack {
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         value: CompressorAttackTime,
     },
     Release {
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         value: CompressorReleaseTime,
     },
     MakeUp {
-        #[clap(parse(try_from_str=parse_compressor_makeup))]
+        #[arg(value_parser=parse_compressor_makeup)]
         value: i8,
     },
 }
@@ -459,125 +451,122 @@ fn parse_compressor_makeup(s: &str) -> Result<i8, String> {
 }
 
 #[derive(Subcommand, Debug)]
-#[clap(setting = AppSettings::DeriveDisplayOrder)]
-#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+#[command(arg_required_else_help = true)]
 pub enum FaderCommands {
     /// Assign a new Channel to a Fader
     Channel {
         /// The Fader to Change
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         fader: FaderName,
 
         /// The New Channel Name
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         channel: ChannelName,
     },
 
     /// Change the behaviour of a Fader Mute Button
     MuteBehaviour {
         /// The Fader to Change
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         fader: FaderName,
 
         /// Where a single press will mute (Hold will always Mute to All)
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         mute_behaviour: MuteFunction,
     },
 
     /// Sets the Current Mute State of the Fader
     MuteState {
         /// The Fader to Change
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         fader: FaderName,
 
         /// The new State
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         state: MuteState,
     },
 
     Scribbles {
-        #[clap(subcommand)]
+        #[command(subcommand)]
         command: Scribbles,
     },
 }
 #[derive(Subcommand, Debug)]
 pub enum Scribbles {
     Icon {
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         fader: FaderName,
         name: String,
     },
 
     Text {
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         fader: FaderName,
         text: String,
     },
 
     Number {
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         fader: FaderName,
         text: String,
     },
 
     Invert {
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         fader: FaderName,
 
-        #[clap(parse(try_from_str))]
+        #[arg(value_parser, action = ArgAction::Set)]
         inverted: bool,
     },
 }
 
 #[derive(Subcommand, Debug)]
-#[clap(setting = AppSettings::DeriveDisplayOrder)]
-#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+#[command(arg_required_else_help = true)]
 pub enum CoughCommands {
     /// Change the behaviour of a Fader Mute Button
     MuteBehaviour {
         /// Where a single press will mute (Hold will always Mute to All)
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         mute_behaviour: MuteFunction,
     },
 }
 
 #[derive(Subcommand, Debug)]
-#[clap(setting = AppSettings::DeriveDisplayOrder)]
-#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+#[command(arg_required_else_help = true)]
 pub enum LightingCommands {
     /// Configure Lighting for a specific fader
     Fader {
-        #[clap(subcommand)]
+        #[command(subcommand)]
         command: FaderLightingCommands,
     },
 
     /// Configure lighting for all faders at once
     FadersAll {
-        #[clap(subcommand)]
+        #[command(subcommand)]
         command: FadersAllLightingCommands,
     },
 
     /// Configure lighting for a specific button
     Button {
-        #[clap(subcommand)]
+        #[command(subcommand)]
         command: ButtonLightingCommands,
     },
 
     /// Configure lighting for a group of common bottoms
     ButtonGroup {
-        #[clap(subcommand)]
+        #[command(subcommand)]
         command: ButtonGroupLightingCommands,
     },
 
     SimpleColour {
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         target: SimpleColourTargets,
         colour: String,
     },
 
     EncoderColour {
         /// The Encoder to Change
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         target: EncoderColourTargets,
 
         /// The 'Inactive' Colour?
@@ -592,23 +581,22 @@ pub enum LightingCommands {
 }
 
 #[derive(Subcommand, Debug)]
-#[clap(setting = AppSettings::DeriveDisplayOrder)]
-#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+#[command(arg_required_else_help = true)]
 pub enum FaderLightingCommands {
     Display {
         /// The Fader to Change
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         fader: FaderName,
 
         /// The new display method
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         display: FaderDisplayStyle,
     },
 
     /// Sets the Top and Bottom colours of a fader
     Colour {
         /// The Fader name to Change
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         fader: FaderName,
 
         /// Top colour in hex format [RRGGBB]
@@ -620,12 +608,11 @@ pub enum FaderLightingCommands {
 }
 
 #[derive(Subcommand, Debug)]
-#[clap(setting = AppSettings::DeriveDisplayOrder)]
-#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+#[command(arg_required_else_help = true)]
 pub enum FadersAllLightingCommands {
     Display {
         /// The new display method
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         display: FaderDisplayStyle,
     },
 
@@ -640,12 +627,11 @@ pub enum FadersAllLightingCommands {
 }
 
 #[derive(Subcommand, Debug)]
-#[clap(setting = AppSettings::DeriveDisplayOrder)]
-#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+#[command(arg_required_else_help = true)]
 pub enum ButtonLightingCommands {
     Colour {
         /// The Button to change
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         button: Button,
 
         /// The primary button colour [RRGGBB]
@@ -657,22 +643,21 @@ pub enum ButtonLightingCommands {
 
     OffStyle {
         /// The Button to change
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         button: Button,
 
         /// How the button should be presented when 'off'
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         off_style: ButtonColourOffStyle,
     },
 }
 
 #[derive(Subcommand, Debug)]
-#[clap(setting = AppSettings::DeriveDisplayOrder)]
-#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+#[command(arg_required_else_help = true)]
 pub enum ButtonGroupLightingCommands {
     Colour {
         /// The group to change
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         group: ButtonColourGroups,
 
         /// The primary button colour [RRGGBB]
@@ -684,23 +669,22 @@ pub enum ButtonGroupLightingCommands {
 
     OffStyle {
         /// The group to change
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         group: ButtonColourGroups,
 
         /// How the button should be presented when 'off'
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         off_style: ButtonColourOffStyle,
     },
 }
 
 #[derive(Subcommand, Debug)]
-#[clap(setting = AppSettings::DeriveDisplayOrder)]
-#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+#[command(arg_required_else_help = true)]
 pub enum AllFaderCommands {
     /// Set the appearance of Slider Lighting
     Display {
         /// The new display method
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         display: FaderDisplayStyle,
     },
 
@@ -719,7 +703,7 @@ pub enum AllFaderCommands {
         colour_one: String,
 
         /// How the button should be presented when 'off'
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         off_style: ButtonColourOffStyle,
 
         /// The secondary button colour [RRGGBB]
@@ -728,8 +712,7 @@ pub enum AllFaderCommands {
 }
 
 #[derive(Subcommand, Debug)]
-#[clap(setting = AppSettings::DeriveDisplayOrder)]
-#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+#[command(arg_required_else_help = true)]
 pub enum EffectsCommands {
     LoadEffectPreset {
         name: String,
@@ -739,53 +722,52 @@ pub enum EffectsCommands {
     },
     SaveActivePreset,
     SetActivePreset {
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         preset: EffectBankPresets,
     },
     Reverb {
-        #[clap(subcommand)]
+        #[command(subcommand)]
         command: Reverb,
     },
     Echo {
-        #[clap(subcommand)]
+        #[command(subcommand)]
         command: Echo,
     },
     Pitch {
-        #[clap(subcommand)]
+        #[command(subcommand)]
         command: Pitch,
     },
     Gender {
-        #[clap(subcommand)]
+        #[command(subcommand)]
         command: Gender,
     },
     Megaphone {
-        #[clap(subcommand)]
+        #[command(subcommand)]
         command: Megaphone,
     },
     Robot {
-        #[clap(subcommand)]
+        #[command(subcommand)]
         command: Robot,
     },
     HardTune {
-        #[clap(subcommand)]
+        #[command(subcommand)]
         command: HardTune,
     },
 
     /// Sets the current state of the FX
     Enabled {
-        #[clap(parse(try_from_str))]
+        #[arg(value_parser, action = ArgAction::Set)]
         enabled: bool,
     },
 }
 
 #[derive(Subcommand, Debug)]
-#[clap(setting = AppSettings::DeriveDisplayOrder)]
-#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+#[command(arg_required_else_help = true)]
 pub enum Reverb {
     /// Set the Reverb Style
     Style {
         /// The Style to Set
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         style: ReverbStyle,
     },
 
@@ -824,12 +806,11 @@ pub enum Reverb {
 }
 
 #[derive(Subcommand, Debug)]
-#[clap(setting = AppSettings::DeriveDisplayOrder)]
-#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+#[command(arg_required_else_help = true)]
 pub enum Echo {
     /// Set the Echo Style
     Style {
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         style: EchoStyle,
     },
 
@@ -856,12 +837,11 @@ pub enum Echo {
 }
 
 #[derive(Subcommand, Debug)]
-#[clap(setting = AppSettings::DeriveDisplayOrder)]
-#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+#[command(arg_required_else_help = true)]
 pub enum Pitch {
     /// Set the Pitch Style
     Style {
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         style: PitchStyle,
     },
 
@@ -873,11 +853,10 @@ pub enum Pitch {
 }
 
 #[derive(Subcommand, Debug)]
-#[clap(setting = AppSettings::DeriveDisplayOrder)]
-#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+#[command(arg_required_else_help = true)]
 pub enum Gender {
     Style {
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         style: GenderStyle,
     },
     Amount {
@@ -886,12 +865,11 @@ pub enum Gender {
 }
 
 #[derive(Subcommand, Debug)]
-#[clap(setting = AppSettings::DeriveDisplayOrder)]
-#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+#[command(arg_required_else_help = true)]
 pub enum Megaphone {
     /// Set the Megaphone Style
     Style {
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         style: MegaphoneStyle,
     },
 
@@ -903,25 +881,24 @@ pub enum Megaphone {
 
     /// Sets the State of the Megaphone Button
     Enabled {
-        #[clap(parse(try_from_str))]
+        #[arg(value_parser, action = ArgAction::Set)]
         enabled: bool,
     },
 }
 
 #[derive(Subcommand, Debug)]
-#[clap(setting = AppSettings::DeriveDisplayOrder)]
-#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+#[command(arg_required_else_help = true)]
 pub enum Robot {
     /// Set the Robot Style
     Style {
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         style: RobotStyle,
     },
 
     /// Sets the Robot Gain
     Gain {
         /// The Gain Range
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         range: RobotRange,
 
         /// The Gain Value
@@ -931,7 +908,7 @@ pub enum Robot {
     /// Sets the Robot Frequency
     Frequency {
         /// The Frequency Range
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         range: RobotRange,
         /// The frequency Value
         frequency: u8,
@@ -939,7 +916,7 @@ pub enum Robot {
     /// Sets the Robot Bandwidth
     Bandwidth {
         /// The Bandwidth Range
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         range: RobotRange,
         /// The Bandwidth Value
         bandwidth: u8,
@@ -958,18 +935,17 @@ pub enum Robot {
 
     /// Sets the Current state of the Robot Button
     Enabled {
-        #[clap(parse(try_from_str))]
+        #[arg(value_parser, action = ArgAction::Set)]
         enabled: bool,
     },
 }
 
 #[derive(Subcommand, Debug)]
-#[clap(setting = AppSettings::DeriveDisplayOrder)]
-#[clap(setting = AppSettings::ArgRequiredElseHelp)]
+#[command(arg_required_else_help = true)]
 pub enum HardTune {
     /// Sets the Hard Tune Style
     Style {
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         style: HardTuneStyle,
     },
 
@@ -984,121 +960,111 @@ pub enum HardTune {
 
     /// Sets the Hard Tune Source
     Source {
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         source: HardTuneSource,
     },
 
     /// Sets the current state of the HardTune Button
     Enabled {
-        #[clap(parse(try_from_str))]
+        #[arg(value_parser, action = ArgAction::Set)]
         enabled: bool,
     },
 }
 
 #[derive(Subcommand, Debug)]
-#[clap(setting = AppSettings::DeriveDisplayOrder)]
-#[clap(setting = AppSettings::ArgRequiredElseHelp)]
-
-/**
-Reference Commands:
-
-RemoveSampleByIndex(SampleBank, SampleButtons, usize),
-PlaySampleByIndex(SampleBank, SampleButtons, usize),
-StopSamplePlayback(SampleBank, SampleButtons),
-*/
-
+#[command(arg_required_else_help = true)]
 pub enum SamplerCommands {
     Add {
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         bank: SampleBank,
 
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         button: SampleButtons,
 
         file: String,
     },
 
     RemoveByIndex {
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         bank: SampleBank,
 
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         button: SampleButtons,
 
         index: usize,
     },
 
     PlayByIndex {
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         bank: SampleBank,
 
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         button: SampleButtons,
 
         index: usize,
     },
 
     PlayNextTrack {
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         bank: SampleBank,
 
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         button: SampleButtons,
     },
 
     StopPlayback {
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         bank: SampleBank,
 
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         button: SampleButtons,
     },
 
     PlaybackMode {
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         bank: SampleBank,
 
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         button: SampleButtons,
 
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         mode: SamplePlaybackMode,
     },
 
     PlaybackOrder {
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         bank: SampleBank,
 
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         button: SampleButtons,
 
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         mode: SamplePlayOrder,
     },
 
     StartPercent {
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         bank: SampleBank,
 
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         button: SampleButtons,
 
         sample_id: usize,
 
-        #[clap(parse(try_from_str=percent_value_float))]
+        #[arg(value_parser=percent_value_float)]
         start_position: f32,
     },
 
     StopPercent {
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         bank: SampleBank,
 
-        #[clap(arg_enum)]
+        #[arg(value_enum)]
         button: SampleButtons,
 
         sample_id: usize,
 
-        #[clap(parse(try_from_str=percent_value_float))]
+        #[arg(value_parser=percent_value_float)]
         stop_position: f32,
     },
 }

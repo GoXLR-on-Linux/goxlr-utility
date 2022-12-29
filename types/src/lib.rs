@@ -1,5 +1,5 @@
 #[cfg(feature = "clap")]
-use clap::ArgEnum;
+use clap::ValueEnum;
 use derivative::Derivative;
 use enum_map::Enum;
 #[cfg(feature = "serde")]
@@ -9,7 +9,7 @@ use std::fmt::Formatter;
 use strum::{Display, EnumCount, EnumIter};
 
 #[derive(Debug, Copy, Clone, Display, Enum, EnumIter, EnumCount, PartialEq, Eq)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ChannelName {
     Mic,
@@ -26,7 +26,7 @@ pub enum ChannelName {
 }
 
 #[derive(Debug, Copy, Clone, Display, Enum, EnumIter, EnumCount, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum FaderName {
     A,
@@ -36,7 +36,7 @@ pub enum FaderName {
 }
 
 #[derive(Copy, Clone, Debug, Display, EnumIter, EnumCount, PartialEq, Eq)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum EncoderName {
     Pitch = 0x00,
@@ -70,7 +70,7 @@ impl std::fmt::Debug for VersionNumber {
 }
 
 #[derive(Debug, Copy, Clone, Display, Enum, EnumIter, EnumCount, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum OutputDevice {
     Headphones,
@@ -81,7 +81,7 @@ pub enum OutputDevice {
 }
 
 #[derive(Debug, Copy, Clone, Display, Enum, EnumIter, EnumCount, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum InputDevice {
     Microphone,
@@ -96,7 +96,7 @@ pub enum InputDevice {
 
 #[derive(Debug, Eq, Copy, Clone, Display, EnumIter, EnumCount, Derivative)]
 #[derivative(PartialEq, Hash)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum EffectKey {
     DisableMic = 0x0158,
@@ -212,7 +212,7 @@ pub enum EffectKey {
 // Eq and Derivative allow for these to be added to a HashSet (the values make EnumSet unusable)
 #[derive(Debug, Copy, Clone, Eq, Display, EnumIter, EnumCount, Derivative)]
 #[derivative(PartialEq, Hash)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum MicrophoneParamKey {
     MicType = 0x000,
@@ -249,7 +249,7 @@ pub enum MicrophoneParamKey {
 }
 
 #[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq)]
-#[cfg_attr(feature = "clap", derive(clap::ArgEnum))]
+#[cfg_attr(feature = "clap", derive(clap::ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum FaderDisplayStyle {
     TwoColour,
@@ -259,7 +259,7 @@ pub enum FaderDisplayStyle {
 }
 
 #[derive(Debug, Copy, Clone, Display, Enum, EnumIter, EnumCount, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Button {
     // These are all the buttons from the GoXLR Mini.
@@ -296,7 +296,7 @@ pub enum Button {
 }
 
 #[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "clap", derive(clap::ArgEnum))]
+#[cfg_attr(feature = "clap", derive(clap::ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum SimpleColourTargets {
     Global,
@@ -308,7 +308,7 @@ pub enum SimpleColourTargets {
 }
 
 #[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "clap", derive(clap::ArgEnum))]
+#[cfg_attr(feature = "clap", derive(clap::ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum SamplerColourTargets {
     SamplerSelectA,
@@ -317,7 +317,7 @@ pub enum SamplerColourTargets {
 }
 
 #[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "clap", derive(clap::ArgEnum))]
+#[cfg_attr(feature = "clap", derive(clap::ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum EncoderColourTargets {
     Reverb,
@@ -327,7 +327,7 @@ pub enum EncoderColourTargets {
 }
 
 #[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ButtonColourGroups {
     FaderMute,
@@ -337,7 +337,7 @@ pub enum ButtonColourGroups {
 }
 
 #[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq)]
-#[cfg_attr(feature = "clap", derive(clap::ArgEnum))]
+#[cfg_attr(feature = "clap", derive(clap::ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ButtonColourOffStyle {
     Dimmed,
@@ -347,7 +347,7 @@ pub enum ButtonColourOffStyle {
 
 // MuteChat
 #[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum MuteFunction {
     All,
@@ -358,7 +358,7 @@ pub enum MuteFunction {
 }
 
 #[derive(Debug, Copy, Clone, Display, Enum, EnumIter, EnumCount, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum MicrophoneType {
     Dynamic,
@@ -381,7 +381,7 @@ impl MicrophoneType {
 }
 
 #[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum EffectBankPresets {
     Preset1,
@@ -393,7 +393,7 @@ pub enum EffectBankPresets {
 }
 
 #[derive(Debug, Copy, Clone, Display, Enum, EnumIter, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum SampleBank {
     A,
@@ -402,7 +402,7 @@ pub enum SampleBank {
 }
 
 #[derive(Debug, Copy, Clone, Display, EnumIter, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum MiniEqFrequencies {
     Equalizer90Hz,
@@ -414,7 +414,7 @@ pub enum MiniEqFrequencies {
 }
 
 #[derive(Debug, Copy, Clone, Display, EnumIter, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum EqFrequencies {
     Equalizer31Hz,
@@ -440,7 +440,7 @@ These enums are essentially the same maps, and use 'as usize' and strum::iter().
  */
 
 #[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize_repr, Deserialize_repr))]
 #[repr(u8)]
 pub enum CompressorRatio {
@@ -462,7 +462,7 @@ pub enum CompressorRatio {
 }
 
 #[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize_repr, Deserialize_repr))]
 #[repr(u8)]
 pub enum GateTimes {
@@ -515,7 +515,7 @@ pub enum GateTimes {
 }
 
 #[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize_repr, Deserialize_repr))]
 #[repr(u8)]
 pub enum CompressorAttackTime {
@@ -543,7 +543,7 @@ pub enum CompressorAttackTime {
 }
 
 #[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize_repr, Deserialize_repr))]
 #[repr(u8)]
 pub enum CompressorReleaseTime {
@@ -571,7 +571,7 @@ pub enum CompressorReleaseTime {
 }
 
 #[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ReverbStyle {
     Library,
@@ -583,7 +583,7 @@ pub enum ReverbStyle {
 }
 
 #[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum EchoStyle {
     Quarter,
@@ -595,7 +595,7 @@ pub enum EchoStyle {
 }
 
 #[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum PitchStyle {
     Narrow,
@@ -603,7 +603,7 @@ pub enum PitchStyle {
 }
 
 #[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum GenderStyle {
     Narrow,
@@ -612,7 +612,7 @@ pub enum GenderStyle {
 }
 
 #[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum MegaphoneStyle {
     Megaphone,
@@ -624,7 +624,7 @@ pub enum MegaphoneStyle {
 }
 
 #[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum RobotStyle {
     Robot1,
@@ -633,7 +633,7 @@ pub enum RobotStyle {
 }
 
 #[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum RobotRange {
     Low,
@@ -642,7 +642,7 @@ pub enum RobotRange {
 }
 
 #[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum HardTuneStyle {
     Natural,
@@ -651,7 +651,7 @@ pub enum HardTuneStyle {
 }
 
 #[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum HardTuneSource {
     All,
@@ -662,7 +662,7 @@ pub enum HardTuneSource {
 }
 
 #[derive(Debug, Copy, Clone, Enum, EnumIter, Display, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum SampleButtons {
     TopLeft,
@@ -672,7 +672,7 @@ pub enum SampleButtons {
 }
 
 #[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum SamplePlaybackMode {
     PlayNext,
@@ -684,7 +684,7 @@ pub enum SamplePlaybackMode {
 }
 
 #[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum SamplePlayOrder {
     Sequential,
@@ -692,7 +692,7 @@ pub enum SamplePlayOrder {
 }
 
 #[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum DisplayMode {
     Simple,
@@ -700,7 +700,7 @@ pub enum DisplayMode {
 }
 
 #[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum DisplayModeComponents {
     NoiseGate,
@@ -710,7 +710,7 @@ pub enum DisplayModeComponents {
 }
 
 #[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
-#[cfg_attr(feature = "clap", derive(ArgEnum))]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum MuteState {
     Unmuted,
