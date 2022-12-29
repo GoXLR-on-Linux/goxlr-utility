@@ -17,43 +17,43 @@ goxlr-types = { path = "../types" }
 goxlr-audio = { path = "../audio" }
 goxlr-profile-loader = { path = "../profile" }
 goxlr-scribbles = { path = "../scribbles" }
-simplelog = "0.11.1"
-tokio = { version = "1.0", features = ["full"] }
+simplelog = "0.12.0"
+tokio = { version = "1.23.0", features = ["full"] }
 tokio-serde = "0.8.0"
-log = "0.4.14"
-anyhow = "1.0"
+log = "0.4.17"
+anyhow = "1.0.68"
 strum = { version = "0.24.1" }
-enumset = "1.0.8"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = { version = "1.0" }
-directories = "4.0"
-byteorder = "1"
-enum-map = "2.1.0"
-futures = "0.3.21"
+enumset = "1.0.12"
+serde = { version = "1.0.152", features = ["derive"] }
+serde_json = { version = "1.0.91" }
+directories = "4.0.1"
+byteorder = "1.4.3"
+enum-map = "2.4.2"
+futures = "0.3.25"
 ritelinked = "0.3.2"
-clap = { version = "3.0.0", features = ["derive"] }
+clap = { version = "4.0.32", features = ["derive"] }
 opener = "0.5.0"
-regex = "1.6.0"
-chrono = "0.4.22"
+regex = "1.7.0"
+chrono = "0.4.23"
 glob = "0.3.0"
 cfg-if = "1.0.0"
 lazy_static = "1.4.0"
 
-interprocess = { version = "1.2.0", features = ["tokio_support"] }
+interprocess = { version = "1.2.1", features = ["tokio_support"] }
 
 notify = "5.0.0"
 json-patch = "0.3.0"
 
 ## HTTPd Server
-actix = "0.13"
-actix-web-actors = "4.1"
-actix-web = "4.1"
-actix-cors = "0.6.1"
+actix = "0.13.0"
+actix-web-actors = "4.1.0"
+actix-web = "4.2.1"
+actix-cors = "0.6.4"
 mime_guess = "2.0.4"
 include_dir = "0.7.3"
 
 [target.'cfg(target_family = "unix")'.dependencies]
-nix = { version = "0.25.0", features = ["user"] }
+nix = { version = "0.26.1", features = ["user"] }
 
 # Under Linux, we use ksni for our tray icon..
 [target.'cfg(target_os = "linux")'.dependencies]
@@ -64,7 +64,7 @@ rust-ini = "0.18.0"
 
 # Under Windows and MacOS, we use tao's tray feature
 [target.'cfg(target_os = "windows")'.dependencies]
-tao = { version = "0.15.7", features=["tray"] }
+tao = { version = "0.15.8", features=["tray"] }
 image = "0.24.5"
 sysinfo = "0.27.1"
 winrt-notification = "0.5.1"
@@ -73,16 +73,16 @@ mslnk = "0.1.8"
 dunce = "1.0.3"
 
 [target.'cfg(target_os = "macos")'.dependencies]
-tao = { version = "0.15.7", features=["tray"] }
+tao = { version = "0.15.8", features=["tray"] }
 image = "0.24.5"
 
 [build-dependencies]
-clap = { version = "3.0.0", features = ["derive"] }
-clap_complete = "3.0.0"
-directories = "4.0"
+clap = { version = "4.0.32", features = ["derive"] }
+clap_complete = "4.0.7"
+directories = "4.0.1"
 
 [target.'cfg(target_os = "windows")'.build-dependencies]
-windres = "*"
+windres = "0.2.2"
 
 [package.metadata.deb]
 name = "goxlr-utility"

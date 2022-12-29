@@ -1,4 +1,4 @@
-use clap::{ArgEnum, IntoApp};
+use clap::CommandFactory;
 use clap_complete::{generate_to, Shell};
 use std::env;
 use std::fs::File;
@@ -21,7 +21,7 @@ fn main() -> Result<(), Error> {
         Some(outdir) => outdir,
     };
 
-    let mut app = Cli::into_app();
+    let mut app = Cli::command();
     for shell in Shell::value_variants() {
         let _ = generate_to(*shell, &mut app, "goxlr-daemon", &outdir)?;
     }
