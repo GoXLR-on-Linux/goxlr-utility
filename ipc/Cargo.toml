@@ -12,17 +12,17 @@ categories = ["hardware-support", "api-bindings"]
 
 [dependencies]
 goxlr-types = { path = "../types", features = ["serde"] }
-serde = { version = "1.0", features = ["derive"] }
-tokio = {version = "1.0", features = ["net"]}
-tokio-util = { version = "0.6.9", features=["codec", "compat"]}
+serde = { version = "1.0.152", features = ["derive"] }
+tokio = {version = "1.23.0", features = ["net"]}
+tokio-util = { version = "0.7.4", features=["codec", "compat"]}
 tokio-serde = { version = "0.8.0", features=["bincode", "json"] }
-interprocess = { version = "1.2.0", features=["tokio_support"]}
-serde_repr = "0.1"
-futures = "0.3.19"
-strum = { version = "0.23" }
-enumset = {version = "1.0.8", features=["serde"] }
-enum-map = { version = "2.4.1", features=["serde"] }
-anyhow = "1.0"
+interprocess = { version = "1.2.1", features=["tokio_support"]}
+serde_repr = "0.1.10"
+futures = "0.3.25"
+strum = { version = "0.24.1" }
+enumset = {version = "1.0.12", features=["serde"] }
+enum-map = { version = "2.4.2", features=["serde"] }
+anyhow = "1.0.68"
 
 # Used to handle 'Patch' events..
 json-patch = "0.3.0"
