@@ -4,7 +4,6 @@ use std::os::raw::c_float;
 
 use enum_map::{Enum, EnumMap};
 use strum::{EnumIter, EnumProperty, IntoEnumIterator};
-use xml::attribute::OwnedAttribute;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
@@ -12,6 +11,7 @@ use xml::EventWriter;
 use anyhow::{anyhow, Result};
 
 use crate::components::colours::ColourMap;
+use crate::profile::Attribute;
 use crate::Preset;
 
 #[derive(thiserror::Error, Debug)]
@@ -52,9 +52,9 @@ impl GenderEncoderBase {
         }
     }
 
-    pub fn parse_gender_root(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_gender_root(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         for attr in attributes {
-            if attr.name.local_name == "active_set" {
+            if attr.name == "active_set" {
                 self.active_set = attr.value.parse()?;
                 continue;
             }
@@ -70,11 +70,11 @@ impl GenderEncoderBase {
     pub fn parse_gender_preset(
         &mut self,
         preset_enum: Preset,
-        attributes: &[OwnedAttribute],
+        attributes: &Vec<Attribute>,
     ) -> Result<(), ParseError> {
         let mut preset = GenderEncoder::new();
         for attr in attributes {
-            if attr.name.local_name == "GENDER_STYLE" {
+            if attr.name == "GENDER_STYLE" {
                 for style in GenderStyle::iter() {
                     if style.get_str("uiIndex").unwrap() == attr.value {
                         preset.style = style;
@@ -84,20 +84,17 @@ impl GenderEncoderBase {
                 continue;
             }
 
-            if attr.name.local_name == "GENDER_KNOB_POSITION" {
+            if attr.name == "GENDER_KNOB_POSITION" {
                 preset.knob_position = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
 
-            if attr.name.local_name == "GENDER_RANGE" {
+            if attr.name == "GENDER_RANGE" {
                 preset.range = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
 
-            println!(
-                "[GenderEncoder] Unparsed Child Attribute: {}",
-                &attr.name.local_name
-            );
+            println!("[GenderEncoder] Unparsed Child Attribute: {}", &attr.name);
         }
 
         self.preset_map[preset_enum] = preset;

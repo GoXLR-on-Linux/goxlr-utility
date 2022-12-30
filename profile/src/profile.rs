@@ -1,16 +1,17 @@
 use std::fs::File;
-use std::io::{Read, Write};
+use std::io::{BufReader, Read, Write};
 use std::path::Path;
 use std::process::exit;
 use std::str::FromStr;
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use enum_map::EnumMap;
-use log::{debug, error, warn};
+use log::{debug, warn};
+use quick_xml::events::{BytesStart, Event};
+use quick_xml::Reader;
 use strum::EnumProperty;
 use strum::IntoEnumIterator;
-use xml::reader::XmlEvent as XmlReaderEvent;
-use xml::{EmitterConfig, EventReader};
+use xml::EmitterConfig;
 use zip::write::FileOptions;
 
 use crate::components::browser::BrowserPreviewTree;
@@ -39,6 +40,12 @@ use crate::{Faders, Preset, SampleButtons};
 pub struct Profile {
     settings: ProfileSettings,
     scribbles: [Vec<u8>; 4],
+}
+
+#[derive(Debug)]
+pub struct Attribute {
+    pub(crate) name: String,
+    pub(crate) value: String,
 }
 
 impl Profile {
@@ -136,8 +143,11 @@ pub struct ProfileSettings {
 
 impl ProfileSettings {
     pub fn load<R: Read>(read: R) -> Result<Self> {
+        // Wrap our reader into a Buffered Reader for parsing..
+        let buf_reader = BufReader::new(read);
+        let mut reader = Reader::from_reader(buf_reader);
+
         debug!("Preparing Structure..");
-        let parser = EventReader::new(read);
 
         let mut root = RootElement::new();
         let mut browser = BrowserPreviewTree::new("browserPreviewTree".to_string());
@@ -164,53 +174,38 @@ impl ProfileSettings {
         let mut gender_encoder = GenderEncoderBase::new("genderEncoder".to_string());
 
         let mut sampler_map: EnumMap<SampleButtons, Option<SampleBase>> = EnumMap::default();
+        let mut active_sample_button: Option<&mut SampleBase> = None;
 
-        let mut active_sample_button = None;
-
-        debug!("Parsing XML..");
-        for e in parser {
-            match e {
-                Ok(XmlReaderEvent::StartElement {
-                    name, attributes, ..
-                }) => {
-                    debug!("Handling Tag: {}", name.local_name);
-                    if name.local_name == "ValueTreeRoot" {
-                        // This also handles <AppTree, due to a single shared value.
-                        root.parse_root(&attributes)?;
-
-                        // This code was made for XML version 2, v1 not currently supported.
-                        if root.get_version() > 2 {
-                            println!("XML Version Not Supported: {}", root.get_version());
-                            exit(-1);
-                        }
-                        continue;
-                    }
-
-                    if name.local_name == "browserPreviewTree" {
+        let mut buf = Vec::new();
+        loop {
+            match reader.read_event_into(&mut buf) {
+                // Applies to most tags, represents a tag with no child
+                Ok(Event::Empty(ref e)) => {
+                    let (name, attributes) = wrap_start_event(e)?;
+                    if name == "browserPreviewTree" {
                         browser.parse_browser(&attributes)?;
                         continue;
                     }
 
-                    if name.local_name == "mixerTree" {
+                    if name == "mixerTree" {
                         mixer.parse_mixers(&attributes)?;
                         continue;
                     }
 
-                    if name.local_name == "selectedContext" {
+                    if name == "selectedContext" {
                         context.parse_context(&attributes)?;
                         continue;
                     }
 
-                    if name.local_name == "muteChat" {
+                    if name == "muteChat" {
                         mute_chat.parse_mute_chat(&attributes)?;
                         continue;
                     }
 
                     // Might need to pattern match this..
-                    if name.local_name.starts_with("mute") && name.local_name != "muteChat" {
+                    if name.starts_with("mute") && name != "muteChat" {
                         // In the XML, the count starts as 1, here, we're gonna store as 0.
                         if let Some(id) = name
-                            .local_name
                             .chars()
                             .last()
                             .map(|s| u8::from_str(&s.to_string()))
@@ -224,10 +219,9 @@ impl ProfileSettings {
                         }
                     }
 
-                    if name.local_name.starts_with("FaderMeter") {
+                    if name.starts_with("FaderMeter") {
                         // In the XML, the count starts at 0, and we have different capitalisation :D
                         if let Some(id) = name
-                            .local_name
                             .chars()
                             .last()
                             .map(|s| u8::from_str(&s.to_string()))
@@ -240,12 +234,12 @@ impl ProfileSettings {
                         }
                     }
 
-                    if name.local_name.starts_with("effects") {
+                    if name.starts_with("effects") {
                         let mut found = false;
 
                         // Version 2, now with more enum, search for the prefix..
                         for preset in Preset::iter() {
-                            if preset.get_str("contextTitle").unwrap() == name.local_name {
+                            if preset.get_str("contextTitle").unwrap() == name {
                                 let mut effect = Effects::new(preset);
                                 effect.parse_effect(&attributes)?;
                                 effects[preset] = Some(effect);
@@ -258,9 +252,8 @@ impl ProfileSettings {
                         }
                     }
 
-                    if name.local_name.starts_with("scribble") {
+                    if name.starts_with("scribble") {
                         if let Some(id) = name
-                            .local_name
                             .chars()
                             .last()
                             .map(|s| u8::from_str(&s.to_string()))
@@ -274,136 +267,57 @@ impl ProfileSettings {
                         }
                     }
 
-                    if name.local_name == "megaphoneEffect" {
-                        megaphone_effect.parse_megaphone_root(&attributes)?;
-                        continue;
-                    }
-
-                    // Because the depth is crazy small, and tag names don't ever repeat themselves, there's really no point
-                    // tracking the opening and closing of tags except when writing, so we'll continue treating the reading
-                    // as if it were a very flat structure.
-                    if name.local_name.starts_with("megaphoneEffectpreset") {
-                        if let Ok(preset) = ProfileSettings::parse_preset(name.local_name.clone()) {
+                    if name.starts_with("megaphoneEffectpreset") {
+                        if let Ok(preset) = ProfileSettings::parse_preset(name.clone()) {
                             megaphone_effect.parse_megaphone_preset(preset, &attributes)?;
                             continue;
                         }
                     }
 
-                    if name.local_name == "robotEffect" {
-                        robot_effect.parse_robot_root(&attributes)?;
-                        continue;
-                    }
-
-                    if name.local_name.starts_with("robotEffectpreset") {
-                        if let Ok(preset) = ProfileSettings::parse_preset(name.local_name.clone()) {
+                    if name.starts_with("robotEffectpreset") {
+                        if let Ok(preset) = ProfileSettings::parse_preset(name.clone()) {
                             robot_effect.parse_robot_preset(preset, &attributes)?;
                             continue;
                         }
                     }
 
-                    if name.local_name == "hardtuneEffect" {
-                        hardtune_effect.parse_hardtune_root(&attributes)?;
-                        continue;
-                    }
-
-                    if name.local_name.starts_with("hardtuneEffectpreset") {
-                        if let Ok(preset) = ProfileSettings::parse_preset(name.local_name.clone()) {
+                    if name.starts_with("hardtuneEffectpreset") {
+                        if let Ok(preset) = ProfileSettings::parse_preset(name.clone()) {
                             hardtune_effect.parse_hardtune_preset(preset, &attributes)?;
                             continue;
                         }
                     }
 
-                    if name.local_name == "reverbEncoder" {
-                        reverb_encoder.parse_reverb_root(&attributes)?;
-                        continue;
-                    }
-
-                    if name.local_name.starts_with("reverbEncoderpreset") {
-                        if let Ok(preset) = ProfileSettings::parse_preset(name.local_name.clone()) {
+                    if name.starts_with("reverbEncoderpreset") {
+                        if let Ok(preset) = ProfileSettings::parse_preset(name.clone()) {
                             reverb_encoder.parse_reverb_preset(preset, &attributes)?;
                             continue;
                         }
                     }
 
-                    if name.local_name == "echoEncoder" {
-                        echo_encoder.parse_echo_root(&attributes)?;
-                        continue;
-                    }
-
-                    if name.local_name.starts_with("echoEncoderpreset") {
-                        if let Ok(preset) = ProfileSettings::parse_preset(name.local_name.clone()) {
+                    if name.starts_with("echoEncoderpreset") {
+                        if let Ok(preset) = ProfileSettings::parse_preset(name.clone()) {
                             echo_encoder.parse_echo_preset(preset, &attributes)?;
                             continue;
                         }
                     }
 
-                    if name.local_name == "pitchEncoder" {
-                        pitch_encoder.parse_pitch_root(&attributes)?;
-                        continue;
-                    }
-
-                    if name.local_name.starts_with("pitchEncoderpreset") {
-                        if let Ok(preset) = ProfileSettings::parse_preset(name.local_name.clone()) {
+                    if name.starts_with("pitchEncoderpreset") {
+                        if let Ok(preset) = ProfileSettings::parse_preset(name.clone()) {
                             pitch_encoder.parse_pitch_preset(preset, &attributes)?;
                             continue;
                         }
                     }
 
-                    if name.local_name == "genderEncoder" {
-                        gender_encoder.parse_gender_root(&attributes)?;
-                        continue;
-                    }
-
-                    if name.local_name.starts_with("genderEncoderpreset") {
-                        if let Ok(preset) = ProfileSettings::parse_preset(name.local_name.clone()) {
+                    if name.starts_with("genderEncoderpreset") {
+                        if let Ok(preset) = ProfileSettings::parse_preset(name.clone()) {
                             gender_encoder.parse_gender_preset(preset, &attributes)?;
                             continue;
                         }
                     }
 
-                    // These can probably be a little cleaner..
-                    if name.local_name == "sampleTopLeft" {
-                        let mut sampler = SampleBase::new("sampleTopLeft".to_string());
-                        sampler.parse_sample_root(&attributes)?;
-                        sampler_map[TopLeft] = Some(sampler);
-                        active_sample_button = sampler_map[TopLeft].as_mut();
-                        continue;
-                    }
-
-                    if name.local_name == "sampleTopRight" {
-                        let mut sampler = SampleBase::new("sampleTopRight".to_string());
-                        sampler.parse_sample_root(&attributes)?;
-                        sampler_map[TopRight] = Some(sampler);
-                        active_sample_button = sampler_map[TopRight].as_mut();
-                        continue;
-                    }
-
-                    if name.local_name == "sampleBottomLeft" {
-                        let mut sampler = SampleBase::new("sampleBottomLeft".to_string());
-                        sampler.parse_sample_root(&attributes)?;
-                        sampler_map[BottomLeft] = Some(sampler);
-                        active_sample_button = sampler_map[BottomLeft].as_mut();
-                        continue;
-                    }
-
-                    if name.local_name == "sampleBottomRight" {
-                        let mut sampler = SampleBase::new("sampleBottomRight".to_string());
-                        sampler.parse_sample_root(&attributes)?;
-                        sampler_map[BottomRight] = Some(sampler);
-                        active_sample_button = sampler_map[BottomRight].as_mut();
-                        continue;
-                    }
-
-                    if name.local_name == "sampleClear" {
-                        let mut sampler = SampleBase::new("sampleClear".to_string());
-                        sampler.parse_sample_root(&attributes)?;
-                        sampler_map[Clear] = Some(sampler);
-                        active_sample_button = sampler_map[Clear].as_mut();
-                        continue;
-                    }
-
-                    if name.local_name.starts_with("sampleStack") {
-                        if let Some(id) = name.local_name.chars().last() {
+                    if name.starts_with("sampleStack") {
+                        if let Some(id) = name.chars().last() {
                             if let Some(button) = &mut active_sample_button {
                                 button.parse_sample_stack(id, &attributes)?;
                                 continue;
@@ -411,46 +325,130 @@ impl ProfileSettings {
                         }
                     }
 
-                    if name.local_name.starts_with("sampleBank")
-                        || name.local_name == "fxClear"
-                        || name.local_name == "swear"
-                        || name.local_name == "globalColour"
-                        || name.local_name == "logoX"
+                    if name.starts_with("sampleBank")
+                        || name == "fxClear"
+                        || name == "swear"
+                        || name == "globalColour"
+                        || name == "logoX"
                     {
                         // In this case, the tag name, and attribute prefixes are the same..
-                        let mut simple_element = SimpleElement::new(name.local_name.clone());
+                        let mut simple_element = SimpleElement::new(name.clone());
                         simple_element.parse_simple(&attributes)?;
-                        simple_elements[SimpleElements::from_str(&name.local_name)?] =
-                            Some(simple_element);
+                        simple_elements[SimpleElements::from_str(&name)?] = Some(simple_element);
 
                         continue;
                     }
 
-                    if name.local_name == "AppTree" {
+                    if name == "AppTree" {
                         // This is handled by ValueTreeRoot
                         continue;
                     }
 
-                    warn!("Unhandled Tag: {}", name.local_name);
+                    warn!("Unhandled Tag: {}", name);
                 }
 
-                Ok(XmlReaderEvent::EndElement { name }) => {
-                    // This probably isn't needed, but cleans up the variable once the stacks have been
-                    // read.
-                    if name.local_name == "sampleTopLeft"
-                        || name.local_name == "sampleTopRight"
-                        || name.local_name == "sampleBottomLeft"
-                        || name.local_name == "sampleBottomRight"
-                        || name.local_name == "sampleClear"
-                    {
-                        active_sample_button = None;
+                // Represents a tag which has children
+                Ok(Event::Start(ref e)) => {
+                    let (name, attributes) = wrap_start_event(e)?;
+
+                    if name == "ValueTreeRoot" {
+                        // This also handles <AppTree, due to a single shared value.
+                        root.parse_root(&attributes)?;
+
+                        // This code was made for XML version 2, v1 not currently supported.
+                        if root.get_version() > 2 {
+                            println!("XML Version Not Supported: {}", root.get_version());
+                            exit(-1);
+                        }
+                        continue;
+                    }
+
+                    if name == "megaphoneEffect" {
+                        megaphone_effect.parse_megaphone_root(&attributes)?;
+                        continue;
+                    }
+
+                    if name == "robotEffect" {
+                        robot_effect.parse_robot_root(&attributes)?;
+                        continue;
+                    }
+
+                    if name == "hardtuneEffect" {
+                        hardtune_effect.parse_hardtune_root(&attributes)?;
+                        continue;
+                    }
+
+                    if name == "reverbEncoder" {
+                        reverb_encoder.parse_reverb_root(&attributes)?;
+                        continue;
+                    }
+
+                    if name == "echoEncoder" {
+                        echo_encoder.parse_echo_root(&attributes)?;
+                        continue;
+                    }
+
+                    if name == "pitchEncoder" {
+                        pitch_encoder.parse_pitch_root(&attributes)?;
+                        continue;
+                    }
+
+                    if name == "genderEncoder" {
+                        gender_encoder.parse_gender_root(&attributes)?;
+                        continue;
+                    }
+
+                    // These can probably be a little cleaner..
+                    if name == "sampleTopLeft" {
+                        let mut sampler = SampleBase::new("sampleTopLeft".to_string());
+                        sampler.parse_sample_root(&attributes)?;
+                        sampler_map[TopLeft] = Some(sampler);
+                        active_sample_button = sampler_map[TopLeft].as_mut();
+                        continue;
+                    }
+
+                    if name == "sampleTopRight" {
+                        let mut sampler = SampleBase::new("sampleTopRight".to_string());
+                        sampler.parse_sample_root(&attributes)?;
+                        sampler_map[TopRight] = Some(sampler);
+                        active_sample_button = sampler_map[TopRight].as_mut();
+                        continue;
+                    }
+
+                    if name == "sampleBottomLeft" {
+                        let mut sampler = SampleBase::new("sampleBottomLeft".to_string());
+                        sampler.parse_sample_root(&attributes)?;
+                        sampler_map[BottomLeft] = Some(sampler);
+                        active_sample_button = sampler_map[BottomLeft].as_mut();
+                        continue;
+                    }
+
+                    if name == "sampleBottomRight" {
+                        let mut sampler = SampleBase::new("sampleBottomRight".to_string());
+                        sampler.parse_sample_root(&attributes)?;
+                        sampler_map[BottomRight] = Some(sampler);
+                        active_sample_button = sampler_map[BottomRight].as_mut();
+                        continue;
+                    }
+
+                    if name == "sampleClear" {
+                        let mut sampler = SampleBase::new("sampleClear".to_string());
+                        sampler.parse_sample_root(&attributes)?;
+                        sampler_map[Clear] = Some(sampler);
+                        active_sample_button = sampler_map[Clear].as_mut();
+                        continue;
                     }
                 }
-                Err(e) => {
-                    error!("Error: {}", e);
+
+                // Ends a tag with children
+                Ok(Event::End(_)) => {}
+                Ok(Event::Eof) => {
                     break;
                 }
-                _ => {}
+                Ok(_) => {}
+                Err(e) => {
+                    bail!("Error Parsing Profile: {}", e);
+                }
             }
         }
 
@@ -477,40 +475,22 @@ impl ProfileSettings {
     }
 
     pub fn load_preset<R: Read>(&mut self, read: R) -> Result<()> {
+        let buf_reader = BufReader::new(read);
+        let mut reader = Reader::from_reader(buf_reader);
+
         // So, in principle here, all we need to do is loop over the tags, check on the
         // tag name, and load it directly into the relevant effect. This should force a
         // replace of the current effect, and bam, done.
 
         // Firstly, we need the current preset to overwrite.
         let current = self.context().selected_effects();
+        let mut buf = Vec::new();
+        loop {
+            match reader.read_event_into(&mut buf) {
+                Ok(Event::Empty(ref e)) => {
+                    let (name, attributes) = wrap_start_event(e)?;
 
-        // Create the parser..
-        let parser = EventReader::new(read);
-
-        let mut read_top = false;
-        for e in parser {
-            match e {
-                Ok(XmlReaderEvent::StartElement {
-                    name, attributes, ..
-                }) => {
-                    if !read_top {
-                        // This is the first 'Start Element', which will be the top level element.
-                        for attribute in attributes {
-                            if attribute.name.local_name == "name" {
-                                read_top = true;
-                                self.effects_mut(current)
-                                    .set_name(attribute.value.clone())?;
-                                break;
-                            }
-                        }
-
-                        if !read_top {
-                            return Err(anyhow!("Preset Name not Found, cannot proceed."));
-                        }
-                        continue;
-                    }
-
-                    match name.local_name.as_str() {
+                    match name.as_str() {
                         "reverbEncoder" => self
                             .reverb_encoder
                             .parse_reverb_preset(current, &attributes)?,
@@ -532,11 +512,33 @@ impl ProfileSettings {
                         "hardtuneEffect" => self
                             .hardtune_effect
                             .parse_hardtune_preset(current, &attributes)?,
-                        _ => warn!("Unexpected Start Tag {}", name.local_name),
+                        _ => warn!("Unexpected Start Tag {}", name),
                     }
                 }
-                Err(error) => error!("Error Occurred: {}", error),
-                _ => {}
+
+                Ok(Event::Start(ref e)) => {
+                    let (_name, attributes) = wrap_start_event(e)?;
+
+                    // We can cheese this a little, there's only one tag in a preset that has
+                    // children, and that's the top level element. So if this is going, we
+                    // already know what to do.
+                    for attribute in attributes {
+                        if attribute.name == "name" {
+                            self.effects_mut(current).set_name(attribute.value)?;
+                            break;
+                        }
+                    }
+                    bail!("Preset Name not found, cannot proceed.");
+                }
+
+                // Ends a tag with children
+                Ok(Event::End(_)) => {}
+                Ok(Event::Eof) => {
+                    break;
+                }
+
+                Ok(_) => {}
+                Err(_) => {}
             }
         }
         Ok(())
@@ -843,4 +845,26 @@ impl ProfileSettings {
     pub fn context_mut(&mut self) -> &mut Context {
         &mut self.context
     }
+}
+
+/// This will wrap a 'Start' XML event into a name, and attribute Vec. We're using
+/// our own Attribute Struct here to allow easy moving between XML libraries in future.
+fn wrap_start_event(event: &BytesStart) -> Result<(String, Vec<Attribute>)> {
+    let mut attributes = Vec::new();
+
+    let name = String::from_utf8_lossy(event.local_name().as_ref()).parse()?;
+    for attribute in event.attributes() {
+        match attribute {
+            Ok(a) => {
+                attributes.push(Attribute {
+                    name: String::from_utf8_lossy(a.key.local_name().as_ref()).parse()?,
+                    value: String::from(a.unescape_value()?.as_ref()),
+                });
+            }
+            Err(e) => {
+                bail!("Error Processing Attribute: {}", e);
+            }
+        }
+    }
+    Ok((name, attributes))
 }

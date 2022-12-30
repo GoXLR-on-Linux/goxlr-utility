@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::io::Write;
 
 use strum::{EnumProperty, IntoEnumIterator};
-use xml::attribute::OwnedAttribute;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
@@ -11,6 +10,7 @@ use anyhow::Result;
 
 use crate::components::colours::ColourMap;
 use crate::components::mixer::FullChannelList;
+use crate::profile::Attribute;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -43,9 +43,9 @@ impl Fader {
         }
     }
 
-    pub fn parse_fader(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_fader(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         for attr in attributes {
-            if attr.name.local_name.ends_with("listIndex") {
+            if attr.name.ends_with("listIndex") {
                 let mut found = false;
 
                 // Iterate over the channels, and see which one this matches..

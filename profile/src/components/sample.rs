@@ -8,13 +8,13 @@ use enum_map::Enum;
 use rand::seq::SliceRandom;
 use ritelinked::LinkedHashMap;
 use strum::{Display, EnumIter, EnumProperty, EnumString};
-use xml::attribute::OwnedAttribute;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
 
 use crate::components::colours::ColourMap;
 use crate::components::sample::PlayOrder::{Random, Sequential};
+use crate::profile::Attribute;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -57,9 +57,9 @@ impl SampleBase {
         }
     }
 
-    pub fn parse_sample_root(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_sample_root(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         for attr in attributes {
-            if attr.name.local_name.ends_with("state") && self.element_name != "sampleClear" {
+            if attr.name.ends_with("state") && self.element_name != "sampleClear" {
                 if attr.value != "Empty" && attr.value != "Stopped" {
                     println!("[Sampler] Unknown State: {}", &attr.value);
                 }
@@ -75,13 +75,13 @@ impl SampleBase {
         Ok(())
     }
 
-    pub fn parse_sample_stack(&mut self, id: char, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_sample_stack(&mut self, id: char, attributes: &Vec<Attribute>) -> Result<()> {
         // The easiest way to handle this is to parse everything into key-value pairs, then try
         // to locate all the settings for each track inside it..
         let mut map: HashMap<String, String> = HashMap::default();
 
         for attr in attributes {
-            map.insert(attr.name.local_name.clone(), attr.value.clone());
+            map.insert(attr.name.clone(), attr.value.clone());
         }
 
         let mut sample_stack = SampleStack::new();

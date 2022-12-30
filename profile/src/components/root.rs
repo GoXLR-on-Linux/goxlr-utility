@@ -3,7 +3,7 @@ use std::io::Write;
 
 use anyhow::Result;
 
-use xml::attribute::OwnedAttribute;
+use crate::profile::Attribute;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
@@ -50,19 +50,19 @@ impl RootElement {
         }
     }
 
-    pub fn parse_root(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_root(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         for attr in attributes {
-            if attr.name.local_name == "version" {
+            if attr.name == "version" {
                 self.version = attr.value.parse()?;
                 continue;
             }
 
-            if attr.name.local_name == "loudness" {
+            if attr.name == "loudness" {
                 self.loudness = attr.value.parse()?;
                 continue;
             }
 
-            if attr.name.local_name == "device" {
+            if attr.name == "device" {
                 self.device = attr.value.parse()?;
             }
         }

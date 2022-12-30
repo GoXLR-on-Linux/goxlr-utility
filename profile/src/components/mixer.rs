@@ -3,7 +3,6 @@ use std::io::Write;
 
 use enum_map::{Enum, EnumMap};
 use strum::{EnumIter, EnumProperty, IntoEnumIterator};
-use xml::attribute::OwnedAttribute;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
@@ -11,6 +10,7 @@ use xml::EventWriter;
 use anyhow::Result;
 
 use crate::components::colours::ColourMap;
+use crate::profile::Attribute;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -50,13 +50,13 @@ impl Mixers {
         }
     }
 
-    pub fn parse_mixers(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_mixers(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         for attr in attributes {
-            if attr.name.local_name.ends_with("Level") {
+            if attr.name.ends_with("Level") {
                 let mut found = false;
 
                 // Get the String key..
-                let channel = attr.name.local_name.as_str();
+                let channel = attr.name.as_str();
                 let channel = &channel[0..channel.len() - 5];
 
                 let value: u8 = attr.value.parse()?;
@@ -76,9 +76,9 @@ impl Mixers {
                 continue;
             }
 
-            if attr.name.local_name.contains("To") {
+            if attr.name.contains("To") {
                 // Extract the two sides of the string..
-                let name = attr.name.local_name.as_str();
+                let name = attr.name.as_str();
 
                 if let Some(middle_index) = name.find("To") {
                     let input = &name[0..middle_index];

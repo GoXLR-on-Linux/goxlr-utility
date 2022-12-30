@@ -3,7 +3,6 @@ use std::io::Write;
 
 use enum_map_derive::Enum;
 use strum::{EnumIter, EnumProperty, IntoEnumIterator};
-use xml::attribute::OwnedAttribute;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
@@ -11,6 +10,7 @@ use xml::EventWriter;
 use anyhow::Result;
 
 use crate::components::colours::ColourMap;
+use crate::profile::Attribute;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -50,9 +50,9 @@ impl MuteButton {
         }
     }
 
-    pub fn parse_button(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_button(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         for attr in attributes {
-            if attr.name.local_name.ends_with("Function") {
+            if attr.name.ends_with("Function") {
                 let mut found = false;
 
                 // First catch this seemingly legacy value..
@@ -74,14 +74,14 @@ impl MuteButton {
                 continue;
             }
 
-            if attr.name.local_name.ends_with("prevLevel") {
+            if attr.name.ends_with("prevLevel") {
                 // Simple, parse this into a u8 :)
                 let value: u8 = attr.value.parse()?;
                 self.previous_volume = value;
                 continue;
             }
 
-            if attr.name.local_name == "fromMuteAllFlag" {
+            if attr.name == "fromMuteAllFlag" {
                 if attr.value == "0" {
                     self.from_mute_all = Some(false);
                 } else {

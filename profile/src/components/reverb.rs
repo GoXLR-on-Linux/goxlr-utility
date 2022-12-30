@@ -4,7 +4,6 @@ use std::os::raw::c_float;
 
 use enum_map::{Enum, EnumMap};
 use strum::{EnumIter, EnumProperty, IntoEnumIterator};
-use xml::attribute::OwnedAttribute;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
@@ -13,6 +12,7 @@ use anyhow::{anyhow, Result};
 
 use crate::components::colours::ColourMap;
 use crate::components::reverb::ReverbStyle::Library;
+use crate::profile::Attribute;
 use crate::Preset;
 
 #[derive(thiserror::Error, Debug)]
@@ -53,9 +53,9 @@ impl ReverbEncoderBase {
         }
     }
 
-    pub fn parse_reverb_root(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_reverb_root(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         for attr in attributes {
-            if attr.name.local_name == "active_set" {
+            if attr.name == "active_set" {
                 self.active_set = attr.value.parse()?;
                 continue;
             }
@@ -71,11 +71,11 @@ impl ReverbEncoderBase {
     pub fn parse_reverb_preset(
         &mut self,
         preset_enum: Preset,
-        attributes: &[OwnedAttribute],
+        attributes: &Vec<Attribute>,
     ) -> Result<()> {
         let mut preset = ReverbEncoder::new();
         for attr in attributes {
-            if attr.name.local_name == "REVERB_STYLE" {
+            if attr.name == "REVERB_STYLE" {
                 for style in ReverbStyle::iter() {
                     if style.get_str("uiIndex").unwrap() == attr.value {
                         preset.style = style;
@@ -85,64 +85,61 @@ impl ReverbEncoderBase {
                 continue;
             }
 
-            if attr.name.local_name == "REVERB_KNOB_POSITION" {
+            if attr.name == "REVERB_KNOB_POSITION" {
                 preset.set_knob_position(attr.value.parse::<c_float>()? as i8)?;
                 continue;
             }
 
-            if attr.name.local_name == "REVERB_TYPE" {
+            if attr.name == "REVERB_TYPE" {
                 preset.reverb_type = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "REVERB_DECAY" {
+            if attr.name == "REVERB_DECAY" {
                 preset.decay = attr.value.parse::<c_float>()? as u16;
                 continue;
             }
-            if attr.name.local_name == "REVERB_PREDELAY" {
+            if attr.name == "REVERB_PREDELAY" {
                 preset.pre_delay = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "REVERB_DIFFUSE" {
+            if attr.name == "REVERB_DIFFUSE" {
                 preset.diffuse = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
-            if attr.name.local_name == "REVERB_LOCOLOR" {
+            if attr.name == "REVERB_LOCOLOR" {
                 preset.low_color = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
-            if attr.name.local_name == "REVERB_HICOLOR" {
+            if attr.name == "REVERB_HICOLOR" {
                 preset.high_color = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
-            if attr.name.local_name == "REVERB_HIFACTOR" {
+            if attr.name == "REVERB_HIFACTOR" {
                 preset.high_factor = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
-            if attr.name.local_name == "REVERB_MODSPEED" {
+            if attr.name == "REVERB_MODSPEED" {
                 preset.mod_speed = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
-            if attr.name.local_name == "REVERB_MODDEPTH" {
+            if attr.name == "REVERB_MODDEPTH" {
                 preset.mod_depth = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
-            if attr.name.local_name == "REVERB_EARLYLEVEL" {
+            if attr.name == "REVERB_EARLYLEVEL" {
                 preset.early_level = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
-            if attr.name.local_name == "REVERB_TAILLEVEL" {
+            if attr.name == "REVERB_TAILLEVEL" {
                 preset.tail_level = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
-            if attr.name.local_name == "REVERB_DRYLEVEL" {
+            if attr.name == "REVERB_DRYLEVEL" {
                 preset.dry_level = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
 
-            println!(
-                "[ReverbEncoder] Unparsed Child Attribute: {}",
-                &attr.name.local_name
-            );
+            println!("[ReverbEncoder] Unparsed Child Attribute: {}", &attr.name);
         }
 
         // Ok, we should be able to store this now..

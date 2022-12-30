@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::io::Write;
 
-use xml::attribute::OwnedAttribute;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
@@ -12,6 +11,7 @@ use enum_map::Enum;
 use strum::{Display, EnumIter, EnumString};
 
 use crate::components::colours::ColourMap;
+use crate::profile::Attribute;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -48,7 +48,7 @@ impl SimpleElement {
         }
     }
 
-    pub fn parse_simple(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_simple(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         for attr in attributes {
             if !self.colour_map.read_colours(attr)? {
                 println!("[{}] Unparsed Attribute: {}", self.element_name, attr.name);

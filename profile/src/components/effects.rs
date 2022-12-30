@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::io::Write;
 
-use xml::attribute::OwnedAttribute;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
@@ -10,6 +9,7 @@ use anyhow::{anyhow, Result};
 use strum::EnumProperty;
 
 use crate::components::colours::ColourMap;
+use crate::profile::Attribute;
 use crate::Preset;
 
 #[derive(thiserror::Error, Debug)]
@@ -49,9 +49,9 @@ impl Effects {
         }
     }
 
-    pub fn parse_effect(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_effect(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         for attr in attributes {
-            if attr.name.local_name.ends_with("Name") {
+            if attr.name.ends_with("Name") {
                 self.name = attr.value.clone();
                 continue;
             }

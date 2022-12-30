@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::io::Write;
 use std::str::FromStr;
 
-use xml::attribute::OwnedAttribute;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
@@ -11,6 +10,7 @@ use anyhow::Result;
 
 use crate::components::colours::ColourMap;
 use crate::components::scribble::ScribbleStyle::{Inverted, Normal};
+use crate::profile::Attribute;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -77,34 +77,34 @@ impl Scribble {
         }
     }
 
-    pub fn parse_scribble(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_scribble(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         for attr in attributes {
-            if attr.name.local_name.ends_with("iconFile") {
+            if attr.name.ends_with("iconFile") {
                 self.icon_file = attr.value.clone();
                 continue;
             }
 
-            if attr.name.local_name.ends_with("string0") {
+            if attr.name.ends_with("string0") {
                 self.text_top_left = attr.value.clone();
                 continue;
             }
 
-            if attr.name.local_name.ends_with("string1") {
+            if attr.name.ends_with("string1") {
                 self.text_bottom_middle = attr.value.clone();
                 continue;
             }
 
-            if attr.name.local_name.ends_with("alpha") {
+            if attr.name.ends_with("alpha") {
                 self.alpha = f64::from_str(attr.value.as_str())?;
                 continue;
             }
 
-            if attr.name.local_name.ends_with("textSize") {
+            if attr.name.ends_with("textSize") {
                 self.text_size = u8::from_str(attr.value.as_str())?;
                 continue;
             }
 
-            if attr.name.local_name.ends_with("inverted") {
+            if attr.name.ends_with("inverted") {
                 if attr.value == "0" {
                     self.style = Normal;
                 } else {
@@ -113,7 +113,7 @@ impl Scribble {
                 continue;
             }
 
-            if attr.name.local_name.ends_with("bitmap") {
+            if attr.name.ends_with("bitmap") {
                 self.bitmap_file = attr.value.clone();
                 continue;
             }

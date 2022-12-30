@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::io::Write;
 
-use xml::attribute::OwnedAttribute;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
@@ -9,6 +8,7 @@ use xml::EventWriter;
 use anyhow::Result;
 
 use crate::components::colours::ColourMap;
+use crate::profile::Attribute;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -55,24 +55,24 @@ impl BrowserPreviewTree {
         }
     }
 
-    pub fn parse_browser(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_browser(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         for attr in attributes {
-            if attr.name.local_name == "playing" {
+            if attr.name == "playing" {
                 self.playing = attr.value.parse()?;
                 continue;
             }
 
-            if attr.name.local_name == "playToggle" {
+            if attr.name == "playToggle" {
                 self.play_toggle = attr.value.parse()?;
                 continue;
             }
 
-            if attr.name.local_name == "file" {
+            if attr.name == "file" {
                 self.file = attr.value.clone();
                 continue;
             }
 
-            if attr.name.local_name == "currentRelativeTime" {
+            if attr.name == "currentRelativeTime" {
                 self.current_relative_time = attr.value.parse()?;
                 continue;
             }

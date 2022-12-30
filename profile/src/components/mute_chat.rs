@@ -3,7 +3,6 @@ use std::io::Write;
 
 use enum_map::Enum;
 use strum::EnumProperty;
-use xml::attribute::OwnedAttribute;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
@@ -29,6 +28,7 @@ pub enum ParseError {
     #[error("Invalid colours: {0}")]
     InvalidColours(#[from] crate::components::colours::ParseError),
 }
+use crate::profile::Attribute;
 use std::str::FromStr;
 
 /**
@@ -63,14 +63,14 @@ impl MuteChat {
         }
     }
 
-    pub fn parse_mute_chat(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_mute_chat(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         for attr in attributes {
-            if attr.name.local_name == "micIsAnActiveFader" {
+            if attr.name == "micIsAnActiveFader" {
                 self.mic_fader_id = attr.value.parse()?;
                 continue;
             }
 
-            if attr.name.local_name == "coughButtonToggleSetting" {
+            if attr.name == "coughButtonToggleSetting" {
                 self.cough_behaviour = if attr.value == "0" {
                     Hold
                 } else {
@@ -79,17 +79,17 @@ impl MuteChat {
                 continue;
             }
 
-            if attr.name.local_name == "coughButtonMuteSourceSelection" {
+            if attr.name == "coughButtonMuteSourceSelection" {
                 self.cough_mute_source = MuteFunction::from_usize(attr.value.parse()?);
                 continue;
             }
 
-            if attr.name.local_name == "coughButtonIsOn" {
+            if attr.name == "coughButtonIsOn" {
                 self.cough_button_on = attr.value != "0";
                 continue;
             }
 
-            if attr.name.local_name == "blink" {
+            if attr.name == "blink" {
                 self.blink = ColourState::from_str(&attr.value)?;
                 continue;
             }

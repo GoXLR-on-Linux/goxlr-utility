@@ -4,7 +4,6 @@ use std::os::raw::c_float;
 
 use enum_map::{Enum, EnumMap};
 use strum::{EnumIter, EnumProperty, IntoEnumIterator};
-use xml::attribute::OwnedAttribute;
 use xml::writer::events::StartElementBuilder;
 use xml::writer::XmlEvent as XmlWriterEvent;
 use xml::EventWriter;
@@ -13,6 +12,7 @@ use anyhow::{anyhow, Result};
 
 use crate::components::colours::ColourMap;
 
+use crate::profile::Attribute;
 use crate::Preset;
 
 #[derive(thiserror::Error, Debug)]
@@ -53,9 +53,9 @@ impl EchoEncoderBase {
         }
     }
 
-    pub fn parse_echo_root(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_echo_root(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         for attr in attributes {
-            if attr.name.local_name == "active_set" {
+            if attr.name == "active_set" {
                 self.active_set = attr.value.parse()?;
                 continue;
             }
@@ -71,11 +71,11 @@ impl EchoEncoderBase {
     pub fn parse_echo_preset(
         &mut self,
         preset_enum: Preset,
-        attributes: &[OwnedAttribute],
+        attributes: &Vec<Attribute>,
     ) -> Result<()> {
         let mut preset = EchoEncoder::new();
         for attr in attributes {
-            if attr.name.local_name == "DELAY_STYLE" {
+            if attr.name == "DELAY_STYLE" {
                 for style in EchoStyle::iter() {
                     if style.get_str("uiIndex").unwrap() == attr.value {
                         preset.style = style;
@@ -85,64 +85,61 @@ impl EchoEncoderBase {
                 continue;
             }
 
-            if attr.name.local_name == "DELAY_KNOB_POSITION" {
+            if attr.name == "DELAY_KNOB_POSITION" {
                 preset.set_knob_position(attr.value.parse::<c_float>()? as i8)?;
                 continue;
             }
 
-            if attr.name.local_name == "DELAY_SOURCE" {
+            if attr.name == "DELAY_SOURCE" {
                 preset.source = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "DELAY_DIV_L" {
+            if attr.name == "DELAY_DIV_L" {
                 preset.div_l = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "DELAY_DIV_R" {
+            if attr.name == "DELAY_DIV_R" {
                 preset.div_r = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "DELAY_FB_L" {
+            if attr.name == "DELAY_FB_L" {
                 preset.feedback_left = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "DELAY_FB_R" {
+            if attr.name == "DELAY_FB_R" {
                 preset.feedback_right = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "DELAY_XFB_L_R" {
+            if attr.name == "DELAY_XFB_L_R" {
                 preset.xfb_l_to_r = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "DELAY_XFB_R_L" {
+            if attr.name == "DELAY_XFB_R_L" {
                 preset.xfb_r_to_l = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "DELAY_FB_CONTROL" {
+            if attr.name == "DELAY_FB_CONTROL" {
                 preset.feedback_control = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "DELAY_FILTER_STYLE" {
+            if attr.name == "DELAY_FILTER_STYLE" {
                 preset.filter_style = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "DELAY_TIME_L" {
+            if attr.name == "DELAY_TIME_L" {
                 preset.time_left = attr.value.parse::<c_float>()? as u16;
                 continue;
             }
-            if attr.name.local_name == "DELAY_TIME_R" {
+            if attr.name == "DELAY_TIME_R" {
                 preset.time_right = attr.value.parse::<c_float>()? as u16;
                 continue;
             }
-            if attr.name.local_name == "DELAY_TEMPO" {
+            if attr.name == "DELAY_TEMPO" {
                 preset.tempo = attr.value.parse::<c_float>()? as u16;
                 continue;
             }
 
-            println!(
-                "[EchoEncoder] Unparsed Child Attribute: {}",
-                &attr.name.local_name
-            );
+            println!("[EchoEncoder] Unparsed Child Attribute: {}", &attr.name);
         }
 
         self.preset_map[preset_enum] = preset;
