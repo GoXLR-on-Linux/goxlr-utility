@@ -1,10 +1,9 @@
+use crate::profile::Attribute;
 use anyhow::Result;
+use quick_xml::events::{BytesStart, Event};
+use quick_xml::Writer;
 use std::collections::HashMap;
 use std::io::Write;
-use xml::attribute::OwnedAttribute;
-use xml::writer::events::StartElementBuilder;
-use xml::writer::XmlEvent as XmlWriterEvent;
-use xml::EventWriter;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -42,24 +41,24 @@ impl UiSetup {
         }
     }
 
-    pub fn parse_ui(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_ui(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         for attr in attributes {
-            if attr.name.local_name == "eqAdvanced" {
+            if attr.name == "eqAdvanced" {
                 self.eq_advanced = matches!(attr.value.as_str(), "1");
                 continue;
             }
 
-            if attr.name.local_name == "compAdvanced" {
+            if attr.name == "compAdvanced" {
                 self.comp_advanced = matches!(attr.value.as_str(), "1");
                 continue;
             }
 
-            if attr.name.local_name == "gateAdvanced" {
+            if attr.name == "gateAdvanced" {
                 self.gate_advanced = matches!(attr.value.as_str(), "1");
                 continue;
             }
 
-            if attr.name.local_name == "eqFineTuneEnabled" {
+            if attr.name == "eqFineTuneEnabled" {
                 self.eq_fine_tune = matches!(attr.value.as_str(), "1");
                 continue;
             }
@@ -68,9 +67,8 @@ impl UiSetup {
         Ok(())
     }
 
-    pub fn write_ui<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
-        let mut element: StartElementBuilder =
-            XmlWriterEvent::start_element("micProfileUIMicProfile");
+    pub fn write_ui<W: Write>(&self, writer: &mut Writer<W>) -> Result<()> {
+        let mut elem = BytesStart::new("micProfileUIMicProfile");
 
         let mut attributes: HashMap<String, String> = HashMap::default();
         attributes.insert(
@@ -91,11 +89,10 @@ impl UiSetup {
         );
 
         for (key, value) in &attributes {
-            element = element.attr(key.as_str(), value.as_str());
+            elem.push_attribute((key.as_str(), value.as_str()));
         }
 
-        writer.write(element)?;
-        writer.write(XmlWriterEvent::end_element())?;
+        writer.write_event(Event::Empty(elem))?;
         Ok(())
     }
 

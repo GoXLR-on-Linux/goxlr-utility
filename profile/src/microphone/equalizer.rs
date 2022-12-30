@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::os::raw::c_float;
 use std::str::FromStr;
-use xml::attribute::OwnedAttribute;
 
+use crate::profile::Attribute;
 use anyhow::{anyhow, Result};
 
 #[derive(thiserror::Error, Debug)]
@@ -74,85 +74,85 @@ impl Equalizer {
         }
     }
 
-    pub fn parse_equaliser(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_equaliser(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         for attr in attributes {
-            if attr.name.local_name == "MIC_EQ_31.5HZ_GAIN" {
+            if attr.name == "MIC_EQ_31.5HZ_GAIN" {
                 self.set_eq_31h_gain(attr.value.parse::<c_float>()? as i8)?;
             }
 
-            if attr.name.local_name == "MIC_EQ_63HZ_GAIN" {
+            if attr.name == "MIC_EQ_63HZ_GAIN" {
                 self.set_eq_63h_gain(attr.value.parse::<c_float>()? as i8)?;
             }
 
-            if attr.name.local_name == "MIC_EQ_125HZ_GAIN" {
+            if attr.name == "MIC_EQ_125HZ_GAIN" {
                 self.set_eq_125h_gain(attr.value.parse::<c_float>()? as i8)?;
             }
 
-            if attr.name.local_name == "MIC_EQ_250HZ_GAIN" {
+            if attr.name == "MIC_EQ_250HZ_GAIN" {
                 self.set_eq_250h_gain(attr.value.parse::<c_float>()? as i8)?;
             }
 
-            if attr.name.local_name == "MIC_EQ_500HZ_GAIN" {
+            if attr.name == "MIC_EQ_500HZ_GAIN" {
                 self.set_eq_500h_gain(attr.value.parse::<c_float>()? as i8)?;
             }
 
-            if attr.name.local_name == "MIC_EQ_1KHZ_GAIN" {
+            if attr.name == "MIC_EQ_1KHZ_GAIN" {
                 self.set_eq_1k_gain(attr.value.parse::<c_float>()? as i8)?;
             }
 
-            if attr.name.local_name == "MIC_EQ_2KHZ_GAIN" {
+            if attr.name == "MIC_EQ_2KHZ_GAIN" {
                 self.set_eq_2k_gain(attr.value.parse::<c_float>()? as i8)?;
             }
 
-            if attr.name.local_name == "MIC_EQ_4KHZ_GAIN" {
+            if attr.name == "MIC_EQ_4KHZ_GAIN" {
                 self.set_eq_4k_gain(attr.value.parse::<c_float>()? as i8)?;
             }
 
-            if attr.name.local_name == "MIC_EQ_8KHZ_GAIN" {
+            if attr.name == "MIC_EQ_8KHZ_GAIN" {
                 self.set_eq_8k_gain(attr.value.parse::<c_float>()? as i8)?;
             }
 
-            if attr.name.local_name == "MIC_EQ_16KHZ_GAIN" {
+            if attr.name == "MIC_EQ_16KHZ_GAIN" {
                 self.set_eq_16k_gain(attr.value.parse::<c_float>()? as i8)?;
             }
 
-            if attr.name.local_name == "MIC_EQ_31.5HZ_F" {
+            if attr.name == "MIC_EQ_31.5HZ_F" {
                 self.set_eq_31h_freq(f32::from_str(attr.value.as_str())?)?;
             }
 
-            if attr.name.local_name == "MIC_EQ_63HZ_F" {
+            if attr.name == "MIC_EQ_63HZ_F" {
                 self.set_eq_63h_freq(f32::from_str(attr.value.as_str())?)?;
             }
 
-            if attr.name.local_name == "MIC_EQ_125HZ_F" {
+            if attr.name == "MIC_EQ_125HZ_F" {
                 self.set_eq_125h_freq(f32::from_str(attr.value.as_str())?)?;
             }
 
-            if attr.name.local_name == "MIC_EQ_250HZ_F" {
+            if attr.name == "MIC_EQ_250HZ_F" {
                 self.set_eq_250h_freq(f32::from_str(attr.value.as_str())?)?;
             }
 
-            if attr.name.local_name == "MIC_EQ_500HZ_F" {
+            if attr.name == "MIC_EQ_500HZ_F" {
                 self.set_eq_500h_freq(f32::from_str(attr.value.as_str())?)?;
             }
 
-            if attr.name.local_name == "MIC_EQ_1KHZ_F" {
+            if attr.name == "MIC_EQ_1KHZ_F" {
                 self.set_eq_1k_freq(f32::from_str(attr.value.as_str())?)?;
             }
 
-            if attr.name.local_name == "MIC_EQ_2KHZ_F" {
+            if attr.name == "MIC_EQ_2KHZ_F" {
                 self.set_eq_2k_freq(f32::from_str(attr.value.as_str())?)?;
             }
 
-            if attr.name.local_name == "MIC_EQ_4KHZ_F" {
+            if attr.name == "MIC_EQ_4KHZ_F" {
                 self.set_eq_4k_freq(f32::from_str(attr.value.as_str())?)?;
             }
 
-            if attr.name.local_name == "MIC_EQ_8KHZ_F" {
+            if attr.name == "MIC_EQ_8KHZ_F" {
                 self.set_eq_8k_freq(f32::from_str(attr.value.as_str())?)?;
             }
 
-            if attr.name.local_name == "MIC_EQ_16KHZ_F" {
+            if attr.name == "MIC_EQ_16KHZ_F" {
                 self.set_eq_16k_freq(f32::from_str(attr.value.as_str())?)?;
             }
         }

@@ -9,7 +9,7 @@ use goxlr_types::{
     CompressorAttackTime, CompressorRatio, CompressorReleaseTime, DisplayMode, EffectKey,
     EqFrequencies, GateTimes, MicrophoneParamKey, MicrophoneType, MiniEqFrequencies,
 };
-use log::error;
+use log::{debug, error};
 use ritelinked::LinkedHashSet;
 use std::collections::{HashMap, HashSet};
 use std::fs::{remove_file, File};
@@ -89,7 +89,7 @@ impl MicProfileAdapter {
 
         // Keep our names in sync (in case it was changed)
         if name != self.name() {
-            dbg!("Changing Profile Name: {} -> {}", self.name(), name.clone());
+            debug!("Changing Profile Name: {} -> {}", self.name(), name);
             self.name = name;
         }
 

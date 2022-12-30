@@ -1,11 +1,10 @@
+use crate::profile::Attribute;
 use anyhow::{anyhow, Result};
+use quick_xml::events::{BytesStart, Event};
+use quick_xml::Writer;
 use std::collections::HashMap;
 use std::io::Write;
 use std::str::FromStr;
-use xml::attribute::OwnedAttribute;
-use xml::writer::events::StartElementBuilder;
-use xml::writer::XmlEvent as XmlWriterEvent;
-use xml::EventWriter;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -40,24 +39,24 @@ impl MicSetup {
         }
     }
 
-    pub fn parse_config(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_config(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         for attr in attributes {
-            if attr.name.local_name == "MIC_TYPE" {
+            if attr.name == "MIC_TYPE" {
                 self.set_mic_type(u8::from_str(attr.value.as_str())?)?;
                 continue;
             }
 
-            if attr.name.local_name == "DYNAMIC_MIC_GAIN" {
+            if attr.name == "DYNAMIC_MIC_GAIN" {
                 self.set_dynamic_mic_gain((u32::from_str(attr.value.as_str())? / 65536) as u16)?;
                 continue;
             }
 
-            if attr.name.local_name == "CONDENSER_MIC_GAIN" {
+            if attr.name == "CONDENSER_MIC_GAIN" {
                 self.set_condenser_mic_gain((u32::from_str(attr.value.as_str())? / 65536) as u16)?;
                 continue;
             }
 
-            if attr.name.local_name == "TRS_MIC_GAIN" {
+            if attr.name == "TRS_MIC_GAIN" {
                 self.set_trs_mic_gain((u32::from_str(attr.value.as_str())? / 65536) as u16)?;
                 continue;
             }
@@ -66,8 +65,8 @@ impl MicSetup {
         Ok(())
     }
 
-    pub fn write_config<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
-        let mut element: StartElementBuilder = XmlWriterEvent::start_element("setupTreeMicProfile");
+    pub fn write_config<W: Write>(&self, writer: &mut Writer<W>) -> Result<()> {
+        let mut elem = BytesStart::new("setupTreeMicProfile");
 
         let mut attributes: HashMap<String, String> = HashMap::default();
         attributes.insert("MIC_TYPE".to_string(), format!("{}", self.mic_type));
@@ -85,11 +84,10 @@ impl MicSetup {
         );
 
         for (key, value) in &attributes {
-            element = element.attr(key.as_str(), value.as_str());
+            elem.push_attribute((key.as_str(), value.as_str()));
         }
 
-        writer.write(element)?;
-        writer.write(XmlWriterEvent::end_element())?;
+        writer.write_event(Event::Empty(elem))?;
         Ok(())
     }
 

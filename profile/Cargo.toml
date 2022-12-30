@@ -12,7 +12,6 @@ thiserror = "1.0.38"
 zip = "0.6.3"
 strum = { version = "0.24.1", features = ["derive"] }
 ritelinked = "0.3.2"
-xml-rs = "0.8.4"
 quick-xml = "0.27.1"
 byteorder = "1.4.3"
 rand = "0.8.5"

@@ -844,7 +844,7 @@ impl ProfileSettings {
 /// This will wrap a 'Start' XML event into a name, and attribute Vec. We're using
 /// our own Attribute Struct here to allow easy moving between XML libraries in future.
 /// TODO: If we're doing this, we might as well make the attributes a HashMap
-fn wrap_start_event(event: &BytesStart) -> Result<(String, Vec<Attribute>)> {
+pub(crate) fn wrap_start_event(event: &BytesStart) -> Result<(String, Vec<Attribute>)> {
     let mut attributes = Vec::new();
 
     let name = String::from_utf8_lossy(event.local_name().as_ref()).parse()?;

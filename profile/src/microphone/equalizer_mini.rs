@@ -1,9 +1,9 @@
 use crate::microphone::equalizer::validate_gain;
+use crate::profile::Attribute;
 use anyhow::{anyhow, Result};
 use std::collections::HashMap;
 use std::os::raw::c_float;
 use std::str::FromStr;
-use xml::attribute::OwnedAttribute;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -60,53 +60,53 @@ impl EqualizerMini {
     }
 
     // TODO: These may not need to be handled as floats..
-    pub fn parse_equaliser(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_equaliser(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         for attr in attributes {
-            if attr.name.local_name == "MIC_MINI_EQ_90HZ_GAIN" {
+            if attr.name == "MIC_MINI_EQ_90HZ_GAIN" {
                 self.set_eq_90h_gain(attr.value.parse::<c_float>()? as i8)?;
             }
 
-            if attr.name.local_name == "MIC_MINI_EQ_250HZ_GAIN" {
+            if attr.name == "MIC_MINI_EQ_250HZ_GAIN" {
                 self.set_eq_250h_gain(attr.value.parse::<c_float>()? as i8)?;
             }
 
-            if attr.name.local_name == "MIC_MINI_EQ_500HZ_GAIN" {
+            if attr.name == "MIC_MINI_EQ_500HZ_GAIN" {
                 self.set_eq_500h_gain(attr.value.parse::<c_float>()? as i8)?;
             }
 
-            if attr.name.local_name == "MIC_MINI_EQ_1KHZ_GAIN" {
+            if attr.name == "MIC_MINI_EQ_1KHZ_GAIN" {
                 self.set_eq_1k_gain(attr.value.parse::<c_float>()? as i8)?;
             }
 
-            if attr.name.local_name == "MIC_MINI_EQ_3KHZ_GAIN" {
+            if attr.name == "MIC_MINI_EQ_3KHZ_GAIN" {
                 self.set_eq_3k_gain(attr.value.parse::<c_float>()? as i8)?;
             }
 
-            if attr.name.local_name == "MIC_MINI_EQ_8KHZ_GAIN" {
+            if attr.name == "MIC_MINI_EQ_8KHZ_GAIN" {
                 self.set_eq_8k_gain(attr.value.parse::<c_float>()? as i8)?;
             }
 
-            if attr.name.local_name == "MIC_MINI_EQ_90HZ_F" {
+            if attr.name == "MIC_MINI_EQ_90HZ_F" {
                 self.set_eq_90h_freq(f32::from_str(attr.value.as_str())?)?;
             }
 
-            if attr.name.local_name == "MIC_MINI_EQ_250HZ_F" {
+            if attr.name == "MIC_MINI_EQ_250HZ_F" {
                 self.set_eq_250h_freq(f32::from_str(attr.value.as_str())?)?;
             }
 
-            if attr.name.local_name == "MIC_MINI_EQ_500HZ_F" {
+            if attr.name == "MIC_MINI_EQ_500HZ_F" {
                 self.set_eq_500h_freq(f32::from_str(attr.value.as_str())?)?;
             }
 
-            if attr.name.local_name == "MIC_MINI_EQ_1KHZ_F" {
+            if attr.name == "MIC_MINI_EQ_1KHZ_F" {
                 self.set_eq_1k_freq(f32::from_str(attr.value.as_str())?)?;
             }
 
-            if attr.name.local_name == "MIC_MINI_EQ_3KHZ_F" {
+            if attr.name == "MIC_MINI_EQ_3KHZ_F" {
                 self.set_eq_3k_freq(f32::from_str(attr.value.as_str())?)?;
             }
 
-            if attr.name.local_name == "MIC_MINI_EQ_8KHZ_F" {
+            if attr.name == "MIC_MINI_EQ_8KHZ_F" {
                 self.set_eq_8k_freq(f32::from_str(attr.value.as_str())?)?;
             }
         }
