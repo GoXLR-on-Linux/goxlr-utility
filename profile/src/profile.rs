@@ -7,11 +7,10 @@ use std::str::FromStr;
 use anyhow::{anyhow, bail, Result};
 use enum_map::EnumMap;
 use log::{debug, warn};
-use quick_xml::events::{BytesStart, Event};
-use quick_xml::Reader;
+use quick_xml::events::{BytesDecl, BytesStart, Event};
+use quick_xml::{Reader, Writer};
 use strum::EnumProperty;
 use strum::IntoEnumIterator;
-use xml::EmitterConfig;
 use zip::write::FileOptions;
 
 use crate::components::browser::BrowserPreviewTree;
@@ -549,32 +548,29 @@ impl ProfileSettings {
         self.write_to(out_file)
     }
 
-    pub fn write_to<W: Write>(&self, mut sink: W) -> Result<()> {
-        // Create the file, and the writer..
-        let mut writer = EmitterConfig::new()
-            .perform_indent(true)
-            .write_document_declaration(true)
-            .create_writer(&mut sink);
+    pub fn write_to<W: Write>(&self, sink: W) -> Result<()> {
+        let mut writer = Writer::new_with_indent(sink, u8::try_from('\t')?, 1);
+        writer.write_event(Event::Decl(BytesDecl::new("1.0", Some("utf-8"), None)))?;
 
-        // Write the initial root tag..
         self.root.write_initial(&mut writer)?;
         self.browser.write_browser(&mut writer)?;
 
         self.mixer.write_mixers(&mut writer)?;
         self.context.write_context(&mut writer)?;
+
         self.mute_chat.write_mute_chat(&mut writer)?;
 
         for (faders, mute_button) in self.mute_buttons.iter() {
             if let Some(mute_button) = mute_button {
-                let element_name = format!("mute{}", (faders as u8) + 1);
-                mute_button.write_button(element_name, &mut writer)?;
+                let name = format!("mute{}", (faders as u8) + 1);
+                mute_button.write_button(name, &mut writer)?;
             }
         }
 
         for (faders, fader) in self.faders.iter() {
             if let Some(fader) = fader {
-                let element_name = format!("FaderMeter{}", faders as u8);
-                fader.write_fader(element_name, &mut writer)?;
+                let name = format!("FaderMeter{}", faders as u8);
+                fader.write_fader(name, &mut writer)?;
             }
         }
 
@@ -623,11 +619,9 @@ impl ProfileSettings {
         self.write_preset_to(out_file)
     }
 
-    pub fn write_preset_to<W: Write>(&self, mut sink: W) -> Result<()> {
-        let mut writer = EmitterConfig::new()
-            .perform_indent(true)
-            .write_document_declaration(true)
-            .create_writer(&mut sink);
+    pub fn write_preset_to<W: Write>(&self, sink: W) -> Result<()> {
+        let mut writer = Writer::new_with_indent(sink, u8::try_from('\t')?, 1);
+        writer.write_event(Event::Decl(BytesDecl::new("1.0", Some("utf-8"), None)))?;
 
         let current = self.context().selected_effects();
         let preset_writer = PresetWriter::new(String::from(self.effects(current).name()));
@@ -849,6 +843,7 @@ impl ProfileSettings {
 
 /// This will wrap a 'Start' XML event into a name, and attribute Vec. We're using
 /// our own Attribute Struct here to allow easy moving between XML libraries in future.
+/// TODO: If we're doing this, we might as well make the attributes a HashMap
 fn wrap_start_event(event: &BytesStart) -> Result<(String, Vec<Attribute>)> {
     let mut attributes = Vec::new();
 

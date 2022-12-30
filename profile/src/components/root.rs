@@ -2,11 +2,10 @@ use std::collections::HashMap;
 use std::io::Write;
 
 use anyhow::Result;
+use quick_xml::events::{BytesEnd, BytesStart, Event};
+use quick_xml::Writer;
 
 use crate::profile::Attribute;
-use xml::writer::events::StartElementBuilder;
-use xml::writer::XmlEvent as XmlWriterEvent;
-use xml::EventWriter;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -70,40 +69,35 @@ impl RootElement {
         Ok(())
     }
 
-    pub fn write_initial<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
-        let mut element: StartElementBuilder = XmlWriterEvent::start_element("ValueTreeRoot");
+    pub fn write_initial<W: Write>(&self, writer: &mut Writer<W>) -> Result<()> {
+        let mut elem = BytesStart::new("ValueTreeRoot");
 
         // Create the hashmap of values..
         let mut attributes: HashMap<String, String> = HashMap::default();
-        //attributes.insert("version".to_string(), format!("{}", self.version));
         attributes.insert("version".to_string(), "2".to_string());
         attributes.insert("loudness".to_string(), format!("{}", self.loudness));
         attributes.insert("device".to_string(), format!("{}", self.device));
 
         for (key, value) in &attributes {
-            element = element.attr(key.as_str(), value.as_str());
+            elem.push_attribute((key.as_str(), value.as_str()));
         }
-        writer.write(element)?;
+        writer.write_event(Event::Start(elem))?;
 
         // WE DO NOT CLOSE THE ELEMENT HERE!!
         Ok(())
     }
 
-    pub fn write_final<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
-        // The AppTree element seems to just be a tag containing the device id..
-        let mut element: StartElementBuilder = XmlWriterEvent::start_element("AppTree");
+    pub fn write_final<W: Write>(&self, writer: &mut Writer<W>) -> Result<()> {
+        let mut elem = BytesStart::new("AppTree");
 
         let mut attributes: HashMap<String, String> = HashMap::default();
         attributes.insert("ConnectedDeviceID".to_string(), format!("{}", &self.device));
         for (key, value) in &attributes {
-            element = element.attr(key.as_str(), value.as_str());
+            elem.push_attribute((key.as_str(), value.as_str()));
         }
 
-        writer.write(element)?;
-        writer.write(XmlWriterEvent::end_element())?;
-
-        // Finally, close the ValueTreeRoot
-        writer.write(XmlWriterEvent::end_element())?;
+        writer.write_event(Event::Empty(elem))?;
+        writer.write_event(Event::End(BytesEnd::new("ValueTreeRoot")))?;
         Ok(())
     }
 

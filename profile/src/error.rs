@@ -93,9 +93,8 @@ pub enum ParseError {
 
 #[derive(thiserror::Error, Debug)]
 pub enum SaveError {
-    #[error("XML Writing Error {0}")]
-    XMLError(#[from] xml::writer::Error),
-
+    // #[error("XML Writing Error {0}")]
+    // XMLError(#[from] xml::writer::Error),
     #[error("IO error: {0}")]
     IOError(#[from] std::io::Error),
 

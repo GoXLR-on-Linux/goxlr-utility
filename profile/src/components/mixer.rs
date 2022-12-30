@@ -3,11 +3,10 @@ use std::io::Write;
 
 use enum_map::{Enum, EnumMap};
 use strum::{EnumIter, EnumProperty, IntoEnumIterator};
-use xml::writer::events::StartElementBuilder;
-use xml::writer::XmlEvent as XmlWriterEvent;
-use xml::EventWriter;
 
 use anyhow::Result;
+use quick_xml::events::{BytesStart, Event};
+use quick_xml::Writer;
 
 use crate::components::colours::ColourMap;
 use crate::profile::Attribute;
@@ -113,8 +112,8 @@ impl Mixers {
         Ok(())
     }
 
-    pub fn write_mixers<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
-        let mut element: StartElementBuilder = XmlWriterEvent::start_element("mixerTree");
+    pub fn write_mixers<W: Write>(&self, writer: &mut Writer<W>) -> Result<()> {
+        let mut elem = BytesStart::new("mixerTree");
 
         // Create the values..
         let mut attributes: HashMap<String, String> = HashMap::default();
@@ -142,12 +141,10 @@ impl Mixers {
 
         // Set the attributes into the XML object..
         for (key, value) in &attributes {
-            element = element.attr(key.as_str(), value.as_str());
+            elem.push_attribute((key.as_str(), value.as_str()));
         }
 
-        // Write and close the tag...
-        writer.write(element)?;
-        writer.write(XmlWriterEvent::end_element())?;
+        writer.write_event(Event::Empty(elem))?;
         Ok(())
     }
 

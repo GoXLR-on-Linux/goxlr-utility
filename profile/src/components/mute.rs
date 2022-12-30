@@ -3,11 +3,10 @@ use std::io::Write;
 
 use enum_map_derive::Enum;
 use strum::{EnumIter, EnumProperty, IntoEnumIterator};
-use xml::writer::events::StartElementBuilder;
-use xml::writer::XmlEvent as XmlWriterEvent;
-use xml::EventWriter;
 
 use anyhow::Result;
+use quick_xml::events::{BytesStart, Event};
+use quick_xml::Writer;
 
 use crate::components::colours::ColourMap;
 use crate::profile::Attribute;
@@ -102,9 +101,9 @@ impl MuteButton {
     pub fn write_button<W: Write>(
         &self,
         element_name: String,
-        writer: &mut EventWriter<&mut W>,
+        writer: &mut Writer<W>,
     ) -> Result<()> {
-        let mut element: StartElementBuilder = XmlWriterEvent::start_element(element_name.as_str());
+        let mut elem = BytesStart::new(element_name.as_str());
 
         let mut attributes: HashMap<String, String> = HashMap::default();
         attributes.insert(
@@ -127,11 +126,10 @@ impl MuteButton {
             .write_colours_with_prefix(element_name.clone(), &mut attributes);
 
         for (key, value) in &attributes {
-            element = element.attr(key.as_str(), value.as_str());
+            elem.push_attribute((key.as_str(), value.as_str()));
         }
 
-        writer.write(element)?;
-        writer.write(XmlWriterEvent::end_element())?;
+        writer.write_event(Event::Empty(elem))?;
         Ok(())
     }
 

@@ -5,12 +5,11 @@ use std::str::FromStr;
 use anyhow::{bail, Result};
 
 use enum_map::Enum;
+use quick_xml::events::{BytesEnd, BytesStart, Event};
+use quick_xml::Writer;
 use rand::seq::SliceRandom;
 use ritelinked::LinkedHashMap;
 use strum::{Display, EnumIter, EnumProperty, EnumString};
-use xml::writer::events::StartElementBuilder;
-use xml::writer::XmlEvent as XmlWriterEvent;
-use xml::EventWriter;
 
 use crate::components::colours::ColourMap;
 use crate::components::sample::PlayOrder::{Random, Sequential};
@@ -131,9 +130,8 @@ impl SampleBase {
         Ok(())
     }
 
-    pub fn write_sample<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
-        let mut element: StartElementBuilder =
-            XmlWriterEvent::start_element(self.element_name.as_str());
+    pub fn write_sample<W: Write>(&self, writer: &mut Writer<W>) -> Result<()> {
+        let mut elem = BytesStart::new(self.element_name.as_str());
 
         let mut attributes: HashMap<String, String> = HashMap::default();
         self.colour_map.write_colours(&mut attributes);
@@ -157,16 +155,15 @@ impl SampleBase {
 
         // Write out the attributes etc for this element, but don't close it yet..
         for (key, value) in &attributes {
-            element = element.attr(key.as_str(), value.as_str());
+            elem.push_attribute((key.as_str(), value.as_str()));
         }
-
-        writer.write(element)?;
+        writer.write_event(Event::Start(elem))?;
 
         // Now onto the damn stacks..
         for (key, value) in &self.sample_stack {
             let sub_element_name = format!("sampleStack{}", key);
 
-            let mut sub_element = XmlWriterEvent::start_element(sub_element_name.as_str());
+            let mut sub_elem = BytesStart::new(sub_element_name.as_str());
 
             // Welcome to the only place where order seems to matter, the track_X attributes must all appear together
             // in an ordered, unbroken list, otherwise the GoXLR App will crash :D
@@ -217,13 +214,12 @@ impl SampleBase {
 
             // Write the attributes into the tag, and close it.
             for (key, value) in &sub_attributes {
-                sub_element = sub_element.attr(key.as_str(), value.as_str());
+                sub_elem.push_attribute((key.as_str(), value.as_str()));
             }
-            writer.write(sub_element)?;
-            writer.write(XmlWriterEvent::end_element())?;
+            writer.write_event(Event::Empty(sub_elem))?;
         }
 
-        writer.write(XmlWriterEvent::end_element())?;
+        writer.write_event(Event::End(BytesEnd::new(self.element_name.as_str())))?;
         Ok(())
     }
 
