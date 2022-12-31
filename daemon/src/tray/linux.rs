@@ -19,6 +19,7 @@ pub fn handle_tray(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Resul
 
     while !state.shutdown_blocking.load(Ordering::Relaxed) {
         thread::sleep(Duration::from_millis(100));
+        tray_handle.update(|_| {});
     }
 
     debug!("Shutting Down Tray Handler..");
@@ -28,15 +29,25 @@ pub fn handle_tray(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Resul
 
 struct GoXLRTray {
     tx: mpsc::Sender<EventTriggers>,
+    icon: Icon,
 }
 
 impl GoXLRTray {
     fn new(tx: mpsc::Sender<EventTriggers>) -> Self {
-        Self { tx }
+        // Generate the icon..
+        let pixmap = Pixmap::decode_png(ICON).unwrap();
+        let rgba_data = GoXLRTray::rgba_to_argb(pixmap.data());
+
+        let icon = Icon {
+            width: pixmap.width() as i32,
+            height: pixmap.height() as i32,
+            data: rgba_data,
+        };
+        Self { tx, icon }
     }
 
     // Probably a better way to handle this..
-    fn rgba_to_argb(&self, input: &[u8]) -> Vec<u8> {
+    fn rgba_to_argb(input: &[u8]) -> Vec<u8> {
         let mut moved = Vec::new();
 
         for chunk in input.chunks(4) {
@@ -68,15 +79,7 @@ impl Tray for GoXLRTray {
     }
 
     fn icon_pixmap(&self) -> Vec<Icon> {
-        let pixmap = Pixmap::decode_png(ICON).unwrap();
-
-        let rgba_data = self.rgba_to_argb(pixmap.data());
-
-        vec![Icon {
-            width: pixmap.width() as i32,
-            height: pixmap.height() as i32,
-            data: rgba_data,
-        }]
+        vec![self.icon.clone()]
     }
 
     fn tool_tip(&self) -> ToolTip {
