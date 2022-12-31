@@ -38,7 +38,6 @@ pub fn handle_tray(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Resul
 
     while !state.shutdown_blocking.load(Ordering::Relaxed) {
         thread::sleep(Duration::from_millis(100));
-        tray_handle.update(|_| {});
     }
 
     debug!("Shutting Down Tray Handler..");
