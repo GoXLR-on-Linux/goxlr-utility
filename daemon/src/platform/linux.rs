@@ -76,6 +76,9 @@ fn get_startup_dir() -> Option<PathBuf> {
         if path_buf.exists() {
             debug!("Found XDG AutoStart Path: {:?}", path_buf);
             return Some(path_buf);
+        } else if fs::create_dir_all(&path_buf).is_ok() {
+            // Attempt to create the path if it doesn't exist..
+            return Some(path_buf);
         }
     }
 
