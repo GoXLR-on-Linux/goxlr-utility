@@ -3,17 +3,36 @@ use crate::{DaemonState, ICON};
 use anyhow::Result;
 use goxlr_ipc::PathTypes::{Icons, MicProfiles, Presets, Profiles, Samples};
 use ksni::menu::{StandardItem, SubMenu};
-use ksni::{Category, Icon, MenuItem, Status, ToolTip, Tray, TrayService};
+use ksni::{Category, MenuItem, Status, ToolTip, Tray, TrayService};
 use log::debug;
+use rand::Rng;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::Ordering;
-use std::thread;
 use std::time::Duration;
-use tiny_skia::Pixmap;
+use std::{fs, thread};
 use tokio::sync::mpsc;
 
 pub fn handle_tray(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Result<()> {
+    // Before we spawn the tray, we're going to extract our icon to a temporary location
+    // so that it can be immediately used. Depending on pixmaps seems to cause issues under
+    // gnome, where occasionally the icon wont correctly spawn.
+
+    // Firstly, we use a random filename (it'll be removed on shutdown) to prevent potential
+    // weirdness in the event it gets locked somehow (different user / crash scenario)
+    let file_name = format!("goxlr-utility-{}.png", rand::thread_rng().gen::<u16>());
+
+    // We'll dump the icon here :)
+    let tmp_file_dir = PathBuf::from("/tmp/goxlr-utility/");
+
+    // Extract the icon to a temporary directory, and pass its path..
+    let tmp_file_path = tmp_file_dir.join(file_name);
+    if !tmp_file_dir.exists() {
+        fs::create_dir_all(&tmp_file_dir)?;
+    }
+    fs::write(&tmp_file_path, ICON)?;
+
     // Attempt to immediately update the environment..
-    let tray_service = TrayService::new(GoXLRTray::new(tx));
+    let tray_service = TrayService::new(GoXLRTray::new(tx, &tmp_file_path));
     let tray_handle = tray_service.handle();
     tray_service.spawn();
 
@@ -24,40 +43,19 @@ pub fn handle_tray(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Resul
 
     debug!("Shutting Down Tray Handler..");
     tray_handle.shutdown();
+    fs::remove_file(&tmp_file_path)?;
     Ok(())
 }
 
 struct GoXLRTray {
     tx: mpsc::Sender<EventTriggers>,
-    icon: Icon,
+    icon: PathBuf,
 }
 
 impl GoXLRTray {
-    fn new(tx: mpsc::Sender<EventTriggers>) -> Self {
-        // Generate the icon..
-        let pixmap = Pixmap::decode_png(ICON).unwrap();
-        let rgba_data = GoXLRTray::rgba_to_argb(pixmap.data());
-
-        let icon = Icon {
-            width: pixmap.width() as i32,
-            height: pixmap.height() as i32,
-            data: rgba_data,
-        };
+    fn new(tx: mpsc::Sender<EventTriggers>, icon: &Path) -> Self {
+        let icon = icon.to_path_buf();
         Self { tx, icon }
-    }
-
-    // Probably a better way to handle this..
-    fn rgba_to_argb(input: &[u8]) -> Vec<u8> {
-        let mut moved = Vec::new();
-
-        for chunk in input.chunks(4) {
-            moved.push(chunk[3]);
-            moved.push(chunk[0]);
-            moved.push(chunk[1]);
-            moved.push(chunk[2]);
-        }
-
-        moved
     }
 }
 
@@ -82,8 +80,19 @@ impl Tray for GoXLRTray {
         Status::Active
     }
 
-    fn icon_pixmap(&self) -> Vec<Icon> {
-        vec![self.icon.clone()]
+    fn icon_theme_path(&self) -> String {
+        if let Some(parent) = self.icon.parent() {
+            return parent.to_string_lossy().to_string();
+        }
+
+        String::from("")
+    }
+
+    fn icon_name(&self) -> String {
+        if let Some(file) = self.icon.file_stem() {
+            return file.to_string_lossy().to_string();
+        }
+        "goxlr-utility".to_string()
     }
 
     fn tool_tip(&self) -> ToolTip {

@@ -58,9 +58,8 @@ nix = { version = "0.26.1", features = ["user"] }
 # Under Linux, we use ksni for our tray icon..
 [target.'cfg(target_os = "linux")'.dependencies]
 ksni = "0.2.0"
-tiny-skia = "0.8.2"
-detect-desktop-environment = "0.2.0"
 rust-ini = "0.18.0"
+rand = "0.8.5"
 
 # Under Windows and MacOS, we use tao's tray feature
 [target.'cfg(target_os = "windows")'.dependencies]
