@@ -7,7 +7,7 @@ use goxlr_ipc::HttpSettings;
 use json_patch::Patch;
 use log::{error, info, warn};
 use simplelog::{ColorChoice, CombinedLogger, ConfigBuilder, TermLogger, TerminalMode};
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::join;
 use tokio::sync::{broadcast, mpsc};
@@ -203,7 +203,7 @@ async fn main() -> Result<()> {
         let _ = global_tx.send(EventTriggers::OpenUi).await;
     }
 
-    if !args.disable_tray {
+    if !args.disable_tray && state.show_tray.load(Ordering::Relaxed) {
         // Tray management has to occur on the main thread, so we'll start it now.
         tray::handle_tray(state.clone(), global_tx.clone())?;
     }
