@@ -90,7 +90,7 @@ assets = [
     ["../target/release/goxlr-daemon", "usr/bin/", "755"],
     ["../target/release/goxlr-client", "usr/bin/", "755"],
     ["../target/release/goxlr-defaults", "usr/bin/", "755"],
-    ["../target/release/goxlr-launcher", "usr/bin", "755"],
+    ["../target/release/goxlr-launcher", "usr/bin/", "755"],
 
     ["../50-goxlr.rules", "etc/udev/rules.d/", "644"],
 
