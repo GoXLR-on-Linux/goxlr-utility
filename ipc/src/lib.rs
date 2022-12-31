@@ -21,6 +21,7 @@ pub enum DaemonRequest {
     Ping,
     OpenUi,
     GetStatus,
+    StopDaemon,
     GetHttpState,
     OpenPath(PathTypes),
     SetShowTrayIcon(bool),

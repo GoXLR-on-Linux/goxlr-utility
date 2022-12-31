@@ -25,6 +25,7 @@ use tokio::time::sleep;
 #[allow(clippy::enum_variant_names)]
 pub enum DeviceCommand {
     SendDaemonStatus(oneshot::Sender<DaemonStatus>),
+    StopDaemon(oneshot::Sender<DaemonResponse>),
     OpenUi(oneshot::Sender<DaemonResponse>),
     OpenPath(PathTypes, oneshot::Sender<DaemonResponse>),
     RecoverDefaults(PathTypes, oneshot::Sender<DaemonResponse>),
@@ -138,6 +139,12 @@ pub async fn spawn_usb_handler(
                 match command {
                     DeviceCommand::SendDaemonStatus(sender) => {
                         let _ = sender.send(daemon_status.clone());
+                    }
+                    DeviceCommand::StopDaemon(sender) => {
+                        // These should probably be moved upstream somewhere, they're not
+                        // device specific!
+                        let _ = global_tx.send(EventTriggers::Stop).await;
+                        let _ = sender.send(DaemonResponse::Ok);
                     }
                     DeviceCommand::OpenUi(sender) => {
                         let _ = global_tx.send(EventTriggers::OpenUi).await;
