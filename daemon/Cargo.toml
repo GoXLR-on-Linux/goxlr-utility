@@ -98,7 +98,7 @@ assets = [
     ["../daemon/resources/goxlr-utility-large.png", "usr/share/pixmaps/goxlr-utility.png", "644"],
     ["../daemon/resources/goxlr-utility.svg", "usr/share/icons/hicolor/scalable/apps/", "644"],
 
-    ["../daemon/resources/goxlr-utility.desktop", "usr/share/applications", "644"],
+    ["../daemon/resources/goxlr-utility.desktop", "usr/share/applications/", "644"],
 
     ["../deployment/deb/goxlr-client.bash", "usr/share/bash-completion/completions/", "644"],
     ["../deployment/deb/goxlr-client.fish", "usr/share/fish/vendor_completions.d/", "644"],
