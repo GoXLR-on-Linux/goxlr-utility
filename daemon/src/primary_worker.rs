@@ -28,6 +28,7 @@ pub enum DeviceCommand {
     OpenUi(oneshot::Sender<DaemonResponse>),
     OpenPath(PathTypes, oneshot::Sender<DaemonResponse>),
     RecoverDefaults(PathTypes, oneshot::Sender<DaemonResponse>),
+    SetShowTrayIcon(bool, oneshot::Sender<DaemonResponse>),
     SetAutoStartEnabled(bool, oneshot::Sender<DaemonResponse>),
     RunDeviceCommand(String, GoXLRCommand, oneshot::Sender<Result<()>>),
 }
@@ -174,6 +175,12 @@ pub async fn spawn_usb_handler(
                             }
                         }
                     }
+                    DeviceCommand::SetShowTrayIcon(enabled, sender) => {
+                        settings.set_show_tray_icon(enabled).await;
+                        settings.save().await;
+                        change_found = true;
+                        let _ = sender.send(DaemonResponse::Ok);
+                    }
                     DeviceCommand::OpenPath(path_type, sender) => {
                         // There's nothing we can really do if this errors..
                         let _ = global_tx.send(EventTriggers::Open(path_type)).await;
@@ -223,6 +230,7 @@ async fn get_daemon_status(
         config: DaemonConfig {
             daemon_version: String::from(VERSION),
             autostart_enabled: has_autostart(),
+            show_tray_icon: settings.get_show_tray_icon().await,
         },
         paths: Paths {
             profile_directory: settings.get_profile_directory().await,

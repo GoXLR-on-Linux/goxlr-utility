@@ -124,8 +124,8 @@ async fn main() -> Result<()> {
     let shutdown = Shutdown::new();
     let shutdown_blocking = Arc::new(AtomicBool::new(false));
 
-    // Configure Showing the Tray Icon, TODO: From Settings
-    let show_tray = Arc::new(AtomicBool::new(true));
+    // Configure Showing the Tray Icon
+    let show_tray = Arc::new(AtomicBool::new(settings.get_show_tray_icon().await));
 
     // Configure, and Start the File Manager Service..
     let file_manager = FileManager::new(&settings);
