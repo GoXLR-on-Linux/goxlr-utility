@@ -70,6 +70,10 @@ impl Tray for GoXLRTray {
         Category::Hardware
     }
 
+    fn id(&self) -> String {
+        "goxlr-utility".to_string()
+    }
+
     fn title(&self) -> String {
         String::from("GoXLR Utility")
     }
