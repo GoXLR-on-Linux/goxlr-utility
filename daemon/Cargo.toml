@@ -57,9 +57,12 @@ nix = { version = "0.26.1", features = ["user"] }
 
 # Under Linux, we use ksni for our tray icon..
 [target.'cfg(target_os = "linux")'.dependencies]
-ksni = "0.2.0"
-tiny-skia = "0.8.2"
-detect-desktop-environment = "0.2.0"
+tao = { version = "0.15.8", features=["tray"] }
+image = "0.24.5"
+
+#ksni = "0.2.0"
+#tiny-skia = "0.8.2"
+
 rust-ini = "0.18.0"
 
 # Under Windows and MacOS, we use tao's tray feature
@@ -110,7 +113,7 @@ assets = [
 maintainer-scripts = "../ci/distrib/DEBIAN/"
 section = "sound"
 priority = "optional"
-depends = "$auto"
+#depends = "$auto"
 extended-description = """\
 A utility for monitoring and controlling a TC-Helicon GoXLR or GoXLR Mini.
 """
