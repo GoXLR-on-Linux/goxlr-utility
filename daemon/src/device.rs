@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::{anyhow, bail, Result};
+use chrono::Local;
 use enum_map::EnumMap;
 use enumset::EnumSet;
 use futures::executor::block_on;
@@ -736,7 +737,7 @@ impl<'a> Device<'a> {
         let sample_bank = self.profile.get_active_sample_bank();
 
         if !self.profile.current_sample_bank_has_samples(button) {
-            let file_date = time_format::strftime_utc("%Y-%m-%dT%H%M%S", time_format::now()?)?;
+            let file_date = Local::now().format("%Y-%m-%dT%H%M%S").to_string();
             let full_name = format!("Recording_{}.wav", file_date);
 
             self.record_audio_file(button, full_name).await?;
