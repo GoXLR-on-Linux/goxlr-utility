@@ -8,7 +8,7 @@ use mslnk::ShellLink;
 use std::path::PathBuf;
 use std::{env, fs};
 use sysinfo::{ProcessRefreshKind, RefreshKind, System, SystemExt};
-use tokio::signal::windows::{ctrl_break, ctrl_c, ctrl_close, ctrl_shutdown};
+use tokio::signal::windows::{ctrl_break, ctrl_close};
 use tokio::sync::mpsc;
 use tokio::time::Duration;
 use tokio::{select, time};
