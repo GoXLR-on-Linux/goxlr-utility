@@ -1,5 +1,5 @@
 # Roadmap
-*Last Updated for 0.7.0 Release*
+*Last Updated for 0.9.0 Release*
 
 ## Completed Features
 * Initialisation of Devices under Linux<sup>1</sup>
@@ -19,9 +19,14 @@
 * Scribbles<sup>4</sup>
 
 <sup>1</sup> Depending on how your GoXLR works, this may require a reboot.  
-<sup>2</sup> Profiles are 'cross platform', so Windows profiles should work with the util, and vice versa  
+<sup>2</sup> Profiles are 'cross-platform', so Windows profiles should work with the util, and vice versa  
 <sup>3</sup> Currently only configurable via the `goxlr-client`  
 <sup>4</sup> UI is not complete (and is messy), but all functionality is present  
+
+## Utility Features
+* Full API for GoXLR Configuration
+* Ability to load *ONLY* lighting from a profile
+* Customisable 'Hold Time' on mute buttons
 
 ## Not Completed
 * Lighting Animations
