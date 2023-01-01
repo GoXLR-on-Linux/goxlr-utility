@@ -26,6 +26,10 @@ fi
 # a predictable location and then build the packages, which knows where to look.
 cargo build --release
 
+strip target/release/goxlr-client
+strip target/release/goxlr-daemon
+strip target/release/goxlr-launcher
+
 DEPLOY_DIR=deployment/deb
 OUT_DIR_CLIENT="$("$D"/cargo-out-dir target/release/ client-stamp)"
 OUT_DIR_DAEMON="$("$D"/cargo-out-dir target/release/ daemon-stamp)"
