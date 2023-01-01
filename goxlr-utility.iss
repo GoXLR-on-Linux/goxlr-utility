@@ -40,6 +40,20 @@ Filename: "{app}\goxlr-launcher.exe"; Description: "Run the GoXLR Utility"; Flag
 Filename: "taskkill"; Parameters: "/im ""goxlr-daemon.exe"" /f"; Flags: runhidden; RunOnceId: Uninstaller
 
 [Code]
+// Check to see if the GoXLR API is available before installing..
+function InitializeSetup(): Boolean;
+begin
+    if (FileExists('C:/Program Files/TC-HELICON/GoXLR_Audio_Driver/W10_x64/goxlr_audioapi_x64.dll')) then
+    begin
+        Result := True
+    end
+    else
+    begin
+        MsgBox('Unable to locate the GoXLR Driver, please ensure it is installed to the default location.', mbCriticalError, MB_OK);
+        Result := False
+    end
+end
+
 // Display two license pages
 // From: https://stackoverflow.com/questions/34592002/how-to-create-two-licensefile-pages-in-inno-setup
 var
