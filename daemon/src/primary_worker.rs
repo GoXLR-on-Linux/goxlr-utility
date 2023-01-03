@@ -155,6 +155,7 @@ pub async fn spawn_usb_handler(
                             PathTypes::Profiles => settings.get_profile_directory().await,
                             PathTypes::Presets => settings.get_presets_directory().await,
                             PathTypes::Icons => settings.get_icons_directory().await,
+                            PathTypes::MicProfiles => settings.get_mic_profile_directory().await,
                             _ => {
                                 let _ = sender.send(DaemonResponse::Error("Invalid Path type Sent".into()));
                                 return;
