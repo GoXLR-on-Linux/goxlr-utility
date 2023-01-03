@@ -8,6 +8,7 @@ use include_dir::{include_dir, Dir};
 use std::path::PathBuf;
 
 const PROFILES: Dir = include_dir!("./defaults/resources/profiles");
+const MIC_PROFILES: Dir = include_dir!("./defaults/resources/mic-profiles");
 const PRESETS: Dir = include_dir!("./defaults/resources/presets");
 const ICONS: Dir = include_dir!("./defaults/resources/icons");
 
@@ -24,6 +25,7 @@ fn main() -> Result<()> {
 
     let files = match args.file_type {
         Type::Profiles => PROFILES,
+        Type::MicProfiles => MIC_PROFILES,
         Type::Presets => PRESETS,
         Type::Icons => ICONS,
     };
@@ -63,6 +65,7 @@ struct Cli {
 #[derive(Debug, Clone, clap::ValueEnum)]
 enum Type {
     Profiles,
+    MicProfiles,
     Presets,
     Icons,
 }

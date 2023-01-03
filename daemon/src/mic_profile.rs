@@ -1,6 +1,6 @@
 use crate::files::can_create_new_file;
 use crate::profile::ProfileAdapter;
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use byteorder::{ByteOrder, LittleEndian};
 use enum_map::EnumMap;
 use goxlr_ipc::{Compressor, Equaliser, EqualiserMini, NoiseGate};
@@ -32,15 +32,14 @@ pub struct MicProfileAdapter {
 }
 
 impl MicProfileAdapter {
-    pub fn from_named_or_default(name: Option<String>, directory: &Path) -> Self {
-        if let Some(name) = name {
-            match MicProfileAdapter::from_named(name.clone(), directory) {
-                Ok(result) => return result,
-                Err(error) => error!("Couldn't load mic profile {}: {}", name, error),
+    pub fn from_named_or_default(name: String, directory: &Path) -> Self {
+        return match MicProfileAdapter::from_named(name.clone(), directory) {
+            Ok(result) => result,
+            Err(error) => {
+                error!("Couldn't load mic profile {}: {}", name, error);
+                MicProfileAdapter::default()
             }
-        }
-
-        MicProfileAdapter::default()
+        };
     }
 
     pub fn from_named(name: String, directory: &Path) -> Result<Self> {
@@ -49,16 +48,11 @@ impl MicProfileAdapter {
             let file = File::open(path).context("Couldn't open mic profile for reading")?;
             return MicProfileAdapter::from_reader(name, file).context("Couldn't read mic profile");
         }
-
-        if name == DEFAULT_MIC_PROFILE_NAME {
-            return Ok(MicProfileAdapter::default());
-        }
-
-        Err(anyhow!(
-            "Mic profile {} does not exist inside {}",
+        bail!(
+            "Mic Profile {} does not exist inside {}",
             name,
             directory.to_string_lossy()
-        ))
+        );
     }
 
     pub fn default() -> Self {

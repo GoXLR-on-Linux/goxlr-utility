@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, bail, Context, Result};
 use enum_map::EnumMap;
-use log::{debug, error, warn};
+use log::{debug, warn};
 use strum::IntoEnumIterator;
 
 use crate::audio::{AudioFile, AudioHandler};
@@ -46,8 +46,8 @@ use goxlr_usb::colouring::ColourTargets;
 
 use crate::files::can_create_new_file;
 
-pub const DEFAULT_PROFILE_NAME: &str = "DEFAULT";
-const DEFAULT_PROFILE: &[u8] = include_bytes!("../profiles/DEFAULT.goxlr");
+pub const DEFAULT_PROFILE_NAME: &str = "Default";
+const DEFAULT_PROFILE: &[u8] = include_bytes!("../profiles/Default.goxlr");
 
 #[derive(Debug)]
 pub struct ProfileAdapter {
@@ -56,15 +56,14 @@ pub struct ProfileAdapter {
 }
 
 impl ProfileAdapter {
-    pub fn from_named_or_default(name: Option<String>, directory: &Path) -> Self {
-        if let Some(name) = name {
-            match ProfileAdapter::from_named(name.clone(), directory) {
-                Ok(result) => return result,
-                Err(error) => error!("Couldn't load profile {}: {}", name, error),
+    pub fn from_named_or_default(name: String, directory: &Path) -> Self {
+        return match ProfileAdapter::from_named(name.clone(), directory) {
+            Ok(result) => result,
+            Err(e) => {
+                warn!("Error Loading Profile, falling back to default.. {}", e);
+                ProfileAdapter::default()
             }
-        }
-
-        ProfileAdapter::default()
+        };
     }
 
     pub fn from_named(name: String, directory: &Path) -> Result<Self> {
@@ -75,16 +74,11 @@ impl ProfileAdapter {
             return ProfileAdapter::from_reader(name, file);
         }
 
-        if name == DEFAULT_PROFILE_NAME {
-            debug!("Loading Embedded Default Profile..");
-            return Ok(ProfileAdapter::default());
-        }
-
-        Err(anyhow!(
+        bail!(
             "Profile {} does not exist inside {:?}",
             name,
             directory.to_string_lossy()
-        ))
+        );
     }
 
     pub fn default() -> Self {

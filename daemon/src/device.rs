@@ -71,21 +71,17 @@ impl<'a> Device<'a> {
             device_type = " Mini";
         }
 
-        let profile = profile_name
-            .clone()
-            .unwrap_or_else(|| DEFAULT_PROFILE_NAME.to_string());
-        let mic_profile = mic_profile_name
-            .clone()
-            .unwrap_or_else(|| DEFAULT_MIC_PROFILE_NAME.to_string());
+        let profile = profile_name.unwrap_or_else(|| DEFAULT_PROFILE_NAME.to_string());
+        let mic_profile = mic_profile_name.unwrap_or_else(|| DEFAULT_MIC_PROFILE_NAME.to_string());
 
         info!(
             "Configuring GoXLR{}, Profile: {}, Mic Profile: {}",
             device_type, profile, mic_profile
         );
 
-        let profile = ProfileAdapter::from_named_or_default(profile_name, profile_directory);
+        let profile = ProfileAdapter::from_named_or_default(profile, profile_directory);
         let mic_profile =
-            MicProfileAdapter::from_named_or_default(mic_profile_name, mic_profile_directory);
+            MicProfileAdapter::from_named_or_default(mic_profile, mic_profile_directory);
 
         let audio_loader = AudioHandler::new();
         debug!("Created Audio Handler..");

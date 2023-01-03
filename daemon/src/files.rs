@@ -65,6 +65,8 @@ impl FileManager {
         if !&paths.mic_profiles.exists() {
             if let Err(e) = create_path(&paths.mic_profiles) {
                 warn!("Unable to Create Path: {:?}, {}", &paths.mic_profiles, e);
+            } else if let Err(e) = extract_defaults(PathTypes::MicProfiles, &paths.mic_profiles) {
+                warn!("Unable to Extract Default Mic Profiles {}", e);
             }
         }
 
@@ -415,6 +417,7 @@ pub fn extract_defaults(file_type: PathTypes, path: &Path) -> Result<()> {
 
     let file_type = match file_type {
         PathTypes::Profiles => "profiles",
+        PathTypes::MicProfiles => "mic-profiles",
         PathTypes::Presets => "presets",
         PathTypes::Icons => "icons",
         _ => bail!("Invalid File Type Specified"),
