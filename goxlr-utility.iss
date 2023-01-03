@@ -52,7 +52,7 @@ begin
         MsgBox('Unable to locate the GoXLR Driver, please ensure it is installed to the default location.', mbCriticalError, MB_OK);
         Result := False
     end
-end
+end;
 
 // Display two license pages
 // From: https://stackoverflow.com/questions/34592002/how-to-create-two-licensefile-pages-in-inno-setup
