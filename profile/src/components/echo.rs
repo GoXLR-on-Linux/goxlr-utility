@@ -4,15 +4,14 @@ use std::os::raw::c_float;
 
 use enum_map::{Enum, EnumMap};
 use strum::{EnumIter, EnumProperty, IntoEnumIterator};
-use xml::attribute::OwnedAttribute;
-use xml::writer::events::StartElementBuilder;
-use xml::writer::XmlEvent as XmlWriterEvent;
-use xml::EventWriter;
 
 use anyhow::{anyhow, Result};
+use quick_xml::events::{BytesEnd, BytesStart, Event};
+use quick_xml::Writer;
 
 use crate::components::colours::ColourMap;
 
+use crate::profile::Attribute;
 use crate::Preset;
 
 #[derive(thiserror::Error, Debug)]
@@ -53,9 +52,9 @@ impl EchoEncoderBase {
         }
     }
 
-    pub fn parse_echo_root(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_echo_root(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         for attr in attributes {
-            if attr.name.local_name == "active_set" {
+            if attr.name == "active_set" {
                 self.active_set = attr.value.parse()?;
                 continue;
             }
@@ -71,11 +70,11 @@ impl EchoEncoderBase {
     pub fn parse_echo_preset(
         &mut self,
         preset_enum: Preset,
-        attributes: &[OwnedAttribute],
+        attributes: &Vec<Attribute>,
     ) -> Result<()> {
         let mut preset = EchoEncoder::new();
         for attr in attributes {
-            if attr.name.local_name == "DELAY_STYLE" {
+            if attr.name == "DELAY_STYLE" {
                 for style in EchoStyle::iter() {
                     if style.get_str("uiIndex").unwrap() == attr.value {
                         preset.style = style;
@@ -85,72 +84,69 @@ impl EchoEncoderBase {
                 continue;
             }
 
-            if attr.name.local_name == "DELAY_KNOB_POSITION" {
+            if attr.name == "DELAY_KNOB_POSITION" {
                 preset.set_knob_position(attr.value.parse::<c_float>()? as i8)?;
                 continue;
             }
 
-            if attr.name.local_name == "DELAY_SOURCE" {
+            if attr.name == "DELAY_SOURCE" {
                 preset.source = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "DELAY_DIV_L" {
+            if attr.name == "DELAY_DIV_L" {
                 preset.div_l = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "DELAY_DIV_R" {
+            if attr.name == "DELAY_DIV_R" {
                 preset.div_r = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "DELAY_FB_L" {
+            if attr.name == "DELAY_FB_L" {
                 preset.feedback_left = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "DELAY_FB_R" {
+            if attr.name == "DELAY_FB_R" {
                 preset.feedback_right = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "DELAY_XFB_L_R" {
+            if attr.name == "DELAY_XFB_L_R" {
                 preset.xfb_l_to_r = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "DELAY_XFB_R_L" {
+            if attr.name == "DELAY_XFB_R_L" {
                 preset.xfb_r_to_l = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "DELAY_FB_CONTROL" {
+            if attr.name == "DELAY_FB_CONTROL" {
                 preset.feedback_control = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "DELAY_FILTER_STYLE" {
+            if attr.name == "DELAY_FILTER_STYLE" {
                 preset.filter_style = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "DELAY_TIME_L" {
+            if attr.name == "DELAY_TIME_L" {
                 preset.time_left = attr.value.parse::<c_float>()? as u16;
                 continue;
             }
-            if attr.name.local_name == "DELAY_TIME_R" {
+            if attr.name == "DELAY_TIME_R" {
                 preset.time_right = attr.value.parse::<c_float>()? as u16;
                 continue;
             }
-            if attr.name.local_name == "DELAY_TEMPO" {
+            if attr.name == "DELAY_TEMPO" {
                 preset.tempo = attr.value.parse::<c_float>()? as u16;
                 continue;
             }
 
-            println!(
-                "[EchoEncoder] Unparsed Child Attribute: {}",
-                &attr.name.local_name
-            );
+            println!("[EchoEncoder] Unparsed Child Attribute: {}", &attr.name);
         }
 
         self.preset_map[preset_enum] = preset;
         Ok(())
     }
 
-    pub fn write_echo<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
-        let mut element: StartElementBuilder = XmlWriterEvent::start_element("echoEncoder");
+    pub fn write_echo<W: Write>(&self, writer: &mut Writer<W>) -> Result<()> {
+        let mut elem = BytesStart::new("echoEncoder");
 
         let mut attributes: HashMap<String, String> = HashMap::default();
         attributes.insert("active_set".to_string(), format!("{}", self.active_set));
@@ -158,29 +154,26 @@ impl EchoEncoderBase {
 
         // Write out the attributes etc for this element, but don't close it yet..
         for (key, value) in &attributes {
-            element = element.attr(key.as_str(), value.as_str());
+            elem.push_attribute((key.as_str(), value.as_str()));
         }
 
-        writer.write(element)?;
+        writer.write_event(Event::Start(elem))?;
 
         // Because all of these are seemingly 'guaranteed' to exist, we can straight dump..
         for preset in Preset::iter() {
             let tag_name = format!("echoEncoder{}", preset.get_str("tagSuffix").unwrap());
-            let mut sub_element: StartElementBuilder =
-                XmlWriterEvent::start_element(tag_name.as_str());
+            let mut sub_elem = BytesStart::new(tag_name.as_str());
 
             let sub_attributes = self.get_preset_attributes(preset);
             for (key, value) in &sub_attributes {
-                sub_element = sub_element.attr(key.as_str(), value.as_str());
+                sub_elem.push_attribute((key.as_str(), value.as_str()));
             }
 
-            writer.write(sub_element)?;
-            writer.write(XmlWriterEvent::end_element())?;
+            writer.write_event(Event::Empty(sub_elem))?;
         }
 
         // Finally, close the 'main' tag.
-        writer.write(XmlWriterEvent::end_element())?;
-
+        writer.write_event(Event::End(BytesEnd::new("echoEncoder")))?;
         Ok(())
     }
 

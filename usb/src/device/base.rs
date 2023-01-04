@@ -99,14 +99,14 @@ pub trait GoXLRCommands: ExecutableGoXLR {
         let serial_len = serial_slice
             .iter()
             .position(|&c| c == 0)
-            .unwrap_or(serial_slice.len()) as usize;
+            .unwrap_or(serial_slice.len());
         let serial_number = String::from_utf8_lossy(&serial_slice[..serial_len]).to_string();
 
         let date_slice = &result[24..];
         let date_len = date_slice
             .iter()
             .position(|&c| c == 0)
-            .unwrap_or(date_slice.len()) as usize;
+            .unwrap_or(date_slice.len());
         let manufacture_date = String::from_utf8_lossy(&date_slice[..date_len]).to_string();
 
         Ok((serial_number, manufacture_date))

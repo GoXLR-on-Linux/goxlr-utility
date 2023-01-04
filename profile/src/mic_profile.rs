@@ -4,17 +4,16 @@ use crate::microphone::equalizer_mini::EqualizerMini;
 use crate::microphone::gate::Gate;
 use crate::microphone::mic_setup::MicSetup;
 use crate::microphone::ui_setup::UiSetup;
-use anyhow::{anyhow, Result};
+use crate::profile::wrap_start_event;
+use anyhow::{anyhow, bail, Result};
 use log::debug;
+use quick_xml::events::{BytesDecl, BytesEnd, BytesStart, Event};
+use quick_xml::{Reader, Writer};
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{Read, Write};
+use std::io::{BufReader, Read, Write};
 use std::os::raw::c_float;
 use std::path::Path;
-use xml::reader::XmlEvent as XmlReaderEvent;
-use xml::writer::events::StartElementBuilder;
-use xml::writer::XmlEvent as XmlWriterEvent;
-use xml::{EmitterConfig, EventReader};
 
 #[derive(Debug)]
 pub struct MicProfileSettings {
@@ -32,7 +31,10 @@ pub struct MicProfileSettings {
 
 impl MicProfileSettings {
     pub fn load<R: Read>(read: R) -> Result<Self> {
-        let parser = EventReader::new(read);
+        let buf_reader = BufReader::new(read);
+        let mut reader = Reader::from_reader(buf_reader);
+
+        //let parser = EventReader::new(read);
 
         let mut equalizer = Equalizer::new();
         let mut equalizer_mini = EqualizerMini::new();
@@ -45,12 +47,12 @@ impl MicProfileSettings {
         let mut mic_setup = MicSetup::new();
         let mut ui_setup = UiSetup::new();
 
-        for e in parser {
-            match e {
-                Ok(XmlReaderEvent::StartElement {
-                    name, attributes, ..
-                }) => {
-                    if name.local_name == "dspTreeMicProfile" {
+        let mut buf = Vec::new();
+        loop {
+            match reader.read_event_into(&mut buf) {
+                Ok(Event::Empty(ref e)) => {
+                    let (name, attributes) = wrap_start_event(e)?;
+                    if name == "dspTreeMicProfile" {
                         // Ok, this is an incredibly large tag, with many settings (30 or so), so
                         // we split it into 3 separate elements.
                         equalizer.parse_equaliser(&attributes)?;
@@ -61,19 +63,19 @@ impl MicProfileSettings {
                         // Before we're done here, there's a single attribute that doesn't fit into
                         // any of the above categories, find it and handle it here..
                         for attr in &attributes {
-                            if attr.name.local_name == "MIC_DEESS_AMOUNT" {
+                            if attr.name == "MIC_DEESS_AMOUNT" {
                                 deess = attr.value.parse::<c_float>()? as u8;
                                 continue;
                             }
-                            if attr.name.local_name == "BLEEP_LEVEL" {
+                            if attr.name == "BLEEP_LEVEL" {
                                 bleep_level = attr.value.parse::<c_float>()? as i8;
                                 continue;
                             }
-                            if attr.name.local_name == "MIC_COMP_SELECT" {
+                            if attr.name == "MIC_COMP_SELECT" {
                                 comp_select = attr.value.parse::<c_float>()? as u8;
                                 continue;
                             }
-                            if attr.name.local_name == "MIC_GATE_MODE" {
+                            if attr.name == "MIC_GATE_MODE" {
                                 gate_mode = attr.value.parse::<c_float>()? as u8;
                                 continue;
                             }
@@ -82,27 +84,33 @@ impl MicProfileSettings {
                         continue;
                     }
 
-                    if name.local_name == "setupTreeMicProfile" {
+                    if name == "setupTreeMicProfile" {
                         mic_setup.parse_config(&attributes)?;
                         continue;
                     }
 
-                    if name.local_name == "micProfileUIMicProfile" {
+                    if name == "micProfileUIMicProfile" {
                         ui_setup.parse_ui(&attributes)?;
                         continue;
                     }
 
-                    if name.local_name == "MicProfileTree" {
+                    if name == "MicProfileTree" {
                         continue;
                     }
 
-                    println!("Unhandled Tag: {}", name.local_name);
+                    println!("Unhandled Tag: {}", name);
                 }
-                Err(e) => {
-                    println!("Error: {}", e);
+
+                Ok(Event::Eof) => {
                     break;
                 }
-                _ => {}
+
+                // Event::Start/End only occurs for the top level micProfileTree, which has no
+                // attributes, so we don't need to worry about it :)
+                Ok(_) => {}
+                Err(e) => {
+                    bail!("Error Parsing Profile: {}", e);
+                }
             }
         }
 
@@ -129,13 +137,10 @@ impl MicProfileSettings {
         Ok(())
     }
 
-    pub fn write_to<W: Write>(&self, mut sink: W) -> Result<()> {
-        // Create the file, and the writer..
-        let mut writer = EmitterConfig::new()
-            .perform_indent(true)
-            .create_writer(&mut sink);
-
-        writer.write(XmlWriterEvent::start_element("MicProfileTree"))?;
+    pub fn write_to<W: Write>(&self, sink: W) -> Result<()> {
+        let mut writer = Writer::new_with_indent(sink, u8::try_from('\t')?, 1);
+        writer.write_event(Event::Decl(BytesDecl::new("1.0", Some("utf-8"), None)))?;
+        writer.write_event(Event::Start(BytesStart::new("MicProfileTree")))?;
 
         // First, we need to write the EQ, Compressor and Gate..
         let mut attributes: HashMap<String, String> = HashMap::default();
@@ -153,18 +158,16 @@ impl MicProfileSettings {
         attributes.insert("BLEEP_LEVEL".to_string(), format!("{}", self.bleep_level));
         attributes.insert("MIC_GATE_MODE".to_string(), format!("{}", self.gate_mode));
 
-        let mut element: StartElementBuilder = XmlWriterEvent::start_element("dspTreeMicProfile");
+        let mut elem = BytesStart::new("dspTreeMicProfile");
         for (key, value) in &attributes {
-            element = element.attr(key.as_str(), value.as_str());
+            elem.push_attribute((key.as_str(), value.as_str()));
         }
-        writer.write(element)?;
-        writer.write(XmlWriterEvent::end_element())?;
+        writer.write_event(Event::Empty(elem))?;
 
         self.mic_setup.write_config(&mut writer)?;
         self.ui_setup.write_ui(&mut writer)?;
 
-        writer.write(XmlWriterEvent::end_element())?;
-
+        writer.write_event(Event::End(BytesEnd::new("MicProfileTree")))?;
         Ok(())
     }
 
@@ -222,7 +225,7 @@ impl MicProfileSettings {
         self.bleep_level
     }
     pub fn set_bleep_level(&mut self, bleep_level: i8) -> Result<()> {
-        if !(-34..=0).contains(&bleep_level) {
+        if !(-36..=0).contains(&bleep_level) {
             return Err(anyhow!("Bleep level should be between -34 and 0"));
         }
         self.bleep_level = bleep_level;

@@ -4,15 +4,14 @@ use std::os::raw::c_float;
 
 use enum_map::EnumMap;
 use strum::{EnumIter, EnumProperty, IntoEnumIterator};
-use xml::attribute::OwnedAttribute;
-use xml::writer::events::StartElementBuilder;
-use xml::writer::XmlEvent as XmlWriterEvent;
-use xml::EventWriter;
 
 use anyhow::{anyhow, Result};
+use quick_xml::events::{BytesEnd, BytesStart, Event};
+use quick_xml::Writer;
 
 use crate::components::colours::ColourMap;
 use crate::components::megaphone::MegaphoneStyle::Megaphone;
+use crate::profile::Attribute;
 use crate::Preset;
 
 #[derive(thiserror::Error, Debug)]
@@ -51,7 +50,7 @@ impl MegaphoneEffectBase {
         }
     }
 
-    pub fn parse_megaphone_root(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_megaphone_root(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         for attr in attributes {
             if !self.colour_map.read_colours(attr)? {
                 println!("[megaphoneEffect] Unparsed Attribute: {}", attr.name);
@@ -64,15 +63,15 @@ impl MegaphoneEffectBase {
     pub fn parse_megaphone_preset(
         &mut self,
         preset_enum: Preset,
-        attributes: &[OwnedAttribute],
+        attributes: &Vec<Attribute>,
     ) -> Result<()> {
         let mut preset = MegaphoneEffect::new();
         for attr in attributes {
-            if attr.name.local_name == "megaphoneEffectstate" {
+            if attr.name == "megaphoneEffectstate" {
                 preset.state = matches!(attr.value.as_str(), "1");
                 continue;
             }
-            if attr.name.local_name == "MEGAPHONE_STYLE" {
+            if attr.name == "MEGAPHONE_STYLE" {
                 for style in MegaphoneStyle::iter() {
                     if style.get_str("uiIndex").unwrap() == attr.value {
                         preset.style = style;
@@ -89,101 +88,96 @@ impl MegaphoneEffectBase {
              * across to their correct type.
              */
 
-            if attr.name.local_name == "TRANS_DIST_AMT" {
+            if attr.name == "TRANS_DIST_AMT" {
                 preset.trans_dist_amt = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "TRANS_HP" {
+            if attr.name == "TRANS_HP" {
                 preset.trans_hp = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "TRANS_LP" {
+            if attr.name == "TRANS_LP" {
                 preset.trans_lp = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "TRANS_PREGAIN" {
+            if attr.name == "TRANS_PREGAIN" {
                 preset.trans_pregain = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "TRANS_POSTGAIN" {
+            if attr.name == "TRANS_POSTGAIN" {
                 preset.trans_postgain = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
-            if attr.name.local_name == "TRANS_DIST_TYPE" {
+            if attr.name == "TRANS_DIST_TYPE" {
                 preset.trans_dist_type = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "TRANS_PRESENCE_GAIN" {
+            if attr.name == "TRANS_PRESENCE_GAIN" {
                 preset.trans_presence_gain = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "TRANS_PRESENCE_FC" {
+            if attr.name == "TRANS_PRESENCE_FC" {
                 preset.trans_presence_fc = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "TRANS_PRESENCE_BW" {
+            if attr.name == "TRANS_PRESENCE_BW" {
                 preset.trans_presence_bw = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "TRANS_BEATBOX_ENABLE" {
+            if attr.name == "TRANS_BEATBOX_ENABLE" {
                 preset.trans_beatbox_enabled = attr.value != "0";
                 continue;
             }
-            if attr.name.local_name == "TRANS_FILTER_CONTROL" {
+            if attr.name == "TRANS_FILTER_CONTROL" {
                 preset.trans_filter_control = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "TRANS_FILTER" {
+            if attr.name == "TRANS_FILTER" {
                 preset.trans_filter = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "TRANS_DRIVE_POT_GAIN_COMP_MID" {
+            if attr.name == "TRANS_DRIVE_POT_GAIN_COMP_MID" {
                 preset.trans_drive_pot_gain_comp_mid = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "TRANS_DRIVE_POT_GAIN_COMP_MAX" {
+            if attr.name == "TRANS_DRIVE_POT_GAIN_COMP_MAX" {
                 preset.trans_drive_pot_gain_comp_max = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            println!(
-                "[MegaphoneEffect] Unparsed Child Attribute: {}",
-                &attr.name.local_name
-            );
+            println!("[MegaphoneEffect] Unparsed Child Attribute: {}", &attr.name);
         }
         self.preset_map[preset_enum] = preset;
         Ok(())
     }
 
-    pub fn write_megaphone<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
-        let mut element: StartElementBuilder = XmlWriterEvent::start_element("megaphoneEffect");
+    pub fn write_megaphone<W: Write>(&self, writer: &mut Writer<W>) -> Result<()> {
+        let mut elem = BytesStart::new("megaphoneEffect");
 
         let mut attributes: HashMap<String, String> = HashMap::default();
         self.colour_map.write_colours(&mut attributes);
 
         // Write out the attributes etc for this element, but don't close it yet..
         for (key, value) in &attributes {
-            element = element.attr(key.as_str(), value.as_str());
+            elem.push_attribute((key.as_str(), value.as_str()));
         }
 
-        writer.write(element)?;
+        writer.write_event(Event::Start(elem))?;
 
         // Because all of these are seemingly 'guaranteed' to exist, we can straight dump..
         for preset in Preset::iter() {
             let tag_name = format!("megaphoneEffect{}", preset.get_str("tagSuffix").unwrap());
-            let mut sub_element: StartElementBuilder =
-                XmlWriterEvent::start_element(tag_name.as_str());
+            let mut sub_elem = BytesStart::new(tag_name.as_str());
 
             let sub_attributes = self.get_preset_attributes(preset);
             for (key, value) in &sub_attributes {
-                sub_element = sub_element.attr(key.as_str(), value.as_str());
+                sub_elem.push_attribute((key.as_str(), value.as_str()));
             }
 
-            writer.write(sub_element)?;
-            writer.write(XmlWriterEvent::end_element())?;
+            writer.write_event(Event::Empty(sub_elem))?;
         }
 
         // Finally, close the 'main' tag.
-        writer.write(XmlWriterEvent::end_element())?;
+        writer.write_event(Event::End(BytesEnd::new("megaphoneEffect")))?;
         Ok(())
     }
 

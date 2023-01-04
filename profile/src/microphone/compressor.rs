@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::os::raw::c_float;
-use xml::attribute::OwnedAttribute;
 
+use crate::profile::Attribute;
 use anyhow::{anyhow, Result};
 
 #[derive(thiserror::Error, Debug)]
@@ -40,15 +40,15 @@ impl Compressor {
         }
     }
 
-    pub fn parse_compressor(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_compressor(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         for attr in attributes {
-            if attr.name.local_name == "MIC_COMP_THRESHOLD" {
+            if attr.name == "MIC_COMP_THRESHOLD" {
                 self.set_threshold(attr.value.parse::<c_float>()? as i8)?;
                 continue;
             }
 
-            if attr.name.local_name == "MIC_COMP_RATIO" {
-                let value = attr.value.parse::<c_float>()? as f32;
+            if attr.name == "MIC_COMP_RATIO" {
+                let value = attr.value.parse::<c_float>()?;
                 if value > 14. {
                     continue;
                 }
@@ -56,8 +56,8 @@ impl Compressor {
                 continue;
             }
 
-            if attr.name.local_name == "MIC_COMP_ATTACK" {
-                let value = attr.value.parse::<c_float>()? as f32;
+            if attr.name == "MIC_COMP_ATTACK" {
+                let value = attr.value.parse::<c_float>()?;
                 if value > 19. {
                     continue;
                 }
@@ -65,8 +65,8 @@ impl Compressor {
                 continue;
             }
 
-            if attr.name.local_name == "MIC_COMP_RELEASE" {
-                let value = attr.value.parse::<c_float>()? as f32;
+            if attr.name == "MIC_COMP_RELEASE" {
+                let value = attr.value.parse::<c_float>()?;
                 if value > 19. {
                     continue;
                 }
@@ -74,7 +74,7 @@ impl Compressor {
                 continue;
             }
 
-            if attr.name.local_name == "MIC_COMP_MAKEUPGAIN" {
+            if attr.name == "MIC_COMP_MAKEUPGAIN" {
                 self.set_makeup_gain(attr.value.parse::<c_float>()? as i8)?;
                 continue;
             }

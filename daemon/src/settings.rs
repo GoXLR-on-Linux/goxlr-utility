@@ -25,6 +25,7 @@ impl SettingsHandle {
         let data_dir = proj_dirs.data_dir();
 
         let mut settings = Settings::read(&path)?.unwrap_or_else(|| Settings {
+            show_tray_icon: Some(true),
             profile_directory: Some(data_dir.join("profiles")),
             mic_profile_directory: Some(data_dir.join("mic-profiles")),
             samples_directory: Some(data_dir.join("samples")),
@@ -54,6 +55,10 @@ impl SettingsHandle {
             settings.icons_directory = Some(data_dir.join("icons"));
         }
 
+        if settings.show_tray_icon.is_none() {
+            settings.show_tray_icon = Some(true);
+        }
+
         let handle = SettingsHandle {
             path,
             settings: Arc::new(RwLock::new(settings)),
@@ -71,6 +76,16 @@ impl SettingsHandle {
                 e
             );
         }
+    }
+
+    pub async fn get_show_tray_icon(&self) -> bool {
+        let settings = self.settings.read().await;
+        settings.show_tray_icon.unwrap()
+    }
+
+    pub async fn set_show_tray_icon(&self, enabled: bool) {
+        let mut settings = self.settings.write().await;
+        settings.show_tray_icon = Some(enabled);
     }
 
     pub async fn get_profile_directory(&self) -> PathBuf {
@@ -180,6 +195,7 @@ impl SettingsHandle {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Settings {
+    show_tray_icon: Option<bool>,
     profile_directory: Option<PathBuf>,
     mic_profile_directory: Option<PathBuf>,
     samples_directory: Option<PathBuf>,

@@ -3,10 +3,6 @@ use std::io::Write;
 
 use enum_map::Enum;
 use strum::EnumProperty;
-use xml::attribute::OwnedAttribute;
-use xml::writer::events::StartElementBuilder;
-use xml::writer::XmlEvent as XmlWriterEvent;
-use xml::EventWriter;
 
 use anyhow::{anyhow, Result};
 
@@ -29,6 +25,9 @@ pub enum ParseError {
     #[error("Invalid colours: {0}")]
     InvalidColours(#[from] crate::components::colours::ParseError),
 }
+use crate::profile::Attribute;
+use quick_xml::events::{BytesStart, Event};
+use quick_xml::Writer;
 use std::str::FromStr;
 
 /**
@@ -63,14 +62,14 @@ impl MuteChat {
         }
     }
 
-    pub fn parse_mute_chat(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_mute_chat(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         for attr in attributes {
-            if attr.name.local_name == "micIsAnActiveFader" {
+            if attr.name == "micIsAnActiveFader" {
                 self.mic_fader_id = attr.value.parse()?;
                 continue;
             }
 
-            if attr.name.local_name == "coughButtonToggleSetting" {
+            if attr.name == "coughButtonToggleSetting" {
                 self.cough_behaviour = if attr.value == "0" {
                     Hold
                 } else {
@@ -79,17 +78,17 @@ impl MuteChat {
                 continue;
             }
 
-            if attr.name.local_name == "coughButtonMuteSourceSelection" {
+            if attr.name == "coughButtonMuteSourceSelection" {
                 self.cough_mute_source = MuteFunction::from_usize(attr.value.parse()?);
                 continue;
             }
 
-            if attr.name.local_name == "coughButtonIsOn" {
+            if attr.name == "coughButtonIsOn" {
                 self.cough_button_on = attr.value != "0";
                 continue;
             }
 
-            if attr.name.local_name == "blink" {
+            if attr.name == "blink" {
                 self.blink = ColourState::from_str(&attr.value)?;
                 continue;
             }
@@ -102,9 +101,8 @@ impl MuteChat {
         Ok(())
     }
 
-    pub fn write_mute_chat<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
-        let mut element: StartElementBuilder =
-            XmlWriterEvent::start_element(self.element_name.as_str());
+    pub fn write_mute_chat<W: Write>(&self, writer: &mut Writer<W>) -> Result<()> {
+        let mut elem = BytesStart::new(self.element_name.as_str());
 
         let mut attributes: HashMap<String, String> = HashMap::default();
 
@@ -140,11 +138,10 @@ impl MuteChat {
         self.colour_map.write_colours(&mut attributes);
 
         for (key, value) in &attributes {
-            element = element.attr(key.as_str(), value.as_str());
+            elem.push_attribute((key.as_str(), value.as_str()));
         }
 
-        writer.write(element)?;
-        writer.write(XmlWriterEvent::end_element())?;
+        writer.write_event(Event::Empty(elem))?;
         Ok(())
     }
 

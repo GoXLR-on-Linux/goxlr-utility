@@ -15,8 +15,8 @@ pub enum ParseError {
     ExpectedEnum(#[from] strum::ParseError),
 }
 use crate::components::colours::ColourDisplay::{Gradient, GradientMeter, Meter};
+use crate::profile::Attribute;
 use strum::{Display, EnumString};
-use xml::attribute::OwnedAttribute;
 
 #[derive(Debug)]
 pub struct ColourMap {
@@ -67,46 +67,46 @@ impl ColourMap {
         }
     }
 
-    pub fn read_colours(&mut self, attribute: &OwnedAttribute) -> Result<bool> {
+    pub fn read_colours(&mut self, attribute: &Attribute) -> Result<bool> {
         let mut attr_key = format!("{}offStyle", &self.prefix);
 
-        if attribute.name.local_name == attr_key {
+        if attribute.name == attr_key {
             self.set_off_style(ColourOffStyle::from_str(&attribute.value)?)?;
             return Ok(true);
         }
 
         attr_key = format!("{}selected", &self.prefix);
-        if attribute.name.local_name == attr_key {
+        if attribute.name == attr_key {
             self.selected = Some(u8::from_str(attribute.value.as_str())?);
             return Ok(true);
         }
 
         attr_key = format!("{}velocity", &self.prefix);
-        if attribute.name.local_name == attr_key {
+        if attribute.name == attr_key {
             self.velocity = Some(i8::from_str(attribute.value.as_str())?);
             return Ok(true);
         }
 
         attr_key = format!("{}state", &self.prefix);
-        if attribute.name.local_name == attr_key {
+        if attribute.name == attr_key {
             self.set_state(Some(ColourState::from_str(&attribute.value)?))?;
             return Ok(true);
         }
 
         attr_key = format!("{}blink", &self.prefix);
-        if attribute.name.local_name == attr_key {
+        if attribute.name == attr_key {
             self.set_blink(Some(ColourState::from_str(&attribute.value)?))?;
             return Ok(true);
         }
 
         // This attribute is spelt wrong.. >:(
-        if attribute.name.local_name == "colorGroup" {
+        if attribute.name == "colorGroup" {
             self.colour_group = Some(attribute.value.clone());
             return Ok(true);
         }
 
         attr_key = format!("{}colour", &self.prefix);
-        if attribute.name.local_name.starts_with(attr_key.as_str()) {
+        if attribute.name.starts_with(attr_key.as_str()) {
             let color_list = self.colour_list.get_or_insert_with(|| {
                 let mut default = Vec::new();
                 default.resize_with(3, || None);
@@ -116,7 +116,6 @@ impl ColourMap {
             // TODO: Tidy this monster up..
             if let Some(index) = attribute
                 .name
-                .local_name
                 .chars()
                 .last()
                 .map(|s| usize::from_str(&s.to_string()))
@@ -129,7 +128,7 @@ impl ColourMap {
         }
 
         attr_key = format!("{}Display", &self.prefix);
-        if attribute.name.local_name == attr_key {
+        if attribute.name == attr_key {
             self.set_fader_display(ColourDisplay::from_str(&attribute.value)?)?;
             return Ok(true);
         }

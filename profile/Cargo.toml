@@ -1,20 +1,20 @@
 [package]
 name = "goxlr-profile-loader"
-version = "0.8.1"
+version = "0.9.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-enum-map = "2.1.0"
-enum-map-derive = "0.8"
-thiserror = "1.0"
-zip = "0.5"
-strum = { version = "0.23", features = ["derive"] }
+enum-map = "2.4.2"
+enum-map-derive = "0.11.0"
+thiserror = "1.0.38"
+zip = "0.6.3"
+strum = { version = "0.24.1", features = ["derive"] }
 ritelinked = "0.3.2"
-xml-rs = "0.8"
-byteorder = "1"
+quick-xml = "0.27.1"
+byteorder = "1.4.3"
 rand = "0.8.5"
 
-anyhow = "1.0"
-log = "0.4.14"
+anyhow = "1.0.68"
+log = "0.4.17"

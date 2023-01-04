@@ -4,6 +4,5 @@ set -e
 # Honestly, it doesn't matter which 'phase' this is called, as we're ultimately not doing anything particularly
 # critical, or may need rolling back, or have different behaviour. So reload udev regardless.
 udevadm control --reload-rules
-
-echo "You may need to replug your GoXLR before running the Daemon"
+udevadm trigger
 exit 0

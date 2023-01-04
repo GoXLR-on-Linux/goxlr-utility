@@ -5,16 +5,15 @@ use std::str::FromStr;
 
 use enum_map::EnumMap;
 use strum::{Display, EnumIter, EnumProperty, EnumString, IntoEnumIterator};
-use xml::attribute::OwnedAttribute;
-use xml::writer::events::StartElementBuilder;
-use xml::writer::XmlEvent as XmlWriterEvent;
-use xml::EventWriter;
 
 use anyhow::{anyhow, Result};
+use quick_xml::events::{BytesEnd, BytesStart, Event};
+use quick_xml::Writer;
 
 use crate::components::colours::ColourMap;
 use crate::components::hardtune::HardTuneSource::All;
 use crate::components::hardtune::HardTuneStyle::Natural;
+use crate::profile::Attribute;
 use crate::Preset;
 
 #[derive(thiserror::Error, Debug)]
@@ -55,10 +54,10 @@ impl HardtuneEffectBase {
         }
     }
 
-    pub fn parse_hardtune_root(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_hardtune_root(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         for attr in attributes {
             // I honestly have no idea why this lives here :D
-            if attr.name.local_name == "HARDTUNE_SOURCE" {
+            if attr.name == "HARDTUNE_SOURCE" {
                 self.source = HardTuneSource::from_str(&attr.value)?;
                 continue;
             }
@@ -74,15 +73,15 @@ impl HardtuneEffectBase {
     pub fn parse_hardtune_preset(
         &mut self,
         preset_enum: Preset,
-        attributes: &[OwnedAttribute],
+        attributes: &Vec<Attribute>,
     ) -> Result<()> {
         let mut preset = HardTuneEffect::new();
         for attr in attributes {
-            if attr.name.local_name == "hardtuneEffectstate" {
+            if attr.name == "hardtuneEffectstate" {
                 preset.state = matches!(attr.value.as_str(), "1");
                 continue;
             }
-            if attr.name.local_name == "HARDTUNE_STYLE" {
+            if attr.name == "HARDTUNE_STYLE" {
                 for style in HardTuneStyle::iter() {
                     if style.get_str("uiIndex").unwrap() == attr.value {
                         preset.style = style;
@@ -92,50 +91,44 @@ impl HardtuneEffectBase {
                 continue;
             }
 
-            if attr.name.local_name == "HARDTUNE_KEYSOURCE" {
+            if attr.name == "HARDTUNE_KEYSOURCE" {
                 preset.key_source = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "HARDTUNE_AMOUNT" {
+            if attr.name == "HARDTUNE_AMOUNT" {
                 preset.amount = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "HARDTUNE_WINDOW" {
+            if attr.name == "HARDTUNE_WINDOW" {
                 preset.window = attr.value.parse::<c_float>()? as u16;
                 continue;
             }
-            if attr.name.local_name == "HARDTUNE_RATE" {
+            if attr.name == "HARDTUNE_RATE" {
                 preset.rate = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "HARDTUNE_SCALE" {
+            if attr.name == "HARDTUNE_SCALE" {
                 preset.scale = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "HARDTUNE_PITCH_AMT" {
+            if attr.name == "HARDTUNE_PITCH_AMT" {
                 preset.pitch_amt = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "HARDTUNE_SOURCE" {
+            if attr.name == "HARDTUNE_SOURCE" {
                 preset.source = Some(HardTuneSource::from_str(&attr.value)?);
                 continue;
             }
 
-            println!(
-                "[HardTuneEffect] Unparsed Child Attribute: {}",
-                &attr.name.local_name
-            );
+            println!("[HardTuneEffect] Unparsed Child Attribute: {}", &attr.name);
         }
 
         self.preset_map[preset_enum] = preset;
         Ok(())
     }
 
-    pub fn write_hardtune<W: Write>(
-        &self,
-        writer: &mut EventWriter<&mut W>,
-    ) -> Result<(), xml::writer::Error> {
-        let mut element: StartElementBuilder = XmlWriterEvent::start_element("hardtuneEffect");
+    pub fn write_hardtune<W: Write>(&self, writer: &mut Writer<W>) -> Result<()> {
+        let mut elem = BytesStart::new("hardtuneEffect");
 
         let mut attributes: HashMap<String, String> = HashMap::default();
         attributes.insert("HARDTUNE_SOURCE".to_string(), self.source.to_string());
@@ -143,28 +136,26 @@ impl HardtuneEffectBase {
 
         // Write out the attributes etc for this element, but don't close it yet..
         for (key, value) in &attributes {
-            element = element.attr(key.as_str(), value.as_str());
+            elem.push_attribute((key.as_str(), value.as_str()));
         }
 
-        writer.write(element)?;
+        writer.write_event(Event::Start(elem))?;
 
         // Because all of these are seemingly 'guaranteed' to exist, we can straight dump..
         for preset in Preset::iter() {
             let tag_name = format!("hardtuneEffect{}", preset.get_str("tagSuffix").unwrap());
-            let mut sub_element: StartElementBuilder =
-                XmlWriterEvent::start_element(tag_name.as_str());
+            let mut sub_elem = BytesStart::new(tag_name.as_str());
 
             let sub_attributes = self.get_preset_attributes(preset);
             for (key, value) in &sub_attributes {
-                sub_element = sub_element.attr(key.as_str(), value.as_str());
+                sub_elem.push_attribute((key.as_str(), value.as_str()));
             }
 
-            writer.write(sub_element)?;
-            writer.write(XmlWriterEvent::end_element())?;
+            writer.write_event(Event::Empty(sub_elem))?;
         }
 
         // Finally, close the 'main' tag.
-        writer.write(XmlWriterEvent::end_element())?;
+        writer.write_event(Event::End(BytesEnd::new("hardtuneEffect")))?;
         Ok(())
     }
 

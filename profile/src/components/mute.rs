@@ -3,14 +3,13 @@ use std::io::Write;
 
 use enum_map_derive::Enum;
 use strum::{EnumIter, EnumProperty, IntoEnumIterator};
-use xml::attribute::OwnedAttribute;
-use xml::writer::events::StartElementBuilder;
-use xml::writer::XmlEvent as XmlWriterEvent;
-use xml::EventWriter;
 
 use anyhow::Result;
+use quick_xml::events::{BytesStart, Event};
+use quick_xml::Writer;
 
 use crate::components::colours::ColourMap;
+use crate::profile::Attribute;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -50,9 +49,9 @@ impl MuteButton {
         }
     }
 
-    pub fn parse_button(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_button(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         for attr in attributes {
-            if attr.name.local_name.ends_with("Function") {
+            if attr.name.ends_with("Function") {
                 let mut found = false;
 
                 // First catch this seemingly legacy value..
@@ -74,14 +73,14 @@ impl MuteButton {
                 continue;
             }
 
-            if attr.name.local_name.ends_with("prevLevel") {
+            if attr.name.ends_with("prevLevel") {
                 // Simple, parse this into a u8 :)
                 let value: u8 = attr.value.parse()?;
                 self.previous_volume = value;
                 continue;
             }
 
-            if attr.name.local_name == "fromMuteAllFlag" {
+            if attr.name == "fromMuteAllFlag" {
                 if attr.value == "0" {
                     self.from_mute_all = Some(false);
                 } else {
@@ -102,9 +101,9 @@ impl MuteButton {
     pub fn write_button<W: Write>(
         &self,
         element_name: String,
-        writer: &mut EventWriter<&mut W>,
+        writer: &mut Writer<W>,
     ) -> Result<()> {
-        let mut element: StartElementBuilder = XmlWriterEvent::start_element(element_name.as_str());
+        let mut elem = BytesStart::new(element_name.as_str());
 
         let mut attributes: HashMap<String, String> = HashMap::default();
         attributes.insert(
@@ -127,11 +126,10 @@ impl MuteButton {
             .write_colours_with_prefix(element_name.clone(), &mut attributes);
 
         for (key, value) in &attributes {
-            element = element.attr(key.as_str(), value.as_str());
+            elem.push_attribute((key.as_str(), value.as_str()));
         }
 
-        writer.write(element)?;
-        writer.write(XmlWriterEvent::end_element())?;
+        writer.write_event(Event::Empty(elem))?;
         Ok(())
     }
 

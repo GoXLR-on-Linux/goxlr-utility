@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
+    "launcher",
     "usb",
     "daemon",
     "audio",
@@ -10,4 +11,5 @@ members = [
     "profile",
     "initialiser",
     "scribbles",
+    "defaults",
 ]

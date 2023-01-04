@@ -11,10 +11,20 @@ pub const PID_GOXLR_MINI: u16 = 0x8fe4;
 pub const PID_GOXLR_FULL: u16 = 0x8fe0;
 
 fn main() {
-    println!("Checking for available GoXLR devices..");
-    find_devices();
+    #[cfg(windows)]
+    {
+        println!("This application should not be run on Windows");
+        std::process::exit(-1);
+    }
+
+    #[cfg(not(windows))]
+    {
+        println!("Checking for available GoXLR devices..");
+        find_devices();
+    }
 }
 
+#[cfg(not(windows))]
 fn device_address<C: UsbContext>(device: &Device<C>) -> String {
     format!(
         "(bus {}, port {}, device {})",
@@ -24,6 +34,7 @@ fn device_address<C: UsbContext>(device: &Device<C>) -> String {
     )
 }
 
+#[cfg(not(windows))]
 fn find_devices() {
     if let Ok(devices) = rusb::devices() {
         for device in devices.iter() {
@@ -102,6 +113,7 @@ fn find_devices() {
     }
 }
 
+#[cfg(not(windows))]
 fn initialize_device(handle: &mut DeviceHandle<GlobalContext>) -> Result<(), Error> {
     println!("Device not initialised, preparing..");
     // The GoXLR is not initialised, we need to fix that..

@@ -229,7 +229,7 @@ impl Player {
                         sample_buffer = Some(SampleBuffer::<f32>::new(duration, spec));
 
                         if !self.process_only {
-                            audio_output.replace(get_output(spec, self.device.clone()).unwrap());
+                            audio_output.replace(get_output(spec, self.device.clone())?);
                         }
                     }
 

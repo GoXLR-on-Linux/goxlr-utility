@@ -7,6 +7,10 @@ jobs:
     name: Check
     runs-on: ubuntu-latest
     steps:
+      - name: "Install Dependencies.."
+        run: |
+          sudo apt-get update
+          sudo apt-get install libdbus-1-dev pkg-config
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
@@ -21,10 +25,10 @@ jobs:
     name: Test Suite
     runs-on: ubuntu-latest
     steps:
-      - name: "Install Pulse Client Libraries.."
+      - name: "Install Dependencies.."
         run: |
           sudo apt-get update
-          sudo apt-get install libpulse0
+          sudo apt-get install libpulse0 libdbus-1-dev pkg-config
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
@@ -55,6 +59,10 @@ jobs:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
+      - name: "Install Dependencies"
+        run: |
+          sudo apt-get update
+          sudo apt-get install libdbus-1-dev pkg-config
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:

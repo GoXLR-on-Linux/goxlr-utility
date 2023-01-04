@@ -1,7 +1,7 @@
+use crate::profile::Attribute;
 use anyhow::{anyhow, Result};
 use std::collections::HashMap;
 use std::os::raw::c_float;
-use xml::attribute::OwnedAttribute;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -41,20 +41,20 @@ impl Gate {
         }
     }
 
-    pub fn parse_gate(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_gate(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         for attr in attributes {
-            if attr.name.local_name == "MIC_GATE_MACRO_AMOUNT" {
+            if attr.name == "MIC_GATE_MACRO_AMOUNT" {
                 self.amount = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
 
-            if attr.name.local_name == "MIC_GATE_THRESOLD" {
+            if attr.name == "MIC_GATE_THRESOLD" {
                 self.set_threshold(attr.value.parse::<c_float>()? as i8)?;
                 continue;
             }
 
-            if attr.name.local_name == "MIC_GATE_ATTACK" {
-                let value = attr.value.parse::<c_float>()? as f32;
+            if attr.name == "MIC_GATE_ATTACK" {
+                let value = attr.value.parse::<c_float>()?;
                 if value > 45. {
                     // If the value is out of range, use the default.
                     continue;
@@ -63,8 +63,8 @@ impl Gate {
                 continue;
             }
 
-            if attr.name.local_name == "MIC_GATE_RELEASE" {
-                let value = attr.value.parse::<c_float>()? as f32;
+            if attr.name == "MIC_GATE_RELEASE" {
+                let value = attr.value.parse::<c_float>()?;
                 if value > 45. {
                     continue;
                 }
@@ -73,12 +73,12 @@ impl Gate {
             }
 
             // Read and handle as a percentage.
-            if attr.name.local_name == "MIC_GATE_ATTEN" {
+            if attr.name == "MIC_GATE_ATTEN" {
                 self.set_attenuation(attr.value.parse::<c_float>()? as u8)?;
                 continue;
             }
 
-            if attr.name.local_name == "MIC_GATE_ENABLE" {
+            if attr.name == "MIC_GATE_ENABLE" {
                 if attr.value == "0" {
                     self.set_enabled(false)?;
                 } else {

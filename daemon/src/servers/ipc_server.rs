@@ -66,13 +66,13 @@ pub async fn bind_socket() -> Result<LocalSocketListener> {
     Ok(listener)
 }
 
-pub async fn run_server(
+pub async fn spawn_ipc_server(
     listener: LocalSocketListener,
     http_settings: HttpSettings,
     usb_tx: DeviceSender,
     mut shutdown_signal: Shutdown,
 ) {
-    info!("Running IPC Server");
+    debug!("Running IPC Server..");
     loop {
         let http_settings = http_settings.clone();
         tokio::select! {

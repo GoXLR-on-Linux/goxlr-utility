@@ -2,15 +2,13 @@ use std::collections::HashMap;
 use std::io::Write;
 use std::str::FromStr;
 
-use xml::attribute::OwnedAttribute;
-use xml::writer::events::StartElementBuilder;
-use xml::writer::XmlEvent as XmlWriterEvent;
-use xml::EventWriter;
-
 use anyhow::Result;
+use quick_xml::events::{BytesStart, Event};
+use quick_xml::Writer;
 
 use crate::components::colours::ColourMap;
 use crate::components::scribble::ScribbleStyle::{Inverted, Normal};
+use crate::profile::Attribute;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -77,34 +75,34 @@ impl Scribble {
         }
     }
 
-    pub fn parse_scribble(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_scribble(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         for attr in attributes {
-            if attr.name.local_name.ends_with("iconFile") {
+            if attr.name.ends_with("iconFile") {
                 self.icon_file = attr.value.clone();
                 continue;
             }
 
-            if attr.name.local_name.ends_with("string0") {
+            if attr.name.ends_with("string0") {
                 self.text_top_left = attr.value.clone();
                 continue;
             }
 
-            if attr.name.local_name.ends_with("string1") {
+            if attr.name.ends_with("string1") {
                 self.text_bottom_middle = attr.value.clone();
                 continue;
             }
 
-            if attr.name.local_name.ends_with("alpha") {
+            if attr.name.ends_with("alpha") {
                 self.alpha = f64::from_str(attr.value.as_str())?;
                 continue;
             }
 
-            if attr.name.local_name.ends_with("textSize") {
+            if attr.name.ends_with("textSize") {
                 self.text_size = u8::from_str(attr.value.as_str())?;
                 continue;
             }
 
-            if attr.name.local_name.ends_with("inverted") {
+            if attr.name.ends_with("inverted") {
                 if attr.value == "0" {
                     self.style = Normal;
                 } else {
@@ -113,7 +111,7 @@ impl Scribble {
                 continue;
             }
 
-            if attr.name.local_name.ends_with("bitmap") {
+            if attr.name.ends_with("bitmap") {
                 self.bitmap_file = attr.value.clone();
                 continue;
             }
@@ -127,9 +125,8 @@ impl Scribble {
         Ok(())
     }
 
-    pub fn write_scribble<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
-        let mut element: StartElementBuilder =
-            XmlWriterEvent::start_element(self.element_name.as_str());
+    pub fn write_scribble<W: Write>(&self, writer: &mut Writer<W>) -> Result<()> {
+        let mut elem = BytesStart::new(self.element_name.as_str());
 
         let mut attributes: HashMap<String, String> = HashMap::default();
         attributes.insert(
@@ -166,11 +163,10 @@ impl Scribble {
         self.colour_map.write_colours(&mut attributes);
 
         for (key, value) in &attributes {
-            element = element.attr(key.as_str(), value.as_str());
+            elem.push_attribute((key.as_str(), value.as_str()));
         }
 
-        writer.write(element)?;
-        writer.write(XmlWriterEvent::end_element())?;
+        writer.write_event(Event::Empty(elem))?;
         Ok(())
     }
 

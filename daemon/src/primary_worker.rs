@@ -1,10 +1,12 @@
 use crate::device::Device;
-use crate::files::create_path;
+use crate::events::EventTriggers;
+use crate::files::extract_defaults;
+use crate::platform::{has_autostart, set_autostart};
 use crate::{FileManager, PatchEvent, SettingsHandle, Shutdown, VERSION};
 use anyhow::{anyhow, Result};
 use goxlr_ipc::{
-    DaemonResponse, DaemonStatus, DeviceType, Files, GoXLRCommand, HardwareStatus, PathTypes,
-    Paths, UsbProductInformation,
+    DaemonConfig, DaemonResponse, DaemonStatus, DeviceType, Files, GoXLRCommand, HardwareStatus,
+    PathTypes, Paths, UsbProductInformation,
 };
 use goxlr_usb::device::base::GoXLRDevice;
 use goxlr_usb::device::{find_devices, from_device};
@@ -23,17 +25,23 @@ use tokio::time::sleep;
 #[allow(clippy::enum_variant_names)]
 pub enum DeviceCommand {
     SendDaemonStatus(oneshot::Sender<DaemonStatus>),
+    StopDaemon(oneshot::Sender<DaemonResponse>),
+    OpenUi(oneshot::Sender<DaemonResponse>),
     OpenPath(PathTypes, oneshot::Sender<DaemonResponse>),
+    RecoverDefaults(PathTypes, oneshot::Sender<DaemonResponse>),
+    SetShowTrayIcon(bool, oneshot::Sender<DaemonResponse>),
+    SetAutoStartEnabled(bool, oneshot::Sender<DaemonResponse>),
     RunDeviceCommand(String, GoXLRCommand, oneshot::Sender<Result<()>>),
 }
 
 pub type DeviceSender = mpsc::Sender<DeviceCommand>;
 pub type DeviceReceiver = mpsc::Receiver<DeviceCommand>;
 
-pub async fn handle_changes(
+pub async fn spawn_usb_handler(
     mut command_rx: DeviceReceiver,
     mut file_rx: Receiver<PathTypes>,
     broadcast_tx: BroadcastSender<PatchEvent>,
+    global_tx: Sender<EventTriggers>,
     mut shutdown: Shutdown,
     settings: SettingsHandle,
     mut file_manager: FileManager,
@@ -44,7 +52,7 @@ pub async fn handle_changes(
 
     // Create the device detection Sleep Timer..
     let detection_duration = Duration::from_millis(1000);
-    let detection_sleep = sleep(Duration::from_millis(10));
+    let detection_sleep = sleep(Duration::from_millis(0));
     tokio::pin!(detection_sleep);
 
     // Create the State update Sleep Timer..
@@ -55,25 +63,6 @@ pub async fn handle_changes(
     // Create the Primary Device List, and 'Ignore' list..
     let mut devices: HashMap<String, Device> = HashMap::new();
     let mut ignore_list = HashMap::new();
-
-    // Attempt to create the needed paths..
-    if let Err(error) = create_path(&settings.get_profile_directory().await) {
-        warn!("Unable to create profile directory: {}", error);
-    }
-
-    if let Err(error) = create_path(&settings.get_mic_profile_directory().await) {
-        warn!("Unable to create mic profile directory: {}", error);
-    }
-
-    let samples_path = &settings.get_samples_directory().await;
-    if let Err(error) = create_path(samples_path) {
-        warn!("Unable to create samples directory: {}", error);
-    }
-
-    let recorded_path = samples_path.join("Recorded/");
-    if let Err(error) = create_path(&recorded_path) {
-        warn!("Unable to create samples directory: {}", error);
-    }
 
     let mut files = get_files(&mut file_manager).await;
     let mut daemon_status = get_daemon_status(&devices, &settings, files.clone()).await;
@@ -150,20 +139,60 @@ pub async fn handle_changes(
                 match command {
                     DeviceCommand::SendDaemonStatus(sender) => {
                         let _ = sender.send(daemon_status.clone());
-                    },
-                    DeviceCommand::OpenPath(path_type, sender) => {
-                        let result = opener::open(match path_type {
+                    }
+                    DeviceCommand::StopDaemon(sender) => {
+                        // These should probably be moved upstream somewhere, they're not
+                        // device specific!
+                        let _ = global_tx.send(EventTriggers::Stop).await;
+                        let _ = sender.send(DaemonResponse::Ok);
+                    }
+                    DeviceCommand::OpenUi(sender) => {
+                        let _ = global_tx.send(EventTriggers::OpenUi).await;
+                        let _ = sender.send(DaemonResponse::Ok);
+                    }
+                    DeviceCommand::RecoverDefaults(path_type, sender) => {
+                        let path = match path_type {
                             PathTypes::Profiles => settings.get_profile_directory().await,
-                            PathTypes::MicProfiles => settings.get_mic_profile_directory().await,
                             PathTypes::Presets => settings.get_presets_directory().await,
-                            PathTypes::Samples => settings.get_samples_directory().await,
                             PathTypes::Icons => settings.get_icons_directory().await,
-                        });
-                        if result.is_err() {
-                            let _ = sender.send(DaemonResponse::Error("Unable to Open".to_string()));
-                        } else {
-                            let _ = sender.send(DaemonResponse::Ok);
+                            PathTypes::MicProfiles => settings.get_mic_profile_directory().await,
+                            _ => {
+                                let _ = sender.send(DaemonResponse::Error("Invalid Path type Sent".into()));
+                                return;
+                            }
+                        };
+                        let result = extract_defaults(path_type, &path);
+                        match result {
+                            Ok(_) => {
+                                let _ = sender.send(DaemonResponse::Ok);
+                            },
+                            Err(e) => {
+                                let _ = sender.send(DaemonResponse::Error(format!("Error Extracting Defaults: {}", e)));
+                            }
                         }
+                    }
+                    DeviceCommand::SetAutoStartEnabled(enabled, sender) => {
+                        let result = set_autostart(enabled);
+                        match result {
+                            Ok(_) => {
+                                let _ = sender.send(DaemonResponse::Ok);
+                                change_found = true;
+                            }
+                            Err(e) => {
+                                let _ = sender.send(DaemonResponse::Error(format!("Unable to Set AutoStart: {}", e)));
+                            }
+                        }
+                    }
+                    DeviceCommand::SetShowTrayIcon(enabled, sender) => {
+                        settings.set_show_tray_icon(enabled).await;
+                        settings.save().await;
+                        change_found = true;
+                        let _ = sender.send(DaemonResponse::Ok);
+                    }
+                    DeviceCommand::OpenPath(path_type, sender) => {
+                        // There's nothing we can really do if this errors..
+                        let _ = global_tx.send(EventTriggers::Open(path_type)).await;
+                        let _ = sender.send(DaemonResponse::Ok);
                     }
                     DeviceCommand::RunDeviceCommand(serial, command, sender) => {
                         if let Some(device) = devices.get_mut(&serial) {
@@ -206,7 +235,11 @@ async fn get_daemon_status(
     files: Files,
 ) -> DaemonStatus {
     let mut status = DaemonStatus {
-        daemon_version: String::from(VERSION),
+        config: DaemonConfig {
+            daemon_version: String::from(VERSION),
+            autostart_enabled: has_autostart(),
+            show_tray_icon: settings.get_show_tray_icon().await,
+        },
         paths: Paths {
             profile_directory: settings.get_profile_directory().await,
             mic_profile_directory: settings.get_mic_profile_directory().await,

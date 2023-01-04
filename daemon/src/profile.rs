@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, bail, Context, Result};
 use enum_map::EnumMap;
-use log::{debug, error, warn};
+use log::{debug, warn};
 use strum::IntoEnumIterator;
 
 use crate::audio::{AudioFile, AudioHandler};
@@ -44,10 +44,10 @@ use goxlr_types::{
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::colouring::ColourTargets;
 
-use crate::files::{can_create_new_file, create_path};
+use crate::files::can_create_new_file;
 
-pub const DEFAULT_PROFILE_NAME: &str = "DEFAULT";
-const DEFAULT_PROFILE: &[u8] = include_bytes!("../profiles/DEFAULT.goxlr");
+pub const DEFAULT_PROFILE_NAME: &str = "Default";
+const DEFAULT_PROFILE: &[u8] = include_bytes!("../profiles/Default.goxlr");
 
 #[derive(Debug)]
 pub struct ProfileAdapter {
@@ -56,42 +56,29 @@ pub struct ProfileAdapter {
 }
 
 impl ProfileAdapter {
-    pub fn from_named_or_default(name: Option<String>, directories: Vec<&Path>) -> Self {
-        if let Some(name) = name {
-            match ProfileAdapter::from_named(name.clone(), directories) {
-                Ok(result) => return result,
-                Err(error) => error!("Couldn't load profile {}: {}", name, error),
+    pub fn from_named_or_default(name: String, directory: &Path) -> Self {
+        return match ProfileAdapter::from_named(name.clone(), directory) {
+            Ok(result) => result,
+            Err(e) => {
+                warn!("Error Loading Profile, falling back to default.. {}", e);
+                ProfileAdapter::default()
             }
-        }
-
-        ProfileAdapter::default()
+        };
     }
 
-    pub fn from_named(name: String, directories: Vec<&Path>) -> Result<Self> {
-        let mut dir_list = "".to_string();
-
-        // Loop through the provided directories, and try to find the profile..
-        for directory in directories {
-            let path = directory.join(format!("{}.goxlr", name));
-
-            if path.is_file() {
-                debug!("Loading Profile From {}", path.to_string_lossy());
-                let file = File::open(path).context("Couldn't open profile for reading")?;
-                return ProfileAdapter::from_reader(name, file);
-            }
-            dir_list = format!("{}, {}", dir_list, directory.to_string_lossy());
+    pub fn from_named(name: String, directory: &Path) -> Result<Self> {
+        let path = directory.join(format!("{}.goxlr", name));
+        if path.is_file() {
+            debug!("Loading Profile From {}", path.to_string_lossy());
+            let file = File::open(path).context("Couldn't open profile for reading")?;
+            return ProfileAdapter::from_reader(name, file);
         }
 
-        if name == DEFAULT_PROFILE_NAME {
-            debug!("Loading Embedded Default Profile..");
-            return Ok(ProfileAdapter::default());
-        }
-
-        Err(anyhow!(
+        bail!(
             "Profile {} does not exist inside {:?}",
             name,
-            dir_list
-        ))
+            directory.to_string_lossy()
+        );
     }
 
     pub fn default() -> Self {
@@ -114,8 +101,6 @@ impl ProfileAdapter {
 
     pub fn write_profile(&mut self, name: String, directory: &Path, overwrite: bool) -> Result<()> {
         let path = directory.join(format!("{}.goxlr", name));
-        create_path(directory)?;
-
         if !overwrite && path.is_file() {
             return Err(anyhow!("Profile exists, will not overwrite"));
         }
@@ -133,7 +118,6 @@ impl ProfileAdapter {
 
     pub fn write_preset(&mut self, name: String, directory: &Path) -> Result<()> {
         let path = directory.join(format!("{}.preset", name));
-        create_path(directory)?;
         self.profile.save_preset(path)?;
         Ok(())
     }
@@ -816,7 +800,7 @@ impl ProfileAdapter {
         self.get_mute_button(fader).previous_volume()
     }
 
-    pub fn set_mute_button_previous_volume(&mut self, fader: FaderName, volume: u8) -> Result<()> {
+    pub fn set_mute_previous_volume(&mut self, fader: FaderName, volume: u8) -> Result<()> {
         self.get_mute_button_mut(fader).set_previous_volume(volume)
     }
 
@@ -1061,83 +1045,56 @@ impl ProfileAdapter {
         Ok(())
     }
 
-    pub fn toggle_megaphone(&mut self) -> Result<()> {
+    pub fn set_megaphone(&mut self, enabled: bool) -> Result<()> {
         let current = self.profile.settings().context().selected_effects();
-
-        let new_state = !self
-            .profile
-            .settings()
-            .megaphone_effect()
-            .get_preset(current)
-            .state();
 
         self.profile
             .settings_mut()
             .megaphone_effect_mut()
             .get_preset_mut(current)
-            .set_state(new_state);
+            .set_state(enabled);
         self.profile
             .settings_mut()
             .megaphone_effect_mut()
             .colour_map_mut()
-            .set_state_on(new_state)
+            .set_state_on(enabled)
     }
 
-    pub fn toggle_robot(&mut self) -> Result<()> {
+    pub fn set_robot(&mut self, enable: bool) -> Result<()> {
         let current = self.profile.settings().context().selected_effects();
-
-        let new_state = !self
-            .profile
-            .settings()
-            .robot_effect()
-            .get_preset(current)
-            .state();
-
         self.profile
             .settings_mut()
             .robot_effect_mut()
             .get_preset_mut(current)
-            .set_state(new_state);
+            .set_state(enable);
         self.profile
             .settings_mut()
             .robot_effect_mut()
             .colour_map_mut()
-            .set_state_on(new_state)
+            .set_state_on(enable)
     }
 
-    pub fn toggle_hardtune(&mut self) -> Result<()> {
+    pub fn set_hardtune(&mut self, enabled: bool) -> Result<()> {
         let current = self.profile.settings().context().selected_effects();
 
-        let new_state = !self
-            .profile
-            .settings()
-            .hardtune_effect()
-            .get_preset(current)
-            .state();
         self.profile
             .settings_mut()
             .hardtune_effect_mut()
             .get_preset_mut(current)
-            .set_state(new_state);
+            .set_state(enabled);
         self.profile
             .settings_mut()
             .hardtune_effect_mut()
             .colour_map_mut()
-            .set_state_on(new_state)
+            .set_state_on(enabled)
     }
 
-    pub fn toggle_effects(&mut self) -> Result<()> {
-        let state = !self
-            .profile
-            .settings()
-            .simple_element(SimpleElements::FxClear)
-            .colour_map()
-            .get_state();
+    pub fn set_effects(&mut self, enabled: bool) -> Result<()> {
         self.profile
             .settings_mut()
             .simple_element_mut(SimpleElements::FxClear)
             .colour_map_mut()
-            .set_state_on(state)
+            .set_state_on(enabled)
     }
 
     pub fn get_pitch_knob_position(&self) -> i8 {
@@ -1569,6 +1526,24 @@ impl ProfileAdapter {
             .get_track_by_index(index);
 
         if let Ok(track) = track {
+            return Ok(ProfileAdapter::track_to_audio(track));
+        }
+        bail!("Unable to find track");
+    }
+
+    pub fn get_track_by_bank_button(
+        &mut self,
+        bank: goxlr_types::SampleBank,
+        button: goxlr_types::SampleButtons,
+    ) -> Result<AudioFile> {
+        let track = self
+            .profile
+            .settings_mut()
+            .sample_button_mut(standard_to_profile_sample_button(button))
+            .get_stack_mut(standard_to_profile_sample_bank(bank))
+            .get_next_track();
+
+        if let Some(track) = track {
             return Ok(ProfileAdapter::track_to_audio(track));
         }
         bail!("Unable to find track");

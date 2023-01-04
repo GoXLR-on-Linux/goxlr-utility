@@ -4,15 +4,14 @@ use std::os::raw::c_float;
 
 use enum_map::EnumMap;
 use strum::{EnumIter, EnumProperty, IntoEnumIterator};
-use xml::attribute::OwnedAttribute;
-use xml::writer::events::StartElementBuilder;
-use xml::writer::XmlEvent as XmlWriterEvent;
-use xml::EventWriter;
 
 use anyhow::{anyhow, Result};
+use quick_xml::events::{BytesEnd, BytesStart, Event};
+use quick_xml::Writer;
 
 use crate::components::colours::ColourMap;
 use crate::components::robot::RobotStyle::Robot1;
+use crate::profile::Attribute;
 use crate::Preset;
 
 #[derive(thiserror::Error, Debug)]
@@ -51,7 +50,7 @@ impl RobotEffectBase {
         }
     }
 
-    pub fn parse_robot_root(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_robot_root(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         for attr in attributes {
             if !self.colour_map.read_colours(attr)? {
                 println!("[robotEffect] Unparsed Attribute: {}", attr.name);
@@ -64,15 +63,15 @@ impl RobotEffectBase {
     pub fn parse_robot_preset(
         &mut self,
         preset_enum: Preset,
-        attributes: &[OwnedAttribute],
+        attributes: &Vec<Attribute>,
     ) -> Result<()> {
         let mut preset = RobotEffect::new();
         for attr in attributes {
-            if attr.name.local_name == "robotEffectstate" {
+            if attr.name == "robotEffectstate" {
                 preset.state = matches!(attr.value.as_str(), "1");
                 continue;
             }
-            if attr.name.local_name == "ROBOT_STYLE" {
+            if attr.name == "ROBOT_STYLE" {
                 for style in RobotStyle::iter() {
                     if style.get_str("uiIndex").unwrap() == attr.value {
                         preset.style = style;
@@ -85,55 +84,55 @@ impl RobotEffectBase {
             /* Same as Microphone, I haven't seen any random float values in the config for robot
              * but I'm not gonna rule it out.. */
 
-            if attr.name.local_name == "ROBOT_SYNTHOSC_PULSEWIDTH" {
+            if attr.name == "ROBOT_SYNTHOSC_PULSEWIDTH" {
                 preset.synthosc_pulse_width = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "ROBOT_SYNTHOSC_WAVEFORM" {
+            if attr.name == "ROBOT_SYNTHOSC_WAVEFORM" {
                 preset.synthosc_waveform = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "ROBOT_VOCODER_GATE_THRESHOLD" {
+            if attr.name == "ROBOT_VOCODER_GATE_THRESHOLD" {
                 preset.vocoder_gate_threshold = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
-            if attr.name.local_name == "ROBOT_DRY_MIX" {
+            if attr.name == "ROBOT_DRY_MIX" {
                 preset.dry_mix = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
-            if attr.name.local_name == "ROBOT_VOCODER_LOW_FREQ" {
+            if attr.name == "ROBOT_VOCODER_LOW_FREQ" {
                 preset.vocoder_low_freq = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "ROBOT_VOCODER_LOW_GAIN" {
+            if attr.name == "ROBOT_VOCODER_LOW_GAIN" {
                 preset.vocoder_low_gain = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
-            if attr.name.local_name == "ROBOT_VOCODER_LOW_BW" {
+            if attr.name == "ROBOT_VOCODER_LOW_BW" {
                 preset.vocoder_low_bw = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "ROBOT_VOCODER_MID_FREQ" {
+            if attr.name == "ROBOT_VOCODER_MID_FREQ" {
                 preset.vocoder_mid_freq = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "ROBOT_VOCODER_MID_GAIN" {
+            if attr.name == "ROBOT_VOCODER_MID_GAIN" {
                 preset.vocoder_mid_gain = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
-            if attr.name.local_name == "ROBOT_VOCODER_MID_BW" {
+            if attr.name == "ROBOT_VOCODER_MID_BW" {
                 preset.vocoder_mid_bw = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "ROBOT_VOCODER_HIGH_FREQ" {
+            if attr.name == "ROBOT_VOCODER_HIGH_FREQ" {
                 preset.vocoder_high_freq = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            if attr.name.local_name == "ROBOT_VOCODER_HIGH_GAIN" {
+            if attr.name == "ROBOT_VOCODER_HIGH_GAIN" {
                 preset.vocoder_high_gain = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
-            if attr.name.local_name == "ROBOT_VOCODER_HIGH_BW" {
+            if attr.name == "ROBOT_VOCODER_HIGH_BW" {
                 preset.vocoder_high_bw = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
@@ -144,36 +143,34 @@ impl RobotEffectBase {
         Ok(())
     }
 
-    pub fn write_robot<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
-        let mut element: StartElementBuilder = XmlWriterEvent::start_element("robotEffect");
+    pub fn write_robot<W: Write>(&self, writer: &mut Writer<W>) -> Result<()> {
+        let mut elem = BytesStart::new("robotEffect");
 
         let mut attributes: HashMap<String, String> = HashMap::default();
         self.colour_map.write_colours(&mut attributes);
 
         // Write out the attributes etc for this element, but don't close it yet..
         for (key, value) in &attributes {
-            element = element.attr(key.as_str(), value.as_str());
+            elem.push_attribute((key.as_str(), value.as_str()));
         }
 
-        writer.write(element)?;
+        writer.write_event(Event::Start(elem))?;
 
         // Because all of these are seemingly 'guaranteed' to exist, we can straight dump..
         for preset in Preset::iter() {
             let tag_name = format!("robotEffect{}", preset.get_str("tagSuffix").unwrap());
-            let mut sub_element: StartElementBuilder =
-                XmlWriterEvent::start_element(tag_name.as_str());
+            let mut sub_elem = BytesStart::new(tag_name.as_str());
 
             let sub_attributes = self.get_preset_attributes(preset);
             for (key, value) in &sub_attributes {
-                sub_element = sub_element.attr(key.as_str(), value.as_str());
+                sub_elem.push_attribute((key.as_str(), value.as_str()));
             }
 
-            writer.write(sub_element)?;
-            writer.write(XmlWriterEvent::end_element())?;
+            writer.write_event(Event::Empty(sub_elem))?;
         }
 
         // Finally, close the 'main' tag.
-        writer.write(XmlWriterEvent::end_element())?;
+        writer.write_event(Event::End(BytesEnd::new("robotEffect")))?;
         Ok(())
     }
 

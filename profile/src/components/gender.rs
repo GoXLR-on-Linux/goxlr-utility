@@ -4,14 +4,13 @@ use std::os::raw::c_float;
 
 use enum_map::{Enum, EnumMap};
 use strum::{EnumIter, EnumProperty, IntoEnumIterator};
-use xml::attribute::OwnedAttribute;
-use xml::writer::events::StartElementBuilder;
-use xml::writer::XmlEvent as XmlWriterEvent;
-use xml::EventWriter;
 
 use anyhow::{anyhow, Result};
+use quick_xml::events::{BytesEnd, BytesStart, Event};
+use quick_xml::Writer;
 
 use crate::components::colours::ColourMap;
+use crate::profile::Attribute;
 use crate::Preset;
 
 #[derive(thiserror::Error, Debug)]
@@ -52,9 +51,9 @@ impl GenderEncoderBase {
         }
     }
 
-    pub fn parse_gender_root(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_gender_root(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         for attr in attributes {
-            if attr.name.local_name == "active_set" {
+            if attr.name == "active_set" {
                 self.active_set = attr.value.parse()?;
                 continue;
             }
@@ -70,11 +69,11 @@ impl GenderEncoderBase {
     pub fn parse_gender_preset(
         &mut self,
         preset_enum: Preset,
-        attributes: &[OwnedAttribute],
+        attributes: &Vec<Attribute>,
     ) -> Result<(), ParseError> {
         let mut preset = GenderEncoder::new();
         for attr in attributes {
-            if attr.name.local_name == "GENDER_STYLE" {
+            if attr.name == "GENDER_STYLE" {
                 for style in GenderStyle::iter() {
                     if style.get_str("uiIndex").unwrap() == attr.value {
                         preset.style = style;
@@ -84,31 +83,25 @@ impl GenderEncoderBase {
                 continue;
             }
 
-            if attr.name.local_name == "GENDER_KNOB_POSITION" {
+            if attr.name == "GENDER_KNOB_POSITION" {
                 preset.knob_position = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
 
-            if attr.name.local_name == "GENDER_RANGE" {
+            if attr.name == "GENDER_RANGE" {
                 preset.range = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
 
-            println!(
-                "[GenderEncoder] Unparsed Child Attribute: {}",
-                &attr.name.local_name
-            );
+            println!("[GenderEncoder] Unparsed Child Attribute: {}", &attr.name);
         }
 
         self.preset_map[preset_enum] = preset;
         Ok(())
     }
 
-    pub fn write_gender<W: Write>(
-        &self,
-        writer: &mut EventWriter<&mut W>,
-    ) -> Result<(), xml::writer::Error> {
-        let mut element: StartElementBuilder = XmlWriterEvent::start_element("genderEncoder");
+    pub fn write_gender<W: Write>(&self, writer: &mut Writer<W>) -> Result<()> {
+        let mut elem = BytesStart::new("genderEncoder");
 
         let mut attributes: HashMap<String, String> = HashMap::default();
         attributes.insert("active_set".to_string(), format!("{}", self.active_set));
@@ -116,28 +109,26 @@ impl GenderEncoderBase {
 
         // Write out the attributes etc for this element, but don't close it yet..
         for (key, value) in &attributes {
-            element = element.attr(key.as_str(), value.as_str());
+            elem.push_attribute((key.as_str(), value.as_str()));
         }
 
-        writer.write(element)?;
+        writer.write_event(Event::Start(elem))?;
 
         // Because all of these are seemingly 'guaranteed' to exist, we can straight dump..
         for preset in Preset::iter() {
             let tag_name = format!("genderEncoder{}", preset.get_str("tagSuffix").unwrap());
-            let mut sub_element: StartElementBuilder =
-                XmlWriterEvent::start_element(tag_name.as_str());
+            let mut sub_elem = BytesStart::new(tag_name.as_str());
 
             let sub_attributes = self.get_preset_attributes(preset);
             for (key, value) in &sub_attributes {
-                sub_element = sub_element.attr(key.as_str(), value.as_str());
+                sub_elem.push_attribute((key.as_str(), value.as_str()));
             }
 
-            writer.write(sub_element)?;
-            writer.write(XmlWriterEvent::end_element())?;
+            writer.write_event(Event::Empty(sub_elem))?;
         }
 
         // Finally, close the 'main' tag.
-        writer.write(XmlWriterEvent::end_element())?;
+        writer.write_event(Event::End(BytesEnd::new("genderEncoder")))?;
         Ok(())
     }
 
@@ -196,9 +187,9 @@ impl GenderEncoder {
         let knob_position = (self.knob_position + 24) as i32; // Between 0 and 48..
 
         match self.style {
-            GenderStyle::Narrow => ((24 * knob_position as i32) / 48 - 12) as i8,
-            GenderStyle::Medium => ((50 * knob_position as i32) / 48 - 25) as i8,
-            GenderStyle::Wide => ((100 * knob_position as i32) / 48 - 50) as i8,
+            GenderStyle::Narrow => ((24 * knob_position) / 48 - 12) as i8,
+            GenderStyle::Medium => ((50 * knob_position) / 48 - 25) as i8,
+            GenderStyle::Wide => ((100 * knob_position) / 48 - 50) as i8,
         }
     }
 

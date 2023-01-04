@@ -14,7 +14,7 @@ use std::path::PathBuf;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct DaemonStatus {
-    pub daemon_version: String,
+    pub config: DaemonConfig,
     pub mixers: HashMap<String, MixerStatus>,
     pub paths: Paths,
     pub files: Files,
@@ -26,6 +26,13 @@ pub struct HttpSettings {
     pub bind_address: String,
     pub cors_enabled: bool,
     pub port: u16,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct DaemonConfig {
+    pub daemon_version: String,
+    pub autostart_enabled: bool,
+    pub show_tray_icon: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

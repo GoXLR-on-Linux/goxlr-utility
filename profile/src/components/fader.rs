@@ -2,15 +2,14 @@ use std::collections::HashMap;
 use std::io::Write;
 
 use strum::{EnumProperty, IntoEnumIterator};
-use xml::attribute::OwnedAttribute;
-use xml::writer::events::StartElementBuilder;
-use xml::writer::XmlEvent as XmlWriterEvent;
-use xml::EventWriter;
 
 use anyhow::Result;
+use quick_xml::events::{BytesStart, Event};
+use quick_xml::Writer;
 
 use crate::components::colours::ColourMap;
 use crate::components::mixer::FullChannelList;
+use crate::profile::Attribute;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -43,9 +42,9 @@ impl Fader {
         }
     }
 
-    pub fn parse_fader(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_fader(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         for attr in attributes {
-            if attr.name.local_name.ends_with("listIndex") {
+            if attr.name.ends_with("listIndex") {
                 let mut found = false;
 
                 // Iterate over the channels, and see which one this matches..
@@ -75,9 +74,9 @@ impl Fader {
     pub fn write_fader<W: Write>(
         &self,
         element_name: String,
-        writer: &mut EventWriter<&mut W>,
+        writer: &mut Writer<W>,
     ) -> Result<()> {
-        let mut element: StartElementBuilder = XmlWriterEvent::start_element(element_name.as_str());
+        let mut elem = BytesStart::new(element_name.as_str());
 
         let mut attributes: HashMap<String, String> = HashMap::default();
         attributes.insert(
@@ -89,11 +88,10 @@ impl Fader {
             .write_colours_with_prefix(element_name.clone(), &mut attributes);
 
         for (key, value) in &attributes {
-            element = element.attr(key.as_str(), value.as_str());
+            elem.push_attribute((key.as_str(), value.as_str()));
         }
 
-        writer.write(element)?;
-        writer.write(XmlWriterEvent::end_element())?;
+        writer.write_event(Event::Empty(elem))?;
         Ok(())
     }
 

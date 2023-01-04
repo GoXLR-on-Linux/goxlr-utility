@@ -11,6 +11,51 @@ pub async fn handle_packet(
     match request {
         DaemonRequest::Ping => Ok(DaemonResponse::Ok),
         DaemonRequest::GetHttpState => Ok(DaemonResponse::HttpState(http_settings.clone())),
+        DaemonRequest::OpenUi => {
+            let (tx, rx) = oneshot::channel();
+            usb_tx
+                .send(DeviceCommand::OpenUi(tx))
+                .await
+                .map_err(|e| anyhow!(e.to_string()))
+                .context("Cound not communicate with the device task")?;
+            Ok(rx.await?)
+        }
+        DaemonRequest::RecoverDefaults(path_type) => {
+            let (tx, rx) = oneshot::channel();
+            usb_tx
+                .send(DeviceCommand::RecoverDefaults(path_type, tx))
+                .await
+                .map_err(|e| anyhow!(e.to_string()))
+                .context("Cound not communicate with the device task")?;
+            Ok(rx.await?)
+        }
+        DaemonRequest::SetAutoStartEnabled(enabled) => {
+            let (tx, rx) = oneshot::channel();
+            usb_tx
+                .send(DeviceCommand::SetAutoStartEnabled(enabled, tx))
+                .await
+                .map_err(|e| anyhow!(e.to_string()))
+                .context("Cound not communicate with the device task")?;
+            Ok(rx.await?)
+        }
+        DaemonRequest::StopDaemon => {
+            let (tx, rx) = oneshot::channel();
+            usb_tx
+                .send(DeviceCommand::StopDaemon(tx))
+                .await
+                .map_err(|e| anyhow!(e.to_string()))
+                .context("Cound not communicate with the device task")?;
+            Ok(rx.await?)
+        }
+        DaemonRequest::SetShowTrayIcon(enabled) => {
+            let (tx, rx) = oneshot::channel();
+            usb_tx
+                .send(DeviceCommand::SetShowTrayIcon(enabled, tx))
+                .await
+                .map_err(|e| anyhow!(e.to_string()))
+                .context("Cound not communicate with the device task")?;
+            Ok(rx.await?)
+        }
         DaemonRequest::GetStatus => {
             let (tx, rx) = oneshot::channel();
             usb_tx

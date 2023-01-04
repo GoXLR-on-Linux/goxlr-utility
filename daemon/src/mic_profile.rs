@@ -1,6 +1,6 @@
-use crate::files::{can_create_new_file, create_path};
+use crate::files::can_create_new_file;
 use crate::profile::ProfileAdapter;
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use byteorder::{ByteOrder, LittleEndian};
 use enum_map::EnumMap;
 use goxlr_ipc::{Compressor, Equaliser, EqualiserMini, NoiseGate};
@@ -9,7 +9,7 @@ use goxlr_types::{
     CompressorAttackTime, CompressorRatio, CompressorReleaseTime, DisplayMode, EffectKey,
     EqFrequencies, GateTimes, MicrophoneParamKey, MicrophoneType, MiniEqFrequencies,
 };
-use log::error;
+use log::{debug, error};
 use ritelinked::LinkedHashSet;
 use std::collections::{HashMap, HashSet};
 use std::fs::{remove_file, File};
@@ -32,38 +32,27 @@ pub struct MicProfileAdapter {
 }
 
 impl MicProfileAdapter {
-    pub fn from_named_or_default(name: Option<String>, directories: Vec<&Path>) -> Self {
-        if let Some(name) = name {
-            match MicProfileAdapter::from_named(name.clone(), directories) {
-                Ok(result) => return result,
-                Err(error) => error!("Couldn't load mic profile {}: {}", name, error),
+    pub fn from_named_or_default(name: String, directory: &Path) -> Self {
+        return match MicProfileAdapter::from_named(name.clone(), directory) {
+            Ok(result) => result,
+            Err(error) => {
+                error!("Couldn't load mic profile {}: {}", name, error);
+                MicProfileAdapter::default()
             }
-        }
-
-        MicProfileAdapter::default()
+        };
     }
 
-    pub fn from_named(name: String, directories: Vec<&Path>) -> Result<Self> {
-        let mut dir_list = "".to_string();
-        for directory in directories {
-            let path = directory.join(format!("{}.goxlrMicProfile", name));
-            if path.is_file() {
-                let file = File::open(path).context("Couldn't open mic profile for reading")?;
-                return MicProfileAdapter::from_reader(name, file)
-                    .context("Couldn't read mic profile");
-            }
-            dir_list = format!("{}, {}", dir_list, directory.to_string_lossy());
+    pub fn from_named(name: String, directory: &Path) -> Result<Self> {
+        let path = directory.join(format!("{}.goxlrMicProfile", name));
+        if path.is_file() {
+            let file = File::open(path).context("Couldn't open mic profile for reading")?;
+            return MicProfileAdapter::from_reader(name, file).context("Couldn't read mic profile");
         }
-
-        if name == DEFAULT_MIC_PROFILE_NAME {
-            return Ok(MicProfileAdapter::default());
-        }
-
-        Err(anyhow!(
-            "Mic profile {} does not exist inside {}",
+        bail!(
+            "Mic Profile {} does not exist inside {}",
             name,
-            dir_list
-        ))
+            directory.to_string_lossy()
+        );
     }
 
     pub fn default() -> Self {
@@ -86,8 +75,6 @@ impl MicProfileAdapter {
 
     pub fn write_profile(&mut self, name: String, directory: &Path, overwrite: bool) -> Result<()> {
         let path = directory.join(format!("{}.goxlrMicProfile", name));
-        create_path(directory)?;
-
         if !overwrite && path.is_file() {
             return Err(anyhow!("Profile exists, will not overwrite"));
         }
@@ -96,7 +83,7 @@ impl MicProfileAdapter {
 
         // Keep our names in sync (in case it was changed)
         if name != self.name() {
-            dbg!("Changing Profile Name: {} -> {}", self.name(), name.clone());
+            debug!("Changing Profile Name: {} -> {}", self.name(), name);
             self.name = name;
         }
 
@@ -117,9 +104,9 @@ impl MicProfileAdapter {
 
     pub fn mic_gains(&self) -> EnumMap<MicrophoneType, u16> {
         let mut gains = EnumMap::default();
-        gains[MicrophoneType::Condenser] = self.profile.setup().condenser_mic_gain() as u16;
-        gains[MicrophoneType::Dynamic] = self.profile.setup().dynamic_mic_gain() as u16;
-        gains[MicrophoneType::Jack] = self.profile.setup().trs_mic_gain() as u16;
+        gains[MicrophoneType::Condenser] = self.profile.setup().condenser_mic_gain();
+        gains[MicrophoneType::Dynamic] = self.profile.setup().dynamic_mic_gain();
+        gains[MicrophoneType::Jack] = self.profile.setup().trs_mic_gain();
 
         gains
     }

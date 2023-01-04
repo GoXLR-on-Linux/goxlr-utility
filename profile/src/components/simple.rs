@@ -1,17 +1,15 @@
 use std::collections::HashMap;
 use std::io::Write;
 
-use xml::attribute::OwnedAttribute;
-use xml::writer::events::StartElementBuilder;
-use xml::writer::XmlEvent as XmlWriterEvent;
-use xml::EventWriter;
-
 use anyhow::Result;
 
 use enum_map::Enum;
+use quick_xml::events::{BytesStart, Event};
+use quick_xml::Writer;
 use strum::{Display, EnumIter, EnumString};
 
 use crate::components::colours::ColourMap;
+use crate::profile::Attribute;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -48,7 +46,7 @@ impl SimpleElement {
         }
     }
 
-    pub fn parse_simple(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_simple(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         for attr in attributes {
             if !self.colour_map.read_colours(attr)? {
                 println!("[{}] Unparsed Attribute: {}", self.element_name, attr.name);
@@ -58,19 +56,17 @@ impl SimpleElement {
         Ok(())
     }
 
-    pub fn write_simple<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
-        let mut element: StartElementBuilder =
-            XmlWriterEvent::start_element(self.element_name.as_str());
+    pub fn write_simple<W: Write>(&self, writer: &mut Writer<W>) -> Result<()> {
+        let mut elem = BytesStart::new(self.element_name.as_str());
 
         let mut attributes: HashMap<String, String> = HashMap::default();
         self.colour_map.write_colours(&mut attributes);
 
         for (key, value) in &attributes {
-            element = element.attr(key.as_str(), value.as_str());
+            elem.push_attribute((key.as_str(), value.as_str()));
         }
 
-        writer.write(element)?;
-        writer.write(XmlWriterEvent::end_element())?;
+        writer.write_event(Event::Empty(elem))?;
         Ok(())
     }
 

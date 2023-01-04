@@ -181,6 +181,11 @@ async fn main() -> Result<()> {
                             )
                             .await?;
                     }
+                    FaderCommands::MuteState { fader, state } => {
+                        client
+                            .command(&serial, GoXLRCommand::SetFaderMuteState(*fader, *state))
+                            .await?;
+                    }
                     FaderCommands::Scribbles { command } => match command {
                         Scribbles::Icon { fader, name } => {
                             client
@@ -253,7 +258,7 @@ async fn main() -> Result<()> {
                     client
                         .command(
                             &serial,
-                            GoXLRCommand::SetSwearButtonVolume((value as i8 - 34) as i8),
+                            GoXLRCommand::SetSwearButtonVolume(value as i8 - 34),
                         )
                         .await?;
                 }
@@ -679,6 +684,11 @@ async fn main() -> Result<()> {
                                 .await
                                 .context("Unable to Set Megaphone Post-Gain")?;
                         }
+                        Megaphone::Enabled { enabled } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetMegaphoneEnabled(*enabled))
+                                .await?;
+                        }
                     },
                     EffectsCommands::Robot { command } => match command {
                         Robot::Style { style } => {
@@ -729,6 +739,11 @@ async fn main() -> Result<()> {
                                 .await
                                 .context("Unable to set Robot Dry Mix")?;
                         }
+                        Robot::Enabled { enabled } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetRobotEnabled(*enabled))
+                                .await?;
+                        }
                     },
                     EffectsCommands::HardTune { command } => match command {
                         HardTune::Style { style } => {
@@ -761,7 +776,17 @@ async fn main() -> Result<()> {
                                 .await
                                 .context("Unable to set HardTune Source")?;
                         }
+                        HardTune::Enabled { enabled } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetHardTuneEnabled(*enabled))
+                                .await?;
+                        }
                     },
+                    EffectsCommands::Enabled { enabled } => {
+                        client
+                            .command(&serial, GoXLRCommand::SetFXEnabled(*enabled))
+                            .await?;
+                    }
                 },
                 SubCommands::Sampler { command } => match command {
                     SamplerCommands::Add { bank, button, file } => {
@@ -798,6 +823,11 @@ async fn main() -> Result<()> {
                             )
                             .await
                             .context("Unable to Play Sample")?;
+                    }
+                    SamplerCommands::PlayNextTrack { bank, button } => {
+                        client
+                            .command(&serial, GoXLRCommand::PlayNextSample(*bank, *button))
+                            .await?;
                     }
                     SamplerCommands::StopPlayback { bank, button } => {
                         client

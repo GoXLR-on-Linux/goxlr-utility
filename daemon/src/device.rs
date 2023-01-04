@@ -18,7 +18,7 @@ use goxlr_ipc::{
 use goxlr_profile_loader::components::mute::MuteFunction;
 use goxlr_types::{
     Button, ChannelName, DisplayModeComponents, EffectBankPresets, EffectKey, EncoderName,
-    FaderName, HardTuneSource, InputDevice as BasicInputDevice, MicrophoneParamKey,
+    FaderName, HardTuneSource, InputDevice as BasicInputDevice, MicrophoneParamKey, MuteState,
     OutputDevice as BasicOutputDevice, RobotRange, SampleBank, SampleButtons, SamplePlaybackMode,
     VersionNumber,
 };
@@ -33,13 +33,14 @@ use crate::mic_profile::{MicProfileAdapter, DEFAULT_MIC_PROFILE_NAME};
 use crate::profile::{
     usb_to_standard_button, version_newer_or_equal_to, ProfileAdapter, DEFAULT_PROFILE_NAME,
 };
-use crate::{SettingsHandle, DISTRIBUTABLE_ROOT};
+use crate::SettingsHandle;
 
 pub struct Device<'a> {
     goxlr: Box<dyn FullGoXLRDevice>,
     hardware: HardwareStatus,
     last_buttons: EnumSet<Buttons>,
     button_states: EnumMap<Buttons, ButtonState>,
+    fader_last_seen: EnumMap<FaderName, u8>,
     profile: ProfileAdapter,
     mic_profile: MicProfileAdapter,
     audio_handler: Option<AudioHandler>,
@@ -70,25 +71,17 @@ impl<'a> Device<'a> {
             device_type = " Mini";
         }
 
-        let profile = profile_name
-            .clone()
-            .unwrap_or_else(|| DEFAULT_PROFILE_NAME.to_string());
-        let mic_profile = mic_profile_name
-            .clone()
-            .unwrap_or_else(|| DEFAULT_MIC_PROFILE_NAME.to_string());
+        let profile = profile_name.unwrap_or_else(|| DEFAULT_PROFILE_NAME.to_string());
+        let mic_profile = mic_profile_name.unwrap_or_else(|| DEFAULT_MIC_PROFILE_NAME.to_string());
 
         info!(
             "Configuring GoXLR{}, Profile: {}, Mic Profile: {}",
             device_type, profile, mic_profile
         );
 
-        let distrib_path = Path::new(DISTRIBUTABLE_ROOT).join("profiles/");
-        let profile = ProfileAdapter::from_named_or_default(
-            profile_name,
-            vec![profile_directory, &distrib_path],
-        );
+        let profile = ProfileAdapter::from_named_or_default(profile, profile_directory);
         let mic_profile =
-            MicProfileAdapter::from_named_or_default(mic_profile_name, vec![mic_profile_directory]);
+            MicProfileAdapter::from_named_or_default(mic_profile, mic_profile_directory);
 
         let audio_loader = AudioHandler::new();
         debug!("Created Audio Handler..");
@@ -117,6 +110,7 @@ impl<'a> Device<'a> {
             vc_mute_also_mute_cm,
             last_buttons: EnumSet::empty(),
             button_states: EnumMap::default(),
+            fader_last_seen: EnumMap::default(),
             audio_handler,
             settings: settings_handle,
         };
@@ -305,18 +299,24 @@ impl<'a> Device<'a> {
 
     async fn on_button_hold(&mut self, button: Buttons) -> Result<()> {
         debug!("Handling Button Hold: {:?}", button);
+
+        // Fader mute buttons maintain their own state check, so it can be programmatically called.
         match button {
             Buttons::Fader1Mute => {
                 self.handle_fader_mute(FaderName::A, true).await?;
+                return Ok(());
             }
             Buttons::Fader2Mute => {
                 self.handle_fader_mute(FaderName::B, true).await?;
+                return Ok(());
             }
             Buttons::Fader3Mute => {
                 self.handle_fader_mute(FaderName::C, true).await?;
+                return Ok(());
             }
             Buttons::Fader4Mute => {
                 self.handle_fader_mute(FaderName::D, true).await?;
+                return Ok(());
             }
             Buttons::MicrophoneMute => {
                 self.handle_cough_mute(false, false, true, false).await?;
@@ -336,21 +336,25 @@ impl<'a> Device<'a> {
             Buttons::Fader1Mute => {
                 if !state.hold_handled {
                     self.handle_fader_mute(FaderName::A, false).await?;
+                    return Ok(());
                 }
             }
             Buttons::Fader2Mute => {
                 if !state.hold_handled {
                     self.handle_fader_mute(FaderName::B, false).await?;
+                    return Ok(());
                 }
             }
             Buttons::Fader3Mute => {
                 if !state.hold_handled {
                     self.handle_fader_mute(FaderName::C, false).await?;
+                    return Ok(());
                 }
             }
             Buttons::Fader4Mute => {
                 if !state.hold_handled {
                     self.handle_fader_mute(FaderName::D, false).await?;
+                    return Ok(());
                 }
             }
             Buttons::MicrophoneMute => {
@@ -382,16 +386,18 @@ impl<'a> Device<'a> {
             // The following 3 are simple, but will need more work once effects are
             // actually applied!
             Buttons::EffectMegaphone => {
-                self.toggle_megaphone().await?;
+                self.set_megaphone(!self.profile.is_megaphone_enabled(true))
+                    .await?;
             }
             Buttons::EffectRobot => {
-                self.toggle_robot().await?;
+                self.set_robot(!self.profile.is_robot_enabled(true)).await?;
             }
             Buttons::EffectHardTune => {
-                self.toggle_hardtune().await?;
+                self.set_hardtune(!self.profile.is_hardtune_enabled(true))
+                    .await?;
             }
             Buttons::EffectFx => {
-                self.toggle_effects().await?;
+                self.set_effects(!self.profile.is_fx_enabled()).await?;
             }
 
             Buttons::SamplerSelectA => {
@@ -434,23 +440,7 @@ impl<'a> Device<'a> {
 
     async fn handle_fader_mute(&mut self, fader: FaderName, held: bool) -> Result<()> {
         // OK, so a fader button has been pressed, we need to determine behaviour, based on the colour map..
-        let channel = self.profile.get_fader_assignment(fader);
-        let current_volume = self.profile.get_channel_volume(channel);
-
         let (muted_to_x, muted_to_all, mute_function) = self.profile.get_mute_button_state(fader);
-
-        // Map the channel to BasicInputDevice in case we need it later..
-        let basic_input = match channel {
-            ChannelName::Mic => Some(BasicInputDevice::Microphone),
-            ChannelName::LineIn => Some(BasicInputDevice::LineIn),
-            ChannelName::Console => Some(BasicInputDevice::Console),
-            ChannelName::System => Some(BasicInputDevice::System),
-            ChannelName::Game => Some(BasicInputDevice::Game),
-            ChannelName::Chat => Some(BasicInputDevice::Chat),
-            ChannelName::Sample => Some(BasicInputDevice::Samples),
-            ChannelName::Music => Some(BasicInputDevice::Music),
-            _ => None,
-        };
 
         // Should we be muting this fader to all channels?
         if held || (!muted_to_x && mute_function == MuteFunction::All) {
@@ -458,86 +448,18 @@ impl<'a> Device<'a> {
                 // Holding the button when it's already muted to all does nothing.
                 return Ok(());
             }
-
-            if !(muted_to_x && mute_function == MuteFunction::All) {
-                // If we did this on Mute to X, we don't need to do it again..
-                self.profile
-                    .set_mute_button_previous_volume(fader, current_volume)?;
-                self.goxlr.set_volume(channel, 0)?;
-                self.goxlr.set_channel_state(channel, Muted)?;
-                self.profile.set_mute_button_on(fader, true)?;
-            }
-
-            if held {
-                self.profile.set_mute_button_blink(fader, true)?;
-            }
-            self.profile.set_channel_volume(channel, 0)?;
-
-            // If we're Chat, we may need to transiently route the Microphone..
-            if channel == ChannelName::Chat {
-                self.apply_routing(BasicInputDevice::Microphone)?;
-            }
-
-            if channel == ChannelName::Mic {
-                self.apply_routing(BasicInputDevice::Microphone)?;
-            }
-
-            return Ok(());
+            self.mute_fader_to_all(fader, held).await?;
         }
 
         // Button has been pressed, and we're already in some kind of muted state..
         if !held && muted_to_x {
-            // Disable the lighting regardless of action
-            self.profile.set_mute_button_on(fader, false)?;
-            self.profile.set_mute_button_blink(fader, false)?;
-
-            if muted_to_all || mute_function == MuteFunction::All {
-                let previous_volume = self.profile.get_mute_button_previous_volume(fader);
-
-                self.goxlr.set_volume(channel, previous_volume)?;
-                self.profile.set_channel_volume(channel, previous_volume)?;
-
-                if channel != ChannelName::Mic
-                    || (channel == ChannelName::Mic && !self.mic_muted_by_cough())
-                {
-                    self.goxlr.set_channel_state(channel, Unmuted)?;
-                }
-
-                // As before, we might need transient Mic Routing..
-                if channel == ChannelName::Chat {
-                    self.apply_routing(BasicInputDevice::Microphone)?;
-                }
-
-                if channel == ChannelName::Mic {
-                    self.apply_routing(BasicInputDevice::Microphone)?;
-                }
-            }
-
-            // Always do a Transient Routing update, just in case we went from Mute to X -> Mute to All
-            if mute_function != MuteFunction::All && basic_input.is_some() {
-                self.apply_routing(basic_input.unwrap())?;
-            }
-
-            return Ok(());
+            self.unmute_fader(fader).await?;
         }
 
+        // Button has been pressed, we're not muted, and we need to transient mute..
         if !held && !muted_to_x && mute_function != MuteFunction::All {
-            // Mute channel to X via transient routing table update
-            self.profile.set_mute_button_on(fader, true)?;
-            if basic_input.is_some() {
-                self.apply_routing(basic_input.unwrap())?;
-            }
+            self.mute_fader_to_x(fader).await?;
         }
-        Ok(())
-    }
-
-    async fn unmute_if_muted(&mut self, fader: FaderName) -> Result<()> {
-        let (muted_to_x, muted_to_all, _mute_function) = self.profile.get_mute_button_state(fader);
-
-        if muted_to_x || muted_to_all {
-            self.handle_fader_mute(fader, false).await?;
-        }
-
         Ok(())
     }
 
@@ -645,6 +567,128 @@ impl<'a> Device<'a> {
         }
 
         Ok(())
+    }
+
+    async fn mute_fader_to_x(&mut self, fader: FaderName) -> Result<()> {
+        let (muted_to_x, muted_to_all, mute_function) = self.profile.get_mute_button_state(fader);
+        let channel = self.profile.get_fader_assignment(fader);
+        if muted_to_all {
+            bail!("Unable to Transition from MutedToAll to MutedToX");
+        }
+
+        if muted_to_x || muted_to_all {
+            return Ok(());
+        }
+
+        if mute_function == MuteFunction::All {
+            // Throw this across to the 'Mute to All' code..
+            return self.mute_fader_to_all(fader, false).await;
+        }
+
+        let input = self.get_basic_input_from_channel(channel);
+        self.profile.set_mute_button_on(fader, true)?;
+        if input.is_some() {
+            self.apply_routing(input.unwrap())?;
+        }
+        self.update_button_states()?;
+        Ok(())
+    }
+
+    async fn mute_fader_to_all(&mut self, fader: FaderName, blink: bool) -> Result<()> {
+        let (muted_to_x, muted_to_all, mute_function) = self.profile.get_mute_button_state(fader);
+        let channel = self.profile.get_fader_assignment(fader);
+
+        // Are we already muted to all?
+        if muted_to_all {
+            return Ok(());
+        }
+
+        // If we did this on Mute to X, we don't need to do it again..
+        if !(muted_to_x && mute_function == MuteFunction::All) {
+            let volume = self.profile.get_channel_volume(channel);
+            self.profile.set_mute_previous_volume(fader, volume)?;
+            self.goxlr.set_volume(channel, 0)?;
+            self.goxlr.set_channel_state(channel, Muted)?;
+            self.profile.set_mute_button_on(fader, true)?;
+        }
+
+        if blink {
+            self.profile.set_mute_button_blink(fader, true)?;
+        }
+        self.profile.set_channel_volume(channel, 0)?;
+
+        // If we're Chat, we may need to transiently route the Microphone..
+        if channel == ChannelName::Chat {
+            self.apply_routing(BasicInputDevice::Microphone)?;
+        }
+
+        if channel == ChannelName::Mic {
+            self.apply_routing(BasicInputDevice::Microphone)?;
+        }
+
+        self.update_button_states()?;
+        Ok(())
+    }
+
+    async fn unmute_fader(&mut self, fader: FaderName) -> Result<()> {
+        let (muted_to_x, muted_to_all, mute_function) = self.profile.get_mute_button_state(fader);
+        let channel = self.profile.get_fader_assignment(fader);
+
+        if !muted_to_x && !muted_to_all {
+            // Nothing to do.
+            debug!("Doing Nothing?");
+            return Ok(());
+        }
+
+        // Disable the lighting regardless of action
+        self.profile.set_mute_button_on(fader, false)?;
+        self.profile.set_mute_button_blink(fader, false)?;
+
+        if muted_to_all || mute_function == MuteFunction::All {
+            // This fader has previously been 'Muted to All', we need to restore the volume..
+            let previous_volume = self.profile.get_mute_button_previous_volume(fader);
+
+            self.goxlr.set_volume(channel, previous_volume)?;
+            self.profile.set_channel_volume(channel, previous_volume)?;
+
+            if channel != ChannelName::Mic
+                || (channel == ChannelName::Mic && !self.mic_muted_by_cough())
+            {
+                self.goxlr.set_channel_state(channel, Unmuted)?;
+            }
+
+            // As before, we might need transient Mic Routing..
+            if channel == ChannelName::Chat {
+                self.apply_routing(BasicInputDevice::Microphone)?;
+            }
+
+            if channel == ChannelName::Mic {
+                self.apply_routing(BasicInputDevice::Microphone)?;
+            }
+        }
+
+        // Always do a Transient Routing update, just in case we went from Mute to X -> Mute to All
+        let input = self.get_basic_input_from_channel(channel);
+        if mute_function != MuteFunction::All && input.is_some() {
+            self.apply_routing(input.unwrap())?;
+        }
+
+        self.update_button_states()?;
+        Ok(())
+    }
+
+    fn get_basic_input_from_channel(&self, channel: ChannelName) -> Option<BasicInputDevice> {
+        match channel {
+            ChannelName::Mic => Some(BasicInputDevice::Microphone),
+            ChannelName::LineIn => Some(BasicInputDevice::LineIn),
+            ChannelName::Console => Some(BasicInputDevice::Console),
+            ChannelName::System => Some(BasicInputDevice::System),
+            ChannelName::Game => Some(BasicInputDevice::Game),
+            ChannelName::Chat => Some(BasicInputDevice::Chat),
+            ChannelName::Sample => Some(BasicInputDevice::Samples),
+            ChannelName::Music => Some(BasicInputDevice::Music),
+            _ => None,
+        }
     }
 
     async fn handle_swear_button(&mut self, press: bool) -> Result<()> {
@@ -913,20 +957,20 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
-    async fn toggle_megaphone(&mut self) -> Result<()> {
-        self.profile.toggle_megaphone()?;
+    async fn set_megaphone(&mut self, enabled: bool) -> Result<()> {
+        self.profile.set_megaphone(enabled)?;
         self.apply_effects(LinkedHashSet::from_iter([EffectKey::MegaphoneEnabled]))?;
         Ok(())
     }
 
-    async fn toggle_robot(&mut self) -> Result<()> {
-        self.profile.toggle_robot()?;
+    async fn set_robot(&mut self, enabled: bool) -> Result<()> {
+        self.profile.set_robot(enabled)?;
         self.apply_effects(LinkedHashSet::from_iter([EffectKey::RobotEnabled]))?;
         Ok(())
     }
 
-    async fn toggle_hardtune(&mut self) -> Result<()> {
-        self.profile.toggle_hardtune()?;
+    async fn set_hardtune(&mut self, enabled: bool) -> Result<()> {
+        self.profile.set_hardtune(enabled)?;
         self.apply_effects(LinkedHashSet::from_iter([EffectKey::HardTuneEnabled]))?;
         self.set_pitch_mode()?;
 
@@ -938,8 +982,8 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
-    async fn toggle_effects(&mut self) -> Result<()> {
-        self.profile.toggle_effects()?;
+    async fn set_effects(&mut self, enabled: bool) -> Result<()> {
+        self.profile.set_effects(enabled)?;
 
         // When this changes, we need to update all the 'Enabled' keys..
         let mut key_updates = LinkedHashSet::new();
@@ -979,10 +1023,17 @@ impl<'a> Device<'a> {
         let mut value_changed = false;
 
         for fader in FaderName::iter() {
+            let new_volume = volumes[fader as usize];
+            if self.hardware.device_type == DeviceType::Mini
+                && new_volume == self.fader_last_seen[fader]
+            {
+                continue;
+            }
+            self.fader_last_seen[fader] = new_volume;
+
             let channel = self.profile.get_fader_assignment(fader);
             let old_volume = self.profile.get_channel_volume(channel);
 
-            let new_volume = volumes[fader as usize];
             if new_volume != old_volume {
                 debug!(
                     "Updating {} volume from {} to {} as a human moved the fader",
@@ -1061,7 +1112,7 @@ impl<'a> Device<'a> {
                 }
 
                 // Unmute the channel to prevent weirdness, then set new behaviour
-                self.unmute_if_muted(fader).await?;
+                self.unmute_fader(fader).await?;
                 self.profile.set_mute_button_behaviour(fader, behaviour);
             }
 
@@ -1277,10 +1328,7 @@ impl<'a> Device<'a> {
             // Effects
             GoXLRCommand::LoadEffectPreset(name) => {
                 let presets_directory = self.settings.get_presets_directory().await;
-                let distrib_path = Path::new(DISTRIBUTABLE_ROOT).join("presets/");
-
-                self.profile
-                    .load_preset(name, vec![&presets_directory, &distrib_path])?;
+                self.profile.load_preset(name, vec![&presets_directory])?;
 
                 let current_effect_bank = self.profile.get_active_effect_bank();
 
@@ -1288,12 +1336,6 @@ impl<'a> Device<'a> {
                 // TODO: This is slightly sloppy, as it will make unneeded changes.
                 // TODO: Loading a profile should be separate from an 'event'.
                 self.load_effect_bank(current_effect_bank).await?;
-                self.update_button_states()?;
-            }
-
-            GoXLRCommand::SetActiveEffectPreset(preset) => {
-                // Welp, this one is simple :)
-                self.load_effect_bank(preset).await?;
                 self.update_button_states()?;
             }
 
@@ -1719,9 +1761,16 @@ impl<'a> Device<'a> {
                     false,
                 )
                 .await?;
+                self.update_button_states()?;
+            }
+            GoXLRCommand::PlayNextSample(bank, button) => {
+                let track = self.profile.get_track_by_bank_button(bank, button)?;
+                self.play_audio_file(bank, button, track, false).await?;
+                self.update_button_states()?;
             }
             GoXLRCommand::StopSamplePlayback(bank, button) => {
                 self.stop_sample_playback(bank, button).await?;
+                self.update_button_states()?;
             }
 
             GoXLRCommand::SetScribbleIcon(fader, icon) => {
@@ -1764,12 +1813,8 @@ impl<'a> Device<'a> {
             }
             GoXLRCommand::LoadProfile(profile_name) => {
                 let profile_directory = self.settings.get_profile_directory().await;
-                let distrib_path = Path::new(DISTRIBUTABLE_ROOT).join("profiles/");
 
-                self.profile = ProfileAdapter::from_named(
-                    profile_name,
-                    vec![&profile_directory, &distrib_path],
-                )?;
+                self.profile = ProfileAdapter::from_named(profile_name, &profile_directory)?;
                 self.apply_profile()?;
                 self.settings
                     .set_device_profile_name(self.serial(), self.profile.name())
@@ -1778,12 +1823,7 @@ impl<'a> Device<'a> {
             }
             GoXLRCommand::LoadProfileColours(profile_name) => {
                 let profile_directory = self.settings.get_profile_directory().await;
-                let distrib_path = Path::new(DISTRIBUTABLE_ROOT).join("profiles/");
-
-                let profile = ProfileAdapter::from_named(
-                    profile_name,
-                    vec![&profile_directory, &distrib_path],
-                )?;
+                let profile = ProfileAdapter::from_named(profile_name, &profile_directory)?;
                 self.profile.load_colour_profile(profile);
                 self.load_colour_map()?;
                 self.update_button_states()?;
@@ -1846,7 +1886,7 @@ impl<'a> Device<'a> {
             GoXLRCommand::LoadMicProfile(mic_profile_name) => {
                 let mic_profile_directory = self.settings.get_mic_profile_directory().await;
                 self.mic_profile =
-                    MicProfileAdapter::from_named(mic_profile_name, vec![&mic_profile_directory])?;
+                    MicProfileAdapter::from_named(mic_profile_name, &mic_profile_directory)?;
                 self.apply_mic_profile()?;
                 self.settings
                     .set_device_mic_profile_name(self.serial(), self.mic_profile.name())
@@ -1901,8 +1941,38 @@ impl<'a> Device<'a> {
                     .await;
                 self.settings.save().await;
             }
-        }
 
+            GoXLRCommand::SetActiveEffectPreset(preset) => {
+                self.load_effect_bank(preset).await?;
+                self.update_button_states()?;
+            }
+            GoXLRCommand::SetActiveSamplerBank(bank) => {
+                self.load_sample_bank(bank).await?;
+                self.load_colour_map()?;
+            }
+            GoXLRCommand::SetMegaphoneEnabled(enabled) => {
+                self.set_megaphone(enabled).await?;
+                self.update_button_states()?;
+            }
+            GoXLRCommand::SetRobotEnabled(enabled) => {
+                self.set_robot(enabled).await?;
+                self.update_button_states()?;
+            }
+            GoXLRCommand::SetHardTuneEnabled(enabled) => {
+                self.set_hardtune(enabled).await?;
+                self.update_button_states()?;
+            }
+            GoXLRCommand::SetFXEnabled(enabled) => {
+                self.set_effects(enabled).await?;
+                self.update_button_states()?;
+            }
+            GoXLRCommand::SetFaderMuteState(fader, state) => match state {
+                MuteState::Unmuted => self.unmute_fader(fader).await?,
+                MuteState::MutedToX => self.mute_fader_to_x(fader).await?,
+                MuteState::MutedToAll => self.mute_fader_to_all(fader, true).await?,
+            },
+            GoXLRCommand::SetCoughMuteState(_state) => {}
+        }
         Ok(())
     }
 
@@ -2176,13 +2246,7 @@ impl<'a> Device<'a> {
         if fader_to_switch.is_none() {
             // Whatever is on the fader already is going away, per windows behaviour we need to
             // ensure any mute behaviour is restored as it can no longer be tracked.
-            let (muted_to_x, _muted_to_all, _mute_function) =
-                self.profile.get_mute_button_state(fader);
-
-            if muted_to_x {
-                // Simulate a mute button tap, this should restore everything..
-                self.handle_fader_mute(fader, false).await?;
-            }
+            self.unmute_fader(fader).await?;
 
             // Check to see if we are dispatching of the mic channel, if so set the id.
             if existing_channel == ChannelName::Mic {
@@ -2192,6 +2256,16 @@ impl<'a> Device<'a> {
             // Now set the new fader..
             self.profile.set_fader_assignment(fader, new_channel);
             self.goxlr.set_fader(fader, new_channel)?;
+
+            // Due to motorised faders, the internal 'old' channel may be incorrectly set,
+            // despite our config here being valid. So we'll force update the old channel.
+            self.goxlr.set_volume(
+                existing_channel,
+                self.profile.get_channel_volume(existing_channel),
+            )?;
+
+            // Remember to update the button states after change..
+            self.update_button_states()?;
 
             return Ok(());
         }

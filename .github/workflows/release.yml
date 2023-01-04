@@ -22,6 +22,32 @@ jobs:
       - id: version
         run: 'echo "::set-output name=version::$(cargo pkgid -p goxlr-daemon | cut -d@ -f2)"'
 
+  build_windows:
+    needs: verify
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+
+      - name: Build Packages
+        run: iscc.exe goxlr-utility.iss
+        shell: cmd
+
+      - name: Upload Installer
+        uses: actions/upload-artifact@v3
+        with:
+          name: windows-artifact
+          path: ./Output/*.exe
+
   build:
     needs: verify
     runs-on: ubuntu-latest
@@ -36,7 +62,7 @@ jobs:
       - name: Install Pulse Client Libraries
         run: |
           sudo apt-get update
-          sudo apt-get install libpulse0
+          sudo apt-get install libpulse0 libdbus-1-dev pkg-config
 
       - name: Install cargo-deb and cargo-generate-rpm
         run: cargo install cargo-deb cargo-generate-rpm
@@ -58,7 +84,7 @@ jobs:
           path: ./target/generate-rpm/*.rpm
 
   create_release_draft:
-    needs: [verify, get_version, build]
+    needs: [verify, get_version, build, build_windows]
     runs-on: ubuntu-latest
     steps:
       # Download the previously generated artifacts..
@@ -81,3 +107,4 @@ jobs:
           files: |
             ./debian-artifact/goxlr-utility_${{ needs.get_version.outputs.version }}_amd64.deb
             ./rpm-artifact/goxlr-utility-${{ needs.get_version.outputs.version }}-1.x86_64.rpm
+            ./windows-artifact/goxlr-utility-setup.exe

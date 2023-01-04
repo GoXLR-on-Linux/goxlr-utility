@@ -1,18 +1,16 @@
 use std::collections::HashMap;
 use std::io::Write;
 
-use xml::attribute::OwnedAttribute;
-use xml::writer::events::StartElementBuilder;
-use xml::writer::XmlEvent as XmlWriterEvent;
-use xml::EventWriter;
-
 use strum::EnumProperty;
 use strum::IntoEnumIterator;
 
 use anyhow::Result;
+use quick_xml::events::{BytesStart, Event};
+use quick_xml::Writer;
 
 use crate::components::colours::ColourMap;
 use crate::components::sample::SampleBank;
+use crate::profile::Attribute;
 use crate::Preset;
 
 #[derive(thiserror::Error, Debug)]
@@ -60,21 +58,21 @@ impl Context {
         }
     }
 
-    pub fn parse_context(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_context(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         for attr in attributes {
-            if attr.name.local_name == "numselected" {
+            if attr.name == "numselected" {
                 self.selected = attr.value.parse()?;
                 continue;
             }
 
-            if attr.name.local_name == "selectedID" {
+            if attr.name == "selectedID" {
                 if !attr.value.is_empty() {
                     self.selected_id = Some(attr.value.parse()?);
                 }
                 continue;
             }
 
-            if attr.name.local_name == "selectedSampleStack" {
+            if attr.name == "selectedSampleStack" {
                 let value = attr.value.clone();
                 for bank in SampleBank::iter() {
                     if bank.get_str("contextTitle").unwrap() == value {
@@ -84,7 +82,7 @@ impl Context {
                 continue;
             }
 
-            if attr.name.local_name == "selectedEffectBank" {
+            if attr.name == "selectedEffectBank" {
                 let value = attr.value.clone();
 
                 // Ok, which preset do we match?
@@ -104,9 +102,8 @@ impl Context {
         Ok(())
     }
 
-    pub fn write_context<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
-        let mut element: StartElementBuilder =
-            XmlWriterEvent::start_element(self.element_name.as_str());
+    pub fn write_context<W: Write>(&self, writer: &mut Writer<W>) -> Result<()> {
+        let mut elem = BytesStart::new(self.element_name.as_str());
 
         let mut attributes: HashMap<String, String> = HashMap::default();
         attributes.insert("numselected".to_string(), format!("{}", self.selected));
@@ -135,11 +132,10 @@ impl Context {
         self.colour_map.write_colours(&mut attributes);
 
         for (key, value) in &attributes {
-            element = element.attr(key.as_str(), value.as_str());
+            elem.push_attribute((key.as_str(), value.as_str()));
         }
 
-        writer.write(element)?;
-        writer.write(XmlWriterEvent::end_element())?;
+        writer.write_event(Event::Empty(elem))?;
         Ok(())
     }
 

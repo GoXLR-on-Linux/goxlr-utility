@@ -1,14 +1,12 @@
 use std::collections::HashMap;
 use std::io::Write;
 
-use xml::attribute::OwnedAttribute;
-use xml::writer::events::StartElementBuilder;
-use xml::writer::XmlEvent as XmlWriterEvent;
-use xml::EventWriter;
-
 use anyhow::Result;
+use quick_xml::events::{BytesStart, Event};
+use quick_xml::Writer;
 
 use crate::components::colours::ColourMap;
+use crate::profile::Attribute;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -55,24 +53,24 @@ impl BrowserPreviewTree {
         }
     }
 
-    pub fn parse_browser(&mut self, attributes: &[OwnedAttribute]) -> Result<()> {
+    pub fn parse_browser(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         for attr in attributes {
-            if attr.name.local_name == "playing" {
+            if attr.name == "playing" {
                 self.playing = attr.value.parse()?;
                 continue;
             }
 
-            if attr.name.local_name == "playToggle" {
+            if attr.name == "playToggle" {
                 self.play_toggle = attr.value.parse()?;
                 continue;
             }
 
-            if attr.name.local_name == "file" {
+            if attr.name == "file" {
                 self.file = attr.value.clone();
                 continue;
             }
 
-            if attr.name.local_name == "currentRelativeTime" {
+            if attr.name == "currentRelativeTime" {
                 self.current_relative_time = attr.value.parse()?;
                 continue;
             }
@@ -85,9 +83,8 @@ impl BrowserPreviewTree {
         Ok(())
     }
 
-    pub fn write_browser<W: Write>(&self, writer: &mut EventWriter<&mut W>) -> Result<()> {
-        let mut element: StartElementBuilder =
-            XmlWriterEvent::start_element(self.element_name.as_str());
+    pub fn write_browser<W: Write>(&self, writer: &mut Writer<W>) -> Result<()> {
+        let mut elem = BytesStart::new(self.element_name.as_str());
 
         let mut attributes: HashMap<String, String> = HashMap::default();
         attributes.insert("playing".to_string(), format!("{}", self.playing));
@@ -101,11 +98,9 @@ impl BrowserPreviewTree {
         self.colour_map.write_colours(&mut attributes);
 
         for (key, value) in &attributes {
-            element = element.attr(key.as_str(), value.as_str());
+            elem.push_attribute((key.as_str(), value.as_str()));
         }
-
-        writer.write(element)?;
-        writer.write(XmlWriterEvent::end_element())?;
+        writer.write_event(Event::Empty(elem))?;
         Ok(())
     }
 }
