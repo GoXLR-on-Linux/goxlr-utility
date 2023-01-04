@@ -57,13 +57,13 @@ pub struct ProfileAdapter {
 
 impl ProfileAdapter {
     pub fn from_named_or_default(name: String, directory: &Path) -> Self {
-        return match ProfileAdapter::from_named(name.clone(), directory) {
+        match ProfileAdapter::from_named(name, directory) {
             Ok(result) => result,
             Err(e) => {
                 warn!("Error Loading Profile, falling back to default.. {}", e);
                 ProfileAdapter::default()
             }
-        };
+        }
     }
 
     pub fn from_named(name: String, directory: &Path) -> Result<Self> {

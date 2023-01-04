@@ -33,13 +33,13 @@ pub struct MicProfileAdapter {
 
 impl MicProfileAdapter {
     pub fn from_named_or_default(name: String, directory: &Path) -> Self {
-        return match MicProfileAdapter::from_named(name.clone(), directory) {
+        match MicProfileAdapter::from_named(name.clone(), directory) {
             Ok(result) => result,
             Err(error) => {
                 error!("Couldn't load mic profile {}: {}", name, error);
                 MicProfileAdapter::default()
             }
-        };
+        }
     }
 
     pub fn from_named(name: String, directory: &Path) -> Result<Self> {
