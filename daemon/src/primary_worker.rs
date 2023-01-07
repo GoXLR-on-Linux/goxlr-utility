@@ -37,9 +37,12 @@ pub enum DeviceCommand {
 pub type DeviceSender = mpsc::Sender<DeviceCommand>;
 pub type DeviceReceiver = mpsc::Receiver<DeviceCommand>;
 
+// Fix this later..
+#[allow(clippy::too_many_arguments)]
 pub async fn spawn_usb_handler(
     mut command_rx: DeviceReceiver,
     mut file_rx: Receiver<PathTypes>,
+    mut device_stop_rx: Receiver<()>,
     broadcast_tx: BroadcastSender<PatchEvent>,
     global_tx: Sender<EventTriggers>,
     mut shutdown: Shutdown,
@@ -130,6 +133,15 @@ pub async fn spawn_usb_handler(
                 } else {
                     warn!("Cannot find registered device with serial: {}", &serial);
                 }
+            }
+            _ = device_stop_rx.recv() => {
+                // Flip through all the devices, send a shutdown signal..
+                for device in devices.values_mut() {
+                    device.shutdown().await;
+                }
+
+                // Send a notification that we're done here..
+                let _ = global_tx.send(EventTriggers::DevicesStopped).await;
             }
             () = shutdown.recv() => {
                 info!("Shutting down device worker");

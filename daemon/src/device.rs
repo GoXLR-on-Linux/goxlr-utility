@@ -187,6 +187,10 @@ impl<'a> Device<'a> {
         }
     }
 
+    pub async fn shutdown(&self) {
+        debug!("Shutting Down Device: {}", self.hardware.serial_number);
+    }
+
     pub fn profile(&self) -> &ProfileAdapter {
         &self.profile
     }

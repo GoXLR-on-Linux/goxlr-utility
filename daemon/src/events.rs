@@ -6,7 +6,7 @@ use goxlr_ipc::{HttpSettings, PathTypes};
 use log::{debug, warn};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use tokio::sync::mpsc::Receiver;
+use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::{select, signal};
 
 #[derive(Debug)]
@@ -14,6 +14,7 @@ pub enum EventTriggers {
     Stop,
     Open(PathTypes),
     OpenUi,
+    DevicesStopped,
 }
 
 #[derive(Clone)]
@@ -29,24 +30,41 @@ pub struct DaemonState {
     pub settings_handle: SettingsHandle,
 }
 
-pub async fn spawn_event_handler(state: DaemonState, mut rx: Receiver<EventTriggers>) {
+pub async fn spawn_event_handler(
+    state: DaemonState,
+    mut rx: Receiver<EventTriggers>,
+    device_stop_tx: Sender<()>,
+) {
+    let mut triggered_device_stop = false;
     debug!("Starting Event Loop..");
     loop {
         select! {
             Ok(()) = signal::ctrl_c() => {
+                debug!("Shutdown Phase 1 Triggered..");
+
                 // Ctrl+C is a generic capture, although we should also check for SIGTERM under Linux..
-                state.shutdown.trigger();
-                state.shutdown_blocking.store(true, Ordering::Relaxed);
-                break;
+                if !triggered_device_stop {
+                    triggered_device_stop = true;
+                    let _ = device_stop_tx.send(()).await;
+                }
             },
             Some(event) = rx.recv() => {
                 match event {
                     EventTriggers::Stop => {
-                        // This is essentially the same as Ctrl+C..
+                        debug!("Shutdown Phase 1 Triggered..");
+                        if !triggered_device_stop {
+                            triggered_device_stop = true;
+                            let _ = device_stop_tx.send(()).await;
+                        }
+                    }
+                    EventTriggers::DevicesStopped => {
+                        debug!("Shutdown Phase 2 Triggered..");
+
+                        // This hits after devices have been stopped..
                         state.shutdown.trigger();
                         state.shutdown_blocking.store(true, Ordering::Relaxed);
                         break;
-                    },
+                    }
                     EventTriggers::Open(path_type) => {
                         if let Err(error) = opener::open(match path_type {
                             PathTypes::Profiles => state.settings_handle.get_profile_directory().await,
