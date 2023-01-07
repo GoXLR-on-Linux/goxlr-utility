@@ -70,6 +70,8 @@ pub async fn spawn_usb_handler(
     let mut files = get_files(&mut file_manager).await;
     let mut daemon_status = get_daemon_status(&devices, &settings, files.clone()).await;
 
+    let mut shutdown_triggered = false;
+
     loop {
         let mut change_found = false;
         tokio::select! {
@@ -135,6 +137,12 @@ pub async fn spawn_usb_handler(
                 }
             }
             _ = device_stop_rx.recv() => {
+                // Make sure this only happens once..
+                if shutdown_triggered {
+                    continue;
+                }
+                shutdown_triggered = true;
+
                 // Flip through all the devices, send a shutdown signal..
                 for device in devices.values_mut() {
                     device.shutdown().await;

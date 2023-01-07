@@ -2,6 +2,7 @@ use crate::mic_profile::DEFAULT_MIC_PROFILE_NAME;
 use crate::profile::DEFAULT_PROFILE_NAME;
 use anyhow::{Context, Result};
 use directories::ProjectDirs;
+use goxlr_ipc::GoXLRCommand;
 use log::error;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -156,6 +157,19 @@ impl SettingsHandle {
         true
     }
 
+    pub async fn get_device_shutdown_commands(&self, device_serial: &str) -> Vec<GoXLRCommand> {
+        let settings = self.settings.read().await;
+        let value = settings
+            .devices
+            .get(device_serial)
+            .map(|d| d.shutdown_commands.clone());
+
+        if let Some(value) = value {
+            return value;
+        }
+        vec![]
+    }
+
     pub async fn set_device_profile_name(&self, device_serial: &str, profile_name: &str) {
         let mut settings = self.settings.write().await;
         let entry = settings
@@ -252,6 +266,9 @@ struct DeviceSettings {
 
     // 'Voice Chat Mute All Also Mutes Mic to Chat Mic' O_O
     chat_mute_mutes_mic_to_chat: Option<bool>,
+
+    // 'Shutdown' commands..
+    shutdown_commands: Vec<GoXLRCommand>,
 }
 
 impl Default for DeviceSettings {
@@ -262,6 +279,8 @@ impl Default for DeviceSettings {
 
             hold_delay: Some(500),
             chat_mute_mutes_mic_to_chat: Some(true),
+
+            shutdown_commands: vec![],
         }
     }
 }

@@ -187,8 +187,20 @@ impl<'a> Device<'a> {
         }
     }
 
-    pub async fn shutdown(&self) {
+    pub async fn shutdown(&mut self) {
         debug!("Shutting Down Device: {}", self.hardware.serial_number);
+
+        let commands = self
+            .settings
+            .get_device_shutdown_commands(&self.hardware.serial_number)
+            .await;
+
+        for command in commands {
+            debug!("{:?}", command);
+
+            // These could fail, but fuck it, we gotta do it..
+            let _ = self.perform_command(command).await;
+        }
     }
 
     pub fn profile(&self) -> &ProfileAdapter {
