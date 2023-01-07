@@ -1838,8 +1838,10 @@ impl<'a> Device<'a> {
                 self.settings.save().await;
             }
             GoXLRCommand::LoadProfileColours(profile_name) => {
+                debug!("Loading Colours For Profile: {}", profile_name);
                 let profile_directory = self.settings.get_profile_directory().await;
                 let profile = ProfileAdapter::from_named(profile_name, &profile_directory)?;
+                debug!("Profile Loaded, Applying Colours..");
                 self.profile.load_colour_profile(profile);
                 self.load_colour_map()?;
                 self.update_button_states()?;
