@@ -11,3 +11,4 @@ categories = ["hardware-support", "command-line-utilities"]
 [dependencies]
 rusb = "0.9.1"
 anyhow = "1.0.68"
+cfg-if = "1.0.0"
