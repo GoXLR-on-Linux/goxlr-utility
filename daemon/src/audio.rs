@@ -1,13 +1,15 @@
 use anyhow::{anyhow, bail, Result};
 use enum_map::EnumMap;
+use goxlr_audio::buffered_recorder::BufferedRecorder;
 use goxlr_audio::player::{Player, PlayerState};
-use goxlr_audio::recorder::{Recorder, RecorderState};
+use goxlr_audio::recorder::RecorderState;
 use goxlr_types::SampleBank;
 use goxlr_types::SampleButtons;
 use log::{debug, error, warn};
 use regex::Regex;
 use std::path::PathBuf;
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::thread;
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
@@ -16,7 +18,9 @@ use strum::IntoEnumIterator;
 #[derive(Debug)]
 pub struct AudioHandler {
     output_device: Option<String>,
-    _input_device: Option<String>,
+    input_device: Option<String>,
+
+    buffered_input: Option<Arc<BufferedRecorder>>,
 
     last_device_check: Option<Instant>,
     active_streams: EnumMap<SampleBank, EnumMap<SampleButtons, Option<StateManager>>>,
@@ -85,13 +89,29 @@ impl AudioRecordingState {
 
 impl AudioHandler {
     pub fn new() -> Result<Self> {
-        let handler = Self {
+        // Find the Input Device..
+        let mut handler = Self {
             output_device: None,
-            _input_device: None,
+            input_device: None,
+
+            buffered_input: None,
 
             last_device_check: None,
             active_streams: EnumMap::default(),
         };
+
+        handler.find_device(false);
+        let recorder = BufferedRecorder::new(handler.input_device.clone())?;
+
+        // Wrap this in an arc so it can be cloned for Threadiness..
+        let arc_recorder = Arc::new(recorder);
+        let inner_recorder = arc_recorder.clone();
+
+        handler.buffered_input.replace(arc_recorder);
+
+        // Fire off the new thread to listen to audio..
+        thread::spawn(move || inner_recorder.listen());
+
         Ok(handler)
     }
 
@@ -152,7 +172,7 @@ impl AudioHandler {
         if is_output {
             self.output_device = device;
         } else {
-            self._input_device = device;
+            self.input_device = device;
         }
     }
 
@@ -288,16 +308,17 @@ impl AudioHandler {
         bank: SampleBank,
         button: SampleButtons,
     ) -> Result<()> {
-        if self._input_device.is_none() {
-            self.find_device(false);
-        }
+        if let Some(recorder) = &mut self.buffered_input {
+            let state = RecorderState {
+                stop: Arc::new(AtomicBool::new(false)),
+            };
 
-        if let Some(device) = &self._input_device {
-            let mut recorder = Recorder::new(&path, Some(device.clone()))?;
-            let state = recorder.get_state();
+            let inner_recorder = recorder.clone();
+            let inner_path = path.clone();
+            let inner_state = state.clone();
 
             let handler = thread::spawn(move || {
-                let result = recorder.record();
+                let result = inner_recorder.record(&inner_path, inner_state);
                 if result.is_err() {
                     error!("Error: {}", result.err().unwrap());
                 }

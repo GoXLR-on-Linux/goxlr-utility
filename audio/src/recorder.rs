@@ -83,7 +83,7 @@ impl Recorder {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RecorderState {
     pub stop: Arc<AtomicBool>,
 }
