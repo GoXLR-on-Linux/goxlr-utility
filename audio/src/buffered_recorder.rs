@@ -66,7 +66,7 @@ impl BufferedRecorder {
         // Add the producer to our handler
         self.producers.lock().unwrap().push(ring_buf_producer);
 
-        let mut read_buffer: [f32; 1024] = [0.0; 1024];
+        let mut read_buffer: [f32; 2048] = [0.0; 2048];
 
         // Prepare the Writer..
         let spec = hound::WavSpec {
