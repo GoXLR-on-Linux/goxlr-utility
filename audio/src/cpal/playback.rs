@@ -68,7 +68,7 @@ impl CpalAudioOutput {
 struct CpalAudioOutputImpl {
     ring_buffer: SpscRb<f32>,
     ring_buf_producer: Producer<f32>,
-    stream: cpal::Stream,
+    _stream: cpal::Stream,
 }
 
 impl CpalAudioOutputImpl {
@@ -113,7 +113,7 @@ impl CpalAudioOutputImpl {
         Ok(Box::new(CpalAudioOutputImpl {
             ring_buffer: ring_buf,
             ring_buf_producer,
-            stream,
+            _stream: stream,
         }))
     }
 }
