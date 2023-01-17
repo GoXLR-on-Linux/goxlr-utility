@@ -38,13 +38,27 @@ impl Recorder {
         // We're going to use the normaliser to ensure that something loud was recorded.
         let mut ebu_r128 = EbuR128::new(2, 48000, Mode::I)?;
 
+        let mut recording_started = false;
+
         // Being the Read Loop..
         while !self.stop.load(Ordering::Relaxed) {
             if let Ok(samples) = input.read() {
-                ebu_r128.add_frames_f32(samples.as_slice())?;
+                if !recording_started {
+                    ebu_r128.add_frames_f32(samples.as_slice())?;
+                    if let Ok(loudness) = ebu_r128.loudness_momentary() {
+                        // The GoXLR has a (rough) noise floor of about -100dB when you set a condenser
+                        // to 1dB output, and disable the noise gate. So we're going to assume that
+                        // anything over -80 is intended noise, and we should start recording.
+                        if loudness > -80. {
+                            recording_started = true;
+                        }
+                    }
+                }
 
-                for sample in samples {
-                    writer.write_sample(sample)?;
+                if recording_started {
+                    for sample in samples {
+                        writer.write_sample(sample)?;
+                    }
                 }
             }
         }
@@ -54,12 +68,10 @@ impl Recorder {
         writer.finalize()?;
 
         // Before we do anything else, was any noise recorded?
-        if let Ok(loudness) = ebu_r128.loudness_global() {
-            if loudness == f64::NEG_INFINITY {
-                // No noise received..
-                info!("No Noise Received in recording, Cancelling.");
-                fs::remove_file(&self.file)?;
-            }
+        if !recording_started {
+            // No noise received..
+            info!("No Noise Received in recording, Cancelling.");
+            fs::remove_file(&self.file)?;
         }
         Ok(())
     }
