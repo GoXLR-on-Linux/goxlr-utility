@@ -101,16 +101,18 @@ impl AudioHandler {
         };
 
         handler.find_device(false);
-        let recorder = BufferedRecorder::new(handler.input_device.clone())?;
+        if let Some(ref input_device) = handler.input_device {
+            let recorder = BufferedRecorder::new(input_device.clone())?;
 
-        // Wrap this in an arc so it can be cloned for Threadiness..
-        let arc_recorder = Arc::new(recorder);
-        let inner_recorder = arc_recorder.clone();
+            // Wrap this in an arc so it can be cloned for Threadiness..
+            let arc_recorder = Arc::new(recorder);
+            let inner_recorder = arc_recorder.clone();
 
-        handler.buffered_input.replace(arc_recorder);
+            handler.buffered_input.replace(arc_recorder);
 
-        // Fire off the new thread to listen to audio..
-        thread::spawn(move || inner_recorder.listen());
+            // Fire off the new thread to listen to audio..
+            thread::spawn(move || inner_recorder.listen());
+        }
 
         Ok(handler)
     }

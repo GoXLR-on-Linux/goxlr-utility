@@ -12,7 +12,7 @@ use std::sync::Mutex;
 
 // Experimental code, an open recorder with a buffer..
 pub struct BufferedRecorder {
-    device: Option<String>,
+    device: String,
     producers: Mutex<Vec<Producer<f32>>>,
 }
 
@@ -26,7 +26,7 @@ impl Debug for BufferedRecorder {
 }
 
 impl BufferedRecorder {
-    pub fn new(device: Option<String>) -> Result<Self> {
+    pub fn new(device: String) -> Result<Self> {
         Ok(Self {
             device,
             producers: Mutex::new(vec![]),
@@ -34,7 +34,7 @@ impl BufferedRecorder {
     }
 
     pub fn listen(&self) {
-        let mut input = get_input(self.device.clone()).unwrap();
+        let mut input = get_input(Some(self.device.clone())).unwrap();
         loop {
             if let Ok(samples) = input.read() {
                 for producer in self.producers.lock().unwrap().iter() {
