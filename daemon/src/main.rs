@@ -86,6 +86,15 @@ async fn main() -> Result<()> {
             error!("please consult the 'Permissions' section of the README. Running as root");
             error!("*WILL* cause issues with the sampler, and may pose a security risk.");
             error!("");
+            #[cfg(target_family = "macos")]
+            {
+                error!("As a MacOS user, you may be attempting to run as root to solve the");
+                error!("issues of initialisation. The correct approach to this is to run the");
+                error!("goxlr-initialiser binary via sudo whenever a GoXLR device is attached.");
+                error!("This can be achieved either via a launchctl script or manually on the");
+                error!("command line.");
+                error!("");
+            }
             error!("To override this message, please start with --force-root");
             std::process::exit(-1);
         }
