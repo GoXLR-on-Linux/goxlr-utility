@@ -2,6 +2,7 @@ use anyhow::anyhow;
 use anyhow::Result;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use rb::*;
+use std::time::Duration;
 use symphonia::core::audio::SignalSpec;
 
 use crate::audio::AudioOutput;
@@ -65,6 +66,7 @@ impl CpalAudioOutput {
 }
 
 struct CpalAudioOutputImpl {
+    ring_buffer: SpscRb<f32>,
     ring_buf_producer: Producer<f32>,
     stream: cpal::Stream,
 }
@@ -109,6 +111,7 @@ impl CpalAudioOutputImpl {
         }
 
         Ok(Box::new(CpalAudioOutputImpl {
+            ring_buffer: ring_buf,
             ring_buf_producer,
             stream,
         }))
@@ -134,7 +137,10 @@ impl AudioOutput for CpalAudioOutputImpl {
     }
 
     fn flush(&mut self) {
-        // Flush is best-effort, ignore the returned result.
-        let _ = self.stream.pause();
+        // We need to make sure all audio data has been read and played back prior to dropping the
+        // stream, so we'll block here until the buffer has been emptied.
+        while !self.ring_buffer.is_empty() {
+            std::thread::sleep(Duration::from_millis(5));
+        }
     }
 }

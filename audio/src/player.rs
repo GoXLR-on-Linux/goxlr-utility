@@ -310,6 +310,9 @@ impl Player {
                 Err(err) => break Err(err),
             }
         };
+        if let Some(mut audio_output) = audio_output {
+            audio_output.flush();
+        }
 
         if let Some(ebu_r128) = ebu_r128 {
             // Calculate Gain..
