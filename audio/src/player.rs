@@ -205,6 +205,8 @@ impl Player {
             0
         };
 
+        let mut break_playback = false;
+
         // Loop over the input file..
         let result = loop {
             let packet = match reader.next_packet() {
@@ -236,7 +238,6 @@ impl Player {
                     if let Some(ref mut buf) = sample_buffer {
                         // Grab out the samples..
                         buf.copy_interleaved_ref(decoded.clone());
-                        let mut break_playback = false;
                         let mut samples = buf.samples().to_vec();
 
                         if let Some(ref mut ebu_r128) = ebu_r128 {
@@ -311,7 +312,9 @@ impl Player {
             }
         };
         if let Some(mut audio_output) = audio_output {
-            audio_output.flush();
+            if !break_playback {
+                audio_output.flush();
+            }
         }
 
         if let Some(ebu_r128) = ebu_r128 {
