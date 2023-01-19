@@ -146,18 +146,13 @@ impl BufferedRecorder {
             if let Some(samples) = ring_buf_consumer.read_blocking(&mut read_buffer) {
                 // Read these out into a vec..
                 let samples: Vec<f32> = Vec::from(&read_buffer[0..samples]);
+                if !recording_started {
+                    recording_started = self.is_audio(&mut ebu_r128, samples.as_slice())?;
+                }
 
-                // This buffer could theoretically contain almost a second of audio (32k samples), so
-                // we'll chunk it to 1k to make sure the recording starts correctly..
-                for samples in samples.chunks(1024) {
-                    if !recording_started {
-                        recording_started = self.is_audio(&mut ebu_r128, samples)?;
-                    }
-
-                    if recording_started {
-                        for sample in samples {
-                            writer.write_sample(*sample)?;
-                        }
+                if recording_started {
+                    for sample in samples {
+                        writer.write_sample(sample)?;
                     }
                 }
             }
