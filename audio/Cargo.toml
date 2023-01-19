@@ -25,6 +25,9 @@ simplelog = "0.12.0"
 # A wrapper around VecDeque to enforce length.
 bounded-vec-deque = "0.1.1"
 
+# Ring Buffer is now needed on all platforms.
+rb = "0.4.1"
+
 # Under Linux, we'll use PulseAudio to output to the GoXLR..
 # We can't find the specific audio channels using CPAL, so will ask Pulse instead.
 [target.'cfg(target_os = "linux")'.dependencies]
@@ -34,4 +37,3 @@ libpulse-simple-binding = "2.5.0"
 # Under Other Operating Systems, we'll use CPAL
 [target.'cfg(not(target_os = "linux"))'.dependencies]
 cpal = "0.14.0"
-rb = "0.4.1"
