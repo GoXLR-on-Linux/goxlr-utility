@@ -7,13 +7,20 @@ use rb::{Producer, RbConsumer, RbProducer, SpscRb, RB};
 use std::fmt::{Debug, Formatter};
 use std::fs;
 use std::path::Path;
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Mutex;
 
 // Experimental code, an open recorder with a buffer..
+static NEXT_ID: AtomicU32 = AtomicU32::new(0);
+
 pub struct BufferedRecorder {
     device: String,
-    producers: Mutex<Vec<Producer<f32>>>,
+    producers: Mutex<Vec<RingProducer>>,
+}
+
+pub struct RingProducer {
+    id: u32,
+    producer: Producer<f32>,
 }
 
 impl Debug for BufferedRecorder {
@@ -38,21 +45,21 @@ impl BufferedRecorder {
         loop {
             if let Ok(samples) = input.read() {
                 for producer in self.producers.lock().unwrap().iter() {
-                    let _ = producer.write(&samples);
+                    let _ = producer.producer.write(&samples);
                 }
             }
         }
     }
 
-    pub fn add_producer(&self, producer: Producer<f32>) {
+    pub fn add_producer(&self, producer: RingProducer) {
         self.producers.lock().unwrap().push(producer);
     }
 
-    pub fn del_producer(&self, producer: Producer<f32>) {
+    pub fn del_producer(&self, producer_id: u32) {
         self.producers
             .lock()
             .unwrap()
-            .retain(|x| !std::ptr::eq(x, &producer));
+            .retain(|x| x.id != producer_id);
     }
 
     pub fn record(&self, path: &Path, state: RecorderState) -> Result<()> {
@@ -63,8 +70,13 @@ impl BufferedRecorder {
         let ring_buf = SpscRb::<f32>::new(4096);
         let (ring_buf_producer, ring_buf_consumer) = (ring_buf.producer(), ring_buf.consumer());
 
+        let producer_id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
+
         // Add the producer to our handler
-        self.producers.lock().unwrap().push(ring_buf_producer);
+        self.add_producer(RingProducer {
+            id: producer_id,
+            producer: ring_buf_producer,
+        });
 
         let mut read_buffer: [f32; 2048] = [0.0; 2048];
 
@@ -117,6 +129,8 @@ impl BufferedRecorder {
             info!("No Noise Received in recording, Cancelling.");
             fs::remove_file(path)?;
         }
+
+        self.del_producer(producer_id);
         Ok(())
     }
 }
