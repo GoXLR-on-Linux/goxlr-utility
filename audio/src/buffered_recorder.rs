@@ -1,21 +1,25 @@
-use crate::audio::get_input;
-use crate::recorder::RecorderState;
-use anyhow::Result;
-use ebur128::{EbuR128, Mode};
-use log::info;
-use rb::{Producer, RbConsumer, RbProducer, SpscRb, RB};
 use std::fmt::{Debug, Formatter};
 use std::fs;
 use std::path::Path;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Mutex;
 
-// Experimental code, an open recorder with a buffer..
+use anyhow::Result;
+use bounded_vec_deque::BoundedVecDeque;
+use ebur128::{EbuR128, Mode};
+use log::{debug, info};
+use rb::{Producer, RbConsumer, RbProducer, SpscRb, RB};
+
+use crate::audio::get_input;
+use crate::recorder::RecorderState;
+
 static NEXT_ID: AtomicU32 = AtomicU32::new(0);
 
 pub struct BufferedRecorder {
     device: String,
     producers: Mutex<Vec<RingProducer>>,
+    buffer_size: usize,
+    buffer: Mutex<BoundedVecDeque<f32>>,
 }
 
 pub struct RingProducer {
@@ -33,10 +37,16 @@ impl Debug for BufferedRecorder {
 }
 
 impl BufferedRecorder {
-    pub fn new(device: String) -> Result<Self> {
+    pub fn new(device: String, buffer_millis: usize) -> Result<Self> {
+        // Buffer size is simple, 48 samples a milli for 2 channels..
+        let buffer_size = (48 * 2) * buffer_millis;
+
         Ok(Self {
             device,
             producers: Mutex::new(vec![]),
+
+            buffer_size,
+            buffer: Mutex::new(BoundedVecDeque::new(buffer_size)),
         })
     }
 
@@ -44,8 +54,17 @@ impl BufferedRecorder {
         let mut input = get_input(Some(self.device.clone())).unwrap();
         loop {
             if let Ok(samples) = input.read() {
+                if self.buffer_size > 0 {
+                    let mut buffer = self.buffer.lock().unwrap();
+                    for sample in &samples {
+                        buffer.push_back(*sample);
+                    }
+                }
                 for producer in self.producers.lock().unwrap().iter() {
-                    let _ = producer.producer.write(&samples);
+                    let result = producer.producer.write(&samples);
+                    if result.is_err() {
+                        debug!("Error writing to producer: {:?}", result.err());
+                    }
                 }
             }
         }
@@ -66,8 +85,9 @@ impl BufferedRecorder {
         // So this will likely be spawned in a different thread, to actually handle the record
         // process.. with path being the file path to handle!
 
-        // Lets create a ring buffer to handle the audio..
-        let ring_buf = SpscRb::<f32>::new(4096);
+        // We create a 128k buffer for audio input as we need to continue receiving audio while
+        // we're creating files, setting up the encoder, and handling the initial buffer.
+        let ring_buf = SpscRb::<f32>::new(128 * 1024);
         let (ring_buf_producer, ring_buf_consumer) = (ring_buf.producer(), ring_buf.consumer());
 
         let producer_id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
@@ -77,6 +97,19 @@ impl BufferedRecorder {
             id: producer_id,
             producer: ring_buf_producer,
         });
+
+        // Grab the contents of the buffer, and push it into a simple vec
+        let mut pre_samples = vec![];
+        if self.buffer_size > 0 {
+            let buffer = self.buffer.lock().unwrap();
+            let (front, back) = buffer.as_slices();
+            for sample in front {
+                pre_samples.push(*sample);
+            }
+            for sample in back {
+                pre_samples.push(*sample);
+            }
+        }
 
         let mut read_buffer: [f32; 2048] = [0.0; 2048];
 
@@ -93,27 +126,38 @@ impl BufferedRecorder {
         let mut ebu_r128 = EbuR128::new(2, 48000, Mode::I)?;
         let mut recording_started = false;
 
-        // While 'Recording' - FIX.
+        // We are all setup, now write the contents of the buffer into the file..
+        if self.buffer_size > 0 {
+            for slice in pre_samples.chunks(2048) {
+                if !recording_started {
+                    recording_started = self.is_audio(&mut ebu_r128, slice)?;
+                }
+
+                if recording_started {
+                    for sample in slice {
+                        writer.write_sample(*sample)?;
+                    }
+                }
+            }
+        }
+
+        // Now jump into the current 'live' audio.
         while !state.stop.load(Ordering::Relaxed) {
             if let Some(samples) = ring_buf_consumer.read_blocking(&mut read_buffer) {
                 // Read these out into a vec..
                 let samples: Vec<f32> = Vec::from(&read_buffer[0..samples]);
 
-                if !recording_started {
-                    ebu_r128.add_frames_f32(samples.as_slice())?;
-                    if let Ok(loudness) = ebu_r128.loudness_momentary() {
-                        // The GoXLR has a (rough) noise floor of about -100dB when you set a condenser
-                        // to 1dB output, and disable the noise gate. So we're going to assume that
-                        // anything over -80 is intended noise, and we should start recording.
-                        if loudness > -80. {
-                            recording_started = true;
-                        }
+                // This buffer could theoretically contain almost a second of audio (32k samples), so
+                // we'll chunk it to 1k to make sure the recording starts correctly..
+                for samples in samples.chunks(1024) {
+                    if !recording_started {
+                        recording_started = self.is_audio(&mut ebu_r128, samples)?;
                     }
-                }
 
-                if recording_started {
-                    for sample in samples {
-                        writer.write_sample(sample)?;
+                    if recording_started {
+                        for sample in samples {
+                            writer.write_sample(*sample)?;
+                        }
                     }
                 }
             }
@@ -132,5 +176,18 @@ impl BufferedRecorder {
 
         self.del_producer(producer_id);
         Ok(())
+    }
+
+    fn is_audio(&self, ebu_r128: &mut EbuR128, samples: &[f32]) -> Result<bool> {
+        // The GoXLR seems to have a noise floor of roughly -100dB, so we're going
+        // to listen for anything louder than -80dB and consider that 'useful' audio.
+        ebu_r128.add_frames_f32(samples)?;
+        if let Ok(loudness) = ebu_r128.loudness_momentary() {
+            if loudness > -80. {
+                return Ok(true);
+            }
+        }
+
+        Ok(false)
     }
 }

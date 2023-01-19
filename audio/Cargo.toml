@@ -22,6 +22,9 @@ anyhow = "1.0.65"
 log = "0.4.17"
 simplelog = "0.12.0"
 
+# A wrapper around VecDeque to enforce length.
+bounded-vec-deque = "0.1.1"
+
 # Under Linux, we'll use PulseAudio to output to the GoXLR..
 # We can't find the specific audio channels using CPAL, so will ask Pulse instead.
 [target.'cfg(target_os = "linux")'.dependencies]

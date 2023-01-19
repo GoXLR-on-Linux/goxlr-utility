@@ -102,7 +102,7 @@ impl AudioHandler {
 
         handler.find_device(false);
         if let Some(ref input_device) = handler.input_device {
-            let recorder = BufferedRecorder::new(input_device.clone())?;
+            let recorder = BufferedRecorder::new(input_device.clone(), 0)?;
 
             // Wrap this in an arc so it can be cloned for Threadiness..
             let arc_recorder = Arc::new(recorder);
