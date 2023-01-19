@@ -1,5 +1,7 @@
 use std::fmt::{Debug, Formatter};
 use std::fs;
+use std::fs::File;
+use std::io::BufWriter;
 use std::path::Path;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Mutex;
@@ -7,6 +9,7 @@ use std::sync::Mutex;
 use anyhow::Result;
 use bounded_vec_deque::BoundedVecDeque;
 use ebur128::{EbuR128, Mode};
+use hound::WavWriter;
 use log::{debug, info};
 use rb::{Producer, RbConsumer, RbProducer, SpscRb, RB};
 
@@ -85,9 +88,9 @@ impl BufferedRecorder {
         // So this will likely be spawned in a different thread, to actually handle the record
         // process.. with path being the file path to handle!
 
-        // We create a 128k buffer for audio input as we need to continue receiving audio while
-        // we're creating files, setting up the encoder, and handling the initial buffer.
-        let ring_buf = SpscRb::<f32>::new(128 * 1024);
+        // We create a second long buffer for audio input as we need to continue receiving
+        // audio while we're creating files, setting up the encoder, and handling the initial buffer.
+        let ring_buf = SpscRb::<f32>::new(48000 * 2);
         let (ring_buf_producer, ring_buf_consumer) = (ring_buf.producer(), ring_buf.consumer());
 
         let producer_id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
@@ -111,7 +114,8 @@ impl BufferedRecorder {
             }
         }
 
-        let mut read_buffer: [f32; 2048] = [0.0; 2048];
+        // Get the read buffer to pull a quarter of a second at a time..
+        let mut read_buffer: [f32; 24000] = [0.0; 24000];
 
         // Prepare the Writer..
         let spec = hound::WavSpec {
@@ -124,21 +128,11 @@ impl BufferedRecorder {
 
         // Set up the Audio Checker for volume..
         let mut ebu_r128 = EbuR128::new(2, 48000, Mode::I)?;
-        let mut recording_started = false;
+        let mut writing = false;
 
         // We are all setup, now write the contents of the buffer into the file..
         if self.buffer_size > 0 {
-            for slice in pre_samples.chunks(2048) {
-                if !recording_started {
-                    recording_started = self.is_audio(&mut ebu_r128, slice)?;
-                }
-
-                if recording_started {
-                    for sample in slice {
-                        writer.write_sample(*sample)?;
-                    }
-                }
-            }
+            writing = self.handle_samples(pre_samples, &mut ebu_r128, writing, &mut writer)?;
         }
 
         // Now jump into the current 'live' audio.
@@ -146,15 +140,7 @@ impl BufferedRecorder {
             if let Some(samples) = ring_buf_consumer.read_blocking(&mut read_buffer) {
                 // Read these out into a vec..
                 let samples: Vec<f32> = Vec::from(&read_buffer[0..samples]);
-                if !recording_started {
-                    recording_started = self.is_audio(&mut ebu_r128, samples.as_slice())?;
-                }
-
-                if recording_started {
-                    for sample in samples {
-                        writer.write_sample(sample)?;
-                    }
-                }
+                writing = self.handle_samples(samples, &mut ebu_r128, writing, &mut writer)?;
             }
         }
 
@@ -163,7 +149,7 @@ impl BufferedRecorder {
         writer.finalize()?;
 
         // Before we do anything else, was any noise recorded?
-        if !recording_started {
+        if !writing {
             // No noise received..
             info!("No Noise Received in recording, Cancelling.");
             fs::remove_file(path)?;
@@ -171,6 +157,30 @@ impl BufferedRecorder {
 
         self.del_producer(producer_id);
         Ok(())
+    }
+
+    fn handle_samples(
+        &self,
+        samples: Vec<f32>,
+        ebu_r128: &mut EbuR128,
+        writing: bool,
+        writer: &mut WavWriter<BufWriter<File>>,
+    ) -> Result<bool> {
+        let mut recording_started = writing;
+
+        // Split into 50ms chunks
+        for slice in samples.chunks(4800) {
+            if !recording_started {
+                recording_started = self.is_audio(ebu_r128, slice)?;
+            }
+
+            if recording_started {
+                for sample in slice {
+                    writer.write_sample(*sample)?;
+                }
+            }
+        }
+        Ok(recording_started)
     }
 
     fn is_audio(&self, ebu_r128: &mut EbuR128, samples: &[f32]) -> Result<bool> {

@@ -6,14 +6,20 @@ use rb::{Consumer, RbConsumer, RbProducer, SpscRb, RB};
 use crate::audio::AudioInput;
 pub struct CpalAudioInput;
 
+// Set max 'interim' buffer size to 200ms. This defines the maximum time between the audio being
+// handled here, and the external reader pulling it out before samples are lost.
+//
+// This may seem a little high, but the buffered recorder needs to handle thread locks, mutexes,
+// and redistributing the samples out to anything that needs them. This can lead to small delays
+// when reading. I've seen this reach 6-7,000 samples before, so this buffer should be clear.
+const BUFFER_SIZE: usize = 19200;
+
 impl CpalAudioInput {
     pub fn open(device: Option<String>) -> Result<Box<dyn AudioInput>> {
         // Device handling is a little more awkward on CPAL, we need the audio host and device.
         // We request them as 'HOST*DEVICE' on the Command Line, now we can look them up :p
 
         let mut cpal_device = None;
-
-        // We need to abstract this device finding code :p
 
         // Basically, if *ANYTHING* goes wrong here, we'll fall through to default.
         if let Some(device_name) = device {
@@ -61,7 +67,7 @@ struct CpalAudioInputImpl {
     stream: cpal::Stream,
 
     // Use a shared read buffer..
-    read_buffer: [f32; 1024],
+    read_buffer: [f32; BUFFER_SIZE],
 }
 
 impl CpalAudioInputImpl {
@@ -70,11 +76,13 @@ impl CpalAudioInputImpl {
         let config = cpal::StreamConfig {
             channels: 2 as cpal::ChannelCount,
             sample_rate: cpal::SampleRate(48000),
-            buffer_size: cpal::BufferSize::Fixed(1024),
+
+            // Set the main read buffer at 10ms
+            buffer_size: cpal::BufferSize::Fixed(960),
         };
 
         // Prepare the Read Buffer, grab the producer and consumer..
-        let ring_buf = SpscRb::<f32>::new(4092);
+        let ring_buf = SpscRb::<f32>::new(BUFFER_SIZE);
         let (ring_buf_producer, ring_buf_consumer) = (ring_buf.producer(), ring_buf.consumer());
 
         let stream_result = device.build_input_stream(
@@ -100,7 +108,7 @@ impl CpalAudioInputImpl {
         }
 
         Ok(Box::new(CpalAudioInputImpl {
-            read_buffer: [0.0; 1024],
+            read_buffer: [0.0; BUFFER_SIZE],
             ring_buf_consumer,
             stream,
         }))
