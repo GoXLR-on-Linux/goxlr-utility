@@ -74,7 +74,7 @@ impl CpalAudioInputImpl {
         };
 
         // Prepare the Read Buffer, grab the producer and consumer..
-        let ring_buf = SpscRb::<f32>::new(2048);
+        let ring_buf = SpscRb::<f32>::new(4092);
         let (ring_buf_producer, ring_buf_consumer) = (ring_buf.producer(), ring_buf.consumer());
 
         let stream_result = device.build_input_stream(
