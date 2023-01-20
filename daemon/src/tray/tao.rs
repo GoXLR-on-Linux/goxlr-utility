@@ -1,5 +1,5 @@
 use anyhow::Result;
-use std::ptr::null_mut;
+
 use std::sync::atomic::Ordering;
 use std::thread;
 use tao::event_loop::{ControlFlow, EventLoop};
@@ -7,6 +7,7 @@ use tao::platform::run_return::EventLoopExtRunReturn;
 
 use crate::events::EventTriggers;
 use crate::{DaemonState, ICON};
+use cfg_if::cfg_if;
 use futures::executor::block_on;
 use log::debug;
 use std::time::{Duration, Instant};
@@ -16,16 +17,21 @@ use tao::menu::MenuItem::Separator;
 use tao::menu::{ContextMenu, MenuItemAttributes, MenuType};
 use tao::system_tray::SystemTrayBuilder;
 use tao::TrayId;
-use tokio::sync::mpsc;
+use tokio::sync::mpsc::Sender;
 
 use goxlr_ipc::PathTypes::{Icons, MicProfiles, Presets, Profiles, Samples};
 #[cfg(target_os = "macos")]
 use tao::platform::macos::{ActivationPolicy, EventLoopExtMacOS};
-use tokio::sync::mpsc::Sender;
-use win_win::{WindowBuilder, WindowClass, WindowProc};
-use winapi::um::winuser::{ShowWindow, SW_HIDE};
 
-pub fn handle_tray(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Result<()> {
+cfg_if! {
+    if #[cfg(windows)] {
+        use win_win::{WindowBuilder, WindowClass, WindowProc};
+        use winapi::um::winuser::{ShowWindow, SW_HIDE};
+        use std::ptr::null_mut;
+    }
+}
+
+pub fn handle_tray(state: DaemonState, tx: Sender<EventTriggers>) -> Result<()> {
     let mut event_loop = EventLoop::new();
 
     #[cfg(target_os = "macos")]
@@ -34,10 +40,12 @@ pub fn handle_tray(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Resul
         event_loop.set_activate_ignoring_other_apps(true);
     }
 
-    let win_state = state.clone();
-    let win_global = tx.clone();
-
-    thread::spawn(move || create_window(win_state, win_global));
+    #[cfg(windows)]
+    {
+        let win_state = state.clone();
+        let win_global = tx.clone();
+        thread::spawn(move || create_window(win_state, win_global));
+    }
 
     let tray_id = TrayId::new("goxlr-utility-tray");
     let icon = load_icon();
@@ -138,7 +146,7 @@ fn load_icon() -> tao::system_tray::Icon {
 }
 
 #[cfg(windows)]
-fn create_window(state: DaemonState, tx: mpsc::Sender<EventTriggers>) {
+fn create_window(state: DaemonState, tx: Sender<EventTriggers>) {
     let win_class = WindowClass::builder("goxlr-utility").build().unwrap();
     let window_proc = GoXLRWindowProc::new(state, tx);
     let hwnd = WindowBuilder::new(window_proc, &win_class).build();
@@ -157,7 +165,7 @@ struct GoXLRWindowProc {
 
 #[cfg(windows)]
 impl GoXLRWindowProc {
-    pub fn new(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Self {
+    pub fn new(state: DaemonState, tx: Sender<EventTriggers>) -> Self {
         Self {
             state,
             global_tx: tx,
