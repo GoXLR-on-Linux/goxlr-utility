@@ -100,7 +100,17 @@ impl AudioHandler {
             active_streams: EnumMap::default(),
         };
 
-        handler.find_device(false);
+        // It can take a moment for the audio devices to appear when plugging in a GoXLR, so
+        // we'll take up to 2 seconds to check, then give up.
+        for _ in 0..20 {
+            handler.find_device(false);
+            if handler.input_device.is_some() {
+                break;
+            }
+
+            thread::sleep(Duration::from_millis(100));
+        }
+
         if let Some(ref input_device) = handler.input_device {
             let recorder = BufferedRecorder::new(input_device.clone(), 0)?;
 
