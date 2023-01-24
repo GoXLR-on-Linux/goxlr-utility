@@ -3,8 +3,8 @@ use std::fs;
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::Path;
-use std::sync::atomic::{AtomicU32, Ordering};
-use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::{Arc, Mutex};
 
 use anyhow::Result;
 use bounded_vec_deque::BoundedVecDeque;
@@ -23,6 +23,7 @@ pub struct BufferedRecorder {
     producers: Mutex<Vec<RingProducer>>,
     buffer_size: usize,
     buffer: Mutex<BoundedVecDeque<f32>>,
+    stop: Arc<AtomicBool>,
 }
 
 pub struct RingProducer {
@@ -50,12 +51,14 @@ impl BufferedRecorder {
 
             buffer_size,
             buffer: Mutex::new(BoundedVecDeque::new(buffer_size)),
+
+            stop: Arc::new(AtomicBool::new(false)),
         })
     }
 
     pub fn listen(&self) {
         let mut input = get_input(Some(self.device.clone())).unwrap();
-        loop {
+        while !self.stop.load(Ordering::Relaxed) {
             if let Ok(samples) = input.read() {
                 if self.buffer_size > 0 {
                     let mut buffer = self.buffer.lock().unwrap();
@@ -194,5 +197,11 @@ impl BufferedRecorder {
         }
 
         Ok(false)
+    }
+}
+
+impl Drop for BufferedRecorder {
+    fn drop(&mut self) {
+        self.stop.store(true, Ordering::Relaxed);
     }
 }
