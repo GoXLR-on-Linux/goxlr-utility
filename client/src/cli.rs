@@ -210,8 +210,7 @@ pub enum ProfileAction {
     },
 
     /// Save the currently running profile
-    #[command(arg_required_else_help = true)]
-    Save {},
+    Save,
 
     /// Save the currently running profile with a new name
     SaveAs {
