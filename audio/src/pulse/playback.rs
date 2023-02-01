@@ -44,7 +44,7 @@ impl PulseAudioOutput {
         // Create the Connection (Use Pulse Simple for this, because, well, it's simple!)
         let pulse = Simple::new(
             None,
-            "Audio Player",
+            "GoXLR Utility",
             Direction::Playback,
             device_str,
             "Media",
