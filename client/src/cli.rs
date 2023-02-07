@@ -262,7 +262,6 @@ pub enum EqualiserMiniCommands {
         /// The Frequency to Modify
         frequency: MiniEqFrequencies,
 
-        #[arg(value_parser=parse_full_frequency)]
         /// The new Frequency
         value: f32,
     },
@@ -273,7 +272,6 @@ pub enum EqualiserMiniCommands {
         /// The Frequency to modify
         frequency: MiniEqFrequencies,
 
-        #[arg(value_parser=parse_gain)]
         #[arg(allow_hyphen_values = true)]
         /// The new Gain Value
         gain: i8,
@@ -289,7 +287,6 @@ pub enum EqualiserCommands {
         /// The Frequency to modify
         frequency: EqFrequencies,
 
-        #[arg(value_parser=parse_full_frequency)]
         /// The new frequency
         value: f32,
     },
@@ -298,46 +295,10 @@ pub enum EqualiserCommands {
         /// The Frequency to Modify
         frequency: EqFrequencies,
 
-        #[arg(value_parser=parse_gain)]
         #[arg(allow_hyphen_values = true)]
         /// The new Gain Value
         gain: i8,
     },
-}
-
-// TODO: The mini has a known smaller frequency range than the full device, find it.
-fn parse_full_frequency(s: &str) -> Result<f32, String> {
-    let value = f32::from_str(s);
-    if value.is_err() {
-        return Err(String::from("Value must be between 300 and 18000hz"));
-    }
-
-    let value = value.unwrap();
-    if value > 18000.0 {
-        return Err(String::from("Value must be lower than 18000hz"));
-    }
-
-    if value < 300.0 {
-        return Err(String::from("Value must be higher than 300hz"));
-    }
-    Ok(value)
-}
-
-fn parse_gain(s: &str) -> Result<i8, String> {
-    let value = i8::from_str(s);
-    if value.is_err() {
-        return Err(String::from("Value must be between -9 and 9db"));
-    }
-
-    let value = value.unwrap();
-    if value > 9 {
-        return Err(String::from("Value must be 9db or lower"));
-    }
-
-    if value < -9 {
-        return Err(String::from("Value must be -9db or higher"));
-    }
-    Ok(value)
 }
 
 #[derive(Subcommand, Debug)]
@@ -345,7 +306,6 @@ fn parse_gain(s: &str) -> Result<i8, String> {
 pub enum NoiseGateCommands {
     /// Activation Threshold in dB [-59 - 0]
     Threshold {
-        #[arg(value_parser=parse_gate_threshold)]
         #[arg(allow_hyphen_values = true)]
         value: i8,
     },
@@ -375,29 +335,11 @@ pub enum NoiseGateCommands {
     },
 }
 
-fn parse_gate_threshold(s: &str) -> Result<i8, String> {
-    let value = i8::from_str(s);
-    if value.is_err() {
-        return Err(String::from("Value must be between -59 and 0"));
-    }
-
-    let value = value.unwrap();
-    if value > 0 {
-        return Err(String::from("Value must be lower than 0"));
-    }
-
-    if value < -59 {
-        return Err(String::from("Value must be higher than -59"));
-    }
-    Ok(value)
-}
-
 #[derive(Subcommand, Debug)]
 #[command(arg_required_else_help = true)]
 pub enum CompressorCommands {
     /// Activation Threshold in dB [-24 - 0]
     Threshold {
-        #[arg(value_parser=parse_compressor_threshold)]
         #[arg(allow_hyphen_values = true)]
         value: i8,
     },
@@ -414,39 +356,8 @@ pub enum CompressorCommands {
         value: CompressorReleaseTime,
     },
     MakeUp {
-        #[arg(value_parser=parse_compressor_makeup)]
         value: i8,
     },
-}
-
-fn parse_compressor_threshold(s: &str) -> Result<i8, String> {
-    let value = i8::from_str(s);
-    if value.is_err() {
-        return Err(String::from("Value must be between -24 and 0"));
-    }
-
-    let value = value.unwrap();
-    if value > 0 {
-        return Err(String::from("Value must be 0 or below"));
-    }
-
-    if value < -24 {
-        return Err(String::from("Value must be -24 or higher"));
-    }
-    Ok(value)
-}
-
-fn parse_compressor_makeup(s: &str) -> Result<i8, String> {
-    let value = i8::from_str(s);
-    if value.is_err() {
-        return Err(String::from("Value must be between 0 and 24"));
-    }
-
-    let value = value.unwrap();
-    if !(-6..=24).contains(&value) {
-        return Err(String::from("Value must between -4 and 24"));
-    }
-    Ok(value)
 }
 
 #[derive(Subcommand, Debug)]
