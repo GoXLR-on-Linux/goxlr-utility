@@ -60,8 +60,8 @@ pub struct Scribble {
 
 impl Scribble {
     pub fn new(id: u8) -> Self {
-        let element_name = format!("scribble{}", id);
-        let colour_map = format!("scribble{}", id);
+        let element_name = format!("scribble{id}");
+        let colour_map = format!("scribble{id}");
         Self {
             element_name,
             colour_map: ColourMap::new(colour_map),

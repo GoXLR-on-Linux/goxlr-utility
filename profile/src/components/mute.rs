@@ -40,7 +40,7 @@ pub struct MuteButton {
 
 impl MuteButton {
     pub fn new(id: u8) -> Self {
-        let colour_prefix = format!("mute{}", id);
+        let colour_prefix = format!("mute{id}");
         Self {
             colour_map: ColourMap::new(colour_prefix),
             mute_function: MuteFunction::All,
@@ -107,11 +107,11 @@ impl MuteButton {
 
         let mut attributes: HashMap<String, String> = HashMap::default();
         attributes.insert(
-            format!("{}Function", element_name),
+            format!("{element_name}Function"),
             self.mute_function.get_str("Value").unwrap().to_string(),
         );
         attributes.insert(
-            format!("{}prevLevel", element_name),
+            format!("{element_name}prevLevel"),
             format!("{}", self.previous_volume),
         );
 

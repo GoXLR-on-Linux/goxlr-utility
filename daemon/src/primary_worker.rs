@@ -187,7 +187,7 @@ pub async fn spawn_usb_handler(
                                 let _ = sender.send(DaemonResponse::Ok);
                             },
                             Err(e) => {
-                                let _ = sender.send(DaemonResponse::Error(format!("Error Extracting Defaults: {}", e)));
+                                let _ = sender.send(DaemonResponse::Error(format!("Error Extracting Defaults: {e}")));
                             }
                         }
                     }
@@ -199,7 +199,7 @@ pub async fn spawn_usb_handler(
                                 change_found = true;
                             }
                             Err(e) => {
-                                let _ = sender.send(DaemonResponse::Error(format!("Unable to Set AutoStart: {}", e)));
+                                let _ = sender.send(DaemonResponse::Error(format!("Unable to Set AutoStart: {e}")));
                             }
                         }
                     }
@@ -396,7 +396,7 @@ async fn load_device(
     if serial_number.is_empty() {
         let mut serial = String::from("");
         for i in 0..=24 {
-            serial = format!("UNKNOWN-SN-{}", i);
+            serial = format!("UNKNOWN-SN-{i}");
             if !existing_serials.contains(&serial) {
                 break;
             }

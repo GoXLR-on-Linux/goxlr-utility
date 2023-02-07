@@ -750,7 +750,7 @@ impl<'a> Device<'a> {
 
         if !self.profile.current_sample_bank_has_samples(button) {
             let file_date = Local::now().format("%Y-%m-%dT%H%M%S").to_string();
-            let full_name = format!("Recording_{}.wav", file_date);
+            let full_name = format!("Recording_{file_date}.wav");
 
             self.record_audio_file(button, full_name).await?;
             return Ok(());

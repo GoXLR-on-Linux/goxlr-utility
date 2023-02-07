@@ -162,7 +162,7 @@ impl PitchEncoderBase {
         if let Some(inst_ratio) = value.inst_ratio {
             attributes.insert(
                 "PITCH_SHIFT_INST_RATIO".to_string(),
-                format!("{}", inst_ratio),
+                format!("{inst_ratio}"),
             );
         }
 

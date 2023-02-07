@@ -145,7 +145,7 @@ fn locate_daemon_binary() -> Option<PathBuf> {
 
 fn get_daemon_binary_name() -> String {
     if cfg!(windows) {
-        format!("{}.exe", DAEMON_NAME)
+        format!("{DAEMON_NAME}.exe")
     } else {
         String::from(DAEMON_NAME)
     }

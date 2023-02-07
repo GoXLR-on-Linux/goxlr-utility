@@ -35,7 +35,7 @@ pub struct Fader {
 
 impl Fader {
     pub fn new(id: u8) -> Self {
-        let colour_map = format!("FaderMeter{}", id);
+        let colour_map = format!("FaderMeter{id}");
         Self {
             colour_map: ColourMap::new(colour_map),
             channel: FullChannelList::Mic,
@@ -80,7 +80,7 @@ impl Fader {
 
         let mut attributes: HashMap<String, String> = HashMap::default();
         attributes.insert(
-            format!("{}listIndex", element_name),
+            format!("{element_name}listIndex"),
             self.channel.get_str("faderIndex").unwrap().to_string(),
         );
 

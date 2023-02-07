@@ -154,25 +154,25 @@ impl ColourMap {
         attributes: &mut HashMap<String, String>,
     ) {
         // Add the 'OffStyle'
-        let mut key = format!("{}offStyle", prefix);
+        let mut key = format!("{prefix}offStyle");
         attributes.insert(key, self.off_style.to_string());
 
         if let Some(selected) = self.selected {
-            attributes.insert(format!("{}selected", prefix), format!("{}", selected));
+            attributes.insert(format!("{prefix}selected"), format!("{selected}"));
         }
 
         if let Some(velocity) = &self.velocity {
-            key = format!("{}velocity", prefix);
-            attributes.insert(key, format!("{}", velocity));
+            key = format!("{prefix}velocity");
+            attributes.insert(key, format!("{velocity}"));
         }
 
         if let Some(state) = &self.state {
-            key = format!("{}state", prefix);
+            key = format!("{prefix}state");
             attributes.insert(key, state.to_string());
         }
 
         if let Some(blink) = &self.blink {
-            key = format!("{}blink", prefix);
+            key = format!("{prefix}blink");
             attributes.insert(key, blink.to_string());
         }
 
@@ -184,14 +184,14 @@ impl ColourMap {
         if let Some(vector) = &self.colour_list {
             for i in 0..3 {
                 if let Some(Some(colour)) = vector.get(i) {
-                    key = format!("{}colour{}", prefix, i);
+                    key = format!("{prefix}colour{i}");
                     attributes.insert(key, colour.to_argb());
                 }
             }
         }
 
         if let Some(colour_display) = &self.colour_display {
-            key = format!("{}Display", prefix);
+            key = format!("{prefix}Display");
             attributes.insert(key, colour_display.to_string());
         }
     }

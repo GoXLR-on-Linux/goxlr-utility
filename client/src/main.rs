@@ -986,7 +986,7 @@ fn print_mixer_info(mixer: &MixerStatus) {
 
     for channel in ChannelName::iter() {
         let pct = (mixer.get_channel_volume(channel) as f32 / 255.0) * 100.0;
-        println!("{} volume: {:.0}%", channel, pct);
+        println!("{channel} volume: {pct:.0}%");
     }
 
     for microphone in MicrophoneType::iter() {
@@ -1011,7 +1011,7 @@ fn print_mixer_info(mixer: &MixerStatus) {
     print!(" {}", " ".repeat(max_col_len));
     for input in InputDevice::iter() {
         let col_name = input.to_string();
-        print!(" |{}|", col_name);
+        print!(" |{col_name}|");
         table_width += col_name.len() + 3;
     }
     println!();

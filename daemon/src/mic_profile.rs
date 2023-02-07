@@ -43,7 +43,7 @@ impl MicProfileAdapter {
     }
 
     pub fn from_named(name: String, directory: &Path) -> Result<Self> {
-        let path = directory.join(format!("{}.goxlrMicProfile", name));
+        let path = directory.join(format!("{name}.goxlrMicProfile"));
         if path.is_file() {
             let file = File::open(path).context("Couldn't open mic profile for reading")?;
             return MicProfileAdapter::from_reader(name, file).context("Couldn't read mic profile");
@@ -69,12 +69,12 @@ impl MicProfileAdapter {
     }
 
     pub fn can_create_new_file(name: String, directory: &Path) -> Result<()> {
-        let path = directory.join(format!("{}.goxlrMicProfile", name));
+        let path = directory.join(format!("{name}.goxlrMicProfile"));
         can_create_new_file(path)
     }
 
     pub fn write_profile(&mut self, name: String, directory: &Path, overwrite: bool) -> Result<()> {
-        let path = directory.join(format!("{}.goxlrMicProfile", name));
+        let path = directory.join(format!("{name}.goxlrMicProfile"));
         if !overwrite && path.is_file() {
             return Err(anyhow!("Profile exists, will not overwrite"));
         }
@@ -91,7 +91,7 @@ impl MicProfileAdapter {
     }
 
     pub fn delete_profile(&mut self, name: String, directory: &Path) -> Result<()> {
-        let path = directory.join(format!("{}.goxlrMicProfile", name));
+        let path = directory.join(format!("{name}.goxlrMicProfile"));
         if path.is_file() {
             remove_file(path)?;
         }
