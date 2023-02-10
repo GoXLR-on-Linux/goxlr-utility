@@ -122,6 +122,8 @@ impl AudioHandler {
 
             // Fire off the new thread to listen to audio..
             thread::spawn(move || inner_recorder.listen());
+        } else {
+            warn!("Unable to locate GoXLR Sampler");
         }
 
         Ok(handler)
