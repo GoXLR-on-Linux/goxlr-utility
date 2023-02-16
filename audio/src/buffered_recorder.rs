@@ -191,7 +191,7 @@ impl BufferedRecorder {
         // to listen for anything louder than -80dB and consider that 'useful' audio.
         ebu_r128.add_frames_f32(samples)?;
         if let Ok(loudness) = ebu_r128.loudness_momentary() {
-            if loudness > -80. {
+            if loudness > -45. {
                 return Ok(true);
             }
         }
