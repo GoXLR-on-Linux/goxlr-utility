@@ -54,8 +54,6 @@ fn find_devices() {
                                 device_address(&device)
                             );
 
-                            let _ = handle.set_active_configuration(1);
-
                             // Send a single vendor command across, see what happens..
                             let request_type = rusb::request_type(Out, Vendor, Interface);
                             let result = handle.write_control(
