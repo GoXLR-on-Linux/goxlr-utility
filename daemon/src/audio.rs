@@ -18,7 +18,6 @@ use strum::IntoEnumIterator;
 #[derive(Debug)]
 pub struct AudioHandler {
     output_device: Option<String>,
-    input_device: Option<String>,
 
     buffered_input: Option<Arc<BufferedRecorder>>,
 
@@ -92,7 +91,6 @@ impl AudioHandler {
         // Find the Input Device..
         let mut handler = Self {
             output_device: None,
-            input_device: None,
 
             buffered_input: None,
 
@@ -100,31 +98,14 @@ impl AudioHandler {
             active_streams: EnumMap::default(),
         };
 
-        // It can take a moment for the audio devices to appear when plugging in a GoXLR, so
-        // we'll take up to 2 seconds to check, then give up.
-        for _ in 0..20 {
-            handler.find_device(false);
-            if handler.input_device.is_some() {
-                break;
-            }
+        // Immediately initialise the recorder, and let it try to handle stuff.
+        let recorder = BufferedRecorder::new(handler.get_input_device_string_patterns(), 0)?;
+        let arc_recorder = Arc::new(recorder);
+        let inner_recorder = arc_recorder.clone();
+        handler.buffered_input.replace(arc_recorder);
 
-            thread::sleep(Duration::from_millis(100));
-        }
-
-        if let Some(ref input_device) = handler.input_device {
-            let recorder = BufferedRecorder::new(input_device.clone(), 0)?;
-
-            // Wrap this in an arc so it can be cloned for Threadiness..
-            let arc_recorder = Arc::new(recorder);
-            let inner_recorder = arc_recorder.clone();
-
-            handler.buffered_input.replace(arc_recorder);
-
-            // Fire off the new thread to listen to audio..
-            thread::spawn(move || inner_recorder.listen());
-        } else {
-            warn!("Unable to locate GoXLR Sampler");
-        }
+        // Fire off the new thread to listen to audio..
+        thread::spawn(move || inner_recorder.listen());
 
         Ok(handler)
     }
@@ -139,6 +120,16 @@ impl AudioHandler {
         patterns
     }
 
+    fn get_output_device_string_patterns(&self) -> Vec<String> {
+        let patterns = vec![
+            String::from("goxlr_sample"),
+            String::from("GoXLR_0_8_9"),
+            String::from("CoreAudio\\*Sample"),
+            String::from("WASAPI\\*Sample.*"),
+        ];
+        patterns
+    }
+
     fn get_input_device_patterns(&self) -> Vec<Regex> {
         let patterns = vec![
             Regex::new("goxlr_sampler.*source").expect("Invalid Regex in Audio Handler"),
@@ -146,6 +137,17 @@ impl AudioHandler {
             Regex::new("CoreAudio\\*Sampler").expect("Invalid Regex in Audio Handler"),
             Regex::new("WASAPI\\*Sample.*").expect("Invalid Regex in Audio Handler"),
         ];
+        patterns
+    }
+
+    fn get_input_device_string_patterns(&self) -> Vec<String> {
+        let patterns = vec![
+            String::from("goxlr_sampler.*source"),
+            String::from("GoXLR_0_4_5.*source"),
+            String::from("CoreAudio\\*Sampler"),
+            String::from("WASAPI\\*Sample.*"),
+        ];
+
         patterns
     }
 
@@ -185,8 +187,6 @@ impl AudioHandler {
 
         if is_output {
             self.output_device = device;
-        } else {
-            self.input_device = device;
         }
     }
 

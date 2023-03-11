@@ -5,21 +5,25 @@ use std::io::BufWriter;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
+use std::thread::sleep;
+use std::time::Duration;
 
 use anyhow::Result;
 use bounded_vec_deque::BoundedVecDeque;
 use ebur128::{EbuR128, Mode};
 use hound::WavWriter;
-use log::{debug, info};
+use log::{debug, info, warn};
 use rb::{Producer, RbConsumer, RbProducer, SpscRb, RB};
+use regex::Regex;
 
-use crate::audio::get_input;
+use crate::audio::{get_input, AudioInput};
+use crate::get_audio_inputs;
 use crate::recorder::RecorderState;
 
 static NEXT_ID: AtomicU32 = AtomicU32::new(0);
 
 pub struct BufferedRecorder {
-    device: String,
+    devices: Vec<Regex>,
     producers: Mutex<Vec<RingProducer>>,
     buffer_size: usize,
     buffer: Mutex<BoundedVecDeque<f32>>,
@@ -34,19 +38,28 @@ pub struct RingProducer {
 impl Debug for BufferedRecorder {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BufferedRecorder")
-            .field("device", &self.device)
+            .field("device", &self.devices)
             .field("producers", &self.producers.lock().unwrap().len())
             .finish()
     }
 }
 
 impl BufferedRecorder {
-    pub fn new(device: String, buffer_millis: usize) -> Result<Self> {
+    pub fn new(devices: Vec<String>, buffer_millis: usize) -> Result<Self> {
         // Buffer size is simple, 48 samples a milli for 2 channels..
         let buffer_size = (48 * 2) * buffer_millis;
 
+        // Convert the list of Strings into a Regexp vec..
+        let regex = devices
+            .iter()
+            .map(|expression| {
+                Regex::new(expression)
+                    .unwrap_or_else(|_| panic!("Unable to Parse Regular Expression: {expression}"))
+            })
+            .collect();
+
         Ok(Self {
-            device,
+            devices: regex,
             producers: Mutex::new(vec![]),
 
             buffer_size,
@@ -57,19 +70,50 @@ impl BufferedRecorder {
     }
 
     pub fn listen(&self) {
-        let mut input = get_input(Some(self.device.clone())).unwrap();
+        debug!("Starting Audio Listener..");
+
+        // We need to find a matching input..
+        let mut input: Option<Box<dyn AudioInput>> = None;
+
         while !self.stop.load(Ordering::Relaxed) {
-            if let Ok(samples) = input.read() {
-                if self.buffer_size > 0 {
-                    let mut buffer = self.buffer.lock().unwrap();
-                    for sample in &samples {
-                        buffer.push_back(*sample);
+            if input.is_none() {
+                // Try and locate the matching input device name..
+                if let Some(device) = self.locate_device() {
+                    // Attempt to load the input stream on the device..
+                    if let Ok(found_input) = get_input(Some(device)) {
+                        // We good, reset the loop so we can start work.
+                        input.replace(found_input);
+                        continue;
                     }
                 }
-                for producer in self.producers.lock().unwrap().iter() {
-                    let result = producer.producer.write(&samples);
-                    if result.is_err() {
-                        debug!("Error writing to producer: {:?}", result.err());
+
+                // We don't have a device, and haven't found a device, wait and try again.
+                sleep(Duration::from_millis(500));
+                continue;
+            } else {
+                // Read the latest samples from the input..
+                match input.as_mut().unwrap().read() {
+                    Ok(samples) => {
+                        if self.buffer_size > 0 {
+                            let mut buffer = self.buffer.lock().unwrap();
+                            for sample in &samples {
+                                buffer.push_back(*sample);
+                            }
+                        }
+                        for producer in self.producers.lock().unwrap().iter() {
+                            let result = producer.producer.write(&samples);
+                            if result.is_err() {
+                                debug!("Error writing to producer: {:?}", result.err());
+                            }
+                        }
+                    }
+                    Err(error) => {
+                        // Something has gone wrong, we need to shut down, drop the input, and
+                        // being again. Hopefully we can pick it back up!
+                        warn!("Error Reading audio input: {}", error);
+                        debug!("Shutting down input, and clearing buffer.");
+                        input = None;
+                        self.buffer.lock().unwrap().clear();
                     }
                 }
             }
@@ -197,6 +241,21 @@ impl BufferedRecorder {
         }
 
         Ok(false)
+    }
+
+    fn locate_device(&self) -> Option<String> {
+        let device_list = get_audio_inputs();
+
+        let device = device_list
+            .iter()
+            .find(|output| self.devices.iter().any(|pattern| pattern.is_match(output)))
+            .cloned();
+
+        if let Some(device) = &device {
+            debug!("Found Device: {}", device);
+            return Some(device.clone());
+        }
+        None
     }
 }
 

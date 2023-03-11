@@ -54,6 +54,12 @@ impl PulseAudioInput {
             Some(&pulse_buffer_attributes),
         );
 
+        // At this point, we do have to somewhat hope that the correct device has been
+        // picked up, as there's no easy way in PA_SIMPLE to verify, or note when a device
+        // gets changed.
+
+        // At the very least, PA will drop the stream if the device is no longer present, so we
+        // have that going for us, which is nice.
         match pulse {
             Ok(pulse_simple) => Ok(Box::new(PulseAudioInput {
                 buffer: [0; 1024],
