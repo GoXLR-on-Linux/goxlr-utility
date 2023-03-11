@@ -12,14 +12,15 @@ use crate::microphone::apply_microphone_controls;
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use cli::Cli;
-use goxlr_ipc::client::Client;
-use goxlr_ipc::ipc_socket::Socket;
+use goxlr_ipc::clients::ipc::ipc_client::IPCClient;
+use goxlr_ipc::clients::ipc::ipc_socket::Socket;
 use goxlr_ipc::GoXLRCommand;
 use goxlr_ipc::{DaemonRequest, DaemonResponse, DeviceType, MixerStatus, UsbProductInformation};
 use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice};
 use interprocess::local_socket::tokio::LocalSocketStream;
 use interprocess::local_socket::NameTypeSupport;
 use strum::IntoEnumIterator;
+use goxlr_ipc::client::Client;
 
 static SOCKET_PATH: &str = "/tmp/goxlr.socket";
 static NAMED_PIPE: &str = "@goxlr.socket";
@@ -27,6 +28,8 @@ static NAMED_PIPE: &str = "@goxlr.socket";
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli: Cli = Cli::parse();
+
+    let mut client: Box<dyn Client>;
 
     let connection = LocalSocketStream::connect(match NameTypeSupport::query() {
         NameTypeSupport::OnlyPaths | NameTypeSupport::Both => SOCKET_PATH,
@@ -36,7 +39,7 @@ async fn main() -> Result<()> {
     .context("Unable to connect to the GoXLR daemon Process")?;
 
     let socket: Socket<DaemonResponse, DaemonRequest> = Socket::new(connection);
-    let mut client = Client::new(socket);
+    client = Box::new(IPCClient::new(socket));
     client.poll_status().await?;
     client.poll_http_status().await?;
 

@@ -1,9 +1,10 @@
 use json_patch::Patch;
 use serde::{Deserialize, Serialize};
 
+pub mod clients;
 pub mod client;
 mod device;
-pub mod ipc_socket;
+
 
 pub use device::*;
 use goxlr_types::{

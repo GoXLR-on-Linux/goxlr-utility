@@ -1,70 +1,13 @@
-use crate::ipc_socket::Socket;
-use crate::{DaemonRequest, DaemonResponse, DaemonStatus, GoXLRCommand, HttpSettings};
-use anyhow::{anyhow, Context, Result};
+use anyhow::Result;
+use async_trait::async_trait;
+use crate::{DaemonRequest, DaemonStatus, GoXLRCommand, HttpSettings};
 
-#[derive(Debug)]
-pub struct Client {
-    socket: Socket<DaemonResponse, DaemonRequest>,
-    status: DaemonStatus,
-    http_settings: HttpSettings,
-}
-
-impl Client {
-    pub fn new(socket: Socket<DaemonResponse, DaemonRequest>) -> Self {
-        Self {
-            socket,
-            status: DaemonStatus::default(),
-            http_settings: Default::default(),
-        }
-    }
-
-    pub async fn send(&mut self, request: DaemonRequest) -> Result<()> {
-        self.socket
-            .send(request)
-            .await
-            .context("Failed to send a command to the GoXLR daemon process")?;
-        let result = self
-            .socket
-            .read()
-            .await
-            .context("Failed to retrieve the command result from the GoXLR daemon process")?
-            .context("Failed to parse the command result from the GoXLR daemon process")?;
-
-        match result {
-            DaemonResponse::HttpState(state) => {
-                self.http_settings = state;
-                Ok(())
-            }
-            DaemonResponse::Status(status) => {
-                self.status = status;
-                Ok(())
-            }
-            DaemonResponse::Ok => Ok(()),
-            DaemonResponse::Error(error) => Err(anyhow!("{}", error)),
-            DaemonResponse::Patch(_patch) => {
-                Err(anyhow!("Received Patch as response, shouldn't happen!"))
-            }
-        }
-    }
-
-    pub async fn poll_status(&mut self) -> Result<()> {
-        self.send(DaemonRequest::GetStatus).await
-    }
-
-    pub async fn poll_http_status(&mut self) -> Result<()> {
-        self.send(DaemonRequest::GetHttpState).await
-    }
-
-    pub async fn command(&mut self, serial: &str, command: GoXLRCommand) -> Result<()> {
-        self.send(DaemonRequest::Command(serial.to_string(), command))
-            .await
-    }
-
-    pub fn status(&self) -> &DaemonStatus {
-        &self.status
-    }
-
-    pub fn http_status(&self) -> &HttpSettings {
-        &self.http_settings
-    }
+#[async_trait]
+pub trait Client {
+    async fn send(&mut self, request: DaemonRequest) -> Result<()>;
+    async fn poll_status(&mut self) -> Result<()>;
+    async fn poll_http_status(&mut self) -> Result<()>;
+    async fn command(&mut self, serial: &str, command: GoXLRCommand) -> Result<()>;
+    fn status(&self) -> &DaemonStatus;
+    fn http_status(&self) -> &HttpSettings;
 }

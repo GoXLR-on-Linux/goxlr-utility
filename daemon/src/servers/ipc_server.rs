@@ -7,7 +7,7 @@ use std::path::Path;
 
 use NameTypeSupport::*;
 
-use goxlr_ipc::ipc_socket::Socket;
+use goxlr_ipc::clients::ipc::ipc_socket::Socket;
 use goxlr_ipc::{DaemonRequest, DaemonResponse, HttpSettings};
 
 use crate::primary_worker::DeviceSender;

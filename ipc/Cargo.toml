@@ -23,6 +23,7 @@ strum = { version = "0.24.1" }
 enumset = {version = "1.0.12", features=["serde"] }
 enum-map = { version = "2.4.2", features=["serde"] }
 anyhow = "1.0.68"
+async-trait = "0.1.64"
 
 # Used to handle 'Patch' events..
 json-patch = "0.3.0"
