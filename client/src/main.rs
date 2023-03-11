@@ -21,6 +21,7 @@ use interprocess::local_socket::tokio::LocalSocketStream;
 use interprocess::local_socket::NameTypeSupport;
 use strum::IntoEnumIterator;
 use goxlr_ipc::client::Client;
+use goxlr_ipc::clients::web::web_client::WebClient;
 
 static SOCKET_PATH: &str = "/tmp/goxlr.socket";
 static NAMED_PIPE: &str = "@goxlr.socket";
@@ -31,15 +32,20 @@ async fn main() -> Result<()> {
 
     let mut client: Box<dyn Client>;
 
-    let connection = LocalSocketStream::connect(match NameTypeSupport::query() {
-        NameTypeSupport::OnlyPaths | NameTypeSupport::Both => SOCKET_PATH,
-        NameTypeSupport::OnlyNamespaced => NAMED_PIPE,
-    })
-    .await
-    .context("Unable to connect to the GoXLR daemon Process")?;
+    if let Some(url) = cli.use_http {
+        client = Box::new(WebClient::new(format!("{}/api/command", url)));
+    } else {
+        let connection = LocalSocketStream::connect(match NameTypeSupport::query() {
+            NameTypeSupport::OnlyPaths | NameTypeSupport::Both => SOCKET_PATH,
+            NameTypeSupport::OnlyNamespaced => NAMED_PIPE,
+        })
+            .await
+            .context("Unable to connect to the GoXLR daemon Process")?;
 
-    let socket: Socket<DaemonResponse, DaemonRequest> = Socket::new(connection);
-    client = Box::new(IPCClient::new(socket));
+        let socket: Socket<DaemonResponse, DaemonRequest> = Socket::new(connection);
+        client = Box::new(IPCClient::new(socket));
+    }
+
     client.poll_status().await?;
     client.poll_http_status().await?;
 

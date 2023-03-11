@@ -30,6 +30,10 @@ pub struct Cli {
     #[arg(long)]
     pub status_http: bool,
 
+    /// Use HTTP Instead of IPC. Specify base path as the param (defaults to http://localhost:14564)
+    #[arg(long, num_args=0..=1, default_missing_value="http://localhost:14564")]
+    pub use_http: Option<String>,
+
     #[command(flatten, next_help_heading = "Microphone controls")]
     pub microphone_controls: MicrophoneControls,
 
