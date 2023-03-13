@@ -1,7 +1,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::env;
-use std::ffi::CString;
 use anyhow::{bail, Result};
 use std::path::PathBuf;
 
@@ -11,7 +9,6 @@ use goxlr_ipc::clients::ipc::ipc_socket::Socket;
 use goxlr_ipc::{DaemonRequest, DaemonResponse};
 use interprocess::local_socket::tokio::LocalSocketStream;
 use interprocess::local_socket::NameTypeSupport;
-use nix::unistd::execve;
 use sysinfo::{ProcessRefreshKind, RefreshKind, System, SystemExt};
 use which::which;
 
@@ -40,6 +37,10 @@ async fn get_connection() -> std::io::Result<LocalSocketStream> {
 
 #[cfg(unix)]
 fn launch_daemon() -> Result<()> {
+    use nix::unistd::execve;
+    use std::env;
+    use std::ffi::CString;
+
     if let Some(path) = locate_daemon_binary() {
         // Use execve to replace this process with the daemon..
         let c_path = CString::new(path.to_string_lossy().as_bytes())?;
