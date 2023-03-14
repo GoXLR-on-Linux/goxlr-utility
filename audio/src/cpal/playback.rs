@@ -1,5 +1,5 @@
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::{anyhow, bail};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use rb::*;
 use std::time::Duration;
@@ -7,6 +7,10 @@ use symphonia::core::audio::SignalSpec;
 
 use crate::audio::AudioOutput;
 use log::{debug, error};
+
+// Create a 200ms Buffer Size for playback, this should be short enough to ensure there aren't
+// any obvious delays when playing samples.
+const BUFFER_SIZE: usize = 200;
 
 pub struct CpalAudioOutput;
 
@@ -82,32 +86,33 @@ impl CpalAudioOutputImpl {
             buffer_size: cpal::BufferSize::Default,
         };
 
-        // Create a ring buffer with a capacity for up-to 200ms of audio.
-        let ring_len = ((200 * spec.rate as usize) / 1000) * num_channels;
+        // Build the ring buffer based on the buffer size
+        let ring_len = ((BUFFER_SIZE * spec.rate as usize) / 1000) * num_channels;
         let ring_buf = SpscRb::<f32>::new(ring_len);
         let (ring_buf_producer, ring_buf_consumer) = (ring_buf.producer(), ring_buf.consumer());
 
         let stream_result = device.build_output_stream(
             &config,
             move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
-                // Write out as many samples as possible from the ring buffer to the audio output.
+                // Read from the ring buffer, and write them to the data array
                 let written = ring_buf_consumer.read(data).unwrap_or(0);
 
-                // Mute any remaining samples.
+                // Data expects a certain number of samples, if we didn't get enough from above,
+                // mute anything afterwards as we're probably EoS
                 data[written..].iter_mut().for_each(|s| *s = 0.0);
             },
             move |_| error!("Audio Output Error.."),
         );
 
         if stream_result.is_err() {
-            return Err(anyhow!("Unable to open Stream: {:?}", stream_result.err()));
+            bail!("Unable to open Stream: {:?}", stream_result.err());
         }
 
         let stream = stream_result.unwrap();
 
         // Start the output stream.
-        if stream.play().is_err() {
-            return Err(anyhow!("Unable to begin Playback"));
+        if let Err(error) = stream.play() {
+            bail!("Unable to begin playback: {}", error);
         }
 
         Ok(Box::new(CpalAudioOutputImpl {

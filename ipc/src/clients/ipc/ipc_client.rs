@@ -1,9 +1,8 @@
+use crate::client::Client;
 use crate::clients::ipc::ipc_socket::Socket;
 use crate::{DaemonRequest, DaemonResponse, DaemonStatus, GoXLRCommand, HttpSettings};
 use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
-use crate::client::Client;
-
 
 #[derive(Debug)]
 pub struct IPCClient {

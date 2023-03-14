@@ -1,7 +1,7 @@
+use crate::client::Client;
+use crate::{DaemonRequest, DaemonResponse, DaemonStatus, GoXLRCommand, HttpSettings};
 use anyhow::bail;
 use async_trait::async_trait;
-use crate::{DaemonRequest, DaemonResponse, DaemonStatus, GoXLRCommand, HttpSettings};
-use crate::client::Client;
 
 #[derive(Debug)]
 pub struct WebClient {

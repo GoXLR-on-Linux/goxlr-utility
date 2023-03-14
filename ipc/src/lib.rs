@@ -1,10 +1,9 @@
 use json_patch::Patch;
 use serde::{Deserialize, Serialize};
 
-pub mod clients;
 pub mod client;
+pub mod clients;
 mod device;
-
 
 pub use device::*;
 use goxlr_types::{

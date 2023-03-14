@@ -1,6 +1,6 @@
+use crate::{DaemonRequest, DaemonStatus, GoXLRCommand, HttpSettings};
 use anyhow::Result;
 use async_trait::async_trait;
-use crate::{DaemonRequest, DaemonStatus, GoXLRCommand, HttpSettings};
 
 #[async_trait]
 pub trait Client {
