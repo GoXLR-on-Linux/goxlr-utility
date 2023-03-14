@@ -15,7 +15,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo check
 
-  test:
+  test_linux:
     name: Test Suite
     runs-on: ubuntu-latest
     steps:
@@ -23,6 +23,22 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install libpulse0 libdbus-1-dev pkg-config
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test
+
+  test_windows:
+    name: Test Suite
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test
+
+  test_macos:
+    name: Test Suite
+    runs-on: macos-latest
+    steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test
