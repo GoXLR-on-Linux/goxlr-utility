@@ -84,11 +84,6 @@ fn launch_daemon() -> Result<()> {
     bail!("Unable to Locate GoXLR Daemon Binary");
 }
 
-#[cfg(not(any(windows, target_os = "linux")))]
-fn launch_daemon() -> Result<()> {
-    Ok(())
-}
-
 async fn open_ui() -> Result<()> {
     // We kinda have to hope for the best here..
     let mut usable_connection = None;
