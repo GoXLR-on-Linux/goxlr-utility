@@ -341,8 +341,9 @@ impl HardTuneEffect {
     }
 }
 
-#[derive(Debug, EnumIter, EnumProperty, Clone, Copy)]
+#[derive(Default, Debug, EnumIter, EnumProperty, Clone, Copy)]
 pub enum HardTuneStyle {
+    #[default]
     #[strum(props(uiIndex = "0"))]
     Natural,
 
@@ -353,14 +354,9 @@ pub enum HardTuneStyle {
     Hard,
 }
 
-impl Default for HardTuneStyle {
-    fn default() -> Self {
-        Natural
-    }
-}
-
-#[derive(Debug, Display, EnumString, PartialEq, Eq, Copy, Clone)]
+#[derive(Default, Debug, Display, EnumString, PartialEq, Eq, Copy, Clone)]
 pub enum HardTuneSource {
+    #[default]
     #[strum(to_string = "ALL")]
     All,
 
@@ -375,12 +371,6 @@ pub enum HardTuneSource {
 
     #[strum(to_string = "SYSTEM")]
     System,
-}
-
-impl Default for HardTuneSource {
-    fn default() -> Self {
-        All
-    }
 }
 
 struct HardtunePreset {

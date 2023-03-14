@@ -449,8 +449,9 @@ impl EchoEncoder {
     }
 }
 
-#[derive(Debug, EnumIter, Enum, EnumProperty, Eq, PartialEq, Clone, Copy)]
+#[derive(Default, Debug, EnumIter, Enum, EnumProperty, Eq, PartialEq, Clone, Copy)]
 pub enum EchoStyle {
+    #[default]
     #[strum(props(uiIndex = "0"))]
     #[strum(to_string = "QUARTER")]
     Quarter,
@@ -474,12 +475,6 @@ pub enum EchoStyle {
     #[strum(props(uiIndex = "5"))]
     #[strum(to_string = "MULTI_TAP")]
     MultiTap,
-}
-
-impl Default for EchoStyle {
-    fn default() -> Self {
-        EchoStyle::Quarter
-    }
 }
 
 struct EchoPreset {

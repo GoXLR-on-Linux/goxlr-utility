@@ -492,8 +492,9 @@ impl ReverbEncoder {
     }
 }
 
-#[derive(Debug, EnumIter, Enum, EnumProperty, Copy, Clone)]
+#[derive(Default, Debug, EnumIter, Enum, EnumProperty, Copy, Clone)]
 pub enum ReverbStyle {
+    #[default]
     #[strum(props(uiIndex = "0"))]
     Library,
 
@@ -511,12 +512,6 @@ pub enum ReverbStyle {
 
     #[strum(props(uiIndex = "5"))]
     HockeyArena,
-}
-
-impl Default for ReverbStyle {
-    fn default() -> Self {
-        Library
-    }
 }
 
 struct ReverbPreset {

@@ -481,8 +481,9 @@ impl RobotEffect {
     }
 }
 
-#[derive(Debug, EnumIter, EnumProperty, Copy, Clone)]
+#[derive(Default, Debug, EnumIter, EnumProperty, Copy, Clone)]
 pub enum RobotStyle {
+    #[default]
     #[strum(props(uiIndex = "0"))]
     Robot1,
 
@@ -491,12 +492,6 @@ pub enum RobotStyle {
 
     #[strum(props(uiIndex = "2"))]
     Robot3,
-}
-
-impl Default for RobotStyle {
-    fn default() -> Self {
-        Robot1
-    }
 }
 
 struct RobotPresets {

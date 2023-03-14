@@ -364,15 +364,10 @@ pub struct UsbProductInformation {
     pub identifier: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum DeviceType {
+    #[default]
     Unknown,
     Full,
     Mini,
-}
-
-impl Default for DeviceType {
-    fn default() -> Self {
-        DeviceType::Unknown
-    }
 }
