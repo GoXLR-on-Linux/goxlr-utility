@@ -120,6 +120,7 @@ impl AudioHandler {
         patterns
     }
 
+    #[allow(dead_code)]
     fn get_output_device_string_patterns(&self) -> Vec<String> {
         let patterns = vec![
             String::from("goxlr_sample"),
