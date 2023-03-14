@@ -1,7 +1,6 @@
 use anyhow::Result;
 
 use std::sync::atomic::Ordering;
-use std::thread;
 use tao::event_loop::{ControlFlow, EventLoop};
 use tao::platform::run_return::EventLoopExtRunReturn;
 
@@ -25,6 +24,7 @@ use tao::platform::macos::{ActivationPolicy, EventLoopExtMacOS};
 
 cfg_if! {
     if #[cfg(windows)] {
+        use std::thread;
         use win_win::{WindowBuilder, WindowClass, WindowProc};
         use winapi::um::winuser::{ShowWindow, SW_HIDE};
         use std::ptr::null_mut;
