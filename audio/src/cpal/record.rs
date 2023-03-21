@@ -1,7 +1,11 @@
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use log::{debug, error};
 use rb::{Consumer, RbConsumer, RbProducer, SpscRb, RB};
+use std::rc::Rc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::time::Duration;
 
 use crate::audio::AudioInput;
 pub struct CpalAudioInput;
@@ -65,6 +69,7 @@ impl CpalAudioInput {
 struct CpalAudioInputImpl {
     ring_buf_consumer: Consumer<f32>,
     stream: cpal::Stream,
+    stream_closed: Arc<AtomicBool>,
 
     // Use a shared read buffer..
     read_buffer: [f32; BUFFER_SIZE],
@@ -84,6 +89,8 @@ impl CpalAudioInputImpl {
         // Prepare the Read Buffer, grab the producer and consumer..
         let ring_buf = SpscRb::<f32>::new(BUFFER_SIZE);
         let (ring_buf_producer, ring_buf_consumer) = (ring_buf.producer(), ring_buf.consumer());
+        let stream_closed = Arc::new(AtomicBool::new(false));
+        let stream_closed_inner = stream_closed.clone();
 
         let stream_result = device.build_input_stream(
             &config,
@@ -93,7 +100,11 @@ impl CpalAudioInputImpl {
                     debug!("{}", samples);
                 }
             },
-            move |_| error!("Audio Input Error.."),
+            move |_| {
+                // Instruct anything that attempts to read that this stream is gone.
+                stream_closed_inner.store(true, Ordering::Relaxed);
+                error!("Audio Input Error from CPAL")
+            },
         );
 
         if stream_result.is_err() {
@@ -111,16 +122,27 @@ impl CpalAudioInputImpl {
             read_buffer: [0.0; BUFFER_SIZE],
             ring_buf_consumer,
             stream,
+            stream_closed,
         }))
     }
 }
 
 impl AudioInput for CpalAudioInputImpl {
     fn read(&mut self) -> Result<Vec<f32>> {
-        // Do a blocking read on the samples,
-        if let Some(samples) = self.ring_buf_consumer.read_blocking(&mut self.read_buffer) {
-            return Ok(Vec::from(&self.read_buffer[0..samples]));
+        if self.stream_closed.load(Ordering::Relaxed) {
+            bail!("Audio Stream has been closed.");
         }
+
+        // We've put a timeout on this, because if CPAL suddenly stops sending packets due to an
+        // error, a read can block forever. 250ms should be sufficient!
+        let read = self
+            .ring_buf_consumer
+            .read_blocking_timeout(&mut self.read_buffer, Duration::from_millis(250));
+
+        if let Ok(Some(samples)) = read {
+            return Ok(Vec::from(&self.read_buffer[0..samples]));
+        };
+
         Ok(vec![])
     }
 
