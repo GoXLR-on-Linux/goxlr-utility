@@ -3,8 +3,9 @@ use crate::cpal::cpal_config::CpalConfiguration;
 use anyhow::{bail, Result};
 use cpal::traits::{DeviceTrait, StreamTrait};
 use cpal::Stream;
-use log::warn;
+use log::{debug, warn};
 use rb::{Producer, RbConsumer, RbInspector, RbProducer, SpscRb, RB};
+use rubato::{FftFixedIn, Resampler};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
@@ -19,6 +20,16 @@ pub(crate) struct CpalPlayback {
 
     buffer: SpscRb<f32>,
     buffer_producer: Producer<f32>,
+
+    // Resampler Related Variables..
+    resampler: Option<CpalResampler>,
+}
+
+struct CpalResampler {
+    resampler: FftFixedIn<f32>,
+    input: Vec<Vec<f32>>,
+    output: Vec<Vec<f32>>,
+    interleaved: Vec<f32>,
 }
 
 impl OpenOutputStream for CpalPlayback {
@@ -37,6 +48,11 @@ impl OpenOutputStream for CpalPlayback {
                 buffer_size: cpal::BufferSize::Default,
             }
         };
+
+        // Before we go any further, is the channel count of the audio correct?
+        if spec.spec.channels.count() != 2 {
+            bail!("Only stereo audio is supported");
+        }
 
         // Calculate the buffer size based on the sample count in BUFFER_SIZE milliseconds..
         let size = (BUFFER_SIZE * config.sample_rate.0 as usize) / 1000;
@@ -69,12 +85,44 @@ impl OpenOutputStream for CpalPlayback {
         )?;
         stream.play()?;
 
+        // Do we need to resample?
+        let resampler = if spec.spec.rate != config.sample_rate.0 {
+            debug!(
+                "Creating Resampler from {} to {}",
+                spec.spec.rate, config.sample_rate.0
+            );
+
+            // Create a resampler..
+            let resampler = FftFixedIn::<f32>::new(
+                spec.spec.rate as usize,
+                config.sample_rate.0 as usize,
+                spec.buffer,
+                2,
+                spec.spec.channels.count(),
+            )?;
+
+            // Allocate the Input and Output Buffers..
+            let input = vec![vec![0_f32; spec.buffer]; spec.spec.channels.count()];
+            let output = Resampler::output_buffer_allocate(&resampler);
+
+            Some(CpalResampler {
+                resampler,
+                input,
+                output,
+                interleaved: vec![],
+            })
+        } else {
+            None
+        };
+
         Ok(Box::new(Self {
             stream,
             stream_closed,
 
             buffer,
             buffer_producer,
+
+            resampler,
         }))
     }
 }
@@ -90,10 +138,64 @@ impl AudioOutput for CpalPlayback {
             return Ok(());
         }
 
+        let mut buffered_samples;
+        let out_samples = if let Some(resampler) = &mut self.resampler {
+            // If we're in a position where we've not received enough samples (generally caused by
+            // premature termination of the stream / fade out), fill out the sample buffer with
+            // silent samples to complete the expected buffer size.
+            let required_samples = resampler.input[0].capacity() * resampler.input.len();
+            let samples = if samples.len() < required_samples {
+                buffered_samples = Vec::from(samples);
+                buffered_samples.resize(required_samples, 0_f32);
+                buffered_samples.as_slice()
+            } else {
+                samples
+            };
+
+            // So, first problem we run into here, is that our samples are already
+            // interleaved, and our resampler expects them to not be, so lets split them.
+            resampler.input[0] = samples.iter().step_by(2).copied().collect();
+            resampler.input[1] = samples.iter().skip(1).step_by(2).copied().collect();
+
+            // Attempt to perform the resample
+            let result = resampler.resampler.process_into_buffer(
+                &resampler.input,
+                &mut resampler.output,
+                None,
+            );
+
+            match result {
+                Ok(_) => {
+                    // We need to re-interleave the results, channels * channel length
+                    let channels = resampler.output.len();
+
+                    let length = channels * resampler.output[0].len();
+                    resampler.interleaved.resize(length, 0_f32);
+
+                    // Iterate over each frame, and replace the samples
+                    for (i, frame) in resampler.interleaved.chunks_exact_mut(channels).enumerate() {
+                        for (channel, sample) in frame.iter_mut().enumerate() {
+                            *sample = resampler.output[channel][i];
+                        }
+                    }
+
+                    // Send back the result as a slice
+                    resampler.interleaved.as_slice()
+                }
+                Err(err) => {
+                    debug!("Resampling Failed: {}, falling back", err);
+                    samples
+                }
+            }
+        } else {
+            // No resampler needed, send back the samples
+            samples
+        };
+
         let mut position = 0;
         while let Some(written) = self
             .buffer_producer
-            .write_blocking(samples.split_at(position).1)
+            .write_blocking(out_samples.split_at(position).1)
         {
             position += written;
         }
