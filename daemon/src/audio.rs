@@ -1,7 +1,7 @@
 use anyhow::{anyhow, bail, Result};
 use enum_map::EnumMap;
-use goxlr_audio::buffered_recorder::BufferedRecorder;
 use goxlr_audio::player::{Player, PlayerState};
+use goxlr_audio::recorder::BufferedRecorder;
 use goxlr_audio::recorder::RecorderState;
 use goxlr_types::SampleBank;
 use goxlr_types::SampleButtons;
