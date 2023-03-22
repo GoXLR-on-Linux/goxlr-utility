@@ -170,7 +170,9 @@ impl AudioOutput for CpalPlayback {
                     let channels = resampler.output.len();
 
                     let length = channels * resampler.output[0].len();
-                    resampler.interleaved.resize(length, 0_f32);
+                    if resampler.interleaved.len() != length {
+                        resampler.interleaved.resize(length, 0_f32);
+                    }
 
                     // Iterate over each frame, and replace the samples
                     for (i, frame) in resampler.interleaved.chunks_exact_mut(channels).enumerate() {
