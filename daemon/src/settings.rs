@@ -170,6 +170,19 @@ impl SettingsHandle {
         vec![]
     }
 
+    pub async fn set_device_shutdown_commands(
+        &self,
+        device_serial: &str,
+        commands: Vec<GoXLRCommand>,
+    ) {
+        let mut settings = self.settings.write().await;
+        let entry = settings
+            .devices
+            .entry(device_serial.to_owned())
+            .or_insert_with(DeviceSettings::default);
+        entry.shutdown_commands = commands.to_owned();
+    }
+
     pub async fn set_device_profile_name(&self, device_serial: &str, profile_name: &str) {
         let mut settings = self.settings.write().await;
         let entry = settings

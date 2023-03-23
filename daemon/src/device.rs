@@ -143,10 +143,7 @@ impl<'a> Device<'a> {
             volumes[channel] = self.profile.get_channel_volume(channel);
         }
 
-        let shutdown_commands = block_on(
-            self.settings
-                .get_device_shutdown_commands(self.hardware.serial_number.as_str()),
-        );
+        let shutdown_commands = block_on(self.settings.get_device_shutdown_commands(self.serial()));
 
         MixerStatus {
             hardware: self.hardware.clone(),
@@ -1124,6 +1121,12 @@ impl<'a> Device<'a> {
 
     pub async fn perform_command(&mut self, command: GoXLRCommand) -> Result<()> {
         match command {
+            GoXLRCommand::SetShutdownCommands(commands) => {
+                self.settings
+                    .set_device_shutdown_commands(self.serial(), commands)
+                    .await;
+            }
+
             GoXLRCommand::SetFader(fader, channel) => {
                 self.set_fader(fader, channel).await?;
             }
