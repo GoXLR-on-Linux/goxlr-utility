@@ -297,6 +297,7 @@ pub struct HardTune {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Sampler {
+    pub record_buffer: u16,
     pub banks: HashMap<SampleBank, HashMap<SampleButtons, SamplerButton>>,
 }
 

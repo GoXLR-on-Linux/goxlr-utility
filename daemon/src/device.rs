@@ -146,6 +146,8 @@ impl<'a> Device<'a> {
         }
 
         let shutdown_commands = block_on(self.settings.get_device_shutdown_commands(self.serial()));
+        let sampler_prerecord =
+            block_on(self.settings.get_device_sampler_pre_buffer(self.serial()));
 
         MixerStatus {
             hardware: self.hardware.clone(),
@@ -175,6 +177,7 @@ impl<'a> Device<'a> {
             sampler: self.profile.get_sampler_ipc(
                 self.hardware.device_type == DeviceType::Mini,
                 &self.audio_handler,
+                sampler_prerecord,
             ),
             settings: Settings {
                 display: Display {
@@ -1127,11 +1130,13 @@ impl<'a> Device<'a> {
                 self.settings
                     .set_device_shutdown_commands(self.serial(), commands)
                     .await;
+                self.settings.save().await;
             }
             GoXLRCommand::SetSamplerPreBufferDuration(duration) => {
                 self.settings
                     .set_device_sampler_pre_buffer(self.serial(), duration)
                     .await;
+                self.settings.save().await;
             }
 
             GoXLRCommand::SetFader(fader, channel) => {

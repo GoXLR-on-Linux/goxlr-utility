@@ -681,6 +681,7 @@ impl ProfileAdapter {
         &self,
         is_device_mini: bool,
         audio_handler: &Option<AudioHandler>,
+        sampler_prerecord: u16,
     ) -> Option<Sampler> {
         if is_device_mini {
             return None;
@@ -728,7 +729,10 @@ impl ProfileAdapter {
             sampler_map.insert(bank, buttons);
         }
 
-        Some(Sampler { banks: sampler_map })
+        Some(Sampler {
+            record_buffer: sampler_prerecord,
+            banks: sampler_map,
+        })
     }
 
     pub fn get_scribble_ipc(&self, fader: FaderName, is_mini: bool) -> Option<Scribble> {
