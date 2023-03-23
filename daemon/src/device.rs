@@ -143,8 +143,14 @@ impl<'a> Device<'a> {
             volumes[channel] = self.profile.get_channel_volume(channel);
         }
 
+        let shutdown_commands = block_on(
+            self.settings
+                .get_device_shutdown_commands(self.hardware.serial_number.as_str()),
+        );
+
         MixerStatus {
             hardware: self.hardware.clone(),
+            shutdown_commands,
             fader_status: fader_map,
             cough_button: self.profile.get_cough_status(),
             levels: Levels {

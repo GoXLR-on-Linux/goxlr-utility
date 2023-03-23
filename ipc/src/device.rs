@@ -1,3 +1,4 @@
+use crate::GoXLRCommand;
 use enum_map::EnumMap;
 use goxlr_types::MuteState::Unmuted;
 use goxlr_types::{
@@ -38,6 +39,7 @@ pub struct DaemonConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MixerStatus {
     pub hardware: HardwareStatus,
+    pub shutdown_commands: Vec<GoXLRCommand>,
     pub fader_status: EnumMap<FaderName, FaderStatus>,
     pub mic_status: MicSettings,
     pub levels: Levels,
