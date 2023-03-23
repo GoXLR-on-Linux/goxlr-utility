@@ -11,7 +11,10 @@ mod cpal;
 
 pub fn get_audio_outputs() -> Vec<String> {
     #[cfg(target_os = "linux")]
-    {}
+    {
+        use crate::pulse::pulse_config::PulseAudioConfiguration;
+        PulseAudioConfiguration::get_outputs()
+    }
 
     #[cfg(not(target_os = "linux"))]
     {
@@ -22,7 +25,10 @@ pub fn get_audio_outputs() -> Vec<String> {
 
 pub fn get_audio_inputs() -> Vec<String> {
     #[cfg(target_os = "linux")]
-    {}
+    {
+        use crate::pulse::pulse_config::PulseAudioConfiguration;
+        PulseAudioConfiguration::get_inputs()
+    }
 
     #[cfg(not(target_os = "linux"))]
     {

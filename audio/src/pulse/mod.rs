@@ -1,3 +1,3 @@
-pub(crate) mod configuration;
-pub(crate) mod playback;
-pub(crate) mod record;
+pub(crate) mod pulse_config;
+pub(crate) mod pulse_playback;
+pub(crate) mod pulse_record;

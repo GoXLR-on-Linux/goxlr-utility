@@ -26,17 +26,13 @@ pub struct AudioSpecification {
 }
 
 #[cfg(target_os = "linux")]
-pub(crate) fn get_output(
-    signal_spec: SignalSpec,
-    device: Option<String>,
-) -> Result<Box<dyn AudioOutput>> {
-    crate::pulse::playback::PulseAudioOutput::open(signal_spec, device)
+pub(crate) fn get_output(spec: AudioSpecification) -> Result<Box<dyn AudioOutput>> {
+    crate::pulse::pulse_playback::PulsePlayback::open(spec)
 }
 
 #[cfg(target_os = "linux")]
-pub(crate) fn get_input(device: Option<String>) -> Result<Box<dyn AudioInput>> {
-    // I have no idea why IntelliJ throws an error for the next line, it's fine!
-    crate::pulse::record::PulseAudioInput::open(device)
+pub(crate) fn get_input(spec: AudioSpecification) -> Result<Box<dyn AudioInput>> {
+    crate::pulse::pulse_record::PulseRecord::open(spec)
 }
 
 #[cfg(not(target_os = "linux"))]

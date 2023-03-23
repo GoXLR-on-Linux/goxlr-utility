@@ -1,22 +1,22 @@
-use crate::audio::AudioInput;
+use crate::audio::{AudioInput, AudioSpecification};
 use anyhow::{anyhow, Result};
 use libpulse_binding::def::BufferAttr;
 use libpulse_binding::sample::{Format, Spec};
 use libpulse_binding::stream::Direction;
 use libpulse_simple_binding::Simple;
 
-pub struct PulseAudioInput {
+pub struct PulseRecord {
     pulse_simple: Simple,
     buffer: [u8; 1024],
 }
 
-impl PulseAudioInput {
-    pub fn open(device: Option<String>) -> Result<Box<dyn AudioInput>> {
+impl PulseRecord {
+    pub fn open(spec: AudioSpecification) -> Result<Box<dyn AudioInput>> {
         // We know the spec of the input stream..
         let pulse_spec = Spec {
             format: Format::F32le,
-            channels: 2,
-            rate: 48000,
+            channels: spec.spec.channels.count() as u8,
+            rate: spec.spec.rate,
         };
 
         if !pulse_spec.is_valid() {
@@ -25,7 +25,7 @@ impl PulseAudioInput {
         }
 
         let device_string;
-        let device_str = match device {
+        let device_str = match spec.device {
             None => None,
             Some(value) => {
                 device_string = value;
@@ -61,7 +61,7 @@ impl PulseAudioInput {
         // At the very least, PA will drop the stream if the device is no longer present, so we
         // have that going for us, which is nice.
         match pulse {
-            Ok(pulse_simple) => Ok(Box::new(PulseAudioInput {
+            Ok(pulse_simple) => Ok(Box::new(PulseRecord {
                 buffer: [0; 1024],
                 pulse_simple,
             })),
@@ -70,7 +70,7 @@ impl PulseAudioInput {
     }
 }
 
-impl AudioInput for PulseAudioInput {
+impl AudioInput for PulseRecord {
     fn read(&mut self) -> Result<Vec<f32>> {
         self.pulse_simple.read(&mut self.buffer)?;
 
