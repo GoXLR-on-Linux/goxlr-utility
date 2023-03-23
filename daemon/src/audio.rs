@@ -87,7 +87,7 @@ impl AudioRecordingState {
 }
 
 impl AudioHandler {
-    pub fn new() -> Result<Self> {
+    pub fn new(recorder_buffer: u16) -> Result<Self> {
         // Find the Input Device..
         let mut handler = Self {
             output_device: None,
@@ -99,7 +99,10 @@ impl AudioHandler {
         };
 
         // Immediately initialise the recorder, and let it try to handle stuff.
-        let recorder = BufferedRecorder::new(handler.get_input_device_string_patterns(), 0)?;
+        let recorder = BufferedRecorder::new(
+            handler.get_input_device_string_patterns(),
+            recorder_buffer as usize,
+        )?;
         let arc_recorder = Arc::new(recorder);
         let inner_recorder = arc_recorder.clone();
         handler.buffered_input.replace(arc_recorder);

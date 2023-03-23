@@ -83,7 +83,9 @@ impl<'a> Device<'a> {
         let mic_profile =
             MicProfileAdapter::from_named_or_default(mic_profile, mic_profile_directory);
 
-        let audio_loader = AudioHandler::new();
+        let audio_buffer =
+            block_on(settings_handle.get_device_sampler_pre_buffer(&hardware.serial_number));
+        let audio_loader = AudioHandler::new(audio_buffer);
         debug!("Created Audio Handler..");
         debug!("{:?}", audio_loader);
 
@@ -1124,6 +1126,11 @@ impl<'a> Device<'a> {
             GoXLRCommand::SetShutdownCommands(commands) => {
                 self.settings
                     .set_device_shutdown_commands(self.serial(), commands)
+                    .await;
+            }
+            GoXLRCommand::SetSamplerPreBufferDuration(duration) => {
+                self.settings
+                    .set_device_sampler_pre_buffer(self.serial(), duration)
                     .await;
             }
 

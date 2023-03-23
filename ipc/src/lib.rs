@@ -63,6 +63,7 @@ pub enum PathTypes {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum GoXLRCommand {
     SetShutdownCommands(Vec<GoXLRCommand>),
+    SetSamplerPreBufferDuration(u16),
 
     SetFader(FaderName, ChannelName),
     SetFaderMuteFunction(FaderName, MuteFunction),

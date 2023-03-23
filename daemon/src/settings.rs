@@ -130,6 +130,31 @@ impl SettingsHandle {
             .map(|d| d.mic_profile.clone())
     }
 
+    pub async fn get_device_shutdown_commands(&self, device_serial: &str) -> Vec<GoXLRCommand> {
+        let settings = self.settings.read().await;
+        let value = settings
+            .devices
+            .get(device_serial)
+            .map(|d| d.shutdown_commands.clone());
+
+        if let Some(value) = value {
+            return value;
+        }
+        vec![]
+    }
+
+    pub async fn get_device_sampler_pre_buffer(&self, device_serial: &str) -> u16 {
+        let settings = self.settings.read().await;
+        let value = settings
+            .devices
+            .get(device_serial)
+            .map(|d| d.sampler_pre_buffer.unwrap_or(0));
+        if let Some(value) = value {
+            return value;
+        }
+        0
+    }
+
     pub async fn get_device_hold_time(&self, device_serial: &str) -> u16 {
         let settings = self.settings.read().await;
         let value = settings
@@ -157,32 +182,6 @@ impl SettingsHandle {
         true
     }
 
-    pub async fn get_device_shutdown_commands(&self, device_serial: &str) -> Vec<GoXLRCommand> {
-        let settings = self.settings.read().await;
-        let value = settings
-            .devices
-            .get(device_serial)
-            .map(|d| d.shutdown_commands.clone());
-
-        if let Some(value) = value {
-            return value;
-        }
-        vec![]
-    }
-
-    pub async fn set_device_shutdown_commands(
-        &self,
-        device_serial: &str,
-        commands: Vec<GoXLRCommand>,
-    ) {
-        let mut settings = self.settings.write().await;
-        let entry = settings
-            .devices
-            .entry(device_serial.to_owned())
-            .or_insert_with(DeviceSettings::default);
-        entry.shutdown_commands = commands.to_owned();
-    }
-
     pub async fn set_device_profile_name(&self, device_serial: &str, profile_name: &str) {
         let mut settings = self.settings.write().await;
         let entry = settings
@@ -199,6 +198,28 @@ impl SettingsHandle {
             .entry(device_serial.to_owned())
             .or_insert_with(DeviceSettings::default);
         entry.mic_profile = mic_profile_name.to_owned();
+    }
+
+    pub async fn set_device_shutdown_commands(
+        &self,
+        device_serial: &str,
+        commands: Vec<GoXLRCommand>,
+    ) {
+        let mut settings = self.settings.write().await;
+        let entry = settings
+            .devices
+            .entry(device_serial.to_owned())
+            .or_insert_with(DeviceSettings::default);
+        entry.shutdown_commands = commands.to_owned();
+    }
+
+    pub async fn set_device_sampler_pre_buffer(&self, device_serial: &str, duration: u16) {
+        let mut settings = self.settings.write().await;
+        let entry = settings
+            .devices
+            .entry(device_serial.to_owned())
+            .or_insert_with(DeviceSettings::default);
+        entry.sampler_pre_buffer = Some(duration);
     }
 
     pub async fn set_device_mute_hold_duration(&self, device_serial: &str, duration: u16) {
@@ -277,6 +298,8 @@ struct DeviceSettings {
 
     hold_delay: Option<u16>,
 
+    sampler_pre_buffer: Option<u16>,
+
     // 'Voice Chat Mute All Also Mutes Mic to Chat Mic' O_O
     chat_mute_mutes_mic_to_chat: Option<bool>,
 
@@ -291,6 +314,7 @@ impl Default for DeviceSettings {
             mic_profile: DEFAULT_MIC_PROFILE_NAME.to_owned(),
 
             hold_delay: Some(500),
+            sampler_pre_buffer: None,
             chat_mute_mutes_mic_to_chat: Some(true),
 
             shutdown_commands: vec![],
