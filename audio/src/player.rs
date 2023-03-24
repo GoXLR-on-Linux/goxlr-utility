@@ -267,6 +267,11 @@ impl Player {
                             if self.force_stop.load(Ordering::Relaxed) {
                                 // Don't care about the buffer, just end it.
                                 debug!("Force Stop Requested, terminating.");
+
+                                if let Some(audio_output) = &mut audio_output {
+                                    audio_output.stop();
+                                }
+
                                 break Ok(());
                             }
 
@@ -315,8 +320,9 @@ impl Player {
                 Err(err) => break Err(err),
             }
         };
-        if let Some(mut audio_output) = audio_output {
-            if !break_playback {
+        if !self.force_stop.load(Ordering::Relaxed) {
+            if let Some(mut audio_output) = audio_output {
+                // We should always flush the last samples, unless forced to stop
                 audio_output.flush();
             }
         }

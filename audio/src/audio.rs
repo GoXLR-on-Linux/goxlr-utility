@@ -12,6 +12,7 @@ pub trait OpenInputStream {
 pub trait AudioOutput {
     fn write(&mut self, samples: &[f32]) -> Result<()>;
     fn flush(&mut self);
+    fn stop(&mut self);
 }
 
 pub trait AudioInput {

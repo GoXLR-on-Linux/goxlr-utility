@@ -79,4 +79,6 @@ impl AudioOutput for PulsePlayback {
     fn flush(&mut self) {
         let _ = self.pulse_simple.drain();
     }
+
+    fn stop(&mut self) {}
 }

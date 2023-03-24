@@ -15,7 +15,7 @@ use std::time::Duration;
 const BUFFER_SIZE: usize = 200;
 
 pub(crate) struct CpalPlayback {
-    stream: Stream,
+    stream: Option<Stream>,
     stream_closed: Arc<AtomicBool>,
 
     buffer: SpscRb<f32>,
@@ -116,7 +116,7 @@ impl OpenOutputStream for CpalPlayback {
         };
 
         Ok(Box::new(Self {
-            stream,
+            stream: Some(stream),
             stream_closed,
 
             buffer,
@@ -218,6 +218,14 @@ impl AudioOutput for CpalPlayback {
             std::thread::sleep(Duration::from_millis(5));
         }
 
-        let _ = self.stream.pause();
+        if let Some(stream) = &self.stream {
+            let _ = stream.pause();
+        }
+    }
+
+    fn stop(&mut self) {
+        // We're going to take the stream and drop it, this should stop playback immediately.
+        self.stream_closed.store(true, Ordering::Relaxed);
+        self.stream.take();
     }
 }
