@@ -32,14 +32,21 @@ impl CpalConfiguration {
                                     "Checking Device: {}",
                                     x.name().unwrap_or("UNKNOWN".to_string())
                                 );
-                                if CpalConfiguration::device_is_input(x) && !input {
-                                    debug!("This device is Input, looking for Output");
-                                    return false;
+                                let is_input = CpalConfiguration::device_is_input(x);
+                                let is_output = CpalConfiguration::device_is_output(x);
+
+                                // Only do checks if this device isn't an input AND output
+                                if !is_input || !is_output {
+                                    if is_input && !input {
+                                        debug!("This device is Input, looking for Output");
+                                        return false;
+                                    }
+                                    if is_output && input {
+                                        debug!("This device is Output, looking for Input");
+                                        return false;
+                                    }
                                 }
-                                if CpalConfiguration::device_is_output(x) && input {
-                                    debug!("This device is Output, looking for Input");
-                                    return false;
-                                }
+
                                 if x.name().unwrap_or_else(|_| "UNKNOWN".to_string()) == str_device
                                 {
                                     debug!("Device Found");
