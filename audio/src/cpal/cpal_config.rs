@@ -1,6 +1,7 @@
 use anyhow::{bail, Result};
 use cpal::traits::{DeviceTrait, HostTrait};
 use cpal::Device;
+use log::{debug, info};
 
 pub struct CpalConfiguration {}
 
@@ -10,6 +11,7 @@ impl CpalConfiguration {
 
         // Basically, if *ANYTHING* goes wrong here, we'll fall through to default.
         if let Some(device_name) = device {
+            debug!("Looking for Device: {}", device_name.clone());
             if let Some(position) = device_name.find('*') {
                 let str_host = &device_name[0..position];
                 let str_device = &device_name[position + 1..device_name.len()];
@@ -39,8 +41,13 @@ impl CpalConfiguration {
         }
 
         if let Some(device) = cpal_device {
+            info!(
+                "Sampler device found: {}",
+                device.name().unwrap_or_else(|_| String::from("UNKNOWN"))
+            );
             Ok(device)
         } else {
+            info!("Sampler Device not Found");
             let host = cpal::default_host();
             let default_device = if input {
                 host.default_input_device()
