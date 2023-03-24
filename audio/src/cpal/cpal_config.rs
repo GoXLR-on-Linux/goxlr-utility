@@ -11,31 +11,53 @@ impl CpalConfiguration {
 
         // Basically, if *ANYTHING* goes wrong here, we'll fall through to default.
         if let Some(device_name) = device {
-            debug!("Looking for Device: {}", device_name.clone());
+            debug!("Looking for Device: {}", device_name);
             if let Some(position) = device_name.find('*') {
                 let str_host = &device_name[0..position];
                 let str_device = &device_name[position + 1..device_name.len()];
+
+                debug!("Split: {} {}", str_host, str_device);
 
                 // Ok, now for cpal, find the correct host..
                 let cpal_host_list = cpal::available_hosts();
                 let host_id = cpal_host_list.iter().find(|x| x.name() == str_host);
 
                 if let Some(host_id) = host_id {
+                    debug!("Host {} found, checking devices", host_id.name());
                     if let Ok(host) = cpal::host_from_id(*host_id) {
+                        debug!("Found Host..");
                         if let Ok(mut devices) = host.devices() {
                             if let Some(device) = devices.find(|x| {
+                                debug!(
+                                    "Checking Device: {}",
+                                    x.name().unwrap_or("UNKNOWN".to_string())
+                                );
                                 if CpalConfiguration::device_is_input(x) && !input {
+                                    debug!("This device is Input, looking for Output");
                                     return false;
                                 }
                                 if CpalConfiguration::device_is_output(x) && input {
+                                    debug!("This device is Output, looking for Input");
                                     return false;
                                 }
-                                x.name().unwrap_or_else(|_| "UNKNOWN".to_string()) == str_device
+                                if x.name().unwrap_or_else(|_| "UNKNOWN".to_string()) == str_device
+                                {
+                                    debug!("Device Found");
+                                    return true;
+                                }
+                                debug!("Not the Device we are looking for!");
+                                false
                             }) {
                                 cpal_device = Some(device)
                             }
+                        } else {
+                            debug!("Audio Devices not found");
                         }
+                    } else {
+                        debug!("Audio Host not Found");
                     }
+                } else {
+                    debug!("Audio Host ID Not Found");
                 }
             }
         }
