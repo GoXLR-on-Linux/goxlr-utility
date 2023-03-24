@@ -318,11 +318,16 @@ impl AudioHandler {
                     return Ok(());
                 }
 
+                // TODO: Tidy this!
                 if force {
                     playback_state
                         .state
                         .force_stop
                         .store(true, Ordering::Relaxed);
+                    playback_state.state.stopping.store(true, Ordering::Relaxed);
+                    playback_state.wait();
+                    self.active_streams[bank][button] = None;
+                    return Ok(());
                 }
 
                 // We're not currently in a stopping state, trigger it.
