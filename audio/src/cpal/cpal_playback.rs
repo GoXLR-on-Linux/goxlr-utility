@@ -10,9 +10,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
-// Create a 200ms Buffer Size for playback, this should be short enough to ensure there aren't
+// Create a 50ms Buffer Size for playback, this should be short enough to ensure there aren't
 // any obvious delays when playing samples.
-const BUFFER_SIZE: usize = 200;
+const BUFFER_SIZE: usize = 50;
 
 pub(crate) struct CpalPlayback {
     stream: Option<Stream>,
@@ -45,7 +45,7 @@ impl OpenOutputStream for CpalPlayback {
             cpal::StreamConfig {
                 channels: spec.spec.channels.count() as cpal::ChannelCount,
                 sample_rate: cpal::SampleRate(spec.spec.rate),
-                buffer_size: cpal::BufferSize::Default,
+                buffer_size: cpal::BufferSize::Fixed(64),
             }
         };
 
