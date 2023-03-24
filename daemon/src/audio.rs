@@ -291,7 +291,12 @@ impl AudioHandler {
         Ok(())
     }
 
-    pub async fn stop_playback(&mut self, bank: SampleBank, button: SampleButtons) -> Result<()> {
+    pub async fn stop_playback(
+        &mut self,
+        bank: SampleBank,
+        button: SampleButtons,
+        force: bool,
+    ) -> Result<()> {
         if let Some(player) = &mut self.active_streams[bank][button] {
             if player.stream_type == StreamType::Recording {
                 // TODO: We can proably use this..
@@ -311,6 +316,13 @@ impl AudioHandler {
                     playback_state.wait();
                     self.active_streams[bank][button] = None;
                     return Ok(());
+                }
+
+                if force {
+                    playback_state
+                        .state
+                        .force_stop
+                        .store(true, Ordering::Relaxed);
                 }
 
                 // We're not currently in a stopping state, trigger it.

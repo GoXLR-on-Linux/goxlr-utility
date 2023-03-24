@@ -792,7 +792,9 @@ impl<'a> Device<'a> {
                     && !audio_handler.is_sample_stopping(sample_bank, button)
                 {
                     // Sample is playing, we need to stop it.
-                    audio_handler.stop_playback(sample_bank, button).await?;
+                    audio_handler
+                        .stop_playback(sample_bank, button, false)
+                        .await?;
                     Ok(())
                 } else {
                     // Play the next file.
@@ -862,7 +864,7 @@ impl<'a> Device<'a> {
                 self.audio_handler
                     .as_mut()
                     .unwrap()
-                    .stop_playback(sample_bank, button)
+                    .stop_playback(sample_bank, button, false)
                     .await?;
                 return Ok(());
             }
@@ -885,7 +887,7 @@ impl<'a> Device<'a> {
         audio.file = sample_path;
 
         if let Some(audio_handler) = &mut self.audio_handler {
-            audio_handler.stop_playback(bank, button).await?;
+            audio_handler.stop_playback(bank, button, true).await?;
 
             let result = audio_handler
                 .play_for_button(bank, button, audio, loop_track)
@@ -906,7 +908,7 @@ impl<'a> Device<'a> {
         button: SampleButtons,
     ) -> Result<()> {
         if let Some(audio_handler) = &mut self.audio_handler {
-            audio_handler.stop_playback(bank, button).await?;
+            audio_handler.stop_playback(bank, button, false).await?;
         }
 
         Ok(())
