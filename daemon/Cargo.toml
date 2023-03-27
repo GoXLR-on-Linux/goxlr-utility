@@ -115,7 +115,7 @@ depends = "$auto"
 extended-description = """\
 A utility for monitoring and controlling a TC-Helicon GoXLR or GoXLR Mini.
 """
-revision = "2"
+revision = "1"
 
 ## cargo generate-rpm support..
 [package.metadata.generate-rpm]
@@ -149,7 +149,7 @@ udevadm control --reload-rules
 udevadm trigger
 """
 
-release = "2"
+release = "1"
 
 # Because we build under Ubuntu in CI, generate-rpm is unable to calculate the dependencies required (no access
 # to rpm / yum), so we need to disable the auto and specify dependencies manually.
