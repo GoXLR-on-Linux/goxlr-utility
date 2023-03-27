@@ -70,7 +70,7 @@ impl Mixers {
                 }
 
                 if !found {
-                    println!("Unable to find Channel: {}", channel);
+                    println!("Unable to find Channel: {channel}");
                 }
                 continue;
             }

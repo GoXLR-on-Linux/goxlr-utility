@@ -83,7 +83,9 @@ impl<'a> Device<'a> {
         let mic_profile =
             MicProfileAdapter::from_named_or_default(mic_profile, mic_profile_directory);
 
-        let audio_loader = AudioHandler::new();
+        let audio_buffer =
+            block_on(settings_handle.get_device_sampler_pre_buffer(&hardware.serial_number));
+        let audio_loader = AudioHandler::new(audio_buffer);
         debug!("Created Audio Handler..");
         debug!("{:?}", audio_loader);
 
@@ -143,8 +145,13 @@ impl<'a> Device<'a> {
             volumes[channel] = self.profile.get_channel_volume(channel);
         }
 
+        let shutdown_commands = block_on(self.settings.get_device_shutdown_commands(self.serial()));
+        let sampler_prerecord =
+            block_on(self.settings.get_device_sampler_pre_buffer(self.serial()));
+
         MixerStatus {
             hardware: self.hardware.clone(),
+            shutdown_commands,
             fader_status: fader_map,
             cough_button: self.profile.get_cough_status(),
             levels: Levels {
@@ -170,6 +177,7 @@ impl<'a> Device<'a> {
             sampler: self.profile.get_sampler_ipc(
                 self.hardware.device_type == DeviceType::Mini,
                 &self.audio_handler,
+                sampler_prerecord,
             ),
             settings: Settings {
                 display: Display {
@@ -184,6 +192,22 @@ impl<'a> Device<'a> {
             button_down: button_states,
             profile_name: self.profile.name().to_owned(),
             mic_profile_name: self.mic_profile.name().to_owned(),
+        }
+    }
+
+    pub async fn shutdown(&mut self) {
+        debug!("Shutting Down Device: {}", self.hardware.serial_number);
+
+        let commands = self
+            .settings
+            .get_device_shutdown_commands(&self.hardware.serial_number)
+            .await;
+
+        for command in commands {
+            debug!("{:?}", command);
+
+            // These could fail, but fuck it, we gotta do it..
+            let _ = self.perform_command(command).await;
         }
     }
 
@@ -734,7 +758,7 @@ impl<'a> Device<'a> {
 
         if !self.profile.current_sample_bank_has_samples(button) {
             let file_date = Local::now().format("%Y-%m-%dT%H%M%S").to_string();
-            let full_name = format!("Recording_{}.wav", file_date);
+            let full_name = format!("Recording_{file_date}.wav");
 
             self.record_audio_file(button, full_name).await?;
             return Ok(());
@@ -768,7 +792,9 @@ impl<'a> Device<'a> {
                     && !audio_handler.is_sample_stopping(sample_bank, button)
                 {
                     // Sample is playing, we need to stop it.
-                    audio_handler.stop_playback(sample_bank, button).await?;
+                    audio_handler
+                        .stop_playback(sample_bank, button, false)
+                        .await?;
                     Ok(())
                 } else {
                     // Play the next file.
@@ -838,7 +864,7 @@ impl<'a> Device<'a> {
                 self.audio_handler
                     .as_mut()
                     .unwrap()
-                    .stop_playback(sample_bank, button)
+                    .stop_playback(sample_bank, button, false)
                     .await?;
                 return Ok(());
             }
@@ -861,7 +887,7 @@ impl<'a> Device<'a> {
         audio.file = sample_path;
 
         if let Some(audio_handler) = &mut self.audio_handler {
-            audio_handler.stop_playback(bank, button).await?;
+            audio_handler.stop_playback(bank, button, true).await?;
 
             let result = audio_handler
                 .play_for_button(bank, button, audio, loop_track)
@@ -882,7 +908,7 @@ impl<'a> Device<'a> {
         button: SampleButtons,
     ) -> Result<()> {
         if let Some(audio_handler) = &mut self.audio_handler {
-            audio_handler.stop_playback(bank, button).await?;
+            audio_handler.stop_playback(bank, button, false).await?;
         }
 
         Ok(())
@@ -1102,6 +1128,19 @@ impl<'a> Device<'a> {
 
     pub async fn perform_command(&mut self, command: GoXLRCommand) -> Result<()> {
         match command {
+            GoXLRCommand::SetShutdownCommands(commands) => {
+                self.settings
+                    .set_device_shutdown_commands(self.serial(), commands)
+                    .await;
+                self.settings.save().await;
+            }
+            GoXLRCommand::SetSamplerPreBufferDuration(duration) => {
+                self.settings
+                    .set_device_sampler_pre_buffer(self.serial(), duration)
+                    .await;
+                self.settings.save().await;
+            }
+
             GoXLRCommand::SetFader(fader, channel) => {
                 self.set_fader(fader, channel).await?;
             }
@@ -1822,8 +1861,10 @@ impl<'a> Device<'a> {
                 self.settings.save().await;
             }
             GoXLRCommand::LoadProfileColours(profile_name) => {
+                debug!("Loading Colours For Profile: {}", profile_name);
                 let profile_directory = self.settings.get_profile_directory().await;
                 let profile = ProfileAdapter::from_named(profile_name, &profile_directory)?;
+                debug!("Profile Loaded, Applying Colours..");
                 self.profile.load_colour_profile(profile);
                 self.load_colour_map()?;
                 self.update_button_states()?;

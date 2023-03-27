@@ -1,21 +1,22 @@
-use crate::audio::AudioOutput;
+use crate::audio::{AudioOutput, AudioSpecification};
 use anyhow::{anyhow, Result};
 use libpulse_binding::def::BufferAttr;
 use libpulse_binding::sample::{Format, Spec};
 use libpulse_binding::stream::Direction;
 use libpulse_simple_binding::Simple;
-use symphonia::core::audio::SignalSpec;
+use std::thread;
+use std::time::Duration;
 
-pub struct PulseAudioOutput {
+pub struct PulsePlayback {
     pulse_simple: Simple,
 }
 
-impl PulseAudioOutput {
-    pub fn open(audio_spec: SignalSpec, device: Option<String>) -> Result<Box<dyn AudioOutput>> {
+impl PulsePlayback {
+    pub fn open(spec: AudioSpecification) -> Result<Box<dyn AudioOutput>> {
         let pulse_spec = Spec {
             format: Format::FLOAT32NE,
-            channels: audio_spec.channels.count() as u8,
-            rate: audio_spec.rate,
+            channels: spec.spec.channels.count() as u8,
+            rate: spec.spec.rate,
         };
 
         if !pulse_spec.is_valid() {
@@ -24,7 +25,7 @@ impl PulseAudioOutput {
         }
 
         let device_string;
-        let device_str = match device {
+        let device_str = match spec.device {
             None => None,
             Some(value) => {
                 device_string = value;
@@ -44,7 +45,7 @@ impl PulseAudioOutput {
         // Create the Connection (Use Pulse Simple for this, because, well, it's simple!)
         let pulse = Simple::new(
             None,
-            "Audio Player",
+            "GoXLR Utility",
             Direction::Playback,
             device_str,
             "Media",
@@ -54,13 +55,16 @@ impl PulseAudioOutput {
         );
 
         match pulse {
-            Ok(pulse_simple) => Ok(Box::new(PulseAudioOutput { pulse_simple })),
+            Ok(pulse_simple) => {
+                thread::sleep(Duration::from_millis(75));
+                Ok(Box::new(PulsePlayback { pulse_simple }))
+            }
             Err(_) => Err(anyhow!("Unable to Connect to Pulse")),
         }
     }
 }
 
-impl AudioOutput for PulseAudioOutput {
+impl AudioOutput for PulsePlayback {
     fn write(&mut self, samples: &[f32]) -> Result<()> {
         let mut buffer = vec![];
 
@@ -75,4 +79,6 @@ impl AudioOutput for PulseAudioOutput {
     fn flush(&mut self) {
         let _ = self.pulse_simple.drain();
     }
+
+    fn stop(&mut self) {}
 }

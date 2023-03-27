@@ -162,7 +162,7 @@ impl PitchEncoderBase {
         if let Some(inst_ratio) = value.inst_ratio {
             attributes.insert(
                 "PITCH_SHIFT_INST_RATIO".to_string(),
-                format!("{}", inst_ratio),
+                format!("{inst_ratio}"),
             );
         }
 
@@ -351,17 +351,12 @@ impl PitchEncoder {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, EnumIter, Enum, EnumProperty, Copy, Clone)]
+#[derive(Default, Debug, PartialEq, Eq, EnumIter, Enum, EnumProperty, Copy, Clone)]
 pub enum PitchStyle {
+    #[default]
     #[strum(props(uiIndex = "0"))]
     Narrow,
 
     #[strum(props(uiIndex = "1"))]
     Wide,
-}
-
-impl Default for PitchStyle {
-    fn default() -> Self {
-        PitchStyle::Narrow
-    }
 }

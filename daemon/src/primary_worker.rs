@@ -37,9 +37,12 @@ pub enum DeviceCommand {
 pub type DeviceSender = mpsc::Sender<DeviceCommand>;
 pub type DeviceReceiver = mpsc::Receiver<DeviceCommand>;
 
+// Fix this later..
+#[allow(clippy::too_many_arguments)]
 pub async fn spawn_usb_handler(
     mut command_rx: DeviceReceiver,
     mut file_rx: Receiver<PathTypes>,
+    mut device_stop_rx: Receiver<()>,
     broadcast_tx: BroadcastSender<PatchEvent>,
     global_tx: Sender<EventTriggers>,
     mut shutdown: Shutdown,
@@ -66,6 +69,8 @@ pub async fn spawn_usb_handler(
 
     let mut files = get_files(&mut file_manager).await;
     let mut daemon_status = get_daemon_status(&devices, &settings, files.clone()).await;
+
+    let mut shutdown_triggered = false;
 
     loop {
         let mut change_found = false;
@@ -131,6 +136,21 @@ pub async fn spawn_usb_handler(
                     warn!("Cannot find registered device with serial: {}", &serial);
                 }
             }
+            _ = device_stop_rx.recv() => {
+                // Make sure this only happens once..
+                if shutdown_triggered {
+                    continue;
+                }
+                shutdown_triggered = true;
+
+                // Flip through all the devices, send a shutdown signal..
+                for device in devices.values_mut() {
+                    device.shutdown().await;
+                }
+
+                // Send a notification that we're done here..
+                let _ = global_tx.send(EventTriggers::DevicesStopped).await;
+            }
             () = shutdown.recv() => {
                 info!("Shutting down device worker");
                 return;
@@ -167,7 +187,7 @@ pub async fn spawn_usb_handler(
                                 let _ = sender.send(DaemonResponse::Ok);
                             },
                             Err(e) => {
-                                let _ = sender.send(DaemonResponse::Error(format!("Error Extracting Defaults: {}", e)));
+                                let _ = sender.send(DaemonResponse::Error(format!("Error Extracting Defaults: {e}")));
                             }
                         }
                     }
@@ -179,7 +199,7 @@ pub async fn spawn_usb_handler(
                                 change_found = true;
                             }
                             Err(e) => {
-                                let _ = sender.send(DaemonResponse::Error(format!("Unable to Set AutoStart: {}", e)));
+                                let _ = sender.send(DaemonResponse::Error(format!("Unable to Set AutoStart: {e}")));
                             }
                         }
                     }
@@ -376,7 +396,7 @@ async fn load_device(
     if serial_number.is_empty() {
         let mut serial = String::from("");
         for i in 0..=24 {
-            serial = format!("UNKNOWN-SN-{}", i);
+            serial = format!("UNKNOWN-SN-{i}");
             if !existing_serials.contains(&serial) {
                 break;
             }

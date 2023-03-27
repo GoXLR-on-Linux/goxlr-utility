@@ -1,3 +1,3 @@
-pub(crate) mod configuration;
-pub(crate) mod playback;
-pub(crate) mod record;
+pub(crate) mod cpal_config;
+pub(crate) mod cpal_playback;
+pub(crate) mod cpal_record;

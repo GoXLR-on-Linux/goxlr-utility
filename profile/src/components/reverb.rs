@@ -361,8 +361,8 @@ impl ReverbEncoder {
     }
     pub fn set_decay_millis(&mut self, milliseconds: u16) -> Result<()> {
         // We're going to handle the conversion here directly..
-        if milliseconds > 20000 {
-            return Err(anyhow!("Decay should be below 20000 milliseconds"));
+        if !(10..=20000).contains(&milliseconds) {
+            return Err(anyhow!("Decay should be between 10 and 20000 milliseconds"));
         }
 
         // For everything below 1000ms, the division is ms / 10..
@@ -492,8 +492,9 @@ impl ReverbEncoder {
     }
 }
 
-#[derive(Debug, EnumIter, Enum, EnumProperty, Copy, Clone)]
+#[derive(Default, Debug, EnumIter, Enum, EnumProperty, Copy, Clone)]
 pub enum ReverbStyle {
+    #[default]
     #[strum(props(uiIndex = "0"))]
     Library,
 
@@ -511,12 +512,6 @@ pub enum ReverbStyle {
 
     #[strum(props(uiIndex = "5"))]
     HockeyArena,
-}
-
-impl Default for ReverbStyle {
-    fn default() -> Self {
-        Library
-    }
 }
 
 struct ReverbPreset {

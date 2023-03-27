@@ -98,7 +98,7 @@ impl MicProfileSettings {
                         continue;
                     }
 
-                    println!("Unhandled Tag: {}", name);
+                    println!("Unhandled Tag: {name}");
                 }
 
                 Ok(Event::Eof) => {

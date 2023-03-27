@@ -55,13 +55,10 @@ impl Profile {
 
         let mut scribbles: [Vec<u8>; 4] = Default::default();
 
-        debug!("Checking for Scribbles..");
         // Load the scribbles if they exist, store them in memory for later fuckery.
         for (i, scribble) in scribbles.iter_mut().enumerate() {
             let filename = format!("scribble{}.png", i + 1);
             if let Ok(mut file) = archive.by_name(filename.as_str()) {
-                debug!("Reading Scribble: {}", filename);
-
                 *scribble = vec![0; file.size() as usize];
                 file.read_exact(scribble)?;
             }

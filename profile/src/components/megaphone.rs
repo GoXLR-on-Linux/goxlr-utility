@@ -463,8 +463,9 @@ impl MegaphoneEffect {
     }
 }
 
-#[derive(Debug, EnumIter, EnumProperty, Copy, Clone)]
+#[derive(Default, Debug, EnumIter, EnumProperty, Copy, Clone)]
 pub enum MegaphoneStyle {
+    #[default]
     #[strum(props(uiIndex = "0"))]
     Megaphone,
 
@@ -482,12 +483,6 @@ pub enum MegaphoneStyle {
 
     #[strum(props(uiIndex = "5"))]
     Tweed,
-}
-
-impl Default for MegaphoneStyle {
-    fn default() -> Self {
-        Megaphone
-    }
 }
 
 struct MegaphonePreset {

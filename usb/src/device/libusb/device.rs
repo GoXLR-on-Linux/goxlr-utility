@@ -158,10 +158,6 @@ impl AttachGoXLR for GoXLRUSB {
         let device = handle.device();
         info!("Connected to possible GoXLR device at {:?}", device);
 
-        debug!(
-            "Set Active Config: {:?}",
-            handle.set_active_configuration(1)
-        );
         let device_is_claimed = handle.claim_interface(0).is_ok();
 
         let mut goxlr = Self {
@@ -213,7 +209,7 @@ impl AttachGoXLR for GoXLRUSB {
             );
 
             // Pause for a second, as we can grab devices a little too quickly!
-            sleep(Duration::from_secs(1));
+            sleep(Duration::from_secs(2));
         }
 
         // Force command pipe activation in all cases.

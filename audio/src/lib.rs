@@ -1,5 +1,3 @@
-use crate::audio::get_configuration;
-
 pub mod player;
 pub mod recorder;
 
@@ -12,9 +10,29 @@ mod pulse;
 mod cpal;
 
 pub fn get_audio_outputs() -> Vec<String> {
-    get_configuration().get_outputs()
+    #[cfg(target_os = "linux")]
+    {
+        use crate::pulse::pulse_config::PulseAudioConfiguration;
+        PulseAudioConfiguration::get_outputs()
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    {
+        use crate::cpal::cpal_config::CpalConfiguration;
+        CpalConfiguration::get_outputs()
+    }
 }
 
 pub fn get_audio_inputs() -> Vec<String> {
-    get_configuration().get_inputs()
+    #[cfg(target_os = "linux")]
+    {
+        use crate::pulse::pulse_config::PulseAudioConfiguration;
+        PulseAudioConfiguration::get_inputs()
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    {
+        use crate::cpal::cpal_config::CpalConfiguration;
+        CpalConfiguration::get_inputs()
+    }
 }

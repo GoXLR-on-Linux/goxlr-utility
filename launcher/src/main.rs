@@ -1,10 +1,11 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 use anyhow::{bail, Result};
 use std::path::PathBuf;
-use std::process::{exit, Command, Stdio};
 
 use goxlr_ipc::client::Client;
-use goxlr_ipc::ipc_socket::Socket;
+use goxlr_ipc::clients::ipc::ipc_client::IPCClient;
+use goxlr_ipc::clients::ipc::ipc_socket::Socket;
 use goxlr_ipc::{DaemonRequest, DaemonResponse};
 use interprocess::local_socket::tokio::LocalSocketStream;
 use interprocess::local_socket::NameTypeSupport;
@@ -34,36 +35,36 @@ async fn get_connection() -> std::io::Result<LocalSocketStream> {
     .await
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(unix)]
 fn launch_daemon() -> Result<()> {
-    use fork::{daemon, Fork};
+    use nix::unistd::execve;
+    use std::env;
+    use std::ffi::CString;
+
     if let Some(path) = locate_daemon_binary() {
-        let mut command = Command::new(&path);
-        command.arg("--start-ui");
-        command.stdin(Stdio::null());
-        command.stdout(Stdio::null());
-        command.stderr(Stdio::null());
+        // Use execve to replace this process with the daemon..
+        let c_path = CString::new(path.to_string_lossy().as_bytes())?;
+        let c_daemon = CString::new(get_daemon_binary_name())?;
+        let c_start_ui = CString::new("--start-ui")?;
 
-        if let Some(parent) = path.parent() {
-            command.current_dir(parent);
+        // TO-CONSIDER: Pass all env::args() through to the daemon?
+        let c_params = vec![c_daemon, c_start_ui];
+
+        // Copy all environment variables for this into the new process..
+        let mut c_env = vec![];
+        for (key, value) in env::vars() {
+            c_env.push(CString::new(format!("{key}={value}"))?);
         }
 
-        match daemon(true, true) {
-            Ok(Fork::Parent(_child)) => {
-                exit(0);
-            }
-            Ok(Fork::Child) => {
-                command.spawn().expect("Failed to Launch Child Process");
-                exit(0);
-            }
-            Err(_) => {}
-        }
+        execve::<CString, CString>(&c_path, c_params.as_slice(), c_env.as_slice())?;
     }
     bail!("Unable to Locate GoXLR Daemon Binary");
 }
 
 #[cfg(windows)]
 fn launch_daemon() -> Result<()> {
+    use std::process::{exit, Command, Stdio};
+
     // Ok, try a simple spawn and exit..
     if let Some(path) = locate_daemon_binary() {
         let mut command = Command::new(&path);
@@ -83,11 +84,6 @@ fn launch_daemon() -> Result<()> {
     bail!("Unable to Locate GoXLR Daemon Binary");
 }
 
-#[cfg(not(any(windows, target_os = "linux")))]
-fn launch_daemon() -> Result<()> {
-    Ok(())
-}
-
 async fn open_ui() -> Result<()> {
     // We kinda have to hope for the best here..
     let mut usable_connection = None;
@@ -98,7 +94,7 @@ async fn open_ui() -> Result<()> {
 
     if let Some(connection) = usable_connection {
         let socket: Socket<DaemonResponse, DaemonRequest> = Socket::new(connection);
-        let mut client = Client::new(socket);
+        let mut client = IPCClient::new(socket);
         client.send(DaemonRequest::OpenUi).await?;
         return Ok(());
     }
@@ -145,7 +141,7 @@ fn locate_daemon_binary() -> Option<PathBuf> {
 
 fn get_daemon_binary_name() -> String {
     if cfg!(windows) {
-        format!("{}.exe", DAEMON_NAME)
+        format!("{DAEMON_NAME}.exe")
     } else {
         String::from(DAEMON_NAME)
     }

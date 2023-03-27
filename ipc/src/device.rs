@@ -1,3 +1,4 @@
+use crate::GoXLRCommand;
 use enum_map::EnumMap;
 use goxlr_types::MuteState::Unmuted;
 use goxlr_types::{
@@ -38,6 +39,7 @@ pub struct DaemonConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MixerStatus {
     pub hardware: HardwareStatus,
+    pub shutdown_commands: Vec<GoXLRCommand>,
     pub fader_status: EnumMap<FaderName, FaderStatus>,
     pub mic_status: MicSettings,
     pub levels: Levels,
@@ -295,6 +297,7 @@ pub struct HardTune {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Sampler {
+    pub record_buffer: u16,
     pub banks: HashMap<SampleBank, HashMap<SampleButtons, SamplerButton>>,
 }
 
@@ -364,15 +367,10 @@ pub struct UsbProductInformation {
     pub identifier: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum DeviceType {
+    #[default]
     Unknown,
     Full,
     Mini,
-}
-
-impl Default for DeviceType {
-    fn default() -> Self {
-        DeviceType::Unknown
-    }
 }

@@ -1,13 +1,15 @@
 use anyhow::{anyhow, bail, Result};
 use enum_map::EnumMap;
 use goxlr_audio::player::{Player, PlayerState};
-use goxlr_audio::recorder::{Recorder, RecorderState};
+use goxlr_audio::recorder::BufferedRecorder;
+use goxlr_audio::recorder::RecorderState;
 use goxlr_types::SampleBank;
 use goxlr_types::SampleButtons;
 use log::{debug, error, warn};
 use regex::Regex;
 use std::path::PathBuf;
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::thread;
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
@@ -16,7 +18,8 @@ use strum::IntoEnumIterator;
 #[derive(Debug)]
 pub struct AudioHandler {
     output_device: Option<String>,
-    _input_device: Option<String>,
+
+    buffered_input: Option<Arc<BufferedRecorder>>,
 
     last_device_check: Option<Instant>,
     active_streams: EnumMap<SampleBank, EnumMap<SampleButtons, Option<StateManager>>>,
@@ -84,14 +87,29 @@ impl AudioRecordingState {
 }
 
 impl AudioHandler {
-    pub fn new() -> Result<Self> {
-        let handler = Self {
+    pub fn new(recorder_buffer: u16) -> Result<Self> {
+        // Find the Input Device..
+        let mut handler = Self {
             output_device: None,
-            _input_device: None,
+
+            buffered_input: None,
 
             last_device_check: None,
             active_streams: EnumMap::default(),
         };
+
+        // Immediately initialise the recorder, and let it try to handle stuff.
+        let recorder = BufferedRecorder::new(
+            handler.get_input_device_string_patterns(),
+            recorder_buffer as usize,
+        )?;
+        let arc_recorder = Arc::new(recorder);
+        let inner_recorder = arc_recorder.clone();
+        handler.buffered_input.replace(arc_recorder);
+
+        // Fire off the new thread to listen to audio..
+        thread::spawn(move || inner_recorder.listen());
+
         Ok(handler)
     }
 
@@ -105,6 +123,17 @@ impl AudioHandler {
         patterns
     }
 
+    #[allow(dead_code)]
+    fn get_output_device_string_patterns(&self) -> Vec<String> {
+        let patterns = vec![
+            String::from("goxlr_sample"),
+            String::from("GoXLR_0_8_9"),
+            String::from("CoreAudio\\*Sample"),
+            String::from("WASAPI\\*Sample.*"),
+        ];
+        patterns
+    }
+
     fn get_input_device_patterns(&self) -> Vec<Regex> {
         let patterns = vec![
             Regex::new("goxlr_sampler.*source").expect("Invalid Regex in Audio Handler"),
@@ -112,6 +141,17 @@ impl AudioHandler {
             Regex::new("CoreAudio\\*Sampler").expect("Invalid Regex in Audio Handler"),
             Regex::new("WASAPI\\*Sample.*").expect("Invalid Regex in Audio Handler"),
         ];
+        patterns
+    }
+
+    fn get_input_device_string_patterns(&self) -> Vec<String> {
+        let patterns = vec![
+            String::from("goxlr_sampler.*source"),
+            String::from("GoXLR_0_4_5.*source"),
+            String::from("CoreAudio\\*Sampler"),
+            String::from("WASAPI\\*Sample.*"),
+        ];
+
         patterns
     }
 
@@ -151,8 +191,6 @@ impl AudioHandler {
 
         if is_output {
             self.output_device = device;
-        } else {
-            self._input_device = device;
         }
     }
 
@@ -253,7 +291,12 @@ impl AudioHandler {
         Ok(())
     }
 
-    pub async fn stop_playback(&mut self, bank: SampleBank, button: SampleButtons) -> Result<()> {
+    pub async fn stop_playback(
+        &mut self,
+        bank: SampleBank,
+        button: SampleButtons,
+        force: bool,
+    ) -> Result<()> {
         if let Some(player) = &mut self.active_streams[bank][button] {
             if player.stream_type == StreamType::Recording {
                 // TODO: We can proably use this..
@@ -275,6 +318,14 @@ impl AudioHandler {
                     return Ok(());
                 }
 
+                // TODO: Tidy this!
+                if force {
+                    playback_state
+                        .state
+                        .force_stop
+                        .store(true, Ordering::Relaxed);
+                }
+
                 // We're not currently in a stopping state, trigger it.
                 playback_state.state.stopping.store(true, Ordering::Relaxed);
             }
@@ -288,16 +339,17 @@ impl AudioHandler {
         bank: SampleBank,
         button: SampleButtons,
     ) -> Result<()> {
-        if self._input_device.is_none() {
-            self.find_device(false);
-        }
+        if let Some(recorder) = &mut self.buffered_input {
+            let state = RecorderState {
+                stop: Arc::new(AtomicBool::new(false)),
+            };
 
-        if let Some(device) = &self._input_device {
-            let mut recorder = Recorder::new(&path, Some(device.clone()))?;
-            let state = recorder.get_state();
+            let inner_recorder = recorder.clone();
+            let inner_path = path.clone();
+            let inner_state = state.clone();
 
             let handler = thread::spawn(move || {
-                let result = recorder.record();
+                let result = inner_recorder.record(&inner_path, inner_state);
                 if result.is_err() {
                     error!("Error: {}", result.err().unwrap());
                 }

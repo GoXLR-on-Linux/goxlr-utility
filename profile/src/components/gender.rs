@@ -253,8 +253,9 @@ impl GenderEncoder {
     }
 }
 
-#[derive(Debug, EnumIter, Enum, EnumProperty)]
+#[derive(Default, Debug, EnumIter, Enum, EnumProperty)]
 pub enum GenderStyle {
+    #[default]
     #[strum(props(uiIndex = "0"))]
     Narrow,
 
@@ -263,10 +264,4 @@ pub enum GenderStyle {
 
     #[strum(props(uiIndex = "2"))]
     Wide,
-}
-
-impl Default for GenderStyle {
-    fn default() -> Self {
-        GenderStyle::Narrow
-    }
 }

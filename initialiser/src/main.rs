@@ -1,10 +1,14 @@
-use anyhow::{Context, Error};
-use rusb::Direction::{In, Out};
-use rusb::Error::Pipe;
-use rusb::Recipient::Interface;
-use rusb::RequestType::{Class, Vendor};
-use rusb::{Device, DeviceHandle, Direction, GlobalContext, Recipient, RequestType, UsbContext};
-use std::time::Duration;
+cfg_if::cfg_if! {
+    if #[cfg(not(windows))] {
+        use anyhow::{Context, Error};
+        use rusb::Direction::{In, Out};
+        use rusb::Error::Pipe;
+        use rusb::Recipient::Interface;
+        use rusb::RequestType::{Class, Vendor};
+        use rusb::{Device, DeviceHandle, Direction, GlobalContext, Recipient, RequestType, UsbContext};
+        use std::time::Duration;
+    }
+}
 
 pub const VID_GOXLR: u16 = 0x1220;
 pub const PID_GOXLR_MINI: u16 = 0x8fe4;
@@ -49,8 +53,6 @@ fn find_devices() {
                                 "Found GoXLR Device {}, checking state..",
                                 device_address(&device)
                             );
-
-                            let _ = handle.set_active_configuration(1);
 
                             // Send a single vendor command across, see what happens..
                             let request_type = rusb::request_type(Out, Vendor, Interface);

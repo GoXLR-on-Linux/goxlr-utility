@@ -13,7 +13,9 @@ use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use cli::Cli;
 use goxlr_ipc::client::Client;
-use goxlr_ipc::ipc_socket::Socket;
+use goxlr_ipc::clients::ipc::ipc_client::IPCClient;
+use goxlr_ipc::clients::ipc::ipc_socket::Socket;
+use goxlr_ipc::clients::web::web_client::WebClient;
 use goxlr_ipc::GoXLRCommand;
 use goxlr_ipc::{DaemonRequest, DaemonResponse, DeviceType, MixerStatus, UsbProductInformation};
 use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice};
@@ -28,15 +30,22 @@ static NAMED_PIPE: &str = "@goxlr.socket";
 async fn main() -> Result<()> {
     let cli: Cli = Cli::parse();
 
-    let connection = LocalSocketStream::connect(match NameTypeSupport::query() {
-        NameTypeSupport::OnlyPaths | NameTypeSupport::Both => SOCKET_PATH,
-        NameTypeSupport::OnlyNamespaced => NAMED_PIPE,
-    })
-    .await
-    .context("Unable to connect to the GoXLR daemon Process")?;
+    let mut client: Box<dyn Client>;
 
-    let socket: Socket<DaemonResponse, DaemonRequest> = Socket::new(connection);
-    let mut client = Client::new(socket);
+    if let Some(url) = cli.use_http {
+        client = Box::new(WebClient::new(format!("{}/api/command", url)));
+    } else {
+        let connection = LocalSocketStream::connect(match NameTypeSupport::query() {
+            NameTypeSupport::OnlyPaths | NameTypeSupport::Both => SOCKET_PATH,
+            NameTypeSupport::OnlyNamespaced => NAMED_PIPE,
+        })
+        .await
+        .context("Unable to connect to the GoXLR daemon Process")?;
+
+        let socket: Socket<DaemonResponse, DaemonRequest> = Socket::new(connection);
+        client = Box::new(IPCClient::new(socket));
+    }
+
     client.poll_status().await?;
     client.poll_http_status().await?;
 
@@ -986,7 +995,7 @@ fn print_mixer_info(mixer: &MixerStatus) {
 
     for channel in ChannelName::iter() {
         let pct = (mixer.get_channel_volume(channel) as f32 / 255.0) * 100.0;
-        println!("{} volume: {:.0}%", channel, pct);
+        println!("{channel} volume: {pct:.0}%");
     }
 
     for microphone in MicrophoneType::iter() {
@@ -1011,7 +1020,7 @@ fn print_mixer_info(mixer: &MixerStatus) {
     print!(" {}", " ".repeat(max_col_len));
     for input in InputDevice::iter() {
         let col_name = input.to_string();
-        print!(" |{}|", col_name);
+        print!(" |{col_name}|");
         table_width += col_name.len() + 3;
     }
     println!();

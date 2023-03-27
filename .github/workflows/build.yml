@@ -11,66 +11,78 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install libdbus-1-dev pkg-config
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: check
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo check
 
-  test:
-    name: Test Suite
+  test_linux:
+    name: Test Linux Suite
     runs-on: ubuntu-latest
     steps:
       - name: "Install Dependencies.."
         run: |
           sudo apt-get update
           sudo apt-get install libpulse0 libdbus-1-dev pkg-config
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test
+
+  test_windows:
+    name: Test Windows Suite
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test
+
+  test_macos:
+    name: Test MacOS Suite
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test
 
   fmt:
     name: Rustfmt
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - run: rustup component add rustfmt
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+          components: rustfmt
+      - run: cargo fmt --all -- --check
 
-  clippy:
-    name: Clippy
+  clippy_linux:
+    name: Clippy Linux
     runs-on: ubuntu-latest
     steps:
       - name: "Install Dependencies"
         run: |
           sudo apt-get update
           sudo apt-get install libdbus-1-dev pkg-config
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - run: rustup component add clippy
-      - uses: actions-rs/cargo@v1
+          components: clippy
+      - run: cargo clippy --all-targets -- -D warnings
+
+  clippy_macos:
+    name: Clippy MacOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          command: clippy
-          args: -- -D warnings
+          components: clippy
+      - run: cargo clippy --all-targets -- -D warnings
+
+  clippy_windows:
+    name: Clippy Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - run: cargo clippy --all-targets -- -D warnings

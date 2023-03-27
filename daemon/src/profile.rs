@@ -67,7 +67,7 @@ impl ProfileAdapter {
     }
 
     pub fn from_named(name: String, directory: &Path) -> Result<Self> {
-        let path = directory.join(format!("{}.goxlr", name));
+        let path = directory.join(format!("{name}.goxlr"));
         if path.is_file() {
             debug!("Loading Profile From {}", path.to_string_lossy());
             let file = File::open(path).context("Couldn't open profile for reading")?;
@@ -95,12 +95,12 @@ impl ProfileAdapter {
     }
 
     pub fn can_create_new_file(name: String, directory: &Path) -> Result<()> {
-        let path = directory.join(format!("{}.goxlr", name));
+        let path = directory.join(format!("{name}.goxlr"));
         can_create_new_file(path)
     }
 
     pub fn write_profile(&mut self, name: String, directory: &Path, overwrite: bool) -> Result<()> {
-        let path = directory.join(format!("{}.goxlr", name));
+        let path = directory.join(format!("{name}.goxlr"));
         if !overwrite && path.is_file() {
             return Err(anyhow!("Profile exists, will not overwrite"));
         }
@@ -117,13 +117,13 @@ impl ProfileAdapter {
     }
 
     pub fn write_preset(&mut self, name: String, directory: &Path) -> Result<()> {
-        let path = directory.join(format!("{}.preset", name));
+        let path = directory.join(format!("{name}.preset"));
         self.profile.save_preset(path)?;
         Ok(())
     }
 
     pub fn delete_profile(&mut self, name: String, directory: &Path) -> Result<()> {
-        let path = directory.join(format!("{}.goxlr", name));
+        let path = directory.join(format!("{name}.goxlr"));
         if path.is_file() {
             remove_file(path)?;
         }
@@ -148,7 +148,7 @@ impl ProfileAdapter {
 
         // Loop through the provided directories, and try to find the preset..
         for directory in directories {
-            let path = directory.join(format!("{}.preset", name));
+            let path = directory.join(format!("{name}.preset"));
 
             if path.is_file() {
                 debug!("Loading Preset From {}", path.to_string_lossy());
@@ -681,6 +681,7 @@ impl ProfileAdapter {
         &self,
         is_device_mini: bool,
         audio_handler: &Option<AudioHandler>,
+        sampler_prerecord: u16,
     ) -> Option<Sampler> {
         if is_device_mini {
             return None;
@@ -728,7 +729,10 @@ impl ProfileAdapter {
             sampler_map.insert(bank, buttons);
         }
 
-        Some(Sampler { banks: sampler_map })
+        Some(Sampler {
+            record_buffer: sampler_prerecord,
+            banks: sampler_map,
+        })
     }
 
     pub fn get_scribble_ipc(&self, fader: FaderName, is_mini: bool) -> Option<Scribble> {

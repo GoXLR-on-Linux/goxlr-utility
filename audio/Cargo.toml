@@ -1,6 +1,6 @@
 [package]
 name = "goxlr-audio"
-version = "0.8.1"
+version = "0.10.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -22,6 +22,15 @@ anyhow = "1.0.65"
 log = "0.4.17"
 simplelog = "0.12.0"
 
+# A wrapper around VecDeque to enforce length.
+bounded-vec-deque = "0.1.1"
+
+# Ring Buffer is now needed on all platforms.
+rb = "0.4.1"
+
+# Regular Expressions to help with device finding..
+regex = "1.7.1"
+
 # Under Linux, we'll use PulseAudio to output to the GoXLR..
 # We can't find the specific audio channels using CPAL, so will ask Pulse instead.
 [target.'cfg(target_os = "linux")'.dependencies]
@@ -30,5 +39,5 @@ libpulse-simple-binding = "2.5.0"
 
 # Under Other Operating Systems, we'll use CPAL
 [target.'cfg(not(target_os = "linux"))'.dependencies]
-cpal = "0.14.0"
-rb = "0.4.1"
+cpal = "0.15.1"
+rubato = "0.12.0"

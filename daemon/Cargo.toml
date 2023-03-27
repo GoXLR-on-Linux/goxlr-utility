@@ -1,6 +1,6 @@
 [package]
 name = "goxlr-daemon"
-version = "0.9.0"
+version = "0.10.0"
 edition = "2021"
 authors = ["Nathan Adams <dinnerbone@dinnerbone.com>", "Craig McLure <craig@mclure.net>", "Lars Mühlbauer <lm41@dismail.de>"]
 description = "Allows control of a TC-Helicon GoXLR or GoXLR Mini, by maintaining an interaction with it over USB in the background."
@@ -70,6 +70,8 @@ winrt-notification = "0.5.1"
 winreg = "0.10.1"
 mslnk = "0.1.8"
 dunce = "1.0.3"
+win-win = "0.1.1"
+winapi = { version = "0.3.9", features=["winuser"]}
 
 [target.'cfg(target_os = "macos")'.dependencies]
 tao = { version = "0.15.8", features=["tray"] }

@@ -9,15 +9,14 @@ use libpulse_binding::context::{Context, FlagSet, State};
 use libpulse_binding::mainloop::standard::{IterateResult, Mainloop};
 use libpulse_binding::proplist::Proplist;
 
-use crate::audio::AudioConfiguration;
-
-pub struct PulseAudioConfiguration {
+pub(crate) struct PulseAudioConfiguration;
+pub struct PulseRuntime {
     main_loop: Rc<RefCell<Mainloop>>,
     context: Rc<RefCell<Context>>,
 }
 
-impl PulseAudioConfiguration {
-    fn new() -> Self {
+impl PulseRuntime {
+    fn connect() -> Self {
         // Connect to the PulseAudio Server..
         let app_name: &str = env!("CARGO_PKG_NAME");
 
@@ -61,18 +60,32 @@ impl PulseAudioConfiguration {
         }
 
         // At this point, we're connected and ready to go :)
-        Self { main_loop, context }
+        PulseRuntime { main_loop, context }
+    }
+
+    fn disconnect(&self) {
+        self.context.borrow_mut().disconnect();
     }
 }
 
-impl AudioConfiguration for PulseAudioConfiguration {
-    fn get_outputs(&mut self) -> Vec<String> {
+impl Drop for PulseRuntime {
+    fn drop(&mut self) {
+        // We need to disconnect our context before we go out of scope, otherwise we'll
+        // segfault when libpulse tries to drop.
+        self.context.borrow_mut().disconnect();
+    }
+}
+
+impl PulseAudioConfiguration {
+    pub(crate) fn get_outputs() -> Vec<String> {
         let found: Vec<String> = vec![];
         let wrapped = Rc::new(RefCell::new(found));
         let insider = wrapped.clone();
 
+        let pulse = PulseRuntime::connect();
+
         let op = {
-            self.context.borrow_mut().introspect().get_sink_info_list(
+            pulse.context.borrow_mut().introspect().get_sink_info_list(
                 move |sink_list: ListResult<&SinkInfo>| {
                     if let ListResult::Item(item) = sink_list {
                         if let Some(name) = &item.name {
@@ -85,51 +98,47 @@ impl AudioConfiguration for PulseAudioConfiguration {
 
         // Block here until the above closure has completed..
         while op.get_state() == pulse::operation::State::Running {
-            self.main_loop.borrow_mut().iterate(true);
+            pulse.main_loop.borrow_mut().iterate(true);
         }
 
+        pulse.disconnect();
         let unwrapped = wrapped.deref().borrow().clone();
         unwrapped
     }
 
-    fn get_inputs(&mut self) -> Vec<String> {
+    pub(crate) fn get_inputs() -> Vec<String> {
+        let pulse = PulseRuntime::connect();
+
         // Basically identical to the above, except getting the Sources..
         let found: Vec<String> = vec![];
         let wrapped = Rc::new(RefCell::new(found));
         let insider = wrapped.clone();
 
         let op = {
-            self.context.borrow_mut().introspect().get_source_info_list(
-                move |source_list: ListResult<&SourceInfo>| match source_list {
-                    ListResult::Item(item) => {
-                        if let Some(name) = &item.name {
-                            insider.borrow_mut().push(name.parse().unwrap());
+            pulse
+                .context
+                .borrow_mut()
+                .introspect()
+                .get_source_info_list(
+                    move |source_list: ListResult<&SourceInfo>| match source_list {
+                        ListResult::Item(item) => {
+                            if let Some(name) = &item.name {
+                                insider.borrow_mut().push(name.parse().unwrap());
+                            }
                         }
-                    }
-                    ListResult::End => {}
-                    ListResult::Error => {}
-                },
-            )
+                        ListResult::End => {}
+                        ListResult::Error => {}
+                    },
+                )
         };
 
         // Block here until the above closure has completed..
         while op.get_state() == pulse::operation::State::Running {
-            self.main_loop.borrow_mut().iterate(true);
+            pulse.main_loop.borrow_mut().iterate(true);
         }
 
+        pulse.disconnect();
         let unwrapped = wrapped.deref().borrow().clone();
         unwrapped
     }
-}
-
-impl Drop for PulseAudioConfiguration {
-    fn drop(&mut self) {
-        // We need to disconnect our context before we go out of scope, otherwise we'll
-        // segfault when libpulse tries to drop.
-        self.context.borrow_mut().disconnect();
-    }
-}
-
-pub fn get_configuration() -> PulseAudioConfiguration {
-    PulseAudioConfiguration::new()
 }

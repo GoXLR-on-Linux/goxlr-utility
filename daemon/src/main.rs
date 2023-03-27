@@ -86,6 +86,15 @@ async fn main() -> Result<()> {
             error!("please consult the 'Permissions' section of the README. Running as root");
             error!("*WILL* cause issues with the sampler, and may pose a security risk.");
             error!("");
+            #[cfg(target_family = "macos")]
+            {
+                error!("As a MacOS user, you may be attempting to run as root to solve the");
+                error!("issues of initialisation. The correct approach to this is to run the");
+                error!("goxlr-initialiser binary via sudo whenever a GoXLR device is attached.");
+                error!("This can be achieved either via a launchctl script or manually on the");
+                error!("command line.");
+                error!("");
+            }
             error!("To override this message, please start with --force-root");
             std::process::exit(-1);
         }
@@ -120,6 +129,9 @@ async fn main() -> Result<()> {
     // Create the HTTP Run Channel..
     let (httpd_tx, httpd_rx) = tokio::sync::oneshot::channel();
 
+    // Create the Device shutdown signallers..
+    let (device_stop_tx, device_stop_rx) = mpsc::channel(1);
+
     // Create the Shutdown Signallers..
     let shutdown = Shutdown::new();
     let shutdown_blocking = Arc::new(AtomicBool::new(false));
@@ -147,6 +159,7 @@ async fn main() -> Result<()> {
     let usb_handle = tokio::spawn(spawn_usb_handler(
         usb_rx,
         file_rx,
+        device_stop_rx,
         broadcast_tx.clone(),
         global_tx.clone(),
         shutdown.clone(),
@@ -193,7 +206,11 @@ async fn main() -> Result<()> {
     };
 
     // Spawn the general event handler..
-    let event_handle = tokio::spawn(spawn_event_handler(state.clone(), global_rx));
+    let event_handle = tokio::spawn(spawn_event_handler(
+        state.clone(),
+        global_rx,
+        device_stop_tx,
+    ));
 
     // Spawn the Platform Runtime (if needed)
     let platform_handle = tokio::spawn(spawn_runtime(state.clone(), global_tx.clone()));

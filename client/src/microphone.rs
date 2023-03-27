@@ -6,7 +6,7 @@ use goxlr_types::MicrophoneType;
 
 pub async fn apply_microphone_controls(
     microphone_controls: &MicrophoneControls,
-    client: &mut Client,
+    client: &mut Box<dyn Client>,
     serial: &str,
 ) -> Result<()> {
     if let Some(gain) = microphone_controls.condenser_gain {

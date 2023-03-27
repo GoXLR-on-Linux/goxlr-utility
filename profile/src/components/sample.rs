@@ -95,7 +95,7 @@ impl SampleBase {
         }
 
         // Ok, somewhere in here we should have a key that tells us how many tracks are configured..
-        let key = format!("sampleStack{}stackSize", id);
+        let key = format!("sampleStack{id}stackSize");
 
         if !map.contains_key(key.as_str()) {
             // Stack doesn't contain any tracks, we're done here.
@@ -108,10 +108,10 @@ impl SampleBase {
             let track_count: u8 = track_count.parse()?;
             for i in 0..track_count {
                 if let (Some(track), Some(start), Some(end), Some(gain)) = (
-                    map.get(&format!("track_{}", i)),
-                    map.get(&format!("track_{}StartPosition", i)),
-                    map.get(&format!("track_{}EndPosition", i)),
-                    map.get(&format!("track_{}NormalizedGain", i)),
+                    map.get(&format!("track_{i}")),
+                    map.get(&format!("track_{i}StartPosition")),
+                    map.get(&format!("track_{i}EndPosition")),
+                    map.get(&format!("track_{i}NormalizedGain")),
                 ) {
                     let track = Track::new(
                         track.to_string(),
@@ -161,7 +161,7 @@ impl SampleBase {
 
         // Now onto the damn stacks..
         for (key, value) in &self.sample_stack {
-            let sub_element_name = format!("sampleStack{}", key);
+            let sub_element_name = format!("sampleStack{key}");
 
             let mut sub_elem = BytesStart::new(sub_element_name.as_str());
 
@@ -171,29 +171,29 @@ impl SampleBase {
 
             for i in 0..value.tracks.len() {
                 sub_attributes.insert(
-                    format!("track_{}", i),
+                    format!("track_{i}"),
                     value.tracks.get(i).unwrap().track.to_string(),
                 );
             }
 
             if !value.tracks.is_empty() {
                 sub_attributes.insert(
-                    format!("sampleStack{}stackSize", key),
+                    format!("sampleStack{key}stackSize"),
                     format!("{}", value.tracks.len()),
                 );
             }
 
             for i in 0..value.tracks.len() {
                 sub_attributes.insert(
-                    format!("track_{}NormalizedGain", i),
+                    format!("track_{i}NormalizedGain"),
                     format!("{}", value.tracks.get(i).unwrap().normalized_gain),
                 );
                 sub_attributes.insert(
-                    format!("track_{}StartPosition", i),
+                    format!("track_{i}StartPosition"),
                     format!("{}", value.tracks.get(i).unwrap().start_position),
                 );
                 sub_attributes.insert(
-                    format!("track_{}EndPosition", i),
+                    format!("track_{i}EndPosition"),
                     format!("{}", value.tracks.get(i).unwrap().end_position),
                 );
             }

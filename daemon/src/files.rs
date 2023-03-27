@@ -387,7 +387,7 @@ pub fn can_create_new_file(path: PathBuf) -> Result<()> {
 const DEFAULTS_BINARY: &str = "goxlr-defaults";
 pub fn extract_defaults(file_type: PathTypes, path: &Path) -> Result<()> {
     let binary_name = if cfg!(target_os = "windows") {
-        format!("{}.exe", DEFAULTS_BINARY)
+        format!("{DEFAULTS_BINARY}.exe")
     } else {
         String::from(DEFAULTS_BINARY)
     };

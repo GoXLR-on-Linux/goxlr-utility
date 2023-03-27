@@ -68,7 +68,7 @@ fn get_startup_dir() -> Option<PathBuf> {
     if let Ok(path) = env::var("XDG_CONFIG_HOME") {
         xdg_config.replace(path);
     } else if let Ok(path) = env::var("HOME") {
-        xdg_config.replace(format!("{}/.config", path));
+        xdg_config.replace(format!("{path}/.config"));
     }
 
     if let Some(path) = xdg_config {

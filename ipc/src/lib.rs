@@ -2,8 +2,8 @@ use json_patch::Patch;
 use serde::{Deserialize, Serialize};
 
 pub mod client;
+pub mod clients;
 mod device;
-pub mod ipc_socket;
 
 pub use device::*;
 use goxlr_types::{
@@ -62,6 +62,9 @@ pub enum PathTypes {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum GoXLRCommand {
+    SetShutdownCommands(Vec<GoXLRCommand>),
+    SetSamplerPreBufferDuration(u16),
+
     SetFader(FaderName, ChannelName),
     SetFaderMuteFunction(FaderName, MuteFunction),
 

@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-use crate::audio::get_output;
+use crate::audio::{get_output, AudioSpecification};
 use symphonia::core::audio::SampleBuffer;
 use symphonia::core::errors::Error;
 use symphonia::core::formats::{SeekMode, SeekTo};
@@ -205,6 +205,8 @@ impl Player {
             0
         };
 
+        let mut break_playback = false;
+
         // Loop over the input file..
         let result = loop {
             let packet = match reader.next_packet() {
@@ -224,25 +226,28 @@ impl Player {
                     // Is this the first decoded packet?
                     if audio_output.is_none() && sample_buffer.is_none() {
                         let spec = *decoded.spec();
-                        let duration = decoded.capacity() as u64;
+                        let capacity = decoded.capacity() as u64;
 
-                        sample_buffer = Some(SampleBuffer::<f32>::new(duration, spec));
+                        sample_buffer = Some(SampleBuffer::<f32>::new(capacity, spec));
 
                         if !self.process_only {
-                            audio_output.replace(get_output(spec, self.device.clone())?);
+                            let audio_spec = AudioSpecification {
+                                device: self.device.clone(),
+                                spec,
+                                buffer: capacity as usize,
+                            };
+
+                            audio_output.replace(get_output(audio_spec)?);
                         }
                     }
 
                     if let Some(ref mut buf) = sample_buffer {
                         // Grab out the samples..
                         buf.copy_interleaved_ref(decoded.clone());
-                        let mut break_playback = false;
                         let mut samples = buf.samples().to_vec();
 
                         if let Some(ref mut ebu_r128) = ebu_r128 {
-                            // We need to convert the samples to f64..
-                            let samples64: Vec<f64> = samples.iter().map(|n| *n as f64).collect();
-                            ebu_r128.add_frames_f64(samples64.as_slice())?;
+                            ebu_r128.add_frames_f32(samples.as_slice())?;
 
                             // Skip straight to the next packet..
                             continue;
@@ -262,6 +267,11 @@ impl Player {
                             if self.force_stop.load(Ordering::Relaxed) {
                                 // Don't care about the buffer, just end it.
                                 debug!("Force Stop Requested, terminating.");
+
+                                if let Some(audio_output) = &mut audio_output {
+                                    audio_output.stop();
+                                }
+
                                 break Ok(());
                             }
 
@@ -310,6 +320,12 @@ impl Player {
                 Err(err) => break Err(err),
             }
         };
+        if !self.force_stop.load(Ordering::Relaxed) {
+            if let Some(mut audio_output) = audio_output {
+                // We should always flush the last samples, unless forced to stop
+                audio_output.flush();
+            }
+        }
 
         if let Some(ebu_r128) = ebu_r128 {
             // Calculate Gain..
