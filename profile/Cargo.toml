@@ -9,7 +9,7 @@ edition = "2021"
 enum-map = "2.4.2"
 enum-map-derive = "0.11.0"
 thiserror = "1.0.38"
-zip = "0.6.3"
+zip = { version = "0.6.4", default-features = false, features = ["deflate"] }
 strum = { version = "0.24.1", features = ["derive"] }
 ritelinked = "0.3.2"
 quick-xml = "0.27.1"
