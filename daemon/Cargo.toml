@@ -47,7 +47,9 @@ json-patch = "0.3.0"
 ## HTTPd Server
 actix = "0.13.0"
 actix-web-actors = "4.1.0"
-actix-web = "4.2.1"
+
+# All we really need from actix-web are macros and compression, TLS and cookies aren't required
+actix-web = { version = "4.2.1", default-features = false, features = ["macros", "compress-brotli", "compress-gzip" ] }
 actix-cors = "0.6.4"
 mime_guess = "2.0.4"
 include_dir = "0.7.3"
@@ -63,7 +65,7 @@ rand = "0.8.5"
 
 # Under Windows and MacOS, we use tao's tray feature
 [target.'cfg(target_os = "windows")'.dependencies]
-tao = { version = "0.15.8", features=["tray"] }
+tao = { version = "0.15.8", features = ["tray"] }
 image = "0.24.5"
 sysinfo = "0.27.1"
 winrt-notification = "0.5.1"
@@ -71,10 +73,10 @@ winreg = "0.10.1"
 mslnk = "0.1.8"
 dunce = "1.0.3"
 win-win = "0.1.1"
-winapi = { version = "0.3.9", features=["winuser"]}
+winapi = { version = "0.3.9", features = ["winuser"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-tao = { version = "0.15.8", features=["tray"] }
+tao = { version = "0.15.8", features = ["tray"] }
 image = "0.24.5"
 
 [build-dependencies]
@@ -92,15 +94,11 @@ assets = [
     ["../target/release/goxlr-client", "usr/bin/", "755"],
     ["../target/release/goxlr-defaults", "usr/bin/", "755"],
     ["../target/release/goxlr-launcher", "usr/bin/", "755"],
-
     ["../50-goxlr.rules", "etc/udev/rules.d/", "644"],
-
     ["../daemon/resources/goxlr-utility.png", "usr/share/icons/hicolor/48x48/apps/", "644"],
     ["../daemon/resources/goxlr-utility-large.png", "usr/share/pixmaps/goxlr-utility.png", "644"],
     ["../daemon/resources/goxlr-utility.svg", "usr/share/icons/hicolor/scalable/apps/", "644"],
-
     ["../daemon/resources/goxlr-utility.desktop", "usr/share/applications/", "644"],
-
     ["../deployment/deb/goxlr-client.bash", "usr/share/bash-completion/completions/", "644"],
     ["../deployment/deb/goxlr-client.fish", "usr/share/fish/vendor_completions.d/", "644"],
     ["../deployment/deb/_goxlr-client", "usr/share/zsh/vendor-completions/", "644"],
@@ -115,7 +113,6 @@ depends = "$auto"
 extended-description = """\
 A utility for monitoring and controlling a TC-Helicon GoXLR or GoXLR Mini.
 """
-revision = "1"
 
 ## cargo generate-rpm support..
 [package.metadata.generate-rpm]
@@ -125,22 +122,17 @@ assets = [
     { source = "../target/release/goxlr-client", dest = "/usr/bin/goxlr-client", mode = "0755" },
     { source = "../target/release/goxlr-defaults", dest = "/usr/bin/goxlr-defaults", mode = "0755" },
     { source = "../target/release/goxlr-launcher", dest = "/usr/bin/goxlr-launcher", mode = "0755" },
-
     { source = "../50-goxlr.rules", dest = "/etc/udev/rules.d/50-goxlr.rules", mode = "0644" },
-
     { source = "../daemon/resources/goxlr-utility.png", dest = "/usr/share/icons/hicolor/48x48/apps/goxlr-utility.png", mode = "0644" },
     { source = "../daemon/resources/goxlr-utility-large.png", dest = "/usr/share/pixmaps/goxlr-utility.png", mode = "0644" },
     { source = "../daemon/resources/goxlr-utility.svg", dest = "/usr/share/icons/hicolor/scalable/apps/goxlr-utility.svg", mode = "0644" },
-
     { source = "../daemon/resources/goxlr-utility.desktop", dest = "/usr/share/applications/goxlr-utility.desktop", mode = "0644" },
-
     { source = "../deployment/deb/goxlr-client.bash", dest = "/usr/share/bash-completion/completions/goxlr-client.bash", mode = "0644" },
     { source = "../deployment/deb/goxlr-client.fish", dest = "/usr/share/fish/vendor_completions.d/goxlr-client.fish", mode = "0644" },
     { source = "../deployment/deb/_goxlr-client", dest = "/usr/share/zsh/vendor-completions/_goxlr-client", mode = "0644" },
     { source = "../deployment/deb/goxlr-daemon.bash", dest = "/usr/share/bash-completion/completions/goxlr-daemon.bash", mode = "0644" },
     { source = "../deployment/deb/goxlr-daemon.fish", dest = "/usr/share/fish/vendor_completions.d/goxlr-daemon.fish", mode = "0644" },
     { source = "../deployment/deb/_goxlr-daemon", dest = "/usr/share/zsh/vendor-completions/_goxlr-daemon", mode = "0644" },
-
 ]
 
 # Tiny scriptlet, should reload udev.
@@ -149,7 +141,7 @@ udevadm control --reload-rules
 udevadm trigger
 """
 
-release = "1"
+#release = "1"
 
 # Because we build under Ubuntu in CI, generate-rpm is unable to calculate the dependencies required (no access
 # to rpm / yum), so we need to disable the auto and specify dependencies manually.
