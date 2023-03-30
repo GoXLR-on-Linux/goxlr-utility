@@ -23,15 +23,16 @@ pub enum ChannelName {
     Headphones,
     MicMonitor,
     LineOut,
+}
 
-    // These are Channel Names for the Submixes
-    LineInB,
-    ConsoleB,
-    SystemB,
-    GameB,
-    ChatB,
-    SampleB,
-    MusicB,
+pub enum SubMixChannelName {
+    LineIn,
+    Console,
+    System,
+    Game,
+    Chat,
+    Sample,
+    Music,
 }
 
 #[derive(Debug, Copy, Clone, Display, Enum, EnumIter, EnumCount, PartialEq, Eq)]
