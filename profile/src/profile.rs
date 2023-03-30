@@ -32,6 +32,8 @@ use crate::components::root::RootElement;
 use crate::components::sample::SampleBase;
 use crate::components::scribble::Scribble;
 use crate::components::simple::{SimpleElement, SimpleElements};
+use crate::components::submix::mix_routing_tree::MixRoutingTree;
+use crate::components::submix::submixer::SubMixer;
 use crate::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
 use crate::{Faders, Preset, SampleButtons};
 
@@ -119,6 +121,8 @@ impl Profile {
 pub struct ProfileSettings {
     root: RootElement,
     browser: BrowserPreviewTree,
+    mix_routing: MixRoutingTree,
+    submix_tree: SubMixer,
     mixer: Mixers,
     context: Context,
     mute_chat: MuteChat,
@@ -147,6 +151,9 @@ impl ProfileSettings {
 
         let mut root = RootElement::new();
         let mut browser = BrowserPreviewTree::new("browserPreviewTree".to_string());
+
+        let mut mix_routing = MixRoutingTree::new();
+        let mut submix_tree = SubMixer::new();
 
         let mut mixer = Mixers::new();
         let mut context = Context::new("selectedContext".to_string());
@@ -180,6 +187,21 @@ impl ProfileSettings {
                     let (name, attributes) = wrap_start_event(e)?;
                     if name == "browserPreviewTree" {
                         browser.parse_browser(&attributes)?;
+                        continue;
+                    }
+
+                    if name == "mixRoutingTree" {
+                        mix_routing.parse_mix_tree(&attributes)?;
+                        continue;
+                    }
+
+                    if name == "monitorTree" {
+                        submix_tree.parse_monitor(&attributes)?;
+                        continue;
+                    }
+
+                    if name == "linkingTree" {
+                        submix_tree.parse_linking(&attributes)?;
                         continue;
                     }
 
@@ -359,6 +381,11 @@ impl ProfileSettings {
                         continue;
                     }
 
+                    if name == "submixerTree" {
+                        submix_tree.parse_submixer(&attributes)?;
+                        continue;
+                    }
+
                     if name == "megaphoneEffect" {
                         megaphone_effect.parse_megaphone_root(&attributes)?;
                         continue;
@@ -448,9 +475,14 @@ impl ProfileSettings {
             }
         }
 
+        debug!("{:?}", mix_routing);
+        debug!("{:?}", submix_tree);
+
         Ok(Self {
             root,
             browser,
+            mix_routing,
+            submix_tree,
             mixer,
             context,
             mute_chat,
@@ -551,6 +583,9 @@ impl ProfileSettings {
 
         self.root.write_initial(&mut writer)?;
         self.browser.write_browser(&mut writer)?;
+
+        self.mix_routing.write_mix_tree(&mut writer)?;
+        self.submix_tree.write_submixer(&mut writer)?;
 
         self.mixer.write_mixers(&mut writer)?;
         self.context.write_context(&mut writer)?;

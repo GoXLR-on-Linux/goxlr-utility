@@ -7,6 +7,7 @@ pub mod mic_profile;
 pub mod microphone;
 pub mod profile;
 
+
 #[derive(Debug, Display, Enum, EnumIter, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum SampleButtons {
     TopLeft,
