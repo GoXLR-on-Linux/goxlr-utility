@@ -192,7 +192,7 @@ pub trait GoXLRCommands: ExecutableGoXLR {
     }
 
     fn set_monitored_mix(&mut self, mix: MixId) -> Result<()> {
-        self.request_data(Command::SetChannelMixes, &[mix as u8])?;
+        self.request_data(Command::SetMonitoredMix, &[mix as u8])?;
         Ok(())
     }
 
