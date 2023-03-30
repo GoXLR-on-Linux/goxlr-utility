@@ -1,5 +1,5 @@
 use crate::routing::InputDevice;
-use goxlr_types::{ChannelName, EncoderName, FaderName, MixId};
+use goxlr_types::{ChannelName, EncoderName, FaderName, SubMixChannelName};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Command {
@@ -7,6 +7,7 @@ pub enum Command {
     SystemInfo(SystemInfoCommand),
     SetChannelState(ChannelName),
     SetChannelVolume(ChannelName),
+    SetSubChannelVolume(SubMixChannelName),
     SetEncoderValue(EncoderName),
     SetEncoderMode(EncoderName),
     SetFader(FaderName),
@@ -31,6 +32,7 @@ impl Command {
             Command::SystemInfo(sub) => sub.id(),
             Command::SetChannelState(channel) => (0x809 << 12) | *channel as u32,
             Command::SetChannelVolume(channel) => (0x806 << 12) | *channel as u32,
+            Command::SetSubChannelVolume(channel) => (0x806 << 12) | (*channel as u32 + 10),
             Command::SetEncoderValue(encoder) => (0x80a << 12) | *encoder as u32,
             Command::SetEncoderMode(encoder) => (0x811 << 12) | *encoder as u32,
             Command::SetFader(fader) => (0x805 << 12) | *fader as u32,

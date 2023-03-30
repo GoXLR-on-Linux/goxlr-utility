@@ -25,6 +25,9 @@ pub enum ChannelName {
     LineOut,
 }
 
+#[derive(Debug, Copy, Clone, Display, Enum, EnumIter, EnumCount, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum SubMixChannelName {
     LineIn,
     Console,
