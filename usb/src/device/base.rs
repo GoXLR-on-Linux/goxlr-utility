@@ -7,10 +7,7 @@ use crate::routing::InputDevice;
 use anyhow::Result;
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
 use enumset::EnumSet;
-use goxlr_types::{
-    ChannelName, EffectKey, EncoderName, FaderName, FirmwareVersions, MicrophoneParamKey,
-    MicrophoneType, VersionNumber,
-};
+use goxlr_types::{ChannelName, EffectKey, EncoderName, FaderName, FirmwareVersions, MicrophoneParamKey, MicrophoneType, MixId, SubMixChannelName, VersionNumber};
 use std::io::{Cursor, Write};
 use tokio::sync::mpsc::Sender;
 
@@ -179,6 +176,23 @@ pub trait GoXLRCommands: ExecutableGoXLR {
 
     fn set_routing(&mut self, input_device: InputDevice, data: [u8; 22]) -> Result<()> {
         self.request_data(Command::SetRouting(input_device), &data)?;
+        Ok(())
+    }
+
+    // Submix Stuff
+    fn set_sub_volume(&mut self, channel: SubMixChannelName, volume: u8) -> Result<()> {
+        self.request_data(Command::SetSubChannelVolume(channel), &[volume])?;
+        Ok(())
+    }
+
+    // TODO: Potentially for later, abstract out the 'data' section into a couple of Vec<>s
+    fn set_channel_mixes(&mut self, data: [u8; 1024]) -> Result<()> {
+        self.request_data(Command::SetChannelMixes, &data)?;
+        Ok(())
+    }
+
+    fn set_monitored_mix(&mut self, mix: MixId) -> Result<()> {
+        self.request_data(Command::SetChannelMixes, &[mix as u8])?;
         Ok(())
     }
 
