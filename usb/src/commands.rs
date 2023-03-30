@@ -1,5 +1,5 @@
 use crate::routing::InputDevice;
-use goxlr_types::{ChannelName, EncoderName, FaderName};
+use goxlr_types::{ChannelName, EncoderName, FaderName, MixId};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Command {
@@ -20,6 +20,8 @@ pub enum Command {
     SetScribble(FaderName),
     GetButtonStates,
     GetHardwareInfo(HardwareInfoCommand),
+    SetChannelMixes,
+    SetMonitoredMix,
 }
 
 impl Command {
@@ -42,6 +44,8 @@ impl Command {
             Command::GetMicrophoneLevel => 0x80c << 12,
             Command::SetMicrophoneParameters => 0x80b << 12,
             Command::SetEffectParameters => 0x801 << 12,
+            Command::SetChannelMixes => 0x817 << 12,
+            Command::SetMonitoredMix => 0x818 << 12,
         }
     }
 }
