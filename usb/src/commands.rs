@@ -7,7 +7,6 @@ pub enum Command {
     SystemInfo(SystemInfoCommand),
     SetChannelState(ChannelName),
     SetChannelVolume(ChannelName),
-    SetSubChannelVolume(SubMixChannelName),
     SetEncoderValue(EncoderName),
     SetEncoderMode(EncoderName),
     SetFader(FaderName),
@@ -21,6 +20,8 @@ pub enum Command {
     SetScribble(FaderName),
     GetButtonStates,
     GetHardwareInfo(HardwareInfoCommand),
+
+    SetSubChannelVolume(SubMixChannelName),
     SetChannelMixes,
     SetMonitoredMix,
 }
@@ -32,7 +33,6 @@ impl Command {
             Command::SystemInfo(sub) => sub.id(),
             Command::SetChannelState(channel) => (0x809 << 12) | *channel as u32,
             Command::SetChannelVolume(channel) => (0x806 << 12) | *channel as u32,
-            Command::SetSubChannelVolume(channel) => (0x806 << 12) | (*channel as u32 + 10),
             Command::SetEncoderValue(encoder) => (0x80a << 12) | *encoder as u32,
             Command::SetEncoderMode(encoder) => (0x811 << 12) | *encoder as u32,
             Command::SetFader(fader) => (0x805 << 12) | *fader as u32,
@@ -46,6 +46,8 @@ impl Command {
             Command::GetMicrophoneLevel => 0x80c << 12,
             Command::SetMicrophoneParameters => 0x80b << 12,
             Command::SetEffectParameters => 0x801 << 12,
+
+            Command::SetSubChannelVolume(channel) => (0x806 << 12) | (*channel as u32 + 10),
             Command::SetChannelMixes => 0x817 << 12,
             Command::SetMonitoredMix => 0x818 << 12,
         }
