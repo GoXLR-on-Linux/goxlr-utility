@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::{anyhow, bail, Result};
@@ -10,6 +11,7 @@ use futures::executor::block_on;
 use log::{debug, error, info};
 use ritelinked::LinkedHashSet;
 use strum::IntoEnumIterator;
+use tokio::sync::Mutex;
 
 use goxlr_ipc::{
     DeviceType, Display, FaderStatus, GoXLRCommand, HardwareStatus, Levels, MicSettings,
@@ -31,7 +33,8 @@ use crate::audio::{AudioFile, AudioHandler};
 use crate::files::find_file_in_path;
 use crate::mic_profile::{MicProfileAdapter, DEFAULT_MIC_PROFILE_NAME};
 use crate::profile::{
-    usb_to_standard_button, version_newer_or_equal_to, ProfileAdapter, DEFAULT_PROFILE_NAME,
+    channel_name_to_submix, usb_to_standard_button, version_newer_or_equal_to, ProfileAdapter,
+    DEFAULT_PROFILE_NAME,
 };
 use crate::SettingsHandle;
 
@@ -47,6 +50,7 @@ pub struct Device<'a> {
     hold_time: u16,
     vc_mute_also_mute_cm: bool,
     settings: &'a SettingsHandle,
+    input_mutex: Arc<Mutex<bool>>,
 }
 
 // Experimental code:
@@ -115,6 +119,7 @@ impl<'a> Device<'a> {
             fader_last_seen: EnumMap::default(),
             audio_handler,
             settings: settings_handle,
+            input_mutex: Arc::new(Mutex::new(false)),
         };
 
         device.apply_profile()?;
@@ -257,6 +262,41 @@ impl<'a> Device<'a> {
             changed = result;
         }
 
+        // Submix Implementation...
+        if self.device_supports_submixes() && self.profile.is_submix_enabled() {
+            // This will need improving!
+            for fader in FaderName::iter() {
+                debug!("Loop :)");
+                // Get the Channel Volume for the fader..
+                let channel = self.profile.get_fader_assignment(fader);
+                let volume = self.profile.get_channel_volume(channel);
+
+                if let Some(mix) = self.profile.get_submix_from_channel(channel) {
+                    if self.profile.submix_linked(mix) {
+                        let mix_volume = self.profile.get_submix_volume(mix);
+                        let ratio = self.profile.get_submix_ratio(mix);
+                        debug!("{} {}", mix_volume, ratio);
+                        debug!("{}", (volume as f64 * ratio));
+
+                        if (volume as f64 * ratio) as u8 != mix_volume {
+                            // Due to the nature of u8, the value can only be between 0 and 255..
+                            let new_volume = (volume as f64 * ratio) as u8;
+
+                            debug!("Setting submix output for {} to {}", mix, new_volume);
+
+                            self.profile.set_submix_volume(mix, new_volume);
+
+                            debug!("Sending Update..");
+                            self.goxlr.set_sub_volume(mix, new_volume)?;
+                        } else {
+                            debug!("Volume Is Same?");
+                        }
+                    }
+                }
+            }
+        }
+
+        debug!("Checking Buttons..");
         let pressed_buttons = state.pressed.difference(self.last_buttons);
         for button in pressed_buttons {
             // This is a new press, store it in the states..
@@ -290,6 +330,7 @@ impl<'a> Device<'a> {
         }
 
         self.last_buttons = state.pressed;
+        debug!("Done!");
         Ok(changed)
     }
 

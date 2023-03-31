@@ -1899,6 +1899,39 @@ impl ProfileAdapter {
             .get_volume(submix_standard_to_profile_input(device))
     }
 
+    pub fn is_channel_linked(&self, device: SubMixChannelName) -> bool {
+        self.profile
+            .settings()
+            .submixes()
+            .is_linked(submix_standard_to_profile_input(device))
+    }
+
+    pub fn get_submix_from_channel(&self, channel: ChannelName) -> Option<SubMixChannelName> {
+        channel_name_to_submix(channel)
+    }
+
+    pub fn submix_linked(&self, channel: SubMixChannelName) -> bool {
+        self.profile
+            .settings()
+            .submixes()
+            .is_linked(submix_standard_to_profile_input(channel))
+    }
+
+    pub fn get_submix_ratio(&self, channel: SubMixChannelName) -> f64 {
+        self.profile
+            .settings()
+            .submixes()
+            .linking_tree()
+            .get_ratio(submix_standard_to_profile_input(channel))
+    }
+
+    pub fn set_submix_volume(&mut self, channel: SubMixChannelName, volume: u8) {
+        self.profile
+            .settings_mut()
+            .submixes_mut()
+            .set_volume(submix_standard_to_profile_input(channel), volume);
+    }
+
     //////////////////// END SUBMIXES ////////////////////
 
     // TODO: We can probably do better with grouping these so they can be reused.
@@ -2755,6 +2788,22 @@ fn submix_standard_to_profile_input(source: SubMixChannelName) -> InputChannels 
         SubMixChannelName::Chat => InputChannels::Chat,
         SubMixChannelName::Sample => InputChannels::Sample,
         SubMixChannelName::Music => InputChannels::Music,
+    }
+}
+
+pub fn channel_name_to_submix(source: ChannelName) -> Option<SubMixChannelName> {
+    match source {
+        ChannelName::Mic => Some(SubMixChannelName::Mic),
+        ChannelName::LineIn => Some(SubMixChannelName::LineIn),
+        ChannelName::Console => Some(SubMixChannelName::Console),
+        ChannelName::System => Some(SubMixChannelName::System),
+        ChannelName::Game => Some(SubMixChannelName::Game),
+        ChannelName::Chat => Some(SubMixChannelName::Chat),
+        ChannelName::Sample => Some(SubMixChannelName::Sample),
+        ChannelName::Music => Some(SubMixChannelName::Music),
+        ChannelName::Headphones => None,
+        ChannelName::MicMonitor => None,
+        ChannelName::LineOut => None,
     }
 }
 

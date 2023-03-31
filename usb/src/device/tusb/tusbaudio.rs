@@ -229,6 +229,7 @@ impl TUSBAudio<'_> {
         index: u16,
         data: &[u8],
     ) -> Result<()> {
+        debug!("Sending TUSB Request..");
         let data_length: u16 = data.len().try_into().unwrap();
         let data_pointer = data.as_ptr();
 
@@ -305,6 +306,7 @@ impl TUSBAudio<'_> {
         let read_len = LittleEndian::read_u32(len);
 
         let data = unsafe { std::slice::from_raw_parts(buffer_ptr, read_len as usize) };
+        debug!("Sending TUSB Response");
         Ok(Vec::from(data))
     }
 
@@ -368,6 +370,7 @@ impl TUSBAudio<'_> {
             if wait_result != WIN32_ERROR(258) {
                 // Check the Queued Events :)
                 loop {
+                    debug!("TUSB Event Received!");
                     let event_result = unsafe {
                         (self.read_device_notification)(handle, &a, buffer_ptr, 1024, &response_len)
                     };
@@ -375,7 +378,7 @@ impl TUSBAudio<'_> {
                         // We've either hit the end of the list, or something's gone wrong, break
                         // out and double check our handle.
                         if event_result != 3992977442 {
-                            debug!("Error Reading Event! {}", event_result);
+                            warn!("Error Reading Event! {}", event_result);
                         }
                         break;
                     }
@@ -394,9 +397,11 @@ impl TUSBAudio<'_> {
 
                     if event_response[0] == 1 && event_response[1] == 1 && event_response[2] == 1 {
                         // This event indicates something waiting to be read..
+                        debug!("Calling Data_Read: {}", callbacks.data_read.capacity());
                         let se = callbacks.data_read.blocking_send(true);
                         if se.is_err() {
                             // Something's gone horribly wrong!
+                            debug!("Send Failed: {:?}", se.err());
                             terminator.store(true, Ordering::Relaxed);
                             break;
                         }
@@ -406,9 +411,17 @@ impl TUSBAudio<'_> {
                     if event_response[0] == 1 && event_response[1] == 1 && event_response[2] == 0 {
                         if let Some(identifier) = &*identifier.lock().unwrap() {
                             // A button or fader interrupt has been received.
+                            debug!(
+                                "Calling Input Changed, Cap: {}",
+                                callbacks.input_changed.capacity()
+                            );
                             if callbacks.input_changed.capacity() > 0 {
+                                debug!("Sending Blocking..");
                                 let se = callbacks.input_changed.blocking_send(identifier.clone());
+                                debug!("Sent..");
                                 if se.is_err() {
+                                    warn!("Error sending Callback! {:?}", se.err());
+
                                     // Something's gone horribly wrong!
                                     terminator.store(true, Ordering::Relaxed);
                                     break;
@@ -432,6 +445,7 @@ impl TUSBAudio<'_> {
 
                 // This one is broken too!
                 if new_handle.is_err() {
+                    debug!("Handle Error!");
                     // Flag ourself for stop..
                     terminator.store(true, Ordering::Relaxed);
 
@@ -605,6 +619,6 @@ pub struct EventChannelReceiver {
 }
 
 pub struct EventChannelSender {
-    pub(crate) data_read: Sender<bool>,
-    pub(crate) input_changed: Sender<String>,
+    pub(crate) data_read: Arc<Sender<bool>>,
+    pub(crate) input_changed: Arc<Sender<String>>,
 }

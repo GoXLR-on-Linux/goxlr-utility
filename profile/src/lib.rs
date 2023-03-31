@@ -7,7 +7,6 @@ pub mod mic_profile;
 pub mod microphone;
 pub mod profile;
 
-
 #[derive(Debug, Display, Enum, EnumIter, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum SampleButtons {
     TopLeft,
@@ -15,14 +14,6 @@ pub enum SampleButtons {
     BottomLeft,
     BottomRight,
     Clear,
-}
-
-#[derive(Debug, Enum, EnumIter, Copy, Clone, PartialEq, Eq, Hash)]
-pub enum Faders {
-    A,
-    B,
-    C,
-    D,
 }
 
 #[derive(Debug, EnumIter, Enum, EnumProperty, Copy, Clone)]
@@ -50,4 +41,12 @@ pub enum Preset {
     #[strum(props(tagSuffix = "preset6", contextTitle = "effects6"))]
     #[strum(to_string = "PRESET_6")]
     Preset6,
+}
+
+#[derive(Debug, Enum, EnumIter, Copy, Clone, PartialEq, Eq, Hash)]
+pub enum Faders {
+    A,
+    B,
+    C,
+    D,
 }

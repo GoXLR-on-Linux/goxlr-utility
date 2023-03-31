@@ -129,4 +129,7 @@ impl LinkingTree {
     pub fn is_linked(&self, channel: InputChannels) -> bool {
         self.linked_list[channel]
     }
+    pub fn get_ratio(&self, channel: InputChannels) -> f64 {
+        self.linked_ratio[channel]
+    }
 }

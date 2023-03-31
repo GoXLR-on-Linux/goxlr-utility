@@ -122,4 +122,11 @@ impl SubMixer {
     pub fn get_volume(&self, channel: InputChannels) -> u8 {
         self.volume_table[channel]
     }
+    pub fn set_volume(&mut self, channel: InputChannels, volume: u8) {
+        self.volume_table[channel] = volume;
+    }
+
+    pub fn is_linked(&self, channel: InputChannels) -> bool {
+        self.linking_tree.is_linked(channel)
+    }
 }

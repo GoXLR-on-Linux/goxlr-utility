@@ -1,5 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+extern crate core;
+
 use actix_web::dev::ServerHandle;
 use anyhow::{bail, Context, Result};
 use clap::Parser;

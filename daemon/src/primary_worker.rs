@@ -12,7 +12,7 @@ use goxlr_usb::device::base::GoXLRDevice;
 use goxlr_usb::device::{find_devices, from_device};
 use goxlr_usb::{PID_GOXLR_FULL, PID_GOXLR_MINI};
 use json_patch::diff;
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use tokio::sync::broadcast::Sender as BroadcastSender;
@@ -34,8 +34,8 @@ pub enum DeviceCommand {
     RunDeviceCommand(String, GoXLRCommand, oneshot::Sender<Result<()>>),
 }
 
-pub type DeviceSender = mpsc::Sender<DeviceCommand>;
-pub type DeviceReceiver = mpsc::Receiver<DeviceCommand>;
+pub type DeviceSender = Sender<DeviceCommand>;
+pub type DeviceReceiver = Receiver<DeviceCommand>;
 
 // Fix this later..
 #[allow(clippy::too_many_arguments)]
@@ -74,8 +74,10 @@ pub async fn spawn_usb_handler(
 
     loop {
         let mut change_found = false;
+        debug!("Loop..");
         tokio::select! {
             () = &mut detection_sleep => {
+                debug!("Sleep..");
                 if let Some(device) = find_new_device(&daemon_status, &ignore_list) {
                     let existing_serials: Vec<String> = get_all_serials(&devices);
                     let bus_number = device.bus_number();
@@ -104,6 +106,7 @@ pub async fn spawn_usb_handler(
                 detection_sleep.as_mut().reset(tokio::time::Instant::now() + detection_duration);
             },
             () = &mut update_sleep => {
+                debug!("Update Sleep..");
                 for device in devices.values_mut() {
                     let updated = device.update_state().await;
 
@@ -118,11 +121,13 @@ pub async fn spawn_usb_handler(
                 update_sleep.as_mut().reset(tokio::time::Instant::now() + update_duration);
             }
             Some(serial) = disconnect_receiver.recv() => {
+                debug!("Disconnect..");
                 info!("[{}] Device Disconnected", serial);
                 devices.remove(&serial);
                 change_found = true;
             },
             Some(serial) = event_receiver.recv() => {
+                debug!("Handling Event..");
                 if let Some(device) = devices.get_mut(&serial) {
                     let result = device.monitor_inputs().await;
                     if let Ok(changed) = result {
@@ -137,6 +142,7 @@ pub async fn spawn_usb_handler(
                 }
             }
             _ = device_stop_rx.recv() => {
+                debug!("Device Stopped..");
                 // Make sure this only happens once..
                 if shutdown_triggered {
                     continue;
@@ -152,10 +158,12 @@ pub async fn spawn_usb_handler(
                 let _ = global_tx.send(EventTriggers::DevicesStopped).await;
             }
             () = shutdown.recv() => {
+                debug!("Shutdown Trigger");
                 info!("Shutting down device worker");
                 return;
             },
             Some(command) = command_rx.recv() => {
+                debug!("IPC Command..");
                 match command {
                     DeviceCommand::SendDaemonStatus(sender) => {
                         let _ = sender.send(daemon_status.clone());
@@ -225,12 +233,15 @@ pub async fn spawn_usb_handler(
                 }
             },
             Some(path) = file_rx.recv() => {
+                debug!("File Manager Trigger..");
                 files = update_files(files, path, &mut file_manager).await;
                 change_found = true;
             }
-        };
+        }
+        debug!("End Loop Broken..");
 
         if change_found {
+            debug!("Change Found!");
             let new_status = get_daemon_status(&devices, &settings, files.clone()).await;
 
             // Convert them to JSON..
@@ -245,8 +256,10 @@ pub async fn spawn_usb_handler(
 
             // Send the patch to the tokio broadcaster, for handling by clients..
             daemon_status = new_status;
+            debug!("Change Ended!");
         }
     }
+    debug!("Loop Broken");
 }
 
 async fn get_daemon_status(
