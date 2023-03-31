@@ -29,6 +29,7 @@ pub enum ChannelName {
 #[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum SubMixChannelName {
+    Mic,
     LineIn,
     Console,
     System,

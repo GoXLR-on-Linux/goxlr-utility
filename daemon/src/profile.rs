@@ -2747,6 +2747,7 @@ fn standard_to_profile_mix(source: goxlr_types::Mix) -> Mix {
 
 fn submix_standard_to_profile_input(source: SubMixChannelName) -> InputChannels {
     match source {
+        SubMixChannelName::Mic => InputChannels::Mic,
         SubMixChannelName::LineIn => InputChannels::LineIn,
         SubMixChannelName::Console => InputChannels::Console,
         SubMixChannelName::System => InputChannels::System,

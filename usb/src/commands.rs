@@ -47,7 +47,8 @@ impl Command {
             Command::SetMicrophoneParameters => 0x80b << 12,
             Command::SetEffectParameters => 0x801 << 12,
 
-            Command::SetSubChannelVolume(channel) => (0x806 << 12) | (*channel as u32 + 10),
+            // I'm doing a +16 here, because there appears to be a bit reset going on..
+            Command::SetSubChannelVolume(channel) => (0x806 << 12) | (*channel as u32 + 16),
             Command::SetChannelMixes => 0x817 << 12,
             Command::SetMonitoredMix => 0x818 << 12,
         }
