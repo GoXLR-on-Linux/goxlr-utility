@@ -189,7 +189,7 @@ pub trait GoXLRCommands: ExecutableGoXLR {
     }
 
     // TODO: Potentially for later, abstract out the 'data' section into a couple of Vec<>s
-    fn set_channel_mixes(&mut self, data: [u8; 1024]) -> Result<()> {
+    fn set_channel_mixes(&mut self, data: [u8; 8]) -> Result<()> {
         self.request_data(Command::SetChannelMixes, &data)?;
         Ok(())
     }

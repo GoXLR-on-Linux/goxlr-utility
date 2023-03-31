@@ -18,7 +18,7 @@ use goxlr_ipc::{
 use goxlr_profile_loader::components::mute::MuteFunction;
 use goxlr_types::{
     Button, ChannelName, DisplayModeComponents, EffectBankPresets, EffectKey, EncoderName,
-    FaderName, HardTuneSource, InputDevice as BasicInputDevice, MicrophoneParamKey, MuteState,
+    FaderName, HardTuneSource, InputDevice as BasicInputDevice, MicrophoneParamKey, Mix, MuteState,
     OutputDevice as BasicOutputDevice, RobotRange, SampleBank, SampleButtons, SamplePlaybackMode,
     VersionNumber,
 };
@@ -2448,6 +2448,9 @@ impl<'a> Device<'a> {
         debug!("Updating button states..");
         self.update_button_states()?;
 
+        debug!("Applying Submixing Settings..");
+        self.load_submix_settings()?;
+
         debug!("Applying Routing..");
         // For profile load, we should configure all the input channels from the profile,
         // this is split so we can do tweaks in places where needed.
@@ -2563,6 +2566,51 @@ impl<'a> Device<'a> {
             self.profile.get_pitch_mode(),
             self.profile.get_pitch_resolution(),
         )?;
+        Ok(())
+    }
+
+    fn load_submix_settings(&mut self) -> Result<()> {
+        if !self.device_supports_submixes() {
+            // Submixes not supported, do nothing.
+            return Ok(());
+        }
+
+        let mut mix_a: [u8; 4] = [0x0c; 4];
+        let mut mix_b: [u8; 4] = [0x0c; 4];
+
+        let mut index = 0;
+
+        // This is kinda awkward, but we'll run with it..
+        for device in BasicOutputDevice::iter() {
+            if device == BasicOutputDevice::Headphones {
+                // We need to make sure the monitor is on the right side..
+                if self.profile.is_submix_enabled() {
+                    let mix = self.profile.get_submix_channel(device);
+                    self.goxlr.set_monitored_mix(mix)?;
+                } else {
+                    self.goxlr.set_monitored_mix(Mix::A)?;
+                }
+
+                // Monitor Mix handled, move to the next channel
+                continue;
+            }
+            if self.profile.is_submix_enabled() {
+                // We need to place this on the correct mix..
+                match self.profile.get_submix_channel(device) {
+                    Mix::A => mix_a[index] = (device as u8) * 2,
+                    Mix::B => mix_b[index] = (device as u8) * 2,
+                }
+            } else {
+                // Force this channel to A..
+                mix_a[index] = (device as u8) * 2;
+            }
+            index += 1;
+        }
+
+        let submix = [mix_a, mix_b].concat();
+
+        // This should always be successful, in theory :D
+        self.goxlr.set_channel_mixes(submix.try_into().unwrap())?;
         Ok(())
     }
 

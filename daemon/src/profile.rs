@@ -1878,6 +1878,22 @@ impl ProfileAdapter {
             .set_off_style(standard_to_profile_colour_off_style(off_style))
     }
 
+    ////////////////////// SUBMIXES //////////////////////
+    pub fn is_submix_enabled(&self) -> bool {
+        self.profile.settings().submixes().submix_enabled()
+    }
+
+    pub fn get_submix_channel(&self, device: OutputDevice) -> goxlr_types::Mix {
+        profile_to_standard_mix(
+            self.profile
+                .settings()
+                .mix_routing()
+                .get_assignment(standard_output_to_profile(device)),
+        )
+    }
+
+    //////////////////// END SUBMIXES ////////////////////
+
     // TODO: We can probably do better with grouping these so they can be reused.
     pub fn set_group_button_colours(
         &mut self,
@@ -2722,7 +2738,7 @@ fn standard_to_profile_mix(source: goxlr_types::Mix) -> Mix {
     }
 }
 
-fn submix_standard_to_profile_input(source: goxlr_types::SubMixChannelName) -> InputChannels {
+fn submix_standard_to_profile_input(source: SubMixChannelName) -> InputChannels {
     match source {
         SubMixChannelName::LineIn => InputChannels::LineIn,
         SubMixChannelName::Console => InputChannels::Console,
