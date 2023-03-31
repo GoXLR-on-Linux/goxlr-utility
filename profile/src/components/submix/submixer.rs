@@ -118,4 +118,8 @@ impl SubMixer {
     pub fn linking_tree(&self) -> &LinkingTree {
         &self.linking_tree
     }
+
+    pub fn get_volume(&self, channel: InputChannels) -> u8 {
+        self.volume_table[channel]
+    }
 }

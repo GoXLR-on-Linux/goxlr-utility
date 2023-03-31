@@ -20,7 +20,7 @@ use goxlr_types::{
     Button, ChannelName, DisplayModeComponents, EffectBankPresets, EffectKey, EncoderName,
     FaderName, HardTuneSource, InputDevice as BasicInputDevice, MicrophoneParamKey, Mix, MuteState,
     OutputDevice as BasicOutputDevice, RobotRange, SampleBank, SampleButtons, SamplePlaybackMode,
-    VersionNumber,
+    SubMixChannelName, VersionNumber,
 };
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::channelstate::ChannelState::{Muted, Unmuted};
@@ -2579,12 +2579,13 @@ impl<'a> Device<'a> {
         let mut mix_b: [u8; 4] = [0x0c; 4];
 
         let mut index = 0;
+        let submix_enabled = self.profile.is_submix_enabled();
 
         // This is kinda awkward, but we'll run with it..
         for device in BasicOutputDevice::iter() {
             if device == BasicOutputDevice::Headphones {
                 // We need to make sure the monitor is on the right side..
-                if self.profile.is_submix_enabled() {
+                if submix_enabled {
                     let mix = self.profile.get_submix_channel(device);
                     self.goxlr.set_monitored_mix(mix)?;
                 } else {
@@ -2594,7 +2595,7 @@ impl<'a> Device<'a> {
                 // Monitor Mix handled, move to the next channel
                 continue;
             }
-            if self.profile.is_submix_enabled() {
+            if submix_enabled {
                 // We need to place this on the correct mix..
                 match self.profile.get_submix_channel(device) {
                     Mix::A => mix_a[index] = (device as u8) * 2,
@@ -2611,6 +2612,18 @@ impl<'a> Device<'a> {
 
         // This should always be successful, in theory :D
         self.goxlr.set_channel_mixes(submix.try_into().unwrap())?;
+
+        // Ok, volumes are next, lets make sure we need to..
+        if !submix_enabled {
+            return Ok(());
+        }
+
+        // Finally, for each of the submix volumes, we need to set them.
+        for channel in SubMixChannelName::iter() {
+            let volume = self.profile.get_submix_volume(channel);
+            self.goxlr.set_sub_volume(channel, volume)?;
+        }
+
         Ok(())
     }
 

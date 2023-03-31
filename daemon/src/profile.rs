@@ -1892,6 +1892,13 @@ impl ProfileAdapter {
         )
     }
 
+    pub fn get_submix_volume(&self, device: SubMixChannelName) -> u8 {
+        self.profile
+            .settings()
+            .submixes()
+            .get_volume(submix_standard_to_profile_input(device))
+    }
+
     //////////////////// END SUBMIXES ////////////////////
 
     // TODO: We can probably do better with grouping these so they can be reused.
