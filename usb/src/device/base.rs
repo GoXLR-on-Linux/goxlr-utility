@@ -7,7 +7,10 @@ use crate::routing::InputDevice;
 use anyhow::Result;
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
 use enumset::EnumSet;
-use goxlr_types::{ChannelName, EffectKey, EncoderName, FaderName, FirmwareVersions, MicrophoneParamKey, MicrophoneType, MixId, SubMixChannelName, VersionNumber};
+use goxlr_types::{
+    ChannelName, EffectKey, EncoderName, FaderName, FirmwareVersions, MicrophoneParamKey,
+    MicrophoneType, Mix, SubMixChannelName, VersionNumber,
+};
 use std::io::{Cursor, Write};
 use tokio::sync::mpsc::Sender;
 
@@ -191,7 +194,7 @@ pub trait GoXLRCommands: ExecutableGoXLR {
         Ok(())
     }
 
-    fn set_monitored_mix(&mut self, mix: MixId) -> Result<()> {
+    fn set_monitored_mix(&mut self, mix: Mix) -> Result<()> {
         self.request_data(Command::SetMonitoredMix, &[mix as u8])?;
         Ok(())
     }

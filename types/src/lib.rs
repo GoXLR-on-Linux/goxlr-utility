@@ -38,12 +38,13 @@ pub enum SubMixChannelName {
     Music,
 }
 
-#[derive(Debug, Copy, Clone, Display, Enum, EnumIter, EnumCount, PartialEq, Eq)]
+#[derive(Debug, Default, Copy, Clone, Display, Enum, EnumIter, EnumCount, PartialEq, Eq)]
 #[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub enum MixId {
-    MixA,
-    MixB
+pub enum Mix {
+    #[default]
+    A,
+    B,
 }
 
 #[derive(Debug, Copy, Clone, Display, Enum, EnumIter, EnumCount, PartialEq, Eq, Hash)]

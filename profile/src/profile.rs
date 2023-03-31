@@ -871,6 +871,20 @@ impl ProfileSettings {
     pub fn context_mut(&mut self) -> &mut Context {
         &mut self.context
     }
+
+    pub fn submixes(&self) -> &SubMixer {
+        &self.submix_tree
+    }
+    pub fn submixes_mut(&mut self) -> &mut SubMixer {
+        &mut self.submix_tree
+    }
+
+    pub fn mix_routing(&self) -> &MixRoutingTree {
+        &self.mix_routing
+    }
+    pub fn mix_routing_mut(&mut self) -> &mut MixRoutingTree {
+        &mut self.mix_routing
+    }
 }
 
 /// This will wrap a 'Start' XML event into a name, and attribute Vec. We're using

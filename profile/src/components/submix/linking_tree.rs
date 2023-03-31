@@ -125,4 +125,8 @@ impl LinkingTree {
         writer.write_event(Event::Empty(elem))?;
         Ok(())
     }
+
+    pub fn is_linked(&self, channel: InputChannels) -> bool {
+        self.linked_list[channel]
+    }
 }

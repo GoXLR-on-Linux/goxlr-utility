@@ -14,7 +14,7 @@ use crate::audio::{AudioFile, AudioHandler};
 use goxlr_ipc::{
     ActiveEffects, ButtonLighting, CoughButton, Echo, Effects, FaderLighting, Gender, HardTune,
     Lighting, Megaphone, OneColour, Pitch, Reverb, Robot, Sample, Sampler, SamplerButton,
-    SamplerLighting, Scribble, ThreeColours, TwoColours,
+    SamplerLighting, Scribble, Submix, Submixes, ThreeColours, TwoColours,
 };
 use goxlr_profile_loader::components::colours::{
     Colour, ColourDisplay, ColourMap, ColourOffStyle, ColourState,
@@ -31,6 +31,7 @@ use goxlr_profile_loader::components::reverb::{ReverbEncoder, ReverbStyle};
 use goxlr_profile_loader::components::robot::{RobotEffect, RobotStyle};
 use goxlr_profile_loader::components::sample::{PlayOrder, PlaybackMode, SampleBank, Track};
 use goxlr_profile_loader::components::simple::SimpleElements;
+use goxlr_profile_loader::components::submix::mix_routing_tree::Mix;
 use goxlr_profile_loader::profile::{Profile, ProfileSettings};
 use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
 use goxlr_profile_loader::{Faders, Preset, SampleButtons};
@@ -39,7 +40,8 @@ use goxlr_types::{
     Button, ButtonColourGroups, ButtonColourOffStyle as BasicColourOffStyle, ChannelName,
     EffectBankPresets, EncoderColourTargets, FaderDisplayStyle as BasicColourDisplay, FaderName,
     InputDevice, MuteFunction as BasicMuteFunction, MuteState, OutputDevice, SamplePlayOrder,
-    SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets, VersionNumber,
+    SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets, SubMixChannelName,
+    VersionNumber,
 };
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::colouring::ColourTargets;
@@ -918,6 +920,43 @@ impl ProfileAdapter {
             ),
             state: mic_state,
         }
+    }
+
+    pub fn get_submixes_ipc(&self, submix_supported: bool) -> Option<Submixes> {
+        if !submix_supported {
+            debug!("NOT SUPPORTED!");
+            return None;
+        }
+
+        let mixes = self.profile.settings().submixes();
+        if !mixes.submix_enabled() {
+            // If ths submix isn't enabled, don't provide data.
+            debug!("Submixes Disabled!");
+            return None;
+        }
+
+        let routing = self.profile.settings().mix_routing();
+        let mut inputs: EnumMap<SubMixChannelName, Submix> = Default::default();
+
+        for channel in SubMixChannelName::iter() {
+            let input_channel = submix_standard_to_profile_input(channel);
+            // We need to map SubmixChannelName to something the profile can understand..
+            inputs[channel] = Submix {
+                volume: mixes.volume_table()[input_channel],
+                linked: mixes.linking_tree().is_linked(input_channel),
+            };
+        }
+
+        // Now handle the outputs..
+        let mut outputs: EnumMap<OutputDevice, goxlr_types::Mix> = Default::default();
+        for output in OutputDevice::iter() {
+            let profile_output = standard_output_to_profile(output);
+            let assignment = profile_to_standard_mix(routing.get_assignment(profile_output));
+
+            outputs[output] = assignment;
+        }
+
+        Some(Submixes { inputs, outputs })
     }
 
     /** Fader Stuff */
@@ -2666,6 +2705,32 @@ fn profile_to_standard_hard_tune_source(source: &HardTuneSource) -> goxlr_types:
         HardTuneSource::Game => goxlr_types::HardTuneSource::Game,
         HardTuneSource::LineIn => goxlr_types::HardTuneSource::LineIn,
         HardTuneSource::System => goxlr_types::HardTuneSource::System,
+    }
+}
+
+fn profile_to_standard_mix(source: Mix) -> goxlr_types::Mix {
+    match source {
+        Mix::A => goxlr_types::Mix::A,
+        Mix::B => goxlr_types::Mix::B,
+    }
+}
+
+fn standard_to_profile_mix(source: goxlr_types::Mix) -> Mix {
+    match source {
+        goxlr_types::Mix::A => Mix::A,
+        goxlr_types::Mix::B => Mix::B,
+    }
+}
+
+fn submix_standard_to_profile_input(source: goxlr_types::SubMixChannelName) -> InputChannels {
+    match source {
+        SubMixChannelName::LineIn => InputChannels::LineIn,
+        SubMixChannelName::Console => InputChannels::Console,
+        SubMixChannelName::System => InputChannels::System,
+        SubMixChannelName::Game => InputChannels::Game,
+        SubMixChannelName::Chat => InputChannels::Chat,
+        SubMixChannelName::Sample => InputChannels::Sample,
+        SubMixChannelName::Music => InputChannels::Music,
     }
 }
 

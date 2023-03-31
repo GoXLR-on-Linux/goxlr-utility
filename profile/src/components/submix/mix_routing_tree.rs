@@ -103,6 +103,14 @@ impl MixRoutingTree {
 
         Ok(())
     }
+
+    pub fn mix(&self) -> EnumMap<OutputChannels, Mix> {
+        self.mix
+    }
+
+    pub fn get_assignment(&self, channel: OutputChannels) -> Mix {
+        self.mix[channel]
+    }
 }
 
 #[derive(Default, Debug, Copy, Clone, EnumIter, Enum, EnumProperty)]

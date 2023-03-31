@@ -149,13 +149,17 @@ impl<'a> Device<'a> {
         let sampler_prerecord =
             block_on(self.settings.get_device_sampler_pre_buffer(self.serial()));
 
+        let submix_supported = self.device_supports_submixes();
+
         MixerStatus {
             hardware: self.hardware.clone(),
             shutdown_commands,
             fader_status: fader_map,
             cough_button: self.profile.get_cough_status(),
             levels: Levels {
+                submix_supported: self.device_supports_submixes(),
                 volumes,
+                submix: self.profile.get_submixes_ipc(submix_supported),
                 bleep: self.mic_profile.bleep_level(),
                 deess: self.mic_profile.get_deesser(),
             },
@@ -2560,6 +2564,20 @@ impl<'a> Device<'a> {
             self.profile.get_pitch_resolution(),
         )?;
         Ok(())
+    }
+
+    fn device_supports_submixes(&self) -> bool {
+        match self.hardware.device_type {
+            DeviceType::Unknown => false,
+            DeviceType::Full => version_newer_or_equal_to(
+                &self.hardware.versions.firmware,
+                VersionNumber(1, 4, 2, 107),
+            ),
+            DeviceType::Mini => version_newer_or_equal_to(
+                &self.hardware.versions.firmware,
+                VersionNumber(1, 2, 0, 46),
+            ),
+        }
     }
 
     // Get the current time in millis..

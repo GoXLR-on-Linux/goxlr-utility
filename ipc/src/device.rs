@@ -6,8 +6,9 @@ use goxlr_types::{
     CompressorReleaseTime, DisplayMode, EchoStyle, EffectBankPresets, EncoderColourTargets,
     EqFrequencies, FaderDisplayStyle, FaderName, FirmwareVersions, GateTimes, GenderStyle,
     HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies,
-    MuteFunction, MuteState, OutputDevice, PitchStyle, ReverbStyle, RobotStyle, SampleBank,
+    Mix, MuteFunction, MuteState, OutputDevice, PitchStyle, ReverbStyle, RobotStyle, SampleBank,
     SampleButtons, SamplePlayOrder, SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets,
+    SubMixChannelName,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
@@ -116,9 +117,23 @@ pub struct MicSettings {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Levels {
+    pub submix_supported: bool,
     pub volumes: EnumMap<ChannelName, u8>,
+    pub submix: Option<Submixes>,
     pub bleep: i8,
     pub deess: u8,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Submixes {
+    pub inputs: EnumMap<SubMixChannelName, Submix>,
+    pub outputs: EnumMap<OutputDevice, Mix>,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct Submix {
+    pub volume: u8,
+    pub linked: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

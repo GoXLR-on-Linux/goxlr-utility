@@ -108,4 +108,14 @@ impl SubMixer {
     pub fn parse_linking(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         self.linking_tree.parse_links(attributes)
     }
+
+    pub fn submix_enabled(&self) -> bool {
+        self.submix_enabled
+    }
+    pub fn volume_table(&self) -> EnumMap<InputChannels, u8> {
+        self.volume_table
+    }
+    pub fn linking_tree(&self) -> &LinkingTree {
+        &self.linking_tree
+    }
 }
