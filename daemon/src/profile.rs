@@ -1933,6 +1933,39 @@ impl ProfileAdapter {
             .set_volume(submix_standard_to_profile_input(channel), volume)
     }
 
+    pub fn set_submix_enabled(&mut self, enabled: bool) -> Result<()> {
+        self.profile
+            .settings_mut()
+            .submixes_mut()
+            .set_submix_enabled(enabled)
+    }
+
+    pub fn set_submix_linked(&mut self, channel: SubMixChannelName, linked: bool) -> Result<()> {
+        self.profile
+            .settings_mut()
+            .submixes_mut()
+            .set_submix_linked(submix_standard_to_profile_input(channel), linked)
+    }
+
+    pub fn set_submix_link_ratio(&mut self, channel: SubMixChannelName, ratio: f64) -> Result<()> {
+        self.profile
+            .settings_mut()
+            .submixes_mut()
+            .set_submix_link_ratio(submix_standard_to_profile_input(channel), ratio)
+    }
+
+    pub fn set_mix_output(&mut self, channel: OutputDevice, mix: goxlr_types::Mix) -> Result<()> {
+        let profile_mix = standard_to_profile_mix(mix);
+        let device = standard_output_to_profile(channel);
+
+        self.profile
+            .settings_mut()
+            .mix_routing_mut()
+            .set_assignment(device, profile_mix)?;
+
+        Ok(())
+    }
+
     //////////////////// END SUBMIXES ////////////////////
 
     // TODO: We can probably do better with grouping these so they can be reused.

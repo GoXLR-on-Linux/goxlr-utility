@@ -11,7 +11,7 @@ use goxlr_types::{
     CompressorRatio, CompressorReleaseTime, DisplayMode, DisplayModeComponents, EchoStyle,
     EffectBankPresets, EncoderColourTargets, EqFrequencies, FaderDisplayStyle, FaderName,
     GateTimes, GenderStyle, HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle,
-    MicrophoneType, MiniEqFrequencies, MuteFunction, MuteState, OutputDevice, PitchStyle,
+    MicrophoneType, MiniEqFrequencies, Mix, MuteFunction, MuteState, OutputDevice, PitchStyle,
     ReverbStyle, RobotRange, RobotStyle, SampleBank, SampleButtons, SamplePlayOrder,
     SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets,
 };
@@ -228,4 +228,10 @@ pub enum GoXLRCommand {
     SetFXEnabled(bool),
     SetFaderMuteState(FaderName, MuteState),
     SetCoughMuteState(MuteState),
+
+    // Submix Commands
+    SetSubMixEnabled(bool),
+    SetSubMixVolume(ChannelName, u8),
+    SetSubMixLinked(ChannelName, bool),
+    SetSubMixOutputMix(OutputDevice, Mix),
 }

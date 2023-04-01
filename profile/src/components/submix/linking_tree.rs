@@ -132,4 +132,14 @@ impl LinkingTree {
     pub fn get_ratio(&self, channel: InputChannels) -> f64 {
         self.linked_ratio[channel]
     }
+
+    pub fn set_link_enabled(&mut self, channel: InputChannels, linked: bool) -> Result<()> {
+        self.linked_list[channel] = linked;
+        Ok(())
+    }
+
+    pub fn set_link_ratio(&mut self, channel: InputChannels, ratio: f64) -> Result<()> {
+        self.linked_ratio[channel] = ratio;
+        Ok(())
+    }
 }

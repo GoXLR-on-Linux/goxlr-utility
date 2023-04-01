@@ -112,6 +112,19 @@ impl SubMixer {
     pub fn submix_enabled(&self) -> bool {
         self.submix_enabled
     }
+
+    pub fn set_submix_enabled(&mut self, submix_enabled: bool) -> Result<()> {
+        self.submix_enabled = submix_enabled;
+        Ok(())
+    }
+
+    pub fn set_submix_linked(&mut self, channel: InputChannels, linked: bool) -> Result<()> {
+        self.linking_tree.set_link_enabled(channel, linked)
+    }
+    pub fn set_submix_link_ratio(&mut self, channel: InputChannels, ratio: f64) -> Result<()> {
+        self.linking_tree.set_link_ratio(channel, ratio)
+    }
+
     pub fn volume_table(&self) -> EnumMap<InputChannels, u8> {
         self.volume_table
     }

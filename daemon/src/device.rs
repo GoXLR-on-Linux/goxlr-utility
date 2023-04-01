@@ -20,7 +20,7 @@ use goxlr_types::{
     Button, ChannelName, DisplayModeComponents, EffectBankPresets, EffectKey, EncoderName,
     FaderName, HardTuneSource, InputDevice as BasicInputDevice, MicrophoneParamKey, Mix, MuteState,
     OutputDevice as BasicOutputDevice, RobotRange, SampleBank, SampleButtons, SamplePlaybackMode,
-    SubMixChannelName, VersionNumber,
+    VersionNumber,
 };
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::channelstate::ChannelState::{Muted, Unmuted};
@@ -2055,6 +2055,22 @@ impl<'a> Device<'a> {
                 MuteState::MutedToAll => self.mute_fader_to_all(fader, true).await?,
             },
             GoXLRCommand::SetCoughMuteState(_state) => {}
+            GoXLRCommand::SetSubMixEnabled(enabled) => {
+                if self.profile.is_submix_enabled() != enabled {
+                    self.profile.set_submix_enabled(enabled)?;
+                    self.load_submix_settings(true)?;
+                }
+            }
+            GoXLRCommand::SetSubMixVolume(channel, volume) => {
+                self.apply_submix_volume(channel, volume)?;
+            }
+            GoXLRCommand::SetSubMixLinked(channel, linked) => {
+                self.link_submix_channel(channel, linked)?;
+            }
+            GoXLRCommand::SetSubMixOutputMix(device, mix) => {
+                self.profile.set_mix_output(device, mix)?;
+                self.load_submix_settings(false)?;
+            }
         }
         Ok(())
     }
@@ -2487,7 +2503,7 @@ impl<'a> Device<'a> {
         self.update_button_states()?;
 
         debug!("Applying Submixing Settings..");
-        self.load_submix_settings()?;
+        self.load_submix_settings(true)?;
 
         debug!("Applying Routing..");
         // For profile load, we should configure all the input channels from the profile,
@@ -2607,7 +2623,7 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
-    fn load_submix_settings(&mut self) -> Result<()> {
+    fn load_submix_settings(&mut self, apply_volumes: bool) -> Result<()> {
         if !self.device_supports_submixes() {
             // Submixes not supported, do nothing.
             return Ok(());
@@ -2651,24 +2667,64 @@ impl<'a> Device<'a> {
         // This should always be successful, in theory :D
         self.goxlr.set_channel_mixes(submix.try_into().unwrap())?;
 
-        for channel in ChannelName::iter() {
-            if let Some(mix) = self.profile.get_submix_from_channel(channel) {
-                if self.profile.is_channel_linked(mix) {
-                    // Get the channels volume..
-                    let volume = self.profile.get_channel_volume(channel);
-                    self.update_submix_for(channel, volume)?;
-                } else {
-                    let sub_volume = self.profile.get_submix_volume(mix);
-                    self.goxlr.set_sub_volume(mix, sub_volume)?;
-                }
+        if submix_enabled && apply_volumes {
+            for channel in ChannelName::iter() {
+                self.sync_submix_volume(channel)?;
             }
         }
 
-        // Ok, volumes are next, lets make sure we need to..
-        if !submix_enabled {
-            return Ok(());
-        }
+        Ok(())
+    }
 
+    fn sync_submix_volume(&mut self, channel: ChannelName) -> Result<()> {
+        if let Some(mix) = self.profile.get_submix_from_channel(channel) {
+            if self.profile.is_channel_linked(mix) {
+                // Get the channels volume..
+                let volume = self.profile.get_channel_volume(channel);
+                self.update_submix_for(channel, volume)?;
+            } else {
+                let sub_volume = self.profile.get_submix_volume(mix);
+                self.goxlr.set_sub_volume(mix, sub_volume)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn apply_submix_volume(&mut self, channel: ChannelName, volume: u8) -> Result<()> {
+        if let Some(mix) = self.profile.get_submix_from_channel(channel) {
+            if self.profile.is_channel_linked(mix) {
+                // We need to calculate the new value for the main channel..
+                let ratio = self.profile.get_submix_ratio(mix);
+
+                let linked_volume = (volume as f64 / ratio) as u8;
+                self.profile.set_channel_volume(channel, linked_volume)?;
+                self.goxlr.set_volume(channel, linked_volume)?;
+            }
+
+            // Apply the submix volume..
+            self.profile.set_submix_volume(mix, volume)?;
+            self.goxlr.set_sub_volume(mix, volume)?;
+        }
+        Ok(())
+    }
+
+    fn link_submix_channel(&mut self, channel: ChannelName, linked: bool) -> Result<()> {
+        if let Some(mix) = self.profile.get_submix_from_channel(channel) {
+            if !linked {
+                // We don't need to do anything special here..
+                self.profile.set_submix_linked(mix, linked)?;
+                return Ok(());
+            } else {
+                // We need to work out the current ratio between the channel, and it's mix..
+                let channel_volume = self.profile.get_channel_volume(channel);
+                let mix_volume = self.profile.get_submix_volume(mix);
+                let ratio = mix_volume as f64 / channel_volume as f64;
+
+                // Enable the link, and set the ratio..
+                self.profile.set_submix_linked(mix, linked)?;
+                self.profile.set_submix_link_ratio(mix, ratio)?;
+            }
+        }
         Ok(())
     }
 
