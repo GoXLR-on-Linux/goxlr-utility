@@ -2651,15 +2651,22 @@ impl<'a> Device<'a> {
         // This should always be successful, in theory :D
         self.goxlr.set_channel_mixes(submix.try_into().unwrap())?;
 
+        for channel in ChannelName::iter() {
+            if let Some(mix) = self.profile.get_submix_from_channel(channel) {
+                if self.profile.is_channel_linked(mix) {
+                    // Get the channels volume..
+                    let volume = self.profile.get_channel_volume(channel);
+                    self.update_submix_for(channel, volume)?;
+                } else {
+                    let sub_volume = self.profile.get_submix_volume(mix);
+                    self.goxlr.set_sub_volume(mix, sub_volume)?;
+                }
+            }
+        }
+
         // Ok, volumes are next, lets make sure we need to..
         if !submix_enabled {
             return Ok(());
-        }
-
-        // Finally, for each of the submix volumes, we need to set them.
-        for channel in SubMixChannelName::iter() {
-            let volume = self.profile.get_submix_volume(channel);
-            self.goxlr.set_sub_volume(channel, volume)?;
         }
 
         Ok(())
