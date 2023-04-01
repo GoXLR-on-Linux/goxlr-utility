@@ -36,7 +36,7 @@ pub struct BrowserPreviewTree {
     playing: u8,
     file: String,
     play_toggle: u8,
-    current_relative_time: u8,
+    current_relative_time: f64,
 }
 
 impl BrowserPreviewTree {
@@ -49,7 +49,7 @@ impl BrowserPreviewTree {
             playing: 0,
             file: "".to_string(),
             play_toggle: 0,
-            current_relative_time: 0,
+            current_relative_time: 0.0,
         }
     }
 
