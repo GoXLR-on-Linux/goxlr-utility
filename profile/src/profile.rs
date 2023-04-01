@@ -67,11 +67,17 @@ impl Profile {
         }
 
         debug!("Attempting to read profile.xml..");
-        let settings = ProfileSettings::load(archive.by_name("profile.xml")?)?;
-        Ok(Profile {
-            settings,
-            scribbles,
-        })
+        let result = ProfileSettings::load(archive.by_name("profile.xml")?);
+        match result {
+            Ok(settings) => Ok(Profile {
+                settings,
+                scribbles,
+            }),
+            Err(e) => {
+                warn!("Unable to Load Profile: {}", e);
+                bail!("Unable to Load Profile");
+            }
+        }
     }
 
     // Ok, this is better.
