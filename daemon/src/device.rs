@@ -1,6 +1,5 @@
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::{anyhow, bail, Result};
@@ -11,7 +10,6 @@ use futures::executor::block_on;
 use log::{debug, error, info};
 use ritelinked::LinkedHashSet;
 use strum::IntoEnumIterator;
-use tokio::sync::Mutex;
 
 use goxlr_ipc::{
     DeviceType, Display, FaderStatus, GoXLRCommand, HardwareStatus, Levels, MicSettings,
@@ -147,19 +145,16 @@ impl<'a> Device<'a> {
             volumes[channel] = self.profile.get_channel_volume(channel);
         }
 
-        debug!("Shutdown Commands?");
         let shutdown_commands = self
             .settings
             .get_device_shutdown_commands(self.serial())
             .await;
 
-        debug!("Sampler Prerecord");
         let sampler_prerecord = self
             .settings
             .get_device_sampler_pre_buffer(self.serial())
             .await;
 
-        debug!("Submix Supported..");
         let submix_supported = self.device_supports_submixes();
 
         MixerStatus {
@@ -268,7 +263,6 @@ impl<'a> Device<'a> {
             changed = result;
         }
 
-        debug!("Checking Buttons..");
         let pressed_buttons = state.pressed.difference(self.last_buttons);
         for button in pressed_buttons {
             // This is a new press, store it in the states..
@@ -302,7 +296,6 @@ impl<'a> Device<'a> {
         }
 
         self.last_buttons = state.pressed;
-        debug!("Done!");
         Ok(changed)
     }
 

@@ -12,7 +12,7 @@ use goxlr_usb::device::base::GoXLRDevice;
 use goxlr_usb::device::{find_devices, from_device};
 use goxlr_usb::{PID_GOXLR_FULL, PID_GOXLR_MINI};
 use json_patch::diff;
-use log::{debug, error, info, warn};
+use log::{error, info, warn};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use tokio::sync::broadcast::Sender as BroadcastSender;
@@ -255,7 +255,6 @@ async fn get_daemon_status(
     settings: &SettingsHandle,
     files: Files,
 ) -> DaemonStatus {
-    debug!("Getting Base..");
     let mut status = DaemonStatus {
         config: DaemonConfig {
             daemon_version: String::from(VERSION),
@@ -273,7 +272,6 @@ async fn get_daemon_status(
         ..Default::default()
     };
 
-    debug!("Iterating Devices..");
     for (serial, device) in devices {
         status
             .mixers

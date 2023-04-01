@@ -2,7 +2,7 @@ use crate::components::mixer::InputChannels;
 use crate::components::submix::linking_tree::LinkingTree;
 use crate::components::submix::monitor_tree::MonitorTree;
 use crate::profile::Attribute;
-use anyhow::{bail, Result};
+use anyhow::Result;
 use enum_map::EnumMap;
 use quick_xml::events::{BytesEnd, BytesStart, Event};
 use quick_xml::Writer;

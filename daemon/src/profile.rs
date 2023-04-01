@@ -1899,6 +1899,7 @@ impl ProfileAdapter {
             .get_volume(submix_standard_to_profile_input(device))
     }
 
+    #[allow(unused)]
     pub fn is_channel_linked(&self, device: SubMixChannelName) -> bool {
         self.profile
             .settings()
@@ -2771,6 +2772,7 @@ fn profile_to_standard_mix(source: Mix) -> goxlr_types::Mix {
     }
 }
 
+#[allow(unused)]
 fn standard_to_profile_mix(source: goxlr_types::Mix) -> Mix {
     match source {
         goxlr_types::Mix::A => Mix::A,
