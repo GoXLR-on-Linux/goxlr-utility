@@ -111,7 +111,7 @@ impl LinkingTree {
         }
 
         for input in InputChannels::iter() {
-            let key = format!("{}Level", input.get_str("Name").unwrap());
+            let key = format!("{}Ratio", input.get_str("Name").unwrap());
             let value = format!("{}", self.linked_ratio[input]);
 
             attributes.insert(key, value);

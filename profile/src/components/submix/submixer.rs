@@ -2,7 +2,7 @@ use crate::components::mixer::InputChannels;
 use crate::components::submix::linking_tree::LinkingTree;
 use crate::components::submix::monitor_tree::MonitorTree;
 use crate::profile::Attribute;
-use anyhow::Result;
+use anyhow::{bail, Result};
 use enum_map::EnumMap;
 use quick_xml::events::{BytesEnd, BytesStart, Event};
 use quick_xml::Writer;
@@ -122,8 +122,9 @@ impl SubMixer {
     pub fn get_volume(&self, channel: InputChannels) -> u8 {
         self.volume_table[channel]
     }
-    pub fn set_volume(&mut self, channel: InputChannels, volume: u8) {
+    pub fn set_volume(&mut self, channel: InputChannels, volume: u8) -> Result<()> {
         self.volume_table[channel] = volume;
+        Ok(())
     }
 
     pub fn is_linked(&self, channel: InputChannels) -> bool {
