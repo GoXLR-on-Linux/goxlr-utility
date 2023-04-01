@@ -454,8 +454,12 @@ impl<'a> Device<'a> {
                     .await?;
             }
             Buttons::SamplerClear => {
-                self.profile
-                    .set_sample_clear_active(!self.profile.is_sample_clear_active())?;
+                if let Some(audio) = &self.audio_handler {
+                    if !audio.is_sample_recording() {
+                        self.profile
+                            .set_sample_clear_active(!self.profile.is_sample_clear_active())?;
+                    }
+                }
             }
         }
         self.update_button_states()?;

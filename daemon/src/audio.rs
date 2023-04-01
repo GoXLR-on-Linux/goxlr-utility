@@ -220,6 +220,20 @@ impl AudioHandler {
         self.active_streams[bank][button].is_some()
     }
 
+    pub fn is_sample_recording(&self) -> bool {
+        for bank in SampleBank::iter() {
+            for button in SampleButtons::iter() {
+                if let Some(manager) = &self.active_streams[bank][button] {
+                    if manager.recording.is_some() {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        false
+    }
+
     pub fn is_sample_stopping(&self, bank: SampleBank, button: SampleButtons) -> bool {
         if let Some(state) = &self.active_streams[bank][button] {
             if state.stream_type == StreamType::Recording {
