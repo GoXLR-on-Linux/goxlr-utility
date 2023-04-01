@@ -338,12 +338,7 @@ impl ProfileAdapter {
     }
 
     pub fn get_fader_from_channel(&self, channel: ChannelName) -> Option<FaderName> {
-        for fader in FaderName::iter() {
-            if self.get_fader_assignment(fader) == channel {
-                return Some(fader);
-            }
-        }
-        None
+        FaderName::iter().find(|&fader| self.get_fader_assignment(fader) == channel)
     }
 
     pub fn set_channel_volume(&mut self, channel: ChannelName, volume: u8) -> Result<()> {

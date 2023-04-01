@@ -1072,27 +1072,25 @@ impl<'a> Device<'a> {
                 if new_volume == self.fader_last_seen[fader] {
                     continue;
                 }
-            } else {
-                if self.fader_pause_until[fader].paused {
-                    let until = self.fader_pause_until[fader].until;
+            } else if self.fader_pause_until[fader].paused {
+                let until = self.fader_pause_until[fader].until;
 
-                    // Calculate min and max, make sure we don't overflow..
-                    let min = match until < 5 {
-                        true => 0,
-                        false => until - 5
-                    };
+                // Calculate min and max, make sure we don't overflow..
+                let min = match until < 5 {
+                    true => 0,
+                    false => until - 5,
+                };
 
-                    let max = match until > 250 {
-                        true => 255,
-                        false => until + 5
-                    };
+                let max = match until > 250 {
+                    true => 255,
+                    false => until + 5,
+                };
 
-                    // Are we in this range?
-                    if !((min)..=(max)).contains(&new_volume) {
-                        continue;
-                    } else {
-                        self.fader_pause_until[fader].paused = false;
-                    }
+                // Are we in this range?
+                if !((min)..=(max)).contains(&new_volume) {
+                    continue;
+                } else {
+                    self.fader_pause_until[fader].paused = false;
                 }
             }
             self.fader_last_seen[fader] = new_volume;
@@ -1871,7 +1869,7 @@ impl<'a> Device<'a> {
                     self.profile.get_track_by_index(bank, button, index)?,
                     false,
                 )
-                    .await?;
+                .await?;
                 self.update_button_states()?;
             }
             GoXLRCommand::PlayNextSample(bank, button) => {
