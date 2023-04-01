@@ -268,40 +268,6 @@ impl<'a> Device<'a> {
             changed = result;
         }
 
-        // Submix Implementation...
-        if self.device_supports_submixes() && self.profile.is_submix_enabled() {
-            // This will need improving!
-            for fader in FaderName::iter() {
-                debug!("Loop :)");
-                // Get the Channel Volume for the fader..
-                let channel = self.profile.get_fader_assignment(fader);
-                let volume = self.profile.get_channel_volume(channel);
-
-                if let Some(mix) = self.profile.get_submix_from_channel(channel) {
-                    if self.profile.submix_linked(mix) {
-                        let mix_volume = self.profile.get_submix_volume(mix);
-                        let ratio = self.profile.get_submix_ratio(mix);
-                        debug!("{} {}", mix_volume, ratio);
-                        debug!("{}", (volume as f64 * ratio));
-
-                        if (volume as f64 * ratio) as u8 != mix_volume {
-                            // Due to the nature of u8, the value can only be between 0 and 255..
-                            let new_volume = (volume as f64 * ratio) as u8;
-
-                            debug!("Setting submix output for {} to {}", mix, new_volume);
-
-                            self.profile.set_submix_volume(mix, new_volume);
-
-                            debug!("Sending Update..");
-                            self.goxlr.set_sub_volume(mix, new_volume)?;
-                        } else {
-                            debug!("Volume Is Same?");
-                        }
-                    }
-                }
-            }
-        }
-
         debug!("Checking Buttons..");
         let pressed_buttons = state.pressed.difference(self.last_buttons);
         for button in pressed_buttons {
@@ -1118,6 +1084,30 @@ impl<'a> Device<'a> {
                 );
                 value_changed = true;
                 self.profile.set_channel_volume(channel, new_volume)?;
+
+                // Now we need to check on the submix fader..
+                if self.device_supports_submixes() && self.profile.is_submix_enabled() {
+                    if let Some(mix) = self.profile.get_submix_from_channel(channel) {
+                        if !self.profile.submix_linked(mix) {
+                            continue;
+                        }
+
+                        let mix_current_volume = self.profile.get_submix_volume(mix);
+                        let ratio = self.profile.get_submix_ratio(mix);
+
+                        let linked_volume = (new_volume as f64 * ratio) as u8;
+
+                        debug!(
+                            "Mix Volume Should Be: {} vs {} ({})",
+                            linked_volume, mix_current_volume, ratio
+                        );
+                        if linked_volume != mix_current_volume {
+                            debug!("Updating Submix Volume to {}", linked_volume);
+                            self.profile.set_submix_volume(mix, linked_volume)?;
+                            self.goxlr.set_sub_volume(mix, linked_volume)?;
+                        }
+                    }
+                }
             }
         }
         Ok(value_changed)
