@@ -32,7 +32,6 @@ pub struct TUSBAudioGoXLR {
 
     // Thread states
     stopped: Arc<AtomicBool>,
-    lock: Arc<Mutex<bool>>,
 }
 
 impl TUSBAudioGoXLR {
@@ -93,7 +92,7 @@ impl AttachGoXLR for TUSBAudioGoXLR {
         let handle = DeviceHandle::from_device(device)?;
 
         // Spawn the Event handler thread..
-        let (data_sender, data_receiver) = mpsc::channel(64);
+        let (data_sender, data_receiver) = mpsc::channel(1);
         let sender_inner = Arc::new(data_sender);
 
         // In this case, we spawn a thread to manage windows events..
@@ -114,7 +113,6 @@ impl AttachGoXLR for TUSBAudioGoXLR {
             daemon_identifier: Arc::new(Mutex::new(None)),
 
             stopped: Arc::new(AtomicBool::new(false)),
-            lock: Arc::new(Mutex::new(false)),
         });
 
         // Spawn an event loop for this handle..
@@ -197,11 +195,6 @@ impl AttachGoXLR for TUSBAudioGoXLR {
 
 impl ExecutableGoXLR for TUSBAudioGoXLR {
     fn perform_request(&mut self, command: Command, body: &[u8], retry: bool) -> Result<Vec<u8>> {
-        // This lock will be dropped when this method completes one way or another, it helps to ensure
-        // that we don't attempt to handle multiple commands at once..
-        let lock = self.lock.clone();
-        let lock = lock.lock().unwrap();
-
         if command == Command::ResetCommandIndex {
             self.command_count = 0;
         } else {
@@ -218,7 +211,6 @@ impl ExecutableGoXLR for TUSBAudioGoXLR {
         LittleEndian::write_u16(&mut full_request[6..8], command_index);
         full_request.extend(body);
 
-        debug!("Writing Control..");
         if let Err(error) = self.write_control(2, 0, 0, &full_request) {
             if error.to_string() == "TSTATUS_INVALID_HANDLE" {
                 if self.is_connected() {
@@ -242,13 +234,11 @@ impl ExecutableGoXLR for TUSBAudioGoXLR {
         }
 
         // We will sit here, and wait for a response.. this may take a few cycles..
-        debug!("Awaiting Response..");
         if !self.await_data() {
             self.trigger_disconnect();
             bail!("Event handler has ended, Disconnecting.");
         }
 
-        debug!("Reading Response..");
         let mut response_value = self.read_control(3, 0, 0, 1040);
         if let Err(error) = response_value {
             if error.to_string() == "TSTATUS_INVALID_HANDLE" {
@@ -271,7 +261,6 @@ impl ExecutableGoXLR for TUSBAudioGoXLR {
             }
         }
 
-        debug!("Waiting For Response..");
         let mut response_header = response_value?;
         if response_header.len() < 16 {
             error!(
@@ -281,7 +270,6 @@ impl ExecutableGoXLR for TUSBAudioGoXLR {
             bail!("Invalid Response");
         }
 
-        debug!("Response Received.");
         let response = response_header.split_off(16);
         let response_length = LittleEndian::read_u16(&response_header[4..6]);
         let response_command_index = LittleEndian::read_u16(&response_header[6..8]);
@@ -310,7 +298,6 @@ impl ExecutableGoXLR for TUSBAudioGoXLR {
         }
 
         debug_assert!(response.len() == response_length as usize);
-        debug!("{:?}", lock);
         Ok(response)
     }
 

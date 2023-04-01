@@ -33,8 +33,7 @@ use crate::audio::{AudioFile, AudioHandler};
 use crate::files::find_file_in_path;
 use crate::mic_profile::{MicProfileAdapter, DEFAULT_MIC_PROFILE_NAME};
 use crate::profile::{
-    channel_name_to_submix, usb_to_standard_button, version_newer_or_equal_to, ProfileAdapter,
-    DEFAULT_PROFILE_NAME,
+    usb_to_standard_button, version_newer_or_equal_to, ProfileAdapter, DEFAULT_PROFILE_NAME,
 };
 use crate::SettingsHandle;
 
@@ -50,7 +49,6 @@ pub struct Device<'a> {
     hold_time: u16,
     vc_mute_also_mute_cm: bool,
     settings: &'a SettingsHandle,
-    input_mutex: Arc<Mutex<bool>>,
 }
 
 // Experimental code:
@@ -119,7 +117,6 @@ impl<'a> Device<'a> {
             fader_last_seen: EnumMap::default(),
             audio_handler,
             settings: settings_handle,
-            input_mutex: Arc::new(Mutex::new(false)),
         };
 
         device.apply_profile()?;
@@ -132,7 +129,7 @@ impl<'a> Device<'a> {
         &self.hardware.serial_number
     }
 
-    pub fn status(&self) -> MixerStatus {
+    pub async fn status(&self) -> MixerStatus {
         let mut fader_map: EnumMap<FaderName, FaderStatus> = Default::default();
         for name in FaderName::iter() {
             fader_map[name] = self.get_fader_state(name);
@@ -150,10 +147,19 @@ impl<'a> Device<'a> {
             volumes[channel] = self.profile.get_channel_volume(channel);
         }
 
-        let shutdown_commands = block_on(self.settings.get_device_shutdown_commands(self.serial()));
-        let sampler_prerecord =
-            block_on(self.settings.get_device_sampler_pre_buffer(self.serial()));
+        debug!("Shutdown Commands?");
+        let shutdown_commands = self
+            .settings
+            .get_device_shutdown_commands(self.serial())
+            .await;
 
+        debug!("Sampler Prerecord");
+        let sampler_prerecord = self
+            .settings
+            .get_device_sampler_pre_buffer(self.serial())
+            .await;
+
+        debug!("Submix Supported..");
         let submix_supported = self.device_supports_submixes();
 
         MixerStatus {
