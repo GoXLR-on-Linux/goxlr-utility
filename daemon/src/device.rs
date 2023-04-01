@@ -1078,32 +1078,37 @@ impl<'a> Device<'a> {
                 value_changed = true;
                 self.profile.set_channel_volume(channel, new_volume)?;
 
-                // Now we need to check on the submix fader..
-                if self.device_supports_submixes() && self.profile.is_submix_enabled() {
-                    if let Some(mix) = self.profile.get_submix_from_channel(channel) {
-                        if !self.profile.submix_linked(mix) {
-                            continue;
-                        }
-
-                        let mix_current_volume = self.profile.get_submix_volume(mix);
-                        let ratio = self.profile.get_submix_ratio(mix);
-
-                        let linked_volume = (new_volume as f64 * ratio) as u8;
-
-                        debug!(
-                            "Mix Volume Should Be: {} vs {} ({})",
-                            linked_volume, mix_current_volume, ratio
-                        );
-                        if linked_volume != mix_current_volume {
-                            debug!("Updating Submix Volume to {}", linked_volume);
-                            self.profile.set_submix_volume(mix, linked_volume)?;
-                            self.goxlr.set_sub_volume(mix, linked_volume)?;
-                        }
-                    }
-                }
+                // Update the Submix..
+                self.update_submix_for(channel, new_volume)?;
             }
         }
         Ok(value_changed)
+    }
+
+    fn update_submix_for(&mut self, channel: ChannelName, volume: u8) -> Result<()> {
+        if self.device_supports_submixes() && self.profile.is_submix_enabled() {
+            if let Some(mix) = self.profile.get_submix_from_channel(channel) {
+                if !self.profile.submix_linked(mix) {
+                    return Ok(());
+                }
+
+                let mix_current_volume = self.profile.get_submix_volume(mix);
+                let ratio = self.profile.get_submix_ratio(mix);
+
+                let linked_volume = (volume as f64 * ratio) as u8;
+
+                debug!(
+                    "Mix Volume Should Be: {} vs {} ({})",
+                    linked_volume, mix_current_volume, ratio
+                );
+                if linked_volume != mix_current_volume {
+                    debug!("Updating Submix Volume to {}", linked_volume);
+                    self.profile.set_submix_volume(mix, linked_volume)?;
+                    self.goxlr.set_sub_volume(mix, linked_volume)?;
+                }
+            }
+        }
+        Ok(())
     }
 
     fn update_encoders_to(&mut self, encoders: [i8; 4]) -> Result<bool> {
@@ -1192,6 +1197,9 @@ impl<'a> Device<'a> {
             GoXLRCommand::SetVolume(channel, volume) => {
                 self.goxlr.set_volume(channel, volume)?;
                 self.profile.set_channel_volume(channel, volume)?;
+
+                // Update the Submix when volume changes via IPC
+                self.update_submix_for(channel, volume)?;
             }
 
             GoXLRCommand::SetCoughMuteFunction(mute_function) => {
