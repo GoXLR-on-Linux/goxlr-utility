@@ -134,6 +134,7 @@ pub struct Submixes {
 pub struct Submix {
     pub volume: u8,
     pub linked: bool,
+    pub ratio: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

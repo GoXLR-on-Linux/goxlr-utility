@@ -924,14 +924,11 @@ impl ProfileAdapter {
 
     pub fn get_submixes_ipc(&self, submix_supported: bool) -> Option<Submixes> {
         if !submix_supported {
-            debug!("NOT SUPPORTED!");
             return None;
         }
 
         let mixes = self.profile.settings().submixes();
         if !mixes.submix_enabled() {
-            // If ths submix isn't enabled, don't provide data.
-            debug!("Submixes Disabled!");
             return None;
         }
 
@@ -940,10 +937,14 @@ impl ProfileAdapter {
 
         for channel in SubMixChannelName::iter() {
             let input_channel = submix_standard_to_profile_input(channel);
-            // We need to map SubmixChannelName to something the profile can understand..
+            let ratio = match mixes.linking_tree().is_linked(input_channel) {
+                true => mixes.linking_tree().get_ratio(input_channel),
+                false => 1.0_f64,
+            };
             inputs[channel] = Submix {
                 volume: mixes.volume_table()[input_channel],
                 linked: mixes.linking_tree().is_linked(input_channel),
+                ratio,
             };
         }
 
