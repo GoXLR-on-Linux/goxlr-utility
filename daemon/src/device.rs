@@ -41,12 +41,19 @@ pub struct Device<'a> {
     last_buttons: EnumSet<Buttons>,
     button_states: EnumMap<Buttons, ButtonState>,
     fader_last_seen: EnumMap<FaderName, u8>,
+    fader_pause_until: EnumMap<FaderName, PauseUntil>,
     profile: ProfileAdapter,
     mic_profile: MicProfileAdapter,
     audio_handler: Option<AudioHandler>,
     hold_time: u16,
     vc_mute_also_mute_cm: bool,
     settings: &'a SettingsHandle,
+}
+
+#[derive(Debug, Default, Copy, Clone)]
+struct PauseUntil {
+    paused: bool,
+    until: u8,
 }
 
 // Experimental code:
@@ -113,6 +120,7 @@ impl<'a> Device<'a> {
             last_buttons: EnumSet::empty(),
             button_states: EnumMap::default(),
             fader_last_seen: EnumMap::default(),
+            fader_pause_until: EnumMap::default(),
             audio_handler,
             settings: settings_handle,
         };
@@ -1060,10 +1068,32 @@ impl<'a> Device<'a> {
 
         for fader in FaderName::iter() {
             let new_volume = volumes[fader as usize];
-            if self.hardware.device_type == DeviceType::Mini
-                && new_volume == self.fader_last_seen[fader]
-            {
-                continue;
+            if self.hardware.device_type == DeviceType::Mini {
+                if new_volume == self.fader_last_seen[fader] {
+                    continue;
+                }
+            } else {
+                if self.fader_pause_until[fader].paused {
+                    let until = self.fader_pause_until[fader].until;
+
+                    // Calculate min and max, make sure we don't overflow..
+                    let min = match until < 5 {
+                        true => 0,
+                        false => until - 5
+                    };
+
+                    let max = match until > 250 {
+                        true => 255,
+                        false => until + 5
+                    };
+
+                    // Are we in this range?
+                    if !((min)..=(max)).contains(&new_volume) {
+                        continue;
+                    } else {
+                        self.fader_pause_until[fader].paused = false;
+                    }
+                }
             }
             self.fader_last_seen[fader] = new_volume;
 
@@ -1195,6 +1225,11 @@ impl<'a> Device<'a> {
 
                 // Update the Submix when volume changes via IPC
                 self.update_submix_for(channel, volume)?;
+
+                if let Some(fader) = self.profile.get_fader_from_channel(channel) {
+                    self.fader_pause_until[fader].paused = true;
+                    self.fader_pause_until[fader].until = volume;
+                }
             }
 
             GoXLRCommand::SetCoughMuteFunction(mute_function) => {
@@ -1836,7 +1871,7 @@ impl<'a> Device<'a> {
                     self.profile.get_track_by_index(bank, button, index)?,
                     false,
                 )
-                .await?;
+                    .await?;
                 self.update_button_states()?;
             }
             GoXLRCommand::PlayNextSample(bank, button) => {
@@ -2693,6 +2728,11 @@ impl<'a> Device<'a> {
 
                 let linked_volume = (volume as f64 / ratio) as u8;
                 if self.profile.get_channel_volume(channel) != linked_volume {
+                    // Setup the latch..
+                    if let Some(fader) = self.profile.get_fader_from_channel(channel) {
+                        self.fader_pause_until[fader].paused = true;
+                        self.fader_pause_until[fader].until = linked_volume;
+                    }
                     self.profile.set_channel_volume(channel, linked_volume)?;
                     self.goxlr.set_volume(channel, linked_volume)?;
                 }
