@@ -12,4 +12,5 @@ members = [
     "initialiser",
     "scribbles",
     "defaults",
+    "firmware",
 ]
