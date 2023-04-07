@@ -190,6 +190,10 @@ impl AttachGoXLR for TUSBAudioGoXLR {
         }
         true
     }
+
+    fn stop_polling(&mut self) {
+        // The TUSB implementation is event driven, so there's no polling to stop.
+    }
 }
 
 impl ExecutableGoXLR for TUSBAudioGoXLR {

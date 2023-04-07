@@ -1,16 +1,20 @@
 use crate::buttonstate::{ButtonStates, Buttons, CurrentButtonStates};
 use crate::channelstate::ChannelState;
 use crate::commands::SystemInfoCommand::SupportsDCPCategory;
-use crate::commands::{Command, HardwareInfoCommand, SystemInfoCommand};
+use crate::commands::{
+    Command, FirmwareAction, FirmwareCommand, HardwareInfoCommand, SystemInfoCommand,
+};
 use crate::dcp::DCPCategory;
 use crate::routing::InputDevice;
-use anyhow::Result;
+use anyhow::{bail, Result};
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
 use enumset::EnumSet;
 use goxlr_types::{
     ChannelName, EffectKey, EncoderName, FaderName, FirmwareVersions, MicrophoneParamKey,
     MicrophoneType, VersionNumber,
 };
+use log::debug;
+use rand::Rng;
 use std::io::{Cursor, Write};
 use tokio::sync::mpsc::Sender;
 
@@ -28,6 +32,7 @@ pub trait AttachGoXLR {
 
     fn set_unique_identifier(&mut self, identifier: String);
     fn is_connected(&mut self) -> bool;
+    fn stop_polling(&mut self);
 }
 
 pub trait ExecutableGoXLR {
@@ -60,6 +65,7 @@ pub trait GoXLRCommands: ExecutableGoXLR {
             Command::GetHardwareInfo(HardwareInfoCommand::FirmwareVersion),
             &[],
         )?;
+        debug!("{:x?}", result);
         let mut cursor = Cursor::new(result);
         let firmware_packed = cursor.read_u32::<LittleEndian>()?;
         let firmware_build = cursor.read_u32::<LittleEndian>()?;
@@ -257,6 +263,92 @@ pub trait GoXLRCommands: ExecutableGoXLR {
             encoders,
         })
     }
+
+    // DO NOT EXECUTE ANY OF THESE, SERIOUSLY!
+    fn begin_firmware_upload(&mut self) -> Result<()> {
+        // let result = self.request_data(
+        //     Command::ExecuteFirmwareUpdateCommand(FirmwareCommand::START),
+        //     &[],
+        // )?;
+        // let code = LittleEndian::read_u32(&result[0..4]);
+        // if code != 0 {
+        //     bail!("Invalid Response Received!");
+        // }
+        // Ok(())
+        Ok(())
+    }
+
+    fn begin_erase_nvr(&mut self) {
+        let mut header = [0; 8];
+        LittleEndian::write_u32(&mut header[0..4], 7);
+        LittleEndian::write_u32(&mut header[4..8], 0);
+
+        println!("{:x?}", header);
+    }
+
+    fn poll_erase_nvr(&mut self) -> Result<u8> {
+        let mut header = [0; 8];
+        LittleEndian::write_u32(&mut header[0..4], 7);
+        LittleEndian::write_u32(&mut header[4..8], 0);
+
+        Ok(0xff)
+        // let result = self.request_data(
+        //     Command::ExecuteFirmwareUpdateAction(FirmwareAction::POLL),
+        //     &header,
+        // )?;
+        // if result.len() != 1 {
+        //     bail!("Unexpected Result from NVRam Firmware Erase!");
+        // }
+        // Ok(result[0])
+    }
+
+    fn send_firmware_packet(&mut self, bytes_sent: u64, data: &[u8]) {
+        let mut header = [0; 12];
+        LittleEndian::write_u32(&mut header[0..4], 7);
+        LittleEndian::write_u64(&mut header[4..], bytes_sent);
+
+        let mut packet = Vec::with_capacity(header.len() + data.len());
+        packet.extend_from_slice(&header);
+        packet.extend_from_slice(data);
+
+        println!("{:x?}", packet);
+    }
+
+    fn validate_firmware_packet(
+        &mut self,
+        verified: u32,
+        hash: u32,
+        remaining: u32,
+    ) -> Result<(u32, u32)> {
+        let mut packet = [0; 16];
+        LittleEndian::write_u32(&mut packet[0..4], 7);
+        LittleEndian::write_u32(&mut packet[4..8], verified);
+        LittleEndian::write_u32(&mut packet[8..12], hash);
+        LittleEndian::write_u32(&mut packet[12..16], remaining);
+        println!("{:x?}", packet);
+
+        let count = match remaining > 1024 {
+            true => 1024,
+            false => remaining,
+        };
+
+        let hash: u32 = rand::thread_rng().gen();
+        println!("Returning Hash: {:x?}", hash.to_le_bytes());
+
+        // if result.len() != 1 - Bail!
+
+        Ok((hash, count))
+    }
+
+    fn verify_firmware_status(&mut self) {}
+
+    fn poll_verify_firmware_status(&mut self) {}
+
+    fn finalise_firmware_upload(&mut self) {}
+
+    fn poll_finalise_firmware_upload(&mut self) {}
+
+    fn reboot_after_firmware_upload(&mut self) {}
 }
 
 // We primarily need the bus number, and address for comparison..

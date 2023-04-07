@@ -29,6 +29,7 @@ pub struct GoXLRUSB {
     identifier: Option<String>,
 
     pause_polling: Arc<AtomicBool>,
+    stop_polling: Arc<AtomicBool>,
 
     stopping: Arc<AtomicBool>,
     disconnecting: bool,
@@ -173,6 +174,7 @@ impl AttachGoXLR for GoXLRUSB {
             disconnecting: false,
             timeout,
             pause_polling: Arc::new(AtomicBool::new(false)),
+            stop_polling: Arc::new(AtomicBool::new(false)),
         };
 
         // Resets the state of the device (unconfirmed - Might just be the command id counter)
@@ -227,6 +229,7 @@ impl AttachGoXLR for GoXLRUSB {
         let sender = self.event_sender.clone();
         let stopping = self.stopping.clone();
         let paused = self.pause_polling.clone();
+        let stopped = self.stop_polling.clone();
 
         let poll_millis = 20;
         task::spawn(async move {
@@ -235,7 +238,7 @@ impl AttachGoXLR for GoXLRUSB {
                     break;
                 }
 
-                if paused.load(Ordering::Relaxed) {
+                if paused.load(Ordering::Relaxed) || stop.load(Ordering::Relaxed) {
                     tokio::time::sleep(Duration::from_millis(poll_millis)).await;
                     continue;
                 }
@@ -271,6 +274,11 @@ impl AttachGoXLR for GoXLRUSB {
             };
         }
         false
+    }
+
+    fn stop_polling(&mut self) {
+        warn!("Disabling GoXLR Value Polling");
+        self.stop_polling.store(true, Ordering::Relaxed);
     }
 }
 
