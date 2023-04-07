@@ -819,14 +819,13 @@ impl<'a> Device<'a> {
     }
 
     async fn handle_sample_button_release(&mut self, button: SampleButtons) -> Result<()> {
+        let active_bank = self.profile.get_active_sample_bank();
         // If clear is flashing, remove all samples from the button, disable the clearer and return..
         if self.profile.is_sample_clear_active() {
             debug!("Stopping any playing samples..");
-            if let Some(audio_handler) = &mut self.audio_handler {
+            if let Some(handler) = &mut self.audio_handler {
                 // Force stop of anything playing back on this button.
-                audio_handler
-                    .stop_playback(self.profile.get_active_sample_bank(), button, true)
-                    .await?;
+                handler.stop_playback(active_bank, button, true).await?;
             }
 
             debug!("Clearing Samples on Button..");
