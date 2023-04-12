@@ -1,5 +1,6 @@
 use anyhow::{anyhow, bail, Result};
 use enum_map::EnumMap;
+use goxlr_audio::get_audio_inputs;
 use goxlr_audio::player::{Player, PlayerState};
 use goxlr_audio::recorder::BufferedRecorder;
 use goxlr_audio::recorder::RecorderState;
@@ -14,7 +15,6 @@ use std::thread;
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 use strum::IntoEnumIterator;
-use goxlr_audio::get_audio_inputs;
 
 #[derive(Debug)]
 pub struct AudioHandler {
@@ -239,7 +239,6 @@ impl AudioHandler {
         false
     }
 
-
     pub fn is_sample_stopping(&self, bank: SampleBank, button: SampleButtons) -> bool {
         if let Some(state) = &self.active_streams[bank][button] {
             if state.stream_type == StreamType::Recording {
@@ -364,7 +363,9 @@ impl AudioHandler {
                 warn!("Sampler not ready, possibly missing Sample device. Not recording.");
 
                 debug!("Available Audio Inputs: ");
-                get_audio_inputs().iter().for_each(|name| debug!("{}", name));
+                get_audio_inputs()
+                    .iter()
+                    .for_each(|name| debug!("{}", name));
 
                 bail!("Sampler is not ready to handle recording (possibly missing device?)");
             }
