@@ -73,7 +73,7 @@ impl BufferedRecorder {
             buffer: Mutex::new(BoundedVecDeque::new(buffer_size)),
 
             stop: Arc::new(AtomicBool::new(false)),
-            is_ready: Arc::new(AtomicBool::new(false))
+            is_ready: Arc::new(AtomicBool::new(false)),
         })
     }
 
@@ -154,7 +154,9 @@ impl BufferedRecorder {
     pub fn record(&self, path: &Path, state: RecorderState) -> Result<()> {
         if !self.is_ready() {
             debug!("Possible problem locating the Sampler Output, available devices:");
-            get_audio_inputs().iter().for_each(|name| debug!("{}", name));
+            get_audio_inputs()
+                .iter()
+                .for_each(|name| debug!("{}", name));
 
             bail!("Attempted to start a recording on an unprepared Sampler");
         }
@@ -211,7 +213,9 @@ impl BufferedRecorder {
 
         // Now jump into the current 'live' audio.
         while !state.stop.load(Ordering::Relaxed) {
-            if let Ok(Some(samples)) = ring_buf_consumer.read_blocking_timeout(&mut read_buffer, READ_TIMEOUT) {
+            if let Ok(Some(samples)) =
+                ring_buf_consumer.read_blocking_timeout(&mut read_buffer, READ_TIMEOUT)
+            {
                 // Read these out into a vec..
                 let samples: Vec<f32> = Vec::from(&read_buffer[0..samples]);
                 writing = self.handle_samples(samples, &mut ebu_r128, writing, &mut writer)?;

@@ -840,7 +840,12 @@ impl<'a> Device<'a> {
 
         let sample_bank = self.profile.get_active_sample_bank();
         if !self.profile.current_sample_bank_has_samples(button) {
-            if self.audio_handler.as_mut().unwrap().is_sample_recording(sample_bank, button) {
+            if self
+                .audio_handler
+                .as_mut()
+                .unwrap()
+                .is_sample_recording(sample_bank, button)
+            {
                 let file_name = self
                     .audio_handler
                     .as_mut()
