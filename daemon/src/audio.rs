@@ -355,6 +355,11 @@ impl AudioHandler {
         button: SampleButtons,
     ) -> Result<()> {
         if let Some(recorder) = &mut self.buffered_input {
+            if !recorder.is_ready() {
+                warn!("Sampler not ready, possibly missing Sample device. Not recording.");
+                bail!("Sampler is not ready to handle recording (possibly missing device?)");
+            }
+
             let state = RecorderState {
                 stop: Arc::new(AtomicBool::new(false)),
             };
