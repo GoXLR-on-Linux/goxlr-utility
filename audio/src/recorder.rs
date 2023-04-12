@@ -208,7 +208,7 @@ impl BufferedRecorder {
 
         // Now jump into the current 'live' audio.
         while !state.stop.load(Ordering::Relaxed) {
-            if let Some(samples) = ring_buf_consumer.read_blocking(&mut read_buffer) {
+            if let Ok(Some(samples)) = ring_buf_consumer.read_blocking_timeout(&mut read_buffer, READ_TIMEOUT) {
                 // Read these out into a vec..
                 let samples: Vec<f32> = Vec::from(&read_buffer[0..samples]);
                 writing = self.handle_samples(samples, &mut ebu_r128, writing, &mut writer)?;
