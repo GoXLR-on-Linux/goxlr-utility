@@ -217,8 +217,23 @@ impl AudioHandler {
     }
 
     pub fn is_sample_playing(&self, bank: SampleBank, button: SampleButtons) -> bool {
-        self.active_streams[bank][button].is_some()
+        if let Some(stream) = &self.active_streams[bank][button] {
+            if stream.playback.is_some() {
+                return true;
+            }
+        }
+        false
     }
+
+    pub fn is_sample_recording(&self, bank: SampleBank, button: SampleButtons) -> bool {
+        if let Some(stream) = &self.active_streams[bank][button] {
+            if stream.recording.is_some() {
+                return true;
+            }
+        }
+        false
+    }
+
 
     pub fn is_sample_stopping(&self, bank: SampleBank, button: SampleButtons) -> bool {
         if let Some(state) = &self.active_streams[bank][button] {
