@@ -153,6 +153,9 @@ impl BufferedRecorder {
 
     pub fn record(&self, path: &Path, state: RecorderState) -> Result<()> {
         if !self.is_ready() {
+            debug!("Possible problem locating the Sampler Output, available devices:");
+            get_audio_inputs().iter().for_each(|name| debug!("{}", name));
+
             bail!("Attempted to start a recording on an unprepared Sampler");
         }
 

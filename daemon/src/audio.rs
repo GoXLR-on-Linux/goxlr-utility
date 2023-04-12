@@ -14,6 +14,7 @@ use std::thread;
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 use strum::IntoEnumIterator;
+use goxlr_audio::get_audio_inputs;
 
 #[derive(Debug)]
 pub struct AudioHandler {
@@ -169,7 +170,7 @@ impl AudioHandler {
 
         let device_list = match is_output {
             true => goxlr_audio::get_audio_outputs(),
-            false => goxlr_audio::get_audio_inputs(),
+            false => get_audio_inputs(),
         };
 
         let pattern_matchers = match is_output {
@@ -361,6 +362,10 @@ impl AudioHandler {
         if let Some(recorder) = &mut self.buffered_input {
             if !recorder.is_ready() {
                 warn!("Sampler not ready, possibly missing Sample device. Not recording.");
+
+                debug!("Available Audio Inputs: ");
+                get_audio_inputs().iter().for_each(|name| debug!("{}", name));
+
                 bail!("Sampler is not ready to handle recording (possibly missing device?)");
             }
 
