@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex};
 use std::thread::sleep;
 use std::time::Duration;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use bounded_vec_deque::BoundedVecDeque;
 use ebur128::{EbuR128, Mode};
 use hound::WavWriter;
@@ -21,6 +21,7 @@ use crate::audio::{get_input, AudioInput, AudioSpecification};
 use crate::get_audio_inputs;
 
 static NEXT_ID: AtomicU32 = AtomicU32::new(0);
+static READ_TIMEOUT: Duration = Duration::from_millis(100);
 
 pub struct BufferedRecorder {
     devices: Vec<Regex>,
@@ -28,6 +29,7 @@ pub struct BufferedRecorder {
     buffer_size: usize,
     buffer: Mutex<BoundedVecDeque<f32>>,
     stop: Arc<AtomicBool>,
+    is_ready: Arc<AtomicBool>,
 }
 
 pub struct RingProducer {
@@ -71,6 +73,7 @@ impl BufferedRecorder {
             buffer: Mutex::new(BoundedVecDeque::new(buffer_size)),
 
             stop: Arc::new(AtomicBool::new(false)),
+            is_ready: Arc::new(AtomicBool::new(false))
         })
     }
 
@@ -94,6 +97,7 @@ impl BufferedRecorder {
                     if let Ok(found_input) = get_input(spec) {
                         // We good, reset the loop so we can start work.
                         input.replace(found_input);
+                        self.is_ready.store(true, Ordering::Relaxed);
                         continue;
                     }
                 }
@@ -124,11 +128,16 @@ impl BufferedRecorder {
                         warn!("Error Reading audio input: {}", error);
                         debug!("Shutting down input, and clearing buffer.");
                         input = None;
+                        self.is_ready.store(false, Ordering::Relaxed);
                         self.buffer.lock().unwrap().clear();
                     }
                 }
             }
         }
+    }
+
+    pub fn is_ready(&self) -> bool {
+        self.is_ready.load(Ordering::Relaxed)
     }
 
     pub fn add_producer(&self, producer: RingProducer) {
@@ -143,6 +152,10 @@ impl BufferedRecorder {
     }
 
     pub fn record(&self, path: &Path, state: RecorderState) -> Result<()> {
+        if !self.is_ready() {
+            bail!("Attempted to start a recording on an unprepared Sampler");
+        }
+
         // So this will likely be spawned in a different thread, to actually handle the record
         // process.. with path being the file path to handle!
 
