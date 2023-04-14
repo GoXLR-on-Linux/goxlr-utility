@@ -340,15 +340,72 @@ pub trait GoXLRCommands: ExecutableGoXLR {
         Ok((hash, count))
     }
 
-    fn verify_firmware_status(&mut self) {}
+    fn verify_firmware_status(&mut self) -> Result<()> {
+        // let result = self.request_data(
+        //     Command::ExecuteFirmwareUpdateAction(FirmwareAction::VALIDATE),
+        //     &[],
+        // )?;
+        //
+        // let output = LittleEndian::read_u32(&result);
+        // if output != 0 {
+        //     bail!("Unexpected Result from Verify: {}", output);
+        // }
+        Ok(())
+    }
 
-    fn poll_verify_firmware_status(&mut self) {}
+    fn poll_verify_firmware_status(&mut self) {
+        // 3 0 1 0 - 'More Data'
+        // 2 0 2 0 - Completed Succesfully
+        // 3 0 3 0b - Failure..
+        // 3 1 3 0d - Failure?
 
-    fn finalise_firmware_upload(&mut self) {}
+        /*
+           Best Guess:
+           u32: Base State, Update (3) / Complete (2)
+           u32: Success state, 0 (success), 1 (failure)
+           u32: Current State: 1 (More Data), 2 (Data Finished), 3 (Error)
+           u32: Current Error: 0 (No Error), X (Error Code, 0x0d = CRC Failure)
+        */
+    }
 
-    fn poll_finalise_firmware_upload(&mut self) {}
+    fn finalise_firmware_upload(&mut self) -> Result<()> {
+        // let result = self.request_data(
+        //     Command::ExecuteFirmwareUpdateAction(FirmwareAction::FINALISE),
+        //     &[],
+        // )?;
+        //
+        // let output = LittleEndian::read_u32(&result);
+        // if output != 0 {
+        //     bail!("Unexpected Result from Finalise: {}", output);
+        // }
+        Ok(())
+    }
 
-    fn reboot_after_firmware_upload(&mut self) {}
+    fn poll_finalise_firmware_upload(&mut self) {
+        // Seems to be similar to verify..
+        // 4 1 1 0 - More Data..
+        // 4 1 2 0 - Complete..
+
+        // 3 1 3 0d on Failure.. Likely to indicate that something failed during verification (3-1)
+
+        /*
+        Ok, First integer is likely operation..
+        Second Integer is also operation, but stage..
+         */
+    }
+
+    fn reboot_after_firmware_upload(&mut self) -> Result<()> {
+        // let result = self.request_data(
+        //     Command::ExecuteFirmwareUpdateAction(FirmwareAction::REBOOT),
+        //     &[],
+        // )?;
+        //
+        // let output = LittleEndian::read_u32(&result);
+        // if output != 0 {
+        //     bail!("Unexpected Result from Verify: {}", output);
+        // }
+        Ok(())
+    }
 }
 
 // We primarily need the bus number, and address for comparison..
