@@ -131,12 +131,17 @@ async fn do_firmware_upload(device: &mut Box<dyn FullGoXLRDevice>) -> Result<()>
     let mut sent = 0;
     for chunk in firmware.chunks(chunk_size) {
         device.send_firmware_packet(sent, chunk);
-        sent += chunk_size as u64;
+        sent += chunk.len() as u64;
     }
 
     println!("Data Sent, Beginning Validation..");
     let total_bytes = firmware.len() as u32;
-    let mut remaining_bytes = firmware.len() as u32;
+    let mut remaining_bytes = sent as u32;
+
+    // This should never fail, unless there's been a chunking issue.
+    if total_bytes != remaining_bytes {
+        bail!("Error with Data Send");
+    }
 
     let mut processed: u32 = 0;
     let mut hash_in = 0;
@@ -150,9 +155,21 @@ async fn do_firmware_upload(device: &mut Box<dyn FullGoXLRDevice>) -> Result<()>
         }
 
         remaining_bytes -= count;
+
+        // I've attempted to determine how the CRC32 for this hash is calculated, and never found a correct answer, it might
+        // be possible to validate it, but the official app doesn't do so, it just sends it with the next packet. To the best
+        // of my understanding, the next step does a separate CRC check on the device itself, so we have to hope that's OK :)
         hash_in = hash;
     }
     println!("Validation complete!");
+
+    // So the GoXLR will note if something's gone wrong, the official app ignores it, but we'll see if we can do a slightly
+    // better job, and try to inform the user as well as abort the firmware update process, if not, we'll duplicate the official
+    // app behaviour, and the below applies..
+
+    // It should be noted, the GoXLR does appear to return errors when something goes wrong, but the official app doesn't seem
+    // to care, or register them, and proceeds as if they didn't happen. The GoXLR itself will take care of this behaviour, but
+    // we should be able to at least inform the user that something has probably gone wrong :p
 
     Ok(())
 }
