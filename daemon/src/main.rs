@@ -22,6 +22,7 @@ use crate::servers::http_server::spawn_http_server;
 use crate::servers::ipc_server::{bind_socket, spawn_ipc_server};
 use crate::settings::SettingsHandle;
 use crate::shutdown::Shutdown;
+use crate::tts::spawn_tts_service;
 
 mod audio;
 mod cli;
@@ -36,6 +37,7 @@ mod servers;
 mod settings;
 mod shutdown;
 mod tray;
+mod tts;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const ICON: &[u8] = include_bytes!("../resources/goxlr-utility-large.png");
@@ -126,6 +128,9 @@ async fn main() -> Result<()> {
     // Create the USB Event Channel..
     let (usb_tx, usb_rx) = mpsc::channel(32);
 
+    // Create the TTS Event Channel..
+    let (tts_sender, tts_rx) = mpsc::channel(32);
+
     // Create the HTTP Run Channel..
     let (httpd_tx, httpd_rx) = tokio::sync::oneshot::channel();
 
@@ -195,8 +200,17 @@ async fn main() -> Result<()> {
         warn!("HTTP Server Disabled");
     }
 
+    // Start the TTS Service..
+    let tts_handle = tokio::spawn(spawn_tts_service(
+        settings.clone(),
+        tts_rx,
+        shutdown.clone(),
+    ));
+
     let mut local_shutdown = shutdown.clone();
     let state = DaemonState {
+        tts_sender,
+
         show_tray,
         shutdown,
         shutdown_blocking,
@@ -237,6 +251,7 @@ async fn main() -> Result<()> {
             communications_handle,
             server.stop(false),
             file_handle,
+            tts_handle,
             event_handle,
             platform_handle
         );
@@ -245,6 +260,7 @@ async fn main() -> Result<()> {
             usb_handle,
             communications_handle,
             file_handle,
+            tts_handle,
             event_handle,
             platform_handle
         );

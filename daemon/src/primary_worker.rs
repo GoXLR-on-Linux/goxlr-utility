@@ -86,7 +86,7 @@ pub async fn spawn_usb_handler(
                         device_identifier = Some(identifier.clone());
                     }
 
-                    match load_device(device, existing_serials, disconnect_sender.clone(), event_sender.clone(), &settings).await {
+                    match load_device(device, existing_serials, disconnect_sender.clone(), event_sender.clone(), global_tx.clone(), &settings).await {
                         Ok(device) => {
                             devices.insert(device.serial().to_owned(), device);
                             change_found = true;
@@ -370,6 +370,7 @@ async fn load_device(
     existing_serials: Vec<String>,
     disconnect_sender: Sender<String>,
     event_sender: Sender<String>,
+    global_events: Sender<EventTriggers>,
     settings: &SettingsHandle,
 ) -> Result<Device<'_>> {
     let device_copy = device.clone();
@@ -427,6 +428,7 @@ async fn load_device(
         &profile_directory,
         &mic_profile_directory,
         settings,
+        global_events,
     )?;
     settings
         .set_device_profile_name(&serial_number, device.profile().name())

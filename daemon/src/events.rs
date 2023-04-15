@@ -11,6 +11,7 @@ use tokio::{select, signal};
 
 #[derive(Debug)]
 pub enum EventTriggers {
+    TTSMessage(String),
     Stop,
     Open(PathTypes),
     OpenUi,
@@ -21,6 +22,9 @@ pub enum EventTriggers {
 pub struct DaemonState {
     pub show_tray: Arc<AtomicBool>,
     pub http_settings: HttpSettings,
+
+    // TTS Output
+    pub tts_sender: Sender<String>,
 
     // Shutdown Handlers
     pub shutdown: Shutdown,
@@ -50,6 +54,9 @@ pub async fn spawn_event_handler(
             },
             Some(event) = rx.recv() => {
                 match event {
+                    EventTriggers::TTSMessage(message) => {
+                        state.tts_sender.send(message).await;
+                    }
                     EventTriggers::Stop => {
                         debug!("Shutdown Phase 1 Triggered..");
                         if !triggered_device_stop {

@@ -10,6 +10,7 @@ use futures::executor::block_on;
 use log::{debug, error, info};
 use ritelinked::LinkedHashSet;
 use strum::IntoEnumIterator;
+use tokio::sync::mpsc::Sender;
 
 use goxlr_ipc::{
     DeviceType, Display, FaderStatus, GoXLRCommand, HardwareStatus, Levels, MicSettings,
@@ -28,6 +29,7 @@ use goxlr_usb::device::base::FullGoXLRDevice;
 use goxlr_usb::routing::{InputDevice, OutputDevice};
 
 use crate::audio::{AudioFile, AudioHandler};
+use crate::events::EventTriggers;
 use crate::files::find_file_in_path;
 use crate::mic_profile::{MicProfileAdapter, DEFAULT_MIC_PROFILE_NAME};
 use crate::profile::{
@@ -47,6 +49,7 @@ pub struct Device<'a> {
     hold_time: u16,
     vc_mute_also_mute_cm: bool,
     settings: &'a SettingsHandle,
+    global_events: Sender<EventTriggers>,
 }
 
 // Experimental code:
@@ -57,6 +60,7 @@ struct ButtonState {
 }
 
 impl<'a> Device<'a> {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         goxlr: Box<dyn FullGoXLRDevice>,
         hardware: HardwareStatus,
@@ -65,6 +69,7 @@ impl<'a> Device<'a> {
         profile_directory: &Path,
         mic_profile_directory: &Path,
         settings_handle: &'a SettingsHandle,
+        global_events: Sender<EventTriggers>,
     ) -> Result<Self> {
         let mut device_type = "";
         if hardware.device_type == DeviceType::Mini {
@@ -115,6 +120,7 @@ impl<'a> Device<'a> {
             fader_last_seen: EnumMap::default(),
             audio_handler,
             settings: settings_handle,
+            global_events,
         };
 
         device.apply_profile()?;
@@ -516,6 +522,14 @@ impl<'a> Device<'a> {
         let (mute_toggle, muted_to_x, muted_to_all, mute_function) =
             self.profile.get_mute_chat_button_state();
 
+        let target = match mute_function {
+            MuteFunction::All => "All",
+            MuteFunction::ToStream => "Stream",
+            MuteFunction::ToVoiceChat => "Voice Chat",
+            MuteFunction::ToPhones => "Headphones",
+            MuteFunction::ToLineOut => "Line Out",
+        };
+
         // Ok, lets handle things in order, was this button just pressed?
         if press {
             if mute_toggle {
@@ -531,6 +545,12 @@ impl<'a> Device<'a> {
                 self.goxlr.set_channel_state(ChannelName::Mic, Muted)?;
             }
 
+            let message = format!("Mic Muted to {}", target);
+            let _ = self
+                .global_events
+                .send(EventTriggers::TTSMessage(message))
+                .await;
+
             self.apply_routing(BasicInputDevice::Microphone)?;
             return Ok(());
         }
@@ -545,6 +565,12 @@ impl<'a> Device<'a> {
             // remove any transient routing which may be set.
             self.profile.set_mute_chat_button_on(true);
             self.profile.set_mute_chat_button_blink(true);
+
+            let message = "Mic Muted to All".to_string();
+            let _ = self
+                .global_events
+                .send(EventTriggers::TTSMessage(message))
+                .await;
 
             self.goxlr.set_channel_state(ChannelName::Mic, Muted)?;
             self.apply_routing(BasicInputDevice::Microphone)?;
@@ -568,6 +594,11 @@ impl<'a> Device<'a> {
                         self.goxlr.set_channel_state(ChannelName::Mic, Unmuted)?;
                     }
 
+                    let message = "Mic Unmuted".to_string();
+                    let _ = self
+                        .global_events
+                        .send(EventTriggers::TTSMessage(message))
+                        .await;
                     self.apply_routing(BasicInputDevice::Microphone)?;
                     return Ok(());
                 }
@@ -578,6 +609,12 @@ impl<'a> Device<'a> {
                 if mute_function == MuteFunction::All {
                     self.goxlr.set_channel_state(ChannelName::Mic, Muted)?;
                 }
+
+                let message = format!("Mic Muted to {}", target);
+                let _ = self
+                    .global_events
+                    .send(EventTriggers::TTSMessage(message))
+                    .await;
 
                 // Update the transient routing..
                 self.apply_routing(BasicInputDevice::Microphone)?;
@@ -599,6 +636,17 @@ impl<'a> Device<'a> {
 
     async fn mute_fader_to_x(&mut self, fader: FaderName) -> Result<()> {
         let (muted_to_x, muted_to_all, mute_function) = self.profile.get_mute_button_state(fader);
+
+        debug!("Hi?");
+
+        let target = match mute_function {
+            MuteFunction::All => "All",
+            MuteFunction::ToStream => "Stream",
+            MuteFunction::ToVoiceChat => "Voice Chat",
+            MuteFunction::ToPhones => "Headphones",
+            MuteFunction::ToLineOut => "Line Out",
+        };
+
         let channel = self.profile.get_fader_assignment(fader);
         if muted_to_all {
             bail!("Unable to Transition from MutedToAll to MutedToX");
@@ -608,10 +656,19 @@ impl<'a> Device<'a> {
             return Ok(());
         }
 
+        // This will only ever trigger if called via the API, so don't announce this for now..
         if mute_function == MuteFunction::All {
             // Throw this across to the 'Mute to All' code..
             return self.mute_fader_to_all(fader, false).await;
         }
+
+        // Ok, we need to announce where we're muted to..
+        let name = self.profile.get_fader_assignment(fader);
+        let message = format!("{} Muted to {}", name, target);
+        let _ = self
+            .global_events
+            .send(EventTriggers::TTSMessage(message))
+            .await;
 
         let input = self.get_basic_input_from_channel(channel);
         self.profile.set_mute_button_on(fader, true)?;
@@ -639,6 +696,13 @@ impl<'a> Device<'a> {
             self.goxlr.set_channel_state(channel, Muted)?;
             self.profile.set_mute_button_on(fader, true)?;
         }
+
+        let name = self.profile.get_fader_assignment(fader);
+        let message = format!("{} Muted to All", name);
+        let _ = self
+            .global_events
+            .send(EventTriggers::TTSMessage(message))
+            .await;
 
         if blink {
             self.profile.set_mute_button_blink(fader, true)?;
@@ -701,6 +765,13 @@ impl<'a> Device<'a> {
             self.apply_routing(input.unwrap())?;
         }
 
+        let name = self.profile.get_fader_assignment(fader);
+        let message = format!("{} unmuted", name);
+        let _ = self
+            .global_events
+            .send(EventTriggers::TTSMessage(message))
+            .await;
+
         self.update_button_states()?;
         Ok(())
     }
@@ -726,6 +797,13 @@ impl<'a> Device<'a> {
     }
 
     async fn load_sample_bank(&mut self, bank: SampleBank) -> Result<()> {
+        // Send the TTS Message..
+        let tts_message = format!("Sample {}", bank);
+        let _ = self
+            .global_events
+            .send(EventTriggers::TTSMessage(tts_message))
+            .await;
+
         self.profile.load_sample_bank(bank)?;
 
         // Sync the state of active playback..
@@ -978,6 +1056,13 @@ impl<'a> Device<'a> {
     }
 
     async fn load_effect_bank(&mut self, preset: EffectBankPresets) -> Result<()> {
+        // Send the TTS Message..
+        let tts_message = format!("Effects {}", preset as u8 + 1);
+        let _ = self
+            .global_events
+            .send(EventTriggers::TTSMessage(tts_message))
+            .await;
+
         self.profile.load_effect_bank(preset)?;
         self.load_effects()?;
         self.set_pitch_mode()?;
@@ -994,18 +1079,39 @@ impl<'a> Device<'a> {
     }
 
     async fn set_megaphone(&mut self, enabled: bool) -> Result<()> {
+        // Send the TTS Message..
+        let tts_message = format!("Megaphone {}", bool_to_state(enabled));
+        let _ = self
+            .global_events
+            .send(EventTriggers::TTSMessage(tts_message))
+            .await;
+
         self.profile.set_megaphone(enabled)?;
         self.apply_effects(LinkedHashSet::from_iter([EffectKey::MegaphoneEnabled]))?;
         Ok(())
     }
 
     async fn set_robot(&mut self, enabled: bool) -> Result<()> {
+        // Send the TTS Message..
+        let tts_message = format!("Robot {}", bool_to_state(enabled));
+        let _ = self
+            .global_events
+            .send(EventTriggers::TTSMessage(tts_message))
+            .await;
+
         self.profile.set_robot(enabled)?;
         self.apply_effects(LinkedHashSet::from_iter([EffectKey::RobotEnabled]))?;
         Ok(())
     }
 
     async fn set_hardtune(&mut self, enabled: bool) -> Result<()> {
+        // Send the TTS Message..
+        let tts_message = format!("Hard tune {}", bool_to_state(enabled));
+        let _ = self
+            .global_events
+            .send(EventTriggers::TTSMessage(tts_message))
+            .await;
+
         self.profile.set_hardtune(enabled)?;
         self.apply_effects(LinkedHashSet::from_iter([EffectKey::HardTuneEnabled]))?;
         self.set_pitch_mode()?;
@@ -1019,6 +1125,13 @@ impl<'a> Device<'a> {
     }
 
     async fn set_effects(&mut self, enabled: bool) -> Result<()> {
+        // Send the TTS Message..
+        let tts_message = format!("Effects {}", bool_to_state(enabled));
+        let _ = self
+            .global_events
+            .send(EventTriggers::TTSMessage(tts_message))
+            .await;
+
         self.profile.set_effects(enabled)?;
 
         // When this changes, we need to update all the 'Enabled' keys..
@@ -2578,5 +2691,12 @@ impl<'a> Device<'a> {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_millis()
+    }
+}
+
+fn bool_to_state(bool: bool) -> String {
+    match bool {
+        true => "On".to_string(),
+        false => "Off".to_string(),
     }
 }
