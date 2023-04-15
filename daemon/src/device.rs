@@ -253,7 +253,7 @@ impl<'a> Device<'a> {
 
     pub async fn monitor_inputs(&mut self) -> Result<bool> {
         let state = self.goxlr.get_button_states()?;
-        let mut changed = self.update_volumes_to(state.volumes)?;
+        let mut changed = self.update_volumes_to(state.volumes).await?;
         let result = self.update_encoders_to(state.encoders).await?;
         if !changed {
             // Only change the value if it's not already true..
@@ -1172,7 +1172,7 @@ impl<'a> Device<'a> {
         muted_to_all || (muted_to_x && mute_function == MuteFunction::All)
     }
 
-    fn update_volumes_to(&mut self, volumes: [u8; 4]) -> Result<bool> {
+    async fn update_volumes_to(&mut self, volumes: [u8; 4]) -> Result<bool> {
         let mut value_changed = false;
 
         for fader in FaderName::iter() {
@@ -1192,6 +1192,19 @@ impl<'a> Device<'a> {
                     "Updating {} volume from {} to {} as a human moved the fader",
                     channel, old_volume, new_volume
                 );
+
+                // Ok, this simply doesn't work on a full device, when mute is called the mechanical
+                // fader drops to 0, and this spams out 'fader is currently muted' during that move.
+                // If I fix that problem, re-enable that code.
+
+                // let (muted_to_x, muted_to_all, mute_function) =
+                //     self.profile.get_mute_button_state(fader);
+                // if muted_to_all || (muted_to_x && mute_function == MuteFunction::All) {
+                //     // This fader is muted, we need to alert that these changes aren't happening!
+                //     let message = format!("Fader {} is currently Muted!", fader);
+                //     let _ = self.global_events.send(TTSMessage(message)).await;
+                // }
+
                 value_changed = true;
                 self.profile.set_channel_volume(channel, new_volume)?;
             }
