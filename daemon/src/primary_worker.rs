@@ -266,6 +266,7 @@ async fn get_daemon_status(
             daemon_version: String::from(VERSION),
             autostart_enabled: has_autostart(),
             show_tray_icon: settings.get_show_tray_icon().await,
+            tts_enabled: settings.get_tts_enabled().await,
         },
         paths: Paths {
             profile_directory: settings.get_profile_directory().await,

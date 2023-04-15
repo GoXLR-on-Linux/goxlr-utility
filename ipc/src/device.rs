@@ -34,6 +34,7 @@ pub struct DaemonConfig {
     pub daemon_version: String,
     pub autostart_enabled: bool,
     pub show_tray_icon: bool,
+    pub tts_enabled: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
