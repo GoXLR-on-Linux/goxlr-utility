@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::fmt::format;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -460,12 +461,7 @@ impl<'a> Device<'a> {
                     .await?;
             }
             Buttons::SamplerClear => {
-                if let Some(audio) = &self.audio_handler {
-                    if !audio.is_sample_recording() {
-                        self.profile
-                            .set_sample_clear_active(!self.profile.is_sample_clear_active())?;
-                    }
-                }
+                self.handle_sample_clear().await?;
             }
         }
         self.update_button_states()?;
@@ -894,6 +890,21 @@ impl<'a> Device<'a> {
                 }
             }
         };
+    }
+
+    async fn handle_sample_clear(&mut self) -> Result<()> {
+        if let Some(audio) = &self.audio_handler {
+            let state = self.profile.is_sample_clear_active();
+            if !audio.is_sample_recording() {
+                let message = format!("Sample Clear {}", bool_to_state(!state));
+                self.global_events
+                    .send(EventTriggers::TTSMessage(message))
+                    .await?;
+
+                self.profile.set_sample_clear_active(!state)?;
+            }
+        }
+        Ok(())
     }
 
     async fn handle_sample_button_release(&mut self, button: SampleButtons) -> Result<()> {
