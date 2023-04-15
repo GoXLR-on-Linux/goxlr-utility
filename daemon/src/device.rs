@@ -622,6 +622,12 @@ impl<'a> Device<'a> {
                 self.goxlr.set_channel_state(ChannelName::Mic, Unmuted)?;
             }
 
+            let message = "Mic Unmuted".to_string();
+            let _ = self
+                .global_events
+                .send(EventTriggers::TTSMessage(message))
+                .await;
+
             // Disable button and refresh transient routing
             self.apply_routing(BasicInputDevice::Microphone)?;
             return Ok(());
