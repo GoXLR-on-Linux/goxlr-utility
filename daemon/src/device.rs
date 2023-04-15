@@ -30,6 +30,7 @@ use goxlr_usb::routing::{InputDevice, OutputDevice};
 
 use crate::audio::{AudioFile, AudioHandler};
 use crate::events::EventTriggers;
+use crate::events::EventTriggers::TTSMessage;
 use crate::files::find_file_in_path;
 use crate::mic_profile::{MicProfileAdapter, DEFAULT_MIC_PROFILE_NAME};
 use crate::profile::{
@@ -253,7 +254,7 @@ impl<'a> Device<'a> {
     pub async fn monitor_inputs(&mut self) -> Result<bool> {
         let state = self.goxlr.get_button_states()?;
         let mut changed = self.update_volumes_to(state.volumes)?;
-        let result = self.update_encoders_to(state.encoders)?;
+        let result = self.update_encoders_to(state.encoders).await?;
         if !changed {
             // Only change the value if it's not already true..
             changed = result;
@@ -1205,7 +1206,7 @@ impl<'a> Device<'a> {
         Ok(value_changed)
     }
 
-    fn update_encoders_to(&mut self, encoders: [i8; 4]) -> Result<bool> {
+    async fn update_encoders_to(&mut self, encoders: [i8; 4]) -> Result<bool> {
         // Ok, this is funky, due to the way pitch works, the encoder 'value' doesn't match
         // the profile value if hardtune is enabled, so we'll pre-emptively calculate pitch here..
         let mut value_changed = false;
@@ -1218,6 +1219,9 @@ impl<'a> Device<'a> {
                 self.profile.get_pitch_knob_position(),
                 encoders[0]
             );
+            let message = format!("Pitch {}", encoders[0]);
+            let _ = self.global_events.send(TTSMessage(message)).await;
+
             value_changed = true;
             self.profile.set_pitch_knob_position(encoders[0])?;
             self.apply_effects(LinkedHashSet::from_iter([EffectKey::PitchAmount]))?;
@@ -1229,6 +1233,9 @@ impl<'a> Device<'a> {
                 self.profile.get_gender_value(),
                 encoders[1]
             );
+            let message = format!("Gender {}", encoders[1]);
+            let _ = self.global_events.send(TTSMessage(message)).await;
+
             value_changed = true;
             self.profile.set_gender_value(encoders[1])?;
             self.apply_effects(LinkedHashSet::from_iter([EffectKey::GenderAmount]))?;
@@ -1240,6 +1247,9 @@ impl<'a> Device<'a> {
                 self.profile.get_reverb_value(),
                 encoders[2]
             );
+            let message = format!("Reverb {}", encoders[2]);
+            let _ = self.global_events.send(TTSMessage(message)).await;
+
             value_changed = true;
             self.profile.set_reverb_value(encoders[2])?;
             self.apply_effects(LinkedHashSet::from_iter([EffectKey::ReverbAmount]))?;
@@ -1251,6 +1261,9 @@ impl<'a> Device<'a> {
                 self.profile.get_echo_value(),
                 encoders[3]
             );
+            let message = format!("Echo {}", encoders[3]);
+            let _ = self.global_events.send(TTSMessage(message)).await;
+
             value_changed = true;
             self.profile.set_echo_value(encoders[3])?;
             self.apply_effects(LinkedHashSet::from_iter([EffectKey::EchoAmount]))?;
