@@ -518,14 +518,7 @@ impl<'a> Device<'a> {
         let (mute_toggle, muted_to_x, muted_to_all, mute_function) =
             self.profile.get_mute_chat_button_state();
 
-        let target = match mute_function {
-            MuteFunction::All => "All",
-            MuteFunction::ToStream => "Stream",
-            MuteFunction::ToVoiceChat => "Voice Chat",
-            MuteFunction::ToPhones => "Headphones",
-            MuteFunction::ToLineOut => "Line Out",
-        };
-
+        let target = tts_target(mute_function);
         // Ok, lets handle things in order, was this button just pressed?
         if press {
             if mute_toggle {
@@ -541,7 +534,7 @@ impl<'a> Device<'a> {
                 self.goxlr.set_channel_state(ChannelName::Mic, Muted)?;
             }
 
-            let message = format!("Mic Muted to {}", target);
+            let message = format!("Mic Muted{}", target);
             let _ = self
                 .global_events
                 .send(EventTriggers::TTSMessage(message))
@@ -562,7 +555,7 @@ impl<'a> Device<'a> {
             self.profile.set_mute_chat_button_on(true);
             self.profile.set_mute_chat_button_blink(true);
 
-            let message = "Mic Muted to All".to_string();
+            let message = "Mic Muted".to_string();
             let _ = self
                 .global_events
                 .send(EventTriggers::TTSMessage(message))
@@ -606,7 +599,7 @@ impl<'a> Device<'a> {
                     self.goxlr.set_channel_state(ChannelName::Mic, Muted)?;
                 }
 
-                let message = format!("Mic Muted to {}", target);
+                let message = format!("Mic Muted{}", target);
                 let _ = self
                     .global_events
                     .send(EventTriggers::TTSMessage(message))
@@ -641,13 +634,7 @@ impl<'a> Device<'a> {
 
         debug!("Hi?");
 
-        let target = match mute_function {
-            MuteFunction::All => "All",
-            MuteFunction::ToStream => "Stream",
-            MuteFunction::ToVoiceChat => "Voice Chat",
-            MuteFunction::ToPhones => "Headphones",
-            MuteFunction::ToLineOut => "Line Out",
-        };
+        let target = tts_target(mute_function);
 
         let channel = self.profile.get_fader_assignment(fader);
         if muted_to_all {
@@ -666,7 +653,7 @@ impl<'a> Device<'a> {
 
         // Ok, we need to announce where we're muted to..
         let name = self.profile.get_fader_assignment(fader);
-        let message = format!("{} Muted to {}", name, target);
+        let message = format!("{} Muted{}", name, target);
         let _ = self
             .global_events
             .send(EventTriggers::TTSMessage(message))
@@ -700,7 +687,7 @@ impl<'a> Device<'a> {
         }
 
         let name = self.profile.get_fader_assignment(fader);
-        let message = format!("{} Muted to All", name);
+        let message = format!("{} Muted", name);
         let _ = self
             .global_events
             .send(EventTriggers::TTSMessage(message))
@@ -902,7 +889,7 @@ impl<'a> Device<'a> {
         if let Some(audio) = &self.audio_handler {
             let state = self.profile.is_sample_clear_active();
             if !audio.is_sample_recording() {
-                let message = format!("Sample Clear {}", bool_to_state(!state));
+                let message = format!("Sample Clear {}", tts_bool_to_state(!state));
                 self.global_events
                     .send(EventTriggers::TTSMessage(message))
                     .await?;
@@ -1097,7 +1084,7 @@ impl<'a> Device<'a> {
 
     async fn set_megaphone(&mut self, enabled: bool) -> Result<()> {
         // Send the TTS Message..
-        let tts_message = format!("Megaphone {}", bool_to_state(enabled));
+        let tts_message = format!("Megaphone {}", tts_bool_to_state(enabled));
         let _ = self
             .global_events
             .send(EventTriggers::TTSMessage(tts_message))
@@ -1110,7 +1097,7 @@ impl<'a> Device<'a> {
 
     async fn set_robot(&mut self, enabled: bool) -> Result<()> {
         // Send the TTS Message..
-        let tts_message = format!("Robot {}", bool_to_state(enabled));
+        let tts_message = format!("Robot {}", tts_bool_to_state(enabled));
         let _ = self
             .global_events
             .send(EventTriggers::TTSMessage(tts_message))
@@ -1123,7 +1110,7 @@ impl<'a> Device<'a> {
 
     async fn set_hardtune(&mut self, enabled: bool) -> Result<()> {
         // Send the TTS Message..
-        let tts_message = format!("Hard tune {}", bool_to_state(enabled));
+        let tts_message = format!("Hard tune {}", tts_bool_to_state(enabled));
         let _ = self
             .global_events
             .send(EventTriggers::TTSMessage(tts_message))
@@ -1143,7 +1130,7 @@ impl<'a> Device<'a> {
 
     async fn set_effects(&mut self, enabled: bool) -> Result<()> {
         // Send the TTS Message..
-        let tts_message = format!("Effects {}", bool_to_state(enabled));
+        let tts_message = format!("Effects {}", tts_bool_to_state(enabled));
         let _ = self
             .global_events
             .send(EventTriggers::TTSMessage(tts_message))
@@ -2723,9 +2710,19 @@ impl<'a> Device<'a> {
     }
 }
 
-fn bool_to_state(bool: bool) -> String {
+fn tts_bool_to_state(bool: bool) -> String {
     match bool {
         true => "On".to_string(),
         false => "Off".to_string(),
+    }
+}
+
+fn tts_target(target: MuteFunction) -> String {
+    match target {
+        MuteFunction::All => "".to_string(),
+        MuteFunction::ToStream => " to Stream".to_string(),
+        MuteFunction::ToVoiceChat => " to Voice Chat".to_string(),
+        MuteFunction::ToPhones => " to Headphones".to_string(),
+        MuteFunction::ToLineOut => " to Line Out".to_string(),
     }
 }
