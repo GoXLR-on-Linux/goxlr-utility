@@ -30,6 +30,7 @@ pub enum DeviceCommand {
     OpenPath(PathTypes, oneshot::Sender<DaemonResponse>),
     RecoverDefaults(PathTypes, oneshot::Sender<DaemonResponse>),
     SetShowTrayIcon(bool, oneshot::Sender<DaemonResponse>),
+    SetTTSEnabled(bool, oneshot::Sender<DaemonResponse>),
     SetAutoStartEnabled(bool, oneshot::Sender<DaemonResponse>),
     RunDeviceCommand(String, GoXLRCommand, oneshot::Sender<Result<()>>),
 }
@@ -205,6 +206,12 @@ pub async fn spawn_usb_handler(
                     }
                     DeviceCommand::SetShowTrayIcon(enabled, sender) => {
                         settings.set_show_tray_icon(enabled).await;
+                        settings.save().await;
+                        change_found = true;
+                        let _ = sender.send(DaemonResponse::Ok);
+                    }
+                    DeviceCommand::SetTTSEnabled(enabled, sender) => {
+                        settings.set_tts_enabled(enabled).await;
                         settings.save().await;
                         change_found = true;
                         let _ = sender.send(DaemonResponse::Ok);
