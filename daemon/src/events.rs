@@ -55,7 +55,7 @@ pub async fn spawn_event_handler(
             Some(event) = rx.recv() => {
                 match event {
                     EventTriggers::TTSMessage(message) => {
-                        state.tts_sender.send(message).await;
+                        let _ = state.tts_sender.send(message).await;
                     }
                     EventTriggers::Stop => {
                         debug!("Shutdown Phase 1 Triggered..");

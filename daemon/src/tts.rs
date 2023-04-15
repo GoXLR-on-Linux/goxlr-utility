@@ -2,9 +2,10 @@ use crate::settings::SettingsHandle;
 use crate::shutdown::Shutdown;
 use anyhow::Result;
 use log::{debug, info, warn};
-use tokio::sync::mpsc::{Receiver, Sender};
-use tts::{Error, Tts, UtteranceId};
+use tokio::sync::mpsc::Receiver;
+use tts::Tts;
 
+#[allow(clippy::upper_case_acronyms)]
 pub(crate) struct TTS {
     settings: SettingsHandle,
     tts: Tts,
