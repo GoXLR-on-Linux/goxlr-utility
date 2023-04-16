@@ -348,28 +348,22 @@ pub trait GoXLRCommands: ExecutableGoXLR {
         LittleEndian::write_u32(&mut packet[12..16], remaining);
 
         let result = self.request_data(
-            Command::ExecuteFirmwareUpdateAction(FirmwareAction::POLL),
+            Command::ExecuteFirmwareUpdateAction(FirmwareAction::VALIDATE),
             &packet,
-        );
+        )?;
 
-        // TODO: Extract from result..
+        println!("{:?}", result);
 
-        let count = match remaining > 1024 {
-            true => 1024,
-            false => remaining,
-        };
-
-        let hash: u32 = rand::thread_rng().gen();
-        println!("Returning Hash: {:x?}", hash.to_le_bytes());
-
-        // if result.len() != 1 - Bail!
+        // Grab the Hash and Count from the result..
+        let hash = LittleEndian::read_u32(&result[0..4]);
+        let count = LittleEndian::read_u32(&result[4..8]);
 
         Ok((hash, count))
     }
 
     fn verify_firmware_status(&mut self) -> Result<()> {
         let result = self.request_data(
-            Command::ExecuteFirmwareUpdateAction(FirmwareAction::VALIDATE),
+            Command::ExecuteFirmwareUpdateCommand(FirmwareCommand::VERIFY),
             &[],
         )?;
 
@@ -504,12 +498,13 @@ pub trait GoXLRCommands: ExecutableGoXLR {
          */
     }
 
-    fn abort_firmware_update(&mut self) -> Result<()> {
+    fn abort_firmware_update(&mut self) -> Result<u32> {
         let result = self.request_data(
             Command::ExecuteFirmwareUpdateCommand(FirmwareCommand::ABORT),
             &[],
         )?;
-        Ok(())
+        let value = LittleEndian::read_u32(&result);
+        Ok(value)
     }
 
     fn reboot_after_firmware_upload(&mut self) -> Result<()> {

@@ -21,6 +21,9 @@ async fn main() -> Result<()> {
     }
 
     let file = PathBuf::from(&args[2]);
+    if !file.exists() {
+        bail!("Firmware File not Found");
+    }
 
     // This is pretty straight forward, Firstly find all the GoXLRs..
     let devices = find_devices();
@@ -77,26 +80,11 @@ async fn main() -> Result<()> {
         bail!("This code has only been tested on the full device.");
     }
 
-    let wait = sleep(Duration::from_secs(2));
-    tokio::pin!(wait);
-
-    // Now we're going to sit and wait for events..
-    loop {
-        tokio::select! {
-            Some(serial) = event_receiver.recv() => {
-                println!("Received Event from {}", serial);
-            },
-            Some(serial) = disconnect_receiver.recv() => {
-                println!("Received Disconnect from {}", serial);
-            }
-            () = &mut wait => {
-                // Trigger this again in about 136 years.. We'll do better later!
-                wait.as_mut().reset(tokio::time::Instant::now() + Duration::from_secs(u32::MAX.into()));
-                println!("Executing Firmware Update..");
-                do_firmware_upload(&mut handled_device, &file).await?;
-            }
-        }
+    if let Err(error) = do_firmware_upload(&mut handled_device, &file).await {
+        println!("Firmware Update Failed: {}", error);
     }
+    reboot_goxlr(&mut handled_device)?;
+    Ok(())
 }
 
 async fn do_firmware_upload(device: &mut Box<dyn FullGoXLRDevice>, file: &PathBuf) -> Result<()> {
@@ -112,25 +100,38 @@ async fn do_firmware_upload(device: &mut Box<dyn FullGoXLRDevice>, file: &PathBu
     device.begin_firmware_upload()?;
 
     println!("Beginning Erasure of Update Partition..");
-    device.begin_erase_nvr();
+    device.begin_erase_nvr()?;
 
+    let mut last_percent = 0_u8;
     let mut progress = 0;
     while progress != 0xff {
         sleep(Duration::from_millis(100)).await;
         progress = device.poll_erase_nvr()?;
 
         // Can output a percentage here..
+        let percent = ((progress as f32 / 255_f32) * 100.) as u8;
+        if percent != last_percent {
+            last_percent = percent;
+            println!("Erasing: {}%", percent);
+        }
     }
     println!("Complete.");
     println!("Beginning Sending of Data..");
 
     // This is to match the Official App
     let chunk_size = 1012;
+    let mut last_percent = 0_u8;
 
     let mut sent = 0;
     for chunk in firmware.chunks(chunk_size) {
-        device.send_firmware_packet(sent, chunk);
+        device.send_firmware_packet(sent, chunk)?;
         sent += chunk.len() as u64;
+
+        let percent = ((sent as f32 / firmware.len() as f32) * 100.) as u8;
+        if percent != last_percent {
+            last_percent = percent;
+            println!("Sending: {}%", percent);
+        }
     }
 
     println!("Data Sent, Beginning Validation..");
@@ -170,7 +171,48 @@ async fn do_firmware_upload(device: &mut Box<dyn FullGoXLRDevice>, file: &PathBu
     // to care, or register them, and proceeds as if they didn't happen. The GoXLR itself will take care of this behaviour, but
     // we should be able to at least inform the user that something has probably gone wrong :p
 
+    // Send the 'Verify' Command..
+    println!("Beginning Hardware Verification..");
+    device.verify_firmware_status()?;
+
+    let mut complete = false;
+    let mut last_percent = 0_u8;
+    while !complete {
+        let (completed, total, done) = device.poll_verify_firmware_status()?;
+        complete = completed;
+        let percent = ((done as f32 / total as f32) * 100.) as u8;
+        if percent != last_percent {
+            last_percent = percent;
+            println!("Verifying: {}%", percent);
+        }
+        // We might need to sleep here, although the official app doesn't!
+    }
+    println!("Hardware Verification Complete..");
+
+    println!("Begining Hardware Finalise..");
+    device.finalise_firmware_upload()?;
+
+    // Same again, except this time for finalise..
+    complete = false;
+    last_percent = 0;
+    while !complete {
+        let (completed, total, done) = device.poll_finalise_firmware_upload()?;
+        complete = completed;
+        let percent = ((done as f32 / total as f32) * 100.) as u8;
+        if percent != last_percent {
+            last_percent = percent;
+            println!("Finalising: {}%", percent);
+        }
+        // Again, no sleep!
+    }
+    println!("Firmware update complete!");
+
     Ok(())
+}
+
+fn reboot_goxlr(device: &mut Box<dyn FullGoXLRDevice>) -> Result<()> {
+    println!("Rebooting GoXLR..");
+    device.reboot_after_firmware_upload()
 }
 
 fn load_firmware_file(file: &PathBuf) -> Result<Vec<u8>> {
