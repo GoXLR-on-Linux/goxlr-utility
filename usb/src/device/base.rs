@@ -370,7 +370,41 @@ pub trait GoXLRCommands: ExecutableGoXLR {
         Ok(())
     }
 
-    fn poll_verify_firmware_status(&mut self) {
+    fn poll_verify_firmware_status(&mut self) -> Result<(bool, u32, u32)> {
+        let result =
+            self.request_data(Command::ExecuteFirmwareUpdateCommand(FirmwareCommand::POLL));
+
+        let mut cursor = Cursor::new(result);
+        let command = cursor.read_u32::<LittleEndian>()?;
+        let failure = cursor.read_u32::<LittleEndian>()?;
+        let state = cursor.read_u32::<LittleEndian>()?;
+        let error_code = cursor.read_u32::<LittleEndian>()?;
+
+        let read_total = cursor.read_u32::<LittleEndian>()?;
+        let read_done = cursor.read_u32::<LittleEndian>()?;
+
+        if command == 2 && failure == 0 && state == 2 {
+            // Verification complete and good..
+            return Ok((true, read_total, read_done));
+        }
+
+        if command != 3 {
+            bail!("Unexpected Command Code, Expected 3 received {}", command);
+        }
+
+        if failure != 0 {
+            bail!("Failed with Error: {}", error_code);
+        }
+
+        if state == 3 {
+            bail("Failing with Error: {}", error_code);
+        }
+
+        if state == 1 && error_code == 0 {
+            // More reading to be done..
+            return Ok((false, read_total, read_done));
+        }
+
         // 3 0 1 0 - 'More Data'
         // 2 0 2 0 - Completed Succesfully
         // 3 0 3 0b - Failure..
@@ -383,6 +417,14 @@ pub trait GoXLRCommands: ExecutableGoXLR {
            u32: Current State: 1 (More Data), 2 (Data Finished), 3 (Error)
            u32: Current Error: 0 (No Error), X (Error Code, 0x0d = CRC Failure)
         */
+
+        bail!(
+            "Unexpected Packet: {} {} {} {}",
+            command,
+            failure,
+            state,
+            read_done
+        );
     }
 
     fn finalise_firmware_upload(&mut self) -> Result<()> {
@@ -398,7 +440,29 @@ pub trait GoXLRCommands: ExecutableGoXLR {
         Ok(())
     }
 
-    fn poll_finalise_firmware_upload(&mut self) {
+    fn poll_finalise_firmware_upload(&mut self) -> Result<()> {
+        let result =
+            self.request_data(Command::ExecuteFirmwareUpdateCommand(FirmwareCommand::POLL));
+
+        let mut cursor = Cursor::new(result);
+        let command = cursor.read_u32::<LittleEndian>()?;
+        let failure = cursor.read_u32::<LittleEndian>()?;
+        let state = cursor.read_u32::<LittleEndian>()?;
+        let error_code = cursor.read_u32::<LittleEndian>()?;
+
+        if command != 4 {
+            if command == 3 {
+                if failure == 1 {
+                    bail!("Validation Failure, {}", error_code);
+                }
+            }
+
+            // Something has gone wrong here with the (assumed) validation phase..
+            bail!("Invalid Command Response: {}", command);
+        }
+
+        Ok(())
+
         // Seems to be similar to verify..
         // 4 1 1 0 - More Data..
         // 4 1 2 0 - Complete..

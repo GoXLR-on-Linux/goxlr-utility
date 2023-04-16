@@ -1,6 +1,5 @@
 use anyhow::{bail, Result};
 use byteorder::{LittleEndian, ReadBytesExt};
-use goxlr_ipc::DeviceType::Mini;
 use goxlr_ipc::{DeviceType, HardwareStatus, UsbProductInformation};
 use goxlr_types::VersionNumber;
 use goxlr_usb::device::base::{AttachGoXLR, FullGoXLRDevice};
@@ -72,7 +71,7 @@ async fn main() -> Result<()> {
         usb_device,
     };
 
-    if hardware.device_type == Mini {
+    if hardware.device_type == DeviceType::Mini {
         bail!("This code has only been tested on the full device.");
     }
 
