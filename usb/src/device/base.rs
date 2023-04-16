@@ -1,5 +1,6 @@
 use crate::buttonstate::{ButtonStates, Buttons, CurrentButtonStates};
 use crate::channelstate::ChannelState;
+use crate::commands::Command::{ExecuteFirmwareUpdateAction, ExecuteFirmwareUpdateCommand};
 use crate::commands::SystemInfoCommand::SupportsDCPCategory;
 use crate::commands::{
     Command, FirmwareAction, FirmwareCommand, HardwareInfoCommand, SystemInfoCommand,
@@ -294,12 +295,13 @@ pub trait GoXLRCommands: ExecutableGoXLR {
         Ok(())
     }
 
-    fn begin_erase_nvr(&mut self) {
+    fn begin_erase_nvr(&mut self) -> Result<()> {
         let mut header = [0; 8];
         LittleEndian::write_u32(&mut header[0..4], 7);
         LittleEndian::write_u32(&mut header[4..8], 0);
 
-        println!("{:x?}", header);
+        self.request_data(ExecuteFirmwareUpdateAction(FirmwareAction::ERASE), &header)?;
+        Ok(())
     }
 
     fn poll_erase_nvr(&mut self) -> Result<u8> {
@@ -317,7 +319,7 @@ pub trait GoXLRCommands: ExecutableGoXLR {
         Ok(result[0])
     }
 
-    fn send_firmware_packet(&mut self, bytes_sent: u64, data: &[u8]) {
+    fn send_firmware_packet(&mut self, bytes_sent: u64, data: &[u8]) -> Result<()> {
         let mut header = [0; 12];
         LittleEndian::write_u32(&mut header[0..4], 7);
         LittleEndian::write_u64(&mut header[4..], bytes_sent);
@@ -326,7 +328,11 @@ pub trait GoXLRCommands: ExecutableGoXLR {
         packet.extend_from_slice(&header);
         packet.extend_from_slice(data);
 
-        println!("{:x?}", packet);
+        self.request_data(
+            Command::ExecuteFirmwareUpdateAction(FirmwareAction::SEND),
+            &packet,
+        )?;
+        Ok(())
     }
 
     fn validate_firmware_packet(
@@ -340,7 +346,13 @@ pub trait GoXLRCommands: ExecutableGoXLR {
         LittleEndian::write_u32(&mut packet[4..8], verified);
         LittleEndian::write_u32(&mut packet[8..12], hash);
         LittleEndian::write_u32(&mut packet[12..16], remaining);
-        println!("{:x?}", packet);
+
+        let result = self.request_data(
+            Command::ExecuteFirmwareUpdateAction(FirmwareAction::POLL),
+            &packet,
+        );
+
+        // TODO: Extract from result..
 
         let count = match remaining > 1024 {
             true => 1024,
@@ -508,7 +520,7 @@ pub trait GoXLRCommands: ExecutableGoXLR {
 
         let output = LittleEndian::read_u32(&result);
         if output != 0 {
-            bail!("Unexpected Result from Verify: {}", output);
+            bail!("Unexpected Result from Reboot: {}", output);
         }
         Ok(())
     }
