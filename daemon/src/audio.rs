@@ -1,5 +1,6 @@
 use anyhow::{anyhow, bail, Result};
 use enum_map::EnumMap;
+use goxlr_audio::get_audio_inputs;
 use goxlr_audio::player::{Player, PlayerState};
 use goxlr_audio::recorder::BufferedRecorder;
 use goxlr_audio::recorder::RecorderState;
@@ -117,6 +118,7 @@ impl AudioHandler {
         let patterns = vec![
             Regex::new("goxlr_sample").expect("Invalid Regex in Audio Handler"),
             Regex::new("GoXLR_0_8_9").expect("Invalid Regex in Audio Handler"),
+            Regex::new("GoXLR.*HiFi__Line3__sink").expect("Invalid Regex in Audio Handler"),
             Regex::new("CoreAudio\\*Sample").expect("Invalid Regex in Audio Handler"),
             Regex::new("WASAPI\\*Sample.*").expect("Invalid Regex in Audio Handler"),
         ];
@@ -128,6 +130,7 @@ impl AudioHandler {
         let patterns = vec![
             String::from("goxlr_sample"),
             String::from("GoXLR_0_8_9"),
+            String::from("GoXLR.*HiFi__Line3__sink"),
             String::from("CoreAudio\\*Sample"),
             String::from("WASAPI\\*Sample.*"),
         ];
@@ -138,6 +141,7 @@ impl AudioHandler {
         let patterns = vec![
             Regex::new("goxlr_sampler.*source").expect("Invalid Regex in Audio Handler"),
             Regex::new("GoXLR_0_4_5.*source").expect("Invalid Regex in Audio Handler"),
+            Regex::new("GoXLR.*HiFi__Line5__source").expect("Invalid Regex in Audio Handler"),
             Regex::new("CoreAudio\\*Sampler").expect("Invalid Regex in Audio Handler"),
             Regex::new("WASAPI\\*Sample.*").expect("Invalid Regex in Audio Handler"),
         ];
@@ -148,6 +152,7 @@ impl AudioHandler {
         let patterns = vec![
             String::from("goxlr_sampler.*source"),
             String::from("GoXLR_0_4_5.*source"),
+            String::from("GoXLR.*HiFi__Line5__source"),
             String::from("CoreAudio\\*Sampler"),
             String::from("WASAPI\\*Sample.*"),
         ];
@@ -165,7 +170,7 @@ impl AudioHandler {
 
         let device_list = match is_output {
             true => goxlr_audio::get_audio_outputs(),
-            false => goxlr_audio::get_audio_inputs(),
+            false => get_audio_inputs(),
         };
 
         let pattern_matchers = match is_output {
@@ -217,7 +222,21 @@ impl AudioHandler {
     }
 
     pub fn is_sample_playing(&self, bank: SampleBank, button: SampleButtons) -> bool {
-        self.active_streams[bank][button].is_some()
+        if let Some(stream) = &self.active_streams[bank][button] {
+            if stream.playback.is_some() {
+                return true;
+            }
+        }
+        false
+    }
+
+    pub fn is_sample_recording(&self, bank: SampleBank, button: SampleButtons) -> bool {
+        if let Some(stream) = &self.active_streams[bank][button] {
+            if stream.recording.is_some() {
+                return true;
+            }
+        }
+        false
     }
 
     pub fn is_sample_stopping(&self, bank: SampleBank, button: SampleButtons) -> bool {
@@ -340,6 +359,17 @@ impl AudioHandler {
         button: SampleButtons,
     ) -> Result<()> {
         if let Some(recorder) = &mut self.buffered_input {
+            if !recorder.is_ready() {
+                warn!("Sampler not ready, possibly missing Sample device. Not recording.");
+
+                debug!("Available Audio Inputs: ");
+                get_audio_inputs()
+                    .iter()
+                    .for_each(|name| debug!("{}", name));
+
+                bail!("Sampler is not ready to handle recording (possibly missing device?)");
+            }
+
             let state = RecorderState {
                 stop: Arc::new(AtomicBool::new(false)),
             };

@@ -858,20 +858,27 @@ impl<'a> Device<'a> {
 
         let sample_bank = self.profile.get_active_sample_bank();
         if !self.profile.current_sample_bank_has_samples(button) {
-            let file_name = self
+            if self
                 .audio_handler
                 .as_mut()
                 .unwrap()
-                .stop_record(sample_bank, button)?;
+                .is_sample_recording(sample_bank, button)
+            {
+                let file_name = self
+                    .audio_handler
+                    .as_mut()
+                    .unwrap()
+                    .stop_record(sample_bank, button)?;
 
-            // Stop flashing the button..
-            self.profile.set_sample_button_blink(button, false)?;
+                // Stop flashing the button..
+                self.profile.set_sample_button_blink(button, false)?;
 
-            if let Some(file_name) = file_name {
-                self.profile.add_sample_file(sample_bank, button, file_name);
+                if let Some(file_name) = file_name {
+                    self.profile.add_sample_file(sample_bank, button, file_name);
 
-                // Reload the Colour Map..
-                self.load_colour_map()?;
+                    // Reload the Colour Map..
+                    self.load_colour_map()?;
+                }
             }
             return Ok(());
         }
