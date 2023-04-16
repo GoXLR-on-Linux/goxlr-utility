@@ -925,7 +925,7 @@ impl<'a> Device<'a> {
                 .audio_handler
                 .as_mut()
                 .unwrap()
-                .is_sample_recording(sample_bank, button)
+                .sample_recording(sample_bank, button)
             {
                 let file_name = self
                     .audio_handler
