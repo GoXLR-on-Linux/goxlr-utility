@@ -17,6 +17,7 @@ use winreg::RegKey;
 use winrt_notification::{Sound, Toast};
 
 const GOXLR_APP_NAME: &str = "GoXLR App.exe";
+const GOXLR_BETA_APP_NAME: &str = "GoXLR Beta App.exe";
 const AUTOSTART_FILENAME: &str = "GoXLR Utility.lnk";
 
 lazy_static! {
@@ -25,8 +26,10 @@ lazy_static! {
 
 pub fn perform_platform_preflight() -> Result<()> {
     let system = System::new_all();
-    let processes = system.processes_by_exact_name(GOXLR_APP_NAME);
-    if processes.count() > 0 {
+    let mut count = system.processes_by_exact_name(GOXLR_APP_NAME).count();
+    count += system.processes_by_exact_name(GOXLR_BETA_APP_NAME).count();
+
+    if count > 0 {
         throw_notification();
         error!("Detected Official GoXLR Application Running, Failing Preflight.");
         bail!("Official GoXLR App Running, Please terminate it before running the Daemon");
@@ -55,8 +58,9 @@ pub async fn spawn_platform_runtime(
         select! {
             _ = duration.tick() => {
                 system.refresh_processes();
-                let processes = system.processes_by_exact_name(GOXLR_APP_NAME);
-                if processes.count() > 0 {
+                let mut count = system.processes_by_exact_name(GOXLR_APP_NAME).count();
+                count += system.processes_by_exact_name(GOXLR_BETA_APP_NAME).count();
+                if count > 0 {
                     throw_notification();
 
                     // The processes list isn't Sendable, so this can't be triggered asynchronously.
