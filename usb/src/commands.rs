@@ -51,7 +51,6 @@ impl Command {
             Command::SetMicrophoneParameters => 0x80b << 12,
             Command::SetEffectParameters => 0x801 << 12,
 
-
             // I'm doing a +16 here, because there appears to be a bit reset going on..
             Command::SetSubChannelVolume(channel) => (0x806 << 12) | (*channel as u32 + 16),
             Command::SetChannelMixes => 0x817 << 12,
@@ -60,7 +59,6 @@ impl Command {
             // Again, don't use these :)
             Command::ExecuteFirmwareUpdateCommand(sub) => 0x810 << 12 | *sub as u32,
             Command::ExecuteFirmwareUpdateAction(sub) => 0x004 << 12 | sub.id(),
-
         }
     }
 }
