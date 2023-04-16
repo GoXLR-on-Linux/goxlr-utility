@@ -1,5 +1,5 @@
 use crate::routing::InputDevice;
-use goxlr_types::{ChannelName, EncoderName, FaderName};
+use goxlr_types::{ChannelName, EncoderName, FaderName, SubMixChannelName};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Command {
@@ -20,6 +20,10 @@ pub enum Command {
     SetScribble(FaderName),
     GetButtonStates,
     GetHardwareInfo(HardwareInfoCommand),
+
+    SetSubChannelVolume(SubMixChannelName),
+    SetChannelMixes,
+    SetMonitoredMix,
 
     // Probably shouldn't use these, but they're here for.. reasons.
     ExecuteFirmwareUpdateCommand(FirmwareCommand),
@@ -47,9 +51,16 @@ impl Command {
             Command::SetMicrophoneParameters => 0x80b << 12,
             Command::SetEffectParameters => 0x801 << 12,
 
+
+            // I'm doing a +16 here, because there appears to be a bit reset going on..
+            Command::SetSubChannelVolume(channel) => (0x806 << 12) | (*channel as u32 + 16),
+            Command::SetChannelMixes => 0x817 << 12,
+            Command::SetMonitoredMix => 0x818 << 12,
+
             // Again, don't use these :)
             Command::ExecuteFirmwareUpdateCommand(sub) => 0x810 << 12 | *sub as u32,
             Command::ExecuteFirmwareUpdateAction(sub) => 0x004 << 12 | sub.id(),
+
         }
     }
 }

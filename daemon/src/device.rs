@@ -19,7 +19,7 @@ use goxlr_ipc::{
 use goxlr_profile_loader::components::mute::MuteFunction;
 use goxlr_types::{
     Button, ChannelName, DisplayModeComponents, EffectBankPresets, EffectKey, EncoderName,
-    FaderName, HardTuneSource, InputDevice as BasicInputDevice, MicrophoneParamKey, MuteState,
+    FaderName, HardTuneSource, InputDevice as BasicInputDevice, MicrophoneParamKey, Mix, MuteState,
     OutputDevice as BasicOutputDevice, RobotRange, SampleBank, SampleButtons, SamplePlaybackMode,
     VersionNumber,
 };
@@ -44,6 +44,7 @@ pub struct Device<'a> {
     last_buttons: EnumSet<Buttons>,
     button_states: EnumMap<Buttons, ButtonState>,
     fader_last_seen: EnumMap<FaderName, u8>,
+    fader_pause_until: EnumMap<FaderName, PauseUntil>,
     profile: ProfileAdapter,
     mic_profile: MicProfileAdapter,
     audio_handler: Option<AudioHandler>,
@@ -51,6 +52,12 @@ pub struct Device<'a> {
     vc_mute_also_mute_cm: bool,
     settings: &'a SettingsHandle,
     global_events: Sender<EventTriggers>,
+}
+
+#[derive(Debug, Default, Copy, Clone)]
+struct PauseUntil {
+    paused: bool,
+    until: u8,
 }
 
 // Experimental code:
@@ -119,6 +126,7 @@ impl<'a> Device<'a> {
             last_buttons: EnumSet::empty(),
             button_states: EnumMap::default(),
             fader_last_seen: EnumMap::default(),
+            fader_pause_until: EnumMap::default(),
             audio_handler,
             settings: settings_handle,
             global_events,
@@ -134,7 +142,7 @@ impl<'a> Device<'a> {
         &self.hardware.serial_number
     }
 
-    pub fn status(&self) -> MixerStatus {
+    pub async fn status(&self) -> MixerStatus {
         let mut fader_map: EnumMap<FaderName, FaderStatus> = Default::default();
         for name in FaderName::iter() {
             fader_map[name] = self.get_fader_state(name);
@@ -152,9 +160,17 @@ impl<'a> Device<'a> {
             volumes[channel] = self.profile.get_channel_volume(channel);
         }
 
-        let shutdown_commands = block_on(self.settings.get_device_shutdown_commands(self.serial()));
-        let sampler_prerecord =
-            block_on(self.settings.get_device_sampler_pre_buffer(self.serial()));
+        let shutdown_commands = self
+            .settings
+            .get_device_shutdown_commands(self.serial())
+            .await;
+
+        let sampler_prerecord = self
+            .settings
+            .get_device_sampler_pre_buffer(self.serial())
+            .await;
+
+        let submix_supported = self.device_supports_submixes();
 
         MixerStatus {
             hardware: self.hardware.clone(),
@@ -162,7 +178,9 @@ impl<'a> Device<'a> {
             fader_status: fader_map,
             cough_button: self.profile.get_cough_status(),
             levels: Levels {
+                submix_supported: self.device_supports_submixes(),
                 volumes,
+                submix: self.profile.get_submixes_ipc(submix_supported),
                 bleep: self.mic_profile.bleep_level(),
                 deess: self.mic_profile.get_deesser(),
             },
@@ -903,20 +921,27 @@ impl<'a> Device<'a> {
 
         let sample_bank = self.profile.get_active_sample_bank();
         if !self.profile.current_sample_bank_has_samples(button) {
-            let file_name = self
+            if self
                 .audio_handler
                 .as_mut()
                 .unwrap()
-                .stop_record(sample_bank, button)?;
+                .is_sample_recording(sample_bank, button)
+            {
+                let file_name = self
+                    .audio_handler
+                    .as_mut()
+                    .unwrap()
+                    .stop_record(sample_bank, button)?;
 
-            // Stop flashing the button..
-            self.profile.set_sample_button_blink(button, false)?;
+                // Stop flashing the button..
+                self.profile.set_sample_button_blink(button, false)?;
 
-            if let Some(file_name) = file_name {
-                self.profile.add_sample_file(sample_bank, button, file_name);
+                if let Some(file_name) = file_name {
+                    self.profile.add_sample_file(sample_bank, button, file_name);
 
-                // Reload the Colour Map..
-                self.load_colour_map()?;
+                    // Reload the Colour Map..
+                    self.load_colour_map()?;
+                }
             }
             return Ok(());
         }
@@ -1133,10 +1158,30 @@ impl<'a> Device<'a> {
 
         for fader in FaderName::iter() {
             let new_volume = volumes[fader as usize];
-            if self.hardware.device_type == DeviceType::Mini
-                && new_volume == self.fader_last_seen[fader]
-            {
-                continue;
+            if self.hardware.device_type == DeviceType::Mini {
+                if new_volume == self.fader_last_seen[fader] {
+                    continue;
+                }
+            } else if self.fader_pause_until[fader].paused {
+                let until = self.fader_pause_until[fader].until;
+
+                // Calculate min and max, make sure we don't overflow..
+                let min = match until < 5 {
+                    true => 0,
+                    false => until - 5,
+                };
+
+                let max = match until > 250 {
+                    true => 255,
+                    false => until + 5,
+                };
+
+                // Are we in this range?
+                if !((min)..=(max)).contains(&new_volume) {
+                    continue;
+                } else {
+                    self.fader_pause_until[fader].paused = false;
+                }
             }
             self.fader_last_seen[fader] = new_volume;
 
@@ -1163,9 +1208,33 @@ impl<'a> Device<'a> {
 
                 value_changed = true;
                 self.profile.set_channel_volume(channel, new_volume)?;
+
+                // Update the Submix..
+                self.update_submix_for(channel, new_volume)?;
             }
         }
         Ok(value_changed)
+    }
+
+    fn update_submix_for(&mut self, channel: ChannelName, volume: u8) -> Result<()> {
+        if self.device_supports_submixes() && self.profile.is_submix_enabled() {
+            if let Some(mix) = self.profile.get_submix_from_channel(channel) {
+                if !self.profile.submix_linked(mix) {
+                    return Ok(());
+                }
+
+                let mix_current_volume = self.profile.get_submix_volume(mix);
+                let ratio = self.profile.get_submix_ratio(mix);
+
+                let linked_volume = (volume as f64 * ratio) as u8;
+
+                if linked_volume != mix_current_volume {
+                    self.profile.set_submix_volume(mix, linked_volume)?;
+                    self.goxlr.set_sub_volume(mix, linked_volume)?;
+                }
+            }
+        }
+        Ok(())
     }
 
     async fn update_encoders_to(&mut self, encoders: [i8; 4]) -> Result<bool> {
@@ -1266,6 +1335,14 @@ impl<'a> Device<'a> {
             GoXLRCommand::SetVolume(channel, volume) => {
                 self.goxlr.set_volume(channel, volume)?;
                 self.profile.set_channel_volume(channel, volume)?;
+
+                // Update the Submix when volume changes via IPC
+                self.update_submix_for(channel, volume)?;
+
+                if let Some(fader) = self.profile.get_fader_from_channel(channel) {
+                    self.fader_pause_until[fader].paused = true;
+                    self.fader_pause_until[fader].until = volume;
+                }
             }
 
             GoXLRCommand::SetCoughMuteFunction(mute_function) => {
@@ -2121,6 +2198,22 @@ impl<'a> Device<'a> {
                 MuteState::MutedToAll => self.mute_fader_to_all(fader, true).await?,
             },
             GoXLRCommand::SetCoughMuteState(_state) => {}
+            GoXLRCommand::SetSubMixEnabled(enabled) => {
+                if self.profile.is_submix_enabled() != enabled {
+                    self.profile.set_submix_enabled(enabled)?;
+                    self.load_submix_settings(true)?;
+                }
+            }
+            GoXLRCommand::SetSubMixVolume(channel, volume) => {
+                self.apply_submix_volume(channel, volume)?;
+            }
+            GoXLRCommand::SetSubMixLinked(channel, linked) => {
+                self.link_submix_channel(channel, linked)?;
+            }
+            GoXLRCommand::SetSubMixOutputMix(device, mix) => {
+                self.profile.set_mix_output(device, mix)?;
+                self.load_submix_settings(false)?;
+            }
         }
         Ok(())
     }
@@ -2552,6 +2645,9 @@ impl<'a> Device<'a> {
         debug!("Updating button states..");
         self.update_button_states()?;
 
+        debug!("Applying Submixing Settings..");
+        self.load_submix_settings(true)?;
+
         debug!("Applying Routing..");
         // For profile load, we should configure all the input channels from the profile,
         // this is split so we can do tweaks in places where needed.
@@ -2668,6 +2764,132 @@ impl<'a> Device<'a> {
             self.profile.get_pitch_resolution(),
         )?;
         Ok(())
+    }
+
+    fn load_submix_settings(&mut self, apply_volumes: bool) -> Result<()> {
+        if !self.device_supports_submixes() {
+            // Submixes not supported, do nothing.
+            return Ok(());
+        }
+
+        let mut mix_a: [u8; 4] = [0x0c; 4];
+        let mut mix_b: [u8; 4] = [0x0c; 4];
+
+        let mut index = 0;
+        let submix_enabled = self.profile.is_submix_enabled();
+
+        // This is kinda awkward, but we'll run with it..
+        for device in BasicOutputDevice::iter() {
+            if device == BasicOutputDevice::Headphones {
+                // We need to make sure the monitor is on the right side..
+                if submix_enabled {
+                    let mix = self.profile.get_submix_channel(device);
+                    self.goxlr.set_monitored_mix(mix)?;
+                } else {
+                    self.goxlr.set_monitored_mix(Mix::A)?;
+                }
+
+                // Monitor Mix handled, move to the next channel
+                continue;
+            }
+            if submix_enabled {
+                // We need to place this on the correct mix..
+                match self.profile.get_submix_channel(device) {
+                    Mix::A => mix_a[index] = (device as u8) * 2,
+                    Mix::B => mix_b[index] = (device as u8) * 2,
+                }
+            } else {
+                // Force this channel to A..
+                mix_a[index] = (device as u8) * 2;
+            }
+            index += 1;
+        }
+
+        let submix = [mix_a, mix_b].concat();
+
+        // This should always be successful, in theory :D
+        self.goxlr.set_channel_mixes(submix.try_into().unwrap())?;
+
+        if submix_enabled && apply_volumes {
+            for channel in ChannelName::iter() {
+                self.sync_submix_volume(channel)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn sync_submix_volume(&mut self, channel: ChannelName) -> Result<()> {
+        if let Some(mix) = self.profile.get_submix_from_channel(channel) {
+            if self.profile.is_channel_linked(mix) {
+                // Get the channels volume..
+                let volume = self.profile.get_channel_volume(channel);
+                self.update_submix_for(channel, volume)?;
+            } else {
+                let sub_volume = self.profile.get_submix_volume(mix);
+                self.goxlr.set_sub_volume(mix, sub_volume)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn apply_submix_volume(&mut self, channel: ChannelName, volume: u8) -> Result<()> {
+        if let Some(mix) = self.profile.get_submix_from_channel(channel) {
+            if self.profile.is_channel_linked(mix) {
+                // We need to calculate the new value for the main channel..
+                let ratio = self.profile.get_submix_ratio(mix);
+
+                let linked_volume = (volume as f64 / ratio) as u8;
+                if self.profile.get_channel_volume(channel) != linked_volume {
+                    // Setup the latch..
+                    if let Some(fader) = self.profile.get_fader_from_channel(channel) {
+                        self.fader_pause_until[fader].paused = true;
+                        self.fader_pause_until[fader].until = linked_volume;
+                    }
+                    self.profile.set_channel_volume(channel, linked_volume)?;
+                    self.goxlr.set_volume(channel, linked_volume)?;
+                }
+            }
+
+            // Apply the submix volume..
+            self.profile.set_submix_volume(mix, volume)?;
+            self.goxlr.set_sub_volume(mix, volume)?;
+        }
+        Ok(())
+    }
+
+    fn link_submix_channel(&mut self, channel: ChannelName, linked: bool) -> Result<()> {
+        if let Some(mix) = self.profile.get_submix_from_channel(channel) {
+            if !linked {
+                // We don't need to do anything special here..
+                self.profile.set_submix_linked(mix, linked)?;
+                return Ok(());
+            } else {
+                // We need to work out the current ratio between the channel, and it's mix..
+                let channel_volume = self.profile.get_channel_volume(channel);
+                let mix_volume = self.profile.get_submix_volume(mix);
+                let ratio = mix_volume as f64 / channel_volume as f64;
+
+                // Enable the link, and set the ratio..
+                self.profile.set_submix_linked(mix, linked)?;
+                self.profile.set_submix_link_ratio(mix, ratio)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn device_supports_submixes(&self) -> bool {
+        match self.hardware.device_type {
+            DeviceType::Unknown => false,
+            DeviceType::Full => version_newer_or_equal_to(
+                &self.hardware.versions.firmware,
+                VersionNumber(1, 4, 2, 107),
+            ),
+            DeviceType::Mini => version_newer_or_equal_to(
+                &self.hardware.versions.firmware,
+                VersionNumber(1, 2, 0, 46),
+            ),
+        }
     }
 
     // Get the current time in millis..

@@ -16,14 +16,6 @@ pub enum SampleButtons {
     Clear,
 }
 
-#[derive(Debug, Enum, EnumIter, Copy, Clone, PartialEq, Eq, Hash)]
-pub enum Faders {
-    A,
-    B,
-    C,
-    D,
-}
-
 #[derive(Debug, EnumIter, Enum, EnumProperty, Copy, Clone)]
 pub enum Preset {
     #[strum(props(tagSuffix = "preset1", contextTitle = "effects1"))]
@@ -49,4 +41,12 @@ pub enum Preset {
     #[strum(props(tagSuffix = "preset6", contextTitle = "effects6"))]
     #[strum(to_string = "PRESET_6")]
     Preset6,
+}
+
+#[derive(Debug, Enum, EnumIter, Copy, Clone, PartialEq, Eq, Hash)]
+pub enum Faders {
+    A,
+    B,
+    C,
+    D,
 }

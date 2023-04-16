@@ -375,7 +375,7 @@ impl TUSBAudio<'_> {
                         // We've either hit the end of the list, or something's gone wrong, break
                         // out and double check our handle.
                         if event_result != 3992977442 {
-                            debug!("Error Reading Event! {}", event_result);
+                            warn!("Error Reading Event! {}", event_result);
                         }
                         break;
                     }
@@ -397,6 +397,7 @@ impl TUSBAudio<'_> {
                         let se = callbacks.data_read.blocking_send(true);
                         if se.is_err() {
                             // Something's gone horribly wrong!
+                            debug!("Send Failed: {:?}", se.err());
                             terminator.store(true, Ordering::Relaxed);
                             break;
                         }
@@ -409,6 +410,8 @@ impl TUSBAudio<'_> {
                             if callbacks.input_changed.capacity() > 0 {
                                 let se = callbacks.input_changed.blocking_send(identifier.clone());
                                 if se.is_err() {
+                                    warn!("Error sending Callback! {:?}", se.err());
+
                                     // Something's gone horribly wrong!
                                     terminator.store(true, Ordering::Relaxed);
                                     break;
@@ -432,6 +435,7 @@ impl TUSBAudio<'_> {
 
                 // This one is broken too!
                 if new_handle.is_err() {
+                    debug!("Handle Error!");
                     // Flag ourself for stop..
                     terminator.store(true, Ordering::Relaxed);
 
@@ -605,6 +609,6 @@ pub struct EventChannelReceiver {
 }
 
 pub struct EventChannelSender {
-    pub(crate) data_read: Sender<bool>,
-    pub(crate) input_changed: Sender<String>,
+    pub(crate) data_read: Arc<Sender<bool>>,
+    pub(crate) input_changed: Arc<Sender<String>>,
 }

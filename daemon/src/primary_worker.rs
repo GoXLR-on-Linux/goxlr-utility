@@ -35,8 +35,8 @@ pub enum DeviceCommand {
     RunDeviceCommand(String, GoXLRCommand, oneshot::Sender<Result<()>>),
 }
 
-pub type DeviceSender = mpsc::Sender<DeviceCommand>;
-pub type DeviceReceiver = mpsc::Receiver<DeviceCommand>;
+pub type DeviceSender = Sender<DeviceCommand>;
+pub type DeviceReceiver = Receiver<DeviceCommand>;
 
 // Fix this later..
 #[allow(clippy::too_many_arguments)]
@@ -51,8 +51,8 @@ pub async fn spawn_usb_handler(
     mut file_manager: FileManager,
 ) {
     // We can probably either merge these, or struct them..
-    let (disconnect_sender, mut disconnect_receiver) = mpsc::channel(32);
-    let (event_sender, mut event_receiver) = mpsc::channel(32);
+    let (disconnect_sender, mut disconnect_receiver) = mpsc::channel(16);
+    let (event_sender, mut event_receiver) = mpsc::channel(16);
 
     // Create the device detection Sleep Timer..
     let detection_duration = Duration::from_millis(1000);
@@ -235,7 +235,7 @@ pub async fn spawn_usb_handler(
                 files = update_files(files, path, &mut file_manager).await;
                 change_found = true;
             }
-        };
+        }
 
         if change_found {
             let new_status = get_daemon_status(&devices, &settings, files.clone()).await;
@@ -243,6 +243,7 @@ pub async fn spawn_usb_handler(
             // Convert them to JSON..
             let json_old = serde_json::to_value(&daemon_status).unwrap();
             let json_new = serde_json::to_value(&new_status).unwrap();
+
             let patch = diff(&json_old, &json_new);
 
             // Only send a patch if something has changed..
@@ -282,7 +283,7 @@ async fn get_daemon_status(
     for (serial, device) in devices {
         status
             .mixers
-            .insert(serial.to_owned(), device.status().clone());
+            .insert(serial.to_owned(), device.status().await.clone());
     }
 
     status

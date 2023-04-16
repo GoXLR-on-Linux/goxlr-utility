@@ -25,6 +25,29 @@ pub enum ChannelName {
     LineOut,
 }
 
+#[derive(Debug, Default, Copy, Clone, Display, Enum, EnumIter, EnumCount, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum Mix {
+    #[default]
+    A,
+    B,
+}
+
+#[derive(Debug, Copy, Clone, Display, Enum, EnumIter, EnumCount, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum SubMixChannelName {
+    Mic,
+    LineIn,
+    Console,
+    System,
+    Game,
+    Chat,
+    Sample,
+    Music,
+}
+
 #[derive(Debug, Copy, Clone, Display, Enum, EnumIter, EnumCount, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -69,15 +92,17 @@ impl std::fmt::Debug for VersionNumber {
     }
 }
 
+// The ordering here might become important for submixes..
+// Under Windows, the Order is Headphones, Broadcast, Chat, Sample, Lineout
 #[derive(Debug, Copy, Clone, Display, Enum, EnumIter, EnumCount, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum OutputDevice {
     Headphones,
     BroadcastMix,
-    LineOut,
     ChatMic,
     Sampler,
+    LineOut,
 }
 
 #[derive(Debug, Copy, Clone, Display, Enum, EnumIter, EnumCount, PartialEq, Eq, Hash)]

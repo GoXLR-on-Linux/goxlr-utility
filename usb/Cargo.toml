@@ -1,6 +1,6 @@
 [package]
 name = "goxlr-usb"
-version = "0.10.1"
+version = "0.10.2"
 edition = "2021"
 authors = ["Nathan Adams <dinnerbone@dinnerbone.com>", "Craig McLure <craig@mclure.net>", "Lars Mühlbauer <lm41@dismail.de>"]
 description = "A direct interface to the TC-Helicon GoXLR & GoXLR Mini via usb."
@@ -21,7 +21,7 @@ anyhow = "1.0.68"
 cfg-if = "1.0.0"
 
 # New, some fun async stuff..
-tokio = { version = "1.23.0", features = ["sync", "rt", "time"] }
+tokio = { version = "1.27.0", features = ["sync", "rt", "time"] }
 futures = "0.3.25"
 
 # Dependencies specifically for building under Windows..
