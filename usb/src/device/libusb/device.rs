@@ -238,7 +238,7 @@ impl AttachGoXLR for GoXLRUSB {
                     break;
                 }
 
-                if paused.load(Ordering::Relaxed) || stop.load(Ordering::Relaxed) {
+                if paused.load(Ordering::Relaxed) || stopped.load(Ordering::Relaxed) {
                     tokio::time::sleep(Duration::from_millis(poll_millis)).await;
                     continue;
                 }
