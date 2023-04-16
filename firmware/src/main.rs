@@ -7,6 +7,7 @@ use goxlr_usb::device::base::{AttachGoXLR, FullGoXLRDevice};
 use goxlr_usb::device::{find_devices, from_device};
 use std::env;
 use std::io::Cursor;
+use std::path::PathBuf;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio::time::sleep;
@@ -14,11 +15,13 @@ use tokio::time::sleep;
 #[tokio::main]
 async fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
-    if args.len() < 2 || args[1] != "I-AM-REALLY-SURE" {
+    if args.len() < 3 || args[1] != "I-AM-REALLY-SURE" {
         eprintln!("Running this binary may damage your GoXLR, do not run it unless you know");
         eprintln!("*EXACTLY* what you're doing, this code is in development, it is *NOT* safe!");
         bail!("Aborting.");
     }
+
+    let file = PathBuf::from(&args[2]);
 
     // This is pretty straight forward, Firstly find all the GoXLRs..
     let devices = find_devices();
@@ -93,15 +96,10 @@ async fn main() -> Result<()> {
             }
         }
     }
-
-    println!("{:?}", hardware);
-
-    println!("Hello, world!");
-    Ok(())
 }
 
-async fn do_firmware_upload(device: &mut Box<dyn FullGoXLRDevice>) -> Result<()> {
-    let firmware = load_firmware_file()?;
+async fn do_firmware_upload(device: &mut Box<dyn FullGoXLRDevice>, file: PathBuf) -> Result<()> {
+    let firmware = load_firmware_file(file)?;
 
     println!("Stopping Device Polling..");
     device.stop_polling();
@@ -174,10 +172,8 @@ async fn do_firmware_upload(device: &mut Box<dyn FullGoXLRDevice>) -> Result<()>
     Ok(())
 }
 
-fn load_firmware_file() -> Result<Vec<u8>> {
-    let firmware = std::fs::read(
-        "C:\\Users\\FrostyCoolSlug\\GoXLR - Submix\\GOXLR_1.4.2 _Build_107-Submix.bin",
-    )?;
+fn load_firmware_file(file: PathBuf) -> Result<Vec<u8>> {
+    let firmware = std::fs::read(file)?;
 
     println!("{:?}", get_firmware_name(&firmware[0..16]));
     println!("{:?}", get_firmware_version(&firmware[24..32]));
