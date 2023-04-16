@@ -1268,16 +1268,22 @@ impl<'a> Device<'a> {
                 encoders[1]
             );
 
-            value_changed = true;
-            self.profile.set_gender_value(encoders[1])?;
-            self.apply_effects(LinkedHashSet::from_iter([EffectKey::GenderAmount]))?;
-
-            // Do TTS..
-            let user_value = self
+            let current_value = self
                 .mic_profile
                 .get_effect_value(EffectKey::GenderAmount, self.profile());
-            let message = format!("Gender {}", user_value);
-            let _ = self.global_events.send(TTSMessage(message)).await;
+
+            self.profile.set_gender_value(encoders[1])?;
+            value_changed = true;
+
+            let new_value = self
+                .mic_profile
+                .get_effect_value(EffectKey::GenderAmount, self.profile());
+
+            if new_value != current_value {
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::GenderAmount]))?;
+                let message = format!("Gender {}", new_value);
+                let _ = self.global_events.send(TTSMessage(message)).await;
+            }
         }
 
         if encoders[2] != self.profile.get_reverb_value() {
@@ -1287,10 +1293,6 @@ impl<'a> Device<'a> {
                 encoders[2]
             );
 
-            let current_value = self
-                .mic_profile
-                .get_effect_value(EffectKey::ReverbAmount, self.profile());
-
             value_changed = true;
             self.profile.set_reverb_value(encoders[2])?;
 
@@ -1298,13 +1300,11 @@ impl<'a> Device<'a> {
                 .mic_profile
                 .get_effect_value(EffectKey::ReverbAmount, self.profile());
 
-            if current_value != new_value {
-                self.apply_effects(LinkedHashSet::from_iter([EffectKey::ReverbAmount]))?;
+            self.apply_effects(LinkedHashSet::from_iter([EffectKey::ReverbAmount]))?;
 
-                let percent = 100 - ((user_value as f32 / -36.) * 100.) as i32;
-                let message = format!("Reverb {} percent", percent);
-                let _ = self.global_events.send(TTSMessage(message)).await;
-            }
+            let percent = 100 - ((new_value as f32 / -36.) * 100.) as i32;
+            let message = format!("Reverb {} percent", percent);
+            let _ = self.global_events.send(TTSMessage(message)).await;
         }
 
         if encoders[3] != self.profile.get_echo_value() {
