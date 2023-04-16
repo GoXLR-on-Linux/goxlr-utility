@@ -147,6 +147,7 @@ async fn do_firmware_upload(device: &mut Box<dyn FullGoXLRDevice>, file: &PathBu
     let mut processed: u32 = 0;
     let mut hash_in = 0;
 
+    let mut last_percent = 0_u8;
     while remaining_bytes > 0 {
         let (hash, count) = device.validate_firmware_packet(processed, hash_in, remaining_bytes)?;
 
@@ -161,6 +162,13 @@ async fn do_firmware_upload(device: &mut Box<dyn FullGoXLRDevice>, file: &PathBu
         // be possible to validate it, but the official app doesn't do so, it just sends it with the next packet. To the best
         // of my understanding, the next step does a separate CRC check on the device itself, so we have to hope that's OK :)
         hash_in = hash;
+
+        // Calculate the Compeltion Percentage..
+        let percent = ((processed as f32 / sent as f32) * 100.) as u8;
+        if percent != last_percent {
+            last_percent = percent;
+            println!("Validating: {}%", percent);
+        }
     }
     println!("Validation complete!");
 

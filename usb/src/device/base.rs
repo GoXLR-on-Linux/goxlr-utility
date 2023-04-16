@@ -352,8 +352,6 @@ pub trait GoXLRCommands: ExecutableGoXLR {
             &packet,
         )?;
 
-        println!("{:?}", result);
-
         // Grab the Hash and Count from the result..
         let hash = LittleEndian::read_u32(&result[0..4]);
         let count = LittleEndian::read_u32(&result[4..8]);
