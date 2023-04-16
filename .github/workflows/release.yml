@@ -62,7 +62,7 @@ jobs:
       - name: Install Pulse Client Libraries
         run: |
           sudo apt-get update
-          sudo apt-get install libpulse0 libdbus-1-dev pkg-config speech-dispatcher
+          sudo apt-get install libpulse0 libdbus-1-dev pkg-config libspeechd-dev
 
       - name: Install cargo-deb and cargo-generate-rpm
         run: cargo install cargo-deb cargo-generate-rpm
