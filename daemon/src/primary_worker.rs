@@ -30,6 +30,7 @@ pub enum DeviceCommand {
     OpenPath(PathTypes, oneshot::Sender<DaemonResponse>),
     RecoverDefaults(PathTypes, oneshot::Sender<DaemonResponse>),
     SetShowTrayIcon(bool, oneshot::Sender<DaemonResponse>),
+    SetTTSEnabled(bool, oneshot::Sender<DaemonResponse>),
     SetAutoStartEnabled(bool, oneshot::Sender<DaemonResponse>),
     RunDeviceCommand(String, GoXLRCommand, oneshot::Sender<Result<()>>),
 }
@@ -86,7 +87,7 @@ pub async fn spawn_usb_handler(
                         device_identifier = Some(identifier.clone());
                     }
 
-                    match load_device(device, existing_serials, disconnect_sender.clone(), event_sender.clone(), &settings).await {
+                    match load_device(device, existing_serials, disconnect_sender.clone(), event_sender.clone(), global_tx.clone(), &settings).await {
                         Ok(device) => {
                             devices.insert(device.serial().to_owned(), device);
                             change_found = true;
@@ -209,6 +210,12 @@ pub async fn spawn_usb_handler(
                         change_found = true;
                         let _ = sender.send(DaemonResponse::Ok);
                     }
+                    DeviceCommand::SetTTSEnabled(enabled, sender) => {
+                        settings.set_tts_enabled(enabled).await;
+                        settings.save().await;
+                        change_found = true;
+                        let _ = sender.send(DaemonResponse::Ok);
+                    }
                     DeviceCommand::OpenPath(path_type, sender) => {
                         // There's nothing we can really do if this errors..
                         let _ = global_tx.send(EventTriggers::Open(path_type)).await;
@@ -260,6 +267,7 @@ async fn get_daemon_status(
             daemon_version: String::from(VERSION),
             autostart_enabled: has_autostart(),
             show_tray_icon: settings.get_show_tray_icon().await,
+            tts_enabled: settings.get_tts_enabled().await,
         },
         paths: Paths {
             profile_directory: settings.get_profile_directory().await,
@@ -371,6 +379,7 @@ async fn load_device(
     existing_serials: Vec<String>,
     disconnect_sender: Sender<String>,
     event_sender: Sender<String>,
+    global_events: Sender<EventTriggers>,
     settings: &SettingsHandle,
 ) -> Result<Device<'_>> {
     let device_copy = device.clone();
@@ -428,6 +437,7 @@ async fn load_device(
         &profile_directory,
         &mic_profile_directory,
         settings,
+        global_events,
     )?;
     settings
         .set_device_profile_name(&serial_number, device.profile().name())

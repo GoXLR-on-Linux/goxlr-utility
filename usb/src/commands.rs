@@ -24,6 +24,10 @@ pub enum Command {
     SetSubChannelVolume(SubMixChannelName),
     SetChannelMixes,
     SetMonitoredMix,
+
+    // Probably shouldn't use these, but they're here for.. reasons.
+    ExecuteFirmwareUpdateCommand(FirmwareCommand),
+    ExecuteFirmwareUpdateAction(FirmwareAction),
 }
 
 impl Command {
@@ -47,10 +51,16 @@ impl Command {
             Command::SetMicrophoneParameters => 0x80b << 12,
             Command::SetEffectParameters => 0x801 << 12,
 
+
             // I'm doing a +16 here, because there appears to be a bit reset going on..
             Command::SetSubChannelVolume(channel) => (0x806 << 12) | (*channel as u32 + 16),
             Command::SetChannelMixes => 0x817 << 12,
             Command::SetMonitoredMix => 0x818 << 12,
+
+            // Again, don't use these :)
+            Command::ExecuteFirmwareUpdateCommand(sub) => 0x810 << 12 | *sub as u32,
+            Command::ExecuteFirmwareUpdateAction(sub) => 0x004 << 12 | sub.id(),
+
         }
     }
 }
@@ -61,17 +71,65 @@ pub enum SystemInfoCommand {
     SupportsDCPCategory,
 }
 
+impl SystemInfoCommand {
+    pub fn id(&self) -> u32 {
+        match self {
+            SystemInfoCommand::FirmwareVersion => 2,
+            SystemInfoCommand::SupportsDCPCategory => 1,
+        }
+    }
+}
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum HardwareInfoCommand {
     FirmwareVersion = 0,
     SerialNumber = 1,
 }
 
-impl SystemInfoCommand {
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum FirmwareCommand {
+    // Start the update (Makes GoXLR go green, we should lock the util here.)
+    START,
+
+    // Verify the update on the GoXLR, use POLL for progress
+    VERIFY,
+
+    // Aborts the Firmware update, only call at the *END* of VERIFY
+    ABORT,
+
+    // Writes the firmware to active memory, use POLL for progress
+    FINALISE,
+
+    // Reboots the GoXLR upon completion of the firmware update
+    REBOOT,
+
+    // Used for polling status (VERIFY / FINALISE)
+    POLL,
+}
+
+// DCP Commands for managing a firmware update (0x004)
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum FirmwareAction {
+    // Formats and erases the update partition
+    ERASE,
+
+    // Poll for ERASE to hit 0xFF
+    POLL,
+
+    // Sends a data chunk to the update partition
+    SEND,
+
+    // Receive Checksums and Validate data
+    VALIDATE,
+}
+
+impl FirmwareAction {
     pub fn id(&self) -> u32 {
         match self {
-            SystemInfoCommand::FirmwareVersion => 2,
-            SystemInfoCommand::SupportsDCPCategory => 1,
+            FirmwareAction::ERASE => 2,
+            FirmwareAction::POLL => 3,
+            FirmwareAction::SEND => 4,
+            FirmwareAction::VALIDATE => 6,
         }
     }
 }
