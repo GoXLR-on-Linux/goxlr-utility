@@ -82,6 +82,7 @@ async fn main() -> Result<()> {
 
     if let Err(error) = do_firmware_upload(&mut handled_device, &file).await {
         println!("Firmware Update Failed: {}", error);
+        abort_update(&mut handled_device)?;
     }
     reboot_goxlr(&mut handled_device)?;
     Ok(())
@@ -207,6 +208,12 @@ async fn do_firmware_upload(device: &mut Box<dyn FullGoXLRDevice>, file: &PathBu
     }
     println!("Firmware update complete!");
 
+    Ok(())
+}
+
+fn abort_update(device: &mut Box<dyn FullGoXLRDevice>) -> Result<()> {
+    println!("Aboring Update");
+    let _ = device.abort_firmware_update()?;
     Ok(())
 }
 
