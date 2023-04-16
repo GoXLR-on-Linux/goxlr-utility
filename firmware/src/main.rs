@@ -92,13 +92,13 @@ async fn main() -> Result<()> {
                 // Trigger this again in about 136 years.. We'll do better later!
                 wait.as_mut().reset(tokio::time::Instant::now() + Duration::from_secs(u32::MAX.into()));
                 println!("Executing Firmware Update..");
-                do_firmware_upload(&mut handled_device).await?;
+                do_firmware_upload(&mut handled_device, &file).await?;
             }
         }
     }
 }
 
-async fn do_firmware_upload(device: &mut Box<dyn FullGoXLRDevice>, file: PathBuf) -> Result<()> {
+async fn do_firmware_upload(device: &mut Box<dyn FullGoXLRDevice>, file: &PathBuf) -> Result<()> {
     let firmware = load_firmware_file(file)?;
 
     println!("Stopping Device Polling..");
@@ -172,7 +172,7 @@ async fn do_firmware_upload(device: &mut Box<dyn FullGoXLRDevice>, file: PathBuf
     Ok(())
 }
 
-fn load_firmware_file(file: PathBuf) -> Result<Vec<u8>> {
+fn load_firmware_file(file: &PathBuf) -> Result<Vec<u8>> {
     let firmware = std::fs::read(file)?;
 
     println!("{:?}", get_firmware_name(&firmware[0..16]));
