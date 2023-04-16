@@ -76,11 +76,9 @@ async fn main() -> Result<()> {
         usb_device,
     };
 
-    if hardware.device_type == DeviceType::Mini {
-        bail!("This code has only been tested on the full device.");
-    }
+    let firmware = load_firmware_file(&file, hardware.device_type)?;
 
-    if let Err(error) = do_firmware_upload(&mut handled_device, &file).await {
+    if let Err(error) = do_firmware_upload(&mut handled_device, firmware).await {
         println!("Firmware Update Failed: {}", error);
         abort_update(&mut handled_device)?;
     }
@@ -88,9 +86,10 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn do_firmware_upload(device: &mut Box<dyn FullGoXLRDevice>, file: &PathBuf) -> Result<()> {
-    let firmware = load_firmware_file(file)?;
-
+async fn do_firmware_upload(
+    device: &mut Box<dyn FullGoXLRDevice>,
+    firmware: Vec<u8>,
+) -> Result<()> {
     println!("Stopping Device Polling..");
     device.stop_polling();
 
@@ -245,8 +244,23 @@ fn reboot_goxlr(device: &mut Box<dyn FullGoXLRDevice>) -> Result<()> {
     device.reboot_after_firmware_upload()
 }
 
-fn load_firmware_file(file: &PathBuf) -> Result<Vec<u8>> {
+fn load_firmware_file(file: &PathBuf, device_type: DeviceType) -> Result<Vec<u8>> {
     let firmware = std::fs::read(file)?;
+
+    let name = get_firmware_name(&firmware[0..16]);
+    if device_type == DeviceType::Full && name != "GoXLR Firmware" {
+        bail!(
+            "Incompatible Firmware, Expected 'GoXLR Firmware' received '{}'",
+            name
+        );
+    }
+
+    if device_type == DeviceType::Mini && name != "GoXLR-Mini" {
+        bail!(
+            "Incompatible Firmware, Expected 'GoXLR-Mini' received '{}'",
+            name
+        );
+    }
 
     println!("{:?}", get_firmware_name(&firmware[0..16]));
     println!("{:?}", get_firmware_version(&firmware[24..32]));
