@@ -535,10 +535,7 @@ impl<'a> Device<'a> {
             }
 
             let message = format!("Mic Muted{}", target);
-            let _ = self
-                .global_events
-                .send(EventTriggers::TTSMessage(message))
-                .await;
+            let _ = self.global_events.send(TTSMessage(message)).await;
 
             self.apply_routing(BasicInputDevice::Microphone)?;
             return Ok(());
@@ -556,10 +553,7 @@ impl<'a> Device<'a> {
             self.profile.set_mute_chat_button_blink(true);
 
             let message = "Mic Muted".to_string();
-            let _ = self
-                .global_events
-                .send(EventTriggers::TTSMessage(message))
-                .await;
+            let _ = self.global_events.send(TTSMessage(message)).await;
 
             self.goxlr.set_channel_state(ChannelName::Mic, Muted)?;
             self.apply_routing(BasicInputDevice::Microphone)?;
@@ -584,10 +578,7 @@ impl<'a> Device<'a> {
                     }
 
                     let message = "Mic Unmuted".to_string();
-                    let _ = self
-                        .global_events
-                        .send(EventTriggers::TTSMessage(message))
-                        .await;
+                    let _ = self.global_events.send(TTSMessage(message)).await;
                     self.apply_routing(BasicInputDevice::Microphone)?;
                     return Ok(());
                 }
@@ -600,10 +591,7 @@ impl<'a> Device<'a> {
                 }
 
                 let message = format!("Mic Muted{}", target);
-                let _ = self
-                    .global_events
-                    .send(EventTriggers::TTSMessage(message))
-                    .await;
+                let _ = self.global_events.send(TTSMessage(message)).await;
 
                 // Update the transient routing..
                 self.apply_routing(BasicInputDevice::Microphone)?;
@@ -616,10 +604,7 @@ impl<'a> Device<'a> {
             }
 
             let message = "Mic Unmuted".to_string();
-            let _ = self
-                .global_events
-                .send(EventTriggers::TTSMessage(message))
-                .await;
+            let _ = self.global_events.send(TTSMessage(message)).await;
 
             // Disable button and refresh transient routing
             self.apply_routing(BasicInputDevice::Microphone)?;
@@ -654,10 +639,7 @@ impl<'a> Device<'a> {
         // Ok, we need to announce where we're muted to..
         let name = self.profile.get_fader_assignment(fader);
         let message = format!("{} Muted{}", name, target);
-        let _ = self
-            .global_events
-            .send(EventTriggers::TTSMessage(message))
-            .await;
+        let _ = self.global_events.send(TTSMessage(message)).await;
 
         let input = self.get_basic_input_from_channel(channel);
         self.profile.set_mute_button_on(fader, true)?;
@@ -688,10 +670,7 @@ impl<'a> Device<'a> {
 
         let name = self.profile.get_fader_assignment(fader);
         let message = format!("{} Muted", name);
-        let _ = self
-            .global_events
-            .send(EventTriggers::TTSMessage(message))
-            .await;
+        let _ = self.global_events.send(TTSMessage(message)).await;
 
         if blink {
             self.profile.set_mute_button_blink(fader, true)?;
@@ -756,10 +735,7 @@ impl<'a> Device<'a> {
 
         let name = self.profile.get_fader_assignment(fader);
         let message = format!("{} unmuted", name);
-        let _ = self
-            .global_events
-            .send(EventTriggers::TTSMessage(message))
-            .await;
+        let _ = self.global_events.send(TTSMessage(message)).await;
 
         self.update_button_states()?;
         Ok(())
@@ -788,10 +764,7 @@ impl<'a> Device<'a> {
     async fn load_sample_bank(&mut self, bank: SampleBank) -> Result<()> {
         // Send the TTS Message..
         let tts_message = format!("Sample {}", bank);
-        let _ = self
-            .global_events
-            .send(EventTriggers::TTSMessage(tts_message))
-            .await;
+        let _ = self.global_events.send(TTSMessage(tts_message)).await;
 
         self.profile.load_sample_bank(bank)?;
 
@@ -890,9 +863,7 @@ impl<'a> Device<'a> {
             let state = self.profile.is_sample_clear_active();
             if !audio.is_sample_recording() {
                 let message = format!("Sample Clear {}", tts_bool_to_state(!state));
-                self.global_events
-                    .send(EventTriggers::TTSMessage(message))
-                    .await?;
+                self.global_events.send(TTSMessage(message)).await?;
 
                 self.profile.set_sample_clear_active(!state)?;
             }
@@ -1062,10 +1033,7 @@ impl<'a> Device<'a> {
     async fn load_effect_bank(&mut self, preset: EffectBankPresets) -> Result<()> {
         // Send the TTS Message..
         let tts_message = format!("Effects {}", preset as u8 + 1);
-        let _ = self
-            .global_events
-            .send(EventTriggers::TTSMessage(tts_message))
-            .await;
+        let _ = self.global_events.send(TTSMessage(tts_message)).await;
 
         self.profile.load_effect_bank(preset)?;
         self.load_effects()?;
@@ -1085,10 +1053,7 @@ impl<'a> Device<'a> {
     async fn set_megaphone(&mut self, enabled: bool) -> Result<()> {
         // Send the TTS Message..
         let tts_message = format!("Megaphone {}", tts_bool_to_state(enabled));
-        let _ = self
-            .global_events
-            .send(EventTriggers::TTSMessage(tts_message))
-            .await;
+        let _ = self.global_events.send(TTSMessage(tts_message)).await;
 
         self.profile.set_megaphone(enabled)?;
         self.apply_effects(LinkedHashSet::from_iter([EffectKey::MegaphoneEnabled]))?;
@@ -1098,10 +1063,7 @@ impl<'a> Device<'a> {
     async fn set_robot(&mut self, enabled: bool) -> Result<()> {
         // Send the TTS Message..
         let tts_message = format!("Robot {}", tts_bool_to_state(enabled));
-        let _ = self
-            .global_events
-            .send(EventTriggers::TTSMessage(tts_message))
-            .await;
+        let _ = self.global_events.send(TTSMessage(tts_message)).await;
 
         self.profile.set_robot(enabled)?;
         self.apply_effects(LinkedHashSet::from_iter([EffectKey::RobotEnabled]))?;
@@ -1111,10 +1073,7 @@ impl<'a> Device<'a> {
     async fn set_hardtune(&mut self, enabled: bool) -> Result<()> {
         // Send the TTS Message..
         let tts_message = format!("Hard tune {}", tts_bool_to_state(enabled));
-        let _ = self
-            .global_events
-            .send(EventTriggers::TTSMessage(tts_message))
-            .await;
+        let _ = self.global_events.send(TTSMessage(tts_message)).await;
 
         self.profile.set_hardtune(enabled)?;
         self.apply_effects(LinkedHashSet::from_iter([EffectKey::HardTuneEnabled]))?;
@@ -1131,10 +1090,7 @@ impl<'a> Device<'a> {
     async fn set_effects(&mut self, enabled: bool) -> Result<()> {
         // Send the TTS Message..
         let tts_message = format!("Effects {}", tts_bool_to_state(enabled));
-        let _ = self
-            .global_events
-            .send(EventTriggers::TTSMessage(tts_message))
-            .await;
+        let _ = self.global_events.send(TTSMessage(tts_message)).await;
 
         self.profile.set_effects(enabled)?;
 
