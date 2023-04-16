@@ -1287,18 +1287,24 @@ impl<'a> Device<'a> {
                 encoders[2]
             );
 
-            value_changed = true;
-            self.profile.set_reverb_value(encoders[2])?;
-            self.apply_effects(LinkedHashSet::from_iter([EffectKey::ReverbAmount]))?;
-
-            let mut user_value = self
+            let current_value = self
                 .mic_profile
                 .get_effect_value(EffectKey::ReverbAmount, self.profile());
 
-            // Turn this into a percentage..
-            user_value = 100 - ((user_value as f32 / -36.) * 100.) as i32;
-            let message = format!("Reverb {} percent", user_value);
-            let _ = self.global_events.send(TTSMessage(message)).await;
+            value_changed = true;
+            self.profile.set_reverb_value(encoders[2])?;
+
+            let new_value = self
+                .mic_profile
+                .get_effect_value(EffectKey::ReverbAmount, self.profile());
+
+            if current_value != new_value {
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::ReverbAmount]))?;
+
+                let percent = 100 - ((user_value as f32 / -36.) * 100.) as i32;
+                let message = format!("Reverb {} percent", percent);
+                let _ = self.global_events.send(TTSMessage(message)).await;
+            }
         }
 
         if encoders[3] != self.profile.get_echo_value() {
