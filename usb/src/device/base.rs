@@ -283,15 +283,14 @@ pub trait GoXLRCommands: ExecutableGoXLR {
 
     // DO NOT EXECUTE ANY OF THESE, SERIOUSLY!
     fn begin_firmware_upload(&mut self) -> Result<()> {
-        // let result = self.request_data(
-        //     Command::ExecuteFirmwareUpdateCommand(FirmwareCommand::START),
-        //     &[],
-        // )?;
-        // let code = LittleEndian::read_u32(&result[0..4]);
-        // if code != 0 {
-        //     bail!("Invalid Response Received!");
-        // }
-        // Ok(())
+        let result = self.request_data(
+            Command::ExecuteFirmwareUpdateCommand(FirmwareCommand::START),
+            &[],
+        )?;
+        let code = LittleEndian::read_u32(&result[0..4]);
+        if code != 0 {
+            bail!("Invalid Response Received!");
+        }
         Ok(())
     }
 
@@ -308,15 +307,14 @@ pub trait GoXLRCommands: ExecutableGoXLR {
         LittleEndian::write_u32(&mut header[0..4], 7);
         LittleEndian::write_u32(&mut header[4..8], 0);
 
-        Ok(0xff)
-        // let result = self.request_data(
-        //     Command::ExecuteFirmwareUpdateAction(FirmwareAction::POLL),
-        //     &header,
-        // )?;
-        // if result.len() != 1 {
-        //     bail!("Unexpected Result from NVRam Firmware Erase!");
-        // }
-        // Ok(result[0])
+        let result = self.request_data(
+            Command::ExecuteFirmwareUpdateAction(FirmwareAction::POLL),
+            &header,
+        )?;
+        if result.len() != 1 {
+            bail!("Unexpected Result from NVRam Firmware Erase!");
+        }
+        Ok(result[0])
     }
 
     fn send_firmware_packet(&mut self, bytes_sent: u64, data: &[u8]) {
@@ -358,15 +356,15 @@ pub trait GoXLRCommands: ExecutableGoXLR {
     }
 
     fn verify_firmware_status(&mut self) -> Result<()> {
-        // let result = self.request_data(
-        //     Command::ExecuteFirmwareUpdateAction(FirmwareAction::VALIDATE),
-        //     &[],
-        // )?;
-        //
-        // let output = LittleEndian::read_u32(&result);
-        // if output != 0 {
-        //     bail!("Unexpected Result from Verify: {}", output);
-        // }
+        let result = self.request_data(
+            Command::ExecuteFirmwareUpdateAction(FirmwareAction::VALIDATE),
+            &[],
+        )?;
+
+        let output = LittleEndian::read_u32(&result);
+        if output != 0 {
+            bail!("Unexpected Result from Verify: {}", output);
+        }
         Ok(())
     }
 
@@ -375,24 +373,24 @@ pub trait GoXLRCommands: ExecutableGoXLR {
             self.request_data(Command::ExecuteFirmwareUpdateCommand(FirmwareCommand::POLL));
 
         let mut cursor = Cursor::new(result);
-        let command = cursor.read_u32::<LittleEndian>()?;
-        let failure = cursor.read_u32::<LittleEndian>()?;
+        let op = cursor.read_u32::<LittleEndian>()?;
+        let stage = cursor.read_u32::<LittleEndian>()?;
         let state = cursor.read_u32::<LittleEndian>()?;
         let error_code = cursor.read_u32::<LittleEndian>()?;
 
         let read_total = cursor.read_u32::<LittleEndian>()?;
         let read_done = cursor.read_u32::<LittleEndian>()?;
 
-        if command == 2 && failure == 0 && state == 2 {
+        if op == 2 && stage == 0 && state == 2 {
             // Verification complete and good..
             return Ok((true, read_total, read_done));
         }
 
-        if command != 3 {
-            bail!("Unexpected Command Code, Expected 3 received {}", command);
+        if op != 3 {
+            bail!("Unexpected Command Code, Expected 3 received {}", op);
         }
 
-        if failure != 0 {
+        if stage != 0 {
             bail!("Failed with Error: {}", error_code);
         }
 
@@ -420,48 +418,63 @@ pub trait GoXLRCommands: ExecutableGoXLR {
 
         bail!(
             "Unexpected Packet: {} {} {} {}",
-            command,
-            failure,
+            op,
+            stage,
             state,
             read_done
         );
     }
 
     fn finalise_firmware_upload(&mut self) -> Result<()> {
-        // let result = self.request_data(
-        //     Command::ExecuteFirmwareUpdateAction(FirmwareAction::FINALISE),
-        //     &[],
-        // )?;
-        //
-        // let output = LittleEndian::read_u32(&result);
-        // if output != 0 {
-        //     bail!("Unexpected Result from Finalise: {}", output);
-        // }
+        let result = self.request_data(
+            Command::ExecuteFirmwareUpdateAction(FirmwareAction::FINALISE),
+            &[],
+        )?;
+
+        let output = LittleEndian::read_u32(&result);
+        if output != 0 {
+            bail!("Unexpected Result from Finalise: {}", output);
+        }
         Ok(())
     }
 
-    fn poll_finalise_firmware_upload(&mut self) -> Result<()> {
+    fn poll_finalise_firmware_upload(&mut self) -> Result<(bool, u32, u32)> {
         let result =
             self.request_data(Command::ExecuteFirmwareUpdateCommand(FirmwareCommand::POLL));
 
         let mut cursor = Cursor::new(result);
-        let command = cursor.read_u32::<LittleEndian>()?;
-        let failure = cursor.read_u32::<LittleEndian>()?;
+        let op = cursor.read_u32::<LittleEndian>()?;
+        let stage = cursor.read_u32::<LittleEndian>()?;
         let state = cursor.read_u32::<LittleEndian>()?;
         let error_code = cursor.read_u32::<LittleEndian>()?;
 
-        if command != 4 {
-            if command == 3 {
-                if failure == 1 {
+        let read_total = cursor.read_u32::<LittleEndian>()?;
+        let read_done = cursor.read_u32::<LittleEndian>()?;
+
+        if op != 4 {
+            if op == 3 {
+                if stage == 1 {
                     bail!("Validation Failure, {}", error_code);
                 }
             }
 
             // Something has gone wrong here with the (assumed) validation phase..
-            bail!("Invalid Command Response: {}", command);
+            bail!("Invalid Command Response: {}", op);
         }
 
-        Ok(())
+        if stage != 1 {
+            bail!("Unknown Stage: {}", stage);
+        }
+
+        if state == 1 {
+            return Ok((false, read_total, read_done));
+        }
+
+        if state == 2 {
+            return Ok((true, read_total, read_done));
+        }
+
+        bail!("Unknown Packet: {} {} {} {}", op, stage, state, error_code);
 
         // Seems to be similar to verify..
         // 4 1 1 0 - More Data..
@@ -475,16 +488,24 @@ pub trait GoXLRCommands: ExecutableGoXLR {
          */
     }
 
+    fn abort_firmware_update(&mut self) -> Result<()> {
+        let result = self.request_data(
+            Command::ExecuteFirmwareUpdateCommand(FirmwareCommand::ABORT),
+            &[],
+        )?;
+        Ok(())
+    }
+
     fn reboot_after_firmware_upload(&mut self) -> Result<()> {
-        // let result = self.request_data(
-        //     Command::ExecuteFirmwareUpdateAction(FirmwareAction::REBOOT),
-        //     &[],
-        // )?;
-        //
-        // let output = LittleEndian::read_u32(&result);
-        // if output != 0 {
-        //     bail!("Unexpected Result from Verify: {}", output);
-        // }
+        let result = self.request_data(
+            Command::ExecuteFirmwareUpdateAction(FirmwareAction::REBOOT),
+            &[],
+        )?;
+
+        let output = LittleEndian::read_u32(&result);
+        if output != 0 {
+            bail!("Unexpected Result from Verify: {}", output);
+        }
         Ok(())
     }
 }
