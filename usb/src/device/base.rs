@@ -369,8 +369,10 @@ pub trait GoXLRCommands: ExecutableGoXLR {
     }
 
     fn poll_verify_firmware_status(&mut self) -> Result<(bool, u32, u32)> {
-        let result =
-            self.request_data(Command::ExecuteFirmwareUpdateCommand(FirmwareCommand::POLL));
+        let result = self.request_data(
+            Command::ExecuteFirmwareUpdateCommand(FirmwareCommand::POLL),
+            &[],
+        )?;
 
         let mut cursor = Cursor::new(result);
         let op = cursor.read_u32::<LittleEndian>()?;
@@ -395,7 +397,7 @@ pub trait GoXLRCommands: ExecutableGoXLR {
         }
 
         if state == 3 {
-            bail("Failing with Error: {}", error_code);
+            bail!("Failing with Error: {}", error_code);
         }
 
         if state == 1 && error_code == 0 {
@@ -427,7 +429,7 @@ pub trait GoXLRCommands: ExecutableGoXLR {
 
     fn finalise_firmware_upload(&mut self) -> Result<()> {
         let result = self.request_data(
-            Command::ExecuteFirmwareUpdateAction(FirmwareAction::FINALISE),
+            Command::ExecuteFirmwareUpdateCommand(FirmwareCommand::FINALISE),
             &[],
         )?;
 
@@ -439,8 +441,10 @@ pub trait GoXLRCommands: ExecutableGoXLR {
     }
 
     fn poll_finalise_firmware_upload(&mut self) -> Result<(bool, u32, u32)> {
-        let result =
-            self.request_data(Command::ExecuteFirmwareUpdateCommand(FirmwareCommand::POLL));
+        let result = self.request_data(
+            Command::ExecuteFirmwareUpdateCommand(FirmwareCommand::POLL),
+            &[],
+        )?;
 
         let mut cursor = Cursor::new(result);
         let op = cursor.read_u32::<LittleEndian>()?;
@@ -498,7 +502,7 @@ pub trait GoXLRCommands: ExecutableGoXLR {
 
     fn reboot_after_firmware_upload(&mut self) -> Result<()> {
         let result = self.request_data(
-            Command::ExecuteFirmwareUpdateAction(FirmwareAction::REBOOT),
+            Command::ExecuteFirmwareUpdateCommand(FirmwareCommand::REBOOT),
             &[],
         )?;
 

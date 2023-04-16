@@ -2,7 +2,7 @@ use anyhow::{bail, Result};
 use byteorder::{LittleEndian, ReadBytesExt};
 use goxlr_ipc::{DeviceType, HardwareStatus, UsbProductInformation};
 use goxlr_types::VersionNumber;
-use goxlr_usb::device::base::{AttachGoXLR, FullGoXLRDevice};
+use goxlr_usb::device::base::FullGoXLRDevice;
 use goxlr_usb::device::{find_devices, from_device};
 use std::env;
 use std::io::Cursor;
@@ -42,9 +42,11 @@ async fn main() -> Result<()> {
     let descriptor = handled_device.get_descriptor()?;
 
     let device_type = match descriptor.product_id() {
-        PID_GOXLR_FULL => DeviceType::Full,
-        PID_GOXLR_MINI => DeviceType::Mini,
-        _ => DeviceType::Unknown,
+        goxlr_usb::PID_GOXLR_FULL => DeviceType::Full,
+        goxlr_usb::PID_GOXLR_MINI => DeviceType::Mini,
+        _ => {
+            bail!("Unknown Device!");
+        }
     };
     let device_version = descriptor.device_version();
     let version = (device_version.0, device_version.1, device_version.2);
@@ -56,7 +58,7 @@ async fn main() -> Result<()> {
         identifier: device_clone.identifier().clone(),
         version,
     };
-    let (mut serial_number, manufactured_date) = handled_device.get_serial_number()?;
+    let (serial_number, manufactured_date) = handled_device.get_serial_number()?;
     if serial_number.is_empty() {
         bail!("Unable to Obtain GoXLR Serial Number!");
     }
