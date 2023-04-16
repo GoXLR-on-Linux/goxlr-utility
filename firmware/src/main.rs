@@ -235,7 +235,7 @@ async fn do_firmware_upload(device: &mut Box<dyn FullGoXLRDevice>, file: &PathBu
 }
 
 fn abort_update(device: &mut Box<dyn FullGoXLRDevice>) -> Result<()> {
-    println!("Aboring Update");
+    println!("Aborting Update");
     let _ = device.abort_firmware_update()?;
     Ok(())
 }
