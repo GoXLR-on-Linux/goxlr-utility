@@ -1,6 +1,6 @@
 use crate::buttonstate::{ButtonStates, Buttons, CurrentButtonStates};
 use crate::channelstate::ChannelState;
-use crate::commands::Command::{ExecuteFirmwareUpdateAction, ExecuteFirmwareUpdateCommand};
+use crate::commands::Command::ExecuteFirmwareUpdateAction;
 use crate::commands::SystemInfoCommand::SupportsDCPCategory;
 use crate::commands::{
     Command, FirmwareAction, FirmwareCommand, HardwareInfoCommand, SystemInfoCommand,
@@ -15,7 +15,6 @@ use goxlr_types::{
     MicrophoneType, Mix, SubMixChannelName, VersionNumber,
 };
 use log::debug;
-use rand::Rng;
 use std::io::{Cursor, Write};
 use tokio::sync::mpsc::Sender;
 
@@ -460,10 +459,8 @@ pub trait GoXLRCommands: ExecutableGoXLR {
         let read_done = cursor.read_u32::<LittleEndian>()?;
 
         if op != 4 {
-            if op == 3 {
-                if stage == 1 {
-                    bail!("Validation Failure, {}", error_code);
-                }
+            if op == 3 && stage == 1 {
+                bail!("Validation Failure, {}", error_code);
             }
 
             // Something has gone wrong here with the (assumed) validation phase..
