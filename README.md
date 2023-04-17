@@ -104,8 +104,8 @@ Copy `50-goxlr.rules` to `/etc/udev/rules.d/` and then reload with `sudo udevadm
 ### Features
 The GoXLR Utility contains compile-time features, which can be used to enable functionality during the build process by
 adding `--features "a b c"` to the `cargo` command (with `a`, `b` and `c` being separate feature names, for example 
-`cargo build --features "tts"`). These features often require separate packages to be installed, and are documented as 
-such below.
+`cargo build --features "tts"`). These features often require separate dependencies to be installed, and are documented
+as such below.
 
 #### Text to Speech on Button Press
 * Feature Name: `tts`
