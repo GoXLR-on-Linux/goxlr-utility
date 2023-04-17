@@ -24,7 +24,7 @@ fi
 # Neither 'cargo deb' or 'cargo generate-rpm' seem to provide a way to specify an asset that is created at build time.
 # To work around this, we force a release build, copy out the shell completions produced from that build, put it into
 # a predictable location and then build the packages, which knows where to look.
-cargo build --release
+cargo build --release --all-features
 
 strip target/release/goxlr-client
 strip target/release/goxlr-daemon

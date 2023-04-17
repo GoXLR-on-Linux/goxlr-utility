@@ -13,7 +13,7 @@ jobs:
           sudo apt-get install libdbus-1-dev pkg-config libspeechd-dev
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo check
+      - run: cargo check --all-features
 
   test_linux:
     name: Test Linux Suite
@@ -25,7 +25,7 @@ jobs:
           sudo apt-get install libpulse0 libdbus-1-dev pkg-config libspeechd-dev
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test
+      - run: cargo test --all-features
 
   test_windows:
     name: Test Windows Suite
@@ -33,7 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test
+      - run: cargo test --all-features
 
   test_macos:
     name: Test MacOS Suite
@@ -41,7 +41,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test
+      - run: cargo test --all-features
 
   fmt:
     name: Rustfmt
@@ -51,7 +51,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
-      - run: cargo fmt --all -- --check
+      - run: cargo fmt --all -- --check --all-features
 
   clippy_linux:
     name: Clippy Linux
@@ -65,7 +65,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo clippy --all-targets -- -D warnings --all-features
 
   clippy_macos:
     name: Clippy MacOS
@@ -75,7 +75,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo clippy --all-targets -- -D warnings --all-features
 
   clippy_windows:
     name: Clippy Windows
@@ -85,4 +85,4 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo clippy --all-targets -- -D warnings --all-features
