@@ -3,6 +3,8 @@ use crate::shutdown::Shutdown;
 use anyhow::Result;
 use log::{debug, info, warn};
 use tokio::sync::mpsc::Receiver;
+
+#[cfg(feature = "tts")]
 use tts::Tts;
 
 #[allow(clippy::upper_case_acronyms)]
@@ -64,4 +66,27 @@ pub async fn spawn_tts_service(settings: SettingsHandle, rx: Receiver<String>, s
         return;
     }
     tts.unwrap().listen(rx, shutdown).await;
+}
+
+/*
+Below is a 'Dummy' implementation of the Tts struct, which is a simple 'Nothing' for use if the
+actual Tts package isn't included.
+ */
+
+#[cfg(not(feature = "tts"))]
+struct Tts {}
+
+#[cfg(not(feature = "tts"))]
+impl Tts {
+    fn default() -> Result<Self> {
+        Ok(Self {})
+    }
+
+    pub fn stop(&self) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn speak(&self, _: String, _: bool) -> Result<()> {
+        Ok(())
+    }
 }

@@ -8,7 +8,8 @@ repository = "https://github.com/GoXLR-on-Linux/GoXLR-Utility"
 license = "MIT"
 categories = ["hardware-support", "command-line-utilities"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+tts = ["dep:tts"]
 
 [dependencies]
 goxlr-usb = { path = "../usb" }
@@ -39,7 +40,7 @@ glob = "0.3.0"
 cfg-if = "1.0.0"
 lazy_static = "1.4.0"
 
-tts = { version = "0.25.1", features=["tolk"] }
+tts = { version = "0.25.1", features = ["tolk"], optional = true }
 interprocess = { version = "1.2.1", features = ["tokio_support"] }
 
 notify = "5.0.0"
@@ -50,7 +51,7 @@ actix = "0.13.0"
 actix-web-actors = "4.1.0"
 
 # All we really need from actix-web are macros and compression, TLS and cookies aren't required
-actix-web = { version = "4.2.1", default-features = false, features = ["macros", "compress-brotli", "compress-gzip" ] }
+actix-web = { version = "4.2.1", default-features = false, features = ["macros", "compress-brotli", "compress-gzip"] }
 actix-cors = "0.6.4"
 mime_guess = "2.0.4"
 include_dir = "0.7.3"
