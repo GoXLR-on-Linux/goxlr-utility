@@ -10,7 +10,7 @@ jobs:
       - name: "Install Dependencies.."
         run: |
           sudo apt-get update
-          sudo apt-get install libdbus-1-dev pkg-config
+          sudo apt-get install libdbus-1-dev pkg-config libspeechd-dev
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo check
@@ -22,7 +22,7 @@ jobs:
       - name: "Install Dependencies.."
         run: |
           sudo apt-get update
-          sudo apt-get install libpulse0 libdbus-1-dev pkg-config
+          sudo apt-get install libpulse0 libdbus-1-dev pkg-config libspeechd-dev
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test
@@ -60,7 +60,7 @@ jobs:
       - name: "Install Dependencies"
         run: |
           sudo apt-get update
-          sudo apt-get install libdbus-1-dev pkg-config
+          sudo apt-get install libdbus-1-dev pkg-config libspeechd-dev
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@stable
         with:

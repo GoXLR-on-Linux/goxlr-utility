@@ -27,6 +27,7 @@ impl SettingsHandle {
 
         let mut settings = Settings::read(&path)?.unwrap_or_else(|| Settings {
             show_tray_icon: Some(true),
+            tts_enabled: Some(false),
             profile_directory: Some(data_dir.join("profiles")),
             mic_profile_directory: Some(data_dir.join("mic-profiles")),
             samples_directory: Some(data_dir.join("samples")),
@@ -60,6 +61,10 @@ impl SettingsHandle {
             settings.show_tray_icon = Some(true);
         }
 
+        if settings.tts_enabled.is_none() {
+            settings.tts_enabled = Some(false);
+        }
+
         let handle = SettingsHandle {
             path,
             settings: Arc::new(RwLock::new(settings)),
@@ -87,6 +92,16 @@ impl SettingsHandle {
     pub async fn set_show_tray_icon(&self, enabled: bool) {
         let mut settings = self.settings.write().await;
         settings.show_tray_icon = Some(enabled);
+    }
+
+    pub async fn get_tts_enabled(&self) -> bool {
+        let settings = self.settings.read().await;
+        settings.tts_enabled.unwrap()
+    }
+
+    pub async fn set_tts_enabled(&self, enabled: bool) {
+        let mut settings = self.settings.write().await;
+        settings.tts_enabled = Some(enabled);
     }
 
     pub async fn get_profile_directory(&self) -> PathBuf {
@@ -244,6 +259,7 @@ impl SettingsHandle {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Settings {
     show_tray_icon: Option<bool>,
+    tts_enabled: Option<bool>,
     profile_directory: Option<PathBuf>,
     mic_profile_directory: Option<PathBuf>,
     samples_directory: Option<PathBuf>,

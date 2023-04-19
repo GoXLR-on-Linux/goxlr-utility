@@ -10,6 +10,7 @@ use futures::executor::block_on;
 use log::{debug, error, info};
 use ritelinked::LinkedHashSet;
 use strum::IntoEnumIterator;
+use tokio::sync::mpsc::Sender;
 
 use goxlr_ipc::{
     DeviceType, Display, FaderStatus, GoXLRCommand, HardwareStatus, Levels, MicSettings,
@@ -18,7 +19,7 @@ use goxlr_ipc::{
 use goxlr_profile_loader::components::mute::MuteFunction;
 use goxlr_types::{
     Button, ChannelName, DisplayModeComponents, EffectBankPresets, EffectKey, EncoderName,
-    FaderName, HardTuneSource, InputDevice as BasicInputDevice, MicrophoneParamKey, MuteState,
+    FaderName, HardTuneSource, InputDevice as BasicInputDevice, MicrophoneParamKey, Mix, MuteState,
     OutputDevice as BasicOutputDevice, RobotRange, SampleBank, SampleButtons, SamplePlaybackMode,
     VersionNumber,
 };
@@ -28,6 +29,8 @@ use goxlr_usb::device::base::FullGoXLRDevice;
 use goxlr_usb::routing::{InputDevice, OutputDevice};
 
 use crate::audio::{AudioFile, AudioHandler};
+use crate::events::EventTriggers;
+use crate::events::EventTriggers::TTSMessage;
 use crate::files::find_file_in_path;
 use crate::mic_profile::{MicProfileAdapter, DEFAULT_MIC_PROFILE_NAME};
 use crate::profile::{
@@ -41,12 +44,20 @@ pub struct Device<'a> {
     last_buttons: EnumSet<Buttons>,
     button_states: EnumMap<Buttons, ButtonState>,
     fader_last_seen: EnumMap<FaderName, u8>,
+    fader_pause_until: EnumMap<FaderName, PauseUntil>,
     profile: ProfileAdapter,
     mic_profile: MicProfileAdapter,
     audio_handler: Option<AudioHandler>,
     hold_time: u16,
     vc_mute_also_mute_cm: bool,
     settings: &'a SettingsHandle,
+    global_events: Sender<EventTriggers>,
+}
+
+#[derive(Debug, Default, Copy, Clone)]
+struct PauseUntil {
+    paused: bool,
+    until: u8,
 }
 
 // Experimental code:
@@ -57,6 +68,7 @@ struct ButtonState {
 }
 
 impl<'a> Device<'a> {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         goxlr: Box<dyn FullGoXLRDevice>,
         hardware: HardwareStatus,
@@ -65,6 +77,7 @@ impl<'a> Device<'a> {
         profile_directory: &Path,
         mic_profile_directory: &Path,
         settings_handle: &'a SettingsHandle,
+        global_events: Sender<EventTriggers>,
     ) -> Result<Self> {
         let mut device_type = "";
         if hardware.device_type == DeviceType::Mini {
@@ -113,8 +126,10 @@ impl<'a> Device<'a> {
             last_buttons: EnumSet::empty(),
             button_states: EnumMap::default(),
             fader_last_seen: EnumMap::default(),
+            fader_pause_until: EnumMap::default(),
             audio_handler,
             settings: settings_handle,
+            global_events,
         };
 
         device.apply_profile()?;
@@ -127,7 +142,7 @@ impl<'a> Device<'a> {
         &self.hardware.serial_number
     }
 
-    pub fn status(&self) -> MixerStatus {
+    pub async fn status(&self) -> MixerStatus {
         let mut fader_map: EnumMap<FaderName, FaderStatus> = Default::default();
         for name in FaderName::iter() {
             fader_map[name] = self.get_fader_state(name);
@@ -145,9 +160,17 @@ impl<'a> Device<'a> {
             volumes[channel] = self.profile.get_channel_volume(channel);
         }
 
-        let shutdown_commands = block_on(self.settings.get_device_shutdown_commands(self.serial()));
-        let sampler_prerecord =
-            block_on(self.settings.get_device_sampler_pre_buffer(self.serial()));
+        let shutdown_commands = self
+            .settings
+            .get_device_shutdown_commands(self.serial())
+            .await;
+
+        let sampler_prerecord = self
+            .settings
+            .get_device_sampler_pre_buffer(self.serial())
+            .await;
+
+        let submix_supported = self.device_supports_submixes();
 
         MixerStatus {
             hardware: self.hardware.clone(),
@@ -155,7 +178,9 @@ impl<'a> Device<'a> {
             fader_status: fader_map,
             cough_button: self.profile.get_cough_status(),
             levels: Levels {
+                submix_supported: self.device_supports_submixes(),
                 volumes,
+                submix: self.profile.get_submixes_ipc(submix_supported),
                 bleep: self.mic_profile.bleep_level(),
                 deess: self.mic_profile.get_deesser(),
             },
@@ -246,8 +271,8 @@ impl<'a> Device<'a> {
 
     pub async fn monitor_inputs(&mut self) -> Result<bool> {
         let state = self.goxlr.get_button_states()?;
-        let mut changed = self.update_volumes_to(state.volumes)?;
-        let result = self.update_encoders_to(state.encoders)?;
+        let mut changed = self.update_volumes_to(state.volumes).await?;
+        let result = self.update_encoders_to(state.encoders).await?;
         if !changed {
             // Only change the value if it's not already true..
             changed = result;
@@ -454,8 +479,7 @@ impl<'a> Device<'a> {
                     .await?;
             }
             Buttons::SamplerClear => {
-                self.profile
-                    .set_sample_clear_active(!self.profile.is_sample_clear_active())?;
+                self.handle_sample_clear().await?;
             }
         }
         self.update_button_states()?;
@@ -512,6 +536,7 @@ impl<'a> Device<'a> {
         let (mute_toggle, muted_to_x, muted_to_all, mute_function) =
             self.profile.get_mute_chat_button_state();
 
+        let target = tts_target(mute_function);
         // Ok, lets handle things in order, was this button just pressed?
         if press {
             if mute_toggle {
@@ -527,6 +552,9 @@ impl<'a> Device<'a> {
                 self.goxlr.set_channel_state(ChannelName::Mic, Muted)?;
             }
 
+            let message = format!("Mic Muted{}", target);
+            let _ = self.global_events.send(TTSMessage(message)).await;
+
             self.apply_routing(BasicInputDevice::Microphone)?;
             return Ok(());
         }
@@ -541,6 +569,9 @@ impl<'a> Device<'a> {
             // remove any transient routing which may be set.
             self.profile.set_mute_chat_button_on(true);
             self.profile.set_mute_chat_button_blink(true);
+
+            let message = "Mic Muted".to_string();
+            let _ = self.global_events.send(TTSMessage(message)).await;
 
             self.goxlr.set_channel_state(ChannelName::Mic, Muted)?;
             self.apply_routing(BasicInputDevice::Microphone)?;
@@ -564,6 +595,8 @@ impl<'a> Device<'a> {
                         self.goxlr.set_channel_state(ChannelName::Mic, Unmuted)?;
                     }
 
+                    let message = "Mic Unmuted".to_string();
+                    let _ = self.global_events.send(TTSMessage(message)).await;
                     self.apply_routing(BasicInputDevice::Microphone)?;
                     return Ok(());
                 }
@@ -575,6 +608,9 @@ impl<'a> Device<'a> {
                     self.goxlr.set_channel_state(ChannelName::Mic, Muted)?;
                 }
 
+                let message = format!("Mic Muted{}", target);
+                let _ = self.global_events.send(TTSMessage(message)).await;
+
                 // Update the transient routing..
                 self.apply_routing(BasicInputDevice::Microphone)?;
                 return Ok(());
@@ -584,6 +620,9 @@ impl<'a> Device<'a> {
             if mute_function == MuteFunction::All && !self.mic_muted_by_fader() {
                 self.goxlr.set_channel_state(ChannelName::Mic, Unmuted)?;
             }
+
+            let message = "Mic Unmuted".to_string();
+            let _ = self.global_events.send(TTSMessage(message)).await;
 
             // Disable button and refresh transient routing
             self.apply_routing(BasicInputDevice::Microphone)?;
@@ -595,6 +634,11 @@ impl<'a> Device<'a> {
 
     async fn mute_fader_to_x(&mut self, fader: FaderName) -> Result<()> {
         let (muted_to_x, muted_to_all, mute_function) = self.profile.get_mute_button_state(fader);
+
+        debug!("Hi?");
+
+        let target = tts_target(mute_function);
+
         let channel = self.profile.get_fader_assignment(fader);
         if muted_to_all {
             bail!("Unable to Transition from MutedToAll to MutedToX");
@@ -604,10 +648,16 @@ impl<'a> Device<'a> {
             return Ok(());
         }
 
+        // This will only ever trigger if called via the API, so don't announce this for now..
         if mute_function == MuteFunction::All {
             // Throw this across to the 'Mute to All' code..
             return self.mute_fader_to_all(fader, false).await;
         }
+
+        // Ok, we need to announce where we're muted to..
+        let name = self.profile.get_fader_assignment(fader);
+        let message = format!("{} Muted{}", name, target);
+        let _ = self.global_events.send(TTSMessage(message)).await;
 
         let input = self.get_basic_input_from_channel(channel);
         self.profile.set_mute_button_on(fader, true)?;
@@ -635,6 +685,10 @@ impl<'a> Device<'a> {
             self.goxlr.set_channel_state(channel, Muted)?;
             self.profile.set_mute_button_on(fader, true)?;
         }
+
+        let name = self.profile.get_fader_assignment(fader);
+        let message = format!("{} Muted", name);
+        let _ = self.global_events.send(TTSMessage(message)).await;
 
         if blink {
             self.profile.set_mute_button_blink(fader, true)?;
@@ -697,6 +751,10 @@ impl<'a> Device<'a> {
             self.apply_routing(input.unwrap())?;
         }
 
+        let name = self.profile.get_fader_assignment(fader);
+        let message = format!("{} unmuted", name);
+        let _ = self.global_events.send(TTSMessage(message)).await;
+
         self.update_button_states()?;
         Ok(())
     }
@@ -722,6 +780,10 @@ impl<'a> Device<'a> {
     }
 
     async fn load_sample_bank(&mut self, bank: SampleBank) -> Result<()> {
+        // Send the TTS Message..
+        let tts_message = format!("Sample {}", bank);
+        let _ = self.global_events.send(TTSMessage(tts_message)).await;
+
         self.profile.load_sample_bank(bank)?;
 
         // Sync the state of active playback..
@@ -814,11 +876,30 @@ impl<'a> Device<'a> {
         };
     }
 
+    async fn handle_sample_clear(&mut self) -> Result<()> {
+        if let Some(audio) = &self.audio_handler {
+            let state = self.profile.is_sample_clear_active();
+            if !audio.is_sample_recording() {
+                let message = format!("Sample Clear {}", tts_bool_to_state(!state));
+                self.global_events.send(TTSMessage(message)).await?;
+
+                self.profile.set_sample_clear_active(!state)?;
+            }
+        }
+        Ok(())
+    }
+
     async fn handle_sample_button_release(&mut self, button: SampleButtons) -> Result<()> {
+        let active_bank = self.profile.get_active_sample_bank();
         // If clear is flashing, remove all samples from the button, disable the clearer and return..
         if self.profile.is_sample_clear_active() {
-            debug!("Sample Clear Active..");
+            debug!("Stopping any playing samples..");
+            if let Some(handler) = &mut self.audio_handler {
+                // Force stop of anything playing back on this button.
+                handler.stop_playback(active_bank, button, true).await?;
+            }
 
+            debug!("Clearing Samples on Button..");
             self.profile.clear_all_samples(button);
 
             debug!("Cleared samples..");
@@ -844,7 +925,7 @@ impl<'a> Device<'a> {
                 .audio_handler
                 .as_mut()
                 .unwrap()
-                .is_sample_recording(sample_bank, button)
+                .sample_recording(sample_bank, button)
             {
                 let file_name = self
                     .audio_handler
@@ -975,6 +1056,10 @@ impl<'a> Device<'a> {
     }
 
     async fn load_effect_bank(&mut self, preset: EffectBankPresets) -> Result<()> {
+        // Send the TTS Message..
+        let tts_message = format!("Effects {}", preset as u8 + 1);
+        let _ = self.global_events.send(TTSMessage(tts_message)).await;
+
         self.profile.load_effect_bank(preset)?;
         self.load_effects()?;
         self.set_pitch_mode()?;
@@ -991,18 +1076,30 @@ impl<'a> Device<'a> {
     }
 
     async fn set_megaphone(&mut self, enabled: bool) -> Result<()> {
+        // Send the TTS Message..
+        let tts_message = format!("Megaphone {}", tts_bool_to_state(enabled));
+        let _ = self.global_events.send(TTSMessage(tts_message)).await;
+
         self.profile.set_megaphone(enabled)?;
         self.apply_effects(LinkedHashSet::from_iter([EffectKey::MegaphoneEnabled]))?;
         Ok(())
     }
 
     async fn set_robot(&mut self, enabled: bool) -> Result<()> {
+        // Send the TTS Message..
+        let tts_message = format!("Robot {}", tts_bool_to_state(enabled));
+        let _ = self.global_events.send(TTSMessage(tts_message)).await;
+
         self.profile.set_robot(enabled)?;
         self.apply_effects(LinkedHashSet::from_iter([EffectKey::RobotEnabled]))?;
         Ok(())
     }
 
     async fn set_hardtune(&mut self, enabled: bool) -> Result<()> {
+        // Send the TTS Message..
+        let tts_message = format!("Hard tune {}", tts_bool_to_state(enabled));
+        let _ = self.global_events.send(TTSMessage(tts_message)).await;
+
         self.profile.set_hardtune(enabled)?;
         self.apply_effects(LinkedHashSet::from_iter([EffectKey::HardTuneEnabled]))?;
         self.set_pitch_mode()?;
@@ -1016,6 +1113,10 @@ impl<'a> Device<'a> {
     }
 
     async fn set_effects(&mut self, enabled: bool) -> Result<()> {
+        // Send the TTS Message..
+        let tts_message = format!("Effects {}", tts_bool_to_state(enabled));
+        let _ = self.global_events.send(TTSMessage(tts_message)).await;
+
         self.profile.set_effects(enabled)?;
 
         // When this changes, we need to update all the 'Enabled' keys..
@@ -1052,15 +1153,35 @@ impl<'a> Device<'a> {
         muted_to_all || (muted_to_x && mute_function == MuteFunction::All)
     }
 
-    fn update_volumes_to(&mut self, volumes: [u8; 4]) -> Result<bool> {
+    async fn update_volumes_to(&mut self, volumes: [u8; 4]) -> Result<bool> {
         let mut value_changed = false;
 
         for fader in FaderName::iter() {
             let new_volume = volumes[fader as usize];
-            if self.hardware.device_type == DeviceType::Mini
-                && new_volume == self.fader_last_seen[fader]
-            {
-                continue;
+            if self.hardware.device_type == DeviceType::Mini {
+                if new_volume == self.fader_last_seen[fader] {
+                    continue;
+                }
+            } else if self.fader_pause_until[fader].paused {
+                let until = self.fader_pause_until[fader].until;
+
+                // Calculate min and max, make sure we don't overflow..
+                let min = match until < 5 {
+                    true => 0,
+                    false => until - 5,
+                };
+
+                let max = match until > 250 {
+                    true => 255,
+                    false => until + 5,
+                };
+
+                // Are we in this range?
+                if !((min)..=(max)).contains(&new_volume) {
+                    continue;
+                } else {
+                    self.fader_pause_until[fader].paused = false;
+                }
             }
             self.fader_last_seen[fader] = new_volume;
 
@@ -1072,14 +1193,51 @@ impl<'a> Device<'a> {
                     "Updating {} volume from {} to {} as a human moved the fader",
                     channel, old_volume, new_volume
                 );
+
+                // Ok, this simply doesn't work on a full device, when mute is called the mechanical
+                // fader drops to 0, and this spams out 'fader is currently muted' during that move.
+                // If I fix that problem, re-enable that code.
+
+                // let (muted_to_x, muted_to_all, mute_function) =
+                //     self.profile.get_mute_button_state(fader);
+                // if muted_to_all || (muted_to_x && mute_function == MuteFunction::All) {
+                //     // This fader is muted, we need to alert that these changes aren't happening!
+                //     let message = format!("Fader {} is currently Muted!", fader);
+                //     let _ = self.global_events.send(TTSMessage(message)).await;
+                // }
+
                 value_changed = true;
                 self.profile.set_channel_volume(channel, new_volume)?;
+
+                // Update the Submix..
+                self.update_submix_for(channel, new_volume)?;
             }
         }
         Ok(value_changed)
     }
 
-    fn update_encoders_to(&mut self, encoders: [i8; 4]) -> Result<bool> {
+    fn update_submix_for(&mut self, channel: ChannelName, volume: u8) -> Result<()> {
+        if self.device_supports_submixes() && self.profile.is_submix_enabled() {
+            if let Some(mix) = self.profile.get_submix_from_channel(channel) {
+                if !self.profile.submix_linked(mix) {
+                    return Ok(());
+                }
+
+                let mix_current_volume = self.profile.get_submix_volume(mix);
+                let ratio = self.profile.get_submix_ratio(mix);
+
+                let linked_volume = (volume as f64 * ratio) as u8;
+
+                if linked_volume != mix_current_volume {
+                    self.profile.set_submix_volume(mix, linked_volume)?;
+                    self.goxlr.set_sub_volume(mix, linked_volume)?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    async fn update_encoders_to(&mut self, encoders: [i8; 4]) -> Result<bool> {
         // Ok, this is funky, due to the way pitch works, the encoder 'value' doesn't match
         // the profile value if hardtune is enabled, so we'll pre-emptively calculate pitch here..
         let mut value_changed = false;
@@ -1092,6 +1250,9 @@ impl<'a> Device<'a> {
                 self.profile.get_pitch_knob_position(),
                 encoders[0]
             );
+            let message = format!("Pitch {}", encoders[0]);
+            let _ = self.global_events.send(TTSMessage(message)).await;
+
             value_changed = true;
             self.profile.set_pitch_knob_position(encoders[0])?;
             self.apply_effects(LinkedHashSet::from_iter([EffectKey::PitchAmount]))?;
@@ -1103,6 +1264,9 @@ impl<'a> Device<'a> {
                 self.profile.get_gender_value(),
                 encoders[1]
             );
+            let message = format!("Gender {}", encoders[1]);
+            let _ = self.global_events.send(TTSMessage(message)).await;
+
             value_changed = true;
             self.profile.set_gender_value(encoders[1])?;
             self.apply_effects(LinkedHashSet::from_iter([EffectKey::GenderAmount]))?;
@@ -1114,6 +1278,9 @@ impl<'a> Device<'a> {
                 self.profile.get_reverb_value(),
                 encoders[2]
             );
+            let message = format!("Reverb {}", encoders[2]);
+            let _ = self.global_events.send(TTSMessage(message)).await;
+
             value_changed = true;
             self.profile.set_reverb_value(encoders[2])?;
             self.apply_effects(LinkedHashSet::from_iter([EffectKey::ReverbAmount]))?;
@@ -1125,6 +1292,9 @@ impl<'a> Device<'a> {
                 self.profile.get_echo_value(),
                 encoders[3]
             );
+            let message = format!("Echo {}", encoders[3]);
+            let _ = self.global_events.send(TTSMessage(message)).await;
+
             value_changed = true;
             self.profile.set_echo_value(encoders[3])?;
             self.apply_effects(LinkedHashSet::from_iter([EffectKey::EchoAmount]))?;
@@ -1165,6 +1335,14 @@ impl<'a> Device<'a> {
             GoXLRCommand::SetVolume(channel, volume) => {
                 self.goxlr.set_volume(channel, volume)?;
                 self.profile.set_channel_volume(channel, volume)?;
+
+                // Update the Submix when volume changes via IPC
+                self.update_submix_for(channel, volume)?;
+
+                if let Some(fader) = self.profile.get_fader_from_channel(channel) {
+                    self.fader_pause_until[fader].paused = true;
+                    self.fader_pause_until[fader].until = volume;
+                }
             }
 
             GoXLRCommand::SetCoughMuteFunction(mute_function) => {
@@ -2020,6 +2198,22 @@ impl<'a> Device<'a> {
                 MuteState::MutedToAll => self.mute_fader_to_all(fader, true).await?,
             },
             GoXLRCommand::SetCoughMuteState(_state) => {}
+            GoXLRCommand::SetSubMixEnabled(enabled) => {
+                if self.profile.is_submix_enabled() != enabled {
+                    self.profile.set_submix_enabled(enabled)?;
+                    self.load_submix_settings(true)?;
+                }
+            }
+            GoXLRCommand::SetSubMixVolume(channel, volume) => {
+                self.apply_submix_volume(channel, volume)?;
+            }
+            GoXLRCommand::SetSubMixLinked(channel, linked) => {
+                self.link_submix_channel(channel, linked)?;
+            }
+            GoXLRCommand::SetSubMixOutputMix(device, mix) => {
+                self.profile.set_mix_output(device, mix)?;
+                self.load_submix_settings(false)?;
+            }
         }
         Ok(())
     }
@@ -2451,6 +2645,9 @@ impl<'a> Device<'a> {
         debug!("Updating button states..");
         self.update_button_states()?;
 
+        debug!("Applying Submixing Settings..");
+        self.load_submix_settings(true)?;
+
         debug!("Applying Routing..");
         // For profile load, we should configure all the input channels from the profile,
         // this is split so we can do tweaks in places where needed.
@@ -2569,11 +2766,154 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
+    fn load_submix_settings(&mut self, apply_volumes: bool) -> Result<()> {
+        if !self.device_supports_submixes() {
+            // Submixes not supported, do nothing.
+            return Ok(());
+        }
+
+        let mut mix_a: [u8; 4] = [0x0c; 4];
+        let mut mix_b: [u8; 4] = [0x0c; 4];
+
+        let mut index = 0;
+        let submix_enabled = self.profile.is_submix_enabled();
+
+        // This is kinda awkward, but we'll run with it..
+        for device in BasicOutputDevice::iter() {
+            if device == BasicOutputDevice::Headphones {
+                // We need to make sure the monitor is on the right side..
+                if submix_enabled {
+                    let mix = self.profile.get_submix_channel(device);
+                    self.goxlr.set_monitored_mix(mix)?;
+                } else {
+                    self.goxlr.set_monitored_mix(Mix::A)?;
+                }
+
+                // Monitor Mix handled, move to the next channel
+                continue;
+            }
+            if submix_enabled {
+                // We need to place this on the correct mix..
+                match self.profile.get_submix_channel(device) {
+                    Mix::A => mix_a[index] = (device as u8) * 2,
+                    Mix::B => mix_b[index] = (device as u8) * 2,
+                }
+            } else {
+                // Force this channel to A..
+                mix_a[index] = (device as u8) * 2;
+            }
+            index += 1;
+        }
+
+        let submix = [mix_a, mix_b].concat();
+
+        // This should always be successful, in theory :D
+        self.goxlr.set_channel_mixes(submix.try_into().unwrap())?;
+
+        if submix_enabled && apply_volumes {
+            for channel in ChannelName::iter() {
+                self.sync_submix_volume(channel)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn sync_submix_volume(&mut self, channel: ChannelName) -> Result<()> {
+        if let Some(mix) = self.profile.get_submix_from_channel(channel) {
+            if self.profile.is_channel_linked(mix) {
+                // Get the channels volume..
+                let volume = self.profile.get_channel_volume(channel);
+                self.update_submix_for(channel, volume)?;
+            } else {
+                let sub_volume = self.profile.get_submix_volume(mix);
+                self.goxlr.set_sub_volume(mix, sub_volume)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn apply_submix_volume(&mut self, channel: ChannelName, volume: u8) -> Result<()> {
+        if let Some(mix) = self.profile.get_submix_from_channel(channel) {
+            if self.profile.is_channel_linked(mix) {
+                // We need to calculate the new value for the main channel..
+                let ratio = self.profile.get_submix_ratio(mix);
+
+                let linked_volume = (volume as f64 / ratio) as u8;
+                if self.profile.get_channel_volume(channel) != linked_volume {
+                    // Setup the latch..
+                    if let Some(fader) = self.profile.get_fader_from_channel(channel) {
+                        self.fader_pause_until[fader].paused = true;
+                        self.fader_pause_until[fader].until = linked_volume;
+                    }
+                    self.profile.set_channel_volume(channel, linked_volume)?;
+                    self.goxlr.set_volume(channel, linked_volume)?;
+                }
+            }
+
+            // Apply the submix volume..
+            self.profile.set_submix_volume(mix, volume)?;
+            self.goxlr.set_sub_volume(mix, volume)?;
+        }
+        Ok(())
+    }
+
+    fn link_submix_channel(&mut self, channel: ChannelName, linked: bool) -> Result<()> {
+        if let Some(mix) = self.profile.get_submix_from_channel(channel) {
+            if !linked {
+                // We don't need to do anything special here..
+                self.profile.set_submix_linked(mix, linked)?;
+                return Ok(());
+            } else {
+                // We need to work out the current ratio between the channel, and it's mix..
+                let channel_volume = self.profile.get_channel_volume(channel);
+                let mix_volume = self.profile.get_submix_volume(mix);
+                let ratio = mix_volume as f64 / channel_volume as f64;
+
+                // Enable the link, and set the ratio..
+                self.profile.set_submix_linked(mix, linked)?;
+                self.profile.set_submix_link_ratio(mix, ratio)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn device_supports_submixes(&self) -> bool {
+        match self.hardware.device_type {
+            DeviceType::Unknown => false,
+            DeviceType::Full => version_newer_or_equal_to(
+                &self.hardware.versions.firmware,
+                VersionNumber(1, 4, 2, 107),
+            ),
+            DeviceType::Mini => version_newer_or_equal_to(
+                &self.hardware.versions.firmware,
+                VersionNumber(1, 2, 0, 46),
+            ),
+        }
+    }
+
     // Get the current time in millis..
     fn get_epoch_ms(&self) -> u128 {
         SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_millis()
+    }
+}
+
+fn tts_bool_to_state(bool: bool) -> String {
+    match bool {
+        true => "On".to_string(),
+        false => "Off".to_string(),
+    }
+}
+
+fn tts_target(target: MuteFunction) -> String {
+    match target {
+        MuteFunction::All => "".to_string(),
+        MuteFunction::ToStream => " to Stream".to_string(),
+        MuteFunction::ToVoiceChat => " to Voice Chat".to_string(),
+        MuteFunction::ToPhones => " to Headphones".to_string(),
+        MuteFunction::ToLineOut => " to Line Out".to_string(),
     }
 }

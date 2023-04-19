@@ -1,16 +1,20 @@
 use crate::buttonstate::{ButtonStates, Buttons, CurrentButtonStates};
 use crate::channelstate::ChannelState;
+use crate::commands::Command::ExecuteFirmwareUpdateAction;
 use crate::commands::SystemInfoCommand::SupportsDCPCategory;
-use crate::commands::{Command, HardwareInfoCommand, SystemInfoCommand};
+use crate::commands::{
+    Command, FirmwareAction, FirmwareCommand, HardwareInfoCommand, SystemInfoCommand,
+};
 use crate::dcp::DCPCategory;
 use crate::routing::InputDevice;
-use anyhow::Result;
+use anyhow::{bail, Result};
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
 use enumset::EnumSet;
 use goxlr_types::{
     ChannelName, EffectKey, EncoderName, FaderName, FirmwareVersions, MicrophoneParamKey,
-    MicrophoneType, VersionNumber,
+    MicrophoneType, Mix, SubMixChannelName, VersionNumber,
 };
+use log::debug;
 use std::io::{Cursor, Write};
 use tokio::sync::mpsc::Sender;
 
@@ -28,6 +32,7 @@ pub trait AttachGoXLR {
 
     fn set_unique_identifier(&mut self, identifier: String);
     fn is_connected(&mut self) -> bool;
+    fn stop_polling(&mut self);
 }
 
 pub trait ExecutableGoXLR {
@@ -60,6 +65,7 @@ pub trait GoXLRCommands: ExecutableGoXLR {
             Command::GetHardwareInfo(HardwareInfoCommand::FirmwareVersion),
             &[],
         )?;
+        debug!("{:x?}", result);
         let mut cursor = Cursor::new(result);
         let firmware_packed = cursor.read_u32::<LittleEndian>()?;
         let firmware_build = cursor.read_u32::<LittleEndian>()?;
@@ -182,6 +188,23 @@ pub trait GoXLRCommands: ExecutableGoXLR {
         Ok(())
     }
 
+    // Submix Stuff
+    fn set_sub_volume(&mut self, channel: SubMixChannelName, volume: u8) -> Result<()> {
+        self.request_data(Command::SetSubChannelVolume(channel), &[volume])?;
+        Ok(())
+    }
+
+    // TODO: Potentially for later, abstract out the 'data' section into a couple of Vec<>s
+    fn set_channel_mixes(&mut self, data: [u8; 8]) -> Result<()> {
+        self.request_data(Command::SetChannelMixes, &data)?;
+        Ok(())
+    }
+
+    fn set_monitored_mix(&mut self, mix: Mix) -> Result<()> {
+        self.request_data(Command::SetMonitoredMix, &[mix as u8])?;
+        Ok(())
+    }
+
     fn set_microphone_gain(&mut self, microphone_type: MicrophoneType, gain: u16) -> Result<()> {
         let mut gain_value = [0; 4];
         LittleEndian::write_u16(&mut gain_value[2..], gain);
@@ -256,6 +279,240 @@ pub trait GoXLRCommands: ExecutableGoXLR {
             volumes: mixers,
             encoders,
         })
+    }
+
+    // DO NOT EXECUTE ANY OF THESE, SERIOUSLY!
+    fn begin_firmware_upload(&mut self) -> Result<()> {
+        let result = self.request_data(
+            Command::ExecuteFirmwareUpdateCommand(FirmwareCommand::START),
+            &[],
+        )?;
+        let code = LittleEndian::read_u32(&result[0..4]);
+        if code != 0 {
+            bail!("Invalid Response Received!");
+        }
+        Ok(())
+    }
+
+    fn begin_erase_nvr(&mut self) -> Result<()> {
+        let mut header = [0; 8];
+        LittleEndian::write_u32(&mut header[0..4], 7);
+        LittleEndian::write_u32(&mut header[4..8], 0);
+
+        self.request_data(ExecuteFirmwareUpdateAction(FirmwareAction::ERASE), &header)?;
+        Ok(())
+    }
+
+    fn poll_erase_nvr(&mut self) -> Result<u8> {
+        let mut header = [0; 8];
+        LittleEndian::write_u32(&mut header[0..4], 7);
+        LittleEndian::write_u32(&mut header[4..8], 0);
+
+        let result = self.request_data(
+            Command::ExecuteFirmwareUpdateAction(FirmwareAction::POLL),
+            &header,
+        )?;
+        if result.len() != 1 {
+            bail!("Unexpected Result from NVRam Firmware Erase!");
+        }
+        Ok(result[0])
+    }
+
+    fn send_firmware_packet(&mut self, bytes_sent: u64, data: &[u8]) -> Result<()> {
+        let mut header = [0; 12];
+        LittleEndian::write_u32(&mut header[0..4], 7);
+        LittleEndian::write_u64(&mut header[4..], bytes_sent);
+
+        let mut packet = Vec::with_capacity(header.len() + data.len());
+        packet.extend_from_slice(&header);
+        packet.extend_from_slice(data);
+
+        self.request_data(
+            Command::ExecuteFirmwareUpdateAction(FirmwareAction::SEND),
+            &packet,
+        )?;
+        Ok(())
+    }
+
+    fn validate_firmware_packet(
+        &mut self,
+        verified: u32,
+        hash: u32,
+        remaining: u32,
+    ) -> Result<(u32, u32)> {
+        let mut packet = [0; 16];
+        LittleEndian::write_u32(&mut packet[0..4], 7);
+        LittleEndian::write_u32(&mut packet[4..8], verified);
+        LittleEndian::write_u32(&mut packet[8..12], hash);
+        LittleEndian::write_u32(&mut packet[12..16], remaining);
+
+        let result = self.request_data(
+            Command::ExecuteFirmwareUpdateAction(FirmwareAction::VALIDATE),
+            &packet,
+        )?;
+
+        // Grab the Hash and Count from the result..
+        let hash = LittleEndian::read_u32(&result[0..4]);
+        let count = LittleEndian::read_u32(&result[4..8]);
+
+        Ok((hash, count))
+    }
+
+    fn verify_firmware_status(&mut self) -> Result<()> {
+        let result = self.request_data(
+            Command::ExecuteFirmwareUpdateCommand(FirmwareCommand::VERIFY),
+            &[],
+        )?;
+
+        let output = LittleEndian::read_u32(&result);
+        if output != 0 {
+            bail!("Unexpected Result from Verify: {}", output);
+        }
+        Ok(())
+    }
+
+    fn poll_verify_firmware_status(&mut self) -> Result<(bool, u32, u32)> {
+        let result = self.request_data(
+            Command::ExecuteFirmwareUpdateCommand(FirmwareCommand::POLL),
+            &[],
+        )?;
+
+        let mut cursor = Cursor::new(result);
+        let op = cursor.read_u32::<LittleEndian>()?;
+        let stage = cursor.read_u32::<LittleEndian>()?;
+        let state = cursor.read_u32::<LittleEndian>()?;
+        let error_code = cursor.read_u32::<LittleEndian>()?;
+
+        let read_total = cursor.read_u32::<LittleEndian>()?;
+        let read_done = cursor.read_u32::<LittleEndian>()?;
+
+        if op == 2 && stage == 0 && state == 2 {
+            // Verification complete and good..
+            return Ok((true, read_total, read_done));
+        }
+
+        if op != 3 {
+            bail!("Unexpected Command Code, Expected 3 received {}", op);
+        }
+
+        if stage != 0 {
+            bail!("Failed with Error: {}", error_code);
+        }
+
+        if state == 3 {
+            bail!("Failing with Error: {}", error_code);
+        }
+
+        if state == 1 && error_code == 0 {
+            // More reading to be done..
+            return Ok((false, read_total, read_done));
+        }
+
+        // 3 0 1 0 - 'More Data'
+        // 2 0 2 0 - Completed Succesfully
+        // 3 0 3 0b - Failure..
+        // 3 1 3 0d - Failure?
+
+        /*
+           Best Guess:
+           u32: Base State, Update (3) / Complete (2)
+           u32: Success state, 0 (success), 1 (failure)
+           u32: Current State: 1 (More Data), 2 (Data Finished), 3 (Error)
+           u32: Current Error: 0 (No Error), X (Error Code, 0x0d = CRC Failure)
+        */
+
+        bail!(
+            "Unexpected Packet: {} {} {} {}",
+            op,
+            stage,
+            state,
+            read_done
+        );
+    }
+
+    fn finalise_firmware_upload(&mut self) -> Result<()> {
+        let result = self.request_data(
+            Command::ExecuteFirmwareUpdateCommand(FirmwareCommand::FINALISE),
+            &[],
+        )?;
+
+        let output = LittleEndian::read_u32(&result);
+        if output != 0 {
+            bail!("Unexpected Result from Finalise: {}", output);
+        }
+        Ok(())
+    }
+
+    fn poll_finalise_firmware_upload(&mut self) -> Result<(bool, u32, u32)> {
+        let result = self.request_data(
+            Command::ExecuteFirmwareUpdateCommand(FirmwareCommand::POLL),
+            &[],
+        )?;
+
+        let mut cursor = Cursor::new(result);
+        let op = cursor.read_u32::<LittleEndian>()?;
+        let stage = cursor.read_u32::<LittleEndian>()?;
+        let state = cursor.read_u32::<LittleEndian>()?;
+        let error_code = cursor.read_u32::<LittleEndian>()?;
+
+        let read_total = cursor.read_u32::<LittleEndian>()?;
+        let read_done = cursor.read_u32::<LittleEndian>()?;
+
+        if op != 4 {
+            if op == 3 && stage == 1 {
+                bail!("Validation Failure, {}", error_code);
+            }
+
+            // Something has gone wrong here with the (assumed) validation phase..
+            bail!("Invalid Command Response: {}", op);
+        }
+
+        if stage != 1 {
+            bail!("Unknown Stage: {}", stage);
+        }
+
+        if state == 1 {
+            return Ok((false, read_total, read_done));
+        }
+
+        if state == 2 {
+            return Ok((true, read_total, read_done));
+        }
+
+        bail!("Unknown Packet: {} {} {} {}", op, stage, state, error_code);
+
+        // Seems to be similar to verify..
+        // 4 1 1 0 - More Data..
+        // 4 1 2 0 - Complete..
+
+        // 3 1 3 0d on Failure.. Likely to indicate that something failed during verification (3-1)
+
+        /*
+        Ok, First integer is likely operation..
+        Second Integer is also operation, but stage..
+         */
+    }
+
+    fn abort_firmware_update(&mut self) -> Result<u32> {
+        let result = self.request_data(
+            Command::ExecuteFirmwareUpdateCommand(FirmwareCommand::ABORT),
+            &[],
+        )?;
+        let value = LittleEndian::read_u32(&result);
+        Ok(value)
+    }
+
+    fn reboot_after_firmware_upload(&mut self) -> Result<()> {
+        let result = self.request_data(
+            Command::ExecuteFirmwareUpdateCommand(FirmwareCommand::REBOOT),
+            &[],
+        )?;
+
+        let output = LittleEndian::read_u32(&result);
+        if output != 0 {
+            bail!("Unexpected Result from Reboot: {}", output);
+        }
+        Ok(())
     }
 }
 

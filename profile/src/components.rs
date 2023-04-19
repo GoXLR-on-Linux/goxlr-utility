@@ -18,3 +18,4 @@ pub mod root;
 pub mod sample;
 pub mod scribble;
 pub mod simple;
+pub mod submix;

@@ -194,7 +194,7 @@ pub enum InputChannels {
     Sample,
 }
 
-#[derive(Debug, EnumIter, Enum, EnumProperty)]
+#[derive(Debug, EnumIter, Enum, EnumProperty, Clone, Copy)]
 pub enum OutputChannels {
     #[strum(props(Name = "HP"))]
     Headphones,

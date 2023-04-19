@@ -80,7 +80,7 @@ impl AttachGoXLR for TUSBAudioGoXLR {
         device: GoXLRDevice,
         disconnect_sender: Sender<String>,
         event_sender: Sender<String>,
-    ) -> anyhow::Result<Box<dyn FullGoXLRDevice>>
+    ) -> Result<Box<dyn FullGoXLRDevice>>
     where
         Self: Sized,
     {
@@ -93,6 +93,7 @@ impl AttachGoXLR for TUSBAudioGoXLR {
 
         // Spawn the Event handler thread..
         let (data_sender, data_receiver) = mpsc::channel(1);
+        let sender_inner = Arc::new(data_sender);
 
         // In this case, we spawn a thread to manage windows events..
         let event_receivers = EventChannelReceiver {
@@ -115,7 +116,7 @@ impl AttachGoXLR for TUSBAudioGoXLR {
         });
 
         // Spawn an event loop for this handle..
-        let thread_sender = goxlr.event_sender.clone();
+        let thread_sender = Arc::new(goxlr.event_sender.clone());
         let thread_daemon_identifier = goxlr.daemon_identifier.clone();
         let thread_stopped = goxlr.stopped.clone();
         if let Some(ref thread_device_identifier) = goxlr.identifier {
@@ -124,7 +125,7 @@ impl AttachGoXLR for TUSBAudioGoXLR {
 
             thread::spawn(move || {
                 let sender = EventChannelSender {
-                    data_read: data_sender.clone(),
+                    data_read: sender_inner.clone(),
                     input_changed: thread_sender,
                 };
 
@@ -190,15 +191,14 @@ impl AttachGoXLR for TUSBAudioGoXLR {
         }
         true
     }
+
+    fn stop_polling(&mut self) {
+        // The TUSB implementation is event driven, so there's no polling to stop.
+    }
 }
 
 impl ExecutableGoXLR for TUSBAudioGoXLR {
-    fn perform_request(
-        &mut self,
-        command: Command,
-        body: &[u8],
-        retry: bool,
-    ) -> anyhow::Result<Vec<u8>> {
+    fn perform_request(&mut self, command: Command, body: &[u8], retry: bool) -> Result<Vec<u8>> {
         if command == Command::ResetCommandIndex {
             self.command_count = 0;
         } else {
@@ -305,7 +305,7 @@ impl ExecutableGoXLR for TUSBAudioGoXLR {
         Ok(response)
     }
 
-    fn get_descriptor(&self) -> anyhow::Result<UsbData> {
+    fn get_descriptor(&self) -> Result<UsbData> {
         let properties = self.handle.get_properties()?;
 
         Ok(UsbData {
