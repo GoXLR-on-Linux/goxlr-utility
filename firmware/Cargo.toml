@@ -1,0 +1,16 @@
+[package]
+name = "goxlr-firmware"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+goxlr-usb = { path = "../usb" }
+goxlr-ipc = { path = "../ipc" }
+goxlr-types = { path = "../types" }
+
+anyhow = "1.0.70"
+tokio = { version = "1.27.0", features = ["full"] }
+byteorder = "1.4.3"
+
