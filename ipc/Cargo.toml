@@ -26,7 +26,7 @@ anyhow = "1.0.68"
 async-trait = "0.1.64"
 
 # Used for Web Requests
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { version = "0.11", default-features = false, features = ["json"] }
 
 # Used to handle 'Patch' events..
 json-patch = "0.3.0"
