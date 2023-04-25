@@ -25,6 +25,7 @@ sudo cp target/release/goxlr-daemon /usr/bin/
 sudo cp target/release/goxlr-client /usr/bin/
 sudo cp target/release/goxlr-defaults /usr/bin/
 sudo cp target/release/goxlr-launcher /usr/bin/
+sudo cp target/release/goxlr-firmware /usr/bin/
 
 sudo chmod 755 /usr/bin/goxlr-client /usr/bin/goxlr-daemon /usr/bin/goxlr-defaults /usr/bin/goxlr-launcher
 
