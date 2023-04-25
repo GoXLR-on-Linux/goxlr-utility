@@ -1250,12 +1250,15 @@ impl<'a> Device<'a> {
                 self.profile.get_pitch_knob_position(),
                 encoders[0]
             );
-            let message = format!("Pitch {}", encoders[0]);
-            let _ = self.global_events.send(TTSMessage(message)).await;
-
             value_changed = true;
             self.profile.set_pitch_knob_position(encoders[0])?;
             self.apply_effects(LinkedHashSet::from_iter([EffectKey::PitchAmount]))?;
+
+            let user_value = self
+                .mic_profile
+                .get_effect_value(EffectKey::PitchAmount, self.profile());
+            let message = format!("Pitch {}", user_value);
+            let _ = self.global_events.send(TTSMessage(message)).await;
         }
 
         if encoders[1] != self.profile.get_gender_value() {
@@ -1264,12 +1267,23 @@ impl<'a> Device<'a> {
                 self.profile.get_gender_value(),
                 encoders[1]
             );
-            let message = format!("Gender {}", encoders[1]);
-            let _ = self.global_events.send(TTSMessage(message)).await;
 
-            value_changed = true;
+            let current_value = self
+                .mic_profile
+                .get_effect_value(EffectKey::GenderAmount, self.profile());
+
             self.profile.set_gender_value(encoders[1])?;
-            self.apply_effects(LinkedHashSet::from_iter([EffectKey::GenderAmount]))?;
+            value_changed = true;
+
+            let new_value = self
+                .mic_profile
+                .get_effect_value(EffectKey::GenderAmount, self.profile());
+
+            if new_value != current_value {
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::GenderAmount]))?;
+                let message = format!("Gender {}", new_value);
+                let _ = self.global_events.send(TTSMessage(message)).await;
+            }
         }
 
         if encoders[2] != self.profile.get_reverb_value() {
@@ -1278,12 +1292,19 @@ impl<'a> Device<'a> {
                 self.profile.get_reverb_value(),
                 encoders[2]
             );
-            let message = format!("Reverb {}", encoders[2]);
-            let _ = self.global_events.send(TTSMessage(message)).await;
 
             value_changed = true;
             self.profile.set_reverb_value(encoders[2])?;
+
+            let new_value = self
+                .mic_profile
+                .get_effect_value(EffectKey::ReverbAmount, self.profile());
+
             self.apply_effects(LinkedHashSet::from_iter([EffectKey::ReverbAmount]))?;
+
+            let percent = 100 - ((new_value as f32 / -36.) * 100.) as i32;
+            let message = format!("Reverb {} percent", percent);
+            let _ = self.global_events.send(TTSMessage(message)).await;
         }
 
         if encoders[3] != self.profile.get_echo_value() {
@@ -1292,12 +1313,16 @@ impl<'a> Device<'a> {
                 self.profile.get_echo_value(),
                 encoders[3]
             );
-            let message = format!("Echo {}", encoders[3]);
-            let _ = self.global_events.send(TTSMessage(message)).await;
-
             value_changed = true;
             self.profile.set_echo_value(encoders[3])?;
             self.apply_effects(LinkedHashSet::from_iter([EffectKey::EchoAmount]))?;
+
+            let mut user_value = self
+                .mic_profile
+                .get_effect_value(EffectKey::EchoAmount, self.profile());
+            user_value = 100 - ((user_value as f32 / -36.) * 100.) as i32;
+            let message = format!("Echo {} percent", user_value);
+            let _ = self.global_events.send(TTSMessage(message)).await;
         }
 
         Ok(value_changed)

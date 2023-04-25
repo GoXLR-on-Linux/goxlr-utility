@@ -16,6 +16,7 @@ We currently provide the following via the [releases page](https://github.com/Go
 * `.deb` files, usable on Debian based systems (Ubuntu, Mint, Pop!_OS, etc)
 * `.rpm` files, usable on Redhat based systems (CentOS, Fedora, etc)
 
+
 We also provide the utility through the [Arch User Repository](https://aur.archlinux.org/packages/goxlr-utility) via the
 `goxlr-utility` package.
 
@@ -92,6 +93,7 @@ which will contain details.
 Copy `50-goxlr.rules` to `/etc/udev/rules.d/` and then reload with `sudo udevadm control --reload-rules && sudo udevadm trigger`.
 
 ## Building from source
+
 ### Prerequisites
 * Have a GoXLR :)
 * Install [Rust](https://rustup.rs/)
@@ -99,9 +101,21 @@ Copy `50-goxlr.rules` to `/etc/udev/rules.d/` and then reload with `sudo udevadm
   * Debian: `sudo apt-get install pkg-config libdbus-1-dev libpulse0`
   * Fedora: `sudo dnf install pkgconf-pkg-config dbus-devel pulseaudio-libs`
 
+### Features
+The GoXLR Utility contains compile-time features, which can be used to enable functionality during the build process by
+adding `--features "a b c"` to the `cargo` command (with `a`, `b` and `c` being separate feature names, for example 
+`cargo build --features "tts"`). These features often require separate dependencies to be installed, and are documented
+as such below.
+
+#### Text to Speech on Button Press
+* Feature Name: `tts`
+* Dependencies:
+  * Debian: `sudo apt-get install clang libspeechd-dev`
+  * Fedora: `sudo dnf install clang speech-dispatcher-devel`
 
 ### Building
-The easiest way to build is by using the following commands to compile and install the executables:
+The easiest way to build is by using the following commands to compile and install the executables (remembering to add 
+features you may want!):
 - `cargo install --path daemon` for the daemon
 - `cargo install --path client` for the client to interact with the daemon
 - `cargo install --path defaults` for the Default Profile Handlers

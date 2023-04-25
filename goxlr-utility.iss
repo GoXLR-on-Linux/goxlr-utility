@@ -2,7 +2,7 @@
 
 [Setup]
 AppName=GoXLR Utility
-AppVersion=0.10.2
+AppVersion=0.11.0
 WizardStyle=modern
 DefaultDirName={autopf}\GoXLR Utility
 DefaultGroupName=GoXLR Utility
@@ -23,6 +23,7 @@ Source: "target\release\goxlr-daemon.exe";    DestDir: "{app}";       DestName: 
 Source: "target\release\goxlr-client.exe";    DestDir: "{app}";       DestName: "goxlr-client.exe"
 Source: "target\release\goxlr-defaults.exe";  DestDir: "{app}";       DestName: "goxlr-defaults.exe"
 Source: "target\release\goxlr-launcher.exe";  DestDir: "{app}";       DestName: "goxlr-launcher.exe"
+Source: "target\release\goxlr-firmware.exe";  DestDir: "{app}";       DestName: "goxlr-firmware.exe"
 Source: "LICENSE";                            DestDir: "{app}";       DestName: "LICENSE"
 Source: "LICENSE-3RD-PARTY";                  DestDir: "{app}";       DestName: "LICENSE-3RD-PARTY"
 

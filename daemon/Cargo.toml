@@ -1,6 +1,6 @@
 [package]
 name = "goxlr-daemon"
-version = "0.10.2"
+version = "0.11.0"
 edition = "2021"
 authors = ["Nathan Adams <dinnerbone@dinnerbone.com>", "Craig McLure <craig@mclure.net>", "Lars Mühlbauer <lm41@dismail.de>"]
 description = "Allows control of a TC-Helicon GoXLR or GoXLR Mini, by maintaining an interaction with it over USB in the background."
@@ -8,7 +8,8 @@ repository = "https://github.com/GoXLR-on-Linux/GoXLR-Utility"
 license = "MIT"
 categories = ["hardware-support", "command-line-utilities"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+tts = ["dep:tts"]
 
 [dependencies]
 goxlr-usb = { path = "../usb" }
@@ -39,7 +40,7 @@ glob = "0.3.0"
 cfg-if = "1.0.0"
 lazy_static = "1.4.0"
 
-tts = { version = "0.25.1", features=["tolk"] }
+tts = { version = "0.25.1", features = ["tolk"], optional = true }
 interprocess = { version = "1.2.1", features = ["tokio_support"] }
 
 notify = "5.0.0"
@@ -50,7 +51,7 @@ actix = "0.13.0"
 actix-web-actors = "4.1.0"
 
 # All we really need from actix-web are macros and compression, TLS and cookies aren't required
-actix-web = { version = "4.2.1", default-features = false, features = ["macros", "compress-brotli", "compress-gzip" ] }
+actix-web = { version = "4.2.1", default-features = false, features = ["macros", "compress-brotli", "compress-gzip"] }
 actix-cors = "0.6.4"
 mime_guess = "2.0.4"
 include_dir = "0.7.3"
@@ -95,6 +96,7 @@ assets = [
     ["../target/release/goxlr-client", "usr/bin/", "755"],
     ["../target/release/goxlr-defaults", "usr/bin/", "755"],
     ["../target/release/goxlr-launcher", "usr/bin/", "755"],
+    ["../target/release/goxlr-firmware", "usr/bin/", "755"],
     ["../50-goxlr.rules", "etc/udev/rules.d/", "644"],
     ["../daemon/resources/goxlr-utility.png", "usr/share/icons/hicolor/48x48/apps/", "644"],
     ["../daemon/resources/goxlr-utility-large.png", "usr/share/pixmaps/goxlr-utility.png", "644"],
@@ -123,6 +125,7 @@ assets = [
     { source = "../target/release/goxlr-client", dest = "/usr/bin/goxlr-client", mode = "0755" },
     { source = "../target/release/goxlr-defaults", dest = "/usr/bin/goxlr-defaults", mode = "0755" },
     { source = "../target/release/goxlr-launcher", dest = "/usr/bin/goxlr-launcher", mode = "0755" },
+    { source = "../target/release/goxlr-firmware", dest = "/usr/bin/goxlr-firmware", mode = "0755" },
     { source = "../50-goxlr.rules", dest = "/etc/udev/rules.d/50-goxlr.rules", mode = "0644" },
     { source = "../daemon/resources/goxlr-utility.png", dest = "/usr/share/icons/hicolor/48x48/apps/goxlr-utility.png", mode = "0644" },
     { source = "../daemon/resources/goxlr-utility-large.png", dest = "/usr/share/pixmaps/goxlr-utility.png", mode = "0644" },
@@ -151,5 +154,6 @@ auto-req = "no"
 [package.metadata.generate-rpm.requires]
 # It should be noted, that bzip2 and libusb get statically linked against the binary, so they're not actually
 # required, this leaves us with dbus and pulseaudio libs :)
-dbus-libs = "*"
-pulseaudio-libs = "*"
+dbus-libs = ">= 1.9.14"
+pulseaudio-libs = ">= 10.0"
+speech-dispatcher = ">= 0.7"

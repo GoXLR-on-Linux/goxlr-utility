@@ -94,9 +94,18 @@ impl SettingsHandle {
         settings.show_tray_icon = Some(enabled);
     }
 
-    pub async fn get_tts_enabled(&self) -> bool {
-        let settings = self.settings.read().await;
-        settings.tts_enabled.unwrap()
+    pub async fn get_tts_enabled(&self) -> Option<bool> {
+        // If the TTS feature isn't compiled in, we shouldn't return a value here..
+        #[cfg(feature = "tts")]
+        {
+            let settings = self.settings.read().await;
+            return Some(settings.tts_enabled.unwrap());
+        }
+
+        // Because whether we get here is defined by a feature, clippy can't be completely
+        // objective on the matter, so we allow the behaviour.
+        #[allow(unreachable_code)]
+        None
     }
 
     pub async fn set_tts_enabled(&self, enabled: bool) {

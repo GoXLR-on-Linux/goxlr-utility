@@ -36,7 +36,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --release
+          args: --release --all-features
 
       - name: Build Packages
         run: iscc.exe goxlr-utility.iss
@@ -59,7 +59,7 @@ jobs:
           toolchain: stable
           override: true
 
-      - name: Install Pulse Client Libraries
+      - name: Install Required Libraries
         run: |
           sudo apt-get update
           sudo apt-get install libpulse0 libdbus-1-dev pkg-config libspeechd-dev
