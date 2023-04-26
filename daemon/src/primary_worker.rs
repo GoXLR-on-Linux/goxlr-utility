@@ -438,7 +438,8 @@ async fn load_device(
         &mic_profile_directory,
         settings,
         global_events,
-    )?;
+    )
+    .await?;
     settings
         .set_device_profile_name(&serial_number, device.profile().name())
         .await;

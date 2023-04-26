@@ -6,7 +6,6 @@ use anyhow::{anyhow, bail, Result};
 use chrono::Local;
 use enum_map::EnumMap;
 use enumset::EnumSet;
-use futures::executor::block_on;
 use log::{debug, error, info};
 use ritelinked::LinkedHashSet;
 use strum::IntoEnumIterator;
@@ -36,7 +35,7 @@ use crate::mic_profile::{MicProfileAdapter, DEFAULT_MIC_PROFILE_NAME};
 use crate::profile::{
     usb_to_standard_button, version_newer_or_equal_to, ProfileAdapter, DEFAULT_PROFILE_NAME,
 };
-use crate::SettingsHandle;
+use crate::{device, SettingsHandle};
 
 pub struct Device<'a> {
     goxlr: Box<dyn FullGoXLRDevice>,
@@ -69,7 +68,7 @@ struct ButtonState {
 
 impl<'a> Device<'a> {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(
+    pub async fn new(
         goxlr: Box<dyn FullGoXLRDevice>,
         hardware: HardwareStatus,
         profile_name: Option<String>,
@@ -78,7 +77,7 @@ impl<'a> Device<'a> {
         mic_profile_directory: &Path,
         settings_handle: &'a SettingsHandle,
         global_events: Sender<EventTriggers>,
-    ) -> Result<Self> {
+    ) -> Result<Device<'a>> {
         let mut device_type = "";
         if hardware.device_type == DeviceType::Mini {
             device_type = " Mini";
@@ -96,8 +95,9 @@ impl<'a> Device<'a> {
         let mic_profile =
             MicProfileAdapter::from_named_or_default(mic_profile, mic_profile_directory);
 
-        let audio_buffer =
-            block_on(settings_handle.get_device_sampler_pre_buffer(&hardware.serial_number));
+        let audio_buffer = settings_handle
+            .get_device_sampler_pre_buffer(&hardware.serial_number)
+            .await;
         let audio_loader = AudioHandler::new(audio_buffer);
         debug!("Created Audio Handler..");
         debug!("{:?}", audio_loader);
@@ -112,10 +112,13 @@ impl<'a> Device<'a> {
             audio_handler = Some(audio);
         }
 
-        let hold_time = block_on(settings_handle.get_device_hold_time(&hardware.serial_number));
-        let vc_mute_also_mute_cm = block_on(
-            settings_handle.get_device_chat_mute_mutes_mic_to_chat(&hardware.serial_number),
-        );
+        let hold_time = settings_handle
+            .get_device_hold_time(&hardware.serial_number)
+            .await;
+        let vc_mute_also_mute_cm = settings_handle
+            .get_device_chat_mute_mutes_mic_to_chat(&hardware.serial_number)
+            .await;
+
         let mut device = Self {
             profile,
             mic_profile,
@@ -132,8 +135,8 @@ impl<'a> Device<'a> {
             global_events,
         };
 
-        device.apply_profile()?;
-        device.apply_mic_profile()?;
+        device.apply_profile().await?;
+        device.apply_mic_profile().await?;
 
         Ok(device)
     }
@@ -2024,19 +2027,19 @@ impl<'a> Device<'a> {
 
             GoXLRCommand::SetScribbleIcon(fader, icon) => {
                 self.profile.set_scribble_icon(fader, icon);
-                self.apply_scribble(fader)?;
+                self.apply_scribble(fader).await?;
             }
             GoXLRCommand::SetScribbleText(fader, text) => {
                 self.profile.set_scribble_text(fader, text);
-                self.apply_scribble(fader)?;
+                self.apply_scribble(fader).await?;
             }
             GoXLRCommand::SetScribbleNumber(fader, number) => {
                 self.profile.set_scribble_number(fader, number);
-                self.apply_scribble(fader)?;
+                self.apply_scribble(fader).await?;
             }
             GoXLRCommand::SetScribbleInvert(fader, inverted) => {
                 self.profile.set_scribble_inverted(fader, inverted);
-                self.apply_scribble(fader)?;
+                self.apply_scribble(fader).await?;
             }
 
             // Profiles
@@ -2048,7 +2051,7 @@ impl<'a> Device<'a> {
 
                 // Force load the default embedded profile..
                 self.profile = ProfileAdapter::default();
-                self.apply_profile()?;
+                self.apply_profile().await?;
 
                 // Save the profile under a new name (although, don't overwrite if exists!)
                 self.profile
@@ -2064,7 +2067,7 @@ impl<'a> Device<'a> {
                 let profile_directory = self.settings.get_profile_directory().await;
 
                 self.profile = ProfileAdapter::from_named(profile_name, &profile_directory)?;
-                self.apply_profile()?;
+                self.apply_profile().await?;
                 self.settings
                     .set_device_profile_name(self.serial(), self.profile.name())
                     .await;
@@ -2138,7 +2141,7 @@ impl<'a> Device<'a> {
                 let mic_profile_directory = self.settings.get_mic_profile_directory().await;
                 self.mic_profile =
                     MicProfileAdapter::from_named(mic_profile_name, &mic_profile_directory)?;
-                self.apply_mic_profile()?;
+                self.apply_mic_profile().await?;
                 self.settings
                     .set_device_mic_profile_name(self.serial(), self.mic_profile.name())
                     .await;
@@ -2558,8 +2561,8 @@ impl<'a> Device<'a> {
         self.goxlr.set_fader(fader, new_channel)?;
         self.goxlr.set_fader(fader_to_switch, existing_channel)?;
 
-        self.apply_scribble(fader)?;
-        self.apply_scribble(fader_to_switch)?;
+        self.apply_scribble(fader).await?;
+        self.apply_scribble(fader_to_switch).await?;
 
         // Finally update the button colours..
         self.update_button_states()?;
@@ -2616,7 +2619,7 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
-    fn apply_profile(&mut self) -> Result<()> {
+    async fn apply_profile(&mut self) -> Result<()> {
         // Set volumes first, applying mute may modify stuff..
         debug!("Applying Profile..");
 
@@ -2640,7 +2643,7 @@ impl<'a> Device<'a> {
             self.apply_mute_from_profile(fader)?;
 
             if self.hardware.device_type == DeviceType::Full {
-                self.apply_scribble(fader)?;
+                self.apply_scribble(fader).await?;
             }
         }
 
@@ -2719,7 +2722,7 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
-    fn apply_mic_profile(&mut self) -> Result<()> {
+    async fn apply_mic_profile(&mut self) -> Result<()> {
         // Configure the microphone..
         self.apply_mic_gain()?;
 
@@ -2768,8 +2771,8 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
-    fn apply_scribble(&mut self, fader: FaderName) -> Result<()> {
-        let icon_path = block_on(self.settings.get_icons_directory());
+    async fn apply_scribble(&mut self, fader: FaderName) -> Result<()> {
+        let icon_path = self.settings.get_icons_directory().await;
 
         let scribble = self.profile.get_scribble_image(fader, &icon_path);
         self.goxlr.set_fader_scribble(fader, scribble)?;
