@@ -7,7 +7,6 @@ use crate::device::tusb::tusbaudio::{
 };
 use anyhow::{bail, Result};
 use byteorder::{ByteOrder, LittleEndian};
-use futures::executor::block_on;
 use log::{debug, error};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -54,7 +53,7 @@ impl TUSBAudioGoXLR {
         self.stopped.store(true, Ordering::Relaxed);
 
         if let Some(daemon_identifier) = &*self.daemon_identifier.lock().unwrap() {
-            let _ = block_on(self.disconnect_sender.send(daemon_identifier.clone()));
+            let _ = self.disconnect_sender.try_send(daemon_identifier.clone());
         }
     }
 
