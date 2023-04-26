@@ -1,8 +1,7 @@
 /*
 This is simply a struct that manages and returns a list of files in various directories.
 
-I considered sending this data on-demand, however things like the UI may poll incredibly
-frequently, and given the infrequency of changes holding a 1 second cache is useful.
+This will trigger mpsc events whenever a
 
 This has been created as a separate mod primarily because profile.rs is big enough, and
 secondly because it's managing different types of files
@@ -17,7 +16,6 @@ use std::process::{Command, Stdio};
 
 use anyhow::{anyhow, bail, Context, Result};
 use futures::channel::mpsc::{channel, Receiver};
-use futures::executor::block_on;
 use futures::{SinkExt, StreamExt};
 use log::{debug, info, warn};
 
@@ -25,12 +23,13 @@ use glob::glob;
 use goxlr_ipc::PathTypes;
 use notify::event::{CreateKind, ModifyKind, RemoveKind, RenameMode};
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+use tokio::runtime::Runtime;
 use tokio::sync::mpsc::Sender;
 
 use crate::{SettingsHandle, Shutdown};
 
 // This should probably be handled with an EnumSet..
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FilePaths {
     profiles: PathBuf,
     mic_profiles: PathBuf,
@@ -45,11 +44,21 @@ pub struct FileManager {
 }
 
 impl FileManager {
-    pub fn new(settings: &SettingsHandle) -> Self {
-        let paths = get_file_paths_from_settings(settings);
+    pub async fn new(settings: &SettingsHandle) -> Self {
+        let paths = FileManager::get_file_paths_from_settings(settings).await;
         FileManager::create_paths(&paths);
 
         Self { paths }
+    }
+
+    pub async fn get_file_paths_from_settings(settings: &SettingsHandle) -> FilePaths {
+        FilePaths {
+            profiles: settings.get_profile_directory().await,
+            mic_profiles: settings.get_mic_profile_directory().await,
+            presets: settings.get_presets_directory().await,
+            icons: settings.get_icons_directory().await,
+            samples: settings.get_samples_directory().await,
+        }
     }
 
     pub fn create_paths(paths: &FilePaths) {
@@ -213,17 +222,25 @@ impl FileManager {
 
         Vec::new()
     }
+    pub fn paths(&self) -> &FilePaths {
+        &self.paths
+    }
 }
 
 pub async fn spawn_file_notification_service(
     paths: FilePaths,
     sender: Sender<PathTypes>,
     mut shutdown_signal: Shutdown,
-) {
-    let watcher = create_watcher();
+) -> Result<()> {
+    // Create a tokio runtime we can use to handle blocking code..
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()?;
+
+    let watcher = create_watcher(runtime);
     if let Err(error) = watcher {
         warn!("Error Creating the File Watcher, aborting: {:?}", error);
-        return;
+        bail!("Error Creating the File Watcher: {:?}", error);
     }
 
     // Create the worker..
@@ -313,14 +330,17 @@ pub async fn spawn_file_notification_service(
             }
         }
     }
+    Ok(())
 }
 
-fn create_watcher() -> notify::Result<(RecommendedWatcher, Receiver<notify::Result<Event>>)> {
+fn create_watcher(
+    runtime: Runtime,
+) -> notify::Result<(RecommendedWatcher, Receiver<notify::Result<Event>>)> {
     let (mut tx, rx) = channel(1);
 
     let watcher = RecommendedWatcher::new(
         move |res| {
-            block_on(async {
+            runtime.block_on(async {
                 tx.send(res).await.unwrap();
             })
         },
@@ -328,16 +348,6 @@ fn create_watcher() -> notify::Result<(RecommendedWatcher, Receiver<notify::Resu
     )?;
 
     Ok((watcher, rx))
-}
-
-pub fn get_file_paths_from_settings(settings: &SettingsHandle) -> FilePaths {
-    FilePaths {
-        profiles: block_on(settings.get_profile_directory()),
-        mic_profiles: block_on(settings.get_mic_profile_directory()),
-        presets: block_on(settings.get_presets_directory()),
-        icons: block_on(settings.get_icons_directory()),
-        samples: block_on(settings.get_samples_directory()),
-    }
 }
 
 pub fn find_file_in_path(path: PathBuf, file: PathBuf) -> Option<PathBuf> {
