@@ -15,16 +15,16 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 use anyhow::{anyhow, bail, Context, Result};
-use futures::channel::mpsc::{channel, Receiver};
-use futures::{SinkExt, StreamExt};
+// use futures::channel::mpsc::{channel, Receiver};
+// use futures::{SinkExt, StreamExt};
 use log::{debug, info, warn};
 
 use glob::glob;
 use goxlr_ipc::PathTypes;
 use notify::event::{CreateKind, ModifyKind, RemoveKind, RenameMode};
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
-use tokio::runtime::Runtime;
-use tokio::sync::mpsc::Sender;
+use tokio::sync::mpsc;
+use tokio::sync::mpsc::{Receiver, Sender};
 
 use crate::{SettingsHandle, Shutdown};
 
@@ -232,12 +232,7 @@ pub async fn spawn_file_notification_service(
     sender: Sender<PathTypes>,
     mut shutdown_signal: Shutdown,
 ) -> Result<()> {
-    // Create a tokio runtime we can use to handle blocking code..
-    let runtime = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()?;
-
-    let watcher = create_watcher(runtime);
+    let watcher = create_watcher();
     if let Err(error) = watcher {
         warn!("Error Creating the File Watcher, aborting: {:?}", error);
         bail!("Error Creating the File Watcher: {:?}", error);
@@ -270,7 +265,7 @@ pub async fn spawn_file_notification_service(
                 debug!("Shutdown Signal Received.");
                 break;
             },
-            result = rx.next() => {
+            result = rx.recv() => {
                 if let Some(result) = result {
                     match result {
                         Ok(event) => {
@@ -333,16 +328,12 @@ pub async fn spawn_file_notification_service(
     Ok(())
 }
 
-fn create_watcher(
-    runtime: Runtime,
-) -> notify::Result<(RecommendedWatcher, Receiver<notify::Result<Event>>)> {
-    let (mut tx, rx) = channel(1);
+fn create_watcher() -> notify::Result<(RecommendedWatcher, Receiver<notify::Result<Event>>)> {
+    let (tx, rx) = mpsc::channel(1);
 
     let watcher = RecommendedWatcher::new(
         move |res| {
-            runtime.block_on(async {
-                tx.send(res).await.unwrap();
-            })
+            let _ = tx.blocking_send(res);
         },
         Config::default(),
     )?;

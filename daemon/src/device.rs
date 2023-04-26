@@ -35,7 +35,7 @@ use crate::mic_profile::{MicProfileAdapter, DEFAULT_MIC_PROFILE_NAME};
 use crate::profile::{
     usb_to_standard_button, version_newer_or_equal_to, ProfileAdapter, DEFAULT_PROFILE_NAME,
 };
-use crate::{device, SettingsHandle};
+use crate::SettingsHandle;
 
 pub struct Device<'a> {
     goxlr: Box<dyn FullGoXLRDevice>,
