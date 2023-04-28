@@ -1064,7 +1064,7 @@ impl<'a> Device<'a> {
         let _ = self.global_events.send(TTSMessage(tts_message)).await;
 
         self.profile.load_effect_bank(preset)?;
-        self.load_effects()?;
+        self.load_encoder_effects()?;
         self.set_pitch_mode()?;
 
         self.apply_effects(self.mic_profile.get_reverb_keyset())?;
@@ -2683,6 +2683,9 @@ impl<'a> Device<'a> {
             self.apply_routing(input)?;
         }
 
+        debug!("Applying Voice FX");
+        self.apply_voice_fx()?;
+
         Ok(())
     }
 
@@ -2714,6 +2717,26 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
+    fn apply_voice_fx(&mut self) -> Result<()> {
+        // Grab all keys that aren't common between devices
+        let fx_keys = self.mic_profile.get_uncommon_keys();
+
+        // Setup to send these keys..
+        let mut send_keys = LinkedHashSet::new();
+        send_keys.extend(fx_keys);
+
+        // Apply these settings..
+        self.apply_effects(send_keys)?;
+
+        // Apply any Pitch / Encoder related Effects
+        if self.hardware.device_type == DeviceType::Full {
+            self.set_pitch_mode()?;
+            self.load_encoder_effects()?;
+        }
+
+        Ok(())
+    }
+
     fn apply_mic_gain(&mut self) -> Result<()> {
         let mic_type = self.mic_profile.mic_type();
         let gain = self.mic_profile.mic_gains()[mic_type];
@@ -2741,20 +2764,12 @@ impl<'a> Device<'a> {
         let mut keys = LinkedHashSet::new();
         keys.extend(self.mic_profile.get_common_keys());
 
-        if self.hardware.device_type == DeviceType::Full {
-            keys.extend(self.mic_profile.get_full_keys());
-        }
-
         self.apply_effects(keys)?;
 
-        if self.hardware.device_type == DeviceType::Full {
-            self.set_pitch_mode()?;
-            self.load_effects()?;
-        }
         Ok(())
     }
 
-    fn load_effects(&mut self) -> Result<()> {
+    fn load_encoder_effects(&mut self) -> Result<()> {
         // For now, we'll simply set the knob positions, more to come!
         let mut value = self.profile.get_pitch_encoder_position();
         self.goxlr.set_encoder_value(EncoderName::Pitch, value)?;

@@ -904,20 +904,10 @@ impl MicProfileAdapter {
         keys.insert(EffectKey::GateMode);
         keys.insert(EffectKey::DisableMic);
 
-        // TODO: Are these common?
-        keys.insert(EffectKey::Encoder1Enabled);
-        keys.insert(EffectKey::Encoder2Enabled);
-        keys.insert(EffectKey::Encoder3Enabled);
-        keys.insert(EffectKey::Encoder4Enabled);
-
-        keys.insert(EffectKey::RobotEnabled);
-        keys.insert(EffectKey::HardTuneEnabled);
-        keys.insert(EffectKey::MegaphoneEnabled);
-
         keys
     }
 
-    pub fn get_full_keys(&self) -> HashSet<EffectKey> {
+    pub fn get_uncommon_keys(&self) -> HashSet<EffectKey> {
         let mut keys = HashSet::new();
 
         // Lets go mental, return everything that's not common..
