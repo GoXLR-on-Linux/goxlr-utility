@@ -72,7 +72,7 @@ impl GoXLRUSB {
 
         if let Some(identifier) = &self.identifier {
             self.stopping.store(true, Ordering::Relaxed);
-            self.disconnect_sender.try_send(identifier.clone());
+            self.disconnect_sender.try_send(identifier.clone())?;
             return Ok(());
         }
         bail!("Unable to Disconnect, Identifier not Found!");
