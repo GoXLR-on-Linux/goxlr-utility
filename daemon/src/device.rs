@@ -2718,6 +2718,11 @@ impl<'a> Device<'a> {
     }
 
     fn apply_voice_fx(&mut self) -> Result<()> {
+        if self.hardware.device_type == DeviceType::Mini {
+            // Voice FX aren't present on the mini.
+            return Ok(());
+        }
+
         // Grab all keys that aren't common between devices
         let fx_keys = self.mic_profile.get_uncommon_keys();
 
@@ -2729,10 +2734,8 @@ impl<'a> Device<'a> {
         self.apply_effects(send_keys)?;
 
         // Apply any Pitch / Encoder related Effects
-        if self.hardware.device_type == DeviceType::Full {
-            self.set_pitch_mode()?;
-            self.load_encoder_effects()?;
-        }
+        self.set_pitch_mode()?;
+        self.load_encoder_effects()?;
 
         Ok(())
     }
