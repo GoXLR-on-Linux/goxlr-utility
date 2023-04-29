@@ -87,6 +87,7 @@ struct Tts {}
 #[cfg(not(feature = "tts"))]
 impl Tts {
     fn default() -> Result<Self> {
+        warn!("TTS Feature is not enabled in build, TTS will not work.");
         Ok(Self {})
     }
 
