@@ -887,7 +887,7 @@ impl MicProfileAdapter {
         GATE_ATTENUATION[index as usize]
     }
 
-    pub fn get_common_keys(&self) -> HashSet<EffectKey> {
+    pub fn get_mic_keys(&self) -> HashSet<EffectKey> {
         let mut keys = HashSet::new();
         keys.insert(EffectKey::DeEsser);
         keys.insert(EffectKey::GateThreshold);
@@ -904,17 +904,39 @@ impl MicProfileAdapter {
         keys.insert(EffectKey::GateMode);
         keys.insert(EffectKey::DisableMic);
 
+        // EQ Settings
+        keys.insert(EffectKey::Equalizer31HzFrequency);
+        keys.insert(EffectKey::Equalizer31HzGain);
+        keys.insert(EffectKey::Equalizer63HzFrequency);
+        keys.insert(EffectKey::Equalizer63HzGain);
+        keys.insert(EffectKey::Equalizer125HzFrequency);
+        keys.insert(EffectKey::Equalizer125HzGain);
+        keys.insert(EffectKey::Equalizer250HzFrequency);
+        keys.insert(EffectKey::Equalizer250HzGain);
+        keys.insert(EffectKey::Equalizer500HzFrequency);
+        keys.insert(EffectKey::Equalizer500HzGain);
+        keys.insert(EffectKey::Equalizer1KHzFrequency);
+        keys.insert(EffectKey::Equalizer1KHzGain);
+        keys.insert(EffectKey::Equalizer2KHzFrequency);
+        keys.insert(EffectKey::Equalizer2KHzGain);
+        keys.insert(EffectKey::Equalizer4KHzFrequency);
+        keys.insert(EffectKey::Equalizer4KHzGain);
+        keys.insert(EffectKey::Equalizer8KHzFrequency);
+        keys.insert(EffectKey::Equalizer8KHzGain);
+        keys.insert(EffectKey::Equalizer16KHzFrequency);
+        keys.insert(EffectKey::Equalizer16KHzGain);
+
         keys
     }
 
-    pub fn get_uncommon_keys(&self) -> HashSet<EffectKey> {
+    pub fn get_fx_keys(&self) -> HashSet<EffectKey> {
         let mut keys = HashSet::new();
 
-        // Lets go mental, return everything that's not common..
-        let common_effects = self.get_common_keys();
+        // Lets go mental, return everything that's not specifically a mic key..
+        let mic_keys = self.get_mic_keys();
 
         for effect in EffectKey::iter() {
-            if !common_effects.contains(&effect) {
+            if !mic_keys.contains(&effect) {
                 keys.insert(effect);
             }
         }

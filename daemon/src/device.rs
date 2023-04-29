@@ -2724,7 +2724,7 @@ impl<'a> Device<'a> {
         }
 
         // Grab all keys that aren't common between devices
-        let fx_keys = self.mic_profile.get_uncommon_keys();
+        let fx_keys = self.mic_profile.get_fx_keys();
 
         // Setup to send these keys..
         let mut send_keys = LinkedHashSet::new();
@@ -2765,7 +2765,7 @@ impl<'a> Device<'a> {
         self.apply_mic_params(keys)?;
 
         let mut keys = LinkedHashSet::new();
-        keys.extend(self.mic_profile.get_common_keys());
+        keys.extend(self.mic_profile.get_mic_keys());
 
         self.apply_effects(keys)?;
 
