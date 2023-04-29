@@ -1,8 +1,7 @@
 use crate::settings::SettingsHandle;
 use crate::shutdown::Shutdown;
 use anyhow::Result;
-use log::{debug, error, info, warn};
-use std::sync::Mutex;
+use log::{debug, info, warn};
 use tokio::sync::mpsc::Receiver;
 
 #[cfg(feature = "tts")]
@@ -11,16 +10,13 @@ use tts::Tts;
 #[allow(clippy::upper_case_acronyms)]
 pub(crate) struct TTS {
     settings: SettingsHandle,
-    tts: Mutex<Option<Tts>>,
+    tts: Tts,
 }
 
 impl TTS {
     pub fn new(settings: SettingsHandle) -> Result<TTS> {
-        //let tts = Tts::default()?;
-        Ok(Self {
-            tts: Mutex::new(None),
-            settings,
-        })
+        let tts = Tts::default()?;
+        Ok(Self { tts, settings })
     }
 
     pub async fn listen(&mut self, mut rx: Receiver<String>, mut shutdown: Shutdown) {
@@ -53,29 +49,15 @@ impl TTS {
             return;
         }
 
-        let mut tts = self.tts.lock().unwrap();
-        if tts.is_none() {
-            let tts_service = match Tts::default() {
-                Ok(service) => service,
-                Err(error) => {
-                    error!("Unable to Establish TTS Service: {:?}", error);
-                    return;
-                }
-            };
-            *tts = Some(tts_service);
+        if self.tts.stop().is_err() {
+            warn!("Unable to Stop TTS Output");
+            return;
         }
 
-        if !tts.is_none() {
-            if tts.as_mut().unwrap().stop().is_err() {
-                warn!("Unable to Stop TTS Output");
-                return;
-            }
-
-            match tts.as_mut().unwrap().speak(message, true) {
-                Ok(_) => {}
-                Err(error) => {
-                    warn!("Error Sending TTS: {}", error);
-                }
+        match self.tts.speak(message, true) {
+            Ok(_) => {}
+            Err(error) => {
+                warn!("Error Sending TTS: {}", error);
             }
         }
     }
