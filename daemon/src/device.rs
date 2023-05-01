@@ -1999,7 +1999,7 @@ impl<'a> Device<'a> {
             GoXLRCommand::RemoveSampleByIndex(bank, button, index) => {
                 let remaining = self
                     .profile
-                    .remove_sample_file_by_index(bank, button, index);
+                    .remove_sample_file_by_index(bank, button, index)?;
 
                 if remaining == 0 {
                     self.load_colour_map()?;

@@ -1859,18 +1859,19 @@ impl ProfileAdapter {
         bank: goxlr_types::SampleBank,
         button: goxlr_types::SampleButtons,
         index: usize,
-    ) -> usize {
+    ) -> Result<usize> {
         self.profile
             .settings_mut()
             .sample_button_mut(standard_to_profile_sample_button(button))
             .get_stack_mut(standard_to_profile_sample_bank(bank))
-            .remove_track_by_index(index);
+            .remove_track_by_index(index)?;
 
-        self.profile
+        Ok(self
+            .profile
             .settings()
             .sample_button(standard_to_profile_sample_button(button))
             .get_stack(standard_to_profile_sample_bank(bank))
-            .get_track_count()
+            .get_track_count())
     }
 
     pub fn set_button_off_style(
