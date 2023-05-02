@@ -11,6 +11,7 @@ use log::{debug, error};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
+use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::error::TryRecvError;
 use tokio::sync::mpsc::Sender;
@@ -72,6 +73,18 @@ impl TUSBAudioGoXLR {
             }
         }
     }
+
+    pub fn await_ready(mut receiver: tokio::sync::oneshot::Receiver<bool>) -> bool {
+        loop {
+            thread::sleep(Duration::from_millis(5));
+            let result = receiver.try_recv();
+            match result {
+                Ok(result) => break result,
+                Err(tokio::sync::oneshot::error::TryRecvError::Closed) => break false,
+                Err(_) => continue,
+            }
+        }
+    }
 }
 
 impl AttachGoXLR for TUSBAudioGoXLR {
@@ -113,6 +126,8 @@ impl AttachGoXLR for TUSBAudioGoXLR {
             stopped: Arc::new(AtomicBool::new(false)),
         });
 
+        let (ready_sender, ready_recv) = tokio::sync::oneshot::channel();
+
         // Spawn an event loop for this handle..
         let thread_event_sender = goxlr.event_sender.clone();
         let thread_daemon_identifier = goxlr.daemon_identifier.clone();
@@ -123,7 +138,8 @@ impl AttachGoXLR for TUSBAudioGoXLR {
 
             thread::spawn(move || {
                 let sender = EventChannelSender {
-                    data_read: data_sender.clone(),
+                    ready_notifier: ready_sender,
+                    data_read: data_sender,
                     input_changed: thread_event_sender,
                 };
 
@@ -137,6 +153,12 @@ impl AttachGoXLR for TUSBAudioGoXLR {
             });
         } else {
             bail!("Unable to Create Event Loop, Device Identifier not set!");
+        }
+
+        // Wait for the event loop to be ready and registered..
+        if !TUSBAudioGoXLR::await_ready(ready_recv) {
+            goxlr.stopped.store(true, Ordering::Relaxed);
+            bail!("Unable to establish Event Loop..");
         }
 
         // Activate the Vendor interface, also initialises audio on Windows!
