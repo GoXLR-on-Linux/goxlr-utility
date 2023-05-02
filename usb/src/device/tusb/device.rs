@@ -11,7 +11,7 @@ use log::{debug, error};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::error::TryRecvError;
 use tokio::sync::mpsc::Sender;
@@ -64,7 +64,13 @@ impl TUSBAudioGoXLR {
         // know a read event will return incredibly quickly, we can slap a loop in to wait for the
         // data.
 
+        let timeout = Instant::now() + Duration::from_millis(50);
         loop {
+            if Instant::now() > timeout {
+                // We've hit a timeout, don't infinite loop, instead throw as error.
+                return false;
+            }
+
             let result = self.event_receivers.data_read.try_recv();
             match result {
                 Ok(result) => break result,
@@ -75,8 +81,14 @@ impl TUSBAudioGoXLR {
     }
 
     pub fn await_ready(mut receiver: tokio::sync::oneshot::Receiver<bool>) -> bool {
+        let timeout = Instant::now() + Duration::from_millis(50);
         loop {
             thread::sleep(Duration::from_millis(5));
+            if Instant::now() > timeout {
+                // We've hit a timeout, don't infinite loop, instead throw as error.
+                return false;
+            }
+
             let result = receiver.try_recv();
             match result {
                 Ok(result) => break result,
