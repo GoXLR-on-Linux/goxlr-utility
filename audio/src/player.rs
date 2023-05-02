@@ -10,7 +10,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use crate::audio::{get_output, AudioSpecification};
-use symphonia::core::audio::{Channels, Layout, SampleBuffer, SignalSpec};
+use symphonia::core::audio::{Layout, SampleBuffer, SignalSpec};
 use symphonia::core::errors::Error;
 use symphonia::core::formats::{SeekMode, SeekTo};
 use symphonia::core::io::MediaSourceStream;
@@ -273,11 +273,8 @@ impl Player {
 
                         // Apply any gain to the samples..
                         if let Some(gain) = self.gain {
-                            // Clippy doesn't seem to understand that I'm actually changing the
-                            // values here, so we'll ignore this warning.
-                            #[allow(clippy::needless_range_loop)]
-                            for i in 0..samples.len() {
-                                samples[i] *= gain as f32;
+                            for sample in samples.iter_mut() {
+                                *sample *= gain as f32;
                             }
                         }
 
