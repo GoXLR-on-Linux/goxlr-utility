@@ -92,7 +92,6 @@ impl AttachGoXLR for TUSBAudioGoXLR {
 
         // Spawn the Event handler thread..
         let (data_sender, data_receiver) = mpsc::channel(1);
-        let sender_inner = Arc::new(data_sender);
 
         // In this case, we spawn a thread to manage windows events..
         let event_receivers = EventChannelReceiver {
@@ -115,7 +114,7 @@ impl AttachGoXLR for TUSBAudioGoXLR {
         });
 
         // Spawn an event loop for this handle..
-        let thread_sender = Arc::new(goxlr.event_sender.clone());
+        let thread_event_sender = goxlr.event_sender.clone();
         let thread_daemon_identifier = goxlr.daemon_identifier.clone();
         let thread_stopped = goxlr.stopped.clone();
         if let Some(ref thread_device_identifier) = goxlr.identifier {
@@ -124,8 +123,8 @@ impl AttachGoXLR for TUSBAudioGoXLR {
 
             thread::spawn(move || {
                 let sender = EventChannelSender {
-                    data_read: sender_inner.clone(),
-                    input_changed: thread_sender,
+                    data_read: data_sender.clone(),
+                    input_changed: thread_event_sender,
                 };
 
                 // Spawn the Event Loop..

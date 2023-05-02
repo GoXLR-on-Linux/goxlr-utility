@@ -609,6 +609,6 @@ pub struct EventChannelReceiver {
 }
 
 pub struct EventChannelSender {
-    pub(crate) data_read: Arc<Sender<bool>>,
-    pub(crate) input_changed: Arc<Sender<String>>,
+    pub(crate) data_read: Sender<bool>,
+    pub(crate) input_changed: Sender<String>,
 }
