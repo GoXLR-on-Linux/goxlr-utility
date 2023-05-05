@@ -2126,10 +2126,11 @@ impl<'a> Device<'a> {
                 self.settings.save().await;
             }
             GoXLRCommand::DeleteProfile(profile_name) => {
-                let profile_directory = self.settings.get_profile_directory().await;
                 if self.profile.name() == profile_name {
                     bail!("Unable to Remove Active Profile!");
                 }
+
+                let profile_directory = self.settings.get_profile_directory().await;
                 self.profile
                     .delete_profile(profile_name.clone(), &profile_directory)?;
             }
@@ -2189,6 +2190,10 @@ impl<'a> Device<'a> {
                 self.settings.save().await;
             }
             GoXLRCommand::DeleteMicProfile(profile_name) => {
+                if self.mic_profile.name() == profile_name {
+                    bail!("Unable to Remove Active Profile!");
+                }
+
                 let profile_directory = self.settings.get_mic_profile_directory().await;
                 self.mic_profile
                     .delete_profile(profile_name.clone(), &profile_directory)?;
