@@ -19,13 +19,15 @@ AppPublisher=The GoXLR on Linux Team
 AppPublisherURL=http://github.com/GoXLR-on-Linux
 
 [Files]
-Source: "target\release\goxlr-daemon.exe";    DestDir: "{app}";       DestName: "goxlr-daemon.exe"
-Source: "target\release\goxlr-client.exe";    DestDir: "{app}";       DestName: "goxlr-client.exe"
-Source: "target\release\goxlr-defaults.exe";  DestDir: "{app}";       DestName: "goxlr-defaults.exe"
-Source: "target\release\goxlr-launcher.exe";  DestDir: "{app}";       DestName: "goxlr-launcher.exe"
-Source: "target\release\goxlr-firmware.exe";  DestDir: "{app}";       DestName: "goxlr-firmware.exe"
-Source: "LICENSE";                            DestDir: "{app}";       DestName: "LICENSE"
-Source: "LICENSE-3RD-PARTY";                  DestDir: "{app}";       DestName: "LICENSE-3RD-PARTY"
+Source: "target\release\goxlr-daemon.exe";             DestDir: "{app}";       DestName: "goxlr-daemon.exe"
+Source: "target\release\goxlr-client.exe";             DestDir: "{app}";       DestName: "goxlr-client.exe"
+Source: "target\release\goxlr-defaults.exe";           DestDir: "{app}";       DestName: "goxlr-defaults.exe"
+Source: "target\release\goxlr-launcher.exe";           DestDir: "{app}";       DestName: "goxlr-launcher.exe"
+Source: "target\release\goxlr-firmware.exe";           DestDir: "{app}";       DestName: "goxlr-firmware.exe"
+Source: "target\release\SAAPI64.dll";                  DestDir: "{app}";       DestName: "SAAPI64.dll"
+Source: "target\release\nvdaControllerClient64.dll";   DestDir: "{app}"        DestName: "nvdaControllerClient64.dll"
+Source: "LICENSE";                                     DestDir: "{app}";       DestName: "LICENSE"
+Source: "LICENSE-3RD-PARTY";                           DestDir: "{app}";       DestName: "LICENSE-3RD-PARTY"
 
 [Tasks]
 Name: StartOnLogin; Description: Automatically start the GoXLR Utility on Login
