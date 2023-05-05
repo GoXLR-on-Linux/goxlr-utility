@@ -104,13 +104,6 @@ async fn main() -> Result<()> {
         }
     }
 
-    let http_settings = HttpSettings {
-        enabled: !args.http_disable,
-        bind_address: args.http_bind_address,
-        cors_enabled: args.http_enable_cors,
-        port: args.http_port,
-    };
-
     info!("Starting GoXLR Daemon v{}", VERSION);
 
     // Before we do anything, perform platform pre-flight to make
@@ -119,6 +112,20 @@ async fn main() -> Result<()> {
     perform_preflight()?;
 
     let settings = SettingsHandle::load(args.config).await?;
+
+    let mut bind_address = String::from("localhost");
+    if let Some(address) = args.http_bind_address {
+        bind_address = address;
+    } else if settings.get_allow_network_access().await {
+        bind_address = String::from("0.0.0.0");
+    }
+
+    let http_settings = HttpSettings {
+        enabled: !args.http_disable,
+        bind_address,
+        cors_enabled: args.http_enable_cors,
+        port: args.http_port,
+    };
 
     // Create the Global Event Channel..
     let (global_tx, global_rx) = mpsc::channel(32);

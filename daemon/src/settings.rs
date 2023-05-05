@@ -28,6 +28,7 @@ impl SettingsHandle {
         let mut settings = Settings::read(&path)?.unwrap_or_else(|| Settings {
             show_tray_icon: Some(true),
             tts_enabled: Some(false),
+            allow_network_access: Some(false),
             profile_directory: Some(data_dir.join("profiles")),
             mic_profile_directory: Some(data_dir.join("mic-profiles")),
             samples_directory: Some(data_dir.join("samples")),
@@ -111,6 +112,16 @@ impl SettingsHandle {
     pub async fn set_tts_enabled(&self, enabled: bool) {
         let mut settings = self.settings.write().await;
         settings.tts_enabled = Some(enabled);
+    }
+
+    pub async fn get_allow_network_access(&self) -> bool {
+        let settings = self.settings.read().await;
+        settings.allow_network_access.unwrap()
+    }
+
+    pub async fn set_allow_network_access(&self, enabled: bool) {
+        let mut settings = self.settings.write().await;
+        settings.allow_network_access = Some(enabled);
     }
 
     pub async fn get_profile_directory(&self) -> PathBuf {
@@ -269,6 +280,7 @@ impl SettingsHandle {
 pub struct Settings {
     show_tray_icon: Option<bool>,
     tts_enabled: Option<bool>,
+    allow_network_access: Option<bool>,
     profile_directory: Option<PathBuf>,
     mic_profile_directory: Option<PathBuf>,
     samples_directory: Option<PathBuf>,

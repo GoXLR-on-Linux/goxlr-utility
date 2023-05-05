@@ -26,8 +26,8 @@ pub struct Cli {
     pub http_enable_cors: bool,
 
     /// Set the HTTP Bind Address (0.0.0.0 for all interfaces)
-    #[arg(long, default_value = "localhost")]
-    pub http_bind_address: String,
+    #[arg(long)]
+    pub http_bind_address: Option<String>,
 
     /// Disable the Tray Icon
     #[arg(long)]

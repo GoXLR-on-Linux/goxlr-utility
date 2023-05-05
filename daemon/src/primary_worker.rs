@@ -31,6 +31,7 @@ pub enum DeviceCommand {
     RecoverDefaults(PathTypes, oneshot::Sender<DaemonResponse>),
     SetShowTrayIcon(bool, oneshot::Sender<DaemonResponse>),
     SetTTSEnabled(bool, oneshot::Sender<DaemonResponse>),
+    SetAllowNetworkAccess(bool, oneshot::Sender<DaemonResponse>),
     SetAutoStartEnabled(bool, oneshot::Sender<DaemonResponse>),
     RunDeviceCommand(String, GoXLRCommand, oneshot::Sender<Result<()>>),
 }
@@ -216,6 +217,12 @@ pub async fn spawn_usb_handler(
                         change_found = true;
                         let _ = sender.send(DaemonResponse::Ok);
                     }
+                    DeviceCommand::SetAllowNetworkAccess(enabled, sender) => {
+                        settings.set_allow_network_access(enabled).await;
+                        settings.save().await;
+                        change_found = true;
+                        let _ = sender.send(DaemonResponse::Ok);
+                    }
                     DeviceCommand::OpenPath(path_type, sender) => {
                         // There's nothing we can really do if this errors..
                         let _ = global_tx.send(EventTriggers::Open(path_type)).await;
@@ -268,6 +275,7 @@ async fn get_daemon_status(
             autostart_enabled: has_autostart(),
             show_tray_icon: settings.get_show_tray_icon().await,
             tts_enabled: settings.get_tts_enabled().await,
+            allow_network_access: settings.get_allow_network_access().await,
         },
         paths: Paths {
             profile_directory: settings.get_profile_directory().await,

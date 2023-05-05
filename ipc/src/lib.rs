@@ -27,6 +27,7 @@ pub enum DaemonRequest {
     SetShowTrayIcon(bool),
     SetTTSEnabled(bool),
     SetAutoStartEnabled(bool),
+    SetAllowNetworkAccess(bool),
     RecoverDefaults(PathTypes),
     Command(String, GoXLRCommand),
 }
