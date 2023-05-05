@@ -64,7 +64,7 @@ impl TUSBAudioGoXLR {
         // know a read event will return incredibly quickly, we can slap a loop in to wait for the
         // data.
 
-        let timeout = Instant::now() + Duration::from_millis(50);
+        let timeout = Instant::now() + Duration::from_secs(1);
         loop {
             if Instant::now() > timeout {
                 // We've hit a timeout, don't infinite loop, instead throw as error.
@@ -81,7 +81,7 @@ impl TUSBAudioGoXLR {
     }
 
     pub fn await_ready(mut receiver: tokio::sync::oneshot::Receiver<bool>) -> bool {
-        let timeout = Instant::now() + Duration::from_millis(50);
+        let timeout = Instant::now() + Duration::from_secs(1);
         loop {
             thread::sleep(Duration::from_millis(5));
             if Instant::now() > timeout {
