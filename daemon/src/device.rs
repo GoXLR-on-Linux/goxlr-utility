@@ -2110,7 +2110,6 @@ impl<'a> Device<'a> {
                 self.profile.save(&profile_directory, true)?;
             }
             GoXLRCommand::SaveProfileAs(profile_name) => {
-                self.stop_all_samples().await?;
                 let profile_directory = self.settings.get_profile_directory().await;
 
                 // Do a new file verification check..
