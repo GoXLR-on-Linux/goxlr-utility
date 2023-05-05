@@ -2106,6 +2106,9 @@ impl<'a> Device<'a> {
             }
             GoXLRCommand::DeleteProfile(profile_name) => {
                 let profile_directory = self.settings.get_profile_directory().await;
+                if self.profile.name() == profile_name {
+                    bail!("Unable to Remove Active Profile!");
+                }
                 self.profile
                     .delete_profile(profile_name.clone(), &profile_directory)?;
             }
