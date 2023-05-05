@@ -347,8 +347,17 @@ impl SampleStack {
         &mut self.tracks[len - 1]
     }
 
-    pub fn remove_track_by_index(&mut self, track: usize) {
+    pub fn remove_track_by_index(&mut self, track: usize) -> Result<()> {
+        if self.tracks.is_empty() {
+            bail!("Sample button has no tracks to remove");
+        }
+
+        if track > self.tracks.len() - 1 {
+            bail!("Index {} > {}", track, self.tracks.len());
+        }
+
         self.tracks.remove(track);
+        Ok(())
     }
     pub fn clear_tracks(&mut self) {
         self.tracks.clear();

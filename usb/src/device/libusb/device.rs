@@ -5,7 +5,6 @@ use crate::device::base::{
 use crate::{PID_GOXLR_FULL, PID_GOXLR_MINI, VID_GOXLR};
 use anyhow::{anyhow, bail, Error, Result};
 use byteorder::{ByteOrder, LittleEndian};
-use futures::executor::block_on;
 use log::{debug, error, info, warn};
 use rusb::Error::Pipe;
 use rusb::{
@@ -73,7 +72,7 @@ impl GoXLRUSB {
 
         if let Some(identifier) = &self.identifier {
             self.stopping.store(true, Ordering::Relaxed);
-            block_on(self.disconnect_sender.send(identifier.clone()))?;
+            self.disconnect_sender.try_send(identifier.clone())?;
             return Ok(());
         }
         bail!("Unable to Disconnect, Identifier not Found!");

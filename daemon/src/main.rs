@@ -16,7 +16,7 @@ use tokio::sync::{broadcast, mpsc};
 
 use crate::cli::{Cli, LevelFilter};
 use crate::events::{spawn_event_handler, DaemonState, EventTriggers};
-use crate::files::{get_file_paths_from_settings, spawn_file_notification_service, FileManager};
+use crate::files::{spawn_file_notification_service, FileManager};
 use crate::platform::perform_preflight;
 use crate::platform::spawn_runtime;
 use crate::primary_worker::spawn_usb_handler;
@@ -147,10 +147,12 @@ async fn main() -> Result<()> {
     let show_tray = Arc::new(AtomicBool::new(settings.get_show_tray_icon().await));
 
     // Configure, and Start the File Manager Service..
-    let file_manager = FileManager::new(&settings);
+    let file_manager = FileManager::new(&settings).await;
+    let file_paths = file_manager.paths().clone();
+
     let (file_tx, file_rx) = mpsc::channel(20);
     let file_handle = tokio::spawn(spawn_file_notification_service(
-        get_file_paths_from_settings(&settings),
+        file_paths,
         file_tx,
         shutdown.clone(),
     ));

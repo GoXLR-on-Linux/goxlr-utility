@@ -13,12 +13,12 @@ use actix_web::{get, post, web, App, HttpRequest, HttpResponse, HttpServer};
 use actix_web_actors::ws;
 use actix_web_actors::ws::CloseCode;
 use anyhow::{anyhow, Result};
-use futures::lock::Mutex;
 use include_dir::{include_dir, Dir};
 use log::{error, info, warn};
 use mime_guess::MimeGuess;
 use tokio::sync::broadcast::Sender as BroadcastSender;
 use tokio::sync::oneshot::Sender;
+use tokio::sync::Mutex;
 
 use crate::PatchEvent;
 use goxlr_ipc::{

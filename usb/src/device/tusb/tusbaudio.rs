@@ -361,6 +361,11 @@ impl TUSBAudio<'_> {
         let a: u32 = 0;
         let response_len: u32 = 0;
 
+        if callbacks.ready_notifier.send(true).is_err() {
+            warn!("Error Sending Ready Notification..");
+            terminator.store(true, Ordering::Relaxed);
+        }
+
         // Now we loop :D
         loop {
             // Wait for the event Trigger (I'd love for this to be async one day :p)..
@@ -609,6 +614,7 @@ pub struct EventChannelReceiver {
 }
 
 pub struct EventChannelSender {
-    pub(crate) data_read: Arc<Sender<bool>>,
-    pub(crate) input_changed: Arc<Sender<String>>,
+    pub(crate) ready_notifier: tokio::sync::oneshot::Sender<bool>,
+    pub(crate) data_read: Sender<bool>,
+    pub(crate) input_changed: Sender<String>,
 }

@@ -10,7 +10,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use crate::audio::{get_output, AudioSpecification};
-use symphonia::core::audio::SampleBuffer;
+use symphonia::core::audio::{Layout, SampleBuffer, SignalSpec};
 use symphonia::core::errors::Error;
 use symphonia::core::formats::{SeekMode, SeekTo};
 use symphonia::core::io::MediaSourceStream;
@@ -206,6 +206,7 @@ impl Player {
         };
 
         let mut break_playback = false;
+        let mut mono_playback = false;
 
         // Loop over the input file..
         let result = loop {
@@ -226,14 +227,22 @@ impl Player {
                     // Is this the first decoded packet?
                     if audio_output.is_none() && sample_buffer.is_none() {
                         let spec = *decoded.spec();
-                        let capacity = decoded.capacity() as u64;
+                        let mut output_spec = spec;
 
+                        // This is a mono audio file, we need to replace the spec with a Stereo
+                        // spec, then during processing, duplicate and interlace the samples.
+                        if spec.channels.count() == 1 {
+                            mono_playback = true;
+                            output_spec = SignalSpec::new_with_layout(spec.rate, Layout::Stereo);
+                        }
+
+                        let capacity = decoded.capacity() as u64;
                         sample_buffer = Some(SampleBuffer::<f32>::new(capacity, spec));
 
                         if !self.process_only {
                             let audio_spec = AudioSpecification {
                                 device: self.device.clone(),
-                                spec,
+                                spec: output_spec,
                                 buffer: capacity as usize,
                             };
 
@@ -246,6 +255,15 @@ impl Player {
                         buf.copy_interleaved_ref(decoded.clone());
                         let mut samples = buf.samples().to_vec();
 
+                        if mono_playback {
+                            let mut buffer = vec![];
+                            samples.iter().for_each(|s| {
+                                buffer.push(*s);
+                                buffer.push(*s)
+                            });
+                            samples = buffer;
+                        }
+
                         if let Some(ref mut ebu_r128) = ebu_r128 {
                             ebu_r128.add_frames_f32(samples.as_slice())?;
 
@@ -255,11 +273,8 @@ impl Player {
 
                         // Apply any gain to the samples..
                         if let Some(gain) = self.gain {
-                            // Clippy doesn't seem to understand that I'm actually changing the
-                            // values here, so we'll ignore this warning.
-                            #[allow(clippy::needless_range_loop)]
-                            for i in 0..samples.len() {
-                                samples[i] *= gain as f32;
+                            for sample in samples.iter_mut() {
+                                *sample *= gain as f32;
                             }
                         }
 

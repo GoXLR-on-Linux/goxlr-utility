@@ -15,7 +15,10 @@ pub(crate) struct TTS {
 
 impl TTS {
     pub fn new(settings: SettingsHandle) -> Result<TTS> {
-        let tts = Tts::default()?;
+        let mut tts = Tts::default()?;
+        if cfg!(target_os = "macos") {
+            tts.set_rate(tts.max_rate())?;
+        }
         Ok(Self { tts, settings })
     }
 
@@ -84,6 +87,7 @@ struct Tts {}
 #[cfg(not(feature = "tts"))]
 impl Tts {
     fn default() -> Result<Self> {
+        warn!("TTS Feature is not enabled in build, TTS will not work.");
         Ok(Self {})
     }
 

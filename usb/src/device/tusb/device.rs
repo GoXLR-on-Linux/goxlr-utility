@@ -7,11 +7,11 @@ use crate::device::tusb::tusbaudio::{
 };
 use anyhow::{bail, Result};
 use byteorder::{ByteOrder, LittleEndian};
-use futures::executor::block_on;
 use log::{debug, error};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
+use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::error::TryRecvError;
 use tokio::sync::mpsc::Sender;
@@ -54,7 +54,7 @@ impl TUSBAudioGoXLR {
         self.stopped.store(true, Ordering::Relaxed);
 
         if let Some(daemon_identifier) = &*self.daemon_identifier.lock().unwrap() {
-            let _ = block_on(self.disconnect_sender.send(daemon_identifier.clone()));
+            let _ = self.disconnect_sender.try_send(daemon_identifier.clone());
         }
     }
 
@@ -64,11 +64,35 @@ impl TUSBAudioGoXLR {
         // know a read event will return incredibly quickly, we can slap a loop in to wait for the
         // data.
 
+        let timeout = Instant::now() + Duration::from_millis(50);
         loop {
+            if Instant::now() > timeout {
+                // We've hit a timeout, don't infinite loop, instead throw as error.
+                return false;
+            }
+
             let result = self.event_receivers.data_read.try_recv();
             match result {
                 Ok(result) => break result,
                 Err(TryRecvError::Disconnected) => break false,
+                Err(_) => continue,
+            }
+        }
+    }
+
+    pub fn await_ready(mut receiver: tokio::sync::oneshot::Receiver<bool>) -> bool {
+        let timeout = Instant::now() + Duration::from_millis(50);
+        loop {
+            thread::sleep(Duration::from_millis(5));
+            if Instant::now() > timeout {
+                // We've hit a timeout, don't infinite loop, instead throw as error.
+                return false;
+            }
+
+            let result = receiver.try_recv();
+            match result {
+                Ok(result) => break result,
+                Err(tokio::sync::oneshot::error::TryRecvError::Closed) => break false,
                 Err(_) => continue,
             }
         }
@@ -93,7 +117,6 @@ impl AttachGoXLR for TUSBAudioGoXLR {
 
         // Spawn the Event handler thread..
         let (data_sender, data_receiver) = mpsc::channel(1);
-        let sender_inner = Arc::new(data_sender);
 
         // In this case, we spawn a thread to manage windows events..
         let event_receivers = EventChannelReceiver {
@@ -115,8 +138,10 @@ impl AttachGoXLR for TUSBAudioGoXLR {
             stopped: Arc::new(AtomicBool::new(false)),
         });
 
+        let (ready_sender, ready_recv) = tokio::sync::oneshot::channel();
+
         // Spawn an event loop for this handle..
-        let thread_sender = Arc::new(goxlr.event_sender.clone());
+        let thread_event_sender = goxlr.event_sender.clone();
         let thread_daemon_identifier = goxlr.daemon_identifier.clone();
         let thread_stopped = goxlr.stopped.clone();
         if let Some(ref thread_device_identifier) = goxlr.identifier {
@@ -125,8 +150,9 @@ impl AttachGoXLR for TUSBAudioGoXLR {
 
             thread::spawn(move || {
                 let sender = EventChannelSender {
-                    data_read: sender_inner.clone(),
-                    input_changed: thread_sender,
+                    ready_notifier: ready_sender,
+                    data_read: data_sender,
+                    input_changed: thread_event_sender,
                 };
 
                 // Spawn the Event Loop..
@@ -139,6 +165,12 @@ impl AttachGoXLR for TUSBAudioGoXLR {
             });
         } else {
             bail!("Unable to Create Event Loop, Device Identifier not set!");
+        }
+
+        // Wait for the event loop to be ready and registered..
+        if !TUSBAudioGoXLR::await_ready(ready_recv) {
+            goxlr.stopped.store(true, Ordering::Relaxed);
+            bail!("Unable to establish Event Loop..");
         }
 
         // Activate the Vendor interface, also initialises audio on Windows!

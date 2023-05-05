@@ -7,7 +7,6 @@ use tao::platform::run_return::EventLoopExtRunReturn;
 use crate::events::EventTriggers;
 use crate::{DaemonState, ICON};
 use cfg_if::cfg_if;
-use futures::executor::block_on;
 use log::debug;
 use std::time::{Duration, Instant};
 use tao::event::Event;
@@ -85,37 +84,37 @@ pub fn handle_tray(state: DaemonState, tx: Sender<EventTriggers>) -> Result<()> 
                 ..
             } => {
                 if menu_id == quit.clone().id() {
-                    let _ = block_on(tx.send(EventTriggers::Stop));
+                    let _ = tx.try_send(EventTriggers::Stop);
                 }
 
                 if menu_id == configure.clone().id() {
-                    let _ = block_on(tx.send(EventTriggers::OpenUi));
+                    let _ = tx.try_send(EventTriggers::OpenUi);
                 }
 
                 if menu_id == profiles.clone().id() {
-                    let _ = block_on(tx.send(EventTriggers::Open(Profiles)));
+                    let _ = tx.try_send(EventTriggers::Open(Profiles));
                 }
 
                 if menu_id == mic_profiles.clone().id() {
-                    let _ = block_on(tx.send(EventTriggers::Open(MicProfiles)));
+                    let _ = tx.try_send(EventTriggers::Open(MicProfiles));
                 }
 
                 if menu_id == presets.clone().id() {
-                    let _ = block_on(tx.send(EventTriggers::Open(Presets)));
+                    let _ = tx.try_send(EventTriggers::Open(Presets));
                 }
 
                 if menu_id == samples.clone().id() {
-                    let _ = block_on(tx.send(EventTriggers::Open(Samples)));
+                    let _ = tx.try_send(EventTriggers::Open(Samples));
                 }
 
                 if menu_id == icons.clone().id() {
-                    let _ = block_on(tx.send(EventTriggers::Open(Icons)));
+                    let _ = tx.try_send(EventTriggers::Open(Icons));
                 }
             }
             Event::TrayEvent { event, .. } => {
                 // Left click on Mac opens the menu, so we don't want to trigger this.
                 if event == LeftClick && cfg!(not(target_os = "macos")) {
-                    let _ = block_on(tx.send(EventTriggers::OpenUi));
+                    let _ = tx.try_send(EventTriggers::OpenUi);
                 }
             }
             _ => {}
@@ -192,8 +191,7 @@ impl WindowProc for GoXLRWindowProc {
                 // Ok, Windows has prompted an session closure here, we need to make sure the
                 // daemon shuts down correctly..
                 debug!("Attempting Shutdown..");
-
-                let _ = block_on(self.global_tx.send(EventTriggers::Stop));
+                let _ = self.global_tx.try_send(EventTriggers::Stop);
 
                 // Now wait for the daemon to actually stop..
                 loop {

@@ -1,7 +1,6 @@
 use crate::events::EventTriggers;
 use crate::DaemonState;
 use anyhow::{bail, Result};
-use futures::executor::block_on;
 use lazy_static::lazy_static;
 use log::{debug, error};
 use mslnk::ShellLink;
@@ -64,24 +63,24 @@ pub async fn spawn_platform_runtime(
                     throw_notification();
 
                     // The processes list isn't Sendable, so this can't be triggered asynchronously.
-                    block_on(tx.send(EventTriggers::Stop))?;
+                    tx.send(EventTriggers::Stop).await?;
                     break;
                 }
             },
             Some(_) = ctrl_break.recv() => {
-                block_on(tx.send(EventTriggers::Stop))?;
+                tx.send(EventTriggers::Stop).await?;
             },
             Some(_) = ctrl_close.recv() => {
                 debug!("Hit Ctrl+Close");
-                block_on(tx.send(EventTriggers::Stop))?;
+                tx.send(EventTriggers::Stop).await?;
             }
             Some(_) = ctrl_shutdown.recv() => {
                 debug!("Hit Ctrl+Shutdown");
-                block_on(tx.send(EventTriggers::Stop))?;
+                tx.send(EventTriggers::Stop).await?;
             }
             Some(_) = ctrl_logoff.recv() => {
                 debug!("Hit Ctrl+Logoff");
-                block_on(tx.send(EventTriggers::Stop))?;
+                tx.send(EventTriggers::Stop).await?;
             }
             //Some(_) = ctrl_
             () = shutdown.recv() => {
