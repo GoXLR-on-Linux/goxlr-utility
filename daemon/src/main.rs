@@ -7,7 +7,7 @@ use anyhow::{bail, Context, Result};
 use clap::Parser;
 use goxlr_ipc::HttpSettings;
 use json_patch::Patch;
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 use simplelog::{ColorChoice, CombinedLogger, ConfigBuilder, TermLogger, TerminalMode};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -115,11 +115,13 @@ async fn main() -> Result<()> {
 
     let mut bind_address = String::from("localhost");
     if let Some(address) = args.http_bind_address {
+        debug!("Command Line Override, binding to: {}", address);
         bind_address = address;
     } else if settings.get_allow_network_access().await {
         bind_address = String::from("0.0.0.0");
     }
 
+    debug!("HTTP Bind Address: {}", bind_address);
     let http_settings = HttpSettings {
         enabled: !args.http_disable,
         bind_address,

@@ -66,6 +66,10 @@ impl SettingsHandle {
             settings.tts_enabled = Some(false);
         }
 
+        if settings.allow_network_access.is_none() {
+            settings.allow_network_access = Some(false);
+        }
+
         let handle = SettingsHandle {
             path,
             settings: Arc::new(RwLock::new(settings)),
