@@ -879,6 +879,24 @@ impl<'a> Device<'a> {
         };
     }
 
+    async fn stop_all_samples(&mut self) -> Result<()> {
+        if let Some(audio) = &mut self.audio_handler {
+            for bank in SampleBank::iter() {
+                for button in SampleButtons::iter() {
+                    if audio.is_sample_playing(bank, button) {
+                        audio.stop_playback(bank, button, true).await?;
+                        self.profile.set_sample_button_state(button, false)?;
+                    }
+                    if audio.sample_recording(bank, button) {
+                        audio.stop_record(bank, button)?;
+                        self.profile.set_sample_button_blink(button, false)?;
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
     async fn handle_sample_clear(&mut self) -> Result<()> {
         if let Some(audio) = &self.audio_handler {
             let state = self.profile.is_sample_clear_active();
@@ -2044,6 +2062,7 @@ impl<'a> Device<'a> {
 
             // Profiles
             GoXLRCommand::NewProfile(profile_name) => {
+                self.stop_all_samples().await?;
                 let profile_directory = self.settings.get_profile_directory().await;
 
                 // Do a new file verification check..
@@ -2064,9 +2083,11 @@ impl<'a> Device<'a> {
                 self.settings.save().await;
             }
             GoXLRCommand::LoadProfile(profile_name, save_change) => {
-                let profile_directory = self.settings.get_profile_directory().await;
+                self.stop_all_samples().await?;
 
+                let profile_directory = self.settings.get_profile_directory().await;
                 self.profile = ProfileAdapter::from_named(profile_name, &profile_directory)?;
+
                 self.apply_profile().await?;
                 if save_change {
                     self.settings
@@ -2089,6 +2110,7 @@ impl<'a> Device<'a> {
                 self.profile.save(&profile_directory, true)?;
             }
             GoXLRCommand::SaveProfileAs(profile_name) => {
+                self.stop_all_samples().await?;
                 let profile_directory = self.settings.get_profile_directory().await;
 
                 // Do a new file verification check..
