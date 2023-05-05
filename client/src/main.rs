@@ -418,7 +418,7 @@ async fn main() -> Result<()> {
                             client
                                 .command(
                                     &serial,
-                                    GoXLRCommand::LoadProfile(profile_name.to_string()),
+                                    GoXLRCommand::LoadProfile(profile_name.to_string(), true),
                                 )
                                 .await
                                 .context("Unable to Load Profile")?;
@@ -462,7 +462,7 @@ async fn main() -> Result<()> {
                             client
                                 .command(
                                     &serial,
-                                    GoXLRCommand::LoadMicProfile(profile_name.to_string()),
+                                    GoXLRCommand::LoadMicProfile(profile_name.to_string(), true),
                                 )
                                 .await
                                 .context("Unable to Load Microphone Profile")?;

@@ -73,20 +73,19 @@ impl MicProfileAdapter {
         can_create_new_file(path)
     }
 
-    pub fn write_profile(&mut self, name: String, directory: &Path, overwrite: bool) -> Result<()> {
+    pub fn save_as(&mut self, name: String, directory: &Path, overwrite: bool) -> Result<()> {
+        self.name = name;
+        self.save(directory, overwrite)
+    }
+
+    pub fn save(&mut self, directory: &Path, overwrite: bool) -> Result<()> {
+        let name = &self.name;
         let path = directory.join(format!("{name}.goxlrMicProfile"));
         if !overwrite && path.is_file() {
             return Err(anyhow!("Profile exists, will not overwrite"));
         }
 
         self.profile.save(path)?;
-
-        // Keep our names in sync (in case it was changed)
-        if name != self.name() {
-            debug!("Changing Profile Name: {} -> {}", self.name(), name);
-            self.name = name;
-        }
-
         Ok(())
     }
 

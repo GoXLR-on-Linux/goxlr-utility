@@ -2055,7 +2055,7 @@ impl<'a> Device<'a> {
 
                 // Save the profile under a new name (although, don't overwrite if exists!)
                 self.profile
-                    .write_profile(profile_name.clone(), &profile_directory, false)?;
+                    .save_as(profile_name.clone(), &profile_directory, false)?;
 
                 // Save the profile in the settings
                 self.settings
@@ -2063,15 +2063,17 @@ impl<'a> Device<'a> {
                     .await;
                 self.settings.save().await;
             }
-            GoXLRCommand::LoadProfile(profile_name) => {
+            GoXLRCommand::LoadProfile(profile_name, save_change) => {
                 let profile_directory = self.settings.get_profile_directory().await;
 
                 self.profile = ProfileAdapter::from_named(profile_name, &profile_directory)?;
                 self.apply_profile().await?;
-                self.settings
-                    .set_device_profile_name(self.serial(), self.profile.name())
-                    .await;
-                self.settings.save().await;
+                if save_change {
+                    self.settings
+                        .set_device_profile_name(self.serial(), self.profile.name())
+                        .await;
+                    self.settings.save().await;
+                }
             }
             GoXLRCommand::LoadProfileColours(profile_name) => {
                 debug!("Loading Colours For Profile: {}", profile_name);
@@ -2084,12 +2086,7 @@ impl<'a> Device<'a> {
             }
             GoXLRCommand::SaveProfile() => {
                 let profile_directory = self.settings.get_profile_directory().await;
-                let profile_name = self.settings.get_device_profile_name(self.serial()).await;
-
-                if let Some(profile_name) = profile_name {
-                    self.profile
-                        .write_profile(profile_name, &profile_directory, true)?;
-                }
+                self.profile.save(&profile_directory, true)?;
             }
             GoXLRCommand::SaveProfileAs(profile_name) => {
                 let profile_directory = self.settings.get_profile_directory().await;
@@ -2098,7 +2095,7 @@ impl<'a> Device<'a> {
                 ProfileAdapter::can_create_new_file(profile_name.clone(), &profile_directory)?;
 
                 self.profile
-                    .write_profile(profile_name.clone(), &profile_directory, false)?;
+                    .save_as(profile_name.clone(), &profile_directory, false)?;
 
                 // Save the new name in the settings
                 self.settings
@@ -2123,8 +2120,7 @@ impl<'a> Device<'a> {
 
                 // As above, load the default profile, then save as a new profile.
                 self.mic_profile = MicProfileAdapter::default();
-
-                self.mic_profile.write_profile(
+                self.mic_profile.save_as(
                     mic_profile_name.clone(),
                     &mic_profile_directory,
                     false,
@@ -2137,35 +2133,29 @@ impl<'a> Device<'a> {
 
                 self.settings.save().await;
             }
-            GoXLRCommand::LoadMicProfile(mic_profile_name) => {
+            GoXLRCommand::LoadMicProfile(mic_profile_name, save_change) => {
                 let mic_profile_directory = self.settings.get_mic_profile_directory().await;
                 self.mic_profile =
                     MicProfileAdapter::from_named(mic_profile_name, &mic_profile_directory)?;
                 self.apply_mic_profile().await?;
-                self.settings
-                    .set_device_mic_profile_name(self.serial(), self.mic_profile.name())
-                    .await;
-                self.settings.save().await;
+
+                if save_change {
+                    self.settings
+                        .set_device_mic_profile_name(self.serial(), self.mic_profile.name())
+                        .await;
+                    self.settings.save().await;
+                }
             }
             GoXLRCommand::SaveMicProfile() => {
                 let mic_profile_directory = self.settings.get_mic_profile_directory().await;
-                let mic_profile_name = self
-                    .settings
-                    .get_device_mic_profile_name(self.serial())
-                    .await;
-
-                if let Some(profile_name) = mic_profile_name {
-                    self.mic_profile
-                        .write_profile(profile_name, &mic_profile_directory, true)?;
-                }
+                self.mic_profile.save(&mic_profile_directory, true)?;
             }
             GoXLRCommand::SaveMicProfileAs(profile_name) => {
                 let profile_directory = self.settings.get_mic_profile_directory().await;
-
                 MicProfileAdapter::can_create_new_file(profile_name.clone(), &profile_directory)?;
 
                 self.mic_profile
-                    .write_profile(profile_name.clone(), &profile_directory, false)?;
+                    .save_as(profile_name.clone(), &profile_directory, false)?;
 
                 // Save the new name in the settings
                 self.settings

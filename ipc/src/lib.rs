@@ -204,14 +204,14 @@ pub enum GoXLRCommand {
 
     // Profile Handling..
     NewProfile(String),
-    LoadProfile(String),
+    LoadProfile(String, bool),
     LoadProfileColours(String),
     SaveProfile(),
     SaveProfileAs(String),
     DeleteProfile(String),
 
     NewMicProfile(String),
-    LoadMicProfile(String),
+    LoadMicProfile(String, bool),
     SaveMicProfile(),
     SaveMicProfileAs(String),
     DeleteMicProfile(String),
