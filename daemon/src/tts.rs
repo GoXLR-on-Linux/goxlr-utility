@@ -98,4 +98,12 @@ impl Tts {
     pub fn speak(&self, _: String, _: bool) -> Result<()> {
         Ok(())
     }
+
+    pub fn set_rate(&mut self, _rate: f32) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn max_rate(&self) -> f32 {
+        0.
+    }
 }
