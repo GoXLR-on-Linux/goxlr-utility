@@ -1092,6 +1092,11 @@ impl ProfileAdapter {
         Ok(())
     }
 
+    pub fn get_effect_name(&mut self, preset: EffectBankPresets) -> String {
+        let preset = standard_to_profile_preset(preset);
+        self.profile.settings().effects(preset).name().to_string()
+    }
+
     pub fn set_megaphone(&mut self, enabled: bool) -> Result<()> {
         let current = self.profile.settings().context().selected_effects();
 

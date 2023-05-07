@@ -1078,7 +1078,8 @@ impl<'a> Device<'a> {
 
     async fn load_effect_bank(&mut self, preset: EffectBankPresets) -> Result<()> {
         // Send the TTS Message..
-        let tts_message = format!("Effects {}", preset as u8 + 1);
+        let preset_name = self.profile.get_effect_name(preset);
+        let tts_message = format!("Effects {}, {}", preset as u8 + 1, preset_name);
         let _ = self.global_events.send(TTSMessage(tts_message)).await;
 
         self.profile.load_effect_bank(preset)?;
