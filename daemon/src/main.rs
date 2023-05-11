@@ -161,7 +161,7 @@ async fn main() -> Result<()> {
 
     let (file_tx, file_rx) = mpsc::channel(20);
     let file_handle = tokio::spawn(spawn_file_notification_service(
-        file_paths,
+        file_paths.clone(),
         file_tx,
         shutdown.clone(),
     ));
@@ -207,6 +207,7 @@ async fn main() -> Result<()> {
             httpd_tx,
             broadcast_tx.clone(),
             http_settings.clone(),
+            file_paths.clone(),
         ));
         http_server = Some(httpd_rx.await?);
     } else {

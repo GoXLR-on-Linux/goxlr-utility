@@ -1,4 +1,6 @@
+use std::fs;
 use std::ops::DerefMut;
+use std::path::Component;
 
 use actix::{
     Actor, ActorContext, AsyncContext, ContextFutureSpawner, Handler, Message, StreamHandler,
@@ -14,12 +16,13 @@ use actix_web_actors::ws;
 use actix_web_actors::ws::CloseCode;
 use anyhow::{anyhow, Result};
 use include_dir::{include_dir, Dir};
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 use mime_guess::MimeGuess;
 use tokio::sync::broadcast::Sender as BroadcastSender;
 use tokio::sync::oneshot::Sender;
 use tokio::sync::Mutex;
 
+use crate::files::FilePaths;
 use crate::PatchEvent;
 use goxlr_ipc::{
     DaemonRequest, DaemonResponse, DaemonStatus, HttpSettings, WebsocketRequest, WebsocketResponse,
@@ -156,6 +159,7 @@ struct AppData {
     usb_tx: DeviceSender,
     broadcast_tx: BroadcastSender<PatchEvent>,
     http_settings: HttpSettings,
+    file_paths: FilePaths,
 }
 
 pub async fn spawn_http_server(
@@ -163,6 +167,7 @@ pub async fn spawn_http_server(
     handle_tx: Sender<ServerHandle>,
     broadcast_tx: tokio::sync::broadcast::Sender<PatchEvent>,
     settings: HttpSettings,
+    file_paths: FilePaths,
 ) -> Result<()> {
     let settings_clone = settings.clone();
 
@@ -181,9 +186,11 @@ pub async fn spawn_http_server(
                 broadcast_tx: broadcast_tx.clone(),
                 usb_tx: usb_tx.clone(),
                 http_settings: settings_clone.clone(),
+                file_paths: file_paths.clone(),
             })))
             .service(execute_command)
             .service(get_devices)
+            .service(get_sample)
             .service(websocket)
             .default_service(web::to(default))
     })
@@ -243,6 +250,31 @@ async fn get_devices(app_data: Data<Mutex<AppData>>) -> HttpResponse {
         return HttpResponse::Ok().json(&response);
     }
     HttpResponse::InternalServerError().finish()
+}
+
+#[get("/files/samples/{sample}")]
+async fn get_sample(path: web::Path<String>, app_data: Data<Mutex<AppData>>) -> HttpResponse {
+    // Get the Base Samples Path..
+    let mut guard = app_data.lock().await;
+    let sender = guard.deref_mut();
+    let sample_path = sender.file_paths.samples.clone();
+    drop(guard);
+
+    let sample = sample_path.join(path.into_inner());
+    debug!("Attempting to Find: {:?}", sample);
+    if sample.components().any(|part| part == Component::ParentDir) {
+        // The path provided attempts to leave the samples dir, reject it.
+        return HttpResponse::Forbidden().finish();
+    }
+
+    if !sample.exists() {
+        return HttpResponse::NotFound().finish();
+    }
+
+    let mime_type = MimeGuess::from_path(sample.clone()).first_or_octet_stream();
+    let mut builder = HttpResponse::Ok();
+    builder.insert_header(ContentType(mime_type));
+    builder.body(fs::read(sample).unwrap())
 }
 
 async fn default(req: HttpRequest) -> HttpResponse {
