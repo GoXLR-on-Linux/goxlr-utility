@@ -357,6 +357,7 @@ pub enum EncoderColourTargets {
 pub enum ButtonColourGroups {
     FaderMute,
     EffectSelector,
+    EffectTypes,
     SampleBankSelector,
     SamplerButtons,
 }
