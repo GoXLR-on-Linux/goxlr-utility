@@ -358,8 +358,6 @@ pub enum ButtonColourGroups {
     FaderMute,
     EffectSelector,
     EffectTypes,
-    SampleBankSelector,
-    SamplerButtons,
 }
 
 #[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq)]

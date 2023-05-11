@@ -2050,42 +2050,6 @@ impl ProfileAdapter {
                 )?;
                 self.set_button_colours(Button::EffectFx, colour_one, colour_two.as_ref())?;
             }
-            ButtonColourGroups::SampleBankSelector => {
-                self.set_button_colours(
-                    Button::SamplerSelectA,
-                    colour_one.clone(),
-                    colour_two.as_ref(),
-                )?;
-                self.set_button_colours(
-                    Button::SamplerSelectB,
-                    colour_one.clone(),
-                    colour_two.as_ref(),
-                )?;
-                self.set_button_colours(Button::SamplerSelectC, colour_one, colour_two.as_ref())?;
-            }
-            ButtonColourGroups::SamplerButtons => {
-                self.set_button_colours(
-                    Button::SamplerTopLeft,
-                    colour_one.clone(),
-                    colour_two.as_ref(),
-                )?;
-                self.set_button_colours(
-                    Button::SamplerTopRight,
-                    colour_one.clone(),
-                    colour_two.as_ref(),
-                )?;
-                self.set_button_colours(
-                    Button::SamplerBottomLeft,
-                    colour_one.clone(),
-                    colour_two.as_ref(),
-                )?;
-                self.set_button_colours(
-                    Button::SamplerBottomRight,
-                    colour_one.clone(),
-                    colour_two.as_ref(),
-                )?;
-                self.set_button_colours(Button::SamplerClear, colour_one, colour_two.as_ref())?;
-            }
         }
 
         Ok(())
@@ -2116,18 +2080,6 @@ impl ProfileAdapter {
                 self.set_button_off_style(Button::EffectRobot, off_style)?;
                 self.set_button_off_style(Button::EffectHardTune, off_style)?;
                 self.set_button_off_style(Button::EffectFx, off_style)?;
-            }
-            ButtonColourGroups::SampleBankSelector => {
-                self.set_button_off_style(Button::SamplerSelectA, off_style)?;
-                self.set_button_off_style(Button::SamplerSelectB, off_style)?;
-                self.set_button_off_style(Button::SamplerSelectC, off_style)?;
-            }
-            ButtonColourGroups::SamplerButtons => {
-                self.set_button_off_style(Button::SamplerTopLeft, off_style)?;
-                self.set_button_off_style(Button::SamplerTopRight, off_style)?;
-                self.set_button_off_style(Button::SamplerBottomLeft, off_style)?;
-                self.set_button_off_style(Button::SamplerBottomRight, off_style)?;
-                self.set_button_off_style(Button::SamplerClear, off_style)?;
             }
         }
         Ok(())
