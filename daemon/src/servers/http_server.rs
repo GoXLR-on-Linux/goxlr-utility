@@ -253,28 +253,34 @@ async fn get_devices(app_data: Data<Mutex<AppData>>) -> HttpResponse {
 }
 
 #[get("/files/samples/{sample}")]
-async fn get_sample(path: web::Path<String>, app_data: Data<Mutex<AppData>>) -> HttpResponse {
+async fn get_sample(sample: web::Path<String>, app_data: Data<Mutex<AppData>>) -> HttpResponse {
     // Get the Base Samples Path..
     let mut guard = app_data.lock().await;
     let sender = guard.deref_mut();
     let sample_path = sender.file_paths.samples.clone();
     drop(guard);
 
-    let sample = sample_path.join(path.into_inner());
-    debug!("Attempting to Find: {:?}", sample);
-    if sample.components().any(|part| part == Component::ParentDir) {
+    let sample = sample.into_inner();
+    let mut path = sample_path.clone();
+    if sample.starts_with("Recording_") {
+        path = sample_path.join("Recorded");
+    }
+
+    path = path.join(sample);
+    debug!("Attempting to Find: {:?}", path);
+    if path.components().any(|part| part == Component::ParentDir) {
         // The path provided attempts to leave the samples dir, reject it.
         return HttpResponse::Forbidden().finish();
     }
 
-    if !sample.exists() {
+    if !path.exists() {
         return HttpResponse::NotFound().finish();
     }
 
-    let mime_type = MimeGuess::from_path(sample.clone()).first_or_octet_stream();
+    let mime_type = MimeGuess::from_path(path.clone()).first_or_octet_stream();
     let mut builder = HttpResponse::Ok();
     builder.insert_header(ContentType(mime_type));
-    builder.body(fs::read(sample).unwrap())
+    builder.body(fs::read(path).unwrap())
 }
 
 async fn default(req: HttpRequest) -> HttpResponse {
