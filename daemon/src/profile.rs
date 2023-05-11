@@ -2048,6 +2048,7 @@ impl ProfileAdapter {
                     colour_one.clone(),
                     colour_two.as_ref(),
                 )?;
+                self.set_button_colours(Button::EffectFx, colour_one, colour_two.as_ref())?;
             }
             ButtonColourGroups::SampleBankSelector => {
                 self.set_button_colours(
@@ -2114,6 +2115,7 @@ impl ProfileAdapter {
                 self.set_button_off_style(Button::EffectMegaphone, off_style)?;
                 self.set_button_off_style(Button::EffectRobot, off_style)?;
                 self.set_button_off_style(Button::EffectHardTune, off_style)?;
+                self.set_button_off_style(Button::EffectFx, off_style)?;
             }
             ButtonColourGroups::SampleBankSelector => {
                 self.set_button_off_style(Button::SamplerSelectA, off_style)?;
