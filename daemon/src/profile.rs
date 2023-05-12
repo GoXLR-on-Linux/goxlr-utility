@@ -2087,18 +2087,36 @@ impl ProfileAdapter {
 
     pub fn set_global_colour(&mut self, colour: String) -> Result<()> {
         // A list of colour targets which require colour1 changed, rather than 0.
-        let colour1 = vec![
+        let fade_meters = vec![
             ColourTargets::FadeMeter1,
             ColourTargets::FadeMeter2,
             ColourTargets::FadeMeter3,
             ColourTargets::FadeMeter4,
         ];
 
+        // All targets except above have Colour0 changed.
         for target in ColourTargets::iter() {
-            let index = if colour1.contains(&target) { 1 } else { 0 };
+            let index = if fade_meters.contains(&target) { 1 } else { 0 };
             let map = get_profile_colour_map_mut(self.profile.settings_mut(), target);
             map.set_colour(index, Colour::fromrgb(colour.as_str())?)?;
         }
+
+        // FadeMeter's Colour0 goes to Black
+        for target in fade_meters {
+            let map = get_profile_colour_map_mut(self.profile.settings_mut(), target);
+            map.set_colour(0, Colour::fromrgb("000000")?)?;
+        }
+
+        // All buttons get changed to 'Off Style = Dimmed'
+        for button in Buttons::iter() {
+            let colour_target = map_button_to_colour_target(button);
+            let map = get_profile_colour_map_mut(self.profile.settings_mut(), colour_target);
+            map.set_off_style(ColourOffStyle::Dimmed)?;
+        }
+
+        // So things that the official app doesn't change, which we might want to in future:
+        // Encoder Dial Colour and Left Colour
+        // Sample Bank Empty Colour
 
         Ok(())
     }

@@ -1526,6 +1526,7 @@ impl<'a> Device<'a> {
             GoXLRCommand::SetGlobalColour(colour) => {
                 self.profile.set_global_colour(colour)?;
                 self.load_colour_map()?;
+                self.update_button_states()?;
             }
             GoXLRCommand::SetFaderDisplayStyle(fader, display) => {
                 self.profile.set_fader_display(fader, display)?;
