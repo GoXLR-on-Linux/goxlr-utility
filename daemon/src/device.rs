@@ -1523,6 +1523,10 @@ impl<'a> Device<'a> {
             }
 
             // Colouring..
+            GoXLRCommand::SetGlobalColour(colour) => {
+                self.profile.set_global_colour(colour)?;
+                self.load_colour_map()?;
+            }
             GoXLRCommand::SetFaderDisplayStyle(fader, display) => {
                 self.profile.set_fader_display(fader, display)?;
                 self.set_fader_display_from_profile(fader)?;

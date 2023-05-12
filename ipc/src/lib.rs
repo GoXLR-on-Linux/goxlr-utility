@@ -109,6 +109,8 @@ pub enum GoXLRCommand {
     SetDeeser(u8),
 
     // Colour Related Settings..
+    SetGlobalColour(String),
+
     SetFaderDisplayStyle(FaderName, FaderDisplayStyle),
     SetFaderColours(FaderName, String, String),
     SetAllFaderColours(String, String),

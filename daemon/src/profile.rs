@@ -2085,6 +2085,24 @@ impl ProfileAdapter {
         Ok(())
     }
 
+    pub fn set_global_colour(&mut self, colour: String) -> Result<()> {
+        // A list of colour targets which require colour1 changed, rather than 0.
+        let colour1 = vec![
+            ColourTargets::FadeMeter1,
+            ColourTargets::FadeMeter2,
+            ColourTargets::FadeMeter3,
+            ColourTargets::FadeMeter4,
+        ];
+
+        for target in ColourTargets::iter() {
+            let index = if colour1.contains(&target) { 1 } else { 0 };
+            let map = get_profile_colour_map_mut(self.profile.settings_mut(), target);
+            map.set_colour(index, Colour::fromrgb(colour.as_str())?)?;
+        }
+
+        Ok(())
+    }
+
     /** Generic Stuff **/
     pub fn get_button_colour_state(&self, button: Buttons) -> ButtonStates {
         let colour_map = self.get_button_colour_map(button);
