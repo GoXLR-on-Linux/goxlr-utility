@@ -344,7 +344,12 @@ impl Player {
 
         if let Some(ebu_r128) = ebu_r128 {
             // Calculate Gain..
-            let loudness = ebu_r128.loudness_global()?;
+            let mut loudness = ebu_r128.loudness_global()?;
+            if loudness == f64::NEG_INFINITY {
+                debug!("Unable to Obtain loudness in Mode I, trying M..");
+                loudness = ebu_r128.loudness_momentary()?;
+            }
+
             let target = -23.0;
 
             let gain_db = target - loudness;
