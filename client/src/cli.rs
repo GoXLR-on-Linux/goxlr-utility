@@ -448,6 +448,9 @@ pub enum CoughCommands {
 #[derive(Subcommand, Debug)]
 #[command(arg_required_else_help = true)]
 pub enum LightingCommands {
+    /// Sets the Global GoXLR Colour
+    Global { colour: String },
+
     /// Configure Lighting for a specific fader
     Fader {
         #[command(subcommand)]

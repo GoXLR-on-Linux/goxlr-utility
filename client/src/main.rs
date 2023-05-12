@@ -273,6 +273,11 @@ async fn main() -> Result<()> {
                 }
 
                 SubCommands::Lighting { command } => match command {
+                    LightingCommands::Global { colour } => {
+                        client
+                            .command(&serial, GoXLRCommand::SetGlobalColour(colour.to_string()))
+                            .await?;
+                    }
                     LightingCommands::Fader { command } => match command {
                         FaderLightingCommands::Display { fader, display } => {
                             client
