@@ -1,5 +1,5 @@
 # Roadmap
-*Last Updated for 0.9.0 Release*
+*Last Updated for 0.12.0 Release*
 
 ## Completed Features
 * Initialisation of Devices under Linux<sup>1</sup>
@@ -27,6 +27,7 @@
 * Full API for GoXLR Configuration
 * Ability to load *ONLY* lighting from a profile
 * Customisable 'Hold Time' on mute buttons
+* Customisable Actions on Exit (Save / Load profiles and lighting)
 
 ## Not Completed
 * Lighting Animations
