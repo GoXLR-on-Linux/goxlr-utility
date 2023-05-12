@@ -316,96 +316,131 @@ impl MicProfileAdapter {
     pub fn set_eq_freq(&mut self, freq: EqFrequencies, value: f32) -> Result<EffectKey> {
         match freq {
             EqFrequencies::Equalizer31Hz => {
-                if value > self.profile.equalizer().eq_63h_freq() {
-                    bail!(
-                        "31Hz Frequency should be below 63Hz Frequency: {}",
-                        self.profile.equalizer().eq_63h_freq()
-                    );
+                let max = self.profile.equalizer().eq_63h_freq();
+                if value > max {
+                    bail!("31Hz Frequency should be below 63Hz ({}) Frequency", max);
                 }
+
                 self.profile.equalizer_mut().set_eq_31h_freq(value)?;
                 Ok(EffectKey::Equalizer31HzFrequency)
             }
             EqFrequencies::Equalizer63Hz => {
-                if value > self.profile.equalizer().eq_125h_freq() {
+                let min = self.profile.equalizer().eq_31h_freq();
+                let max = self.profile.equalizer().eq_125h_freq();
+
+                if value > max || value < min {
                     bail!(
-                        "63Hz Frequency should be below 125Hz Frequency: {}",
-                        self.profile.equalizer().eq_125h_freq()
+                        "63Hz Frequency should be between 31Hz ({}) and 125Hz ({}) Frequency",
+                        min,
+                        max
                     );
                 }
                 self.profile.equalizer_mut().set_eq_63h_freq(value)?;
                 Ok(EffectKey::Equalizer63HzFrequency)
             }
             EqFrequencies::Equalizer125Hz => {
-                if value > self.profile.equalizer().eq_250h_freq() {
+                let min = self.profile.equalizer().eq_63h_freq();
+                let max = self.profile.equalizer().eq_250h_freq();
+
+                if value > max || value < min {
                     bail!(
-                        "125Hz Frequency should be below 250Hz Frequency: {}",
-                        self.profile.equalizer().eq_250h_freq()
+                        "125Hz Frequency should be between 63Hz ({}) and 250Hz ({}) Frequency",
+                        min,
+                        max
                     );
                 }
                 self.profile.equalizer_mut().set_eq_125h_freq(value)?;
                 Ok(EffectKey::Equalizer125HzFrequency)
             }
             EqFrequencies::Equalizer250Hz => {
-                if value > self.profile.equalizer().eq_500h_freq() {
+                let min = self.profile.equalizer().eq_125h_freq();
+                let max = self.profile.equalizer().eq_500h_freq();
+
+                if value > max || value < min {
                     bail!(
-                        "250Hz Frequency should be below 500Hz Frequency: {}",
-                        self.profile.equalizer().eq_500h_freq()
+                        "250Hz Frequency should be between 125Hz ({}) and 500Hz ({}) Frequency",
+                        min,
+                        max
                     );
                 }
                 self.profile.equalizer_mut().set_eq_250h_freq(value)?;
                 Ok(EffectKey::Equalizer250HzFrequency)
             }
             EqFrequencies::Equalizer500Hz => {
-                if value > self.profile.equalizer().eq_1k_freq() {
+                let min = self.profile.equalizer().eq_250h_freq();
+                let max = self.profile.equalizer().eq_1k_freq();
+
+                if value > max || value < min {
                     bail!(
-                        "500Hz Frequency should be below 1KHz Frequency: {}",
-                        self.profile.equalizer().eq_1k_freq()
+                        "500Hz Frequency should be between 250Hz ({}) and 1KHz ({}) Frequency",
+                        min,
+                        max
                     );
                 }
                 self.profile.equalizer_mut().set_eq_500h_freq(value)?;
                 Ok(EffectKey::Equalizer500HzFrequency)
             }
             EqFrequencies::Equalizer1KHz => {
-                if value > self.profile.equalizer().eq_2k_freq() {
+                let min = self.profile.equalizer().eq_500h_freq();
+                let max = self.profile.equalizer().eq_2k_freq();
+
+                if value > max || value < min {
                     bail!(
-                        "1KHz Frequency should be below 2KHz Frequency: {}",
-                        self.profile.equalizer().eq_2k_freq()
+                        "1KHz Frequency should be between 500Hz ({}) and 2KHz ({}) Frequency",
+                        min,
+                        max
                     );
                 }
                 self.profile.equalizer_mut().set_eq_1k_freq(value)?;
                 Ok(EffectKey::Equalizer1KHzFrequency)
             }
             EqFrequencies::Equalizer2KHz => {
-                if value > self.profile.equalizer().eq_4k_freq() {
+                let min = self.profile.equalizer().eq_1k_freq();
+                let max = self.profile.equalizer().eq_4k_freq();
+
+                if value > max || value < min {
                     bail!(
-                        "2KHz Frequency should be below 4KHz Frequency: {}",
-                        self.profile.equalizer().eq_4k_freq()
+                        "2KHz Frequency should be between 1KHz ({}) and 4KHz ({}) Frequency",
+                        min,
+                        max
                     );
                 }
                 self.profile.equalizer_mut().set_eq_2k_freq(value)?;
                 Ok(EffectKey::Equalizer2KHzFrequency)
             }
             EqFrequencies::Equalizer4KHz => {
-                if value > self.profile.equalizer().eq_8k_freq() {
+                let min = self.profile.equalizer().eq_2k_freq();
+                let max = self.profile.equalizer().eq_8k_freq();
+
+                if value > max || value < min {
                     bail!(
-                        "4KHz Frequency should be below 8KHz Frequency: {}",
-                        self.profile.equalizer().eq_8k_freq()
+                        "4KHz Frequency should be between 1KHz ({}) and 8KHz ({}) Frequency",
+                        min,
+                        max
                     );
                 }
                 self.profile.equalizer_mut().set_eq_4k_freq(value)?;
                 Ok(EffectKey::Equalizer4KHzFrequency)
             }
             EqFrequencies::Equalizer8KHz => {
-                if value > self.profile.equalizer().eq_16k_freq() {
+                let min = self.profile.equalizer().eq_4k_freq();
+                let max = self.profile.equalizer().eq_16k_freq();
+
+                if value > max || value < min {
                     bail!(
-                        "8KHz Frequency should be below 16KHz Frequency: {}",
-                        self.profile.equalizer().eq_16k_freq()
+                        "8KHz Frequency should be between 4Khz ({}) and 16KHz ({}) Frequency",
+                        min,
+                        max
                     );
                 }
                 self.profile.equalizer_mut().set_eq_8k_freq(value)?;
                 Ok(EffectKey::Equalizer8KHzFrequency)
             }
             EqFrequencies::Equalizer16KHz => {
+                let min = self.profile.equalizer().eq_8k_freq();
+                if value < min {
+                    bail!("16K Frequency should be above 8KHz ({}) Frequency", min);
+                }
                 self.profile.equalizer_mut().set_eq_16k_freq(value)?;
                 Ok(EffectKey::Equalizer16KHzFrequency)
             }
@@ -480,56 +515,75 @@ impl MicProfileAdapter {
     ) -> Result<MicrophoneParamKey> {
         match freq {
             MiniEqFrequencies::Equalizer90Hz => {
-                if value > self.profile.equalizer_mini().eq_250h_freq() {
-                    bail!(
-                        "90Hz Frequency should be below 250Hz Frequency: {}",
-                        self.profile.equalizer_mini().eq_250h_freq()
-                    );
+                let max = self.profile.equalizer_mini().eq_1k_freq();
+                if value > max {
+                    bail!("90Hz Frequency should be below 250Hz ({}) Frequency", max);
                 }
                 self.profile.equalizer_mini_mut().set_eq_90h_freq(value)?;
                 Ok(MicrophoneParamKey::Equalizer90HzFrequency)
             }
             MiniEqFrequencies::Equalizer250Hz => {
-                if value > self.profile.equalizer_mini().eq_500h_freq() {
+                let min = self.profile.equalizer_mini().eq_90h_freq();
+                let max = self.profile.equalizer_mini().eq_500h_freq();
+
+                if value > max || value < min {
                     bail!(
-                        "250Hz Frequency should be below 500Hz Frequency: {}",
-                        self.profile.equalizer_mini().eq_500h_freq()
+                        "250Hz Frequency should be between 90Hz ({}) and 500Hz ({}) Frequency",
+                        min,
+                        max
                     );
                 }
                 self.profile.equalizer_mini_mut().set_eq_250h_freq(value)?;
                 Ok(MicrophoneParamKey::Equalizer250HzFrequency)
             }
             MiniEqFrequencies::Equalizer500Hz => {
-                if value > self.profile.equalizer_mini().eq_1k_freq() {
+                let min = self.profile.equalizer_mini().eq_250h_freq();
+                let max = self.profile.equalizer_mini().eq_1k_freq();
+
+                if value > max || value < min {
                     bail!(
-                        "500Hz Frequency should be below 1KHz Frequency: {}",
-                        self.profile.equalizer_mini().eq_1k_freq()
+                        "500Hz Frequency should be between 250Hz ({}) and 1KHz ({}) Frequency",
+                        min,
+                        max
                     );
                 }
                 self.profile.equalizer_mini_mut().set_eq_500h_freq(value)?;
                 Ok(MicrophoneParamKey::Equalizer500HzFrequency)
             }
             MiniEqFrequencies::Equalizer1KHz => {
-                if value > self.profile.equalizer_mini().eq_3k_freq() {
+                let min = self.profile.equalizer_mini().eq_500h_freq();
+                let max = self.profile.equalizer_mini().eq_3k_freq();
+
+                if value > max || value < min {
                     bail!(
-                        "1KHz Frequency should be below 3KHz Frequency: {}",
-                        self.profile.equalizer_mini().eq_3k_freq()
+                        "1KHz Frequency should be between 500Hz ({}) and 3KHz ({}) Frequency",
+                        min,
+                        max
                     );
                 }
                 self.profile.equalizer_mini_mut().set_eq_1k_freq(value)?;
                 Ok(MicrophoneParamKey::Equalizer1KHzFrequency)
             }
             MiniEqFrequencies::Equalizer3KHz => {
-                if value > self.profile.equalizer_mini().eq_8k_freq() {
+                let min = self.profile.equalizer_mini().eq_1k_freq();
+                let max = self.profile.equalizer_mini().eq_8k_freq();
+
+                if value > max || value < min {
                     bail!(
-                        "3KHz Frequency should be below 8KHz Frequency: {}",
-                        self.profile.equalizer_mini().eq_8k_freq()
+                        "3KHz Frequency should be between 1KHz ({}) and 8KHz ({}) Frequency",
+                        min,
+                        max
                     );
                 }
                 self.profile.equalizer_mini_mut().set_eq_3k_freq(value)?;
                 Ok(MicrophoneParamKey::Equalizer3KHzFrequency)
             }
             MiniEqFrequencies::Equalizer8KHz => {
+                let min = self.profile.equalizer_mini().eq_250h_freq();
+                if value < min {
+                    bail!("8K Frequency should be above 3KHz ({}) Frequency", min,);
+                }
+
                 self.profile.equalizer_mini_mut().set_eq_8k_freq(value)?;
                 Ok(MicrophoneParamKey::Equalizer8KHzFrequency)
             }
