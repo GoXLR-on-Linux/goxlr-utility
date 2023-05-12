@@ -350,10 +350,14 @@ impl Player {
                 loudness = ebu_r128.loudness_momentary()?;
             }
 
-            let target = -23.0;
-
-            let gain_db = target - loudness;
-            self.normalized_gain = Some(f64::powf(10., gain_db / 20.));
+            if loudness == f64::NEG_INFINITY {
+                debug!("Unable to Obtain loudness in Mode M, Setting Default..");
+                self.normalized_gain = Some(1.0);
+            } else {
+                let target = -23.0;
+                let gain_db = target - loudness;
+                self.normalized_gain = Some(f64::powf(10., gain_db / 20.));
+            }
         }
         decoder.finalize();
 
