@@ -38,10 +38,10 @@ use goxlr_profile_loader::{Faders, Preset, SampleButtons};
 use goxlr_scribbles::get_scribble;
 use goxlr_types::{
     Button, ButtonColourGroups, ButtonColourOffStyle as BasicColourOffStyle, ChannelName,
-    EffectBankPresets, EncoderColourTargets, FaderDisplayStyle as BasicColourDisplay, FaderName,
-    InputDevice, MuteFunction as BasicMuteFunction, MuteState, OutputDevice, SamplePlayOrder,
-    SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets, SubMixChannelName,
-    VersionNumber,
+    EffectBankPresets, EncoderColourTargets, FaderDisplayStyle as BasicColourDisplay,
+    FaderDisplayStyle, FaderName, InputDevice, MuteFunction as BasicMuteFunction, MuteState,
+    OutputDevice, SamplePlayOrder, SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets,
+    SubMixChannelName, VersionNumber,
 };
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::colouring::ColourTargets;
@@ -2094,8 +2094,18 @@ impl ProfileAdapter {
             ColourTargets::FadeMeter4,
         ];
 
+        let encoders = vec![
+            ColourTargets::EchoEncoder,
+            ColourTargets::ReverbEncoder,
+            ColourTargets::GenderEncoder,
+            ColourTargets::PitchEncoder,
+        ];
+
         // All targets except above have Colour0 changed.
         for target in ColourTargets::iter() {
+            if encoders.contains(&target) {
+                continue;
+            }
             let index = if fade_meters.contains(&target) { 1 } else { 0 };
             let map = get_profile_colour_map_mut(self.profile.settings_mut(), target);
             map.set_colour(index, Colour::fromrgb(colour.as_str())?)?;
@@ -2105,6 +2115,15 @@ impl ProfileAdapter {
         for target in fade_meters {
             let map = get_profile_colour_map_mut(self.profile.settings_mut(), target);
             map.set_colour(0, Colour::fromrgb("000000")?)?;
+
+            // We remove any Gradient assigned, because gradient to black is weird..
+            let new_display = if map.is_fader_meter() {
+                FaderDisplayStyle::Meter
+            } else {
+                FaderDisplayStyle::TwoColour
+            };
+            debug!("Setting Fader Style to: {}", new_display);
+            map.set_fader_display(standard_to_profile_fader_display(new_display))?;
         }
 
         // All buttons get changed to 'Off Style = Dimmed'
@@ -2114,9 +2133,32 @@ impl ProfileAdapter {
             map.set_off_style(ColourOffStyle::Dimmed)?;
         }
 
-        // So things that the official app doesn't change, which we might want to in future:
-        // Encoder Dial Colour and Left Colour
-        // Sample Bank Empty Colour
+        // The official app doesn't do this, but here we're going to do slightly cleaner colouring
+        // of the encoder, and set their dial colours as well.
+        for target in encoders {
+            let map = get_profile_colour_map_mut(self.profile.settings_mut(), target);
+            map.set_colour(2, Colour::fromrgb(colour.as_str())?)?;
+
+            // The other two colours are dependent on the type of dial..
+            if target == ColourTargets::ReverbEncoder || target == ColourTargets::EchoEncoder {
+                map.set_colour(1, Colour::fromrgb(colour.as_str())?)?;
+                map.set_colour(0, Colour::fromrgb("000000")?)?;
+            } else {
+                map.set_colour(1, Colour::fromrgb(colour.as_str())?)?;
+                map.set_colour(0, Colour::fromrgb(colour.as_str())?)?;
+            }
+        }
+
+        // As above, the official app doesn't do this, which can leave the empty samples looking
+        // a little jank against the new global colour, so we'll set the empty colour to black.
+        for target in SamplerColourTargets::iter() {
+            let standard = standard_to_sample_colour(target);
+
+            let map = get_profile_colour_map_mut(self.profile.settings_mut(), standard);
+            map.set_colour(2, Colour::fromrgb("000000")?)?;
+
+            self.sync_sample_if_active(target)?;
+        }
 
         Ok(())
     }

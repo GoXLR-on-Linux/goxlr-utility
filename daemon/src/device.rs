@@ -1527,6 +1527,7 @@ impl<'a> Device<'a> {
                 self.profile.set_global_colour(colour)?;
                 self.load_colour_map()?;
                 self.update_button_states()?;
+                self.set_all_fader_display_from_profile()?;
             }
             GoXLRCommand::SetFaderDisplayStyle(fader, display) => {
                 self.profile.set_fader_display(fader, display)?;
@@ -2604,6 +2605,13 @@ impl<'a> Device<'a> {
                 .get_scribble_ipc(fader, self.hardware.device_type == DeviceType::Mini),
             mute_state: self.profile.get_ipc_mute_state(fader),
         }
+    }
+
+    fn set_all_fader_display_from_profile(&mut self) -> Result<()> {
+        for fader in FaderName::iter() {
+            self.set_fader_display_from_profile(fader)?;
+        }
+        Ok(())
     }
 
     fn set_fader_display_from_profile(&mut self, fader: FaderName) -> Result<()> {
