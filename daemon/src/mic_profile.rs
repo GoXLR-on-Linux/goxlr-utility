@@ -316,38 +316,92 @@ impl MicProfileAdapter {
     pub fn set_eq_freq(&mut self, freq: EqFrequencies, value: f32) -> Result<EffectKey> {
         match freq {
             EqFrequencies::Equalizer31Hz => {
+                if value > self.profile.equalizer().eq_63h_freq() {
+                    bail!(
+                        "31Hz Frequency should be below 63Hz Frequency: {}",
+                        self.profile.equalizer().eq_63h_freq()
+                    );
+                }
                 self.profile.equalizer_mut().set_eq_31h_freq(value)?;
                 Ok(EffectKey::Equalizer31HzFrequency)
             }
             EqFrequencies::Equalizer63Hz => {
+                if value > self.profile.equalizer().eq_125h_freq() {
+                    bail!(
+                        "63Hz Frequency should be below 125Hz Frequency: {}",
+                        self.profile.equalizer().eq_125h_freq()
+                    );
+                }
                 self.profile.equalizer_mut().set_eq_63h_freq(value)?;
                 Ok(EffectKey::Equalizer63HzFrequency)
             }
             EqFrequencies::Equalizer125Hz => {
+                if value > self.profile.equalizer().eq_250h_freq() {
+                    bail!(
+                        "125Hz Frequency should be below 250Hz Frequency: {}",
+                        self.profile.equalizer().eq_250h_freq()
+                    );
+                }
                 self.profile.equalizer_mut().set_eq_125h_freq(value)?;
                 Ok(EffectKey::Equalizer125HzFrequency)
             }
             EqFrequencies::Equalizer250Hz => {
+                if value > self.profile.equalizer().eq_500h_freq() {
+                    bail!(
+                        "250Hz Frequency should be below 500Hz Frequency: {}",
+                        self.profile.equalizer().eq_500h_freq()
+                    );
+                }
                 self.profile.equalizer_mut().set_eq_250h_freq(value)?;
                 Ok(EffectKey::Equalizer250HzFrequency)
             }
             EqFrequencies::Equalizer500Hz => {
+                if value > self.profile.equalizer().eq_1k_freq() {
+                    bail!(
+                        "500Hz Frequency should be below 1KHz Frequency: {}",
+                        self.profile.equalizer().eq_1k_freq()
+                    );
+                }
                 self.profile.equalizer_mut().set_eq_500h_freq(value)?;
                 Ok(EffectKey::Equalizer500HzFrequency)
             }
             EqFrequencies::Equalizer1KHz => {
+                if value > self.profile.equalizer().eq_2k_freq() {
+                    bail!(
+                        "1KHz Frequency should be below 2KHz Frequency: {}",
+                        self.profile.equalizer().eq_2k_freq()
+                    );
+                }
                 self.profile.equalizer_mut().set_eq_1k_freq(value)?;
                 Ok(EffectKey::Equalizer1KHzFrequency)
             }
             EqFrequencies::Equalizer2KHz => {
+                if value > self.profile.equalizer().eq_4k_freq() {
+                    bail!(
+                        "2KHz Frequency should be below 4KHz Frequency: {}",
+                        self.profile.equalizer().eq_4k_freq()
+                    );
+                }
                 self.profile.equalizer_mut().set_eq_2k_freq(value)?;
                 Ok(EffectKey::Equalizer2KHzFrequency)
             }
             EqFrequencies::Equalizer4KHz => {
+                if value > self.profile.equalizer().eq_8k_freq() {
+                    bail!(
+                        "4KHz Frequency should be below 8KHz Frequency: {}",
+                        self.profile.equalizer().eq_8k_freq()
+                    );
+                }
                 self.profile.equalizer_mut().set_eq_4k_freq(value)?;
                 Ok(EffectKey::Equalizer4KHzFrequency)
             }
             EqFrequencies::Equalizer8KHz => {
+                if value > self.profile.equalizer().eq_16k_freq() {
+                    bail!(
+                        "8KHz Frequency should be below 16KHz Frequency: {}",
+                        self.profile.equalizer().eq_16k_freq()
+                    );
+                }
                 self.profile.equalizer_mut().set_eq_8k_freq(value)?;
                 Ok(EffectKey::Equalizer8KHzFrequency)
             }
@@ -426,22 +480,52 @@ impl MicProfileAdapter {
     ) -> Result<MicrophoneParamKey> {
         match freq {
             MiniEqFrequencies::Equalizer90Hz => {
+                if value > self.profile.equalizer_mini().eq_250h_freq() {
+                    bail!(
+                        "90Hz Frequency should be below 250Hz Frequency: {}",
+                        self.profile.equalizer_mini().eq_250h_freq()
+                    );
+                }
                 self.profile.equalizer_mini_mut().set_eq_90h_freq(value)?;
                 Ok(MicrophoneParamKey::Equalizer90HzFrequency)
             }
             MiniEqFrequencies::Equalizer250Hz => {
+                if value > self.profile.equalizer_mini().eq_500h_freq() {
+                    bail!(
+                        "250Hz Frequency should be below 500Hz Frequency: {}",
+                        self.profile.equalizer_mini().eq_500h_freq()
+                    );
+                }
                 self.profile.equalizer_mini_mut().set_eq_250h_freq(value)?;
                 Ok(MicrophoneParamKey::Equalizer250HzFrequency)
             }
             MiniEqFrequencies::Equalizer500Hz => {
+                if value > self.profile.equalizer_mini().eq_1k_freq() {
+                    bail!(
+                        "500Hz Frequency should be below 1KHz Frequency: {}",
+                        self.profile.equalizer_mini().eq_1k_freq()
+                    );
+                }
                 self.profile.equalizer_mini_mut().set_eq_500h_freq(value)?;
                 Ok(MicrophoneParamKey::Equalizer500HzFrequency)
             }
             MiniEqFrequencies::Equalizer1KHz => {
+                if value > self.profile.equalizer_mini().eq_3k_freq() {
+                    bail!(
+                        "1KHz Frequency should be below 3KHz Frequency: {}",
+                        self.profile.equalizer_mini().eq_3k_freq()
+                    );
+                }
                 self.profile.equalizer_mini_mut().set_eq_1k_freq(value)?;
                 Ok(MicrophoneParamKey::Equalizer1KHzFrequency)
             }
             MiniEqFrequencies::Equalizer3KHz => {
+                if value > self.profile.equalizer_mini().eq_8k_freq() {
+                    bail!(
+                        "3KHz Frequency should be below 8KHz Frequency: {}",
+                        self.profile.equalizer_mini().eq_8k_freq()
+                    );
+                }
                 self.profile.equalizer_mini_mut().set_eq_3k_freq(value)?;
                 Ok(MicrophoneParamKey::Equalizer3KHzFrequency)
             }
