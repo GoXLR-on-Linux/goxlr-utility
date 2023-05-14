@@ -2451,10 +2451,9 @@ impl<'a> Device<'a> {
                 && (muted_to_all || (muted_to_x && mute_function == MuteFunction::All))
             {
                 // In the case of the mic, if we're muted to all, we should drop routing to All other channels..
-                router[BasicOutputDevice::Headphones] = false;
-                router[BasicOutputDevice::ChatMic] = false;
-                router[BasicOutputDevice::LineOut] = false;
-                router[BasicOutputDevice::BroadcastMix] = false;
+                for output in BasicOutputDevice::iter() {
+                    router[output] = false;
+                }
             }
             return Ok(());
         }
