@@ -402,21 +402,27 @@ impl Track {
 
     pub fn set_start_position(&mut self, start: f32) -> Result<()> {
         if !(0. ..=100.).contains(&start) {
-            bail!("Value should be a percentage!");
+            bail!("Start Value should be a percentage! {}", start);
         }
-        if start < self.end_position {
+        if start > self.end_position {
             bail!("Start position should be before end");
         }
+        self.start_position = start;
         Ok(())
     }
 
     pub fn set_end_position(&mut self, end: f32) -> Result<()> {
         if !(0. ..=100.).contains(&end) {
-            bail!("Value should be a percentage!");
+            bail!("End Value should be a percentage! {}", end);
         }
         if end < self.start_position {
-            bail!("End Percentage should be after start");
+            bail!(
+                "End Percentage should be after start {} - {}",
+                self.start_position,
+                end
+            );
         }
+        self.end_position = end;
         Ok(())
     }
 }

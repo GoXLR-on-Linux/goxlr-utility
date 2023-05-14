@@ -752,7 +752,7 @@ impl ProfileAdapter {
                         name: track.track.clone(),
                         start_pct: track.start_position,
                         stop_pct: track.end_position,
-                    })
+                    });
                 }
 
                 let mut is_playing = false;
