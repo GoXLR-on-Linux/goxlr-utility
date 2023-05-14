@@ -180,6 +180,17 @@ impl ProfileAdapter {
             }
             router[profile_to_standard_input(input)] = outputs;
         }
+
+        // Before we return this, are we monitoring something else? If so, we need to replace the
+        // headphones row..
+        if self.get_monitoring_mix() != OutputDevice::Headphones {
+            let headphone_routing = self.profile.settings().submixes().monitor_tree().routing();
+            for input in InputDevice::iter() {
+                let input_channel = standard_input_to_profile(input);
+                router[input][OutputDevice::Headphones] = headphone_routing[input_channel] != 0;
+            }
+        }
+
         router
     }
 
@@ -215,6 +226,7 @@ impl ProfileAdapter {
                 .routing_mut();
 
             stored_routing[input_channel] = value;
+            debug!("{:?}", stored_routing);
             return;
         }
 
@@ -1938,7 +1950,6 @@ impl ProfileAdapter {
             .get_volume(submix_standard_to_profile_input(device))
     }
 
-    #[allow(unused)]
     pub fn is_channel_linked(&self, device: SubMixChannelName) -> bool {
         self.profile
             .settings()
