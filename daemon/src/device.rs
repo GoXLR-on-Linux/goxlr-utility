@@ -2476,6 +2476,12 @@ impl<'a> Device<'a> {
         debug!("Applying Routing to {:?}:", input);
         debug!("{:?}", router);
 
+        let monitor = self.profile.get_monitoring_mix();
+        if monitor != BasicOutputDevice::Headphones {
+            debug!("Syncing With Monitor Mix..");
+            router[BasicOutputDevice::Headphones] = router[monitor];
+        }
+
         self.apply_channel_routing(input, router)?;
 
         Ok(())
