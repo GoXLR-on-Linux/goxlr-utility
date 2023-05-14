@@ -995,10 +995,23 @@ impl ProfileAdapter {
         // Now handle the outputs..
         let mut outputs: EnumMap<OutputDevice, goxlr_types::Mix> = Default::default();
         for output in OutputDevice::iter() {
-            let profile_output = standard_output_to_profile(output);
-            let assignment = profile_to_standard_mix(routing.get_assignment(profile_output));
-
-            outputs[output] = assignment;
+            if output == OutputDevice::Headphones
+                && self.get_monitoring_mix() != OutputDevice::Headphones
+            {
+                // If we're monitoring something else, we need to return the 'original' value for
+                // the headphones, not it's current value..
+                let mix = self
+                    .profile
+                    .settings()
+                    .submixes()
+                    .monitor_tree()
+                    .headphone_mix();
+                outputs[output] = profile_to_standard_mix(mix);
+            } else {
+                let profile_output = standard_output_to_profile(output);
+                let assignment = profile_to_standard_mix(routing.get_assignment(profile_output));
+                outputs[output] = assignment;
+            }
         }
 
         Some(Submixes { inputs, outputs })
