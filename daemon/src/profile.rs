@@ -2221,11 +2221,7 @@ impl ProfileAdapter {
             for input in InputDevice::iter() {
                 self.set_routing(input, OutputDevice::Headphones, router[input][device]);
             }
-
-            return Ok(());
-        }
-
-        if device == OutputDevice::Headphones && output != OutputChannels::Headphones {
+        } else if device == OutputDevice::Headphones && output != OutputChannels::Headphones {
             // We're going from Different -> Headphones, so restore the original routing and mix.
             let original_map = self.profile.settings().submixes().monitor_tree().routing();
             for input in InputDevice::iter() {
@@ -2249,16 +2245,22 @@ impl ProfileAdapter {
                 .settings_mut()
                 .mix_routing_mut()
                 .set_assignment(OutputChannels::Headphones, mix)?;
-
-            return Ok(());
+        } else if device != OutputDevice::Headphones && output != OutputChannels::Headphones {
+            // If we get here, we're simply moving between two monitors not involving headphones,
+            // so we just update the routing table.
+            for input in InputDevice::iter() {
+                let router = self.get_router(input);
+                self.set_routing(input, OutputDevice::Headphones, router[device]);
+            }
         }
 
-        // If we get here, we're simply moving between two monitors not involving headphones,
-        // so we just update the routing table.
-        for input in InputDevice::iter() {
-            let router = self.get_router(input);
-            self.set_routing(input, OutputDevice::Headphones, router[device]);
-        }
+        // Once all that's done, store the new monitored device.
+        let new_output = standard_output_to_profile(device);
+        self.profile
+            .settings_mut()
+            .submixes_mut()
+            .monitor_tree_mut()
+            .set_monitored_output(new_output);
 
         Ok(())
     }
