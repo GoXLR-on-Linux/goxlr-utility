@@ -120,6 +120,7 @@ pub struct MicSettings {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Levels {
     pub submix_supported: bool,
+    pub output_monitor: OutputDevice,
     pub volumes: EnumMap<ChannelName, u8>,
     pub submix: Option<Submixes>,
     pub bleep: i8,

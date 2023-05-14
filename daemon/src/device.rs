@@ -182,6 +182,7 @@ impl<'a> Device<'a> {
             cough_button: self.profile.get_cough_status(),
             levels: Levels {
                 submix_supported: self.device_supports_submixes(),
+                output_monitor: self.profile.get_monitoring_mix(),
                 volumes,
                 submix: self.profile.get_submixes_ipc(submix_supported),
                 bleep: self.mic_profile.bleep_level(),
