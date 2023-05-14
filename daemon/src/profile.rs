@@ -2183,6 +2183,7 @@ impl ProfileAdapter {
             .monitor_tree()
             .monitored_output();
 
+        let profile_device = standard_output_to_profile(device);
         if device != OutputDevice::Headphones && output == OutputChannels::Headphones {
             // We're moving from Headphones to a different output for monitoring.
             // We need to store the existing routing for the headphones into the monitor tree.
@@ -2215,6 +2216,18 @@ impl ProfileAdapter {
                 .submixes_mut()
                 .monitor_tree_mut()
                 .set_headphone_mix(mix);
+
+            // Apply the monitor mix of the target to the headphones..
+            let new_mix = self
+                .profile
+                .settings()
+                .mix_routing()
+                .get_assignment(profile_device);
+
+            self.profile
+                .settings_mut()
+                .mix_routing_mut()
+                .set_assignment(OutputChannels::Headphones, new_mix)?;
 
             // Ok, now we need to replace the headphone routing config in the profile to match
             // the monitored channel..
@@ -2255,12 +2268,11 @@ impl ProfileAdapter {
         }
 
         // Once all that's done, store the new monitored device.
-        let new_output = standard_output_to_profile(device);
         self.profile
             .settings_mut()
             .submixes_mut()
             .monitor_tree_mut()
-            .set_monitored_output(new_output);
+            .set_monitored_output(profile_device);
 
         Ok(())
     }
