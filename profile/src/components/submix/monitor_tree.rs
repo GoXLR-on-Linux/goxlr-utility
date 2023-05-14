@@ -121,6 +121,9 @@ impl MonitorTree {
     pub fn routing(&self) -> EnumMap<InputChannels, u16> {
         self.routing
     }
+    pub fn routing_mut(&mut self) -> &mut EnumMap<InputChannels, u16> {
+        &mut self.routing
+    }
 
     pub fn set_monitored_output(&mut self, monitored_output: OutputChannels) {
         self.monitored_output = monitored_output;
