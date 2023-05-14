@@ -1,4 +1,5 @@
 use crate::components::mixer::{InputChannels, OutputChannels};
+use crate::components::submix::mix_routing_tree::Mix;
 use crate::profile::Attribute;
 use anyhow::Result;
 use enum_map::EnumMap;
@@ -11,7 +12,7 @@ use strum::{EnumProperty, IntoEnumIterator};
 #[derive(Debug)]
 pub struct MonitorTree {
     monitored_output: OutputChannels,
-    headphone_mix: u8,
+    headphone_mix: Mix,
     routing: EnumMap<InputChannels, u16>,
 }
 
@@ -28,13 +29,12 @@ get their values updated to 'clone' the monitored channel.
 
 When the monitored output is returned to headphones, the stored settings are reloaded back to
 their originals, and this struct isn't updated until the monitored output is changed again.
-
 */
 impl MonitorTree {
     pub fn new() -> Self {
         Self {
             monitored_output: OutputChannels::Headphones,
-            headphone_mix: 1,
+            headphone_mix: Mix::A,
             routing: MonitorTree::get_default_routing(),
         }
     }
@@ -50,16 +50,16 @@ impl MonitorTree {
     pub fn parse_monitor_tree(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         for attr in attributes {
             if attr.name == "monitoredOutput" {
-                let output = OutputChannels::iter().nth(attr.value.parse()?);
-                self.monitored_output = match output {
-                    None => OutputChannels::Headphones,
-                    Some(monitored) => monitored,
-                };
+                if let Some(output) = OutputChannels::iter().nth(attr.value.parse()?) {
+                    self.monitored_output = output;
+                }
                 continue;
             }
 
             if attr.name == "headphoneMix" {
-                self.headphone_mix = attr.value.parse()?;
+                if let Some(mix) = Mix::iter().nth(attr.value.parse::<usize>()? - 1) {
+                    self.headphone_mix = mix;
+                }
                 continue;
             }
 
@@ -94,7 +94,11 @@ impl MonitorTree {
             format!("{}", self.monitored_output as usize),
         );
 
-        attributes.insert(String::from("headphoneMix"), self.headphone_mix.to_string());
+        attributes.insert(
+            String::from("headphoneMix"),
+            format!("{}", self.headphone_mix as usize + 1),
+        );
+
         for channel in InputChannels::iter() {
             let key = format!("{}ToHP", channel.get_str("Name").unwrap());
             attributes.insert(key, self.routing[channel].to_string());
@@ -111,7 +115,7 @@ impl MonitorTree {
     pub fn monitored_output(&self) -> OutputChannels {
         self.monitored_output
     }
-    pub fn headphone_mix(&self) -> u8 {
+    pub fn headphone_mix(&self) -> Mix {
         self.headphone_mix
     }
     pub fn routing(&self) -> EnumMap<InputChannels, u16> {
@@ -121,7 +125,7 @@ impl MonitorTree {
     pub fn set_monitored_output(&mut self, monitored_output: OutputChannels) {
         self.monitored_output = monitored_output;
     }
-    pub fn set_headphone_mix(&mut self, headphone_mix: u8) {
+    pub fn set_headphone_mix(&mut self, headphone_mix: Mix) {
         self.headphone_mix = headphone_mix;
     }
     pub fn set_routing(&mut self, routing: EnumMap<InputChannels, u16>) {
