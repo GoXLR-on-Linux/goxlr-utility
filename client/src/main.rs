@@ -6,7 +6,7 @@ use crate::cli::{
     Echo, EffectsCommands, EqualiserCommands, EqualiserMiniCommands, FaderCommands,
     FaderLightingCommands, FadersAllLightingCommands, Gender, HardTune, LightingCommands,
     Megaphone, MicrophoneCommands, NoiseGateCommands, Pitch, ProfileAction, ProfileType, Reverb,
-    Robot, SamplerCommands, Scribbles, SubCommands,
+    Robot, SamplerCommands, Scribbles, SubCommands, SubmixCommands,
 };
 use crate::microphone::apply_microphone_controls;
 use anyhow::{anyhow, Context, Result};
@@ -908,6 +908,40 @@ async fn main() -> Result<()> {
                             )
                             .await
                             .context("Unable to set Stop Percent")?;
+                    }
+                },
+                SubCommands::Submix { command } => match command {
+                    SubmixCommands::Enabled { enabled } => {
+                        client
+                            .command(&serial, GoXLRCommand::SetSubMixEnabled(*enabled))
+                            .await?;
+                    }
+                    SubmixCommands::Volume {
+                        channel,
+                        volume_percent,
+                    } => {
+                        let value = (255 * *volume_percent as u16) / 100;
+                        client
+                            .command(
+                                &serial,
+                                GoXLRCommand::SetSubMixVolume(*channel, value as u8),
+                            )
+                            .await?;
+                    }
+                    SubmixCommands::Linked { channel, linked } => {
+                        client
+                            .command(&serial, GoXLRCommand::SetSubMixLinked(*channel, *linked))
+                            .await?;
+                    }
+                    SubmixCommands::OutputMix { device, mix } => {
+                        client
+                            .command(&serial, GoXLRCommand::SetSubMixOutputMix(*device, *mix))
+                            .await?;
+                    }
+                    SubmixCommands::MonitorMix { device } => {
+                        client
+                            .command(&serial, GoXLRCommand::SetMonitorMix(*device))
+                            .await?;
                     }
                 },
             }

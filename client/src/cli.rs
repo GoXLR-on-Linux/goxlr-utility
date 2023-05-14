@@ -4,7 +4,7 @@ use goxlr_types::{
     Button, ButtonColourGroups, ButtonColourOffStyle, ChannelName, CompressorAttackTime,
     CompressorRatio, CompressorReleaseTime, EchoStyle, EffectBankPresets, EncoderColourTargets,
     EqFrequencies, FaderDisplayStyle, FaderName, GateTimes, GenderStyle, HardTuneSource,
-    HardTuneStyle, InputDevice, MegaphoneStyle, MiniEqFrequencies, MuteFunction, MuteState,
+    HardTuneStyle, InputDevice, MegaphoneStyle, MiniEqFrequencies, Mix, MuteFunction, MuteState,
     OutputDevice, PitchStyle, ReverbStyle, RobotRange, RobotStyle, SampleBank, SampleButtons,
     SamplePlayOrder, SamplePlaybackMode, SimpleColourTargets,
 };
@@ -83,6 +83,11 @@ pub enum SubCommands {
         /// The new volume as a percentage [0 - 100]
         #[arg(value_parser=percent_value)]
         volume_percent: u8,
+    },
+
+    Submix {
+        #[command(subcommand)]
+        command: SubmixCommands,
     },
 
     /// Configure the Bleep Button
@@ -254,6 +259,45 @@ pub enum MicrophoneCommands {
     DeEss {
         #[arg(value_parser=percent_value)]
         level: u8,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+#[command(arg_required_else_help = true)]
+pub enum SubmixCommands {
+    Enabled {
+        #[arg(value_parser, action = ArgAction::Set)]
+        enabled: bool,
+    },
+
+    Volume {
+        #[arg(value_enum)]
+        channel: ChannelName,
+
+        /// The new volume as a percentage [0 - 100]
+        #[arg(value_parser=percent_value)]
+        volume_percent: u8,
+    },
+
+    Linked {
+        #[arg(value_enum)]
+        channel: ChannelName,
+
+        #[arg(value_parser, action = ArgAction::Set)]
+        linked: bool,
+    },
+
+    OutputMix {
+        #[arg(value_enum)]
+        device: OutputDevice,
+
+        #[arg(value_enum)]
+        mix: Mix,
+    },
+
+    MonitorMix {
+        #[arg(value_enum)]
+        device: OutputDevice,
     },
 }
 
