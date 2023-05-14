@@ -21,7 +21,7 @@ use crate::components::fader::Fader;
 use crate::components::gender::GenderEncoderBase;
 use crate::components::hardtune::HardtuneEffectBase;
 use crate::components::megaphone::MegaphoneEffectBase;
-use crate::components::mixer::Mixers;
+use crate::components::mixer::{InputChannels, Mixers, OutputChannels};
 use crate::components::mute::MuteButton;
 use crate::components::mute_chat::MuteChat;
 use crate::components::pitch::PitchEncoderBase;
@@ -32,7 +32,7 @@ use crate::components::root::RootElement;
 use crate::components::sample::SampleBase;
 use crate::components::scribble::Scribble;
 use crate::components::simple::{SimpleElement, SimpleElements};
-use crate::components::submix::mix_routing_tree::MixRoutingTree;
+use crate::components::submix::mix_routing_tree::{Mix, MixRoutingTree};
 use crate::components::submix::submixer::SubMixer;
 use crate::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
 use crate::{Faders, Preset, SampleButtons};
@@ -81,7 +81,7 @@ impl Profile {
     }
 
     // Ok, this is better.
-    pub fn save(&self, path: impl AsRef<Path>) -> Result<()> {
+    pub fn save(&mut self, path: impl AsRef<Path>) -> Result<()> {
         debug!("Saving File: {}", &path.as_ref().to_string_lossy());
 
         // Create a new ZipFile at the requested location
@@ -578,14 +578,35 @@ impl ProfileSettings {
         Ok(())
     }
 
-    pub fn write<P: AsRef<Path>>(&self, path: P) -> Result<()> {
+    pub fn write<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
         let out_file = File::create(path)?;
         self.write_to(out_file)
     }
 
-    pub fn write_to<W: Write>(&self, sink: W) -> Result<()> {
+    pub fn write_to<W: Write>(&mut self, sink: W) -> Result<()> {
         let mut writer = Writer::new_with_indent(sink, u8::try_from('\t')?, 1);
         writer.write_event(Event::Decl(BytesDecl::new("1.0", Some("utf-8"), None)))?;
+
+        // For compatibility with the 'Release' version of the official app, we need to adjust
+        // the config and reset channel monitoring back to the headphones (along with associated
+        // routing), so we'll pull some data out, make some changes, then reload the settings once
+        // writing is complete.
+        let monitored_output = self.submix_tree.monitor_tree().monitored_output();
+        let routing = self.mixer.mixer_table_mut();
+        let headphone_routing = self.submix_tree.monitor_tree_mut().routing();
+        let headphone_mix = self.submix_tree.monitor_tree_mut().headphone_mix();
+
+        if monitored_output != OutputChannels::Headphones {
+            for input in InputChannels::iter() {
+                routing[input][OutputChannels::Headphones] = headphone_routing[input];
+            }
+            self.submix_tree
+                .monitor_tree_mut()
+                .set_monitored_output(OutputChannels::Headphones);
+            self.submix_tree
+                .monitor_tree_mut()
+                .set_headphone_mix(Mix::A);
+        }
 
         self.root.write_initial(&mut writer)?;
         self.browser.write_browser(&mut writer)?;
@@ -648,6 +669,20 @@ impl ProfileSettings {
 
         // Finalise the XML..
         self.root.write_final(&mut writer)?;
+
+        let routing = self.mixer.mixer_table_mut();
+        // Everything's written, restore the original monitor settings..
+        if monitored_output != OutputChannels::Headphones {
+            for input in InputChannels::iter() {
+                routing[input][OutputChannels::Headphones] = routing[input][monitored_output];
+            }
+            self.submix_tree
+                .monitor_tree_mut()
+                .set_monitored_output(monitored_output);
+            self.submix_tree
+                .monitor_tree_mut()
+                .set_headphone_mix(headphone_mix);
+        }
 
         Ok(())
     }
