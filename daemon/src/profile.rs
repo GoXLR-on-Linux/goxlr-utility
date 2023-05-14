@@ -1890,7 +1890,7 @@ impl ProfileAdapter {
             .get_stack_mut(standard_to_profile_sample_bank(bank))
             .get_track_by_index_mut(index)?;
 
-        track.start_position = percent;
+        track.set_start_position(percent)?;
         Ok(())
     }
 
@@ -1908,7 +1908,7 @@ impl ProfileAdapter {
             .get_stack_mut(standard_to_profile_sample_bank(bank))
             .get_track_by_index_mut(index)?;
 
-        track.end_position = percent;
+        track.set_end_position(percent)?;
         Ok(())
     }
 

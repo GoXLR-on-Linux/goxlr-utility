@@ -399,6 +399,26 @@ impl Track {
     pub fn normalized_gain(&self) -> f64 {
         self.normalized_gain
     }
+
+    pub fn set_start_position(&mut self, start: f32) -> Result<()> {
+        if !(0. ..=100.).contains(&start) {
+            bail!("Value should be a percentage!");
+        }
+        if start < self.end_position {
+            bail!("Start position should be before end");
+        }
+        Ok(())
+    }
+
+    pub fn set_end_position(&mut self, end: f32) -> Result<()> {
+        if !(0. ..=100.).contains(&end) {
+            bail!("Value should be a percentage!");
+        }
+        if end < self.start_position {
+            bail!("End Percentage should be after start");
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Copy, Clone, Enum, EnumProperty)]
