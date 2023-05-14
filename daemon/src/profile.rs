@@ -2163,6 +2163,106 @@ impl ProfileAdapter {
         Ok(())
     }
 
+    /** Mix Monitoring **/
+    pub fn get_monitoring_mix(&self) -> OutputDevice {
+        profile_to_standard_output(
+            self.profile
+                .settings()
+                .submixes()
+                .monitor_tree()
+                .monitored_output(),
+        )
+    }
+
+    pub fn set_monitor_mix(&mut self, device: OutputDevice) -> Result<()> {
+        // Ok, this is convoluted, but firstly, what are we mixing to?
+        let output = self
+            .profile
+            .settings()
+            .submixes()
+            .monitor_tree()
+            .monitored_output();
+
+        if device != OutputDevice::Headphones && output == OutputChannels::Headphones {
+            // We're moving from Headphones to a different output for monitoring.
+            // We need to store the existing routing for the headphones into the monitor tree.
+            let mut new_map: EnumMap<InputChannels, u16> = Default::default();
+            let router = self.create_router();
+
+            for input in InputDevice::iter() {
+                if router[input][OutputDevice::Headphones] {
+                    let channel = standard_input_to_profile(input);
+                    new_map[channel] = 8192;
+                }
+            }
+
+            // Store the original Headphone routing in the monitor tree..
+            self.profile
+                .settings_mut()
+                .submixes_mut()
+                .monitor_tree_mut()
+                .set_routing(new_map);
+
+            // Get the currently assigned headphone mix, and store that..
+            let mix = self
+                .profile
+                .settings()
+                .mix_routing()
+                .get_assignment(OutputChannels::Headphones);
+
+            self.profile
+                .settings_mut()
+                .submixes_mut()
+                .monitor_tree_mut()
+                .set_headphone_mix(mix);
+
+            // Ok, now we need to replace the headphone routing config in the profile to match
+            // the monitored channel..
+            for input in InputDevice::iter() {
+                self.set_routing(input, OutputDevice::Headphones, router[input][device]);
+            }
+
+            return Ok(());
+        }
+
+        if device == OutputDevice::Headphones && output != OutputChannels::Headphones {
+            // We're going from Different -> Headphones, so restore the original routing and mix.
+            let original_map = self.profile.settings().submixes().monitor_tree().routing();
+            for input in InputDevice::iter() {
+                let input_device = standard_input_to_profile(input);
+                if original_map[input_device] == 0 {
+                    self.set_routing(input, OutputDevice::Headphones, false);
+                } else {
+                    self.set_routing(input, OutputDevice::Headphones, true);
+                }
+            }
+
+            // Now restore the mix.
+            let mix = self
+                .profile
+                .settings()
+                .submixes()
+                .monitor_tree()
+                .headphone_mix();
+
+            self.profile
+                .settings_mut()
+                .mix_routing_mut()
+                .set_assignment(OutputChannels::Headphones, mix)?;
+
+            return Ok(());
+        }
+
+        // If we get here, we're simply moving between two monitors not involving headphones,
+        // so we just update the routing table.
+        for input in InputDevice::iter() {
+            let router = self.get_router(input);
+            self.set_routing(input, OutputDevice::Headphones, router[device]);
+        }
+
+        Ok(())
+    }
+
     /** Generic Stuff **/
     pub fn get_button_colour_state(&self, button: Buttons) -> ButtonStates {
         let colour_map = self.get_button_colour_map(button);
