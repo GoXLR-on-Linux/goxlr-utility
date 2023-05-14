@@ -2268,6 +2268,17 @@ impl<'a> Device<'a> {
                 self.profile.set_mix_output(device, mix)?;
                 self.load_submix_settings(false)?;
             }
+            GoXLRCommand::SetMonitorMix(device) => {
+                self.profile.set_monitor_mix(device)?;
+
+                // Might be a cleaner way to do this, we only need to handle 1 output..
+                for device in BasicInputDevice::iter() {
+                    self.apply_routing(device)?;
+                }
+
+                // Make sure to switch Headphones from A to B if needed.
+                self.load_submix_settings(false)?;
+            }
         }
         Ok(())
     }

@@ -238,4 +238,7 @@ pub enum GoXLRCommand {
     SetSubMixVolume(ChannelName, u8),
     SetSubMixLinked(ChannelName, bool),
     SetSubMixOutputMix(OutputDevice, Mix),
+
+    // Mix Monitoring
+    SetMonitorMix(OutputDevice),
 }
