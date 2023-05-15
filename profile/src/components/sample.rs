@@ -107,18 +107,38 @@ impl SampleBase {
         if let Some(track_count) = map.get(key.as_str()) {
             let track_count: u8 = track_count.parse()?;
             for i in 0..track_count {
-                if let (Some(track), Some(start), Some(end), Some(gain)) = (
+                if let (Some(track), Some(mut start), Some(end), Some(gain)) = (
                     map.get(&format!("track_{i}")),
                     map.get(&format!("track_{i}StartPosition")),
                     map.get(&format!("track_{i}EndPosition")),
                     map.get(&format!("track_{i}NormalizedGain")),
                 ) {
-                    let track = Track::new(
-                        track.to_string(),
-                        start.parse()?,
-                        end.parse()?,
-                        gain.parse()?,
-                    );
+                    let mut start: f32 = start.parse()?;
+                    let mut end: f32 = end.parse()?;
+
+                    if start > 100. {
+                        start = 100.;
+                    }
+                    if start < 0. {
+                        start = 0.;
+                    }
+
+                    if end > 100. {
+                        end = 100.;
+                    }
+                    if end < 0. {
+                        end = 0.
+                    }
+
+                    if start > end {
+                        start = end;
+                    }
+
+                    if end < start {
+                        end = start;
+                    }
+
+                    let track = Track::new(track.to_string(), start, end, gain.parse()?);
                     sample_stack.tracks.push(track);
                 }
             }
