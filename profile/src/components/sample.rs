@@ -107,7 +107,7 @@ impl SampleBase {
         if let Some(track_count) = map.get(key.as_str()) {
             let track_count: u8 = track_count.parse()?;
             for i in 0..track_count {
-                if let (Some(track), Some(mut start), Some(end), Some(gain)) = (
+                if let (Some(track), Some(start), Some(end), Some(gain)) = (
                     map.get(&format!("track_{i}")),
                     map.get(&format!("track_{i}StartPosition")),
                     map.get(&format!("track_{i}EndPosition")),

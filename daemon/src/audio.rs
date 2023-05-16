@@ -1,3 +1,4 @@
+use crate::{OVERRIDE_SAMPLER_INPUT, OVERRIDE_SAMPLER_OUTPUT};
 use anyhow::{anyhow, bail, Result};
 use enum_map::EnumMap;
 use goxlr_audio::get_audio_inputs;
@@ -8,6 +9,7 @@ use goxlr_types::SampleBank;
 use goxlr_types::SampleButtons;
 use log::{debug, error, info, warn};
 use regex::Regex;
+use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -115,6 +117,11 @@ impl AudioHandler {
     }
 
     fn get_output_device_patterns(&self) -> Vec<Regex> {
+        let override_output = OVERRIDE_SAMPLER_OUTPUT.lock().unwrap().deref().clone();
+        if let Some(device) = override_output {
+            return vec![Regex::new(&device).expect("Invalid Regex in Audio Handler")];
+        }
+
         let patterns = vec![
             Regex::new("goxlr_sample").expect("Invalid Regex in Audio Handler"),
             Regex::new("GoXLR_0_8_9").expect("Invalid Regex in Audio Handler"),
@@ -127,6 +134,11 @@ impl AudioHandler {
 
     #[allow(dead_code)]
     fn get_output_device_string_patterns(&self) -> Vec<String> {
+        let override_output = OVERRIDE_SAMPLER_OUTPUT.lock().unwrap().deref().clone();
+        if let Some(device) = override_output {
+            return vec![device];
+        }
+
         let patterns = vec![
             String::from("goxlr_sample"),
             String::from("GoXLR_0_8_9"),
@@ -138,6 +150,11 @@ impl AudioHandler {
     }
 
     fn get_input_device_patterns(&self) -> Vec<Regex> {
+        let override_input = OVERRIDE_SAMPLER_INPUT.lock().unwrap().deref().clone();
+        if let Some(device) = override_input {
+            return vec![Regex::new(&device).expect("Invalid Regex in Audio Handler")];
+        }
+
         let patterns = vec![
             Regex::new("goxlr_sampler.*source").expect("Invalid Regex in Audio Handler"),
             Regex::new("GoXLR_0_4_5.*source").expect("Invalid Regex in Audio Handler"),
@@ -149,6 +166,11 @@ impl AudioHandler {
     }
 
     fn get_input_device_string_patterns(&self) -> Vec<String> {
+        let override_input = OVERRIDE_SAMPLER_INPUT.lock().unwrap().deref().clone();
+        if let Some(device) = override_input {
+            return vec![device];
+        }
+
         let patterns = vec![
             String::from("goxlr_sampler.*source"),
             String::from("GoXLR_0_4_5.*source"),

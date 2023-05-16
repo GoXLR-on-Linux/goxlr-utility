@@ -40,6 +40,14 @@ pub struct Cli {
     /// Automatically Launch the UI on Start..
     #[arg(long)]
     pub start_ui: bool,
+
+    /// Force regular expression to use when finding the Sampler Input
+    #[arg(long)]
+    pub override_sample_input_device: Option<String>,
+
+    /// Force regular expression to use when finding the Sampler Output
+    #[arg(long)]
+    pub override_sample_output_device: Option<String>,
 }
 
 fn default_config_location() -> PathBuf {

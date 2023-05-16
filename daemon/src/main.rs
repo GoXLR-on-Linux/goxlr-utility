@@ -10,7 +10,7 @@ use json_patch::Patch;
 use log::{debug, error, info, warn};
 use simplelog::{ColorChoice, CombinedLogger, ConfigBuilder, TermLogger, TerminalMode};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio::join;
 use tokio::sync::{broadcast, mpsc};
 
@@ -43,6 +43,14 @@ mod tts;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const ICON: &[u8] = include_bytes!("../resources/goxlr-utility-large.png");
+
+/**
+This is ugly, and I know it's ugly. I need to rework how the Primary Worker is constructed
+so that various variables can be easily passed through it down to the device level via a struct
+rather than through additional parameters. When that comes, this will be removed!
+*/
+static OVERRIDE_SAMPLER_INPUT: Mutex<Option<String>> = Mutex::new(None);
+static OVERRIDE_SAMPLER_OUTPUT: Mutex<Option<String>> = Mutex::new(None);
 
 // This is for global 'JSON Patches', for when something changes.
 #[derive(Debug, Clone)]
@@ -102,6 +110,14 @@ async fn main() -> Result<()> {
             error!("To override this message, please start with --force-root");
             std::process::exit(-1);
         }
+    }
+
+    if let Some(device) = args.override_sample_input_device {
+        OVERRIDE_SAMPLER_INPUT.lock().unwrap().replace(device);
+    }
+
+    if let Some(device) = args.override_sample_output_device {
+        OVERRIDE_SAMPLER_OUTPUT.lock().unwrap().replace(device);
     }
 
     info!("Starting GoXLR Daemon v{}", VERSION);
