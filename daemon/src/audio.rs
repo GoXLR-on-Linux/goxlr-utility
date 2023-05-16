@@ -6,7 +6,7 @@ use goxlr_audio::recorder::BufferedRecorder;
 use goxlr_audio::recorder::RecorderState;
 use goxlr_types::SampleBank;
 use goxlr_types::SampleButtons;
-use log::{debug, error, warn};
+use log::{debug, error, info, warn};
 use regex::Regex;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -190,8 +190,8 @@ impl AudioHandler {
         if let Some(device) = &device {
             debug!("Found Device: {}", device);
         } else {
-            debug!("Audio Device Not Found, Available Devices:");
-            device_list.iter().for_each(|name| debug!("{}", name));
+            warn!("Audio Device Not Found, Available Devices:");
+            device_list.iter().for_each(|name| info!("{}", name));
         }
 
         if is_output {
