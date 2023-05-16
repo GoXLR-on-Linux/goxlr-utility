@@ -78,6 +78,8 @@ impl<'a> Device<'a> {
         settings_handle: &'a SettingsHandle,
         global_events: Sender<EventTriggers>,
     ) -> Result<Device<'a>> {
+        debug!("New Device Loading..");
+
         let mut device_type = "";
         if hardware.device_type == DeviceType::Mini {
             device_type = " Mini";

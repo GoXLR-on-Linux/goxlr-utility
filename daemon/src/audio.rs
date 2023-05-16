@@ -394,7 +394,7 @@ impl AudioHandler {
         bank: SampleBank,
         button: SampleButtons,
     ) -> Result<()> {
-        if let Some(recorder) = &mut self.buffered_input {
+        if let Some(recorder) = &self.buffered_input {
             if !recorder.is_ready() {
                 warn!("Sampler not ready, possibly missing Sample device. Not recording.");
 
@@ -470,5 +470,13 @@ impl AudioHandler {
     pub fn calculate_gain(&self, path: &PathBuf) -> Result<Option<f64>> {
         let mut player = Player::new(path, None, None, None, None, None)?;
         player.calculate_gain()
+    }
+}
+
+impl Drop for AudioHandler {
+    fn drop(&mut self) {
+        if let Some(buffered_recorder) = &self.buffered_input {
+            buffered_recorder.stop();
+        }
     }
 }

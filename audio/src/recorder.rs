@@ -134,6 +134,12 @@ impl BufferedRecorder {
                 }
             }
         }
+
+        debug!("Audio Listener Terminated");
+    }
+
+    pub fn stop(&self) {
+        self.stop.store(true, Ordering::Relaxed);
     }
 
     pub fn is_ready(&self) -> bool {
@@ -290,6 +296,8 @@ impl BufferedRecorder {
 
 impl Drop for BufferedRecorder {
     fn drop(&mut self) {
+        // We probably don't need to do this, as drop will only be called after the main
+        // thread has terminated, but safety first :)
         self.stop.store(true, Ordering::Relaxed);
     }
 }
