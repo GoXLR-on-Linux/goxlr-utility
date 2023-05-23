@@ -762,7 +762,6 @@ impl ProfileAdapter {
                     is_playing = audio_handler.is_sample_playing(bank, button);
                     is_recording = audio_handler.sample_recording(bank, button);
                 }
-                debug!("{}", is_recording);
 
                 // Create a SamplerButton
                 let sampler_button = SamplerButton {
