@@ -756,9 +756,13 @@ impl ProfileAdapter {
                 }
 
                 let mut is_playing = false;
+                let mut is_recording = false;
+
                 if let Some(audio_handler) = audio_handler {
                     is_playing = audio_handler.is_sample_playing(bank, button);
+                    is_recording = audio_handler.sample_recording(bank, button);
                 }
+                debug!("{}", is_recording);
 
                 // Create a SamplerButton
                 let sampler_button = SamplerButton {
@@ -768,6 +772,7 @@ impl ProfileAdapter {
                     order: profile_to_standard_sample_playback_order(sample_bank.get_play_order()),
                     samples: tracks,
                     is_playing,
+                    is_recording,
                 };
                 buttons.insert(button, sampler_button);
             }

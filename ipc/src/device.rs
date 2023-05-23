@@ -328,6 +328,7 @@ pub struct SamplerButton {
     pub order: SamplePlayOrder,
     pub samples: Vec<Sample>,
     pub is_playing: bool,
+    pub is_recording: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
