@@ -442,6 +442,8 @@ impl AudioHandler {
         bank: SampleBank,
         button: SampleButtons,
     ) -> Result<Option<String>> {
+        let mut filename = None;
+
         if let Some(player) = &mut self.active_streams[bank][button] {
             if player.stream_type == StreamType::Playback {
                 bail!("Attempted to Stop Recording on Playback Stream..");
@@ -454,17 +456,19 @@ impl AudioHandler {
                 // Recording Complete, check the file was made...
                 if recording_state.file.exists() {
                     if let Some(file_name) = recording_state.file.file_name() {
-                        return Ok(Some(String::from(file_name.to_string_lossy())));
+                        filename.replace(String::from(file_name.to_string_lossy()));
                     } else {
                         bail!("Unable to Extract Filename from Path! (This shouldn't be possible!)")
                     }
                 }
-
-                // If we get here, the file was never made.
-                return Ok(None);
             }
+        } else {
+            bail!("Attempted to stop inactive recording..");
         }
-        bail!("Attempted to stop inactive recording..");
+
+        // Sample has been stopped, clear the state of this button.
+        self.active_streams[bank][button] = None;
+        Ok(filename)
     }
 
     pub fn calculate_gain(&self, path: &PathBuf) -> Result<Option<f64>> {
