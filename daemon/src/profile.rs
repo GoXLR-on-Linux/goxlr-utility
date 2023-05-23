@@ -776,6 +776,8 @@ impl ProfileAdapter {
         }
 
         Some(Sampler {
+            active_bank: self.get_active_sample_bank(),
+            clear_active: self.is_sample_clear_active(),
             record_buffer: sampler_prerecord,
             banks: sampler_map,
         })
