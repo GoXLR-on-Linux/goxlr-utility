@@ -34,7 +34,7 @@ ritelinked = "0.3.2"
 clap = { version = "4.0.32", features = ["derive"] }
 opener = "0.5.0"
 regex = "1.7.0"
-chrono = "0.4.23"
+chrono = { version = "0.4.23", default-features = false, features = ["clock"] }
 glob = "0.3.0"
 cfg-if = "1.0.0"
 lazy_static = "1.4.0"
@@ -48,10 +48,10 @@ json-patch = "0.3.0"
 
 ## HTTPd Server
 actix = "0.13.0"
-actix-web-actors = "4.1.0"
+actix-web-actors = "4.2.0"
 
 # All we really need from actix-web are macros and compression, TLS and cookies aren't required
-actix-web = { version = "4.2.1", default-features = false, features = ["macros", "compress-brotli", "compress-gzip"] }
+actix-web = { version = "4.3.1", default-features = false, features = ["macros", "compress-brotli", "compress-gzip"] }
 actix-cors = "0.6.4"
 mime_guess = "2.0.4"
 include_dir = "0.7.3"
