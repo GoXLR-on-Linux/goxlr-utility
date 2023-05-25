@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs;
 use std::ops::DerefMut;
 use std::path::Component;
@@ -16,6 +17,7 @@ use actix_web_actors::ws;
 use actix_web_actors::ws::CloseCode;
 use anyhow::{anyhow, Result};
 use include_dir::{include_dir, Dir};
+use jsonpath_rust::JsonPathQuery;
 use log::{debug, error, info, warn};
 use mime_guess::MimeGuess;
 use tokio::sync::broadcast::Sender as BroadcastSender;
@@ -191,6 +193,7 @@ pub async fn spawn_http_server(
             .service(execute_command)
             .service(get_devices)
             .service(get_sample)
+            .service(get_path)
             .service(websocket)
             .default_service(web::to(default))
     })
@@ -249,6 +252,34 @@ async fn get_devices(app_data: Data<Mutex<AppData>>) -> HttpResponse {
     if let Ok(response) = get_status(app_data).await {
         return HttpResponse::Ok().json(&response);
     }
+    HttpResponse::InternalServerError().finish()
+}
+
+#[get("/api/path")]
+async fn get_path(app_data: Data<Mutex<AppData>>, req: HttpRequest) -> HttpResponse {
+    let params = web::Query::<HashMap<String, String>>::from_query(req.query_string());
+    if let Ok(params) = params {
+        if let Some(path) = params.get("path") {
+            if let Ok(status) = get_status(app_data).await {
+                if let Ok(value) = serde_json::to_value(status) {
+                    if let Ok(result) = value.path(path) {
+                        return HttpResponse::Ok().json(result);
+                    } else {
+                        warn!("Invalid Path Provided..");
+                    }
+                } else {
+                    warn!("Unable to Parse DaemonStatus..");
+                }
+            } else {
+                warn!("Unable to Fetch Daemon Status..");
+            }
+        } else {
+            warn!("Path Parameter Not Found..");
+        }
+    } else {
+        warn!("Unable to Parse Parameters..");
+    }
+
     HttpResponse::InternalServerError().finish()
 }
 
