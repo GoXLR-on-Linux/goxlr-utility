@@ -276,6 +276,7 @@ async fn get_daemon_status(
             show_tray_icon: settings.get_show_tray_icon().await,
             tts_enabled: settings.get_tts_enabled().await,
             allow_network_access: settings.get_allow_network_access().await,
+            log_level: settings.get_log_level().await,
         },
         paths: Paths {
             profile_directory: settings.get_profile_directory().await,
@@ -283,6 +284,7 @@ async fn get_daemon_status(
             samples_directory: settings.get_samples_directory().await,
             presets_directory: settings.get_presets_directory().await,
             icons_directory: settings.get_icons_directory().await,
+            logs_directory: settings.get_log_directory().await,
         },
         files,
         ..Default::default()

@@ -1,4 +1,4 @@
-use crate::GoXLRCommand;
+use crate::{GoXLRCommand, LogLevel};
 use enum_map::EnumMap;
 use goxlr_types::MuteState::Unmuted;
 use goxlr_types::{
@@ -37,6 +37,7 @@ pub struct DaemonConfig {
     pub show_tray_icon: bool,
     pub tts_enabled: Option<bool>,
     pub allow_network_access: bool,
+    pub log_level: LogLevel,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -360,6 +361,7 @@ pub struct Paths {
     pub samples_directory: PathBuf,
     pub presets_directory: PathBuf,
     pub icons_directory: PathBuf,
+    pub logs_directory: PathBuf,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
