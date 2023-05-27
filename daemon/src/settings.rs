@@ -169,6 +169,11 @@ impl SettingsHandle {
         settings.logs_directory.clone().unwrap()
     }
 
+    pub async fn set_log_level(&self, level: LogLevel) {
+        let mut settings = self.settings.write().await;
+        settings.log_level = Some(level);
+    }
+
     pub async fn get_log_level(&self) -> LogLevel {
         let settings = self.settings.read().await;
         settings.log_level.clone().unwrap_or(LogLevel::Info)

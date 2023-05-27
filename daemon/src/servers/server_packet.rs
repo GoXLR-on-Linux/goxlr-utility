@@ -47,6 +47,15 @@ pub async fn handle_packet(
                 .context("Cound not communicate with the device task")?;
             Ok(rx.await?)
         }
+        DaemonRequest::SetLogLevel(level) => {
+            let (tx, rx) = oneshot::channel();
+            usb_tx
+                .send(DeviceCommand::SetLogLevel(level, tx))
+                .await
+                .map_err(|e| anyhow!(e.to_string()))
+                .context("Cound not communicate with the device task")?;
+            Ok(rx.await?)
+        }
         DaemonRequest::SetShowTrayIcon(enabled) => {
             let (tx, rx) = oneshot::channel();
             usb_tx

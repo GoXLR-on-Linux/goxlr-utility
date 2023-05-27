@@ -6,7 +6,7 @@ use crate::{FileManager, PatchEvent, SettingsHandle, Shutdown, VERSION};
 use anyhow::{anyhow, Result};
 use goxlr_ipc::{
     DaemonConfig, DaemonResponse, DaemonStatus, DeviceType, Files, GoXLRCommand, HardwareStatus,
-    PathTypes, Paths, UsbProductInformation,
+    LogLevel, PathTypes, Paths, UsbProductInformation,
 };
 use goxlr_usb::device::base::GoXLRDevice;
 use goxlr_usb::device::{find_devices, from_device};
@@ -29,6 +29,7 @@ pub enum DeviceCommand {
     OpenUi(oneshot::Sender<DaemonResponse>),
     OpenPath(PathTypes, oneshot::Sender<DaemonResponse>),
     RecoverDefaults(PathTypes, oneshot::Sender<DaemonResponse>),
+    SetLogLevel(LogLevel, oneshot::Sender<DaemonResponse>),
     SetShowTrayIcon(bool, oneshot::Sender<DaemonResponse>),
     SetTTSEnabled(bool, oneshot::Sender<DaemonResponse>),
     SetAllowNetworkAccess(bool, oneshot::Sender<DaemonResponse>),
@@ -204,6 +205,12 @@ pub async fn spawn_usb_handler(
                                 let _ = sender.send(DaemonResponse::Error(format!("Unable to Set AutoStart: {e}")));
                             }
                         }
+                    }
+                    DeviceCommand::SetLogLevel(level, sender) => {
+                        settings.set_log_level(level).await;
+                        settings.save().await;
+                        change_found = true;
+                        let _ = sender.send(DaemonResponse::Ok);
                     }
                     DeviceCommand::SetShowTrayIcon(enabled, sender) => {
                         settings.set_show_tray_icon(enabled).await;

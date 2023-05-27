@@ -24,6 +24,7 @@ pub enum DaemonRequest {
     StopDaemon,
     GetHttpState,
     OpenPath(PathTypes),
+    SetLogLevel(LogLevel),
     SetShowTrayIcon(bool),
     SetTTSEnabled(bool),
     SetAutoStartEnabled(bool),
