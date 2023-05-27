@@ -20,7 +20,6 @@ anyhow = "1.0.65"
 
 # Logging..
 log = "0.4.17"
-simplelog = "0.12.0"
 
 # A wrapper around VecDeque to enforce length.
 bounded-vec-deque = "0.1.1"
