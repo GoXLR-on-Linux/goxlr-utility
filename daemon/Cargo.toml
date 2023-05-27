@@ -18,10 +18,14 @@ goxlr-types = { path = "../types" }
 goxlr-audio = { path = "../audio" }
 goxlr-profile-loader = { path = "../profile" }
 goxlr-scribbles = { path = "../scribbles" }
+
+log = "0.4.17"
 simplelog = "0.12.0"
+file-rotate = "0.7.4"
+
 tokio = { version = "1.23.0", features = ["full"] }
 tokio-serde = "0.8.0"
-log = "0.4.17"
+
 anyhow = "1.0.68"
 strum = { version = "0.24.1" }
 enumset = "1.0.12"

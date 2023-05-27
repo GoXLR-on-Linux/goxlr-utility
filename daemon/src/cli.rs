@@ -6,8 +6,8 @@ use std::path::PathBuf;
 #[command(about, version, author)]
 pub struct Cli {
     /// Minimum log level to print out
-    #[arg(long, value_enum, default_value = "info")]
-    pub log_level: LevelFilter,
+    #[arg(long, value_enum)]
+    pub log_level: Option<LevelFilter>,
 
     /// Location of the daemon configuration file on disk
     #[arg(long, default_value_os_t = default_config_location())]

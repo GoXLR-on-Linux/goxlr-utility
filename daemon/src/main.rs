@@ -2,17 +2,25 @@
 
 extern crate core;
 
+use std::fs::create_dir_all;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
+
 use actix_web::dev::ServerHandle;
 use anyhow::{bail, Context, Result};
 use clap::Parser;
-use goxlr_ipc::HttpSettings;
+use file_rotate::compression::Compression;
+use file_rotate::suffix::AppendCount;
+use file_rotate::{ContentLimit, FileRotate};
 use json_patch::Patch;
 use log::{debug, error, info, warn};
-use simplelog::{ColorChoice, CombinedLogger, ConfigBuilder, TermLogger, TerminalMode};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use simplelog::{
+    ColorChoice, CombinedLogger, ConfigBuilder, TermLogger, TerminalMode, WriteLogger,
+};
 use tokio::join;
 use tokio::sync::{broadcast, mpsc};
+
+use goxlr_ipc::{HttpSettings, LogLevel};
 
 use crate::cli::{Cli, LevelFilter};
 use crate::events::{spawn_event_handler, DaemonState, EventTriggers};
@@ -62,6 +70,18 @@ pub struct PatchEvent {
 async fn main() -> Result<()> {
     let args: Cli = Cli::parse();
 
+    // Before we do absolutely anything, we need to load the config file, as it implies log settings
+    let settings = SettingsHandle::load(args.config).await?;
+
+    // Configure and / or create the log path, and file name.
+    let log_path = settings.get_log_directory().await;
+    if !log_path.clone().exists() {
+        if let Err(e) = create_dir_all(log_path.clone()) {
+            bail!("Unable to create log directory: {}", e);
+        }
+    }
+    let log_file = log_path.join("goxlr-daemon.log");
+
     // We need to ignore a couple of packages log output so create a builder.
     let mut config = ConfigBuilder::new();
 
@@ -74,19 +94,47 @@ async fn main() -> Result<()> {
     config.add_filter_ignore_str("actix_server::server");
     config.add_filter_ignore_str("actix_server::builder");
 
-    CombinedLogger::init(vec![TermLogger::new(
-        match args.log_level {
+    // Create a file rotator, that will compress and rotate files after 5Mb
+    let file_rotator = FileRotate::new(
+        log_file,
+        AppendCount::new(5),
+        ContentLimit::Bytes(1024 * 1024 * 5),
+        Compression::OnRotate(1),
+        #[cfg(unix)]
+        None,
+    );
+
+    // Configure the log level, prioritise the CLI, but otherwise config.
+    let log_level = if let Some(cli_level) = args.log_level {
+        match cli_level {
             LevelFilter::Off => log::LevelFilter::Off,
             LevelFilter::Error => log::LevelFilter::Error,
             LevelFilter::Warn => log::LevelFilter::Warn,
             LevelFilter::Info => log::LevelFilter::Info,
             LevelFilter::Debug => log::LevelFilter::Debug,
             LevelFilter::Trace => log::LevelFilter::Trace,
-        },
-        config.build(),
-        TerminalMode::Mixed,
-        ColorChoice::Auto,
-    )])
+        }
+    } else {
+        match settings.get_log_level().await {
+            LogLevel::Off => log::LevelFilter::Off,
+            LogLevel::Error => log::LevelFilter::Error,
+            LogLevel::Warn => log::LevelFilter::Warn,
+            LogLevel::Info => log::LevelFilter::Info,
+            LogLevel::Debug => log::LevelFilter::Debug,
+            LogLevel::Trace => log::LevelFilter::Trace,
+        }
+    };
+
+    // Create the loggers :)
+    CombinedLogger::init(vec![
+        TermLogger::new(
+            log_level,
+            config.build(),
+            TerminalMode::Mixed,
+            ColorChoice::Auto,
+        ),
+        WriteLogger::new(log_level, config.build(), file_rotator),
+    ])
     .context("Could not configure the logger")?;
 
     if is_root() {
@@ -126,8 +174,6 @@ async fn main() -> Result<()> {
     // sure we're allowed to start.
     info!("Performing Platform Preflight...");
     perform_preflight()?;
-
-    let settings = SettingsHandle::load(args.config).await?;
 
     let mut bind_address = String::from("localhost");
     if let Some(address) = args.http_bind_address {

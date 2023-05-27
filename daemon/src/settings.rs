@@ -2,7 +2,7 @@ use crate::mic_profile::DEFAULT_MIC_PROFILE_NAME;
 use crate::profile::DEFAULT_PROFILE_NAME;
 use anyhow::{Context, Result};
 use directories::ProjectDirs;
-use goxlr_ipc::GoXLRCommand;
+use goxlr_ipc::{GoXLRCommand, LogLevel};
 use log::error;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -24,6 +24,7 @@ impl SettingsHandle {
         let proj_dirs = ProjectDirs::from("org", "GoXLR-on-Linux", "GoXLR-Utility")
             .context("Couldn't find project directories")?;
         let data_dir = proj_dirs.data_dir();
+        let config_dir = proj_dirs.config_dir();
 
         let mut settings = Settings::read(&path)?.unwrap_or_else(|| Settings {
             show_tray_icon: Some(true),
@@ -34,6 +35,8 @@ impl SettingsHandle {
             samples_directory: Some(data_dir.join("samples")),
             presets_directory: Some(data_dir.join("presets")),
             icons_directory: Some(data_dir.join("icons")),
+            logs_directory: Some(config_dir.join("logs")),
+            log_level: Some(LogLevel::Info),
             devices: Default::default(),
         });
 
@@ -56,6 +59,14 @@ impl SettingsHandle {
 
         if settings.icons_directory.is_none() {
             settings.icons_directory = Some(data_dir.join("icons"));
+        }
+
+        if settings.logs_directory.is_none() {
+            settings.logs_directory = Some(config_dir.join("logs"));
+        }
+
+        if settings.log_level.is_none() {
+            settings.log_level = Some(LogLevel::Info);
         }
 
         if settings.show_tray_icon.is_none() {
@@ -151,6 +162,16 @@ impl SettingsHandle {
     pub async fn get_icons_directory(&self) -> PathBuf {
         let settings = self.settings.read().await;
         settings.icons_directory.clone().unwrap()
+    }
+
+    pub async fn get_log_directory(&self) -> PathBuf {
+        let settings = self.settings.read().await;
+        settings.logs_directory.clone().unwrap()
+    }
+
+    pub async fn get_log_level(&self) -> LogLevel {
+        let settings = self.settings.read().await;
+        settings.log_level.clone().unwrap_or(LogLevel::Info)
     }
 
     pub async fn get_device_profile_name(&self, device_serial: &str) -> Option<String> {
@@ -290,6 +311,8 @@ pub struct Settings {
     samples_directory: Option<PathBuf>,
     presets_directory: Option<PathBuf>,
     icons_directory: Option<PathBuf>,
+    logs_directory: Option<PathBuf>,
+    log_level: Option<LogLevel>,
     devices: HashMap<String, DeviceSettings>,
 }
 
