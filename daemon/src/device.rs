@@ -1993,9 +1993,6 @@ impl<'a> Device<'a> {
                     .get_path_for_sample(PathBuf::from(filename.clone()))
                     .await?;
 
-                // Add the Sample, and Grab the created track..
-                let track = self.profile.add_sample_file(bank, button, filename);
-
                 // If we have an audio handler, try to calcuate the Gain..
                 if let Some(audio_handler) = &mut self.audio_handler {
                     // TODO: Find a way to do this asynchronously..
@@ -2004,11 +2001,9 @@ impl<'a> Device<'a> {
                     // needs to exist in the profile and could be removed prior to the calculation
                     // completing (causing Cross Thread Mutability issues), consider looking into
                     // refcounters to see if this can be solved.
-                    //
-                    // Bonus issue here, if too many commands are sent while this is happening, the
-                    // entire daemon will lock up :D
                     if let Some(gain) = audio_handler.calculate_gain(&path)? {
-                        // Gain was calculated, Apply it to the track..
+                        // Gain Calculation was successful, add the track to the profile, and set the gain.
+                        let track = self.profile.add_sample_file(bank, button, filename);
                         track.normalized_gain = gain;
                     }
                 }
