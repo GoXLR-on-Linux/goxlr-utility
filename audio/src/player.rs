@@ -2,7 +2,7 @@ use anyhow::{anyhow, bail, Result};
 
 use core::default::Default;
 use ebur128::{EbuR128, Mode};
-use log::{debug, warn};
+use log::debug;
 use std::fs::File;
 use std::io::ErrorKind::UnexpectedEof;
 use std::path::PathBuf;

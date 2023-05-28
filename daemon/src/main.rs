@@ -94,6 +94,10 @@ async fn main() -> Result<()> {
     config.add_filter_ignore_str("actix_server::server");
     config.add_filter_ignore_str("actix_server::builder");
 
+    // I'm generally not interested in the Symphonia header announcements which go to INFO,
+    // it's only useful in a development setting!
+    config.add_filter_ignore_str("symphonia");
+
     // Create a file rotator, that will compress and rotate files after 5Mb
     let file_rotator = FileRotate::new(
         log_file,
