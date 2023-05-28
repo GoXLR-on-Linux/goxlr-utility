@@ -246,6 +246,13 @@ pub async fn spawn_usb_handler(
                 }
             },
             Some(path) = file_rx.recv() => {
+                // Notify devices if Samples have changed..
+                if path == PathTypes::Samples {
+                    for device in devices.values_mut() {
+                        let _ = device.validate_sampler().await;
+                    }
+                }
+
                 files = update_files(files, path, &mut file_manager).await;
                 change_found = true;
             }

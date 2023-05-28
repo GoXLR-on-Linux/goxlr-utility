@@ -803,7 +803,7 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
-    async fn validate_sampler(&mut self) -> Result<()> {
+    pub async fn validate_sampler(&mut self) -> Result<()> {
         let sample_path = self.settings.get_samples_directory().await;
         for bank in SampleBank::iter() {
             for button in SampleButtons::iter() {
@@ -817,7 +817,10 @@ impl<'a> Device<'a> {
             }
         }
 
-        Ok(())
+        // Because we may have removed the 'last' sample on a button, we need to refresh
+        // the states to make sure everything is correctly updated.
+        self.load_colour_map()?;
+        self.update_button_states()
     }
 
     async fn handle_sample_button_down(&mut self, button: SampleButtons) -> Result<()> {
@@ -2732,6 +2735,9 @@ impl<'a> Device<'a> {
             debug!("Setting volume for {} to {}", channel, channel_volume);
             self.goxlr.set_volume(channel, channel_volume)?;
         }
+
+        debug!("Validating Sampler Configuration..");
+        self.validate_sampler().await?;
 
         debug!("Updating button states..");
         self.update_button_states()?;
