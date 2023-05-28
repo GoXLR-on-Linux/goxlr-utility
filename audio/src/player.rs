@@ -48,7 +48,7 @@ impl Player {
     ) -> Result<Self> {
         let probe_result = Player::load_file(file);
         if probe_result.is_err() {
-            return Err(anyhow!("Unable to Probe audio file"));
+            return Err(anyhow!("Unable to Probe Audio File"));
         }
 
         Ok(Self {
@@ -122,7 +122,7 @@ impl Player {
         // Grab the Track and it's ID
         let track = match reader.default_track() {
             Some(track) => track,
-            None => return Ok(()),
+            None => bail!("Unable to find Default Track"),
         };
         let track_id = track.id;
 
@@ -139,12 +139,13 @@ impl Player {
         let mut ebu_r128 = None;
 
         let channels = match track.codec_params.channels {
-            None => {
-                debug!("Unable to ascertain channel count, assuming 2..");
-                2
-            } // Assume 2 playback Channels..
+            None => bail!("Unable to obtain channel count"),
             Some(channels) => channels.count(),
         };
+
+        if channels > 2 {
+            bail!("The Sample Player only Supports Mono and Stereo Samples");
+        }
 
         if let Some(rate) = sample_rate {
             if self.process_only {
@@ -174,10 +175,7 @@ impl Player {
                 }
             }
         } else {
-            if self.process_only {
-                bail!("Unable to obtain Rate, cannot normalise.");
-            }
-            warn!("Unable to get the Sample Rate, Fade and Seek Unavailable");
+            bail!("Unable to Determine the Audio File's Sample Rate");
         }
 
         // Audio Output Device..
