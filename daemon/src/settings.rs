@@ -24,7 +24,6 @@ impl SettingsHandle {
         let proj_dirs = ProjectDirs::from("org", "GoXLR-on-Linux", "GoXLR-Utility")
             .context("Couldn't find project directories")?;
         let data_dir = proj_dirs.data_dir();
-        let config_dir = proj_dirs.config_dir();
 
         let mut settings = Settings::read(&path)?.unwrap_or_else(|| Settings {
             show_tray_icon: Some(true),
@@ -35,7 +34,7 @@ impl SettingsHandle {
             samples_directory: Some(data_dir.join("samples")),
             presets_directory: Some(data_dir.join("presets")),
             icons_directory: Some(data_dir.join("icons")),
-            logs_directory: Some(config_dir.join("logs")),
+            logs_directory: Some(data_dir.join("logs")),
             log_level: Some(LogLevel::Info),
             devices: Default::default(),
         });
@@ -62,7 +61,7 @@ impl SettingsHandle {
         }
 
         if settings.logs_directory.is_none() {
-            settings.logs_directory = Some(config_dir.join("logs"));
+            settings.logs_directory = Some(data_dir.join("logs"));
         }
 
         if settings.log_level.is_none() {
