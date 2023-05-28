@@ -302,6 +302,9 @@ impl SampleStack {
     pub fn get_tracks(&self) -> &Vec<Track> {
         &self.tracks
     }
+    pub fn get_tracks_mut(&mut self) -> &mut Vec<Track> {
+        &mut self.tracks
+    }
     pub fn get_track_by_index(&self, index: usize) -> Result<&Track> {
         if self.tracks.len() <= index {
             bail!("Track not Found");

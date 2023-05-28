@@ -803,6 +803,23 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
+    async fn validate_sampler(&mut self) -> Result<()> {
+        let sample_path = self.settings.get_samples_directory().await;
+        for bank in SampleBank::iter() {
+            for button in SampleButtons::iter() {
+                let tracks = self.profile.get_sample_bank(bank, button);
+                tracks.retain(|track| {
+                    let file = PathBuf::from(track.track.clone());
+
+                    // Simply, if this returns None, the file isn't present.
+                    find_file_in_path(sample_path.clone(), file).is_some()
+                });
+            }
+        }
+
+        Ok(())
+    }
+
     async fn handle_sample_button_down(&mut self, button: SampleButtons) -> Result<()> {
         debug!(
             "Handling Sample Button, clear state: {}",

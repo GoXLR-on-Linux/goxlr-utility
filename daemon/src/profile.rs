@@ -1707,6 +1707,18 @@ impl ProfileAdapter {
             .set_state_on(state)
     }
 
+    pub fn get_sample_bank(
+        &mut self,
+        bank: goxlr_types::SampleBank,
+        button: goxlr_types::SampleButtons,
+    ) -> &mut Vec<Track> {
+        self.profile
+            .settings_mut()
+            .sample_button_mut(standard_to_profile_sample_button(button))
+            .get_stack_mut(standard_to_profile_sample_bank(bank))
+            .get_tracks_mut()
+    }
+
     pub fn set_sample_button_blink(
         &mut self,
         button: goxlr_types::SampleButtons,
