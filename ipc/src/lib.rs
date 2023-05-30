@@ -213,7 +213,7 @@ pub enum GoXLRCommand {
     StopSamplePlayback(SampleBank, SampleButtons),
 
     // Scribbles
-    SetScribbleIcon(FaderName, String),
+    SetScribbleIcon(FaderName, Option<String>),
     SetScribbleText(FaderName, String),
     SetScribbleNumber(FaderName, String),
     SetScribbleInvert(FaderName, bool),

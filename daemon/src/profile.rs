@@ -334,7 +334,7 @@ impl ProfileAdapter {
         )
     }
 
-    pub fn set_scribble_icon(&mut self, fader: FaderName, icon: String) {
+    pub fn set_scribble_icon(&mut self, fader: FaderName, icon: Option<String>) {
         let scribble = self
             .profile
             .settings_mut()

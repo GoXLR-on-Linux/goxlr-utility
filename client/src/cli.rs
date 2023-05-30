@@ -454,7 +454,7 @@ pub enum Scribbles {
     Icon {
         #[arg(value_enum)]
         fader: FaderName,
-        name: String,
+        name: Option<String>,
     },
 
     Text {
