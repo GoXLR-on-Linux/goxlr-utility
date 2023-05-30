@@ -552,17 +552,21 @@ impl ProfileSettings {
 
                 Ok(Event::Start(ref e)) => {
                     let (_name, attributes) = wrap_start_event(e)?;
+                    let mut found = false;
 
                     // We can cheese this a little, there's only one tag in a preset that has
                     // children, and that's the top level element. So if this is going, we
                     // already know what to do.
                     for attribute in attributes {
                         if attribute.name == "name" {
+                            found = true;
                             self.effects_mut(current).set_name(attribute.value)?;
                             break;
                         }
                     }
-                    bail!("Preset Name not found, cannot proceed.");
+                    if !found {
+                        bail!("Preset Name not found, cannot proceed.");
+                    }
                 }
 
                 // Ends a tag with children
