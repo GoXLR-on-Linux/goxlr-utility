@@ -977,16 +977,14 @@ impl<'a> Device<'a> {
                     .unwrap()
                     .stop_record(sample_bank, button)?;
 
-                // Stop flashing the button..
-                self.profile.set_sample_button_blink(button, false)?;
-
                 if let Some(file_name) = file_name {
                     self.profile.add_sample_file(sample_bank, button, file_name);
-
-                    // Reload the Colour Map..
-                    self.load_colour_map()?;
                 }
             }
+            // In all cases, we should stop the colour flashing.
+            self.profile.set_sample_button_blink(button, false)?;
+            self.load_colour_map()?;
+
             return Ok(());
         }
 
