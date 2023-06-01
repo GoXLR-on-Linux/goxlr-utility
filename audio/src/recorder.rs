@@ -12,7 +12,7 @@ use anyhow::{bail, Result};
 use bounded_vec_deque::BoundedVecDeque;
 use ebur128::{EbuR128, Mode};
 use hound::WavWriter;
-use log::{debug, info, warn};
+use log::{debug, error, info, warn};
 use rb::{Producer, RbConsumer, RbProducer, SpscRb, RB};
 use regex::Regex;
 use symphonia::core::audio::{Layout, SignalSpec};
@@ -201,8 +201,8 @@ impl BufferedRecorder {
         let spec = hound::WavSpec {
             channels: 2,
             sample_rate: 48000,
-            bits_per_sample: 32,
-            sample_format: hound::SampleFormat::Float,
+            bits_per_sample: 24,
+            sample_format: hound::SampleFormat::Int,
         };
         let mut writer = hound::WavWriter::create(path, spec)?;
 
@@ -212,7 +212,13 @@ impl BufferedRecorder {
 
         // We are all setup, now write the contents of the buffer into the file..
         if self.buffer_size > 0 {
-            writing = self.handle_samples(pre_samples, &mut ebu_r128, writing, &mut writer)?;
+            match self.handle_samples(pre_samples, &mut ebu_r128, writing, &mut writer) {
+                Ok(result) => writing = result,
+                Err(error) => {
+                    error!("Error Writing Samples {}", error);
+                    state.stop.store(true, Ordering::Relaxed);
+                }
+            };
         }
 
         // Now jump into the current 'live' audio.
@@ -222,7 +228,15 @@ impl BufferedRecorder {
             {
                 // Read these out into a vec..
                 let samples: Vec<f32> = Vec::from(&read_buffer[0..samples]);
-                writing = self.handle_samples(samples, &mut ebu_r128, writing, &mut writer)?;
+                match self.handle_samples(samples, &mut ebu_r128, writing, &mut writer) {
+                    Ok(result) => writing = result,
+                    Err(error) => {
+                        // Something's gone wrong, we need to fail safe..
+                        error!("Error Writing Samples: {}", error);
+                        writing = false;
+                        state.stop.store(true, Ordering::Relaxed);
+                    }
+                }
             }
         }
 
@@ -233,7 +247,7 @@ impl BufferedRecorder {
         // Before we do anything else, was any noise recorded?
         if !writing {
             // No noise received..
-            info!("No Noise Received in recording, Cancelling.");
+            info!("No Noise Received, or error in recording, Cancelling.");
             fs::remove_file(path)?;
         }
 
@@ -258,7 +272,8 @@ impl BufferedRecorder {
 
             if recording_started {
                 for sample in slice {
-                    writer.write_sample(*sample)?;
+                    // Multiply the sample by 2^23, to convert to a pseudo I24
+                    writer.write_sample((*sample * 8388608.0) as i32)?;
                 }
             }
         }
