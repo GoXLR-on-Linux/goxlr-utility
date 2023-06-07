@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fs;
 use std::ops::DerefMut;
-use std::path::Component;
+use std::path::{Component, PathBuf};
 
 use actix::{
     Actor, ActorContext, AsyncContext, ContextFutureSpawner, Handler, Message, StreamHandler,
@@ -24,7 +24,7 @@ use tokio::sync::broadcast::Sender as BroadcastSender;
 use tokio::sync::oneshot::Sender;
 use tokio::sync::Mutex;
 
-use crate::files::FilePaths;
+use crate::files::{find_file_in_path, FilePaths};
 use crate::PatchEvent;
 use goxlr_ipc::{
     DaemonRequest, DaemonResponse, DaemonStatus, HttpSettings, WebsocketRequest, WebsocketResponse,
@@ -292,26 +292,22 @@ async fn get_sample(sample: web::Path<String>, app_data: Data<Mutex<AppData>>) -
     drop(guard);
 
     let sample = sample.into_inner();
-    let mut path = sample_path.clone();
-    if sample.starts_with("Recording_") {
-        path = sample_path.join("Recorded");
-    }
 
-    path = path.join(sample);
-    debug!("Attempting to Find: {:?}", path);
+    let path = PathBuf::from(sample);
     if path.components().any(|part| part == Component::ParentDir) {
         // The path provided attempts to leave the samples dir, reject it.
         return HttpResponse::Forbidden().finish();
     }
 
-    if !path.exists() {
-        return HttpResponse::NotFound().finish();
+    let file = find_file_in_path(sample_path, path);
+    if let Some(path) = file {
+        let mime_type = MimeGuess::from_path(path.clone()).first_or_octet_stream();
+        let mut builder = HttpResponse::Ok();
+        builder.insert_header(ContentType(mime_type));
+        return builder.body(fs::read(path).unwrap());
     }
 
-    let mime_type = MimeGuess::from_path(path.clone()).first_or_octet_stream();
-    let mut builder = HttpResponse::Ok();
-    builder.insert_header(ContentType(mime_type));
-    builder.body(fs::read(path).unwrap())
+    HttpResponse::NotFound().finish()
 }
 
 async fn default(req: HttpRequest) -> HttpResponse {
