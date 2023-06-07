@@ -299,8 +299,10 @@ async fn get_sample(sample: web::Path<String>, app_data: Data<Mutex<AppData>>) -
         return HttpResponse::Forbidden().finish();
     }
 
+    debug!("Attempting to Find {:?} in {:?}", path, sample_path);
     let file = find_file_in_path(sample_path, path);
     if let Some(path) = file {
+        debug!("Found at {:?}", path);
         let mime_type = MimeGuess::from_path(path.clone()).first_or_octet_stream();
         let mut builder = HttpResponse::Ok();
         builder.insert_header(ContentType(mime_type));
