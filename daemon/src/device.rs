@@ -2687,6 +2687,11 @@ impl<'a> Device<'a> {
         // Set volumes first, applying mute may modify stuff..
         debug!("Applying Profile..");
 
+        debug!("Clearing Mute States..");
+        for channel in ChannelName::iter() {
+            self.goxlr.set_channel_state(channel, Unmuted)?;
+        }
+
         debug!("Setting Faders..");
         let mut mic_assigned_to_fader = false;
 
