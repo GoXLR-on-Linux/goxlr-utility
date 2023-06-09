@@ -186,7 +186,7 @@ impl Scribble {
     }
 
     pub fn icon_file(&self) -> Option<String> {
-        return self.icon_file.clone();
+        self.icon_file.clone()
     }
     pub fn text_top_left(&self) -> Option<String> {
         if self.text_top_left.is_empty() {
