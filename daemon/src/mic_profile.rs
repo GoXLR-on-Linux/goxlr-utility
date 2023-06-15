@@ -9,7 +9,7 @@ use goxlr_types::{
     CompressorAttackTime, CompressorRatio, CompressorReleaseTime, DisplayMode, EffectKey,
     EqFrequencies, GateTimes, MicrophoneParamKey, MicrophoneType, MiniEqFrequencies,
 };
-use log::error;
+use log::{error, warn};
 use ritelinked::LinkedHashSet;
 use std::collections::{HashMap, HashSet};
 use std::fs::{remove_file, File};
@@ -36,7 +36,8 @@ impl MicProfileAdapter {
         match MicProfileAdapter::from_named(name.clone(), directory) {
             Ok(result) => result,
             Err(error) => {
-                error!("Couldn't load mic profile {}: {}", name, error);
+                warn!("Couldn't load mic profile {}: {}", name, error);
+                warn!("Loading Embedded Default Profile");
                 MicProfileAdapter::default()
             }
         }
