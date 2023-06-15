@@ -11,10 +11,10 @@ use std::time::Duration;
 use anyhow::{bail, Result};
 use bounded_vec_deque::BoundedVecDeque;
 use ebur128::{EbuR128, Mode};
+use fancy_regex::Regex;
 use hound::WavWriter;
 use log::{debug, error, info, warn};
 use rb::{Producer, RbConsumer, RbProducer, SpscRb, RB};
-use regex::Regex;
 use symphonia::core::audio::{Layout, SignalSpec};
 
 use crate::audio::{get_input, AudioInput, AudioSpecification};
@@ -298,7 +298,14 @@ impl BufferedRecorder {
 
         let device = device_list
             .iter()
-            .find(|output| self.devices.iter().any(|pattern| pattern.is_match(output)))
+            .find(|output| {
+                self.devices.iter().any(|pattern| {
+                    if let Ok(result) = pattern.is_match(output) {
+                        return result;
+                    }
+                    false
+                })
+            })
             .cloned();
 
         if let Some(device) = &device {

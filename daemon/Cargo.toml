@@ -37,7 +37,7 @@ enum-map = "2.4.2"
 ritelinked = "0.3.2"
 clap = { version = "4.0.32", features = ["derive"] }
 opener = "0.5.0"
-regex = "1.7.0"
+fancy-regex = "0.11.0"
 chrono = { version = "0.4.23", default-features = false, features = ["clock"] }
 glob = "0.3.0"
 cfg-if = "1.0.0"

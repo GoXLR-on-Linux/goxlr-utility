@@ -28,7 +28,7 @@ bounded-vec-deque = "0.1.1"
 rb = "0.4.1"
 
 # Regular Expressions to help with device finding..
-regex = "1.7.1"
+fancy-regex = "0.11.0"
 
 # Under Linux, we'll use PulseAudio to output to the GoXLR..
 # We can't find the specific audio channels using CPAL, so will ask Pulse instead.

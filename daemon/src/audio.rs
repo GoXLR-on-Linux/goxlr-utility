@@ -1,6 +1,7 @@
 use crate::{OVERRIDE_SAMPLER_INPUT, OVERRIDE_SAMPLER_OUTPUT};
 use anyhow::{anyhow, bail, Result};
 use enum_map::EnumMap;
+use fancy_regex::Regex;
 use goxlr_audio::get_audio_inputs;
 use goxlr_audio::player::{Player, PlayerState};
 use goxlr_audio::recorder::BufferedRecorder;
@@ -8,7 +9,6 @@ use goxlr_audio::recorder::RecorderState;
 use goxlr_types::SampleBank;
 use goxlr_types::SampleButtons;
 use log::{debug, error, info, warn};
-use regex::Regex;
 use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -203,9 +203,12 @@ impl AudioHandler {
         let device = device_list
             .iter()
             .find(|output| {
-                pattern_matchers
-                    .iter()
-                    .any(|pattern| pattern.is_match(output))
+                pattern_matchers.iter().any(|pattern| {
+                    if let Ok(result) = pattern.is_match(output) {
+                        return result;
+                    }
+                    false
+                })
             })
             .cloned();
 
