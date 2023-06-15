@@ -97,21 +97,25 @@ impl<'a> Device<'a> {
         let mic_profile =
             MicProfileAdapter::from_named_or_default(mic_profile, mic_profile_directory);
 
-        let audio_buffer = settings_handle
-            .get_device_sampler_pre_buffer(&hardware.serial_number)
-            .await;
-        let audio_loader = AudioHandler::new(audio_buffer);
-        debug!("Created Audio Handler..");
-        debug!("{:?}", audio_loader);
-
-        if let Err(e) = &audio_loader {
-            error!("Error Running Script: {}", e);
-        }
-
         let mut audio_handler = None;
-        if let Ok(audio) = audio_loader {
-            debug!("Audio Handler Loaded OK..");
-            audio_handler = Some(audio);
+        if hardware.device_type == DeviceType::Full {
+            let audio_buffer = settings_handle
+                .get_device_sampler_pre_buffer(&hardware.serial_number)
+                .await;
+            let audio_loader = AudioHandler::new(audio_buffer);
+            debug!("Created Audio Handler..");
+            debug!("{:?}", audio_loader);
+
+            if let Err(e) = &audio_loader {
+                error!("Error Running Script: {}", e);
+            }
+
+            if let Ok(audio) = audio_loader {
+                debug!("Audio Handler Loaded OK..");
+                audio_handler.replace(audio);
+            }
+        } else {
+            debug!("Not Spawning Audio Handler, Device is Mini!");
         }
 
         let hold_time = settings_handle
