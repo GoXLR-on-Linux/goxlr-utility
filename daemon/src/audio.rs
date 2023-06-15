@@ -127,7 +127,7 @@ impl AudioHandler {
             Regex::new("GoXLR_0_8_9").expect("Invalid Regex in Audio Handler"),
             Regex::new("GoXLR.*HiFi__Line3__sink").expect("Invalid Regex in Audio Handler"),
             Regex::new("CoreAudio\\*Sample").expect("Invalid Regex in Audio Handler"),
-            Regex::new("WASAPI\\*Sample.*").expect("Invalid Regex in Audio Handler"),
+            Regex::new("^WASAPI\\*Sample(?:(?!Mini).)*$").expect("Invalid Regex in Audio Handler"),
         ];
         patterns
     }
@@ -144,7 +144,7 @@ impl AudioHandler {
             String::from("GoXLR_0_8_9"),
             String::from("GoXLR.*HiFi__Line3__sink"),
             String::from("CoreAudio\\*Sample"),
-            String::from("WASAPI\\*Sample.*"),
+            String::from("^WASAPI\\*Sample(?:(?!Mini).)*$"),
         ];
         patterns
     }
@@ -160,7 +160,7 @@ impl AudioHandler {
             Regex::new("GoXLR_0_4_5.*source").expect("Invalid Regex in Audio Handler"),
             Regex::new("GoXLR.*HiFi__Line5__source").expect("Invalid Regex in Audio Handler"),
             Regex::new("CoreAudio\\*Sampler").expect("Invalid Regex in Audio Handler"),
-            Regex::new("WASAPI\\*Sample.*").expect("Invalid Regex in Audio Handler"),
+            Regex::new("^WASAPI\\*Sample(?:(?!Mini).)*$").expect("Invalid Regex in Audio Handler"),
         ];
         patterns
     }
@@ -176,7 +176,7 @@ impl AudioHandler {
             String::from("GoXLR_0_4_5.*source"),
             String::from("GoXLR.*HiFi__Line5__source"),
             String::from("CoreAudio\\*Sampler"),
-            String::from("WASAPI\\*Sample.*"),
+            String::from("^WASAPI\\*Sample(?:(?!Mini).)*$"),
         ];
 
         patterns
