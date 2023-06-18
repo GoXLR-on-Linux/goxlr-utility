@@ -7,9 +7,10 @@ use std::fs::File;
 use std::io::ErrorKind::UnexpectedEof;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use crate::audio::{get_output, AudioSpecification};
+use crate::AtomicF64;
 use symphonia::core::audio::{Layout, SampleBuffer, SignalSpec};
 use symphonia::core::errors::Error;
 use symphonia::core::formats::{SeekMode, SeekTo};
@@ -32,10 +33,11 @@ pub struct Player {
     gain: Option<f64>,
 
     progress: Arc<AtomicU8>,
+    result: Arc<Mutex<Result<()>>>,
 
     // Used for processing Gain..
     process_only: bool,
-    normalized_gain: Option<f64>,
+    normalized_gain: Arc<AtomicF64>,
 }
 
 impl Player {
@@ -62,6 +64,7 @@ impl Player {
             force_stop: Arc::new(AtomicBool::new(false)),
 
             progress: Arc::new(AtomicU8::new(0)),
+            result: Arc::new(Mutex::new(Ok(()))),
 
             device,
             fade_duration,
@@ -70,7 +73,7 @@ impl Player {
             gain,
 
             process_only: false,
-            normalized_gain: None,
+            normalized_gain: Arc::new(AtomicF64::new(1.0)),
         })
     }
 
@@ -98,11 +101,21 @@ impl Player {
         probe_result
     }
 
-    pub fn calculate_gain(&mut self) -> Result<Option<f64>> {
+    pub fn calculate_gain2(&mut self) {
+        self.process_only = true;
+
+        let result = self.play();
+
+        // Replace the Result..
+        let mut res = self.result.lock().unwrap();
+        *res = result;
+    }
+
+    pub fn calculate_gain(&mut self) -> Result<Arc<AtomicF64>> {
         self.process_only = true;
         self.play()?;
 
-        Ok(self.normalized_gain)
+        Ok(self.normalized_gain.clone())
     }
 
     pub fn play_loop(&mut self) -> Result<()> {
@@ -366,11 +379,13 @@ impl Player {
 
             if loudness == f64::NEG_INFINITY {
                 debug!("Unable to Obtain loudness in Mode M, Setting Default..");
-                self.normalized_gain = Some(1.0);
+                self.normalized_gain.store(1.0, Ordering::Relaxed);
             } else {
                 let target = -23.0;
                 let gain_db = target - loudness;
-                self.normalized_gain = Some(f64::powf(10., gain_db / 20.));
+                let value = f64::powf(10., gain_db / 20.);
+
+                self.normalized_gain.store(value, Ordering::Relaxed);
             }
         }
         decoder.finalize();
@@ -410,6 +425,8 @@ impl Player {
             stopping: self.stopping.clone(),
             force_stop: self.force_stop.clone(),
             progress: self.progress.clone(),
+            result: self.result.clone(),
+            calculated_gain: self.normalized_gain.clone(),
         }
     }
 }
@@ -418,5 +435,11 @@ impl Player {
 pub struct PlayerState {
     pub stopping: Arc<AtomicBool>,
     pub force_stop: Arc<AtomicBool>,
+
+    // These are generally read only from the outside..
     pub progress: Arc<AtomicU8>,
+    pub result: Arc<Mutex<Result<()>>>,
+
+    // Specifically for calculating the gain..
+    pub calculated_gain: Arc<AtomicF64>,
 }

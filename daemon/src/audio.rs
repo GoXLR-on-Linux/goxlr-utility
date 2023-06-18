@@ -488,7 +488,7 @@ impl AudioHandler {
 
     pub fn calculate_gain(&self, path: &PathBuf) -> Result<Option<f64>> {
         let mut player = Player::new(path, None, None, None, None, None)?;
-        player.calculate_gain()
+        Ok(Some(player.calculate_gain()?.load(Ordering::Relaxed)))
     }
 }
 
