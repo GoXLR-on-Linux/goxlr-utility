@@ -259,8 +259,11 @@ impl<'a> Device<'a> {
 
         // Update any audio related states..
         if let Some(audio_handler) = &mut self.audio_handler {
-            audio_handler.check_playing().await;
-            state_updated = self.sync_sample_lighting().await?;
+            state_updated = audio_handler.check_playing().await;
+
+            if self.sync_sample_lighting().await? && !state_updated {
+                state_updated = true;
+            };
         }
 
         // Find any buttons that have been held, and action if needed.

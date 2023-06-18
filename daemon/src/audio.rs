@@ -230,7 +230,9 @@ impl AudioHandler {
         }
     }
 
-    pub async fn check_playing(&mut self) {
+    pub async fn check_playing(&mut self) -> bool {
+        let mut state_changed = false;
+
         // Iterate over the Sampler Banks..
         for bank in SampleBank::iter() {
             // Iterate over the buttons..
@@ -240,16 +242,20 @@ impl AudioHandler {
                         if let Some(recording) = &state.recording {
                             if recording.is_finished() {
                                 self.active_streams[bank][button] = None;
+                                state_changed = true;
                             }
                         }
                     } else if let Some(playback) = &state.playback {
                         if playback.is_finished() {
                             self.active_streams[bank][button] = None;
+                            state_changed = true;
                         }
                     }
                 }
             }
         }
+
+        state_changed
     }
 
     pub fn is_sample_playing(&self, bank: SampleBank, button: SampleButtons) -> bool {
