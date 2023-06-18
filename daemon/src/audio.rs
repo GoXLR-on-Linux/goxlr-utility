@@ -26,6 +26,8 @@ pub struct AudioHandler {
 
     last_device_check: Option<Instant>,
     active_streams: EnumMap<SampleBank, EnumMap<SampleButtons, Option<StateManager>>>,
+
+    process_task: Option<ProcessTask>,
 }
 
 pub struct AudioFile {
@@ -34,6 +36,15 @@ pub struct AudioFile {
     pub(crate) start_pct: Option<f64>,
     pub(crate) stop_pct: Option<f64>,
     pub(crate) fade_on_stop: bool,
+}
+
+#[derive(Debug)]
+pub struct ProcessTask {
+    bank: SampleBank,
+    button: SampleButtons,
+    file: PathBuf,
+
+    player: AudioPlaybackState,
 }
 
 #[derive(Debug)]
@@ -99,6 +110,8 @@ impl AudioHandler {
 
             last_device_check: None,
             active_streams: EnumMap::default(),
+
+            process_task: None,
         };
 
         // Immediately initialise the recorder, and let it try to handle stuff.
@@ -486,6 +499,101 @@ impl AudioHandler {
         Ok(filename)
     }
 
+    pub fn calculate_gain_thread(
+        &mut self,
+        path: &PathBuf,
+        bank: SampleBank,
+        button: SampleButtons,
+    ) -> Result<()> {
+        if self.process_task.is_some() {
+            bail!("Sample already being processed");
+        }
+
+        // Create the player..
+        let mut player = Player::new(path, None, None, None, None, None)?;
+
+        // Grab the State..
+        let state = player.get_state();
+
+        // Spawn the Thread and Grab the Handler..
+        let handler = thread::spawn(move || {
+            player.calculate_gain2();
+        });
+
+        // Store this into the processing task..
+        self.process_task.replace(ProcessTask {
+            bank,
+            button,
+            file: path.clone(),
+            player: AudioPlaybackState {
+                handle: Some(handler),
+                state,
+            },
+        });
+
+        Ok(())
+    }
+
+    pub fn is_calculating(&self) -> bool {
+        self.process_task.is_some()
+    }
+
+    pub fn is_calculating_complete(&self) -> Result<bool> {
+        if self.process_task.is_none() {
+            bail!("Calculation not in progress");
+        }
+
+        if let Some(task) = &self.process_task {
+            return Ok(task.player.is_finished());
+        }
+        bail!("Task exists, but also doesn't exist!");
+    }
+
+    pub fn get_calculating_progress(&self) -> Result<u8> {
+        if self.process_task.is_none() {
+            bail!("Calculation not in progress");
+        }
+
+        if let Some(task) = &self.process_task {
+            return Ok(task.player.state.progress.load(Ordering::Relaxed));
+        }
+
+        bail!("Task exists, but also doesn't exist!");
+    }
+
+    pub fn get_and_clear_calculating_result(&mut self) -> Result<CalculationResult> {
+        if self.process_task.is_none() {
+            bail!("Calculation not in progress");
+        }
+
+        let result;
+        if let Some(task) = &mut self.process_task {
+            // We need to make sure the thread is finished..
+            task.player.wait();
+
+            let error = task.player.state.error.lock().unwrap();
+            let task_result = if error.is_some() {
+                Err(anyhow!(error.as_ref().unwrap().clone()))
+            } else {
+                Ok(())
+            };
+
+            result = CalculationResult {
+                result: task_result,
+                file: task.file.clone(),
+                bank: task.bank,
+                button: task.button,
+                gain: task.player.state.calculated_gain.load(Ordering::Relaxed),
+            };
+        } else {
+            bail!("Unable to obtain Task");
+        }
+
+        // In all cases, when we get here, we're done, so cleanup and go home
+        self.process_task = None;
+        Ok(result)
+    }
+
     pub fn calculate_gain(&self, path: &PathBuf) -> Result<Option<f64>> {
         let mut player = Player::new(path, None, None, None, None, None)?;
         Ok(Some(player.calculate_gain()?.load(Ordering::Relaxed)))
@@ -498,4 +606,12 @@ impl Drop for AudioHandler {
             buffered_recorder.stop();
         }
     }
+}
+
+pub struct CalculationResult {
+    result: Result<()>,
+    file: PathBuf,
+    bank: SampleBank,
+    button: SampleButtons,
+    gain: f64,
 }

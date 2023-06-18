@@ -33,7 +33,7 @@ pub struct Player {
     gain: Option<f64>,
 
     progress: Arc<AtomicU8>,
-    result: Arc<Mutex<Result<()>>>,
+    error: Arc<Mutex<Option<String>>>,
 
     // Used for processing Gain..
     process_only: bool,
@@ -64,7 +64,7 @@ impl Player {
             force_stop: Arc::new(AtomicBool::new(false)),
 
             progress: Arc::new(AtomicU8::new(0)),
-            result: Arc::new(Mutex::new(Ok(()))),
+            error: Arc::new(Mutex::new(None)),
 
             device,
             fade_duration,
@@ -105,10 +105,10 @@ impl Player {
         self.process_only = true;
 
         let result = self.play();
-
-        // Replace the Result..
-        let mut res = self.result.lock().unwrap();
-        *res = result;
+        if let Err(error) = result {
+            let mut res = self.error.lock().unwrap();
+            *res = Some(error.to_string());
+        }
     }
 
     pub fn calculate_gain(&mut self) -> Result<Arc<AtomicF64>> {
@@ -425,7 +425,7 @@ impl Player {
             stopping: self.stopping.clone(),
             force_stop: self.force_stop.clone(),
             progress: self.progress.clone(),
-            result: self.result.clone(),
+            error: self.error.clone(),
             calculated_gain: self.normalized_gain.clone(),
         }
     }
@@ -438,7 +438,7 @@ pub struct PlayerState {
 
     // These are generally read only from the outside..
     pub progress: Arc<AtomicU8>,
-    pub result: Arc<Mutex<Result<()>>>,
+    pub error: Arc<Mutex<Option<String>>>,
 
     // Specifically for calculating the gain..
     pub calculated_gain: Arc<AtomicF64>,
