@@ -2020,6 +2020,10 @@ impl<'a> Device<'a> {
 
                 // If we have an audio handler, try to calcuate the Gain..
                 if let Some(audio_handler) = &mut self.audio_handler {
+                    if audio_handler.is_calculating() {
+                        bail!("Gain Calculation already in progress..");
+                    }
+
                     // V2 Here, this technically still blocks in it's current state, however, it
                     // doesn't have to anymore.
                     audio_handler.calculate_gain_thread(path, bank, button)?;
