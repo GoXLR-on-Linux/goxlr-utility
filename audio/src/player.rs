@@ -6,7 +6,7 @@ use log::debug;
 use std::fs::File;
 use std::io::ErrorKind::UnexpectedEof;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::sync::Arc;
 
 use crate::audio::{get_output, AudioSpecification};
@@ -30,6 +30,8 @@ pub struct Player {
     start_pct: Option<f64>,
     stop_pct: Option<f64>,
     gain: Option<f64>,
+
+    progress: Arc<AtomicU8>,
 
     // Used for processing Gain..
     process_only: bool,
@@ -58,6 +60,8 @@ impl Player {
             volume: 1.0_f32,
             stopping: Arc::new(AtomicBool::new(false)),
             force_stop: Arc::new(AtomicBool::new(false)),
+
+            progress: Arc::new(AtomicU8::new(0)),
 
             device,
             fade_duration,
@@ -264,6 +268,12 @@ impl Player {
 
                         if let Some(ref mut ebu_r128) = ebu_r128 {
                             ebu_r128.add_frames_f32(samples.as_slice())?;
+                            samples_processed += samples.len() as u64;
+
+                            let progress = Player::processed(frames, samples_processed, channels);
+                            if self.progress.load(Ordering::Relaxed) != progress {
+                                self.progress.store(progress, Ordering::Relaxed);
+                            }
 
                             // Skip straight to the next packet..
                             continue;
@@ -317,6 +327,12 @@ impl Player {
                         }
 
                         samples_processed += samples.len() as u64;
+
+                        // Calculate the Current Processing Percent..
+                        let progress = Player::processed(frames, samples_processed, channels);
+                        if self.progress.load(Ordering::Relaxed) != progress {
+                            self.progress.store(progress, Ordering::Relaxed);
+                        }
 
                         if let Some(stop_sample) = stop_sample {
                             if samples_processed >= stop_sample {
@@ -377,10 +393,23 @@ impl Player {
         Ok(())
     }
 
+    fn processed(total_frames: Option<u64>, current_frame: u64, channels: usize) -> u8 {
+        // Calculate the Current Processing Percent..
+        if let Some(frames) = total_frames {
+            let frames_processed = current_frame / channels as u64;
+            let processed_ratio = frames_processed as f64 / frames as f64;
+            let calc_percent = (processed_ratio * 100.) as u8;
+
+            return calc_percent;
+        }
+        0
+    }
+
     pub fn get_state(&self) -> PlayerState {
         PlayerState {
             stopping: self.stopping.clone(),
             force_stop: self.force_stop.clone(),
+            progress: self.progress.clone(),
         }
     }
 }
@@ -389,4 +418,5 @@ impl Player {
 pub struct PlayerState {
     pub stopping: Arc<AtomicBool>,
     pub force_stop: Arc<AtomicBool>,
+    pub progress: Arc<AtomicU8>,
 }
