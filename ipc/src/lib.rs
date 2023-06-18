@@ -202,6 +202,7 @@ pub enum GoXLRCommand {
     SetHardTuneSource(HardTuneSource),
 
     // Sampler..
+    ClearSampleProcessError(),
     SetSamplerFunction(SampleBank, SampleButtons, SamplePlaybackMode),
     SetSamplerOrder(SampleBank, SampleButtons, SamplePlayOrder),
     AddSample(SampleBank, SampleButtons, String),

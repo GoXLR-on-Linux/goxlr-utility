@@ -6,7 +6,7 @@ use anyhow::{anyhow, bail, Result};
 use chrono::Local;
 use enum_map::EnumMap;
 use enumset::EnumSet;
-use log::{debug, error, info, warn};
+use log::{debug, error, info};
 use ritelinked::LinkedHashSet;
 use strum::IntoEnumIterator;
 use tokio::sync::mpsc::Sender;
@@ -2068,6 +2068,9 @@ impl<'a> Device<'a> {
             }
 
             // Sampler..
+            GoXLRCommand::ClearSampleProcessError() => {
+                self.last_sample_error = None;
+            }
             GoXLRCommand::SetSamplerFunction(bank, button, function) => {
                 self.profile.set_sampler_function(bank, button, function);
             }
