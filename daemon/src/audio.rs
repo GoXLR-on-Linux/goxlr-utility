@@ -501,7 +501,7 @@ impl AudioHandler {
 
     pub fn calculate_gain_thread(
         &mut self,
-        path: &PathBuf,
+        path: PathBuf,
         bank: SampleBank,
         button: SampleButtons,
     ) -> Result<()> {
@@ -510,21 +510,21 @@ impl AudioHandler {
         }
 
         // Create the player..
-        let mut player = Player::new(path, None, None, None, None, None)?;
+        let mut player = Player::new(&path, None, None, None, None, None)?;
 
         // Grab the State..
         let state = player.get_state();
 
         // Spawn the Thread and Grab the Handler..
         let handler = thread::spawn(move || {
-            player.calculate_gain2();
+            player.calculate_gain();
         });
 
         // Store this into the processing task..
         self.process_task.replace(ProcessTask {
             bank,
             button,
-            file: path.clone(),
+            file: path,
             player: AudioPlaybackState {
                 handle: Some(handler),
                 state,
@@ -593,11 +593,6 @@ impl AudioHandler {
         self.process_task = None;
         Ok(result)
     }
-
-    pub fn calculate_gain(&self, path: &PathBuf) -> Result<Option<f64>> {
-        let mut player = Player::new(path, None, None, None, None, None)?;
-        Ok(Some(player.calculate_gain()?.load(Ordering::Relaxed)))
-    }
 }
 
 impl Drop for AudioHandler {
@@ -609,9 +604,9 @@ impl Drop for AudioHandler {
 }
 
 pub struct CalculationResult {
-    result: Result<()>,
-    file: PathBuf,
-    bank: SampleBank,
-    button: SampleButtons,
-    gain: f64,
+    pub result: Result<()>,
+    pub file: PathBuf,
+    pub bank: SampleBank,
+    pub button: SampleButtons,
+    pub gain: f64,
 }

@@ -2020,17 +2020,28 @@ impl<'a> Device<'a> {
 
                 // If we have an audio handler, try to calcuate the Gain..
                 if let Some(audio_handler) = &mut self.audio_handler {
-                    // TODO: Find a way to do this asynchronously..
-                    // Currently this will block the main thread until the calculation is complete,
-                    // obviously this is less than ideal. We can't hold the track because it also
-                    // needs to exist in the profile and could be removed prior to the calculation
-                    // completing (causing Cross Thread Mutability issues), consider looking into
-                    // refcounters to see if this can be solved.
-                    if let Some(gain) = audio_handler.calculate_gain(&path)? {
-                        // Gain Calculation was successful, add the track to the profile, and set the gain.
-                        let track = self.profile.add_sample_file(bank, button, filename);
-                        track.normalized_gain = gain;
-                    }
+                    // V2 Here, this technically still blocks in it's current state, however, it
+                    // doesn't have to anymore.
+                    audio_handler.calculate_gain_thread(path, bank, button)?;
+
+                    // This method will block until complete, but will give us a result..
+                    let result = audio_handler.get_and_clear_calculating_result()?;
+
+                    // We can process any errors which occurred here..
+                    if let Err(error) = result.result {
+                        bail!("Error Handling Sample: {}", error);
+                    };
+
+                    let bank = result.bank;
+                    let button = result.button;
+
+                    // Multi-part breakdown :p
+                    let filename = result.file.file_name().unwrap();
+                    let filename = filename.to_string_lossy().to_string();
+
+                    // Add the Track..
+                    let track = self.profile.add_sample_file(bank, button, filename);
+                    track.normalized_gain = result.gain;
                 }
 
                 // Update the lighting..

@@ -101,7 +101,7 @@ impl Player {
         probe_result
     }
 
-    pub fn calculate_gain2(&mut self) {
+    pub fn calculate_gain(&mut self) {
         self.process_only = true;
 
         let result = self.play();
@@ -109,13 +109,6 @@ impl Player {
             let mut res = self.error.lock().unwrap();
             *res = Some(error.to_string());
         }
-    }
-
-    pub fn calculate_gain(&mut self) -> Result<Arc<AtomicF64>> {
-        self.process_only = true;
-        self.play()?;
-
-        Ok(self.normalized_gain.clone())
     }
 
     pub fn play_loop(&mut self) -> Result<()> {
