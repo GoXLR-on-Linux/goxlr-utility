@@ -6,7 +6,7 @@ use anyhow::{anyhow, bail, Result};
 use chrono::Local;
 use enum_map::EnumMap;
 use enumset::EnumSet;
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use ritelinked::LinkedHashSet;
 use strum::IntoEnumIterator;
 use tokio::sync::mpsc::Sender;
@@ -256,14 +256,52 @@ impl<'a> Device<'a> {
 
     pub async fn update_state(&mut self) -> Result<bool> {
         let mut state_updated = false;
+        let mut refresh_colour_map = false;
 
         // Update any audio related states..
         if let Some(audio_handler) = &mut self.audio_handler {
-            state_updated = audio_handler.check_playing().await;
+            // Check the status of any processing audio files..
+            if audio_handler.is_calculating() && audio_handler.is_calculating_complete()? {
+                // Handling has been finished, pull all the data and add it to the profile.
+
+                let result = audio_handler.get_and_clear_calculating_result()?;
+                if result.result.is_err() {
+                    if let Err(error) = result.result {
+                        // We need to somehow push this to the user (via DaemonStatus probably)..
+                        warn!("Unable to process Sample: {}", error);
+                    }
+                } else {
+                    let bank = result.bank;
+                    let button = result.button;
+
+                    let filename = result.file.file_name().unwrap();
+                    let filename = filename.to_string_lossy().to_string();
+
+                    let track = self.profile.add_sample_file(bank, button, filename);
+                    track.normalized_gain = result.gain;
+
+                    refresh_colour_map = true;
+                }
+                state_updated = true;
+            }
+
+            if audio_handler.is_calculating() {
+                // We need to update the percentage in DaemonStatus
+                debug!("Progress: {}", audio_handler.get_calculating_progress()?);
+                state_updated = true;
+            }
+
+            if audio_handler.check_playing().await && !state_updated {
+                state_updated = true;
+            }
 
             if self.sync_sample_lighting().await? && !state_updated {
                 state_updated = true;
             };
+
+            if refresh_colour_map {
+                self.load_colour_map()?;
+            }
         }
 
         // Find any buttons that have been held, and action if needed.
@@ -2028,24 +2066,24 @@ impl<'a> Device<'a> {
                     // doesn't have to anymore.
                     audio_handler.calculate_gain_thread(path, bank, button)?;
 
-                    // This method will block until complete, but will give us a result..
-                    let result = audio_handler.get_and_clear_calculating_result()?;
-
-                    // We can process any errors which occurred here..
-                    if let Err(error) = result.result {
-                        bail!("Error Handling Sample: {}", error);
-                    };
-
-                    let bank = result.bank;
-                    let button = result.button;
-
-                    // Multi-part breakdown :p
-                    let filename = result.file.file_name().unwrap();
-                    let filename = filename.to_string_lossy().to_string();
-
-                    // Add the Track..
-                    let track = self.profile.add_sample_file(bank, button, filename);
-                    track.normalized_gain = result.gain;
+                    // // This method will block until complete, but will give us a result..
+                    // let result = audio_handler.get_and_clear_calculating_result()?;
+                    //
+                    // // We can process any errors which occurred here..
+                    // if let Err(error) = result.result {
+                    //     bail!("Error Handling Sample: {}", error);
+                    // };
+                    //
+                    // let bank = result.bank;
+                    // let button = result.button;
+                    //
+                    // // Multi-part breakdown :p
+                    // let filename = result.file.file_name().unwrap();
+                    // let filename = filename.to_string_lossy().to_string();
+                    //
+                    // // Add the Track..
+                    // let track = self.profile.add_sample_file(bank, button, filename);
+                    // track.normalized_gain = result.gain;
                 }
 
                 // Update the lighting..
