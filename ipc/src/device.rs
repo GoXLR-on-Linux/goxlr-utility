@@ -317,10 +317,17 @@ pub struct HardTune {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Sampler {
+    pub processing_state: SampleProcessState,
     pub active_bank: SampleBank,
     pub clear_active: bool,
     pub record_buffer: u16,
     pub banks: HashMap<SampleBank, HashMap<SampleButtons, SamplerButton>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SampleProcessState {
+    pub progress: Option<u8>,
+    pub last_error: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

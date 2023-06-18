@@ -13,7 +13,7 @@ use tokio::sync::mpsc::Sender;
 
 use goxlr_ipc::{
     DeviceType, Display, FaderStatus, GoXLRCommand, HardwareStatus, Levels, MicSettings,
-    MixerStatus, Settings,
+    MixerStatus, SampleProcessState, Settings,
 };
 use goxlr_profile_loader::components::mute::MuteFunction;
 use goxlr_types::{
@@ -51,6 +51,8 @@ pub struct Device<'a> {
     vc_mute_also_mute_cm: bool,
     settings: &'a SettingsHandle,
     global_events: Sender<EventTriggers>,
+
+    last_sample_error: Option<String>,
 }
 
 #[derive(Debug, Default, Copy, Clone)]
@@ -139,6 +141,8 @@ impl<'a> Device<'a> {
             audio_handler,
             settings: settings_handle,
             global_events,
+
+            last_sample_error: None,
         };
 
         device.apply_profile().await?;
@@ -181,6 +185,21 @@ impl<'a> Device<'a> {
 
         let submix_supported = self.device_supports_submixes();
 
+        let mut sample_progress = None;
+        let mut sample_error = None;
+
+        if let Some(audio_handler) = &self.audio_handler {
+            if audio_handler.is_calculating() {
+                if let Ok(value) = audio_handler.get_calculating_progress() {
+                    sample_progress.replace(value);
+                }
+            }
+        }
+
+        if let Some(error) = &self.last_sample_error {
+            sample_error.replace(error.clone());
+        }
+
         MixerStatus {
             hardware: self.hardware.clone(),
             shutdown_commands,
@@ -213,6 +232,10 @@ impl<'a> Device<'a> {
                 self.hardware.device_type == DeviceType::Mini,
                 &self.audio_handler,
                 sampler_prerecord,
+                SampleProcessState {
+                    progress: sample_progress,
+                    last_error: sample_error,
+                },
             ),
             settings: Settings {
                 display: Display {
@@ -268,7 +291,7 @@ impl<'a> Device<'a> {
                 if result.result.is_err() {
                     if let Err(error) = result.result {
                         // We need to somehow push this to the user (via DaemonStatus probably)..
-                        warn!("Unable to process Sample: {}", error);
+                        self.last_sample_error = Some(error.to_string());
                     }
                 } else {
                     let bank = result.bank;

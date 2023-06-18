@@ -13,8 +13,8 @@ use strum::IntoEnumIterator;
 use crate::audio::{AudioFile, AudioHandler};
 use goxlr_ipc::{
     ActiveEffects, ButtonLighting, CoughButton, Echo, Effects, FaderLighting, Gender, HardTune,
-    Lighting, Megaphone, OneColour, Pitch, Reverb, Robot, Sample, Sampler, SamplerButton,
-    SamplerLighting, Scribble, Submix, Submixes, ThreeColours, TwoColours,
+    Lighting, Megaphone, OneColour, Pitch, Reverb, Robot, Sample, SampleProcessState, Sampler,
+    SamplerButton, SamplerLighting, Scribble, Submix, Submixes, ThreeColours, TwoColours,
 };
 use goxlr_profile_loader::components::colours::{
     Colour, ColourDisplay, ColourMap, ColourOffStyle, ColourState,
@@ -728,6 +728,7 @@ impl ProfileAdapter {
         is_device_mini: bool,
         audio_handler: &Option<AudioHandler>,
         sampler_prerecord: u16,
+        processing_state: SampleProcessState,
     ) -> Option<Sampler> {
         if is_device_mini {
             return None;
@@ -780,6 +781,7 @@ impl ProfileAdapter {
         }
 
         Some(Sampler {
+            processing_state,
             active_bank: self.get_active_sample_bank(),
             clear_active: self.is_sample_clear_active(),
             record_buffer: sampler_prerecord,
