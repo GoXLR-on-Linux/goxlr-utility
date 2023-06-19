@@ -19,16 +19,8 @@ use goxlr_types::{
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DaemonRequest {
     Ping,
-    OpenUi,
     GetStatus,
-    StopDaemon,
-    OpenPath(PathTypes),
-    SetLogLevel(LogLevel),
-    SetShowTrayIcon(bool),
-    SetTTSEnabled(bool),
-    SetAutoStartEnabled(bool),
-    SetAllowNetworkAccess(bool),
-    RecoverDefaults(PathTypes),
+    Daemon(DaemonCommand),
     Command(String, GoXLRCommand),
 }
 
@@ -71,6 +63,19 @@ pub enum LogLevel {
     Info,
     Debug,
     Trace,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum DaemonCommand {
+    OpenUi,
+    StopDaemon,
+    OpenPath(PathTypes),
+    SetLogLevel(LogLevel),
+    SetShowTrayIcon(bool),
+    SetTTSEnabled(bool),
+    SetAutoStartEnabled(bool),
+    SetAllowNetworkAccess(bool),
+    RecoverDefaults(PathTypes),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
