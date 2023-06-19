@@ -159,18 +159,6 @@ pub async fn spawn_usb_handler(
                     }
 
                     DeviceCommand::RunDaemonCommand(command, sender) => {
-                        /*
-                            OpenUi,
-                        StopDaemon,
-                        OpenPath(PathTypes),
-                        SetLogLevel(LogLevel),
-                        SetShowTrayIcon(bool),
-                        SetTTSEnabled(bool),
-                        SetAutoStartEnabled(bool),
-                        SetAllowNetworkAccess(bool),
-                        RecoverDefaults(PathTypes),
-                        */
-
                         match command {
                             DaemonCommand::StopDaemon => {
                                 // These should probably be moved upstream somewhere, they're not
