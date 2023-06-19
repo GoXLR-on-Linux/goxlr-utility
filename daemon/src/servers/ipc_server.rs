@@ -8,7 +8,7 @@ use std::path::Path;
 use NameTypeSupport::*;
 
 use goxlr_ipc::clients::ipc::ipc_socket::Socket;
-use goxlr_ipc::{DaemonRequest, DaemonResponse, HttpSettings};
+use goxlr_ipc::{DaemonRequest, DaemonResponse};
 
 use crate::primary_worker::DeviceSender;
 use crate::servers::server_packet::handle_packet;
@@ -68,19 +68,17 @@ pub async fn bind_socket() -> Result<LocalSocketListener> {
 
 pub async fn spawn_ipc_server(
     listener: LocalSocketListener,
-    http_settings: HttpSettings,
     usb_tx: DeviceSender,
     mut shutdown_signal: Shutdown,
 ) {
     debug!("Running IPC Server..");
     loop {
-        let http_settings = http_settings.clone();
         tokio::select! {
             Ok(connection) = listener.accept() => {
                 let socket = Socket::new(connection);
                 let usb_tx = usb_tx.clone();
                 tokio::spawn(async move {
-                    handle_connection(&http_settings.clone(), socket, usb_tx).await;
+                    handle_connection(socket, usb_tx).await;
                 });
             }
             () = shutdown_signal.recv() => {
@@ -93,18 +91,17 @@ pub async fn spawn_ipc_server(
                 }
                 return;
             }
-        };
+        }
     }
 }
 
 async fn handle_connection(
-    http_settings: &HttpSettings,
     mut socket: Socket<DaemonRequest, DaemonResponse>,
     mut usb_tx: DeviceSender,
 ) {
     while let Some(msg) = socket.read().await {
         match msg {
-            Ok(msg) => match handle_packet(http_settings, msg, &mut usb_tx).await {
+            Ok(msg) => match handle_packet(msg, &mut usb_tx).await {
                 Ok(response) => {
                     if let Err(e) = socket.send(response).await {
                         warn!("Couldn't reply to {:?}: {}", socket.address(), e);

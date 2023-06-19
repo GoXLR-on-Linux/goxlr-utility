@@ -23,21 +23,22 @@ pub struct DaemonStatus {
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct HttpSettings {
-    pub enabled: bool,
-    pub bind_address: String,
-    pub cors_enabled: bool,
-    pub port: u16,
-}
-
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct DaemonConfig {
+    pub http_settings: HttpSettings,
     pub daemon_version: String,
     pub autostart_enabled: bool,
     pub show_tray_icon: bool,
     pub tts_enabled: Option<bool>,
     pub allow_network_access: bool,
     pub log_level: LogLevel,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct HttpSettings {
+    pub enabled: bool,
+    pub bind_address: String,
+    pub cors_enabled: bool,
+    pub port: u16,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

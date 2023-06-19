@@ -6,7 +6,7 @@ use crate::{FileManager, PatchEvent, SettingsHandle, Shutdown, VERSION};
 use anyhow::{anyhow, Result};
 use goxlr_ipc::{
     DaemonConfig, DaemonResponse, DaemonStatus, DeviceType, Files, GoXLRCommand, HardwareStatus,
-    LogLevel, PathTypes, Paths, UsbProductInformation,
+    HttpSettings, LogLevel, PathTypes, Paths, UsbProductInformation,
 };
 use goxlr_usb::device::base::GoXLRDevice;
 use goxlr_usb::device::{find_devices, from_device};
@@ -50,6 +50,7 @@ pub async fn spawn_usb_handler(
     global_tx: Sender<EventTriggers>,
     mut shutdown: Shutdown,
     settings: SettingsHandle,
+    http_settings: HttpSettings,
     mut file_manager: FileManager,
 ) {
     // We can probably either merge these, or struct them..
@@ -71,7 +72,8 @@ pub async fn spawn_usb_handler(
     let mut ignore_list = HashMap::new();
 
     let mut files = get_files(&mut file_manager).await;
-    let mut daemon_status = get_daemon_status(&devices, &settings, files.clone()).await;
+    let mut daemon_status =
+        get_daemon_status(&devices, &settings, &http_settings, files.clone()).await;
 
     let mut shutdown_triggered = false;
 
@@ -259,7 +261,8 @@ pub async fn spawn_usb_handler(
         }
 
         if change_found {
-            let new_status = get_daemon_status(&devices, &settings, files.clone()).await;
+            let new_status =
+                get_daemon_status(&devices, &settings, &http_settings, files.clone()).await;
 
             // Convert them to JSON..
             let json_old = serde_json::to_value(&daemon_status).unwrap();
@@ -281,10 +284,12 @@ pub async fn spawn_usb_handler(
 async fn get_daemon_status(
     devices: &HashMap<String, Device<'_>>,
     settings: &SettingsHandle,
+    http_settings: &HttpSettings,
     files: Files,
 ) -> DaemonStatus {
     let mut status = DaemonStatus {
         config: DaemonConfig {
+            http_settings: http_settings.clone(),
             daemon_version: String::from(VERSION),
             autostart_enabled: has_autostart(),
             show_tray_icon: settings.get_show_tray_icon().await,

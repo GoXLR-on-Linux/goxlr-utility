@@ -1,16 +1,14 @@
 use crate::primary_worker::{DeviceCommand, DeviceSender};
 use anyhow::{anyhow, Context, Result};
-use goxlr_ipc::{DaemonRequest, DaemonResponse, HttpSettings};
+use goxlr_ipc::{DaemonRequest, DaemonResponse};
 use tokio::sync::oneshot;
 
 pub async fn handle_packet(
-    http_settings: &HttpSettings,
     request: DaemonRequest,
     usb_tx: &mut DeviceSender,
 ) -> Result<DaemonResponse> {
     match request {
         DaemonRequest::Ping => Ok(DaemonResponse::Ok),
-        DaemonRequest::GetHttpState => Ok(DaemonResponse::HttpState(http_settings.clone())),
         DaemonRequest::OpenUi => {
             let (tx, rx) = oneshot::channel();
             usb_tx

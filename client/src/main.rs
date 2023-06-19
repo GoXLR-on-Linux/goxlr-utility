@@ -47,7 +47,6 @@ async fn main() -> Result<()> {
     }
 
     client.poll_status().await?;
-    client.poll_http_status().await?;
 
     let serial = if let Some(serial) = &cli.device {
         serial.to_owned()
@@ -951,11 +950,6 @@ async fn main() -> Result<()> {
     if cli.status_json {
         client.poll_status().await?;
         println!("{}", serde_json::to_string_pretty(client.status())?);
-    }
-
-    if cli.status_http {
-        client.poll_http_status().await?;
-        println!("{}", serde_json::to_string_pretty(client.http_status())?);
     }
 
     if cli.status {

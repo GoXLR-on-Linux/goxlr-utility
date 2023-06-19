@@ -22,7 +22,6 @@ pub enum DaemonRequest {
     OpenUi,
     GetStatus,
     StopDaemon,
-    GetHttpState,
     OpenPath(PathTypes),
     SetLogLevel(LogLevel),
     SetShowTrayIcon(bool),
@@ -37,7 +36,6 @@ pub enum DaemonRequest {
 pub enum DaemonResponse {
     Ok,
     Error(String),
-    HttpState(HttpSettings),
     Status(DaemonStatus),
     Patch(Patch),
 }

@@ -248,6 +248,7 @@ async fn main() -> Result<()> {
         global_tx.clone(),
         shutdown.clone(),
         settings.clone(),
+        http_settings.clone(),
         file_manager,
     ));
 
@@ -255,7 +256,6 @@ async fn main() -> Result<()> {
     let ipc_socket = ipc_socket.unwrap();
     let communications_handle = tokio::spawn(spawn_ipc_server(
         ipc_socket,
-        http_settings.clone(),
         usb_tx.clone(),
         shutdown.clone(),
     ));

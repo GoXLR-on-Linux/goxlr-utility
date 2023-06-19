@@ -33,10 +33,6 @@ impl Client for WebClient {
 
         // Should probably abstract this part, it's common between clients..
         match resp {
-            DaemonResponse::HttpState(state) => {
-                self.http_settings = state;
-                Ok(())
-            }
             DaemonResponse::Status(status) => {
                 self.status = status;
                 Ok(())
@@ -51,10 +47,6 @@ impl Client for WebClient {
 
     async fn poll_status(&mut self) -> anyhow::Result<()> {
         self.send(DaemonRequest::GetStatus).await
-    }
-
-    async fn poll_http_status(&mut self) -> anyhow::Result<()> {
-        self.send(DaemonRequest::GetHttpState).await
     }
 
     async fn command(&mut self, serial: &str, command: GoXLRCommand) -> anyhow::Result<()> {
