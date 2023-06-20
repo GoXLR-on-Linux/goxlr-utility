@@ -36,6 +36,7 @@ impl SettingsHandle {
             icons_directory: Some(data_dir.join("icons")),
             logs_directory: Some(data_dir.join("logs")),
             log_level: Some(LogLevel::Info),
+            activate: None,
             devices: Default::default(),
         });
 
@@ -178,6 +179,17 @@ impl SettingsHandle {
         settings.log_level.clone().unwrap_or(LogLevel::Info)
     }
 
+    pub async fn get_activate(&self) -> Option<String> {
+        let settings = self.settings.read().await;
+        settings.activate.clone()
+    }
+
+    #[allow(dead_code)]
+    pub async fn set_activate(&self, activate: Option<String>) {
+        let mut settings = self.settings.write().await;
+        settings.activate = activate;
+    }
+
     pub async fn get_device_profile_name(&self, device_serial: &str) -> Option<String> {
         let settings = self.settings.read().await;
         settings
@@ -317,6 +329,7 @@ pub struct Settings {
     icons_directory: Option<PathBuf>,
     logs_directory: Option<PathBuf>,
     log_level: Option<LogLevel>,
+    activate: Option<String>,
     devices: HashMap<String, DeviceSettings>,
 }
 

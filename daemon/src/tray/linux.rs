@@ -60,7 +60,7 @@ impl GoXLRTray {
 
 impl Tray for GoXLRTray {
     fn activate(&mut self, _x: i32, _y: i32) {
-        let _ = self.tx.blocking_send(EventTriggers::OpenUi);
+        let _ = self.tx.blocking_send(EventTriggers::Activate);
     }
 
     fn category(&self) -> Category {

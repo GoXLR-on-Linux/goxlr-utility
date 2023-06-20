@@ -311,7 +311,7 @@ async fn main() -> Result<()> {
 
     if args.start_ui {
         //thread::sleep(Duration::from_millis(250));
-        let _ = global_tx.send(EventTriggers::OpenUi).await;
+        let _ = global_tx.send(EventTriggers::Activate).await;
     }
 
     if !args.disable_tray && state.show_tray.load(Ordering::Relaxed) {

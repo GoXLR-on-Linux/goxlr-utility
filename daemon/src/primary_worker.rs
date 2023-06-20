@@ -170,6 +170,10 @@ pub async fn spawn_usb_handler(
                                 let _ = global_tx.send(EventTriggers::OpenUi).await;
                                 let _ = sender.send(Ok(()));
                             }
+                            DaemonCommand::Activate => {
+                                let _ = global_tx.send(EventTriggers::Activate).await;
+                                let _ = sender.send(Ok(()));
+                            }
                             DaemonCommand::RecoverDefaults(path_type) => {
                                 let path = match path_type {
                                     PathTypes::Profiles => settings.get_profile_directory().await,

@@ -68,6 +68,7 @@ pub enum LogLevel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DaemonCommand {
     OpenUi,
+    Activate,
     StopDaemon,
     OpenPath(PathTypes),
     SetLogLevel(LogLevel),

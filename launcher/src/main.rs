@@ -96,7 +96,7 @@ async fn open_ui() -> Result<()> {
         let socket: Socket<DaemonResponse, DaemonRequest> = Socket::new(connection);
         let mut client = IPCClient::new(socket);
         client
-            .send(DaemonRequest::Daemon(DaemonCommand::OpenUi))
+            .send(DaemonRequest::Daemon(DaemonCommand::Activate))
             .await?;
         return Ok(());
     }

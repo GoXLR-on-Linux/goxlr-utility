@@ -4,6 +4,7 @@
 use crate::{SettingsHandle, Shutdown};
 use goxlr_ipc::{HttpSettings, PathTypes};
 use log::{debug, warn};
+use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::sync::mpsc::{Receiver, Sender};
@@ -14,6 +15,7 @@ pub enum EventTriggers {
     TTSMessage(String),
     Stop,
     Open(PathTypes),
+    Activate,
     OpenUi,
     DevicesStopped,
 }
@@ -85,18 +87,62 @@ pub async fn spawn_event_handler(
                         };
                     },
                     EventTriggers::OpenUi => {
-                        let mut host = String::from("localhost");
-                        if &state.http_settings.bind_address != "localhost" && &state.http_settings.bind_address != "0.0.0.0" {
-                            host = state.http_settings.bind_address.clone();
-                        }
-
-                        let url = format!("http://{}:{}/", host, state.http_settings.port);
-                        if let Err(error) = opener::open(url) {
+                        if let Err(error) = opener::open(get_util_url(&state)) {
                             warn!("Error Opening URL: {}", error);
                         }
+                    },
+                    EventTriggers::Activate => {
+                        let activate = state.settings_handle.get_activate().await;
+                        let url = get_util_url(&state);
+
+                        // For now, we only support this on Linux, until more Windows tests
+                        // can be done.
+                        #[cfg(not(target_os = "linux"))]
+                        {
+                            if let Err(error) = opener::open(get_util_url(&state)) {
+                                warn!("Error Opening URL: {}", error);
+                            }
+                        }
+
+                        #[cfg(target_os = "linux")]
+                        {
+                            use shell_words;
+                            match activate {
+                                Some(exec) => {
+                                    let exec = exec.replace("%URL%", &url);
+                                    if let Ok(params) = shell_words::split(&exec) {
+                                        debug!("Attempting to Execute: {:?}", params);
+                                        let _ = Command::new(&params[0])
+                                            .args(&params[1..])
+                                            .stdout(Stdio::null())
+                                            .stderr(Stdio::null())
+                                            .spawn();
+                                    } else if let Err(error) = opener::open(url) {
+                                        warn!("Error Opening URL: {}", error);
+                                    }
+                                },
+                                None => {
+                                    if let Err(error) = opener::open(url) {
+                                        warn!("Error Opening URL: {}", error);
+                                    }
+                                }
+                            }
+                        }
+
                     }
                 }
             },
         }
     }
+}
+
+fn get_util_url(state: &DaemonState) -> String {
+    let mut host = String::from("localhost");
+    if state.http_settings.bind_address != "localhost"
+        && &state.http_settings.bind_address != "0.0.0.0"
+    {
+        host = state.http_settings.bind_address.clone();
+    }
+
+    format!("http://{}:{}/", host, state.http_settings.port)
 }
