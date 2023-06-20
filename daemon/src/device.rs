@@ -2773,11 +2773,6 @@ impl<'a> Device<'a> {
         // Set volumes first, applying mute may modify stuff..
         debug!("Applying Profile..");
 
-        debug!("Clearing Mute States..");
-        for channel in ChannelName::iter() {
-            self.goxlr.set_channel_state(channel, Unmuted)?;
-        }
-
         debug!("Setting Faders..");
         let mut mic_assigned_to_fader = false;
 
@@ -2843,6 +2838,24 @@ impl<'a> Device<'a> {
 
         debug!("Applying Voice FX");
         self.apply_voice_fx()?;
+
+        debug!("Clearing Mute States..");
+        for channel in ChannelName::iter() {
+            // Ignore the Mic, the mute state is handled separately..
+            if channel == ChannelName::Mic {
+                continue;
+            }
+
+            // If this channel is assigned to a fader, it's mute state has already
+            // been handled.
+            if self.profile.get_fader_from_channel(channel).is_some() {
+                continue;
+            }
+
+            // Unmute anything else not assigned to a fader to ensure it doesn't
+            // get stuck muted during profile reassignment.
+            self.goxlr.set_channel_state(channel, Unmuted)?;
+        }
 
         Ok(())
     }
