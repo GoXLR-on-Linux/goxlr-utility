@@ -86,6 +86,7 @@ windows-args = "0.2.0"
 [target.'cfg(target_os = "macos")'.dependencies]
 tao = { version = "0.15.8", features = ["tray"] }
 image = "0.24.5"
+shell-words = "1.1.0"
 
 [build-dependencies]
 clap = { version = "4.0.32", features = ["derive"] }
