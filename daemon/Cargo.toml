@@ -81,6 +81,7 @@ mslnk = "0.1.8"
 dunce = "1.0.3"
 win-win = "0.1.1"
 winapi = { version = "0.3.9", features = ["winuser"] }
+windows-args = "0.2.0"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 tao = { version = "0.15.8", features = ["tray"] }

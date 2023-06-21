@@ -97,14 +97,37 @@ pub async fn spawn_event_handler(
 
                         // For now, we only support this on Linux, until more Windows tests
                         // can be done.
-                        #[cfg(not(target_os = "linux"))]
+                        #[cfg(not(unix))]
                         {
-                            if let Err(error) = opener::open(get_util_url(&state)) {
-                                warn!("Error Opening URL: {}", error);
+                            use windows_args;
+                            match activate {
+                                Some(exec) => {
+                                    let exec = exec.replace("%URL%", &url);
+                                    let mut args = windows_args::Args::parse_cmd(&exec);
+                                    if let Some(command) = args.next() {
+                                        let result = Command::new(command)
+                                            .args(args)
+                                            .stdout(Stdio::null())
+                                            .stderr(Stdio::null())
+                                            .spawn();
+
+                                        if let Err(error) = result {
+                                            warn!("Error Executing command: {:?}, falling back", error);
+                                            if let Err(error) = opener::open(url) {
+                                                warn!("Error Opening URL: {}", error);
+                                            }
+                                        }
+                                    }
+                                },
+                                None => {
+                                    if let Err(error) = opener::open(url) {
+                                        warn!("Error Opening URL: {}", error);
+                                    }
+                                }
                             }
                         }
 
-                        #[cfg(target_os = "linux")]
+                        #[cfg(unix)]
                         {
                             use shell_words;
                             match activate {
@@ -112,11 +135,19 @@ pub async fn spawn_event_handler(
                                     let exec = exec.replace("%URL%", &url);
                                     if let Ok(params) = shell_words::split(&exec) {
                                         debug!("Attempting to Execute: {:?}", params);
-                                        let _ = Command::new(&params[0])
+                                        let result = Command::new(&params[0])
                                             .args(&params[1..])
                                             .stdout(Stdio::null())
                                             .stderr(Stdio::null())
                                             .spawn();
+
+                                        if let Err(error) = result {
+                                            warn!("Error Executing command: {:?}, falling back", error);
+                                            if let Err(error) = opener::open(url) {
+                                                warn!("Error Opening URL: {}", error);
+                                            }
+                                        }
+
                                     } else if let Err(error) = opener::open(url) {
                                         warn!("Error Opening URL: {}", error);
                                     }
