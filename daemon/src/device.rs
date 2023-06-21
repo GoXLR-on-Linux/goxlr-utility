@@ -2788,21 +2788,39 @@ impl<'a> Device<'a> {
                 mic_assigned_to_fader = true;
                 self.profile.set_mic_fader(fader)?;
             }
-
-            debug!("Applying Mute Profile for {}", fader);
-            self.apply_mute_from_profile(fader)?;
-
-            if self.hardware.device_type == DeviceType::Full {
-                self.apply_scribble(fader).await?;
-            }
         }
-
         if !mic_assigned_to_fader {
             self.profile.clear_mic_fader();
         }
 
-        debug!("Applying Cough button settings..");
-        self.apply_cough_from_profile()?;
+        debug!("Setting Mute States..");
+        for channel in ChannelName::iter() {
+            if channel == ChannelName::Mic {
+                self.apply_cough_from_profile()?;
+            } else if let Some(fader) = self.profile.get_fader_from_channel(channel) {
+                self.apply_mute_from_profile(fader)?;
+            } else {
+                // Force unmute for all other channels
+                self.goxlr.set_channel_state(channel, Unmuted)?;
+            }
+        }
+
+        debug!("Setting Channel Volumes..");
+        for channel in ChannelName::iter() {
+            let channel_volume = self.profile.get_channel_volume(channel);
+            debug!("Setting volume for {} to {}", channel, channel_volume);
+            self.goxlr.set_volume(channel, channel_volume)?;
+        }
+
+        debug!("Setting Channel Volumes..");
+        for channel in ChannelName::iter() {
+            let channel_volume = self.profile.get_channel_volume(channel);
+            debug!("Setting volume for {} to {}", channel, channel_volume);
+            self.goxlr.set_volume(channel, channel_volume)?;
+        }
+
+        debug!("Applying Submixing Settings..");
+        self.load_submix_settings(true)?;
 
         debug!("Loading Colour Map..");
         self.load_colour_map()?;
@@ -2813,21 +2831,14 @@ impl<'a> Device<'a> {
             self.set_fader_display_from_profile(fader)?;
         }
 
-        debug!("Setting Channel Volumes..");
-        for channel in ChannelName::iter() {
-            let channel_volume = self.profile.get_channel_volume(channel);
-            debug!("Setting volume for {} to {}", channel, channel_volume);
-            self.goxlr.set_volume(channel, channel_volume)?;
+        if self.hardware.device_type == DeviceType::Full {
+            for fader in FaderName::iter() {
+                self.apply_scribble(fader).await?;
+            }
         }
-
-        debug!("Validating Sampler Configuration..");
-        self.validate_sampler().await?;
 
         debug!("Updating button states..");
         self.update_button_states()?;
-
-        debug!("Applying Submixing Settings..");
-        self.load_submix_settings(true)?;
 
         debug!("Applying Routing..");
         // For profile load, we should configure all the input channels from the profile,
@@ -2839,23 +2850,9 @@ impl<'a> Device<'a> {
         debug!("Applying Voice FX");
         self.apply_voice_fx()?;
 
-        debug!("Clearing Mute States..");
-        for channel in ChannelName::iter() {
-            // Ignore the Mic, the mute state is handled separately..
-            if channel == ChannelName::Mic {
-                continue;
-            }
-
-            // If this channel is assigned to a fader, it's mute state has already
-            // been handled.
-            if self.profile.get_fader_from_channel(channel).is_some() {
-                continue;
-            }
-
-            // Unmute anything else not assigned to a fader to ensure it doesn't
-            // get stuck muted during profile reassignment.
-            self.goxlr.set_channel_state(channel, Unmuted)?;
-        }
+        // Drop this to the end so it doesn't directly interfere with profile loading..
+        debug!("Validating Sampler Configuration..");
+        self.validate_sampler().await?;
 
         Ok(())
     }
