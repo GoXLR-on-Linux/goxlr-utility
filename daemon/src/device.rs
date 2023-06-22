@@ -2595,12 +2595,15 @@ impl<'a> Device<'a> {
 
         let (muted_to_x, muted_to_all, mute_function) = self.profile.get_mute_button_state(fader);
         if muted_to_all || (muted_to_x && mute_function == MuteFunction::All) {
+            debug!("Setting Channel set {} to Muted", channel);
+
             // This channel should be fully muted
             self.goxlr.set_channel_state(channel, Muted)?;
             return Ok(());
         }
 
         // This channel isn't supposed to be muted (The Router will handle anything else).
+        debug!("Channel {} set to Unmuted", channel);
         self.goxlr.set_channel_state(channel, Unmuted)?;
         Ok(())
     }
@@ -2628,8 +2631,10 @@ impl<'a> Device<'a> {
         };
 
         if muted_to_all || (muted_to_x && mute_function == MuteFunction::All) || muted_by_fader {
+            debug!("Setting Mic to Muted");
             self.goxlr.set_channel_state(ChannelName::Mic, Muted)?;
         } else {
+            debug!("Setting Mic to Unmuted");
             self.goxlr.set_channel_state(ChannelName::Mic, Unmuted)?;
         }
         Ok(())
@@ -2798,10 +2803,13 @@ impl<'a> Device<'a> {
         debug!("Setting Mute States..");
         for channel in ChannelName::iter() {
             if channel == ChannelName::Mic {
+                debug!("Applying Microphone Mute State");
                 self.apply_cough_from_profile()?;
             } else if let Some(fader) = self.profile.get_fader_from_channel(channel) {
+                debug!("Channel {} on Fader, Loading State from Profile", channel);
                 self.apply_mute_from_profile(fader)?;
             } else {
+                debug!("Channel {} not on fader, forcing unmute", channel);
                 // Force unmute for all other channels
                 self.goxlr.set_channel_state(channel, Unmuted)?;
             }
