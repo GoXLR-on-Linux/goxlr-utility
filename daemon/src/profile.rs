@@ -377,6 +377,14 @@ impl ProfileAdapter {
             .channel_volume(standard_to_profile_channel(channel))
     }
 
+    pub fn get_channel_volume_map(&self) -> EnumMap<ChannelName, u8> {
+        let mut map = EnumMap::default();
+        for channel in ChannelName::iter() {
+            map[channel] = self.get_channel_volume(channel);
+        }
+        map
+    }
+
     pub fn get_fader_from_channel(&self, channel: ChannelName) -> Option<FaderName> {
         FaderName::iter().find(|&fader| self.get_fader_assignment(fader) == channel)
     }

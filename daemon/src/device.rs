@@ -145,7 +145,7 @@ impl<'a> Device<'a> {
             last_sample_error: None,
         };
 
-        device.apply_profile().await?;
+        device.apply_profile(None).await?;
         device.apply_mic_profile().await?;
 
         Ok(device)
@@ -2173,13 +2173,14 @@ impl<'a> Device<'a> {
             GoXLRCommand::NewProfile(profile_name) => {
                 self.stop_all_samples().await?;
                 let profile_directory = self.settings.get_profile_directory().await;
+                let volumes = self.profile.get_channel_volume_map();
 
                 // Do a new file verification check..
                 ProfileAdapter::can_create_new_file(profile_name.clone(), &profile_directory)?;
 
                 // Force load the default embedded profile..
                 self.profile = ProfileAdapter::default();
-                self.apply_profile().await?;
+                self.apply_profile(Some(volumes)).await?;
 
                 // Save the profile under a new name (although, don't overwrite if exists!)
                 self.profile
@@ -2193,11 +2194,12 @@ impl<'a> Device<'a> {
             }
             GoXLRCommand::LoadProfile(profile_name, save_change) => {
                 self.stop_all_samples().await?;
+                let volumes = self.profile.get_channel_volume_map();
 
                 let profile_directory = self.settings.get_profile_directory().await;
                 self.profile = ProfileAdapter::from_named(profile_name, &profile_directory)?;
 
-                self.apply_profile().await?;
+                self.apply_profile(Some(volumes)).await?;
                 if save_change {
                     self.settings
                         .set_device_profile_name(self.serial(), self.profile.name())
@@ -2769,7 +2771,7 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
-    async fn apply_profile(&mut self) -> Result<()> {
+    async fn apply_profile(&mut self, volumes: Option<EnumMap<ChannelName, u8>>) -> Result<()> {
         // Set volumes first, applying mute may modify stuff..
         debug!("Applying Profile..");
 
@@ -2806,15 +2808,9 @@ impl<'a> Device<'a> {
         }
 
         debug!("Setting Channel Volumes..");
-        for channel in ChannelName::iter() {
+        for channel in self.get_load_volume_order(volumes) {
             let channel_volume = self.profile.get_channel_volume(channel);
-            debug!("Setting volume for {} to {}", channel, channel_volume);
-            self.goxlr.set_volume(channel, channel_volume)?;
-        }
 
-        debug!("Setting Channel Volumes..");
-        for channel in ChannelName::iter() {
-            let channel_volume = self.profile.get_channel_volume(channel);
             debug!("Setting volume for {} to {}", channel, channel_volume);
             self.goxlr.set_volume(channel, channel_volume)?;
         }
@@ -2855,6 +2851,54 @@ impl<'a> Device<'a> {
         self.validate_sampler().await?;
 
         Ok(())
+    }
+
+    fn get_load_volume_order(&self, volumes: Option<EnumMap<ChannelName, u8>>) -> Vec<ChannelName> {
+        // This method exists primarily to 'smooth' the loading of new volumes, in situations
+        // where you're starting with a Headphone volume of 100 and a System volume of 20 and are
+        // finishing at Headphone 20, System 100 there's an (albeit) brief period during load where
+        // both headphones and system will be at 100% which can result in brief, sudden, loud noises
+
+        // The goal is to check whether this load is making the headphones / line out quieter,
+        // and pushing their volume change to the head of the queue, making the System channel
+        // in the above example briefly QUIETER, instead of louder.
+
+        let mut order = vec![];
+
+        if let Some(volumes) = volumes {
+            let headphone_volume = self.profile.get_channel_volume(ChannelName::Headphones);
+            let lineout_volume = self.profile.get_channel_volume(ChannelName::LineOut);
+
+            if volumes[ChannelName::Headphones] > headphone_volume {
+                order.push(ChannelName::Headphones);
+            }
+            if volumes[ChannelName::LineOut] > lineout_volume {
+                order.push(ChannelName::LineOut);
+            }
+
+            // Grab all the other channels in order, and push them..
+            ChannelName::iter().for_each(|channel| {
+                if channel != ChannelName::Headphones && channel != ChannelName::LineOut {
+                    order.push(channel);
+                }
+            });
+
+            // Headphones and Line out are technically the last in the list, so we could, in theory
+            // handle them in the above iter, however, they're placed here separately just in case
+            // the ChannelName enum list needs to change in the future which could break this.
+            if volumes[ChannelName::Headphones] <= headphone_volume {
+                order.push(ChannelName::Headphones);
+            }
+            if volumes[ChannelName::LineOut] <= lineout_volume {
+                order.push(ChannelName::LineOut);
+            }
+        } else {
+            // We don't have reference volumes, just send all the channel names..
+            debug!("No reference volumes, sending channels in order");
+            return ChannelName::iter().collect();
+        }
+
+        order
     }
 
     /// Applies a Set of Microphone Parameters based on input, designed this way
