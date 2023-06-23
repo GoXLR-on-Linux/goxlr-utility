@@ -6,14 +6,14 @@
 A tool to configure and control a TC-Helicon GoXLR or GoXLR Mini on Linux, MacOS and Windows.
 
 ## Features
-* Full Control over the GoXLR and GoXLR Mini (Similar to the official App)
+* Full control over the GoXLR and GoXLR Mini (Similar to the official App)
 * Compatibility with profiles created by the official application
 * An accessible UI designed to work well with Assistive Technologies
-* Remote Access. Control you're GoXLR from another computer on your network
+* Remote Access. Control your GoXLR from another computer on your network
 * A Sample 'Pre-Buffer'. Record audio from before you press the button
 * Exit Actions, including saving profiles and loading other profiles / lighting
-* Multiple Device Support. Run more than one GoXLR
-* A CLI and API for basic to advance scripting and automation
+* Multiple Device Support. Run more than one GoXLR simultaneously
+* A CLI and API for basic or advanced scripting and automation
 
 ## Downloads
 Downloads are available on the [Releases Page](https://github.com/GoXLR-on-Linux/goxlr-utility/releases) under the
@@ -25,7 +25,7 @@ Downloads are available on the [Releases Page](https://github.com/GoXLR-on-Linux
 
 If you're an Arch user, updated versions of the utility are available via [AUR](https://aur.archlinux.org/packages/goxlr-utility)
 using the `goxlr-utility` package.  
-If you're a MacOS user, check out the [MacOS Project](https://github.com/Adelenade/GoXlr-Macos) for a more integrated implementation
+If you're a MacOS user, check out the [MacOS Project](https://github.com/Adelenade/GoXlr-Macos) for a more integrated implementation.
 
 <sup>1</sup> Windows requires the official device drivers provided by TC-Helicon. If you have the official app 
 installed you don't need to do anything, otherwise download the latest drivers from TC-Helicon's website [here](https://go.tc-helicon.com/GoXLR_driver_5.12).
