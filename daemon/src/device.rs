@@ -1456,6 +1456,10 @@ impl<'a> Device<'a> {
                 self.settings.save().await;
             }
             GoXLRCommand::SetSamplerPreBufferDuration(duration) => {
+                if duration > 30000 {
+                    bail!("Buffer must be below 30seconds");
+                }
+
                 self.settings
                     .set_device_sampler_pre_buffer(self.serial(), duration)
                     .await;
