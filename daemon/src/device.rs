@@ -797,7 +797,6 @@ impl<'a> Device<'a> {
 
         if !muted_to_x && !muted_to_all {
             // Nothing to do.
-            debug!("Doing Nothing?");
             return Ok(());
         }
 
@@ -2710,6 +2709,12 @@ impl<'a> Device<'a> {
                 self.profile.get_channel_volume(existing_channel),
             )?;
 
+            // Make sure the new channel comes in with the correct volume..
+            if new_channel == ChannelName::Headphones || new_channel == ChannelName::LineOut {
+                let volume = self.profile.get_channel_volume(new_channel);
+                self.goxlr.set_volume(new_channel, volume)?;
+            }
+
             // Remember to update the button states after change..
             self.update_button_states()?;
 
@@ -2736,6 +2741,16 @@ impl<'a> Device<'a> {
         // Now switch the faders on the GoXLR..
         self.goxlr.set_fader(fader, new_channel)?;
         self.goxlr.set_fader(fader_to_switch, existing_channel)?;
+
+        // If the channel being moved is either Headphone or Line Out, reset the volume..
+        if new_channel == ChannelName::Headphones || new_channel == ChannelName::LineOut {
+            let volume = self.profile.get_channel_volume(new_channel);
+            self.goxlr.set_volume(new_channel, volume)?;
+        }
+        if existing_channel == ChannelName::Headphones || existing_channel == ChannelName::LineOut {
+            let volume = self.profile.get_channel_volume(existing_channel);
+            self.goxlr.set_volume(existing_channel, volume)?;
+        }
 
         self.apply_scribble(fader).await?;
         self.apply_scribble(fader_to_switch).await?;
