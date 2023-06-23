@@ -1460,6 +1460,13 @@ impl<'a> Device<'a> {
                     .set_device_sampler_pre_buffer(self.serial(), duration)
                     .await;
                 self.settings.save().await;
+
+                // Reload the Audio Handler..
+                self.stop_all_samples().await?;
+
+                // Drop the Audio Handler..
+                let new_handler = AudioHandler::new(duration)?;
+                self.audio_handler = Some(new_handler);
             }
 
             GoXLRCommand::SetFader(fader, channel) => {
