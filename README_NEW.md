@@ -12,7 +12,7 @@ A tool to configure and control a TC-Helicon GoXLR or GoXLR Mini on Linux, MacOS
 * Remote Access. Control your GoXLR from another computer on your network
 * A Sample 'Pre-Buffer'. Record audio from before you press the button
 * Exit Actions, including saving profiles and loading other profiles / lighting
-* Multiple Device Support. Run more than one GoXLR simultaneously
+* Multiple Device Support. Run more than one GoXLR simultaneously on one PC
 * A CLI and API for basic or advanced scripting and automation
 
 ## Downloads
