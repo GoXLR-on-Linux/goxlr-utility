@@ -242,12 +242,25 @@ impl ProfileAdapter {
         map
     }
 
-    pub fn set_routing(&mut self, input: InputDevice, output: OutputDevice, enabled: bool) {
+    pub fn set_routing(
+        &mut self,
+        input: InputDevice,
+        output: OutputDevice,
+        enabled: bool,
+    ) -> Result<()> {
         let input_channel = standard_input_to_profile(input);
         let output_channel = standard_output_to_profile(output);
         let monitoring = self.get_monitoring_mix();
 
         let value = if enabled { 8192 } else { 0 };
+
+        // Before we do anything before we do anything, make sure it's valid..
+        if input == InputDevice::Chat && output == OutputDevice::ChatMic {
+            bail!("Invalid Route: Chat -> Chat Mic");
+        }
+        if input == InputDevice::Samples && output == OutputDevice::Sampler {
+            bail!("Invalid Route: Samples -> Sampler");
+        }
 
         // Before we do anything, are we changing Headphones while they're not the active Monitor?
         if monitoring != OutputDevice::Headphones && output == OutputDevice::Headphones {
@@ -262,7 +275,7 @@ impl ProfileAdapter {
 
             stored_routing[input_channel] = value;
             debug!("{:?}", stored_routing);
-            return;
+            return Ok(());
         }
 
         let table = self.profile.settings_mut().mixer_mut().mixer_table_mut();
@@ -272,6 +285,7 @@ impl ProfileAdapter {
             // We need to update routing on the headphones for this channel as well..
             table[input_channel][OutputChannels::Headphones] = value;
         }
+        Ok(())
     }
 
     pub fn set_monitor_routing(&mut self, input: InputDevice, output: OutputDevice, enabled: bool) {

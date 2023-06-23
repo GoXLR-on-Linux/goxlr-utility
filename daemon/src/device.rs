@@ -1519,7 +1519,7 @@ impl<'a> Device<'a> {
             }
             GoXLRCommand::SetRouter(input, output, enabled) => {
                 debug!("Setting Routing: {:?} {:?} {}", input, output, enabled);
-                self.profile.set_routing(input, output, enabled);
+                self.profile.set_routing(input, output, enabled)?;
 
                 // Apply the change..
                 self.apply_routing(input)?;
