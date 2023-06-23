@@ -2365,7 +2365,16 @@ impl<'a> Device<'a> {
             },
             GoXLRCommand::SetCoughMuteState(_state) => {}
             GoXLRCommand::SetSubMixEnabled(enabled) => {
+                let headphones = goxlr_types::OutputDevice::Headphones;
                 if self.profile.is_submix_enabled() != enabled {
+                    if !enabled {
+                        // Submixes are being disabled, we need to revert the monitor..
+                        self.profile.set_monitor_mix(headphones)?;
+                        for device in BasicInputDevice::iter() {
+                            self.apply_routing(device)?;
+                        }
+                    }
+
                     self.profile.set_submix_enabled(enabled)?;
                     self.load_submix_settings(true)?;
                 }
