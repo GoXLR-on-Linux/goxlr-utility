@@ -6,8 +6,8 @@ use std::path::PathBuf;
 #[command(about, version, author)]
 pub struct Cli {
     /// Minimum log level to print out
-    #[arg(long, value_enum, default_value = "info")]
-    pub log_level: LevelFilter,
+    #[arg(long, value_enum)]
+    pub log_level: Option<LevelFilter>,
 
     /// Location of the daemon configuration file on disk
     #[arg(long, default_value_os_t = default_config_location())]
@@ -26,8 +26,8 @@ pub struct Cli {
     pub http_enable_cors: bool,
 
     /// Set the HTTP Bind Address (0.0.0.0 for all interfaces)
-    #[arg(long, default_value = "localhost")]
-    pub http_bind_address: String,
+    #[arg(long)]
+    pub http_bind_address: Option<String>,
 
     /// Disable the Tray Icon
     #[arg(long)]
@@ -40,6 +40,14 @@ pub struct Cli {
     /// Automatically Launch the UI on Start..
     #[arg(long)]
     pub start_ui: bool,
+
+    /// Force regular expression to use when finding the Sampler Input
+    #[arg(long)]
+    pub override_sample_input_device: Option<String>,
+
+    /// Force regular expression to use when finding the Sampler Output
+    #[arg(long)]
+    pub override_sample_output_device: Option<String>,
 }
 
 fn default_config_location() -> PathBuf {

@@ -8,10 +8,11 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::fmt::Formatter;
 use strum::{Display, EnumCount, EnumIter};
 
-#[derive(Debug, Copy, Clone, Display, Enum, EnumIter, EnumCount, PartialEq, Eq)]
+#[derive(Default, Debug, Copy, Clone, Display, Enum, EnumIter, EnumCount, PartialEq, Eq)]
 #[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ChannelName {
+    #[default]
     Mic,
     LineIn,
     Console,
@@ -357,8 +358,7 @@ pub enum EncoderColourTargets {
 pub enum ButtonColourGroups {
     FaderMute,
     EffectSelector,
-    SampleBankSelector,
-    SamplerButtons,
+    EffectTypes,
 }
 
 #[derive(Debug, Copy, Clone, Display, EnumIter, EnumCount, PartialEq, Eq)]

@@ -1,13 +1,15 @@
+use crate::{OVERRIDE_SAMPLER_INPUT, OVERRIDE_SAMPLER_OUTPUT};
 use anyhow::{anyhow, bail, Result};
 use enum_map::EnumMap;
+use fancy_regex::Regex;
 use goxlr_audio::get_audio_inputs;
 use goxlr_audio::player::{Player, PlayerState};
 use goxlr_audio::recorder::BufferedRecorder;
 use goxlr_audio::recorder::RecorderState;
 use goxlr_types::SampleBank;
 use goxlr_types::SampleButtons;
-use log::{debug, error, warn};
-use regex::Regex;
+use log::{debug, error, info, warn};
+use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -24,6 +26,8 @@ pub struct AudioHandler {
 
     last_device_check: Option<Instant>,
     active_streams: EnumMap<SampleBank, EnumMap<SampleButtons, Option<StateManager>>>,
+
+    process_task: Option<ProcessTask>,
 }
 
 pub struct AudioFile {
@@ -32,6 +36,15 @@ pub struct AudioFile {
     pub(crate) start_pct: Option<f64>,
     pub(crate) stop_pct: Option<f64>,
     pub(crate) fade_on_stop: bool,
+}
+
+#[derive(Debug)]
+pub struct ProcessTask {
+    bank: SampleBank,
+    button: SampleButtons,
+    file: PathBuf,
+
+    player: AudioPlaybackState,
 }
 
 #[derive(Debug)]
@@ -97,6 +110,8 @@ impl AudioHandler {
 
             last_device_check: None,
             active_streams: EnumMap::default(),
+
+            process_task: None,
         };
 
         // Immediately initialise the recorder, and let it try to handle stuff.
@@ -115,46 +130,72 @@ impl AudioHandler {
     }
 
     fn get_output_device_patterns(&self) -> Vec<Regex> {
+        let override_output = OVERRIDE_SAMPLER_OUTPUT.lock().unwrap().deref().clone();
+        if let Some(device) = override_output {
+            return vec![Regex::new(&device).expect("Invalid Regex in Audio Handler")];
+        }
+
         let patterns = vec![
             Regex::new("goxlr_sample").expect("Invalid Regex in Audio Handler"),
             Regex::new("GoXLR_0_8_9").expect("Invalid Regex in Audio Handler"),
             Regex::new("GoXLR.*HiFi__Line3__sink").expect("Invalid Regex in Audio Handler"),
             Regex::new("CoreAudio\\*Sample").expect("Invalid Regex in Audio Handler"),
-            Regex::new("WASAPI\\*Sample.*").expect("Invalid Regex in Audio Handler"),
+            Regex::new("^WASAPI\\*Sample(?:(?!Mini).)*$").expect("Invalid Regex in Audio Handler"),
+            // If we ever support the sampler on the Mini, this can be used as a fallback, so we defer
+            // to any attached Full Sized device, but if one isn't present, we can use the mini.
+            //Regex::new("^WASAPI\\*Sample.*$").expect("Invalid Regex in Audio Handler"),
         ];
         patterns
     }
 
     #[allow(dead_code)]
     fn get_output_device_string_patterns(&self) -> Vec<String> {
+        let override_output = OVERRIDE_SAMPLER_OUTPUT.lock().unwrap().deref().clone();
+        if let Some(device) = override_output {
+            return vec![device];
+        }
+
         let patterns = vec![
             String::from("goxlr_sample"),
             String::from("GoXLR_0_8_9"),
             String::from("GoXLR.*HiFi__Line3__sink"),
             String::from("CoreAudio\\*Sample"),
-            String::from("WASAPI\\*Sample.*"),
+            String::from("^WASAPI\\*Sample(?:(?!Mini).)*$"),
+            //String::from("^WASAPI\\*Sample.*$"),
         ];
         patterns
     }
 
     fn get_input_device_patterns(&self) -> Vec<Regex> {
+        let override_input = OVERRIDE_SAMPLER_INPUT.lock().unwrap().deref().clone();
+        if let Some(device) = override_input {
+            return vec![Regex::new(&device).expect("Invalid Regex in Audio Handler")];
+        }
+
         let patterns = vec![
-            Regex::new("goxlr_sampler.*source").expect("Invalid Regex in Audio Handler"),
+            Regex::new("goxlr_sample.*source").expect("Invalid Regex in Audio Handler"),
             Regex::new("GoXLR_0_4_5.*source").expect("Invalid Regex in Audio Handler"),
             Regex::new("GoXLR.*HiFi__Line5__source").expect("Invalid Regex in Audio Handler"),
             Regex::new("CoreAudio\\*Sampler").expect("Invalid Regex in Audio Handler"),
-            Regex::new("WASAPI\\*Sample.*").expect("Invalid Regex in Audio Handler"),
+            Regex::new("^WASAPI\\*Sample(?:(?!Mini).)*$").expect("Invalid Regex in Audio Handler"),
+            //Regex::new("^WASAPI\\*Sample.*$").expect("Invalid Regex in Audio Handler"),
         ];
         patterns
     }
 
     fn get_input_device_string_patterns(&self) -> Vec<String> {
+        let override_input = OVERRIDE_SAMPLER_INPUT.lock().unwrap().deref().clone();
+        if let Some(device) = override_input {
+            return vec![device];
+        }
+
         let patterns = vec![
-            String::from("goxlr_sampler.*source"),
+            String::from("goxlr_sample.*source"),
             String::from("GoXLR_0_4_5.*source"),
             String::from("GoXLR.*HiFi__Line5__source"),
             String::from("CoreAudio\\*Sampler"),
-            String::from("WASAPI\\*Sample.*"),
+            String::from("^WASAPI\\*Sample(?:(?!Mini).)*$"),
+            //String::from("^WASAPI\\*Sample.*$"),
         ];
 
         patterns
@@ -181,17 +222,20 @@ impl AudioHandler {
         let device = device_list
             .iter()
             .find(|output| {
-                pattern_matchers
-                    .iter()
-                    .any(|pattern| pattern.is_match(output))
+                pattern_matchers.iter().any(|pattern| {
+                    if let Ok(result) = pattern.is_match(output) {
+                        return result;
+                    }
+                    false
+                })
             })
             .cloned();
 
         if let Some(device) = &device {
             debug!("Found Device: {}", device);
         } else {
-            debug!("Audio Device Not Found, Available Devices:");
-            device_list.iter().for_each(|name| debug!("{}", name));
+            warn!("Audio Device Not Found, Available Devices:");
+            device_list.iter().for_each(|name| info!("{}", name));
         }
 
         if is_output {
@@ -199,7 +243,9 @@ impl AudioHandler {
         }
     }
 
-    pub async fn check_playing(&mut self) {
+    pub async fn check_playing(&mut self) -> bool {
+        let mut state_changed = false;
+
         // Iterate over the Sampler Banks..
         for bank in SampleBank::iter() {
             // Iterate over the buttons..
@@ -209,16 +255,20 @@ impl AudioHandler {
                         if let Some(recording) = &state.recording {
                             if recording.is_finished() {
                                 self.active_streams[bank][button] = None;
+                                state_changed = true;
                             }
                         }
                     } else if let Some(playback) = &state.playback {
                         if playback.is_finished() {
                             self.active_streams[bank][button] = None;
+                            state_changed = true;
                         }
                     }
                 }
             }
         }
+
+        state_changed
     }
 
     pub fn is_sample_playing(&self, bank: SampleBank, button: SampleButtons) -> bool {
@@ -372,7 +422,7 @@ impl AudioHandler {
         bank: SampleBank,
         button: SampleButtons,
     ) -> Result<()> {
-        if let Some(recorder) = &mut self.buffered_input {
+        if let Some(recorder) = &self.buffered_input {
             if !recorder.is_ready() {
                 warn!("Sampler not ready, possibly missing Sample device. Not recording.");
 
@@ -420,6 +470,8 @@ impl AudioHandler {
         bank: SampleBank,
         button: SampleButtons,
     ) -> Result<Option<String>> {
+        let mut filename = None;
+
         if let Some(player) = &mut self.active_streams[bank][button] {
             if player.stream_type == StreamType::Playback {
                 bail!("Attempted to Stop Recording on Playback Stream..");
@@ -432,21 +484,129 @@ impl AudioHandler {
                 // Recording Complete, check the file was made...
                 if recording_state.file.exists() {
                     if let Some(file_name) = recording_state.file.file_name() {
-                        return Ok(Some(String::from(file_name.to_string_lossy())));
+                        filename.replace(String::from(file_name.to_string_lossy()));
                     } else {
                         bail!("Unable to Extract Filename from Path! (This shouldn't be possible!)")
                     }
                 }
-
-                // If we get here, the file was never made.
-                return Ok(None);
             }
+        } else {
+            bail!("Attempted to stop inactive recording..");
         }
-        bail!("Attempted to stop inactive recording..");
+
+        // Sample has been stopped, clear the state of this button.
+        self.active_streams[bank][button] = None;
+        Ok(filename)
     }
 
-    pub fn calculate_gain(&self, path: &PathBuf) -> Result<Option<f64>> {
-        let mut player = Player::new(path, None, None, None, None, None)?;
-        player.calculate_gain()
+    pub fn calculate_gain_thread(
+        &mut self,
+        path: PathBuf,
+        bank: SampleBank,
+        button: SampleButtons,
+    ) -> Result<()> {
+        if self.process_task.is_some() {
+            bail!("Sample already being processed");
+        }
+
+        // Create the player..
+        let mut player = Player::new(&path, None, None, None, None, None)?;
+
+        // Grab the State..
+        let state = player.get_state();
+
+        // Spawn the Thread and Grab the Handler..
+        let handler = thread::spawn(move || {
+            player.calculate_gain();
+        });
+
+        // Store this into the processing task..
+        self.process_task.replace(ProcessTask {
+            bank,
+            button,
+            file: path,
+            player: AudioPlaybackState {
+                handle: Some(handler),
+                state,
+            },
+        });
+
+        Ok(())
     }
+
+    pub fn is_calculating(&self) -> bool {
+        self.process_task.is_some()
+    }
+
+    pub fn is_calculating_complete(&self) -> Result<bool> {
+        if self.process_task.is_none() {
+            bail!("Calculation not in progress");
+        }
+
+        if let Some(task) = &self.process_task {
+            return Ok(task.player.is_finished());
+        }
+        bail!("Task exists, but also doesn't exist!");
+    }
+
+    pub fn get_calculating_progress(&self) -> Result<u8> {
+        if self.process_task.is_none() {
+            bail!("Calculation not in progress");
+        }
+
+        if let Some(task) = &self.process_task {
+            return Ok(task.player.state.progress.load(Ordering::Relaxed));
+        }
+
+        bail!("Task exists, but also doesn't exist!");
+    }
+
+    pub fn get_and_clear_calculating_result(&mut self) -> Result<CalculationResult> {
+        if self.process_task.is_none() {
+            bail!("Calculation not in progress");
+        }
+
+        let result;
+        if let Some(task) = &mut self.process_task {
+            // We need to make sure the thread is finished..
+            task.player.wait();
+
+            let error = task.player.state.error.lock().unwrap();
+            let task_result = if error.is_some() {
+                Err(anyhow!(error.as_ref().unwrap().clone()))
+            } else {
+                Ok(())
+            };
+
+            result = CalculationResult {
+                result: task_result,
+                file: task.file.clone(),
+                bank: task.bank,
+                button: task.button,
+                gain: task.player.state.calculated_gain.load(Ordering::Relaxed),
+            };
+        } else {
+            bail!("Unable to obtain Task");
+        }
+
+        // In all cases, when we get here, we're done, so cleanup and go home
+        self.process_task = None;
+        Ok(result)
+    }
+}
+
+impl Drop for AudioHandler {
+    fn drop(&mut self) {
+        if let Some(buffered_recorder) = &self.buffered_input {
+            buffered_recorder.stop();
+        }
+    }
+}
+
+pub struct CalculationResult {
+    pub result: Result<()>,
+    pub file: PathBuf,
+    pub bank: SampleBank,
+    pub button: SampleButtons,
+    pub gain: f64,
 }

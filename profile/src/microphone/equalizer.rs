@@ -3,7 +3,7 @@ use std::os::raw::c_float;
 use std::str::FromStr;
 
 use crate::profile::Attribute;
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -373,21 +373,33 @@ impl Equalizer {
     }
     pub fn set_eq_31h_freq(&mut self, value: f32) -> Result<()> {
         if !(30.0..=300.0).contains(&value) {
-            return Err(anyhow!("31Hz Frequency must be between 30.0 and 300.0"));
+            bail!("31Hz Frequency must be between 30.0 and 300.0");
         }
+
+        if value % 0.5 != 0. {
+            bail!("31Hz Frequency must be a multiple of 0.5");
+        }
+
         self.eq_31h_freq = value;
         Ok(())
     }
     pub fn set_eq_63h_freq(&mut self, value: f32) -> Result<()> {
         if !(30.0..=300.0).contains(&value) {
-            return Err(anyhow!("63Hz Frequency must be between 30.0 and 300.0"));
+            bail!("63Hz Frequency must be between 30.0 and 300.0");
         }
+        if value % 0.5 != 0. {
+            bail!("63Hz Frequency must be a multiple of 0.5");
+        }
+
         self.eq_63h_freq = value;
         Ok(())
     }
     pub fn set_eq_125h_freq(&mut self, value: f32) -> Result<()> {
         if !(30.0..=300.0).contains(&value) {
-            return Err(anyhow!("125Hz Frequency must be between 30.0 and 300.0"));
+            bail!("125Hz Frequency must be between 30.0 and 300.0");
+        }
+        if value % 0.5 != 0. {
+            bail!("125Hz Frequency must be a multiple of 0.5");
         }
 
         self.eq_125h_freq = value;
@@ -395,51 +407,72 @@ impl Equalizer {
     }
     pub fn set_eq_250h_freq(&mut self, value: f32) -> Result<()> {
         if !(30.0..=300.0).contains(&value) {
-            return Err(anyhow!("250Hz Frequency must be between 30.0 and 300.0"));
+            bail!("250Hz Frequency must be between 30.0 and 300.0");
         }
+        if value % 0.5 != 0. {
+            bail!("250Hz Frequency must be a multiple of 0.5");
+        }
+
         self.eq_250h_freq = value;
         Ok(())
     }
     pub fn set_eq_500h_freq(&mut self, value: f32) -> Result<()> {
         if !(300.0..=2000.0).contains(&value) {
-            return Err(anyhow!("500Hz Frequency must be between 300.0 and 2000.0"));
+            bail!("500Hz Frequency must be between 300.0 and 2000.0");
         }
+        if value % 100. != 0. {
+            bail!("500Hz Frequency must be a multiple of 100");
+        }
+
         self.eq_500h_freq = value;
         Ok(())
     }
     pub fn set_eq_1k_freq(&mut self, value: f32) -> Result<()> {
         if !(300.0..=2000.0).contains(&value) {
-            return Err(anyhow!("1KHz Frequency must be between 300.0 and 2000.0"));
+            bail!("1KHz Frequency must be between 300.0 and 2000.0");
+        }
+        if value % 100. != 0. {
+            bail!("1KHz Frequency must be a multiple of 100");
         }
         self.eq_1k_freq = value;
         Ok(())
     }
     pub fn set_eq_2k_freq(&mut self, value: f32) -> Result<()> {
         if !(300.0..=2000.0).contains(&value) {
-            return Err(anyhow!("2KHz Frequency must be between 300.0 and 2000.0"));
+            bail!("2KHz Frequency must be between 300.0 and 2000.0");
+        }
+        if value % 100. != 0. {
+            bail!("2KHz Frequency must be a multiple of 100");
         }
         self.eq_2k_freq = value;
         Ok(())
     }
     pub fn set_eq_4k_freq(&mut self, value: f32) -> Result<()> {
         if !(2000.0..=18000.0).contains(&value) {
-            return Err(anyhow!("4KHz Frequency must be between 2000.0 and 18000.0"));
+            bail!("4KHz Frequency must be between 2000.0 and 18000.0");
+        }
+        if value % 100. != 0. {
+            bail!("4KHz Frequency must be a multiple of 100");
         }
         self.eq_4k_freq = value;
         Ok(())
     }
     pub fn set_eq_8k_freq(&mut self, value: f32) -> Result<()> {
         if !(2000.0..=18000.0).contains(&value) {
-            return Err(anyhow!("8KHz Frequency must be between 2000.0 and 18000.0"));
+            bail!("8KHz Frequency must be between 2000.0 and 18000.0");
+        }
+        if value % 100. != 0. {
+            bail!("8KHz Frequency must be a multiple of 100");
         }
         self.eq_8k_freq = value;
         Ok(())
     }
     pub fn set_eq_16k_freq(&mut self, value: f32) -> Result<()> {
         if !(2000.0..=18000.0).contains(&value) {
-            return Err(anyhow!(
-                "16KHz Frequency must be between 2000.0 and 18000.0"
-            ));
+            bail!("16KHz Frequency must be between 2000.0 and 18000.0");
+        }
+        if value % 100. != 0. {
+            bail!("16KHz Frequency must be a multiple of 100");
         }
         self.eq_16k_freq = value;
         Ok(())

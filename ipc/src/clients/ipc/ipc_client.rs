@@ -36,10 +36,6 @@ impl Client for IPCClient {
             .context("Failed to parse the command result from the GoXLR daemon process")?;
 
         match result {
-            DaemonResponse::HttpState(state) => {
-                self.http_settings = state;
-                Ok(())
-            }
             DaemonResponse::Status(status) => {
                 self.status = status;
                 Ok(())
@@ -54,10 +50,6 @@ impl Client for IPCClient {
 
     async fn poll_status(&mut self) -> Result<()> {
         self.send(DaemonRequest::GetStatus).await
-    }
-
-    async fn poll_http_status(&mut self) -> Result<()> {
-        self.send(DaemonRequest::GetHttpState).await
     }
 
     async fn command(&mut self, serial: &str, command: GoXLRCommand) -> Result<()> {

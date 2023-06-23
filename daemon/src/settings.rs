@@ -2,7 +2,7 @@ use crate::mic_profile::DEFAULT_MIC_PROFILE_NAME;
 use crate::profile::DEFAULT_PROFILE_NAME;
 use anyhow::{Context, Result};
 use directories::ProjectDirs;
-use goxlr_ipc::GoXLRCommand;
+use goxlr_ipc::{GoXLRCommand, LogLevel};
 use log::error;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -28,11 +28,15 @@ impl SettingsHandle {
         let mut settings = Settings::read(&path)?.unwrap_or_else(|| Settings {
             show_tray_icon: Some(true),
             tts_enabled: Some(false),
+            allow_network_access: Some(false),
             profile_directory: Some(data_dir.join("profiles")),
             mic_profile_directory: Some(data_dir.join("mic-profiles")),
             samples_directory: Some(data_dir.join("samples")),
             presets_directory: Some(data_dir.join("presets")),
             icons_directory: Some(data_dir.join("icons")),
+            logs_directory: Some(data_dir.join("logs")),
+            log_level: Some(LogLevel::Info),
+            activate: None,
             devices: Default::default(),
         });
 
@@ -57,12 +61,24 @@ impl SettingsHandle {
             settings.icons_directory = Some(data_dir.join("icons"));
         }
 
+        if settings.logs_directory.is_none() {
+            settings.logs_directory = Some(data_dir.join("logs"));
+        }
+
+        if settings.log_level.is_none() {
+            settings.log_level = Some(LogLevel::Info);
+        }
+
         if settings.show_tray_icon.is_none() {
             settings.show_tray_icon = Some(true);
         }
 
         if settings.tts_enabled.is_none() {
             settings.tts_enabled = Some(false);
+        }
+
+        if settings.allow_network_access.is_none() {
+            settings.allow_network_access = Some(false);
         }
 
         let handle = SettingsHandle {
@@ -113,6 +129,16 @@ impl SettingsHandle {
         settings.tts_enabled = Some(enabled);
     }
 
+    pub async fn get_allow_network_access(&self) -> bool {
+        let settings = self.settings.read().await;
+        settings.allow_network_access.unwrap()
+    }
+
+    pub async fn set_allow_network_access(&self, enabled: bool) {
+        let mut settings = self.settings.write().await;
+        settings.allow_network_access = Some(enabled);
+    }
+
     pub async fn get_profile_directory(&self) -> PathBuf {
         let settings = self.settings.read().await;
         settings.profile_directory.clone().unwrap()
@@ -136,6 +162,32 @@ impl SettingsHandle {
     pub async fn get_icons_directory(&self) -> PathBuf {
         let settings = self.settings.read().await;
         settings.icons_directory.clone().unwrap()
+    }
+
+    pub async fn get_log_directory(&self) -> PathBuf {
+        let settings = self.settings.read().await;
+        settings.logs_directory.clone().unwrap()
+    }
+
+    pub async fn set_log_level(&self, level: LogLevel) {
+        let mut settings = self.settings.write().await;
+        settings.log_level = Some(level);
+    }
+
+    pub async fn get_log_level(&self) -> LogLevel {
+        let settings = self.settings.read().await;
+        settings.log_level.clone().unwrap_or(LogLevel::Info)
+    }
+
+    pub async fn get_activate(&self) -> Option<String> {
+        let settings = self.settings.read().await;
+        settings.activate.clone()
+    }
+
+    #[allow(dead_code)]
+    pub async fn set_activate(&self, activate: Option<String>) {
+        let mut settings = self.settings.write().await;
+        settings.activate = activate;
     }
 
     pub async fn get_device_profile_name(&self, device_serial: &str) -> Option<String> {
@@ -269,11 +321,15 @@ impl SettingsHandle {
 pub struct Settings {
     show_tray_icon: Option<bool>,
     tts_enabled: Option<bool>,
+    allow_network_access: Option<bool>,
     profile_directory: Option<PathBuf>,
     mic_profile_directory: Option<PathBuf>,
     samples_directory: Option<PathBuf>,
     presets_directory: Option<PathBuf>,
     icons_directory: Option<PathBuf>,
+    logs_directory: Option<PathBuf>,
+    log_level: Option<LogLevel>,
+    activate: Option<String>,
     devices: HashMap<String, DeviceSettings>,
 }
 

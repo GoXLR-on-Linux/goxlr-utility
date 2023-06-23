@@ -7,7 +7,7 @@ use crate::device::tusb::tusbaudio::{
 };
 use anyhow::{bail, Result};
 use byteorder::{ByteOrder, LittleEndian};
-use log::{debug, error};
+use log::{debug, error, warn};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -217,8 +217,11 @@ impl AttachGoXLR for TUSBAudioGoXLR {
             });
 
             if new_handle.is_err() {
+                warn!("Unable to create new handle.");
                 return false;
             }
+
+            debug!("New Handle Created.");
             self.handle = new_handle.unwrap();
         }
         true

@@ -1,130 +1,68 @@
 [![Support Server](https://img.shields.io/discord/828348446775574548.svg?label=Discord&logo=Discord&colorB=7289da&style=flat)](https://discord.gg/Wbp3UxkX2j)
+[![GitHub tag (latest SemVer pre-release)](https://img.shields.io/github/v/tag/goxlr-on-linux/goxlr-utility?label=Latest)](http://github.com/goxlr-on-linux/goxlr-utility/releases/latest)
+![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/goxlr-on-linux/goxlr-utility/build.yml)
 
-# GoXLR Configuration Utility
-A tool to configure and use a TC-Helicon GoXLR or GoXLR Mini without requiring windows.
+## GoXLR Configuration Utility
+A tool to configure and control a TC-Helicon GoXLR or GoXLR Mini on Linux, MacOS and Windows.
 
-This application assumes you have working audio with your GoXLR device, either out of the box, or via our installation
-script. Check out the main [GoXLR on Linux](https://github.com/GoXLR-on-Linux/goxlr-on-linux) repository for info.
+## Features
+* Full Control over the GoXLR and GoXLR Mini (Similar to the official App)
+* Compatibility with profiles created by the official application
+* An accessible UI designed to work well with Assistive Technologies
+* Remote Access. Control you're GoXLR from another computer on your network
+* A Sample 'Pre-Buffer'. Record audio from before you press the button
+* Exit Actions, including saving profiles and loading other profiles / lighting
+* Multiple Device Support. Run more than one GoXLR
+* A CLI and API for basic to advance scripting and automation
 
-# Project State
-For the current list of features that are supported, as well as what's still left to be done, checkout the 
-[Roadmap](ROADMAP.md) in this repository. 
+## Downloads
+Downloads are available on the [Releases Page](https://github.com/GoXLR-on-Linux/goxlr-utility/releases) under the
+'Assets' header, we currently provide the following files:
 
-# Installation
-### Linux
-We currently provide the following via the [releases page](https://github.com/GoXLR-on-Linux/goxlr-utility/releases/):
+* `.exe` files, usable on Windows<sup>1</sup>
 * `.deb` files, usable on Debian based systems (Ubuntu, Mint, Pop!_OS, etc)
 * `.rpm` files, usable on Redhat based systems (CentOS, Fedora, etc)
 
+If you're an Arch user, updated versions of the utility are available via [AUR](https://aur.archlinux.org/packages/goxlr-utility)
+using the `goxlr-utility` package.  
+If you're a MacOS user, check out the [MacOS Project](https://github.com/Adelenade/GoXlr-Macos) for a more integrated implementation
 
-We also provide the utility through the [Arch User Repository](https://aur.archlinux.org/packages/goxlr-utility) via the
-`goxlr-utility` package.
+<sup>1</sup> Windows requires the official device drivers provided by TC-Helicon. If you have the official app 
+installed you don't need to do anything, otherwise download the latest drivers from TC-Helicon's website [here](https://go.tc-helicon.com/GoXLR_driver_5.12).
 
-We've tested as many distributions as possible, but the packages may not work on yours. If you have any problems, 
-drop us a message on Discord.
+## Getting Started
+Once installed, you can launch the Utility using the `GoXLR Utility` item in your Applications Menu, this will launch
+the utility and configuration UI. The UI will then be accessible via the system tray icon, or (if you don't have a tray)
+by re-running the `GoXLR Utility` menu item.
 
-If you require the utility to run on an unsupported distribution, jump to Manual Compilation below.
+If you're running on Linux, a first configuration step should be to enable `Autostart on Login` via System -> Settings. 
+Windows users will get the choice during installation. If you change your mind, you can change the setting.
 
-### MacOS
-While the GoXLR Utility does work correctly under MacOS, it comes with several caveats. The following needs to be 
-considered:
+If you want to import your profiles from the official app, simply click on the folder icon in the top right of the 
+relevant profiles pane (either Main or Mic) which will open the directory in your file browser. Copy the profile across
+from the Official App's directory (normally `Documents/GoXLR`) and they'll appear in the util ready to load, simply 
+double click them.
 
-* It must be manually compiled (we are currently not producing builds)
-* Aggregate devices must be created to split the GoXLRs multichannel input / output to usable channels
-* When a device is attached, the `goxlr-initialiser` binary needs to be run with sudo to prepare the device
-* There is no 'auto start' functionality, and the `goxlr-launcher` binary will not launch the daemon.
+If you're setting up from scratch, the best place to start is configuring your microphone. Head over to the `Mic` tab
+and hit `Mic Setup` to configure your microphone type and gain. It may be easier to configure if you first set your
+Gate Amount to 0, then reconfigure it once your mic is working. Once done, go explore the UI!
 
-We may look into directly solving these problems down the line, but in the meantime a community member has been working
-on them over at the [GoXLR MacOS](https://github.com/Adelenade/GoXlr-Macos) project, as well as providing a more
-integrated swift based UI, so if you're on Mac, check that out!
+## The UI
+The Utility's UI is web based, and served directly from the utility to your web browser of choice (if configured, it
+can also be served to a web browser on another computer). The UI design was modelled around the official application
+in an attempt to provide a familiar interface for those moving from Windows to other platforms, rather than forcing
+people to learn a new configuration paradigm.
 
-### Windows
-The GoXLR Utility is usable under Windows through the official TC-Helicon drivers. The utility installer is available
-via the [releases page](https://github.com/GoXLR-on-Linux/goxlr-utility/releases/). There are a couple of things to 
-note:
+![image](https://user-images.githubusercontent.com/574943/248385311-0bce92e6-c6c7-4933-81e1-95a36772bb7f.png)
 
-* Windows support is relatively new, so may not be as stable.
-* The official GoXLR driver is required, and the util has been tested against version 5.12 (Available from TC-Helicon 
-[here](https://go.tc-helicon.com/GoXLR_driver_5.12))
-* The driver *MUST* be installed to the default location on drive C.
-* To prevent conflicts, the utility will abort and quit if it detects the Official GoXLR App running
+## Building
+Build instructions and other useful information can be found on the project's [wiki](https://github.com/GoXLR-on-Linux/goxlr-utility/wiki/Compilation-Guide).
+While it's a little sparse at the moment, over time it should grow, and requests / feedback are always welcome!
 
-If you have any problems, be sure to use our discord, and not the official one! In addition, a huge shout-out to
-oddbear for doing most the heavy lifting in getting the utility functional under Windows, and to TC-Helicon for
-graciously permitting us to release it! 
-
-# Usage
-## Running the utility
-If you installed the utility via a package, there should be a 'GoXLR Utility' item in your application list. This will
-start the background daemon (if needed), then launch the UI for configuration. The background Daemon will then continue
-running until you log out or quit (this is required for the GoXLR to function). If your desktop environment supports a
-system tray, an icon will appear there for quick opening the configuration.
-
-If you're manually compiling, the produced `goxlr-launcher` binary will do the above.
-
-### Automatically Start on Login
-The GoXLR Utility supports automatically starting on login, from the UI, go to `System` -> `Settings`, and tick the
-`Autostart on Login` box.
-
-### Advanced Running
-For more control over the GoXLR utility, the `goxlr-daemon` can be manually launched with various configuration
-settings. For more information, check out `goxlr-daemon --help`. Note that any extra parameters passed to the
-daemon will not be propagated into autostart if you enable it (You'll need to manually edit
-`~/.config/autostart/goxlr-daemon.desktop` once autostart is enabled).
-
-## Interacting with the GoXLR
-For most people, running the GoXLR Utility from your menu or interacting with the system tray icon will bring up
-the web configuration UI allowing you to fully configure the GoXLR from your web browser. If you'd like to help improve
-the web experience, check out the [UI Repository](https://github.com/GoXLR-on-Linux/goxlr-ui) and get tweaking!
-
-There is also a command line client, `goxlr-client`, which can be used to configure all parts of the GoXLR without
-the main UI. This can be useful for automation scenarios (for example, changing colour themes when locking / unlocking
-your computer), setting up keyboard shortcuts, or even additional Stream Deck actions. For a list of all parameters and
-options (there are a lot!) check out `goxlr-client --help`.
-
-# The GoXLR Utility API
-The GoXLR Utility is an API driven application, which allows third party programs and applications to communicate with,
-monitor, and make changes to the GoXLR. The WebUI and `goxlr-client` binaries are examples of API clients. If
-you're interested in building a tool with the API, check out [This Wiki Page](https://github.com/GoXLR-on-Linux/goxlr-utility/wiki/The-GoXLR-Utility-API)
-which will contain details.
-
-# Manual Compilation
-## Setting Permissions
-Copy `50-goxlr.rules` to `/etc/udev/rules.d/` and then reload with `sudo udevadm control --reload-rules && sudo udevadm trigger`.
-
-## Building from source
-
-### Prerequisites
-* Have a GoXLR :)
-* Install [Rust](https://rustup.rs/)
-* For Linux:
-  * Debian: `sudo apt-get install pkg-config libdbus-1-dev libpulse0`
-  * Fedora: `sudo dnf install pkgconf-pkg-config dbus-devel pulseaudio-libs`
-
-### Features
-The GoXLR Utility contains compile-time features, which can be used to enable functionality during the build process by
-adding `--features "a b c"` to the `cargo` command (with `a`, `b` and `c` being separate feature names, for example 
-`cargo build --features "tts"`). These features often require separate dependencies to be installed, and are documented
-as such below.
-
-#### Text to Speech on Button Press
-* Feature Name: `tts`
-* Dependencies:
-  * Debian: `sudo apt-get install clang libspeechd-dev`
-  * Fedora: `sudo dnf install clang speech-dispatcher-devel`
-
-### Building
-The easiest way to build is by using the following commands to compile and install the executables (remembering to add 
-features you may want!):
-- `cargo install --path daemon` for the daemon
-- `cargo install --path client` for the client to interact with the daemon
-- `cargo install --path defaults` for the Default Profile Handlers
-- `cargo install --path launcher` for the Utility Launcher
-
-Tab-complete files for your terminal of choice will be available after building.
-
-If you'd prefer not to install, you can use `cargo build` and access the binaries in the `target/` directory.
-
-# Disclaimer
-This project is also not supported by, or affiliated in any way with, TC-Helicon. For the official GoXLR software, 
+## Disclaimer
+This project is also not supported by, or affiliated in any way with, TC-Helicon. For the official GoXLR software,
 please refer to their website.
+
+In addition, this project accepts no responsibility or liability for use of this software, or any problems which may
+occur from its use. Please read the [LICENSE](https://github.com/GoXLR-on-Linux/goxlr-utility/blob/main/LICENSE) for
+more information.

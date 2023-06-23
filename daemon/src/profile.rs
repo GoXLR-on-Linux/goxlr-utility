@@ -11,10 +11,11 @@ use log::{debug, warn};
 use strum::IntoEnumIterator;
 
 use crate::audio::{AudioFile, AudioHandler};
+use crate::device::CurrentState;
 use goxlr_ipc::{
     ActiveEffects, ButtonLighting, CoughButton, Echo, Effects, FaderLighting, Gender, HardTune,
-    Lighting, Megaphone, OneColour, Pitch, Reverb, Robot, Sample, Sampler, SamplerButton,
-    SamplerLighting, Scribble, Submix, Submixes, ThreeColours, TwoColours,
+    Lighting, Megaphone, OneColour, Pitch, Reverb, Robot, Sample, SampleProcessState, Sampler,
+    SamplerButton, SamplerLighting, Scribble, Submix, Submixes, ThreeColours, TwoColours,
 };
 use goxlr_profile_loader::components::colours::{
     Colour, ColourDisplay, ColourMap, ColourOffStyle, ColourState,
@@ -38,12 +39,13 @@ use goxlr_profile_loader::{Faders, Preset, SampleButtons};
 use goxlr_scribbles::get_scribble;
 use goxlr_types::{
     Button, ButtonColourGroups, ButtonColourOffStyle as BasicColourOffStyle, ChannelName,
-    EffectBankPresets, EncoderColourTargets, FaderDisplayStyle as BasicColourDisplay, FaderName,
-    InputDevice, MuteFunction as BasicMuteFunction, MuteState, OutputDevice, SamplePlayOrder,
-    SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets, SubMixChannelName,
-    VersionNumber,
+    EffectBankPresets, EncoderColourTargets, FaderDisplayStyle as BasicColourDisplay,
+    FaderDisplayStyle, FaderName, InputDevice, MuteFunction as BasicMuteFunction, MuteState,
+    OutputDevice, SamplePlayOrder, SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets,
+    SubMixChannelName, VersionNumber,
 };
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
+use goxlr_usb::channelstate::ChannelState;
 use goxlr_usb::colouring::ColourTargets;
 
 use crate::files::can_create_new_file;
@@ -101,20 +103,19 @@ impl ProfileAdapter {
         can_create_new_file(path)
     }
 
-    pub fn write_profile(&mut self, name: String, directory: &Path, overwrite: bool) -> Result<()> {
+    pub fn save_as(&mut self, name: String, directory: &Path, overwrite: bool) -> Result<()> {
+        self.name = name;
+        self.save(directory, overwrite)
+    }
+
+    pub fn save(&mut self, directory: &Path, overwrite: bool) -> Result<()> {
+        let name = &self.name;
         let path = directory.join(format!("{name}.goxlr"));
         if !overwrite && path.is_file() {
             return Err(anyhow!("Profile exists, will not overwrite"));
         }
 
         self.profile.save(path)?;
-
-        // Keep our names in sync (in case it was changed)
-        if name != self.name() {
-            dbg!("Changing Profile Name: {} -> {}", self.name(), name.clone());
-            self.name = name;
-        }
-
         Ok(())
     }
 
@@ -169,6 +170,39 @@ impl ProfileAdapter {
         ))
     }
 
+    pub(crate) fn get_current_state(&self) -> CurrentState {
+        let mut faders = EnumMap::default();
+        let mut mute_state = EnumMap::default();
+
+        for fader in FaderName::iter() {
+            faders[fader] = self.get_fader_assignment(fader);
+        }
+
+        for channel in ChannelName::iter() {
+            mute_state[channel] = self.get_channel_mute_state(channel);
+        }
+
+        CurrentState {
+            faders,
+            mute_state,
+            volumes: self.get_channel_volume_map(),
+        }
+    }
+
+    fn get_channel_mute_state(&self, channel: ChannelName) -> ChannelState {
+        // Is this assigned to a fader?
+        if let Some(fader) = self.get_fader_from_channel(channel) {
+            let (muted_to_x, muted_to_all, mute_function) = self.get_mute_button_state(fader);
+
+            if muted_to_all || (muted_to_x && mute_function == MuteFunction::All) {
+                return ChannelState::Muted;
+            }
+        }
+
+        // Not assigned, always unmuted
+        ChannelState::Unmuted
+    }
+
     pub fn create_router(&self) -> EnumMap<InputDevice, EnumMap<OutputDevice, bool>> {
         // Create the main EnumMap..
         let mut router: EnumMap<InputDevice, EnumMap<OutputDevice, bool>> = EnumMap::default();
@@ -181,6 +215,17 @@ impl ProfileAdapter {
             }
             router[profile_to_standard_input(input)] = outputs;
         }
+
+        // Before we return this, are we monitoring something else? If so, we need to replace the
+        // headphones row..
+        if self.get_monitoring_mix() != OutputDevice::Headphones {
+            let headphone_routing = self.profile.settings().submixes().monitor_tree().routing();
+            for input in InputDevice::iter() {
+                let input_channel = standard_input_to_profile(input);
+                router[input][OutputDevice::Headphones] = headphone_routing[input_channel] != 0;
+            }
+        }
+
         router
     }
 
@@ -197,17 +242,61 @@ impl ProfileAdapter {
         map
     }
 
-    pub fn set_routing(&mut self, input: InputDevice, output: OutputDevice, enabled: bool) {
-        let input = standard_input_to_profile(input);
-        let output = standard_output_to_profile(output);
+    pub fn set_routing(
+        &mut self,
+        input: InputDevice,
+        output: OutputDevice,
+        enabled: bool,
+    ) -> Result<()> {
+        let input_channel = standard_input_to_profile(input);
+        let output_channel = standard_output_to_profile(output);
+        let monitoring = self.get_monitoring_mix();
 
-        let mut value = 8192;
-        if !enabled {
-            value = 0;
+        let value = if enabled { 8192 } else { 0 };
+
+        // Before we do anything before we do anything, make sure it's valid..
+        if input == InputDevice::Chat && output == OutputDevice::ChatMic {
+            bail!("Invalid Route: Chat -> Chat Mic");
+        }
+        if input == InputDevice::Samples && output == OutputDevice::Sampler {
+            bail!("Invalid Route: Samples -> Sampler");
+        }
+
+        // Before we do anything, are we changing Headphones while they're not the active Monitor?
+        if monitoring != OutputDevice::Headphones && output == OutputDevice::Headphones {
+            // In this scenario, we don't update the actual routing table, we just update the
+            // 'on restore' table.
+            let stored_routing = self
+                .profile
+                .settings_mut()
+                .submixes_mut()
+                .monitor_tree_mut()
+                .routing_mut();
+
+            stored_routing[input_channel] = value;
+            debug!("{:?}", stored_routing);
+            return Ok(());
         }
 
         let table = self.profile.settings_mut().mixer_mut().mixer_table_mut();
-        table[input][output] = value;
+        table[input_channel][output_channel] = value;
+
+        if monitoring != OutputDevice::Headphones && monitoring == output {
+            // We need to update routing on the headphones for this channel as well..
+            table[input_channel][OutputChannels::Headphones] = value;
+        }
+        Ok(())
+    }
+
+    pub fn set_monitor_routing(&mut self, input: InputDevice, output: OutputDevice, enabled: bool) {
+        // This is similar to above, except we don't do the monitor checks as we need to force the
+        // routing settings.
+        let input_channel = standard_input_to_profile(input);
+        let output_channel = standard_output_to_profile(output);
+
+        let value = if enabled { 8192 } else { 0 };
+        let table = self.profile.settings_mut().mixer_mut().mixer_table_mut();
+        table[input_channel][output_channel] = value;
     }
 
     pub fn get_fader_assignment(&self, fader: FaderName) -> ChannelName {
@@ -294,7 +383,7 @@ impl ProfileAdapter {
         )
     }
 
-    pub fn set_scribble_icon(&mut self, fader: FaderName, icon: String) {
+    pub fn set_scribble_icon(&mut self, fader: FaderName, icon: Option<String>) {
         let scribble = self
             .profile
             .settings_mut()
@@ -335,6 +424,14 @@ impl ProfileAdapter {
             .settings()
             .mixer()
             .channel_volume(standard_to_profile_channel(channel))
+    }
+
+    pub fn get_channel_volume_map(&self) -> EnumMap<ChannelName, u8> {
+        let mut map = EnumMap::default();
+        for channel in ChannelName::iter() {
+            map[channel] = self.get_channel_volume(channel);
+        }
+        map
     }
 
     pub fn get_fader_from_channel(&self, channel: ChannelName) -> Option<FaderName> {
@@ -688,6 +785,7 @@ impl ProfileAdapter {
         is_device_mini: bool,
         audio_handler: &Option<AudioHandler>,
         sampler_prerecord: u16,
+        processing_state: SampleProcessState,
     ) -> Option<Sampler> {
         if is_device_mini {
             return None;
@@ -712,12 +810,15 @@ impl ProfileAdapter {
                         name: track.track.clone(),
                         start_pct: track.start_position,
                         stop_pct: track.end_position,
-                    })
+                    });
                 }
 
                 let mut is_playing = false;
+                let mut is_recording = false;
+
                 if let Some(audio_handler) = audio_handler {
                     is_playing = audio_handler.is_sample_playing(bank, button);
+                    is_recording = audio_handler.sample_recording(bank, button);
                 }
 
                 // Create a SamplerButton
@@ -728,6 +829,7 @@ impl ProfileAdapter {
                     order: profile_to_standard_sample_playback_order(sample_bank.get_play_order()),
                     samples: tracks,
                     is_playing,
+                    is_recording,
                 };
                 buttons.insert(button, sampler_button);
             }
@@ -736,6 +838,9 @@ impl ProfileAdapter {
         }
 
         Some(Sampler {
+            processing_state,
+            active_bank: self.get_active_sample_bank(),
+            clear_active: self.is_sample_clear_active(),
             record_buffer: sampler_prerecord,
             banks: sampler_map,
         })
@@ -955,10 +1060,23 @@ impl ProfileAdapter {
         // Now handle the outputs..
         let mut outputs: EnumMap<OutputDevice, goxlr_types::Mix> = Default::default();
         for output in OutputDevice::iter() {
-            let profile_output = standard_output_to_profile(output);
-            let assignment = profile_to_standard_mix(routing.get_assignment(profile_output));
-
-            outputs[output] = assignment;
+            if output == OutputDevice::Headphones
+                && self.get_monitoring_mix() != OutputDevice::Headphones
+            {
+                // If we're monitoring something else, we need to return the 'original' value for
+                // the headphones, not it's current value..
+                let mix = self
+                    .profile
+                    .settings()
+                    .submixes()
+                    .monitor_tree()
+                    .headphone_mix();
+                outputs[output] = profile_to_standard_mix(mix);
+            } else {
+                let profile_output = standard_output_to_profile(output);
+                let assignment = profile_to_standard_mix(routing.get_assignment(profile_output));
+                outputs[output] = assignment;
+            }
         }
 
         Some(Submixes { inputs, outputs })
@@ -1091,6 +1209,11 @@ impl ProfileAdapter {
             .set_state_on(true)?;
 
         Ok(())
+    }
+
+    pub fn get_effect_name(&mut self, preset: EffectBankPresets) -> String {
+        let preset = standard_to_profile_preset(preset);
+        self.profile.settings().effects(preset).name().to_string()
     }
 
     pub fn set_megaphone(&mut self, enabled: bool) -> Result<()> {
@@ -1643,6 +1766,18 @@ impl ProfileAdapter {
             .set_state_on(state)
     }
 
+    pub fn get_sample_bank(
+        &mut self,
+        bank: goxlr_types::SampleBank,
+        button: goxlr_types::SampleButtons,
+    ) -> &mut Vec<Track> {
+        self.profile
+            .settings_mut()
+            .sample_button_mut(standard_to_profile_sample_button(button))
+            .get_stack_mut(standard_to_profile_sample_bank(bank))
+            .get_tracks_mut()
+    }
+
     pub fn set_sample_button_blink(
         &mut self,
         button: goxlr_types::SampleButtons,
@@ -1832,7 +1967,7 @@ impl ProfileAdapter {
             .get_stack_mut(standard_to_profile_sample_bank(bank))
             .get_track_by_index_mut(index)?;
 
-        track.start_position = percent;
+        track.set_start_position(percent)?;
         Ok(())
     }
 
@@ -1850,7 +1985,7 @@ impl ProfileAdapter {
             .get_stack_mut(standard_to_profile_sample_bank(bank))
             .get_track_by_index_mut(index)?;
 
-        track.end_position = percent;
+        track.set_end_position(percent)?;
         Ok(())
     }
 
@@ -1905,7 +2040,6 @@ impl ProfileAdapter {
             .get_volume(submix_standard_to_profile_input(device))
     }
 
-    #[allow(unused)]
     pub fn is_channel_linked(&self, device: SubMixChannelName) -> bool {
         self.profile
             .settings()
@@ -1963,6 +2097,15 @@ impl ProfileAdapter {
     pub fn set_mix_output(&mut self, channel: OutputDevice, mix: goxlr_types::Mix) -> Result<()> {
         let profile_mix = standard_to_profile_mix(mix);
         let device = standard_output_to_profile(channel);
+
+        // Do we also need to change the mic assignment?
+        if self.get_monitoring_mix() == channel && channel != OutputDevice::Headphones {
+            // Move the headphone mix across too..
+            self.profile
+                .settings_mut()
+                .mix_routing_mut()
+                .set_assignment(OutputChannels::Headphones, profile_mix)?;
+        }
 
         self.profile
             .settings_mut()
@@ -2028,41 +2171,23 @@ impl ProfileAdapter {
                 )?;
                 self.set_button_colours(Button::EffectSelect6, colour_one, colour_two.as_ref())?;
             }
-            ButtonColourGroups::SampleBankSelector => {
+            ButtonColourGroups::EffectTypes => {
                 self.set_button_colours(
-                    Button::SamplerSelectA,
+                    Button::EffectMegaphone,
                     colour_one.clone(),
                     colour_two.as_ref(),
                 )?;
                 self.set_button_colours(
-                    Button::SamplerSelectB,
-                    colour_one.clone(),
-                    colour_two.as_ref(),
-                )?;
-                self.set_button_colours(Button::SamplerSelectC, colour_one, colour_two.as_ref())?;
-            }
-            ButtonColourGroups::SamplerButtons => {
-                self.set_button_colours(
-                    Button::SamplerTopLeft,
+                    Button::EffectRobot,
                     colour_one.clone(),
                     colour_two.as_ref(),
                 )?;
                 self.set_button_colours(
-                    Button::SamplerTopRight,
+                    Button::EffectHardTune,
                     colour_one.clone(),
                     colour_two.as_ref(),
                 )?;
-                self.set_button_colours(
-                    Button::SamplerBottomLeft,
-                    colour_one.clone(),
-                    colour_two.as_ref(),
-                )?;
-                self.set_button_colours(
-                    Button::SamplerBottomRight,
-                    colour_one.clone(),
-                    colour_two.as_ref(),
-                )?;
-                self.set_button_colours(Button::SamplerClear, colour_one, colour_two.as_ref())?;
+                self.set_button_colours(Button::EffectFx, colour_one, colour_two.as_ref())?;
             }
         }
 
@@ -2089,19 +2214,217 @@ impl ProfileAdapter {
                 self.set_button_off_style(Button::EffectSelect5, off_style)?;
                 self.set_button_off_style(Button::EffectSelect6, off_style)?;
             }
-            ButtonColourGroups::SampleBankSelector => {
-                self.set_button_off_style(Button::SamplerSelectA, off_style)?;
-                self.set_button_off_style(Button::SamplerSelectB, off_style)?;
-                self.set_button_off_style(Button::SamplerSelectC, off_style)?;
-            }
-            ButtonColourGroups::SamplerButtons => {
-                self.set_button_off_style(Button::SamplerTopLeft, off_style)?;
-                self.set_button_off_style(Button::SamplerTopRight, off_style)?;
-                self.set_button_off_style(Button::SamplerBottomLeft, off_style)?;
-                self.set_button_off_style(Button::SamplerBottomRight, off_style)?;
-                self.set_button_off_style(Button::SamplerClear, off_style)?;
+            ButtonColourGroups::EffectTypes => {
+                self.set_button_off_style(Button::EffectMegaphone, off_style)?;
+                self.set_button_off_style(Button::EffectRobot, off_style)?;
+                self.set_button_off_style(Button::EffectHardTune, off_style)?;
+                self.set_button_off_style(Button::EffectFx, off_style)?;
             }
         }
+        Ok(())
+    }
+
+    pub fn set_global_colour(&mut self, colour: String) -> Result<()> {
+        // A list of colour targets which require colour1 changed, rather than 0.
+        let fade_meters = vec![
+            ColourTargets::FadeMeter1,
+            ColourTargets::FadeMeter2,
+            ColourTargets::FadeMeter3,
+            ColourTargets::FadeMeter4,
+        ];
+
+        let encoders = vec![
+            ColourTargets::EchoEncoder,
+            ColourTargets::ReverbEncoder,
+            ColourTargets::GenderEncoder,
+            ColourTargets::PitchEncoder,
+        ];
+
+        // All targets except above have Colour0 changed.
+        for target in ColourTargets::iter() {
+            if encoders.contains(&target) {
+                continue;
+            }
+            let index = if fade_meters.contains(&target) { 1 } else { 0 };
+            let map = get_profile_colour_map_mut(self.profile.settings_mut(), target);
+            map.set_colour(index, Colour::fromrgb(colour.as_str())?)?;
+        }
+
+        // FadeMeter's Colour0 goes to Black
+        for target in fade_meters {
+            let map = get_profile_colour_map_mut(self.profile.settings_mut(), target);
+            map.set_colour(0, Colour::fromrgb("000000")?)?;
+
+            // We remove any Gradient assigned, because gradient to black is weird..
+            let new_display = if map.is_fader_meter() {
+                FaderDisplayStyle::Meter
+            } else {
+                FaderDisplayStyle::TwoColour
+            };
+            debug!("Setting Fader Style to: {}", new_display);
+            map.set_fader_display(standard_to_profile_fader_display(new_display))?;
+        }
+
+        // All buttons get changed to 'Off Style = Dimmed'
+        for button in Buttons::iter() {
+            let colour_target = map_button_to_colour_target(button);
+            let map = get_profile_colour_map_mut(self.profile.settings_mut(), colour_target);
+            map.set_off_style(ColourOffStyle::Dimmed)?;
+        }
+
+        // The official app doesn't do this, but here we're going to do slightly cleaner colouring
+        // of the encoder, and set their dial colours as well.
+        for target in encoders {
+            let map = get_profile_colour_map_mut(self.profile.settings_mut(), target);
+            map.set_colour(2, Colour::fromrgb(colour.as_str())?)?;
+
+            // The other two colours are dependent on the type of dial..
+            if target == ColourTargets::ReverbEncoder || target == ColourTargets::EchoEncoder {
+                map.set_colour(1, Colour::fromrgb(colour.as_str())?)?;
+                map.set_colour(0, Colour::fromrgb("000000")?)?;
+            } else {
+                map.set_colour(1, Colour::fromrgb(colour.as_str())?)?;
+                map.set_colour(0, Colour::fromrgb(colour.as_str())?)?;
+            }
+        }
+
+        // As above, the official app doesn't do this, which can leave the empty samples looking
+        // a little jank against the new global colour, so we'll set the empty colour to black.
+        for target in SamplerColourTargets::iter() {
+            let standard = standard_to_sample_colour(target);
+
+            let map = get_profile_colour_map_mut(self.profile.settings_mut(), standard);
+            map.set_colour(2, Colour::fromrgb("000000")?)?;
+
+            self.sync_sample_if_active(target)?;
+        }
+
+        Ok(())
+    }
+
+    /** Mix Monitoring **/
+    pub fn get_monitoring_mix(&self) -> OutputDevice {
+        profile_to_standard_output(
+            self.profile
+                .settings()
+                .submixes()
+                .monitor_tree()
+                .monitored_output(),
+        )
+    }
+
+    pub fn set_monitor_mix(&mut self, device: OutputDevice) -> Result<()> {
+        // Ok, this is convoluted, but firstly, what are we mixing to?
+        let output = self
+            .profile
+            .settings()
+            .submixes()
+            .monitor_tree()
+            .monitored_output();
+        let profile_device = standard_output_to_profile(device);
+
+        // If we're not actually changing anything, fast fail
+        if output == profile_device {
+            return Ok(());
+        }
+
+        // Store the change in monitoring state, we do that here so that when we call
+        // set_routing, it knows everything it needs to!
+        self.profile
+            .settings_mut()
+            .submixes_mut()
+            .monitor_tree_mut()
+            .set_monitored_output(profile_device);
+
+        if device != OutputDevice::Headphones && output == OutputChannels::Headphones {
+            // We're moving from Headphones to a different output for monitoring.
+            // We need to store the existing routing for the headphones into the monitor tree.
+            let mut new_map: EnumMap<InputChannels, u16> = Default::default();
+            let router = self.create_router();
+
+            for input in InputDevice::iter() {
+                if router[input][OutputDevice::Headphones] {
+                    let channel = standard_input_to_profile(input);
+                    new_map[channel] = 8192;
+                }
+            }
+
+            // Store the original Headphone routing in the monitor tree..
+            self.profile
+                .settings_mut()
+                .submixes_mut()
+                .monitor_tree_mut()
+                .set_routing(new_map);
+
+            // Get the currently assigned headphone mix, and store that..
+            let mix = self
+                .profile
+                .settings()
+                .mix_routing()
+                .get_assignment(OutputChannels::Headphones);
+
+            self.profile
+                .settings_mut()
+                .submixes_mut()
+                .monitor_tree_mut()
+                .set_headphone_mix(mix);
+
+            // Apply the monitor mix of the target to the headphones..
+            let new_mix = self
+                .profile
+                .settings()
+                .mix_routing()
+                .get_assignment(profile_device);
+
+            self.profile
+                .settings_mut()
+                .mix_routing_mut()
+                .set_assignment(OutputChannels::Headphones, new_mix)?;
+
+            // Ok, now we need to replace the headphone routing config in the profile to match
+            // the monitored channel..
+            for input in InputDevice::iter() {
+                self.set_monitor_routing(input, OutputDevice::Headphones, router[input][device]);
+            }
+
+            return Ok(());
+        }
+
+        if device == OutputDevice::Headphones && output != OutputChannels::Headphones {
+            // We're going from Different -> Headphones, so restore the original routing and mix.
+            let original_map = self.profile.settings().submixes().monitor_tree().routing();
+            for input in InputDevice::iter() {
+                let input_device = standard_input_to_profile(input);
+                if original_map[input_device] == 0 {
+                    self.set_monitor_routing(input, OutputDevice::Headphones, false);
+                } else {
+                    self.set_monitor_routing(input, OutputDevice::Headphones, true);
+                }
+            }
+
+            // Now restore the mix.
+            let mix = self
+                .profile
+                .settings()
+                .submixes()
+                .monitor_tree()
+                .headphone_mix();
+
+            self.profile
+                .settings_mut()
+                .mix_routing_mut()
+                .set_assignment(OutputChannels::Headphones, mix)?;
+
+            return Ok(());
+        }
+
+        // If we get here, we're simply moving between two monitors not involving headphones,
+        // so we just update the routing table.
+        for input in InputDevice::iter() {
+            let router = self.get_router(input);
+            self.set_monitor_routing(input, OutputDevice::Headphones, router[device]);
+        }
+
         Ok(())
     }
 

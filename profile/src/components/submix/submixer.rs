@@ -143,4 +143,12 @@ impl SubMixer {
     pub fn is_linked(&self, channel: InputChannels) -> bool {
         self.linking_tree.is_linked(channel)
     }
+
+    pub fn monitor_tree(&self) -> &MonitorTree {
+        &self.monitor_tree
+    }
+
+    pub fn monitor_tree_mut(&mut self) -> &mut MonitorTree {
+        &mut self.monitor_tree
+    }
 }

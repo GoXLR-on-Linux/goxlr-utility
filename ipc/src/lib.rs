@@ -19,15 +19,8 @@ use goxlr_types::{
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DaemonRequest {
     Ping,
-    OpenUi,
     GetStatus,
-    StopDaemon,
-    GetHttpState,
-    OpenPath(PathTypes),
-    SetShowTrayIcon(bool),
-    SetTTSEnabled(bool),
-    SetAutoStartEnabled(bool),
-    RecoverDefaults(PathTypes),
+    Daemon(DaemonCommand),
     Command(String, GoXLRCommand),
 }
 
@@ -35,7 +28,6 @@ pub enum DaemonRequest {
 pub enum DaemonResponse {
     Ok,
     Error(String),
-    HttpState(HttpSettings),
     Status(DaemonStatus),
     Patch(Patch),
 }
@@ -59,6 +51,32 @@ pub enum PathTypes {
     Presets,
     Samples,
     Icons,
+    Logs,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, Eq, PartialEq)]
+pub enum LogLevel {
+    Off,
+    Error,
+    Warn,
+    #[default]
+    Info,
+    Debug,
+    Trace,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum DaemonCommand {
+    OpenUi,
+    Activate,
+    StopDaemon,
+    OpenPath(PathTypes),
+    SetLogLevel(LogLevel),
+    SetShowTrayIcon(bool),
+    SetTTSEnabled(bool),
+    SetAutoStartEnabled(bool),
+    SetAllowNetworkAccess(bool),
+    RecoverDefaults(PathTypes),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -108,6 +126,8 @@ pub enum GoXLRCommand {
     SetDeeser(u8),
 
     // Colour Related Settings..
+    SetGlobalColour(String),
+
     SetFaderDisplayStyle(FaderName, FaderDisplayStyle),
     SetFaderColours(FaderName, String, String),
     SetAllFaderColours(String, String),
@@ -186,6 +206,7 @@ pub enum GoXLRCommand {
     SetHardTuneSource(HardTuneSource),
 
     // Sampler..
+    ClearSampleProcessError(),
     SetSamplerFunction(SampleBank, SampleButtons, SamplePlaybackMode),
     SetSamplerOrder(SampleBank, SampleButtons, SamplePlayOrder),
     AddSample(SampleBank, SampleButtons, String),
@@ -197,21 +218,21 @@ pub enum GoXLRCommand {
     StopSamplePlayback(SampleBank, SampleButtons),
 
     // Scribbles
-    SetScribbleIcon(FaderName, String),
+    SetScribbleIcon(FaderName, Option<String>),
     SetScribbleText(FaderName, String),
     SetScribbleNumber(FaderName, String),
     SetScribbleInvert(FaderName, bool),
 
     // Profile Handling..
     NewProfile(String),
-    LoadProfile(String),
+    LoadProfile(String, bool),
     LoadProfileColours(String),
     SaveProfile(),
     SaveProfileAs(String),
     DeleteProfile(String),
 
     NewMicProfile(String),
-    LoadMicProfile(String),
+    LoadMicProfile(String, bool),
     SaveMicProfile(),
     SaveMicProfileAs(String),
     DeleteMicProfile(String),
@@ -235,4 +256,7 @@ pub enum GoXLRCommand {
     SetSubMixVolume(ChannelName, u8),
     SetSubMixLinked(ChannelName, bool),
     SetSubMixOutputMix(OutputDevice, Mix),
+
+    // Mix Monitoring
+    SetMonitorMix(OutputDevice),
 }

@@ -2,17 +2,25 @@
 
 extern crate core;
 
+use std::fs::create_dir_all;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
+
 use actix_web::dev::ServerHandle;
 use anyhow::{bail, Context, Result};
 use clap::Parser;
-use goxlr_ipc::HttpSettings;
+use file_rotate::compression::Compression;
+use file_rotate::suffix::AppendCount;
+use file_rotate::{ContentLimit, FileRotate};
 use json_patch::Patch;
-use log::{error, info, warn};
-use simplelog::{ColorChoice, CombinedLogger, ConfigBuilder, TermLogger, TerminalMode};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use log::{debug, error, info, warn};
+use simplelog::{
+    ColorChoice, CombinedLogger, ConfigBuilder, TermLogger, TerminalMode, WriteLogger,
+};
 use tokio::join;
 use tokio::sync::{broadcast, mpsc};
+
+use goxlr_ipc::{HttpSettings, LogLevel};
 
 use crate::cli::{Cli, LevelFilter};
 use crate::events::{spawn_event_handler, DaemonState, EventTriggers};
@@ -44,6 +52,14 @@ mod tts;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const ICON: &[u8] = include_bytes!("../resources/goxlr-utility-large.png");
 
+/**
+This is ugly, and I know it's ugly. I need to rework how the Primary Worker is constructed
+so that various variables can be easily passed through it down to the device level via a struct
+rather than through additional parameters. When that comes, this will be removed!
+*/
+static OVERRIDE_SAMPLER_INPUT: Mutex<Option<String>> = Mutex::new(None);
+static OVERRIDE_SAMPLER_OUTPUT: Mutex<Option<String>> = Mutex::new(None);
+
 // This is for global 'JSON Patches', for when something changes.
 #[derive(Debug, Clone)]
 pub struct PatchEvent {
@@ -53,6 +69,18 @@ pub struct PatchEvent {
 #[tokio::main]
 async fn main() -> Result<()> {
     let args: Cli = Cli::parse();
+
+    // Before we do absolutely anything, we need to load the config file, as it implies log settings
+    let settings = SettingsHandle::load(args.config).await?;
+
+    // Configure and / or create the log path, and file name.
+    let log_path = settings.get_log_directory().await;
+    if !log_path.clone().exists() {
+        if let Err(e) = create_dir_all(log_path.clone()) {
+            bail!("Unable to create log directory: {}", e);
+        }
+    }
+    let log_file = log_path.join("goxlr-daemon.log");
 
     // We need to ignore a couple of packages log output so create a builder.
     let mut config = ConfigBuilder::new();
@@ -66,19 +94,51 @@ async fn main() -> Result<()> {
     config.add_filter_ignore_str("actix_server::server");
     config.add_filter_ignore_str("actix_server::builder");
 
-    CombinedLogger::init(vec![TermLogger::new(
-        match args.log_level {
+    // I'm generally not interested in the Symphonia header announcements which go to INFO,
+    // it's only useful in a development setting!
+    config.add_filter_ignore_str("symphonia");
+
+    // Create a file rotator, that will compress and rotate files after 5Mb
+    let file_rotator = FileRotate::new(
+        log_file,
+        AppendCount::new(5),
+        ContentLimit::Bytes(1024 * 1024 * 5),
+        Compression::OnRotate(1),
+        #[cfg(unix)]
+        None,
+    );
+
+    // Configure the log level, prioritise the CLI, but otherwise config.
+    let log_level = if let Some(cli_level) = args.log_level {
+        match cli_level {
             LevelFilter::Off => log::LevelFilter::Off,
             LevelFilter::Error => log::LevelFilter::Error,
             LevelFilter::Warn => log::LevelFilter::Warn,
             LevelFilter::Info => log::LevelFilter::Info,
             LevelFilter::Debug => log::LevelFilter::Debug,
             LevelFilter::Trace => log::LevelFilter::Trace,
-        },
-        config.build(),
-        TerminalMode::Mixed,
-        ColorChoice::Auto,
-    )])
+        }
+    } else {
+        match settings.get_log_level().await {
+            LogLevel::Off => log::LevelFilter::Off,
+            LogLevel::Error => log::LevelFilter::Error,
+            LogLevel::Warn => log::LevelFilter::Warn,
+            LogLevel::Info => log::LevelFilter::Info,
+            LogLevel::Debug => log::LevelFilter::Debug,
+            LogLevel::Trace => log::LevelFilter::Trace,
+        }
+    };
+
+    // Create the loggers :)
+    CombinedLogger::init(vec![
+        TermLogger::new(
+            log_level,
+            config.build(),
+            TerminalMode::Mixed,
+            ColorChoice::Auto,
+        ),
+        WriteLogger::new(log_level, config.build(), file_rotator),
+    ])
     .context("Could not configure the logger")?;
 
     if is_root() {
@@ -104,12 +164,13 @@ async fn main() -> Result<()> {
         }
     }
 
-    let http_settings = HttpSettings {
-        enabled: !args.http_disable,
-        bind_address: args.http_bind_address,
-        cors_enabled: args.http_enable_cors,
-        port: args.http_port,
-    };
+    if let Some(device) = args.override_sample_input_device {
+        OVERRIDE_SAMPLER_INPUT.lock().unwrap().replace(device);
+    }
+
+    if let Some(device) = args.override_sample_output_device {
+        OVERRIDE_SAMPLER_OUTPUT.lock().unwrap().replace(device);
+    }
 
     info!("Starting GoXLR Daemon v{}", VERSION);
 
@@ -118,7 +179,21 @@ async fn main() -> Result<()> {
     info!("Performing Platform Preflight...");
     perform_preflight()?;
 
-    let settings = SettingsHandle::load(args.config).await?;
+    let mut bind_address = String::from("localhost");
+    if let Some(address) = args.http_bind_address {
+        debug!("Command Line Override, binding to: {}", address);
+        bind_address = address;
+    } else if settings.get_allow_network_access().await {
+        bind_address = String::from("0.0.0.0");
+    }
+
+    debug!("HTTP Bind Address: {}", bind_address);
+    let http_settings = HttpSettings {
+        enabled: !args.http_disable,
+        bind_address,
+        cors_enabled: args.http_enable_cors,
+        port: args.http_port,
+    };
 
     // Create the Global Event Channel..
     let (global_tx, global_rx) = mpsc::channel(32);
@@ -152,7 +227,7 @@ async fn main() -> Result<()> {
 
     let (file_tx, file_rx) = mpsc::channel(20);
     let file_handle = tokio::spawn(spawn_file_notification_service(
-        file_paths,
+        file_paths.clone(),
         file_tx,
         shutdown.clone(),
     ));
@@ -173,6 +248,7 @@ async fn main() -> Result<()> {
         global_tx.clone(),
         shutdown.clone(),
         settings.clone(),
+        http_settings.clone(),
         file_manager,
     ));
 
@@ -180,7 +256,6 @@ async fn main() -> Result<()> {
     let ipc_socket = ipc_socket.unwrap();
     let communications_handle = tokio::spawn(spawn_ipc_server(
         ipc_socket,
-        http_settings.clone(),
         usb_tx.clone(),
         shutdown.clone(),
     ));
@@ -198,6 +273,7 @@ async fn main() -> Result<()> {
             httpd_tx,
             broadcast_tx.clone(),
             http_settings.clone(),
+            file_paths.clone(),
         ));
         http_server = Some(httpd_rx.await?);
     } else {
@@ -235,7 +311,7 @@ async fn main() -> Result<()> {
 
     if args.start_ui {
         //thread::sleep(Duration::from_millis(250));
-        let _ = global_tx.send(EventTriggers::OpenUi).await;
+        let _ = global_tx.send(EventTriggers::Activate).await;
     }
 
     if !args.disable_tray && state.show_tray.load(Ordering::Relaxed) {

@@ -5,8 +5,8 @@ use crate::platform::{has_autostart, set_autostart};
 use crate::{FileManager, PatchEvent, SettingsHandle, Shutdown, VERSION};
 use anyhow::{anyhow, Result};
 use goxlr_ipc::{
-    DaemonConfig, DaemonResponse, DaemonStatus, DeviceType, Files, GoXLRCommand, HardwareStatus,
-    PathTypes, Paths, UsbProductInformation,
+    DaemonCommand, DaemonConfig, DaemonStatus, DeviceType, Files, GoXLRCommand, HardwareStatus,
+    HttpSettings, PathTypes, Paths, UsbProductInformation,
 };
 use goxlr_usb::device::base::GoXLRDevice;
 use goxlr_usb::device::{find_devices, from_device};
@@ -25,13 +25,7 @@ use tokio::time::sleep;
 #[allow(clippy::enum_variant_names)]
 pub enum DeviceCommand {
     SendDaemonStatus(oneshot::Sender<DaemonStatus>),
-    StopDaemon(oneshot::Sender<DaemonResponse>),
-    OpenUi(oneshot::Sender<DaemonResponse>),
-    OpenPath(PathTypes, oneshot::Sender<DaemonResponse>),
-    RecoverDefaults(PathTypes, oneshot::Sender<DaemonResponse>),
-    SetShowTrayIcon(bool, oneshot::Sender<DaemonResponse>),
-    SetTTSEnabled(bool, oneshot::Sender<DaemonResponse>),
-    SetAutoStartEnabled(bool, oneshot::Sender<DaemonResponse>),
+    RunDaemonCommand(DaemonCommand, oneshot::Sender<Result<()>>),
     RunDeviceCommand(String, GoXLRCommand, oneshot::Sender<Result<()>>),
 }
 
@@ -48,6 +42,7 @@ pub async fn spawn_usb_handler(
     global_tx: Sender<EventTriggers>,
     mut shutdown: Shutdown,
     settings: SettingsHandle,
+    http_settings: HttpSettings,
     mut file_manager: FileManager,
 ) {
     // We can probably either merge these, or struct them..
@@ -69,7 +64,8 @@ pub async fn spawn_usb_handler(
     let mut ignore_list = HashMap::new();
 
     let mut files = get_files(&mut file_manager).await;
-    let mut daemon_status = get_daemon_status(&devices, &settings, files.clone()).await;
+    let mut daemon_status =
+        get_daemon_status(&devices, &settings, &http_settings, files.clone()).await;
 
     let mut shutdown_triggered = false;
 
@@ -161,66 +157,71 @@ pub async fn spawn_usb_handler(
                     DeviceCommand::SendDaemonStatus(sender) => {
                         let _ = sender.send(daemon_status.clone());
                     }
-                    DeviceCommand::StopDaemon(sender) => {
-                        // These should probably be moved upstream somewhere, they're not
-                        // device specific!
-                        let _ = global_tx.send(EventTriggers::Stop).await;
-                        let _ = sender.send(DaemonResponse::Ok);
-                    }
-                    DeviceCommand::OpenUi(sender) => {
-                        let _ = global_tx.send(EventTriggers::OpenUi).await;
-                        let _ = sender.send(DaemonResponse::Ok);
-                    }
-                    DeviceCommand::RecoverDefaults(path_type, sender) => {
-                        let path = match path_type {
-                            PathTypes::Profiles => settings.get_profile_directory().await,
-                            PathTypes::Presets => settings.get_presets_directory().await,
-                            PathTypes::Icons => settings.get_icons_directory().await,
-                            PathTypes::MicProfiles => settings.get_mic_profile_directory().await,
-                            _ => {
-                                let _ = sender.send(DaemonResponse::Error("Invalid Path type Sent".into()));
-                                return;
+
+                    DeviceCommand::RunDaemonCommand(command, sender) => {
+                        match command {
+                            DaemonCommand::StopDaemon => {
+                                // These should probably be moved upstream somewhere, they're not
+                                // device specific!
+                                let _ = global_tx.send(EventTriggers::Stop).await;
+                                let _ = sender.send(Ok(()));
                             }
-                        };
-                        let result = extract_defaults(path_type, &path);
-                        match result {
-                            Ok(_) => {
-                                let _ = sender.send(DaemonResponse::Ok);
-                            },
-                            Err(e) => {
-                                let _ = sender.send(DaemonResponse::Error(format!("Error Extracting Defaults: {e}")));
+                            DaemonCommand::OpenUi => {
+                                let _ = global_tx.send(EventTriggers::OpenUi).await;
+                                let _ = sender.send(Ok(()));
                             }
-                        }
-                    }
-                    DeviceCommand::SetAutoStartEnabled(enabled, sender) => {
-                        let result = set_autostart(enabled);
-                        match result {
-                            Ok(_) => {
-                                let _ = sender.send(DaemonResponse::Ok);
+                            DaemonCommand::Activate => {
+                                let _ = global_tx.send(EventTriggers::Activate).await;
+                                let _ = sender.send(Ok(()));
+                            }
+                            DaemonCommand::RecoverDefaults(path_type) => {
+                                let path = match path_type {
+                                    PathTypes::Profiles => settings.get_profile_directory().await,
+                                    PathTypes::Presets => settings.get_presets_directory().await,
+                                    PathTypes::Icons => settings.get_icons_directory().await,
+                                    PathTypes::MicProfiles => settings.get_mic_profile_directory().await,
+                                    _ => {
+                                        let _ = sender.send(Err(anyhow!("Invalid Path type Sent")));
+                                        return;
+                                    }
+                                };
+                                let _ = sender.send(extract_defaults(path_type, &path));
+                            }
+                            DaemonCommand::SetAutoStartEnabled(enabled) => {
+                                let _ = sender.send(set_autostart(enabled));
+                            }
+                            DaemonCommand::SetLogLevel(level) => {
+                                settings.set_log_level(level).await;
+                                settings.save().await;
                                 change_found = true;
+                                let _ = sender.send(Ok(()));
                             }
-                            Err(e) => {
-                                let _ = sender.send(DaemonResponse::Error(format!("Unable to Set AutoStart: {e}")));
+                            DaemonCommand::SetShowTrayIcon(enabled) => {
+                                settings.set_show_tray_icon(enabled).await;
+                                settings.save().await;
+                                change_found = true;
+                                let _ = sender.send(Ok(()));
+                            }
+                            DaemonCommand::SetTTSEnabled(enabled) => {
+                                settings.set_tts_enabled(enabled).await;
+                                settings.save().await;
+                                change_found = true;
+                                let _ = sender.send(Ok(()));
+                            }
+                            DaemonCommand::SetAllowNetworkAccess(enabled) => {
+                                settings.set_allow_network_access(enabled).await;
+                                settings.save().await;
+                                change_found = true;
+                                let _ = sender.send(Ok(()));
+                            }
+                            DaemonCommand::OpenPath(path_type) => {
+                                // There's nothing we can really do if this errors..
+                                let _ = global_tx.send(EventTriggers::Open(path_type)).await;
+                                let _ = sender.send(Ok(()));
                             }
                         }
-                    }
-                    DeviceCommand::SetShowTrayIcon(enabled, sender) => {
-                        settings.set_show_tray_icon(enabled).await;
-                        settings.save().await;
-                        change_found = true;
-                        let _ = sender.send(DaemonResponse::Ok);
-                    }
-                    DeviceCommand::SetTTSEnabled(enabled, sender) => {
-                        settings.set_tts_enabled(enabled).await;
-                        settings.save().await;
-                        change_found = true;
-                        let _ = sender.send(DaemonResponse::Ok);
-                    }
-                    DeviceCommand::OpenPath(path_type, sender) => {
-                        // There's nothing we can really do if this errors..
-                        let _ = global_tx.send(EventTriggers::Open(path_type)).await;
-                        let _ = sender.send(DaemonResponse::Ok);
-                    }
+                    },
+
                     DeviceCommand::RunDeviceCommand(serial, command, sender) => {
                         if let Some(device) = devices.get_mut(&serial) {
                             let _ = sender.send(device.perform_command(command).await);
@@ -232,13 +233,21 @@ pub async fn spawn_usb_handler(
                 }
             },
             Some(path) = file_rx.recv() => {
+                // Notify devices if Samples have changed..
+                if path == PathTypes::Samples {
+                    for device in devices.values_mut() {
+                        let _ = device.validate_sampler().await;
+                    }
+                }
+
                 files = update_files(files, path, &mut file_manager).await;
                 change_found = true;
             }
         }
 
         if change_found {
-            let new_status = get_daemon_status(&devices, &settings, files.clone()).await;
+            let new_status =
+                get_daemon_status(&devices, &settings, &http_settings, files.clone()).await;
 
             // Convert them to JSON..
             let json_old = serde_json::to_value(&daemon_status).unwrap();
@@ -260,14 +269,18 @@ pub async fn spawn_usb_handler(
 async fn get_daemon_status(
     devices: &HashMap<String, Device<'_>>,
     settings: &SettingsHandle,
+    http_settings: &HttpSettings,
     files: Files,
 ) -> DaemonStatus {
     let mut status = DaemonStatus {
         config: DaemonConfig {
+            http_settings: http_settings.clone(),
             daemon_version: String::from(VERSION),
             autostart_enabled: has_autostart(),
             show_tray_icon: settings.get_show_tray_icon().await,
             tts_enabled: settings.get_tts_enabled().await,
+            allow_network_access: settings.get_allow_network_access().await,
+            log_level: settings.get_log_level().await,
         },
         paths: Paths {
             profile_directory: settings.get_profile_directory().await,
@@ -275,6 +288,7 @@ async fn get_daemon_status(
             samples_directory: settings.get_samples_directory().await,
             presets_directory: settings.get_presets_directory().await,
             icons_directory: settings.get_icons_directory().await,
+            logs_directory: settings.get_log_directory().await,
         },
         files,
         ..Default::default()

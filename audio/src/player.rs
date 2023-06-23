@@ -2,14 +2,15 @@ use anyhow::{anyhow, bail, Result};
 
 use core::default::Default;
 use ebur128::{EbuR128, Mode};
-use log::{debug, warn};
+use log::debug;
 use std::fs::File;
 use std::io::ErrorKind::UnexpectedEof;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
+use std::sync::{Arc, Mutex};
 
 use crate::audio::{get_output, AudioSpecification};
+use crate::AtomicF64;
 use symphonia::core::audio::{Layout, SampleBuffer, SignalSpec};
 use symphonia::core::errors::Error;
 use symphonia::core::formats::{SeekMode, SeekTo};
@@ -31,9 +32,12 @@ pub struct Player {
     stop_pct: Option<f64>,
     gain: Option<f64>,
 
+    progress: Arc<AtomicU8>,
+    error: Arc<Mutex<Option<String>>>,
+
     // Used for processing Gain..
     process_only: bool,
-    normalized_gain: Option<f64>,
+    normalized_gain: Arc<AtomicF64>,
 }
 
 impl Player {
@@ -48,7 +52,7 @@ impl Player {
     ) -> Result<Self> {
         let probe_result = Player::load_file(file);
         if probe_result.is_err() {
-            return Err(anyhow!("Unable to Probe audio file"));
+            return Err(anyhow!("Unable to Probe Audio File"));
         }
 
         Ok(Self {
@@ -59,6 +63,9 @@ impl Player {
             stopping: Arc::new(AtomicBool::new(false)),
             force_stop: Arc::new(AtomicBool::new(false)),
 
+            progress: Arc::new(AtomicU8::new(0)),
+            error: Arc::new(Mutex::new(None)),
+
             device,
             fade_duration,
             start_pct,
@@ -66,7 +73,7 @@ impl Player {
             gain,
 
             process_only: false,
-            normalized_gain: None,
+            normalized_gain: Arc::new(AtomicF64::new(1.0)),
         })
     }
 
@@ -94,11 +101,14 @@ impl Player {
         probe_result
     }
 
-    pub fn calculate_gain(&mut self) -> Result<Option<f64>> {
+    pub fn calculate_gain(&mut self) {
         self.process_only = true;
-        self.play()?;
 
-        Ok(self.normalized_gain)
+        let result = self.play();
+        if let Err(error) = result {
+            let mut res = self.error.lock().unwrap();
+            *res = Some(error.to_string());
+        }
     }
 
     pub fn play_loop(&mut self) -> Result<()> {
@@ -122,7 +132,7 @@ impl Player {
         // Grab the Track and it's ID
         let track = match reader.default_track() {
             Some(track) => track,
-            None => return Ok(()),
+            None => bail!("Unable to find Default Track"),
         };
         let track_id = track.id;
 
@@ -139,12 +149,13 @@ impl Player {
         let mut ebu_r128 = None;
 
         let channels = match track.codec_params.channels {
-            None => {
-                debug!("Unable to ascertain channel count, assuming 2..");
-                2
-            } // Assume 2 playback Channels..
+            None => bail!("Unable to obtain channel count"),
             Some(channels) => channels.count(),
         };
+
+        if channels > 2 {
+            bail!("The Sample Player only Supports Mono and Stereo Samples");
+        }
 
         if let Some(rate) = sample_rate {
             if self.process_only {
@@ -174,10 +185,7 @@ impl Player {
                 }
             }
         } else {
-            if self.process_only {
-                bail!("Unable to obtain Rate, cannot normalise.");
-            }
-            warn!("Unable to get the Sample Rate, Fade and Seek Unavailable");
+            bail!("Unable to Determine the Audio File's Sample Rate");
         }
 
         // Audio Output Device..
@@ -266,6 +274,12 @@ impl Player {
 
                         if let Some(ref mut ebu_r128) = ebu_r128 {
                             ebu_r128.add_frames_f32(samples.as_slice())?;
+                            samples_processed += samples.len() as u64;
+
+                            let progress = Player::processed(frames, samples_processed, channels);
+                            if self.progress.load(Ordering::Relaxed) != progress {
+                                self.progress.store(progress, Ordering::Relaxed);
+                            }
 
                             // Skip straight to the next packet..
                             continue;
@@ -320,6 +334,12 @@ impl Player {
 
                         samples_processed += samples.len() as u64;
 
+                        // Calculate the Current Processing Percent..
+                        let progress = Player::processed(frames, samples_processed, channels);
+                        if self.progress.load(Ordering::Relaxed) != progress {
+                            self.progress.store(progress, Ordering::Relaxed);
+                        }
+
                         if let Some(stop_sample) = stop_sample {
                             if samples_processed >= stop_sample {
                                 break Ok(());
@@ -344,11 +364,22 @@ impl Player {
 
         if let Some(ebu_r128) = ebu_r128 {
             // Calculate Gain..
-            let loudness = ebu_r128.loudness_global()?;
-            let target = -23.0;
+            let mut loudness = ebu_r128.loudness_global()?;
+            if loudness == f64::NEG_INFINITY {
+                debug!("Unable to Obtain loudness in Mode I, trying M..");
+                loudness = ebu_r128.loudness_momentary()?;
+            }
 
-            let gain_db = target - loudness;
-            self.normalized_gain = Some(f64::powf(10., gain_db / 20.));
+            if loudness == f64::NEG_INFINITY {
+                debug!("Unable to Obtain loudness in Mode M, Setting Default..");
+                self.normalized_gain.store(1.0, Ordering::Relaxed);
+            } else {
+                let target = -23.0;
+                let gain_db = target - loudness;
+                let value = f64::powf(10., gain_db / 20.);
+
+                self.normalized_gain.store(value, Ordering::Relaxed);
+            }
         }
         decoder.finalize();
 
@@ -370,10 +401,25 @@ impl Player {
         Ok(())
     }
 
+    fn processed(total_frames: Option<u64>, current_frame: u64, channels: usize) -> u8 {
+        // Calculate the Current Processing Percent..
+        if let Some(frames) = total_frames {
+            let frames_processed = current_frame / channels as u64;
+            let processed_ratio = frames_processed as f64 / frames as f64;
+            let calc_percent = (processed_ratio * 100.) as u8;
+
+            return calc_percent;
+        }
+        0
+    }
+
     pub fn get_state(&self) -> PlayerState {
         PlayerState {
             stopping: self.stopping.clone(),
             force_stop: self.force_stop.clone(),
+            progress: self.progress.clone(),
+            error: self.error.clone(),
+            calculated_gain: self.normalized_gain.clone(),
         }
     }
 }
@@ -382,4 +428,11 @@ impl Player {
 pub struct PlayerState {
     pub stopping: Arc<AtomicBool>,
     pub force_stop: Arc<AtomicBool>,
+
+    // These are generally read only from the outside..
+    pub progress: Arc<AtomicU8>,
+    pub error: Arc<Mutex<Option<String>>>,
+
+    // Specifically for calculating the gain..
+    pub calculated_gain: Arc<AtomicF64>,
 }

@@ -31,11 +31,11 @@ use crate::{SettingsHandle, Shutdown};
 // This should probably be handled with an EnumSet..
 #[derive(Debug, Clone)]
 pub struct FilePaths {
-    profiles: PathBuf,
-    mic_profiles: PathBuf,
-    presets: PathBuf,
-    icons: PathBuf,
-    samples: PathBuf,
+    pub profiles: PathBuf,
+    pub mic_profiles: PathBuf,
+    pub presets: PathBuf,
+    pub icons: PathBuf,
+    pub samples: PathBuf,
 }
 
 #[derive(Debug)]

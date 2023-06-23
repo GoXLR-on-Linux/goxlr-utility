@@ -1,4 +1,4 @@
-use crate::GoXLRCommand;
+use crate::{GoXLRCommand, LogLevel};
 use enum_map::EnumMap;
 use goxlr_types::MuteState::Unmuted;
 use goxlr_types::{
@@ -23,19 +23,22 @@ pub struct DaemonStatus {
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct DaemonConfig {
+    pub http_settings: HttpSettings,
+    pub daemon_version: String,
+    pub autostart_enabled: bool,
+    pub show_tray_icon: bool,
+    pub tts_enabled: Option<bool>,
+    pub allow_network_access: bool,
+    pub log_level: LogLevel,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct HttpSettings {
     pub enabled: bool,
     pub bind_address: String,
     pub cors_enabled: bool,
     pub port: u16,
-}
-
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct DaemonConfig {
-    pub daemon_version: String,
-    pub autostart_enabled: bool,
-    pub show_tray_icon: bool,
-    pub tts_enabled: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -119,6 +122,7 @@ pub struct MicSettings {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Levels {
     pub submix_supported: bool,
+    pub output_monitor: OutputDevice,
     pub volumes: EnumMap<ChannelName, u8>,
     pub submix: Option<Submixes>,
     pub bleep: i8,
@@ -314,8 +318,17 @@ pub struct HardTune {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Sampler {
+    pub processing_state: SampleProcessState,
+    pub active_bank: SampleBank,
+    pub clear_active: bool,
     pub record_buffer: u16,
     pub banks: HashMap<SampleBank, HashMap<SampleButtons, SamplerButton>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SampleProcessState {
+    pub progress: Option<u8>,
+    pub last_error: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -324,6 +337,7 @@ pub struct SamplerButton {
     pub order: SamplePlayOrder,
     pub samples: Vec<Sample>,
     pub is_playing: bool,
+    pub is_recording: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -355,6 +369,7 @@ pub struct Paths {
     pub samples_directory: PathBuf,
     pub presets_directory: PathBuf,
     pub icons_directory: PathBuf,
+    pub logs_directory: PathBuf,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

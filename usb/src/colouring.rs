@@ -6,7 +6,7 @@ use strum::EnumIter;
  * better building of structures, and definitions. Todo: Later.
  */
 
-#[derive(Copy, Clone, Debug, EnumIter)]
+#[derive(Copy, Clone, Debug, EnumIter, PartialEq)]
 pub enum ColourTargets {
     // These are all the buttons from the GoXLR Mini.
     Fader1Mute,

@@ -13,7 +13,7 @@ use tokio::sync::mpsc::Sender;
 
 use goxlr_ipc::{
     DeviceType, Display, FaderStatus, GoXLRCommand, HardwareStatus, Levels, MicSettings,
-    MixerStatus, Settings,
+    MixerStatus, SampleProcessState, Settings,
 };
 use goxlr_profile_loader::components::mute::MuteFunction;
 use goxlr_types::{
@@ -23,6 +23,7 @@ use goxlr_types::{
     VersionNumber,
 };
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
+use goxlr_usb::channelstate::ChannelState;
 use goxlr_usb::channelstate::ChannelState::{Muted, Unmuted};
 use goxlr_usb::device::base::FullGoXLRDevice;
 use goxlr_usb::routing::{InputDevice, OutputDevice};
@@ -51,6 +52,8 @@ pub struct Device<'a> {
     vc_mute_also_mute_cm: bool,
     settings: &'a SettingsHandle,
     global_events: Sender<EventTriggers>,
+
+    last_sample_error: Option<String>,
 }
 
 #[derive(Debug, Default, Copy, Clone)]
@@ -59,11 +62,19 @@ struct PauseUntil {
     until: u8,
 }
 
-// Experimental code:
 #[derive(Debug, Default, Copy, Clone)]
 struct ButtonState {
     press_time: u128,
     hold_handled: bool,
+}
+
+// Used when loading profiles to provide the previous
+// profile's settings for comparison.
+#[derive(Default)]
+pub(crate) struct CurrentState {
+    pub(crate) faders: EnumMap<FaderName, ChannelName>,
+    pub(crate) mute_state: EnumMap<ChannelName, ChannelState>,
+    pub(crate) volumes: EnumMap<ChannelName, u8>,
 }
 
 impl<'a> Device<'a> {
@@ -78,6 +89,8 @@ impl<'a> Device<'a> {
         settings_handle: &'a SettingsHandle,
         global_events: Sender<EventTriggers>,
     ) -> Result<Device<'a>> {
+        debug!("New Device Loading..");
+
         let mut device_type = "";
         if hardware.device_type == DeviceType::Mini {
             device_type = " Mini";
@@ -95,21 +108,25 @@ impl<'a> Device<'a> {
         let mic_profile =
             MicProfileAdapter::from_named_or_default(mic_profile, mic_profile_directory);
 
-        let audio_buffer = settings_handle
-            .get_device_sampler_pre_buffer(&hardware.serial_number)
-            .await;
-        let audio_loader = AudioHandler::new(audio_buffer);
-        debug!("Created Audio Handler..");
-        debug!("{:?}", audio_loader);
-
-        if let Err(e) = &audio_loader {
-            error!("Error Running Script: {}", e);
-        }
-
         let mut audio_handler = None;
-        if let Ok(audio) = audio_loader {
-            debug!("Audio Handler Loaded OK..");
-            audio_handler = Some(audio);
+        if hardware.device_type == DeviceType::Full {
+            let audio_buffer = settings_handle
+                .get_device_sampler_pre_buffer(&hardware.serial_number)
+                .await;
+            let audio_loader = AudioHandler::new(audio_buffer);
+            debug!("Created Audio Handler..");
+            debug!("{:?}", audio_loader);
+
+            if let Err(e) = &audio_loader {
+                error!("Error Running Script: {}", e);
+            }
+
+            if let Ok(audio) = audio_loader {
+                debug!("Audio Handler Loaded OK..");
+                audio_handler.replace(audio);
+            }
+        } else {
+            debug!("Not Spawning Audio Handler, Device is Mini!");
         }
 
         let hold_time = settings_handle
@@ -133,9 +150,11 @@ impl<'a> Device<'a> {
             audio_handler,
             settings: settings_handle,
             global_events,
+
+            last_sample_error: None,
         };
 
-        device.apply_profile().await?;
+        device.apply_profile(None).await?;
         device.apply_mic_profile().await?;
 
         Ok(device)
@@ -175,6 +194,21 @@ impl<'a> Device<'a> {
 
         let submix_supported = self.device_supports_submixes();
 
+        let mut sample_progress = None;
+        let mut sample_error = None;
+
+        if let Some(audio_handler) = &self.audio_handler {
+            if audio_handler.is_calculating() {
+                if let Ok(value) = audio_handler.get_calculating_progress() {
+                    sample_progress.replace(value);
+                }
+            }
+        }
+
+        if let Some(error) = &self.last_sample_error {
+            sample_error.replace(error.clone());
+        }
+
         MixerStatus {
             hardware: self.hardware.clone(),
             shutdown_commands,
@@ -182,6 +216,7 @@ impl<'a> Device<'a> {
             cough_button: self.profile.get_cough_status(),
             levels: Levels {
                 submix_supported: self.device_supports_submixes(),
+                output_monitor: self.profile.get_monitoring_mix(),
                 volumes,
                 submix: self.profile.get_submixes_ipc(submix_supported),
                 bleep: self.mic_profile.bleep_level(),
@@ -206,6 +241,10 @@ impl<'a> Device<'a> {
                 self.hardware.device_type == DeviceType::Mini,
                 &self.audio_handler,
                 sampler_prerecord,
+                SampleProcessState {
+                    progress: sample_progress,
+                    last_error: sample_error,
+                },
             ),
             settings: Settings {
                 display: Display {
@@ -249,11 +288,52 @@ impl<'a> Device<'a> {
 
     pub async fn update_state(&mut self) -> Result<bool> {
         let mut state_updated = false;
+        let mut refresh_colour_map = false;
 
         // Update any audio related states..
         if let Some(audio_handler) = &mut self.audio_handler {
-            audio_handler.check_playing().await;
-            state_updated = self.sync_sample_lighting().await?;
+            // Check the status of any processing audio files..
+            if audio_handler.is_calculating() && audio_handler.is_calculating_complete()? {
+                // Handling has been finished, pull all the data and add it to the profile.
+
+                let result = audio_handler.get_and_clear_calculating_result()?;
+                if result.result.is_err() {
+                    if let Err(error) = result.result {
+                        // We need to somehow push this to the user (via DaemonStatus probably)..
+                        self.last_sample_error = Some(error.to_string());
+                    }
+                } else {
+                    let bank = result.bank;
+                    let button = result.button;
+
+                    let filename = result.file.file_name().unwrap();
+                    let filename = filename.to_string_lossy().to_string();
+
+                    let track = self.profile.add_sample_file(bank, button, filename);
+                    track.normalized_gain = result.gain;
+
+                    refresh_colour_map = true;
+                }
+                state_updated = true;
+            }
+
+            if audio_handler.is_calculating() {
+                // We need to update the percentage in DaemonStatus
+                debug!("Progress: {}", audio_handler.get_calculating_progress()?);
+                state_updated = true;
+            }
+
+            if audio_handler.check_playing().await && !state_updated {
+                state_updated = true;
+            }
+
+            if self.sync_sample_lighting().await? && !state_updated {
+                state_updated = true;
+            };
+
+            if refresh_colour_map {
+                self.load_colour_map()?;
+            }
         }
 
         // Find any buttons that have been held, and action if needed.
@@ -717,7 +797,6 @@ impl<'a> Device<'a> {
 
         if !muted_to_x && !muted_to_all {
             // Nothing to do.
-            debug!("Doing Nothing?");
             return Ok(());
         }
 
@@ -800,6 +879,26 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
+    pub async fn validate_sampler(&mut self) -> Result<()> {
+        let sample_path = self.settings.get_samples_directory().await;
+        for bank in SampleBank::iter() {
+            for button in SampleButtons::iter() {
+                let tracks = self.profile.get_sample_bank(bank, button);
+                tracks.retain(|track| {
+                    let file = PathBuf::from(track.track.clone());
+
+                    // Simply, if this returns None, the file isn't present.
+                    find_file_in_path(sample_path.clone(), file).is_some()
+                });
+            }
+        }
+
+        // Because we may have removed the 'last' sample on a button, we need to refresh
+        // the states to make sure everything is correctly updated.
+        self.load_colour_map()?;
+        self.update_button_states()
+    }
+
     async fn handle_sample_button_down(&mut self, button: SampleButtons) -> Result<()> {
         debug!(
             "Handling Sample Button, clear state: {}",
@@ -879,6 +978,24 @@ impl<'a> Device<'a> {
         };
     }
 
+    async fn stop_all_samples(&mut self) -> Result<()> {
+        if let Some(audio) = &mut self.audio_handler {
+            for bank in SampleBank::iter() {
+                for button in SampleButtons::iter() {
+                    if audio.is_sample_playing(bank, button) {
+                        audio.stop_playback(bank, button, true).await?;
+                        self.profile.set_sample_button_state(button, false)?;
+                    }
+                    if audio.sample_recording(bank, button) {
+                        audio.stop_record(bank, button)?;
+                        self.profile.set_sample_button_blink(button, false)?;
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
     async fn handle_sample_clear(&mut self) -> Result<()> {
         if let Some(audio) = &self.audio_handler {
             let state = self.profile.is_sample_clear_active();
@@ -936,16 +1053,14 @@ impl<'a> Device<'a> {
                     .unwrap()
                     .stop_record(sample_bank, button)?;
 
-                // Stop flashing the button..
-                self.profile.set_sample_button_blink(button, false)?;
-
                 if let Some(file_name) = file_name {
                     self.profile.add_sample_file(sample_bank, button, file_name);
-
-                    // Reload the Colour Map..
-                    self.load_colour_map()?;
                 }
             }
+            // In all cases, we should stop the colour flashing.
+            self.profile.set_sample_button_blink(button, false)?;
+            self.load_colour_map()?;
+
             return Ok(());
         }
 
@@ -1060,7 +1175,8 @@ impl<'a> Device<'a> {
 
     async fn load_effect_bank(&mut self, preset: EffectBankPresets) -> Result<()> {
         // Send the TTS Message..
-        let tts_message = format!("Effects {}", preset as u8 + 1);
+        let preset_name = self.profile.get_effect_name(preset);
+        let tts_message = format!("Effects {}, {}", preset as u8 + 1, preset_name);
         let _ = self.global_events.send(TTSMessage(tts_message)).await;
 
         self.profile.load_effect_bank(preset)?;
@@ -1340,10 +1456,21 @@ impl<'a> Device<'a> {
                 self.settings.save().await;
             }
             GoXLRCommand::SetSamplerPreBufferDuration(duration) => {
+                if duration > 30000 {
+                    bail!("Buffer must be below 30seconds");
+                }
+
                 self.settings
                     .set_device_sampler_pre_buffer(self.serial(), duration)
                     .await;
                 self.settings.save().await;
+
+                // Reload the Audio Handler..
+                self.stop_all_samples().await?;
+
+                // Drop the Audio Handler..
+                let new_handler = AudioHandler::new(duration)?;
+                self.audio_handler = Some(new_handler);
             }
 
             GoXLRCommand::SetFader(fader, channel) => {
@@ -1403,7 +1530,7 @@ impl<'a> Device<'a> {
             }
             GoXLRCommand::SetRouter(input, output, enabled) => {
                 debug!("Setting Routing: {:?} {:?} {}", input, output, enabled);
-                self.profile.set_routing(input, output, enabled);
+                self.profile.set_routing(input, output, enabled)?;
 
                 // Apply the change..
                 self.apply_routing(input)?;
@@ -1504,6 +1631,12 @@ impl<'a> Device<'a> {
             }
 
             // Colouring..
+            GoXLRCommand::SetGlobalColour(colour) => {
+                self.profile.set_global_colour(colour)?;
+                self.load_colour_map()?;
+                self.update_button_states()?;
+                self.set_all_fader_display_from_profile()?;
+            }
             GoXLRCommand::SetFaderDisplayStyle(fader, display) => {
                 self.profile.set_fader_display(fader, display)?;
                 self.set_fader_display_from_profile(fader)?;
@@ -1954,6 +2087,9 @@ impl<'a> Device<'a> {
             }
 
             // Sampler..
+            GoXLRCommand::ClearSampleProcessError() => {
+                self.last_sample_error = None;
+            }
             GoXLRCommand::SetSamplerFunction(bank, button, function) => {
                 self.profile.set_sampler_function(bank, button, function);
             }
@@ -1965,24 +2101,34 @@ impl<'a> Device<'a> {
                     .get_path_for_sample(PathBuf::from(filename.clone()))
                     .await?;
 
-                // Add the Sample, and Grab the created track..
-                let track = self.profile.add_sample_file(bank, button, filename);
-
                 // If we have an audio handler, try to calcuate the Gain..
                 if let Some(audio_handler) = &mut self.audio_handler {
-                    // TODO: Find a way to do this asynchronously..
-                    // Currently this will block the main thread until the calculation is complete,
-                    // obviously this is less than ideal. We can't hold the track because it also
-                    // needs to exist in the profile and could be removed prior to the calculation
-                    // completing (causing Cross Thread Mutability issues), consider looking into
-                    // refcounters to see if this can be solved.
-                    //
-                    // Bonus issue here, if too many commands are sent while this is happening, the
-                    // entire daemon will lock up :D
-                    if let Some(gain) = audio_handler.calculate_gain(&path)? {
-                        // Gain was calculated, Apply it to the track..
-                        track.normalized_gain = gain;
+                    if audio_handler.is_calculating() {
+                        bail!("Gain Calculation already in progress..");
                     }
+
+                    // V2 Here, this technically still blocks in it's current state, however, it
+                    // doesn't have to anymore.
+                    audio_handler.calculate_gain_thread(path, bank, button)?;
+
+                    // // This method will block until complete, but will give us a result..
+                    // let result = audio_handler.get_and_clear_calculating_result()?;
+                    //
+                    // // We can process any errors which occurred here..
+                    // if let Err(error) = result.result {
+                    //     bail!("Error Handling Sample: {}", error);
+                    // };
+                    //
+                    // let bank = result.bank;
+                    // let button = result.button;
+                    //
+                    // // Multi-part breakdown :p
+                    // let filename = result.file.file_name().unwrap();
+                    // let filename = filename.to_string_lossy().to_string();
+                    //
+                    // // Add the Track..
+                    // let track = self.profile.add_sample_file(bank, button, filename);
+                    // track.normalized_gain = result.gain;
                 }
 
                 // Update the lighting..
@@ -2044,18 +2190,20 @@ impl<'a> Device<'a> {
 
             // Profiles
             GoXLRCommand::NewProfile(profile_name) => {
+                self.stop_all_samples().await?;
                 let profile_directory = self.settings.get_profile_directory().await;
+                let volumes = self.profile.get_current_state();
 
                 // Do a new file verification check..
                 ProfileAdapter::can_create_new_file(profile_name.clone(), &profile_directory)?;
 
                 // Force load the default embedded profile..
                 self.profile = ProfileAdapter::default();
-                self.apply_profile().await?;
+                self.apply_profile(Some(volumes)).await?;
 
                 // Save the profile under a new name (although, don't overwrite if exists!)
                 self.profile
-                    .write_profile(profile_name.clone(), &profile_directory, false)?;
+                    .save_as(profile_name.clone(), &profile_directory, false)?;
 
                 // Save the profile in the settings
                 self.settings
@@ -2063,15 +2211,20 @@ impl<'a> Device<'a> {
                     .await;
                 self.settings.save().await;
             }
-            GoXLRCommand::LoadProfile(profile_name) => {
-                let profile_directory = self.settings.get_profile_directory().await;
+            GoXLRCommand::LoadProfile(profile_name, save_change) => {
+                self.stop_all_samples().await?;
+                let volumes = self.profile.get_current_state();
 
+                let profile_directory = self.settings.get_profile_directory().await;
                 self.profile = ProfileAdapter::from_named(profile_name, &profile_directory)?;
-                self.apply_profile().await?;
-                self.settings
-                    .set_device_profile_name(self.serial(), self.profile.name())
-                    .await;
-                self.settings.save().await;
+
+                self.apply_profile(Some(volumes)).await?;
+                if save_change {
+                    self.settings
+                        .set_device_profile_name(self.serial(), self.profile.name())
+                        .await;
+                    self.settings.save().await;
+                }
             }
             GoXLRCommand::LoadProfileColours(profile_name) => {
                 debug!("Loading Colours For Profile: {}", profile_name);
@@ -2084,12 +2237,7 @@ impl<'a> Device<'a> {
             }
             GoXLRCommand::SaveProfile() => {
                 let profile_directory = self.settings.get_profile_directory().await;
-                let profile_name = self.settings.get_device_profile_name(self.serial()).await;
-
-                if let Some(profile_name) = profile_name {
-                    self.profile
-                        .write_profile(profile_name, &profile_directory, true)?;
-                }
+                self.profile.save(&profile_directory, true)?;
             }
             GoXLRCommand::SaveProfileAs(profile_name) => {
                 let profile_directory = self.settings.get_profile_directory().await;
@@ -2098,7 +2246,7 @@ impl<'a> Device<'a> {
                 ProfileAdapter::can_create_new_file(profile_name.clone(), &profile_directory)?;
 
                 self.profile
-                    .write_profile(profile_name.clone(), &profile_directory, false)?;
+                    .save_as(profile_name.clone(), &profile_directory, false)?;
 
                 // Save the new name in the settings
                 self.settings
@@ -2108,6 +2256,10 @@ impl<'a> Device<'a> {
                 self.settings.save().await;
             }
             GoXLRCommand::DeleteProfile(profile_name) => {
+                if self.profile.name() == profile_name {
+                    bail!("Unable to Remove Active Profile!");
+                }
+
                 let profile_directory = self.settings.get_profile_directory().await;
                 self.profile
                     .delete_profile(profile_name.clone(), &profile_directory)?;
@@ -2123,8 +2275,7 @@ impl<'a> Device<'a> {
 
                 // As above, load the default profile, then save as a new profile.
                 self.mic_profile = MicProfileAdapter::default();
-
-                self.mic_profile.write_profile(
+                self.mic_profile.save_as(
                     mic_profile_name.clone(),
                     &mic_profile_directory,
                     false,
@@ -2137,35 +2288,29 @@ impl<'a> Device<'a> {
 
                 self.settings.save().await;
             }
-            GoXLRCommand::LoadMicProfile(mic_profile_name) => {
+            GoXLRCommand::LoadMicProfile(mic_profile_name, save_change) => {
                 let mic_profile_directory = self.settings.get_mic_profile_directory().await;
                 self.mic_profile =
                     MicProfileAdapter::from_named(mic_profile_name, &mic_profile_directory)?;
                 self.apply_mic_profile().await?;
-                self.settings
-                    .set_device_mic_profile_name(self.serial(), self.mic_profile.name())
-                    .await;
-                self.settings.save().await;
+
+                if save_change {
+                    self.settings
+                        .set_device_mic_profile_name(self.serial(), self.mic_profile.name())
+                        .await;
+                    self.settings.save().await;
+                }
             }
             GoXLRCommand::SaveMicProfile() => {
                 let mic_profile_directory = self.settings.get_mic_profile_directory().await;
-                let mic_profile_name = self
-                    .settings
-                    .get_device_mic_profile_name(self.serial())
-                    .await;
-
-                if let Some(profile_name) = mic_profile_name {
-                    self.mic_profile
-                        .write_profile(profile_name, &mic_profile_directory, true)?;
-                }
+                self.mic_profile.save(&mic_profile_directory, true)?;
             }
             GoXLRCommand::SaveMicProfileAs(profile_name) => {
                 let profile_directory = self.settings.get_mic_profile_directory().await;
-
                 MicProfileAdapter::can_create_new_file(profile_name.clone(), &profile_directory)?;
 
                 self.mic_profile
-                    .write_profile(profile_name.clone(), &profile_directory, false)?;
+                    .save_as(profile_name.clone(), &profile_directory, false)?;
 
                 // Save the new name in the settings
                 self.settings
@@ -2175,6 +2320,10 @@ impl<'a> Device<'a> {
                 self.settings.save().await;
             }
             GoXLRCommand::DeleteMicProfile(profile_name) => {
+                if self.mic_profile.name() == profile_name {
+                    bail!("Unable to Remove Active Profile!");
+                }
+
                 let profile_directory = self.settings.get_mic_profile_directory().await;
                 self.mic_profile
                     .delete_profile(profile_name.clone(), &profile_directory)?;
@@ -2227,7 +2376,16 @@ impl<'a> Device<'a> {
             },
             GoXLRCommand::SetCoughMuteState(_state) => {}
             GoXLRCommand::SetSubMixEnabled(enabled) => {
+                let headphones = goxlr_types::OutputDevice::Headphones;
                 if self.profile.is_submix_enabled() != enabled {
+                    if !enabled {
+                        // Submixes are being disabled, we need to revert the monitor..
+                        self.profile.set_monitor_mix(headphones)?;
+                        for device in BasicInputDevice::iter() {
+                            self.apply_routing(device)?;
+                        }
+                    }
+
                     self.profile.set_submix_enabled(enabled)?;
                     self.load_submix_settings(true)?;
                 }
@@ -2240,6 +2398,17 @@ impl<'a> Device<'a> {
             }
             GoXLRCommand::SetSubMixOutputMix(device, mix) => {
                 self.profile.set_mix_output(device, mix)?;
+                self.load_submix_settings(false)?;
+            }
+            GoXLRCommand::SetMonitorMix(device) => {
+                self.profile.set_monitor_mix(device)?;
+
+                // Might be a cleaner way to do this, we only need to handle 1 output..
+                for device in BasicInputDevice::iter() {
+                    self.apply_routing(device)?;
+                }
+
+                // Make sure to switch Headphones from A to B if needed.
                 self.load_submix_settings(false)?;
             }
         }
@@ -2413,10 +2582,9 @@ impl<'a> Device<'a> {
                 && (muted_to_all || (muted_to_x && mute_function == MuteFunction::All))
             {
                 // In the case of the mic, if we're muted to all, we should drop routing to All other channels..
-                router[BasicOutputDevice::Headphones] = false;
-                router[BasicOutputDevice::ChatMic] = false;
-                router[BasicOutputDevice::LineOut] = false;
-                router[BasicOutputDevice::BroadcastMix] = false;
+                for output in BasicOutputDevice::iter() {
+                    router[output] = false;
+                }
             }
             return Ok(());
         }
@@ -2439,24 +2607,49 @@ impl<'a> Device<'a> {
         debug!("Applying Routing to {:?}:", input);
         debug!("{:?}", router);
 
+        let monitor = self.profile.get_monitoring_mix();
+        if monitor != BasicOutputDevice::Headphones {
+            router[BasicOutputDevice::Headphones] = router[monitor];
+        }
+
         self.apply_channel_routing(input, router)?;
 
         Ok(())
     }
 
-    fn apply_mute_from_profile(&mut self, fader: FaderName) -> Result<()> {
+    fn apply_mute_from_profile(
+        &mut self,
+        fader: FaderName,
+        current: Option<ChannelState>,
+    ) -> Result<()> {
         // Basically stripped down behaviour from handle_fader_mute which simply applies stuff.
         let channel = self.profile.get_fader_assignment(fader);
 
         let (muted_to_x, muted_to_all, mute_function) = self.profile.get_mute_button_state(fader);
         if muted_to_all || (muted_to_x && mute_function == MuteFunction::All) {
-            // This channel should be fully muted
-            self.goxlr.set_channel_state(channel, Muted)?;
+            if let Some(current) = current {
+                if current != Muted {
+                    // This channel should be fully muted
+                    debug!("Setting Channel set {} to Muted", channel);
+                    self.goxlr.set_channel_state(channel, Muted)?;
+                } else {
+                    debug!("Fader {} is Already Muted, doing nothing.", fader);
+                }
+            }
+
             return Ok(());
         }
 
         // This channel isn't supposed to be muted (The Router will handle anything else).
-        self.goxlr.set_channel_state(channel, Unmuted)?;
+        if let Some(current) = current {
+            if current != Unmuted {
+                debug!("Channel {} set to Unmuted", channel);
+                self.goxlr.set_channel_state(channel, Unmuted)?;
+            } else {
+                debug!("Channel {} already Unmuted, doing nothing.", fader);
+            }
+        }
+
         Ok(())
     }
 
@@ -2483,8 +2676,10 @@ impl<'a> Device<'a> {
         };
 
         if muted_to_all || (muted_to_x && mute_function == MuteFunction::All) || muted_by_fader {
+            debug!("Setting Mic to Muted");
             self.goxlr.set_channel_state(ChannelName::Mic, Muted)?;
         } else {
+            debug!("Setting Mic to Unmuted");
             self.goxlr.set_channel_state(ChannelName::Mic, Unmuted)?;
         }
         Ok(())
@@ -2534,6 +2729,12 @@ impl<'a> Device<'a> {
                 self.profile.get_channel_volume(existing_channel),
             )?;
 
+            // Make sure the new channel comes in with the correct volume..
+            if new_channel == ChannelName::Headphones || new_channel == ChannelName::LineOut {
+                let volume = self.profile.get_channel_volume(new_channel);
+                self.goxlr.set_volume(new_channel, volume)?;
+            }
+
             // Remember to update the button states after change..
             self.update_button_states()?;
 
@@ -2561,6 +2762,16 @@ impl<'a> Device<'a> {
         self.goxlr.set_fader(fader, new_channel)?;
         self.goxlr.set_fader(fader_to_switch, existing_channel)?;
 
+        // If the channel being moved is either Headphone or Line Out, reset the volume..
+        if new_channel == ChannelName::Headphones || new_channel == ChannelName::LineOut {
+            let volume = self.profile.get_channel_volume(new_channel);
+            self.goxlr.set_volume(new_channel, volume)?;
+        }
+        if existing_channel == ChannelName::Headphones || existing_channel == ChannelName::LineOut {
+            let volume = self.profile.get_channel_volume(existing_channel);
+            self.goxlr.set_volume(existing_channel, volume)?;
+        }
+
         self.apply_scribble(fader).await?;
         self.apply_scribble(fader_to_switch).await?;
 
@@ -2579,6 +2790,13 @@ impl<'a> Device<'a> {
                 .get_scribble_ipc(fader, self.hardware.device_type == DeviceType::Mini),
             mute_state: self.profile.get_ipc_mute_state(fader),
         }
+    }
+
+    fn set_all_fader_display_from_profile(&mut self) -> Result<()> {
+        for fader in FaderName::iter() {
+            self.set_fader_display_from_profile(fader)?;
+        }
+        Ok(())
     }
 
     fn set_fader_display_from_profile(&mut self, fader: FaderName) -> Result<()> {
@@ -2619,40 +2837,78 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
-    async fn apply_profile(&mut self) -> Result<()> {
+    async fn apply_profile(&mut self, current: Option<CurrentState>) -> Result<()> {
         // Set volumes first, applying mute may modify stuff..
         debug!("Applying Profile..");
 
         debug!("Setting Faders..");
         let mut mic_assigned_to_fader = false;
-
-        // Prepare the faders, and configure channel mute states
+        //
+        // // Prepare the faders, and configure channel mute states
         for fader in FaderName::iter() {
             let assignment = self.profile.get_fader_assignment(fader);
 
-            debug!("Setting Fader {} to {:?}", fader, assignment);
-            self.goxlr.set_fader(fader, assignment)?;
+            if let Some(current) = &current {
+                if current.faders[fader] != assignment {
+                    debug!("Setting Fader {} to {:?}", fader, assignment);
+                    self.goxlr.set_fader(fader, assignment)?;
+                } else {
+                    debug!("Fader Already Assigned, ignoring");
+                }
+            } else {
+                debug!("Setting Fader {} to {:?}", fader, assignment);
+                self.goxlr.set_fader(fader, assignment)?;
+            }
 
             // Force Mic Fader Assignment
             if assignment == ChannelName::Mic {
                 mic_assigned_to_fader = true;
                 self.profile.set_mic_fader(fader)?;
             }
-
-            debug!("Applying Mute Profile for {}", fader);
-            self.apply_mute_from_profile(fader)?;
-
-            if self.hardware.device_type == DeviceType::Full {
-                self.apply_scribble(fader).await?;
-            }
         }
-
         if !mic_assigned_to_fader {
             self.profile.clear_mic_fader();
         }
 
-        debug!("Applying Cough button settings..");
-        self.apply_cough_from_profile()?;
+        debug!("Setting Mute States..");
+        for channel in ChannelName::iter() {
+            if channel == ChannelName::Mic {
+                debug!("Applying Microphone Mute State");
+                self.apply_cough_from_profile()?;
+            } else if let Some(fader) = self.profile.get_fader_from_channel(channel) {
+                debug!("Channel {} on Fader, Loading State from Profile", channel);
+                if let Some(current) = &current {
+                    self.apply_mute_from_profile(fader, Some(current.mute_state[channel]))?;
+                } else {
+                    self.apply_mute_from_profile(fader, None)?;
+                }
+            } else if let Some(current) = &current {
+                if current.mute_state[channel] != Unmuted {
+                    debug!("Channel {} not on Fader, but muted. Unmuting..", channel);
+                    self.goxlr.set_channel_state(channel, Unmuted)?;
+                }
+            } else {
+                debug!("Unknown Channel state for {}, Unmuting.", channel);
+                self.goxlr.set_channel_state(channel, Unmuted)?;
+            }
+        }
+
+        debug!("Setting Channel Volumes..");
+        let volumes = if let Some(current) = &current {
+            self.get_load_volume_order(Some(current.volumes))
+        } else {
+            self.get_load_volume_order(None)
+        };
+
+        for channel in volumes {
+            let channel_volume = self.profile.get_channel_volume(channel);
+
+            debug!("Setting volume for {} to {}", channel, channel_volume);
+            self.goxlr.set_volume(channel, channel_volume)?;
+        }
+
+        debug!("Applying Submixing Settings..");
+        self.load_submix_settings(true)?;
 
         debug!("Loading Colour Map..");
         self.load_colour_map()?;
@@ -2663,18 +2919,14 @@ impl<'a> Device<'a> {
             self.set_fader_display_from_profile(fader)?;
         }
 
-        debug!("Setting Channel Volumes..");
-        for channel in ChannelName::iter() {
-            let channel_volume = self.profile.get_channel_volume(channel);
-            debug!("Setting volume for {} to {}", channel, channel_volume);
-            self.goxlr.set_volume(channel, channel_volume)?;
+        if self.hardware.device_type == DeviceType::Full {
+            for fader in FaderName::iter() {
+                self.apply_scribble(fader).await?;
+            }
         }
 
         debug!("Updating button states..");
         self.update_button_states()?;
-
-        debug!("Applying Submixing Settings..");
-        self.load_submix_settings(true)?;
 
         debug!("Applying Routing..");
         // For profile load, we should configure all the input channels from the profile,
@@ -2686,7 +2938,59 @@ impl<'a> Device<'a> {
         debug!("Applying Voice FX");
         self.apply_voice_fx()?;
 
+        // Drop this to the end so it doesn't directly interfere with profile loading..
+        debug!("Validating Sampler Configuration..");
+        self.validate_sampler().await?;
+
         Ok(())
+    }
+
+    fn get_load_volume_order(&self, volumes: Option<EnumMap<ChannelName, u8>>) -> Vec<ChannelName> {
+        // This method exists primarily to 'smooth' the loading of new volumes, in situations
+        // where you're starting with a Headphone volume of 100 and a System volume of 20 and are
+        // finishing at Headphone 20, System 100 there's an (albeit) brief period during load where
+        // both headphones and system will be at 100% which can result in brief, sudden, loud noises
+
+        // The goal is to check whether this load is making the headphones / line out quieter,
+        // and pushing their volume change to the head of the queue, making the System channel
+        // in the above example briefly QUIETER, instead of louder.
+
+        let mut order = vec![];
+
+        if let Some(volumes) = volumes {
+            let headphone_volume = self.profile.get_channel_volume(ChannelName::Headphones);
+            let lineout_volume = self.profile.get_channel_volume(ChannelName::LineOut);
+
+            if volumes[ChannelName::Headphones] > headphone_volume {
+                order.push(ChannelName::Headphones);
+            }
+            if volumes[ChannelName::LineOut] > lineout_volume {
+                order.push(ChannelName::LineOut);
+            }
+
+            // Grab all the other channels in order, and push them..
+            ChannelName::iter().for_each(|channel| {
+                if channel != ChannelName::Headphones && channel != ChannelName::LineOut {
+                    order.push(channel);
+                }
+            });
+
+            // Headphones and Line out are technically the last in the list, so we could, in theory
+            // handle them in the above iter, however, they're placed here separately just in case
+            // the ChannelName enum list needs to change in the future which could break this.
+            if volumes[ChannelName::Headphones] <= headphone_volume {
+                order.push(ChannelName::Headphones);
+            }
+            if volumes[ChannelName::LineOut] <= lineout_volume {
+                order.push(ChannelName::LineOut);
+            }
+        } else {
+            // We don't have reference volumes, just send all the channel names..
+            debug!("No reference volumes, sending channels in order");
+            return ChannelName::iter().collect();
+        }
+
+        order
     }
 
     /// Applies a Set of Microphone Parameters based on input, designed this way
@@ -2860,6 +3164,15 @@ impl<'a> Device<'a> {
             for channel in ChannelName::iter() {
                 self.sync_submix_volume(channel)?;
             }
+        }
+
+        // If submixes are enabled, the Mic Monitor should be at 100% as monitoring
+        // is supposed to be handled by the mix.
+        if submix_enabled {
+            self.goxlr.set_volume(ChannelName::MicMonitor, 255)?;
+        } else {
+            let volume = self.profile.get_channel_volume(ChannelName::MicMonitor);
+            self.goxlr.set_volume(ChannelName::MicMonitor, volume)?;
         }
 
         Ok(())

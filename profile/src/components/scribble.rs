@@ -32,7 +32,7 @@ pub struct Scribble {
     colour_map: ColourMap,
 
     // File provided to the GoXLR to handle (no path, just the filename)
-    icon_file: String,
+    icon_file: Option<String>,
 
     // This normally is just the channel number, rendered in the top left.
     text_top_left: String,
@@ -65,7 +65,7 @@ impl Scribble {
         Self {
             element_name,
             colour_map: ColourMap::new(colour_map),
-            icon_file: "".to_string(),
+            icon_file: None,
             text_top_left: "".to_string(),
             text_bottom_middle: "".to_string(),
             text_size: 0,
@@ -78,7 +78,11 @@ impl Scribble {
     pub fn parse_scribble(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
         for attr in attributes {
             if attr.name.ends_with("iconFile") {
-                self.icon_file = attr.value.clone();
+                if attr.value.clone() == "" {
+                    self.icon_file = None;
+                } else {
+                    self.icon_file = Some(attr.value.clone());
+                }
                 continue;
             }
 
@@ -131,7 +135,11 @@ impl Scribble {
         let mut attributes: HashMap<String, String> = HashMap::default();
         attributes.insert(
             format!("{}iconFile", self.element_name),
-            self.icon_file.clone(),
+            if self.icon_file.is_none() {
+                "".to_string()
+            } else {
+                self.icon_file.clone().unwrap()
+            },
         );
         attributes.insert(
             format!("{}string0", self.element_name),
@@ -178,10 +186,7 @@ impl Scribble {
     }
 
     pub fn icon_file(&self) -> Option<String> {
-        if self.icon_file.is_empty() {
-            return None;
-        }
-        Some(self.icon_file.to_string())
+        self.icon_file.clone()
     }
     pub fn text_top_left(&self) -> Option<String> {
         if self.text_top_left.is_empty() {
@@ -203,7 +208,7 @@ impl Scribble {
         &self.style
     }
 
-    pub fn set_icon_file(&mut self, icon_file: String) {
+    pub fn set_icon_file(&mut self, icon_file: Option<String>) {
         self.icon_file = icon_file;
     }
     pub fn set_text_top_left(&mut self, text_top_left: String) {

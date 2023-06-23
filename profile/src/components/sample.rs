@@ -113,12 +113,32 @@ impl SampleBase {
                     map.get(&format!("track_{i}EndPosition")),
                     map.get(&format!("track_{i}NormalizedGain")),
                 ) {
-                    let track = Track::new(
-                        track.to_string(),
-                        start.parse()?,
-                        end.parse()?,
-                        gain.parse()?,
-                    );
+                    let mut start: f32 = start.parse()?;
+                    let mut end: f32 = end.parse()?;
+
+                    if start > 100. {
+                        start = 100.;
+                    }
+                    if start < 0. {
+                        start = 0.;
+                    }
+
+                    if end > 100. {
+                        end = 100.;
+                    }
+                    if end < 0. {
+                        end = 0.
+                    }
+
+                    if start > end {
+                        start = end;
+                    }
+
+                    if end < start {
+                        end = start;
+                    }
+
+                    let track = Track::new(track.to_string(), start, end, gain.parse()?);
                     sample_stack.tracks.push(track);
                 }
             }
@@ -282,6 +302,9 @@ impl SampleStack {
     pub fn get_tracks(&self) -> &Vec<Track> {
         &self.tracks
     }
+    pub fn get_tracks_mut(&mut self) -> &mut Vec<Track> {
+        &mut self.tracks
+    }
     pub fn get_track_by_index(&self, index: usize) -> Result<&Track> {
         if self.tracks.len() <= index {
             bail!("Track not Found");
@@ -398,6 +421,32 @@ impl Track {
     }
     pub fn normalized_gain(&self) -> f64 {
         self.normalized_gain
+    }
+
+    pub fn set_start_position(&mut self, start: f32) -> Result<()> {
+        if !(0. ..=100.).contains(&start) {
+            bail!("Start Value should be a percentage! {}", start);
+        }
+        if start > self.end_position {
+            bail!("Start position should be before end");
+        }
+        self.start_position = start;
+        Ok(())
+    }
+
+    pub fn set_end_position(&mut self, end: f32) -> Result<()> {
+        if !(0. ..=100.).contains(&end) {
+            bail!("End Value should be a percentage! {}", end);
+        }
+        if end < self.start_position {
+            bail!(
+                "End Percentage should be after start {} - {}",
+                self.start_position,
+                end
+            );
+        }
+        self.end_position = end;
+        Ok(())
     }
 }
 

@@ -11,10 +11,10 @@ use std::time::Duration;
 use anyhow::{bail, Result};
 use bounded_vec_deque::BoundedVecDeque;
 use ebur128::{EbuR128, Mode};
+use fancy_regex::Regex;
 use hound::WavWriter;
-use log::{debug, info, warn};
+use log::{debug, error, info, warn};
 use rb::{Producer, RbConsumer, RbProducer, SpscRb, RB};
-use regex::Regex;
 use symphonia::core::audio::{Layout, SignalSpec};
 
 use crate::audio::{get_input, AudioInput, AudioSpecification};
@@ -134,6 +134,12 @@ impl BufferedRecorder {
                 }
             }
         }
+
+        debug!("Audio Listener Terminated");
+    }
+
+    pub fn stop(&self) {
+        self.stop.store(true, Ordering::Relaxed);
     }
 
     pub fn is_ready(&self) -> bool {
@@ -153,10 +159,8 @@ impl BufferedRecorder {
 
     pub fn record(&self, path: &Path, state: RecorderState) -> Result<()> {
         if !self.is_ready() {
-            debug!("Possible problem locating the Sampler Output, available devices:");
-            get_audio_inputs()
-                .iter()
-                .for_each(|name| debug!("{}", name));
+            warn!("Possible problem locating the Sampler Output, available devices:");
+            get_audio_inputs().iter().for_each(|name| info!("{}", name));
 
             bail!("Attempted to start a recording on an unprepared Sampler");
         }
@@ -197,8 +201,8 @@ impl BufferedRecorder {
         let spec = hound::WavSpec {
             channels: 2,
             sample_rate: 48000,
-            bits_per_sample: 32,
-            sample_format: hound::SampleFormat::Float,
+            bits_per_sample: 24,
+            sample_format: hound::SampleFormat::Int,
         };
         let mut writer = hound::WavWriter::create(path, spec)?;
 
@@ -208,7 +212,13 @@ impl BufferedRecorder {
 
         // We are all setup, now write the contents of the buffer into the file..
         if self.buffer_size > 0 {
-            writing = self.handle_samples(pre_samples, &mut ebu_r128, writing, &mut writer)?;
+            match self.handle_samples(pre_samples, &mut ebu_r128, writing, &mut writer) {
+                Ok(result) => writing = result,
+                Err(error) => {
+                    error!("Error Writing Samples {}", error);
+                    state.stop.store(true, Ordering::Relaxed);
+                }
+            };
         }
 
         // Now jump into the current 'live' audio.
@@ -218,7 +228,15 @@ impl BufferedRecorder {
             {
                 // Read these out into a vec..
                 let samples: Vec<f32> = Vec::from(&read_buffer[0..samples]);
-                writing = self.handle_samples(samples, &mut ebu_r128, writing, &mut writer)?;
+                match self.handle_samples(samples, &mut ebu_r128, writing, &mut writer) {
+                    Ok(result) => writing = result,
+                    Err(error) => {
+                        // Something's gone wrong, we need to fail safe..
+                        error!("Error Writing Samples: {}", error);
+                        writing = false;
+                        state.stop.store(true, Ordering::Relaxed);
+                    }
+                }
             }
         }
 
@@ -229,7 +247,7 @@ impl BufferedRecorder {
         // Before we do anything else, was any noise recorded?
         if !writing {
             // No noise received..
-            info!("No Noise Received in recording, Cancelling.");
+            info!("No Noise Received, or error in recording, Cancelling.");
             fs::remove_file(path)?;
         }
 
@@ -254,7 +272,8 @@ impl BufferedRecorder {
 
             if recording_started {
                 for sample in slice {
-                    writer.write_sample(*sample)?;
+                    // Multiply the sample by 2^23, to convert to a pseudo I24
+                    writer.write_sample((*sample * 8388608.0) as i32)?;
                 }
             }
         }
@@ -279,7 +298,14 @@ impl BufferedRecorder {
 
         let device = device_list
             .iter()
-            .find(|output| self.devices.iter().any(|pattern| pattern.is_match(output)))
+            .find(|output| {
+                self.devices.iter().any(|pattern| {
+                    if let Ok(result) = pattern.is_match(output) {
+                        return result;
+                    }
+                    false
+                })
+            })
             .cloned();
 
         if let Some(device) = &device {
@@ -292,6 +318,8 @@ impl BufferedRecorder {
 
 impl Drop for BufferedRecorder {
     fn drop(&mut self) {
+        // We probably don't need to do this, as drop will only be called after the main
+        // thread has terminated, but safety first :)
         self.stop.store(true, Ordering::Relaxed);
     }
 }

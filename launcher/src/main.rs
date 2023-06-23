@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use goxlr_ipc::client::Client;
 use goxlr_ipc::clients::ipc::ipc_client::IPCClient;
 use goxlr_ipc::clients::ipc::ipc_socket::Socket;
-use goxlr_ipc::{DaemonRequest, DaemonResponse};
+use goxlr_ipc::{DaemonCommand, DaemonRequest, DaemonResponse};
 use interprocess::local_socket::tokio::LocalSocketStream;
 use interprocess::local_socket::NameTypeSupport;
 use sysinfo::{ProcessRefreshKind, RefreshKind, System, SystemExt};
@@ -95,7 +95,9 @@ async fn open_ui() -> Result<()> {
     if let Some(connection) = usable_connection {
         let socket: Socket<DaemonResponse, DaemonRequest> = Socket::new(connection);
         let mut client = IPCClient::new(socket);
-        client.send(DaemonRequest::OpenUi).await?;
+        client
+            .send(DaemonRequest::Daemon(DaemonCommand::Activate))
+            .await?;
         return Ok(());
     }
     bail!("Unable to make a connection with the Daemon");

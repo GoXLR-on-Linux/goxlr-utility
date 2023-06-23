@@ -434,13 +434,15 @@ impl TUSBAudio<'_> {
 
             // This code simply validates our handle is good, and re-establishes if needed.
             if let Err(_error) = self.get_device_id_string(handle) {
+                debug!("Invalid Handle Detected, attempting recovery..");
+
                 // Handle appears broken, try making a new one..
                 let new_handle =
                     TUSB_INTERFACE.open_device_by_identifier(device_identifier.clone());
 
                 // This one is broken too!
                 if new_handle.is_err() {
-                    debug!("Handle Error!");
+                    warn!("Unable to recover invalid handle, stopping handler");
                     // Flag ourself for stop..
                     terminator.store(true, Ordering::Relaxed);
 
@@ -455,7 +457,14 @@ impl TUSBAudio<'_> {
                     }
                     break;
                 } else {
+                    debug!("Handle Re-established, attempting to register for notifications..");
                     handle = new_handle?;
+
+                    let result =
+                        unsafe { (self.register_device_notification)(handle, u32::MAX, event, 0) };
+                    if result != 0 {
+                        bail!("Unable to register notifications");
+                    }
                 }
             }
         }

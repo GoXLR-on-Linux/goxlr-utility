@@ -6,7 +6,7 @@ use crate::cli::{
     Echo, EffectsCommands, EqualiserCommands, EqualiserMiniCommands, FaderCommands,
     FaderLightingCommands, FadersAllLightingCommands, Gender, HardTune, LightingCommands,
     Megaphone, MicrophoneCommands, NoiseGateCommands, Pitch, ProfileAction, ProfileType, Reverb,
-    Robot, SamplerCommands, Scribbles, SubCommands,
+    Robot, SamplerCommands, Scribbles, SubCommands, SubmixCommands,
 };
 use crate::microphone::apply_microphone_controls;
 use anyhow::{anyhow, Context, Result};
@@ -47,7 +47,6 @@ async fn main() -> Result<()> {
     }
 
     client.poll_status().await?;
-    client.poll_http_status().await?;
 
     let serial = if let Some(serial) = &cli.device {
         serial.to_owned()
@@ -273,6 +272,11 @@ async fn main() -> Result<()> {
                 }
 
                 SubCommands::Lighting { command } => match command {
+                    LightingCommands::Global { colour } => {
+                        client
+                            .command(&serial, GoXLRCommand::SetGlobalColour(colour.to_string()))
+                            .await?;
+                    }
                     LightingCommands::Fader { command } => match command {
                         FaderLightingCommands::Display { fader, display } => {
                             client
@@ -418,7 +422,7 @@ async fn main() -> Result<()> {
                             client
                                 .command(
                                     &serial,
-                                    GoXLRCommand::LoadProfile(profile_name.to_string()),
+                                    GoXLRCommand::LoadProfile(profile_name.to_string(), true),
                                 )
                                 .await
                                 .context("Unable to Load Profile")?;
@@ -462,7 +466,7 @@ async fn main() -> Result<()> {
                             client
                                 .command(
                                     &serial,
-                                    GoXLRCommand::LoadMicProfile(profile_name.to_string()),
+                                    GoXLRCommand::LoadMicProfile(profile_name.to_string(), true),
                                 )
                                 .await
                                 .context("Unable to Load Microphone Profile")?;
@@ -905,6 +909,40 @@ async fn main() -> Result<()> {
                             .context("Unable to set Stop Percent")?;
                     }
                 },
+                SubCommands::Submix { command } => match command {
+                    SubmixCommands::Enabled { enabled } => {
+                        client
+                            .command(&serial, GoXLRCommand::SetSubMixEnabled(*enabled))
+                            .await?;
+                    }
+                    SubmixCommands::Volume {
+                        channel,
+                        volume_percent,
+                    } => {
+                        let value = (255 * *volume_percent as u16) / 100;
+                        client
+                            .command(
+                                &serial,
+                                GoXLRCommand::SetSubMixVolume(*channel, value as u8),
+                            )
+                            .await?;
+                    }
+                    SubmixCommands::Linked { channel, linked } => {
+                        client
+                            .command(&serial, GoXLRCommand::SetSubMixLinked(*channel, *linked))
+                            .await?;
+                    }
+                    SubmixCommands::OutputMix { device, mix } => {
+                        client
+                            .command(&serial, GoXLRCommand::SetSubMixOutputMix(*device, *mix))
+                            .await?;
+                    }
+                    SubmixCommands::MonitorMix { device } => {
+                        client
+                            .command(&serial, GoXLRCommand::SetMonitorMix(*device))
+                            .await?;
+                    }
+                },
             }
         }
     }
@@ -912,11 +950,6 @@ async fn main() -> Result<()> {
     if cli.status_json {
         client.poll_status().await?;
         println!("{}", serde_json::to_string_pretty(client.status())?);
-    }
-
-    if cli.status_http {
-        client.poll_http_status().await?;
-        println!("{}", serde_json::to_string_pretty(client.http_status())?);
     }
 
     if cli.status {
