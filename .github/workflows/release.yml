@@ -39,14 +39,14 @@ jobs:
           args: --release --all-features
 
       - name: Build Packages
-        run: iscc.exe goxlr-utility.iss
+        run: iscc.exe ci/goxlr-utility.iss
         shell: cmd
 
       - name: Upload Installer
         uses: actions/upload-artifact@v3
         with:
           name: windows-artifact
-          path: ./Output/*.exe
+          path: ./ci/Output/*.exe
 
   build:
     needs: verify
