@@ -11,6 +11,7 @@ use log::{debug, warn};
 use strum::IntoEnumIterator;
 
 use crate::audio::{AudioFile, AudioHandler};
+use crate::device::CurrentState;
 use goxlr_ipc::{
     ActiveEffects, ButtonLighting, CoughButton, Echo, Effects, FaderLighting, Gender, HardTune,
     Lighting, Megaphone, OneColour, Pitch, Reverb, Robot, Sample, SampleProcessState, Sampler,
@@ -44,6 +45,7 @@ use goxlr_types::{
     SubMixChannelName, VersionNumber,
 };
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
+use goxlr_usb::channelstate::ChannelState;
 use goxlr_usb::colouring::ColourTargets;
 
 use crate::files::can_create_new_file;
@@ -166,6 +168,39 @@ impl ProfileAdapter {
             name,
             dir_list
         ))
+    }
+
+    pub(crate) fn get_current_state(&self) -> CurrentState {
+        let mut faders = EnumMap::default();
+        let mut mute_state = EnumMap::default();
+
+        for fader in FaderName::iter() {
+            faders[fader] = self.get_fader_assignment(fader);
+        }
+
+        for channel in ChannelName::iter() {
+            mute_state[channel] = self.get_channel_mute_state(channel);
+        }
+
+        CurrentState {
+            faders,
+            mute_state,
+            volumes: self.get_channel_volume_map(),
+        }
+    }
+
+    fn get_channel_mute_state(&self, channel: ChannelName) -> ChannelState {
+        // Is this assigned to a fader?
+        if let Some(fader) = self.get_fader_from_channel(channel) {
+            let (muted_to_x, muted_to_all, mute_function) = self.get_mute_button_state(fader);
+
+            if muted_to_all || (muted_to_x && mute_function == MuteFunction::All) {
+                return ChannelState::Muted;
+            }
+        }
+
+        // Not assigned, always unmuted
+        ChannelState::Unmuted
     }
 
     pub fn create_router(&self) -> EnumMap<InputDevice, EnumMap<OutputDevice, bool>> {

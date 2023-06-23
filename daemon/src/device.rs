@@ -23,6 +23,7 @@ use goxlr_types::{
     VersionNumber,
 };
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
+use goxlr_usb::channelstate::ChannelState;
 use goxlr_usb::channelstate::ChannelState::{Muted, Unmuted};
 use goxlr_usb::device::base::FullGoXLRDevice;
 use goxlr_usb::routing::{InputDevice, OutputDevice};
@@ -61,11 +62,19 @@ struct PauseUntil {
     until: u8,
 }
 
-// Experimental code:
 #[derive(Debug, Default, Copy, Clone)]
 struct ButtonState {
     press_time: u128,
     hold_handled: bool,
+}
+
+// Used when loading profiles to provide the previous
+// profile's settings for comparison.
+#[derive(Default)]
+pub(crate) struct CurrentState {
+    pub(crate) faders: EnumMap<FaderName, ChannelName>,
+    pub(crate) mute_state: EnumMap<ChannelName, ChannelState>,
+    pub(crate) volumes: EnumMap<ChannelName, u8>,
 }
 
 impl<'a> Device<'a> {
@@ -2173,7 +2182,7 @@ impl<'a> Device<'a> {
             GoXLRCommand::NewProfile(profile_name) => {
                 self.stop_all_samples().await?;
                 let profile_directory = self.settings.get_profile_directory().await;
-                let volumes = self.profile.get_channel_volume_map();
+                let volumes = self.profile.get_current_state();
 
                 // Do a new file verification check..
                 ProfileAdapter::can_create_new_file(profile_name.clone(), &profile_directory)?;
@@ -2194,7 +2203,7 @@ impl<'a> Device<'a> {
             }
             GoXLRCommand::LoadProfile(profile_name, save_change) => {
                 self.stop_all_samples().await?;
-                let volumes = self.profile.get_channel_volume_map();
+                let volumes = self.profile.get_current_state();
 
                 let profile_directory = self.settings.get_profile_directory().await;
                 self.profile = ProfileAdapter::from_named(profile_name, &profile_directory)?;
@@ -2589,22 +2598,39 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
-    fn apply_mute_from_profile(&mut self, fader: FaderName) -> Result<()> {
+    fn apply_mute_from_profile(
+        &mut self,
+        fader: FaderName,
+        current: Option<ChannelState>,
+    ) -> Result<()> {
         // Basically stripped down behaviour from handle_fader_mute which simply applies stuff.
         let channel = self.profile.get_fader_assignment(fader);
 
         let (muted_to_x, muted_to_all, mute_function) = self.profile.get_mute_button_state(fader);
         if muted_to_all || (muted_to_x && mute_function == MuteFunction::All) {
-            debug!("Setting Channel set {} to Muted", channel);
+            if let Some(current) = current {
+                if current != Muted {
+                    // This channel should be fully muted
+                    debug!("Setting Channel set {} to Muted", channel);
+                    self.goxlr.set_channel_state(channel, Muted)?;
+                } else {
+                    debug!("Fader {} is Already Muted, doing nothing.", fader);
+                }
+            }
 
-            // This channel should be fully muted
-            self.goxlr.set_channel_state(channel, Muted)?;
             return Ok(());
         }
 
         // This channel isn't supposed to be muted (The Router will handle anything else).
-        debug!("Channel {} set to Unmuted", channel);
-        self.goxlr.set_channel_state(channel, Unmuted)?;
+        if let Some(current) = current {
+            if current != Unmuted {
+                debug!("Channel {} set to Unmuted", channel);
+                self.goxlr.set_channel_state(channel, Unmuted)?;
+            } else {
+                debug!("Channel {} already Unmuted, doing nothing.", fader);
+            }
+        }
+
         Ok(())
     }
 
@@ -2776,19 +2802,28 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
-    async fn apply_profile(&mut self, volumes: Option<EnumMap<ChannelName, u8>>) -> Result<()> {
+    async fn apply_profile(&mut self, current: Option<CurrentState>) -> Result<()> {
         // Set volumes first, applying mute may modify stuff..
         debug!("Applying Profile..");
 
         debug!("Setting Faders..");
         let mut mic_assigned_to_fader = false;
-
-        // Prepare the faders, and configure channel mute states
+        //
+        // // Prepare the faders, and configure channel mute states
         for fader in FaderName::iter() {
             let assignment = self.profile.get_fader_assignment(fader);
 
-            debug!("Setting Fader {} to {:?}", fader, assignment);
-            self.goxlr.set_fader(fader, assignment)?;
+            if let Some(current) = &current {
+                if current.faders[fader] != assignment {
+                    debug!("Setting Fader {} to {:?}", fader, assignment);
+                    self.goxlr.set_fader(fader, assignment)?;
+                } else {
+                    debug!("Fader Already Assigned, ignoring");
+                }
+            } else {
+                debug!("Setting Fader {} to {:?}", fader, assignment);
+                self.goxlr.set_fader(fader, assignment)?;
+            }
 
             // Force Mic Fader Assignment
             if assignment == ChannelName::Mic {
@@ -2807,16 +2842,30 @@ impl<'a> Device<'a> {
                 self.apply_cough_from_profile()?;
             } else if let Some(fader) = self.profile.get_fader_from_channel(channel) {
                 debug!("Channel {} on Fader, Loading State from Profile", channel);
-                self.apply_mute_from_profile(fader)?;
+                if let Some(current) = &current {
+                    self.apply_mute_from_profile(fader, Some(current.mute_state[channel]))?;
+                } else {
+                    self.apply_mute_from_profile(fader, None)?;
+                }
+            } else if let Some(current) = &current {
+                if current.mute_state[channel] != Unmuted {
+                    debug!("Channel {} not on Fader, but muted. Unmuting..", channel);
+                    self.goxlr.set_channel_state(channel, Unmuted)?;
+                }
             } else {
-                debug!("Channel {} not on fader, forcing unmute", channel);
-                // Force unmute for all other channels
+                debug!("Unknown Channel state for {}, Unmuting.", channel);
                 self.goxlr.set_channel_state(channel, Unmuted)?;
             }
         }
 
         debug!("Setting Channel Volumes..");
-        for channel in self.get_load_volume_order(volumes) {
+        let volumes = if let Some(current) = &current {
+            self.get_load_volume_order(Some(current.volumes))
+        } else {
+            self.get_load_volume_order(None)
+        };
+
+        for channel in volumes {
             let channel_volume = self.profile.get_channel_volume(channel);
 
             debug!("Setting volume for {} to {}", channel, channel_volume);

@@ -1,6 +1,7 @@
-#[derive(Copy, Clone, Debug)]
+#[derive(Default, Copy, Clone, Debug, Eq, PartialEq)]
 pub enum ChannelState {
     Muted,
+    #[default]
     Unmuted,
 }
 
