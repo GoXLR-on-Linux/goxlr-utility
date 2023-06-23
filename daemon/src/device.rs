@@ -3155,6 +3155,15 @@ impl<'a> Device<'a> {
             }
         }
 
+        // If submixes are enabled, the Mic Monitor should be at 100% as monitoring
+        // is supposed to be handled by the mix.
+        if submix_enabled {
+            self.goxlr.set_volume(ChannelName::MicMonitor, 255)?;
+        } else {
+            let volume = self.profile.get_channel_volume(ChannelName::MicMonitor);
+            self.goxlr.set_volume(ChannelName::MicMonitor, volume)?;
+        }
+
         Ok(())
     }
 
