@@ -3,6 +3,8 @@
 
 ## Completed Features
 * Initialisation of Devices under Linux
+* Cross Platform Support (run the util on Linux, MacOS and Windows)
+* Multi-device support (For more than one GoXLR)
 * Mic and Main Profile Management
 * Cross Platform Profile Support
 * Microphone Selection and Gain
