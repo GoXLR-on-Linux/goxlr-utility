@@ -143,6 +143,10 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for Websocket {
                 ctx.close(Some(CloseCode::Unsupported.into()));
                 ctx.stop();
             }
+            Ok(ws::Message::Close(reason)) => {
+                ctx.close(reason);
+                ctx.stop();
+            }
             _ => (),
         }
     }
