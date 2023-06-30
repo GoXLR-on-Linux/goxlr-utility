@@ -14,12 +14,13 @@ use actix_web::middleware::Condition;
 use actix_web::web::Data;
 use actix_web::{get, post, web, App, HttpRequest, HttpResponse, HttpServer};
 use actix_web_actors::ws;
-use actix_web_actors::ws::CloseCode;
+use actix_web_actors::ws::{CloseCode, CloseReason};
 use anyhow::{anyhow, Result};
 use include_dir::{include_dir, Dir};
 use jsonpath_rust::JsonPathQuery;
 use log::{debug, error, info, warn};
 use mime_guess::MimeGuess;
+use serde_json::Value;
 use tokio::sync::broadcast::Sender as BroadcastSender;
 use tokio::sync::oneshot::Sender;
 use tokio::sync::Mutex;
@@ -54,7 +55,7 @@ impl Actor for Websocket {
                 if let Ok(event) = broadcast_rx.recv().await {
                     // We've received a message, attempt to trigger the WsMessage Handle..
                     if let Err(error) = address.clone().try_send(WsResponse(WebsocketResponse {
-                        id: u32::MAX,
+                        id: u64::MAX,
                         data: DaemonResponse::Patch(event.data),
                     })) {
                         error!(
@@ -132,15 +133,53 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for Websocket {
                         future.into_actor(self).spawn(ctx);
                     }
                     Err(error) => {
-                        warn!("HTTP Error: {}", error);
-                        warn!("Request: {}", text);
-                        ctx.close(Some(CloseCode::Invalid.into()));
-                        ctx.stop();
+                        // Ok, we weren't able to deserialise the request into a proper object, we
+                        // now need to confirm whether it was at least valid JSON with a request id
+                        warn!("Error Deserialising Request to Object: {}", error);
+                        warn!("Original Request: {}", text);
+
+                        debug!("Attempting Low Level request Id Extraction..");
+                        let request: serde_json::Result<Value> =
+                            serde_json::from_str(text.as_ref());
+                        match request {
+                            Ok(value) => {
+                                if let Some(request_id) = value["id"].as_u64() {
+                                    let recipient = ctx.address().recipient();
+                                    recipient.do_send(WsResponse(WebsocketResponse {
+                                        id: request_id,
+                                        data: DaemonResponse::Error(error.to_string()),
+                                    }));
+                                } else {
+                                    warn!("id missing, Cannot continue. Closing connection");
+                                    let error = CloseReason {
+                                        code: CloseCode::Invalid,
+                                        description: Some(String::from(
+                                            "Missing or invalid Request ID",
+                                        )),
+                                    };
+                                    ctx.close(Some(error));
+                                    ctx.stop();
+                                }
+                            }
+                            Err(error) => {
+                                warn!("JSON structure is invalid, closing connection.");
+                                let error = CloseReason {
+                                    code: CloseCode::Invalid,
+                                    description: Some(error.to_string()),
+                                };
+                                ctx.close(Some(error));
+                                ctx.stop();
+                            }
+                        }
                     }
                 }
             }
             Ok(ws::Message::Binary(_bin)) => {
                 ctx.close(Some(CloseCode::Unsupported.into()));
+                ctx.stop();
+            }
+            Ok(ws::Message::Close(reason)) => {
+                ctx.close(reason);
                 ctx.stop();
             }
             _ => (),
