@@ -742,3 +742,24 @@ pub enum MuteState {
     MutedToX,
     MutedToAll,
 }
+
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum AnimationMode {
+    RetroRainbow,
+    RainbowDark,
+    RainbowBright,
+    Simple,
+    Ripple,
+    None,
+}
+
+#[derive(Debug, Copy, Clone, EnumIter, Display, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum WaterfallDirection {
+    Down,
+    Up,
+    Off,
+}

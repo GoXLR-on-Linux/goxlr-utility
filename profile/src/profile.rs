@@ -774,6 +774,14 @@ impl ProfileSettings {
         Err(anyhow!("Unable to Parse Preset from Number"))
     }
 
+    pub fn animation(&self) -> &AnimationTree {
+        &self.animation_tree
+    }
+
+    pub fn animation_mut(&mut self) -> &mut AnimationTree {
+        &mut self.animation_tree
+    }
+
     pub fn mixer_mut(&mut self) -> &mut Mixers {
         &mut self.mixer
     }

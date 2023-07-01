@@ -73,6 +73,19 @@ impl AnimationTree {
         writer.write_event(Event::Empty(elem))?;
         Ok(())
     }
+
+    pub fn mode(&self) -> AnimationMode {
+        self.mode
+    }
+    pub fn mod1(&self) -> u8 {
+        self.mod1
+    }
+    pub fn mod2(&self) -> u8 {
+        self.mod2
+    }
+    pub fn waterfall(&self) -> WaterfallDirection {
+        self.waterfall
+    }
 }
 
 #[derive(Debug, Default, Copy, Clone, EnumIter)]
