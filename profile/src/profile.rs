@@ -13,6 +13,7 @@ use strum::EnumProperty;
 use strum::IntoEnumIterator;
 use zip::write::FileOptions;
 
+use crate::components::animation::AnimationTree;
 use crate::components::browser::BrowserPreviewTree;
 use crate::components::context::Context;
 use crate::components::echo::EchoEncoderBase;
@@ -127,6 +128,7 @@ impl Profile {
 pub struct ProfileSettings {
     root: RootElement,
     browser: BrowserPreviewTree,
+    animation_tree: AnimationTree,
     mix_routing: MixRoutingTree,
     submix_tree: SubMixer,
     mixer: Mixers,
@@ -157,6 +159,8 @@ impl ProfileSettings {
 
         let mut root = RootElement::new();
         let mut browser = BrowserPreviewTree::new("browserPreviewTree".to_string());
+
+        let mut animation_tree = AnimationTree::new("animationTree".to_string());
 
         let mut mix_routing = MixRoutingTree::new();
         let mut submix_tree = SubMixer::new();
@@ -193,6 +197,11 @@ impl ProfileSettings {
                     let (name, attributes) = wrap_start_event(e)?;
                     if name == "browserPreviewTree" {
                         browser.parse_browser(&attributes)?;
+                        continue;
+                    }
+
+                    if name == "animationTree" {
+                        animation_tree.parse_animation(&attributes)?;
                         continue;
                     }
 
@@ -487,6 +496,7 @@ impl ProfileSettings {
         Ok(Self {
             root,
             browser,
+            animation_tree,
             mix_routing,
             submix_tree,
             mixer,
@@ -614,6 +624,7 @@ impl ProfileSettings {
 
         self.root.write_initial(&mut writer)?;
         self.browser.write_browser(&mut writer)?;
+        self.animation_tree.write_animation(&mut writer)?;
 
         self.mix_routing.write_mix_tree(&mut writer)?;
         self.submix_tree.write_submixer(&mut writer)?;

@@ -1,3 +1,4 @@
+pub mod animation;
 pub mod browser;
 pub mod colours;
 pub mod context;
