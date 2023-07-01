@@ -10,6 +10,7 @@ pub mod microphone;
 pub mod routing;
 
 pub mod animation;
+pub mod colours;
 pub mod device;
 
 pub const VID_GOXLR: u16 = 0x1220;
