@@ -9,6 +9,7 @@ pub mod error;
 pub mod microphone;
 pub mod routing;
 
+pub mod animation;
 pub mod device;
 
 pub const VID_GOXLR: u16 = 0x1220;
