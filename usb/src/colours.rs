@@ -1,7 +1,10 @@
 /**
- * This is a little more convoluted, however we're going to try and handle all the important
- * colour map code handling here, rather than expect whatever whatever is using this to try
- * and build the byte array itself.
+ * This is primarily a replacement for colour handling, that removes the difficulty of manually
+ * building the colour array. Instead this struct can be built, stored, and altered and will
+ * produce the correct output.
+ *
+ * Note, this is not used in the util as of yet (there's simply too much to change), but may
+ * be used later.
  */
 use byteorder::{ByteOrder, LittleEndian};
 
