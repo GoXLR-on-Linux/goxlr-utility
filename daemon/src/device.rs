@@ -22,6 +22,7 @@ use goxlr_types::{
     OutputDevice as BasicOutputDevice, RobotRange, SampleBank, SampleButtons, SamplePlaybackMode,
     VersionNumber,
 };
+use goxlr_usb::animation::{AnimationMode, WaterFallDir};
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::channelstate::ChannelState;
 use goxlr_usb::channelstate::ChannelState::{Muted, Unmuted};
@@ -2812,18 +2813,7 @@ impl<'a> Device<'a> {
         // The new colour format occurred on different firmware versions depending on device,
         // so do the check here.
 
-        let use_1_3_40_format: bool = match self.hardware.device_type {
-            DeviceType::Unknown => true,
-            DeviceType::Full => version_newer_or_equal_to(
-                &self.hardware.versions.firmware,
-                VersionNumber(1, 3, 40, 0),
-            ),
-            DeviceType::Mini => version_newer_or_equal_to(
-                &self.hardware.versions.firmware,
-                VersionNumber(1, 1, 8, 0),
-            ),
-        };
-
+        let use_1_3_40_format = self.device_supports_animations();
         let colour_map = self.profile.get_colour_map(use_1_3_40_format);
 
         if use_1_3_40_format {
@@ -2840,6 +2830,17 @@ impl<'a> Device<'a> {
     async fn apply_profile(&mut self, current: Option<CurrentState>) -> Result<()> {
         // Set volumes first, applying mute may modify stuff..
         debug!("Applying Profile..");
+        if self.device_supports_animations() {
+            // Make sure animations are disabled in the util when loading profiles, the following
+            // settings Send 0 for everything :)
+            self.goxlr.set_animation_mode(
+                false,
+                AnimationMode::AnimationNone,
+                0,
+                0,
+                WaterFallDir::Down,
+            )?;
+        }
 
         debug!("Setting Faders..");
         let mut mic_assigned_to_fader = false;
@@ -3247,6 +3248,20 @@ impl<'a> Device<'a> {
             DeviceType::Mini => version_newer_or_equal_to(
                 &self.hardware.versions.firmware,
                 VersionNumber(1, 2, 0, 46),
+            ),
+        }
+    }
+
+    fn device_supports_animations(&self) -> bool {
+        match self.hardware.device_type {
+            DeviceType::Unknown => true,
+            DeviceType::Full => version_newer_or_equal_to(
+                &self.hardware.versions.firmware,
+                VersionNumber(1, 3, 40, 0),
+            ),
+            DeviceType::Mini => version_newer_or_equal_to(
+                &self.hardware.versions.firmware,
+                VersionNumber(1, 1, 8, 0),
             ),
         }
     }
