@@ -10,8 +10,6 @@ use enum_map::EnumMap;
 use log::{debug, warn};
 use strum::IntoEnumIterator;
 
-use crate::audio::{AudioFile, AudioHandler};
-use crate::device::CurrentState;
 use goxlr_ipc::{
     ActiveEffects, AnimationLighting, ButtonLighting, CoughButton, Echo, Effects, FaderLighting,
     Gender, HardTune, Lighting, Megaphone, OneColour, Pitch, Reverb, Robot, Sample,
@@ -50,6 +48,8 @@ use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::channelstate::ChannelState;
 use goxlr_usb::colouring::ColourTargets;
 
+use crate::audio::{AudioFile, AudioHandler};
+use crate::device::CurrentState;
 use crate::files::can_create_new_file;
 
 pub const DEFAULT_PROFILE_NAME: &str = "Default";
@@ -334,6 +334,29 @@ impl ProfileAdapter {
             .settings_mut()
             .mute_buttons()
             .swap(profile_fader_one, profile_fader_two);
+    }
+
+    // Animation Settings
+    pub fn set_animation_mode(&mut self, mode: goxlr_types::AnimationMode) -> Result<()> {
+        self.profile
+            .settings_mut()
+            .animation_mut()
+            .set_mode(standard_to_profile_animation_mode(mode))
+    }
+    pub fn set_animation_mod1(&mut self, mod1: u8) -> Result<()> {
+        self.profile.settings_mut().animation_mut().set_mod1(mod1)
+    }
+    pub fn set_animation_mod2(&mut self, mod2: u8) -> Result<()> {
+        self.profile.settings_mut().animation_mut().set_mod2(mod2)
+    }
+    pub fn set_animation_waterfall(
+        &mut self,
+        waterfall: goxlr_types::WaterfallDirection,
+    ) -> Result<()> {
+        self.profile
+            .settings_mut()
+            .animation_mut()
+            .set_waterfall(standard_to_profile_animation_waterfall(waterfall))
     }
 
     pub fn set_fader_display(
@@ -3194,6 +3217,17 @@ pub fn profile_to_standard_animation_mode(mode: AnimationMode) -> goxlr_types::A
     }
 }
 
+pub fn standard_to_profile_animation_mode(mode: goxlr_types::AnimationMode) -> AnimationMode {
+    match mode {
+        goxlr_types::AnimationMode::RetroRainbow => AnimationMode::RetroRainbow,
+        goxlr_types::AnimationMode::RainbowDark => AnimationMode::RainbowDark,
+        goxlr_types::AnimationMode::RainbowBright => AnimationMode::RainbowBright,
+        goxlr_types::AnimationMode::Simple => AnimationMode::Simple,
+        goxlr_types::AnimationMode::Ripple => AnimationMode::Ripple,
+        goxlr_types::AnimationMode::None => AnimationMode::None,
+    }
+}
+
 pub fn profile_to_standard_animation_waterfall(
     mode: WaterfallDirection,
 ) -> goxlr_types::WaterfallDirection {
@@ -3201,6 +3235,16 @@ pub fn profile_to_standard_animation_waterfall(
         WaterfallDirection::Down => goxlr_types::WaterfallDirection::Down,
         WaterfallDirection::Up => goxlr_types::WaterfallDirection::Up,
         WaterfallDirection::Off => goxlr_types::WaterfallDirection::Off,
+    }
+}
+
+pub fn standard_to_profile_animation_waterfall(
+    mode: goxlr_types::WaterfallDirection,
+) -> WaterfallDirection {
+    match mode {
+        goxlr_types::WaterfallDirection::Down => WaterfallDirection::Down,
+        goxlr_types::WaterfallDirection::Up => WaterfallDirection::Up,
+        goxlr_types::WaterfallDirection::Off => WaterfallDirection::Off,
     }
 }
 
