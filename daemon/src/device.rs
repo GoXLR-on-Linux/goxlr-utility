@@ -1638,7 +1638,7 @@ impl<'a> Device<'a> {
                 }
 
                 self.profile.set_animation_mode(mode)?;
-                self.load_animation()?;
+                self.load_animation(false)?;
             }
             GoXLRCommand::SetAnimationMod1(value) => {
                 if !self.device_supports_animations() {
@@ -1646,7 +1646,7 @@ impl<'a> Device<'a> {
                 }
 
                 self.profile.set_animation_mod1(value)?;
-                self.load_animation()?;
+                self.load_animation(false)?;
             }
             GoXLRCommand::SetAnimationMod2(value) => {
                 if !self.device_supports_animations() {
@@ -1654,7 +1654,7 @@ impl<'a> Device<'a> {
                 }
 
                 self.profile.set_animation_mod2(value)?;
-                self.load_animation()?;
+                self.load_animation(false)?;
             }
             GoXLRCommand::SetAnimationWaterfall(direction) => {
                 if !self.device_supports_animations() {
@@ -1662,7 +1662,7 @@ impl<'a> Device<'a> {
                 }
 
                 self.profile.set_animation_waterfall(direction)?;
-                self.load_animation()?;
+                self.load_animation(false)?;
             }
 
             GoXLRCommand::SetGlobalColour(colour) => {
@@ -2860,7 +2860,7 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
-    fn load_animation(&mut self) -> Result<()> {
+    fn load_animation(&mut self, map_set: bool) -> Result<()> {
         let enabled = self.profile.get_animation_mode() != goxlr_types::AnimationMode::None;
 
         // This one is kinda weird, we go from profile -> types -> usb..
@@ -2882,7 +2882,17 @@ impl<'a> Device<'a> {
         };
 
         self.goxlr
-            .set_animation_mode(enabled, mode, mod1, mod2, waterfall)
+            .set_animation_mode(enabled, mode, mod1, mod2, waterfall)?;
+
+        if !map_set
+            && (mode == AnimationMode::None
+                || mode == AnimationMode::Ripple
+                || mode == AnimationMode::Simple)
+        {
+            self.load_colour_map()?;
+        }
+
+        Ok(())
     }
 
     async fn apply_profile(&mut self, current: Option<CurrentState>) -> Result<()> {
@@ -2963,7 +2973,7 @@ impl<'a> Device<'a> {
 
         if self.device_supports_animations() {
             // Load any animation settings..
-            self.load_animation()?;
+            self.load_animation(true)?;
         }
 
         debug!("Setting Fader display modes..");
