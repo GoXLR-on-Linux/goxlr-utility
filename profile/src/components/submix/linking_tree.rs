@@ -77,7 +77,7 @@ impl LinkingTree {
                 let channel = attr.name.as_str();
                 let channel = &channel[0..channel.len() - 5];
 
-                let value: f64 = attr.value.parse()?;
+                let value: f64 = attr.value.parse().unwrap_or(1.);
 
                 // Find the channel from the Prefix..
                 for chan_enum in InputChannels::iter() {
