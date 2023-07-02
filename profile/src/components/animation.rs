@@ -1,5 +1,6 @@
+use crate::components::animation::AnimationMode::{RainbowBright, RainbowDark, RetroRainbow};
 use crate::profile::Attribute;
-use anyhow::Result;
+use anyhow::{bail, Result};
 use log::warn;
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Writer;
@@ -86,9 +87,41 @@ impl AnimationTree {
     pub fn waterfall(&self) -> WaterfallDirection {
         self.waterfall
     }
+
+    pub fn set_mode(&mut self, mode: AnimationMode) {
+        self.mode = mode;
+    }
+    pub fn set_mod1(&mut self, mod1: u8) -> Result<()> {
+        if mod1 > 100 {
+            bail!("Mod1 much be between 0 and 100");
+        }
+
+        self.mod1 = mod1;
+        Ok(())
+    }
+
+    pub fn set_mod2(&mut self, mod2: u8) -> Result<()> {
+        if self.mode != RainbowBright && self.mode != RainbowDark {
+            bail!("Mod2 Not Available in this Mode");
+        }
+        if mod2 > 100 {
+            bail!("Mod2 must be between 0 and 100");
+        }
+
+        self.mod2 = mod2;
+        Ok(())
+    }
+    pub fn set_waterfall(&mut self, waterfall: WaterfallDirection) -> Result<()> {
+        if self.mode == RetroRainbow || self.mode == AnimationMode::None {
+            bail!("Waterfall not Availabe in this Mode");
+        }
+
+        self.waterfall = waterfall;
+        Ok(())
+    }
 }
 
-#[derive(Debug, Default, Copy, Clone, EnumIter)]
+#[derive(Debug, Default, Copy, Clone, EnumIter, PartialEq)]
 pub enum AnimationMode {
     RetroRainbow,
     RainbowDark,
