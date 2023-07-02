@@ -1,6 +1,6 @@
 [package]
 name = "goxlr-usb"
-version = "0.12.1"
+version = "0.12.2"
 edition = "2021"
 authors = ["Nathan Adams <dinnerbone@dinnerbone.com>", "Craig McLure <craig@mclure.net>", "Lars Mühlbauer <lm41@dismail.de>"]
 description = "A direct interface to the TC-Helicon GoXLR & GoXLR Mini via usb."
