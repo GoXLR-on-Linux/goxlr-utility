@@ -1633,18 +1633,34 @@ impl<'a> Device<'a> {
 
             // Colouring..
             GoXLRCommand::SetAnimationMode(mode) => {
+                if !self.device_supports_animations() {
+                    bail!("Animations not supported on this firmware.");
+                }
+
                 self.profile.set_animation_mode(mode)?;
                 self.load_animation()?;
             }
             GoXLRCommand::SetAnimationMod1(value) => {
+                if !self.device_supports_animations() {
+                    bail!("Animations not supported on this firmware.");
+                }
+
                 self.profile.set_animation_mod1(value)?;
                 self.load_animation()?;
             }
             GoXLRCommand::SetAnimationMod2(value) => {
+                if !self.device_supports_animations() {
+                    bail!("Animations not supported on this firmware.");
+                }
+
                 self.profile.set_animation_mod2(value)?;
                 self.load_animation()?;
             }
             GoXLRCommand::SetAnimationWaterfall(direction) => {
+                if !self.device_supports_animations() {
+                    bail!("Animations not supported on this firmware.");
+                }
+
                 self.profile.set_animation_waterfall(direction)?;
                 self.load_animation()?;
             }
