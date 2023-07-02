@@ -20,7 +20,7 @@ use goxlr_types::{
     Button, ChannelName, DisplayModeComponents, EffectBankPresets, EffectKey, EncoderName,
     FaderName, HardTuneSource, InputDevice as BasicInputDevice, MicrophoneParamKey, Mix, MuteState,
     OutputDevice as BasicOutputDevice, RobotRange, SampleBank, SampleButtons, SamplePlaybackMode,
-    VersionNumber,
+    VersionNumber, WaterfallDirection,
 };
 use goxlr_usb::animation::{AnimationMode, WaterFallDir};
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
@@ -1632,6 +1632,23 @@ impl<'a> Device<'a> {
             }
 
             // Colouring..
+            GoXLRCommand::SetAnimationMode(mode) => {
+                self.profile.set_animation_mode(mode)?;
+                self.load_animation()?;
+            }
+            GoXLRCommand::SetAnimationMod1(value) => {
+                self.profile.set_animation_mod1(value)?;
+                self.load_animation()?;
+            }
+            GoXLRCommand::SetAnimationMod2(value) => {
+                self.profile.set_animation_mod2(value)?;
+                self.load_animation()?;
+            }
+            GoXLRCommand::SetAnimationWaterfall(direction) => {
+                self.profile.set_animation_waterfall(direction)?;
+                self.load_animation()?;
+            }
+
             GoXLRCommand::SetGlobalColour(colour) => {
                 self.profile.set_global_colour(colour)?;
                 self.load_colour_map()?;
@@ -2827,20 +2844,34 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
+    fn load_animation(&mut self) -> Result<()> {
+        let enabled = self.profile.get_animation_mode() != goxlr_types::AnimationMode::None;
+
+        // This one is kinda weird, we go from profile -> types -> usb..
+        let mode = match self.profile.get_animation_mode() {
+            goxlr_types::AnimationMode::RetroRainbow => AnimationMode::RetroRainbow,
+            goxlr_types::AnimationMode::RainbowDark => AnimationMode::RainbowDark,
+            goxlr_types::AnimationMode::RainbowBright => AnimationMode::RainbowBright,
+            goxlr_types::AnimationMode::Simple => AnimationMode::Simple,
+            goxlr_types::AnimationMode::Ripple => AnimationMode::Ripple,
+            goxlr_types::AnimationMode::None => AnimationMode::None,
+        };
+
+        let mod1 = self.profile.get_animation_mod1();
+        let mod2 = self.profile.get_animation_mod2();
+        let waterfall = match self.profile.get_animation_waterfall() {
+            WaterfallDirection::Down => WaterFallDir::Down,
+            WaterfallDirection::Up => WaterFallDir::Up,
+            WaterfallDirection::Off => WaterFallDir::Off,
+        };
+
+        self.goxlr
+            .set_animation_mode(enabled, mode, mod1, mod2, waterfall)
+    }
+
     async fn apply_profile(&mut self, current: Option<CurrentState>) -> Result<()> {
         // Set volumes first, applying mute may modify stuff..
         debug!("Applying Profile..");
-        if self.device_supports_animations() {
-            // Make sure animations are disabled in the util when loading profiles, the following
-            // settings Send 0 for everything :)
-            self.goxlr.set_animation_mode(
-                false,
-                AnimationMode::AnimationNone,
-                0,
-                0,
-                WaterFallDir::Down,
-            )?;
-        }
 
         debug!("Setting Faders..");
         let mut mic_assigned_to_fader = false;
@@ -2913,6 +2944,11 @@ impl<'a> Device<'a> {
 
         debug!("Loading Colour Map..");
         self.load_colour_map()?;
+
+        if self.device_supports_animations() {
+            // Load any animation settings..
+            self.load_animation()?;
+        }
 
         debug!("Setting Fader display modes..");
         for fader in FaderName::iter() {

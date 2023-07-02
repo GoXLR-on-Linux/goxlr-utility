@@ -7,13 +7,14 @@ mod device;
 
 pub use device::*;
 use goxlr_types::{
-    Button, ButtonColourGroups, ButtonColourOffStyle, ChannelName, CompressorAttackTime,
-    CompressorRatio, CompressorReleaseTime, DisplayMode, DisplayModeComponents, EchoStyle,
-    EffectBankPresets, EncoderColourTargets, EqFrequencies, FaderDisplayStyle, FaderName,
-    GateTimes, GenderStyle, HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle,
-    MicrophoneType, MiniEqFrequencies, Mix, MuteFunction, MuteState, OutputDevice, PitchStyle,
-    ReverbStyle, RobotRange, RobotStyle, SampleBank, SampleButtons, SamplePlayOrder,
-    SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets,
+    AnimationMode, Button, ButtonColourGroups, ButtonColourOffStyle, ChannelName,
+    CompressorAttackTime, CompressorRatio, CompressorReleaseTime, DisplayMode,
+    DisplayModeComponents, EchoStyle, EffectBankPresets, EncoderColourTargets, EqFrequencies,
+    FaderDisplayStyle, FaderName, GateTimes, GenderStyle, HardTuneSource, HardTuneStyle,
+    InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies, Mix, MuteFunction, MuteState,
+    OutputDevice, PitchStyle, ReverbStyle, RobotRange, RobotStyle, SampleBank, SampleButtons,
+    SamplePlayOrder, SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets,
+    WaterfallDirection,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -126,6 +127,11 @@ pub enum GoXLRCommand {
     SetDeeser(u8),
 
     // Colour Related Settings..
+    SetAnimationMode(AnimationMode),
+    SetAnimationMod1(u8),
+    SetAnimationMod2(u8),
+    SetAnimationWaterfall(WaterfallDirection),
+
     SetGlobalColour(String),
 
     SetFaderDisplayStyle(FaderName, FaderDisplayStyle),

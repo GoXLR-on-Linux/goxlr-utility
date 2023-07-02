@@ -3,9 +3,9 @@ pub enum AnimationMode {
     RetroRainbow,
     RainbowDark,
     RainbowBright,
-    AnimationSimple,
-    AnimationRipple,
-    AnimationNone,
+    Simple,
+    Ripple,
+    None,
 }
 
 pub enum WaterFallDir {
