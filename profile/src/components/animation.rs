@@ -88,8 +88,9 @@ impl AnimationTree {
         self.waterfall
     }
 
-    pub fn set_mode(&mut self, mode: AnimationMode) {
+    pub fn set_mode(&mut self, mode: AnimationMode) -> Result<()> {
         self.mode = mode;
+        Ok(())
     }
     pub fn set_mod1(&mut self, mod1: u8) -> Result<()> {
         if mod1 > 100 {
