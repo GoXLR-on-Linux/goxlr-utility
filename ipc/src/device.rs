@@ -184,6 +184,7 @@ pub struct Lighting {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnimationLighting {
+    pub supported: bool,
     pub mode: AnimationMode,
     pub mod1: u8,
     pub mod2: u8,

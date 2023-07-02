@@ -560,7 +560,7 @@ impl ProfileAdapter {
         get_colour_map_from_button(self.profile.settings(), button)
     }
 
-    pub fn get_lighting_ipc(&self, is_device_mini: bool) -> Lighting {
+    pub fn get_lighting_ipc(&self, is_device_mini: bool, animation_supported: bool) -> Lighting {
         let mut fader_map: HashMap<FaderName, FaderLighting> = HashMap::new();
         for fader in FaderName::iter() {
             let colour_target = map_fader_to_colour_target(fader);
@@ -701,6 +701,7 @@ impl ProfileAdapter {
         }
 
         let animation = AnimationLighting {
+            supported: animation_supported,
             mode: profile_to_standard_animation_mode(self.profile.settings().animation().mode()),
             mod1: self.profile.settings().animation().mod1(),
             mod2: self.profile.settings().animation().mod2(),

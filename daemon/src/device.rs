@@ -210,6 +210,8 @@ impl<'a> Device<'a> {
             sample_error.replace(error.clone());
         }
 
+        let is_mini = self.hardware.device_type == DeviceType::Mini;
+
         MixerStatus {
             hardware: self.hardware.clone(),
             shutdown_commands,
@@ -234,12 +236,10 @@ impl<'a> Device<'a> {
             },
             lighting: self
                 .profile
-                .get_lighting_ipc(self.hardware.device_type == DeviceType::Mini),
-            effects: self
-                .profile
-                .get_effects_ipc(self.hardware.device_type == DeviceType::Mini),
+                .get_lighting_ipc(is_mini, self.device_supports_animations()),
+            effects: self.profile.get_effects_ipc(is_mini),
             sampler: self.profile.get_sampler_ipc(
-                self.hardware.device_type == DeviceType::Mini,
+                is_mini,
                 &self.audio_handler,
                 sampler_prerecord,
                 SampleProcessState {
