@@ -93,6 +93,10 @@ impl AnimationTree {
         Ok(())
     }
     pub fn set_mod1(&mut self, mod1: u8) -> Result<()> {
+        if self.mode == AnimationMode::None {
+            bail!("Mod1 Not Available in this Mode");
+        }
+
         if mod1 > 100 {
             bail!("Mod1 much be between 0 and 100");
         }
