@@ -2,7 +2,7 @@
 
 [Setup]
 AppName=GoXLR Utility
-AppVersion=0.12.1
+AppVersion=0.12.2
 WizardStyle=modern
 DefaultDirName={autopf}\GoXLR Utility
 DefaultGroupName=GoXLR Utility

@@ -3,7 +3,7 @@ use strum::EnumIter;
 /**
  * This can probably be handled a lot better, there's a lot of duplication going on here
  * at this point in the interests of making things work.. Traits and better OO should allow for
- * better building of structures, and definitions. Todo: Later.
+ * better building of structures, and definitions. Todo: Later (started in colours.rs).
  */
 
 #[derive(Copy, Clone, Debug, EnumIter, PartialEq)]

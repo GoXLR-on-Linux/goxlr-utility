@@ -20,8 +20,9 @@ use goxlr_types::{
     Button, ChannelName, DisplayModeComponents, EffectBankPresets, EffectKey, EncoderName,
     FaderName, HardTuneSource, InputDevice as BasicInputDevice, MicrophoneParamKey, Mix, MuteState,
     OutputDevice as BasicOutputDevice, RobotRange, SampleBank, SampleButtons, SamplePlaybackMode,
-    VersionNumber,
+    VersionNumber, WaterfallDirection,
 };
+use goxlr_usb::animation::{AnimationMode, WaterFallDir};
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::channelstate::ChannelState;
 use goxlr_usb::channelstate::ChannelState::{Muted, Unmuted};
@@ -209,6 +210,8 @@ impl<'a> Device<'a> {
             sample_error.replace(error.clone());
         }
 
+        let is_mini = self.hardware.device_type == DeviceType::Mini;
+
         MixerStatus {
             hardware: self.hardware.clone(),
             shutdown_commands,
@@ -233,12 +236,10 @@ impl<'a> Device<'a> {
             },
             lighting: self
                 .profile
-                .get_lighting_ipc(self.hardware.device_type == DeviceType::Mini),
-            effects: self
-                .profile
-                .get_effects_ipc(self.hardware.device_type == DeviceType::Mini),
+                .get_lighting_ipc(is_mini, self.device_supports_animations()),
+            effects: self.profile.get_effects_ipc(is_mini),
             sampler: self.profile.get_sampler_ipc(
-                self.hardware.device_type == DeviceType::Mini,
+                is_mini,
                 &self.audio_handler,
                 sampler_prerecord,
                 SampleProcessState {
@@ -1631,6 +1632,39 @@ impl<'a> Device<'a> {
             }
 
             // Colouring..
+            GoXLRCommand::SetAnimationMode(mode) => {
+                if !self.device_supports_animations() {
+                    bail!("Animations not supported on this firmware.");
+                }
+
+                self.profile.set_animation_mode(mode)?;
+                self.load_animation(false)?;
+            }
+            GoXLRCommand::SetAnimationMod1(value) => {
+                if !self.device_supports_animations() {
+                    bail!("Animations not supported on this firmware.");
+                }
+
+                self.profile.set_animation_mod1(value)?;
+                self.load_animation(false)?;
+            }
+            GoXLRCommand::SetAnimationMod2(value) => {
+                if !self.device_supports_animations() {
+                    bail!("Animations not supported on this firmware.");
+                }
+
+                self.profile.set_animation_mod2(value)?;
+                self.load_animation(false)?;
+            }
+            GoXLRCommand::SetAnimationWaterfall(direction) => {
+                if !self.device_supports_animations() {
+                    bail!("Animations not supported on this firmware.");
+                }
+
+                self.profile.set_animation_waterfall(direction)?;
+                self.load_animation(false)?;
+            }
+
             GoXLRCommand::SetGlobalColour(colour) => {
                 self.profile.set_global_colour(colour)?;
                 self.load_colour_map()?;
@@ -2812,18 +2846,7 @@ impl<'a> Device<'a> {
         // The new colour format occurred on different firmware versions depending on device,
         // so do the check here.
 
-        let use_1_3_40_format: bool = match self.hardware.device_type {
-            DeviceType::Unknown => true,
-            DeviceType::Full => version_newer_or_equal_to(
-                &self.hardware.versions.firmware,
-                VersionNumber(1, 3, 40, 0),
-            ),
-            DeviceType::Mini => version_newer_or_equal_to(
-                &self.hardware.versions.firmware,
-                VersionNumber(1, 1, 8, 0),
-            ),
-        };
-
+        let use_1_3_40_format = self.device_supports_animations();
         let colour_map = self.profile.get_colour_map(use_1_3_40_format);
 
         if use_1_3_40_format {
@@ -2832,6 +2855,41 @@ impl<'a> Device<'a> {
             let mut map: [u8; 328] = [0; 328];
             map.copy_from_slice(&colour_map[0..328]);
             self.goxlr.set_button_colours(map)?;
+        }
+
+        Ok(())
+    }
+
+    fn load_animation(&mut self, map_set: bool) -> Result<()> {
+        let enabled = self.profile.get_animation_mode() != goxlr_types::AnimationMode::None;
+
+        // This one is kinda weird, we go from profile -> types -> usb..
+        let mode = match self.profile.get_animation_mode() {
+            goxlr_types::AnimationMode::RetroRainbow => AnimationMode::RetroRainbow,
+            goxlr_types::AnimationMode::RainbowDark => AnimationMode::RainbowDark,
+            goxlr_types::AnimationMode::RainbowBright => AnimationMode::RainbowBright,
+            goxlr_types::AnimationMode::Simple => AnimationMode::Simple,
+            goxlr_types::AnimationMode::Ripple => AnimationMode::Ripple,
+            goxlr_types::AnimationMode::None => AnimationMode::None,
+        };
+
+        let mod1 = self.profile.get_animation_mod1();
+        let mod2 = self.profile.get_animation_mod2();
+        let waterfall = match self.profile.get_animation_waterfall() {
+            WaterfallDirection::Down => WaterFallDir::Down,
+            WaterfallDirection::Up => WaterFallDir::Up,
+            WaterfallDirection::Off => WaterFallDir::Off,
+        };
+
+        self.goxlr
+            .set_animation_mode(enabled, mode, mod1, mod2, waterfall)?;
+
+        if !map_set
+            && (mode == AnimationMode::None
+                || mode == AnimationMode::Ripple
+                || mode == AnimationMode::Simple)
+        {
+            self.load_colour_map()?;
         }
 
         Ok(())
@@ -2912,6 +2970,11 @@ impl<'a> Device<'a> {
 
         debug!("Loading Colour Map..");
         self.load_colour_map()?;
+
+        if self.device_supports_animations() {
+            // Load any animation settings..
+            self.load_animation(true)?;
+        }
 
         debug!("Setting Fader display modes..");
         for fader in FaderName::iter() {
@@ -3247,6 +3310,20 @@ impl<'a> Device<'a> {
             DeviceType::Mini => version_newer_or_equal_to(
                 &self.hardware.versions.firmware,
                 VersionNumber(1, 2, 0, 46),
+            ),
+        }
+    }
+
+    fn device_supports_animations(&self) -> bool {
+        match self.hardware.device_type {
+            DeviceType::Unknown => true,
+            DeviceType::Full => version_newer_or_equal_to(
+                &self.hardware.versions.firmware,
+                VersionNumber(1, 3, 40, 0),
+            ),
+            DeviceType::Mini => version_newer_or_equal_to(
+                &self.hardware.versions.firmware,
+                VersionNumber(1, 1, 8, 0),
             ),
         }
     }

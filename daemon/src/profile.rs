@@ -10,13 +10,13 @@ use enum_map::EnumMap;
 use log::{debug, warn};
 use strum::IntoEnumIterator;
 
-use crate::audio::{AudioFile, AudioHandler};
-use crate::device::CurrentState;
 use goxlr_ipc::{
-    ActiveEffects, ButtonLighting, CoughButton, Echo, Effects, FaderLighting, Gender, HardTune,
-    Lighting, Megaphone, OneColour, Pitch, Reverb, Robot, Sample, SampleProcessState, Sampler,
-    SamplerButton, SamplerLighting, Scribble, Submix, Submixes, ThreeColours, TwoColours,
+    ActiveEffects, AnimationLighting, ButtonLighting, CoughButton, Echo, Effects, FaderLighting,
+    Gender, HardTune, Lighting, Megaphone, OneColour, Pitch, Reverb, Robot, Sample,
+    SampleProcessState, Sampler, SamplerButton, SamplerLighting, Scribble, Submix, Submixes,
+    ThreeColours, TwoColours,
 };
+use goxlr_profile_loader::components::animation::{AnimationMode, WaterfallDirection};
 use goxlr_profile_loader::components::colours::{
     Colour, ColourDisplay, ColourMap, ColourOffStyle, ColourState,
 };
@@ -48,6 +48,8 @@ use goxlr_usb::buttonstate::{ButtonStates, Buttons};
 use goxlr_usb::channelstate::ChannelState;
 use goxlr_usb::colouring::ColourTargets;
 
+use crate::audio::{AudioFile, AudioHandler};
+use crate::device::CurrentState;
 use crate::files::can_create_new_file;
 
 pub const DEFAULT_PROFILE_NAME: &str = "Default";
@@ -334,6 +336,48 @@ impl ProfileAdapter {
             .swap(profile_fader_one, profile_fader_two);
     }
 
+    // Animation Settings
+    pub fn set_animation_mode(&mut self, mode: goxlr_types::AnimationMode) -> Result<()> {
+        self.profile
+            .settings_mut()
+            .animation_mut()
+            .set_mode(standard_to_profile_animation_mode(mode))
+    }
+
+    pub fn get_animation_mode(&self) -> goxlr_types::AnimationMode {
+        profile_to_standard_animation_mode(self.profile.settings().animation().mode())
+    }
+
+    pub fn set_animation_mod1(&mut self, mod1: u8) -> Result<()> {
+        self.profile.settings_mut().animation_mut().set_mod1(mod1)
+    }
+
+    pub fn get_animation_mod1(&self) -> u8 {
+        self.profile.settings().animation().mod1()
+    }
+
+    pub fn set_animation_mod2(&mut self, mod2: u8) -> Result<()> {
+        self.profile.settings_mut().animation_mut().set_mod2(mod2)
+    }
+
+    pub fn get_animation_mod2(&self) -> u8 {
+        self.profile.settings().animation().mod2()
+    }
+
+    pub fn set_animation_waterfall(
+        &mut self,
+        waterfall: goxlr_types::WaterfallDirection,
+    ) -> Result<()> {
+        self.profile
+            .settings_mut()
+            .animation_mut()
+            .set_waterfall(standard_to_profile_animation_waterfall(waterfall))
+    }
+
+    pub fn get_animation_waterfall(&self) -> goxlr_types::WaterfallDirection {
+        profile_to_standard_animation_waterfall(self.profile.settings().animation().waterfall())
+    }
+
     pub fn set_fader_display(
         &mut self,
         fader: FaderName,
@@ -516,7 +560,7 @@ impl ProfileAdapter {
         get_colour_map_from_button(self.profile.settings(), button)
     }
 
-    pub fn get_lighting_ipc(&self, is_device_mini: bool) -> Lighting {
+    pub fn get_lighting_ipc(&self, is_device_mini: bool, animation_supported: bool) -> Lighting {
         let mut fader_map: HashMap<FaderName, FaderLighting> = HashMap::new();
         for fader in FaderName::iter() {
             let colour_target = map_fader_to_colour_target(fader);
@@ -656,7 +700,18 @@ impl ProfileAdapter {
             );
         }
 
+        let animation = AnimationLighting {
+            supported: animation_supported,
+            mode: profile_to_standard_animation_mode(self.profile.settings().animation().mode()),
+            mod1: self.profile.settings().animation().mod1(),
+            mod2: self.profile.settings().animation().mod2(),
+            waterfall_direction: profile_to_standard_animation_waterfall(
+                self.profile.settings().animation().waterfall(),
+            ),
+        };
+
         Lighting {
+            animation,
             faders: fader_map,
             buttons: button_map,
             simple: simple_map,
@@ -3168,6 +3223,48 @@ pub fn channel_name_to_submix(source: ChannelName) -> Option<SubMixChannelName> 
         ChannelName::Headphones => None,
         ChannelName::MicMonitor => None,
         ChannelName::LineOut => None,
+    }
+}
+
+pub fn profile_to_standard_animation_mode(mode: AnimationMode) -> goxlr_types::AnimationMode {
+    match mode {
+        AnimationMode::RetroRainbow => goxlr_types::AnimationMode::RetroRainbow,
+        AnimationMode::RainbowDark => goxlr_types::AnimationMode::RainbowDark,
+        AnimationMode::RainbowBright => goxlr_types::AnimationMode::RainbowBright,
+        AnimationMode::Simple => goxlr_types::AnimationMode::Simple,
+        AnimationMode::Ripple => goxlr_types::AnimationMode::Ripple,
+        AnimationMode::None => goxlr_types::AnimationMode::None,
+    }
+}
+
+pub fn standard_to_profile_animation_mode(mode: goxlr_types::AnimationMode) -> AnimationMode {
+    match mode {
+        goxlr_types::AnimationMode::RetroRainbow => AnimationMode::RetroRainbow,
+        goxlr_types::AnimationMode::RainbowDark => AnimationMode::RainbowDark,
+        goxlr_types::AnimationMode::RainbowBright => AnimationMode::RainbowBright,
+        goxlr_types::AnimationMode::Simple => AnimationMode::Simple,
+        goxlr_types::AnimationMode::Ripple => AnimationMode::Ripple,
+        goxlr_types::AnimationMode::None => AnimationMode::None,
+    }
+}
+
+pub fn profile_to_standard_animation_waterfall(
+    mode: WaterfallDirection,
+) -> goxlr_types::WaterfallDirection {
+    match mode {
+        WaterfallDirection::Down => goxlr_types::WaterfallDirection::Down,
+        WaterfallDirection::Up => goxlr_types::WaterfallDirection::Up,
+        WaterfallDirection::Off => goxlr_types::WaterfallDirection::Off,
+    }
+}
+
+pub fn standard_to_profile_animation_waterfall(
+    mode: goxlr_types::WaterfallDirection,
+) -> WaterfallDirection {
+    match mode {
+        goxlr_types::WaterfallDirection::Down => WaterfallDirection::Down,
+        goxlr_types::WaterfallDirection::Up => WaterfallDirection::Up,
+        goxlr_types::WaterfallDirection::Off => WaterfallDirection::Off,
     }
 }
 

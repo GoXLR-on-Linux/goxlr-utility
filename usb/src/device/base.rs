@@ -1,3 +1,4 @@
+use crate::animation::{AnimationMode, WaterFallDir};
 use crate::buttonstate::{ButtonStates, Buttons, CurrentButtonStates};
 use crate::channelstate::ChannelState;
 use crate::commands::Command::ExecuteFirmwareUpdateAction;
@@ -279,6 +280,30 @@ pub trait GoXLRCommands: ExecutableGoXLR {
             volumes: mixers,
             encoders,
         })
+    }
+
+    fn set_animation_mode(
+        &mut self,
+        enabled: bool,
+        mode: AnimationMode,
+        modifier1: u8,
+        modifier2: u8,
+        waterfall: WaterFallDir,
+    ) -> Result<()> {
+        if modifier1 > 100 || modifier2 > 100 {
+            bail!("Modifiers should be < 100");
+        }
+
+        // Build the command..
+        let mut command = [0; 5];
+        command[0] = enabled as u8;
+        command[1] = mode as u8;
+        command[2] = modifier1;
+        command[3] = modifier2;
+        command[4] = waterfall as u8;
+
+        let _ = self.request_data(Command::SetAnimationMode, &command);
+        Ok(())
     }
 
     // DO NOT EXECUTE ANY OF THESE, SERIOUSLY!

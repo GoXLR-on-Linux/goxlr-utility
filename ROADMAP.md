@@ -1,5 +1,5 @@
 # Roadmap
-*Last Updated for 0.12.0 Release*
+*Last Updated for 0.12.2 Release*
 
 ## Completed Features
 * Initialisation of Devices under Linux
@@ -20,6 +20,7 @@
 * Full Lighting Configuration
 * Sampler Support
 * Scribbles
+* Lighting Animations
 * Full Submix Beta Support
 
 ## Utility Features
@@ -32,4 +33,4 @@
 * Logging options for troubleshooting
 
 ## Not Implemented
-* Lighting Animations (unlikely to be added)
+[ This space intentionally left blank. ]

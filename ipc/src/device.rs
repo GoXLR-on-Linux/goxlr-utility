@@ -2,13 +2,13 @@ use crate::{GoXLRCommand, LogLevel};
 use enum_map::EnumMap;
 use goxlr_types::MuteState::Unmuted;
 use goxlr_types::{
-    Button, ButtonColourOffStyle, ChannelName, CompressorAttackTime, CompressorRatio,
-    CompressorReleaseTime, DisplayMode, EchoStyle, EffectBankPresets, EncoderColourTargets,
-    EqFrequencies, FaderDisplayStyle, FaderName, FirmwareVersions, GateTimes, GenderStyle,
-    HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies,
-    Mix, MuteFunction, MuteState, OutputDevice, PitchStyle, ReverbStyle, RobotStyle, SampleBank,
-    SampleButtons, SamplePlayOrder, SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets,
-    SubMixChannelName,
+    AnimationMode, Button, ButtonColourOffStyle, ChannelName, CompressorAttackTime,
+    CompressorRatio, CompressorReleaseTime, DisplayMode, EchoStyle, EffectBankPresets,
+    EncoderColourTargets, EqFrequencies, FaderDisplayStyle, FaderName, FirmwareVersions, GateTimes,
+    GenderStyle, HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle, MicrophoneType,
+    MiniEqFrequencies, Mix, MuteFunction, MuteState, OutputDevice, PitchStyle, ReverbStyle,
+    RobotStyle, SampleBank, SampleButtons, SamplePlayOrder, SamplePlaybackMode,
+    SamplerColourTargets, SimpleColourTargets, SubMixChannelName, WaterfallDirection,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
@@ -174,11 +174,21 @@ pub struct Compressor {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Lighting {
+    pub animation: AnimationLighting,
     pub faders: HashMap<FaderName, FaderLighting>,
     pub buttons: HashMap<Button, ButtonLighting>,
     pub simple: HashMap<SimpleColourTargets, OneColour>,
     pub sampler: HashMap<SamplerColourTargets, SamplerLighting>,
     pub encoders: HashMap<EncoderColourTargets, ThreeColours>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AnimationLighting {
+    pub supported: bool,
+    pub mode: AnimationMode,
+    pub mod1: u8,
+    pub mod2: u8,
+    pub waterfall_direction: WaterfallDirection,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

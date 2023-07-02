@@ -21,6 +21,8 @@ pub enum Command {
     GetButtonStates,
     GetHardwareInfo(HardwareInfoCommand),
 
+    SetAnimationMode,
+
     SetSubChannelVolume(SubMixChannelName),
     SetChannelMixes,
     SetMonitoredMix,
@@ -50,6 +52,9 @@ impl Command {
             Command::GetMicrophoneLevel => 0x80c << 12,
             Command::SetMicrophoneParameters => 0x80b << 12,
             Command::SetEffectParameters => 0x801 << 12,
+
+            // Animation Related Commands
+            Command::SetAnimationMode => 0x816 << 12,
 
             // I'm doing a +16 here, because there appears to be a bit reset going on..
             Command::SetSubChannelVolume(channel) => (0x806 << 12) | (*channel as u32 + 16),
