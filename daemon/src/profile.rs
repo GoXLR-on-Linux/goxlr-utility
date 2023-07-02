@@ -343,12 +343,27 @@ impl ProfileAdapter {
             .animation_mut()
             .set_mode(standard_to_profile_animation_mode(mode))
     }
+
+    pub fn get_animation_mode(&self) -> goxlr_types::AnimationMode {
+        profile_to_standard_animation_mode(self.profile.settings().animation().mode())
+    }
+
     pub fn set_animation_mod1(&mut self, mod1: u8) -> Result<()> {
         self.profile.settings_mut().animation_mut().set_mod1(mod1)
     }
+
+    pub fn get_animation_mod1(&self) -> u8 {
+        self.profile.settings().animation().mod1()
+    }
+
     pub fn set_animation_mod2(&mut self, mod2: u8) -> Result<()> {
         self.profile.settings_mut().animation_mut().set_mod2(mod2)
     }
+
+    pub fn get_animation_mod2(&self) -> u8 {
+        self.profile.settings().animation().mod2()
+    }
+
     pub fn set_animation_waterfall(
         &mut self,
         waterfall: goxlr_types::WaterfallDirection,
@@ -357,6 +372,10 @@ impl ProfileAdapter {
             .settings_mut()
             .animation_mut()
             .set_waterfall(standard_to_profile_animation_waterfall(waterfall))
+    }
+
+    pub fn get_animation_waterfall(&self) -> goxlr_types::WaterfallDirection {
+        profile_to_standard_animation_waterfall(self.profile.settings().animation().waterfall())
     }
 
     pub fn set_fader_display(
