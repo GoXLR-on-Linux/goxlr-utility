@@ -1,12 +1,13 @@
 use clap::{ArgAction, Args, Parser, Subcommand};
 
 use goxlr_types::{
-    Button, ButtonColourGroups, ButtonColourOffStyle, ChannelName, CompressorAttackTime,
-    CompressorRatio, CompressorReleaseTime, EchoStyle, EffectBankPresets, EncoderColourTargets,
-    EqFrequencies, FaderDisplayStyle, FaderName, GateTimes, GenderStyle, HardTuneSource,
-    HardTuneStyle, InputDevice, MegaphoneStyle, MiniEqFrequencies, Mix, MuteFunction, MuteState,
-    OutputDevice, PitchStyle, ReverbStyle, RobotRange, RobotStyle, SampleBank, SampleButtons,
-    SamplePlayOrder, SamplePlaybackMode, SimpleColourTargets,
+    AnimationMode, Button, ButtonColourGroups, ButtonColourOffStyle, ChannelName,
+    CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EchoStyle, EffectBankPresets,
+    EncoderColourTargets, EqFrequencies, FaderDisplayStyle, FaderName, GateTimes, GenderStyle,
+    HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle, MiniEqFrequencies, Mix,
+    MuteFunction, MuteState, OutputDevice, PitchStyle, ReverbStyle, RobotRange, RobotStyle,
+    SampleBank, SampleButtons, SamplePlayOrder, SamplePlaybackMode, SimpleColourTargets,
+    WaterfallDirection,
 };
 use std::str::FromStr;
 
@@ -492,6 +493,11 @@ pub enum CoughCommands {
 #[derive(Subcommand, Debug)]
 #[command(arg_required_else_help = true)]
 pub enum LightingCommands {
+    Animation {
+        #[command(subcommand)]
+        command: AnimationCommands,
+    },
+
     /// Sets the Global GoXLR Colour
     Global { colour: String },
 
@@ -539,6 +545,15 @@ pub enum LightingCommands {
         /// The Knob Colour
         colour_three: String,
     },
+}
+
+#[derive(Subcommand, Debug)]
+#[command(arg_required_else_help = true)]
+pub enum AnimationCommands {
+    Mode { mode: AnimationMode },
+    Mod1 { mod1: u8 },
+    Mod2 { mod2: u8 },
+    WaterFall { waterfall: WaterfallDirection },
 }
 
 #[derive(Subcommand, Debug)]

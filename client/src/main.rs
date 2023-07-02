@@ -2,11 +2,11 @@ mod cli;
 mod microphone;
 
 use crate::cli::{
-    ButtonGroupLightingCommands, ButtonLightingCommands, CompressorCommands, CoughButtonBehaviours,
-    Echo, EffectsCommands, EqualiserCommands, EqualiserMiniCommands, FaderCommands,
-    FaderLightingCommands, FadersAllLightingCommands, Gender, HardTune, LightingCommands,
-    Megaphone, MicrophoneCommands, NoiseGateCommands, Pitch, ProfileAction, ProfileType, Reverb,
-    Robot, SamplerCommands, Scribbles, SubCommands, SubmixCommands,
+    AnimationCommands, ButtonGroupLightingCommands, ButtonLightingCommands, CompressorCommands,
+    CoughButtonBehaviours, Echo, EffectsCommands, EqualiserCommands, EqualiserMiniCommands,
+    FaderCommands, FaderLightingCommands, FadersAllLightingCommands, Gender, HardTune,
+    LightingCommands, Megaphone, MicrophoneCommands, NoiseGateCommands, Pitch, ProfileAction,
+    ProfileType, Reverb, Robot, SamplerCommands, Scribbles, SubCommands, SubmixCommands,
 };
 use crate::microphone::apply_microphone_controls;
 use anyhow::{anyhow, Context, Result};
@@ -272,6 +272,29 @@ async fn main() -> Result<()> {
                 }
 
                 SubCommands::Lighting { command } => match command {
+                    LightingCommands::Animation { command } => match command {
+                        AnimationCommands::Mode { mode } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetAnimationMode(*mode))
+                                .await?;
+                        }
+                        AnimationCommands::Mod1 { mod1 } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetAnimationMod1(*mod1))
+                                .await?;
+                        }
+                        AnimationCommands::Mod2 { mod2 } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetAnimationMod2(*mod2))
+                                .await?;
+                        }
+                        AnimationCommands::WaterFall { waterfall } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetAnimationWaterfall(*waterfall))
+                                .await?;
+                        }
+                    },
+
                     LightingCommands::Global { colour } => {
                         client
                             .command(&serial, GoXLRCommand::SetGlobalColour(colour.to_string()))
