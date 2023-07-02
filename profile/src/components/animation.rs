@@ -65,7 +65,7 @@ impl AnimationTree {
         let mut attributes: HashMap<String, String> = HashMap::default();
         attributes.insert("animationMode".to_string(), format!("{}", self.mode as u8));
         attributes.insert("mod1".to_string(), format!("{}", self.mod1));
-        attributes.insert("mod2".to_string(), format!("{}", self.mod1));
+        attributes.insert("mod2".to_string(), format!("{}", self.mod2));
         attributes.insert("mod3".to_string(), format!("{}", self.waterfall as u8));
 
         for (key, value) in &attributes {
