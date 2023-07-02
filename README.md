@@ -3,7 +3,7 @@
 ![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/goxlr-on-linux/goxlr-utility/build.yml)
 
 ## GoXLR Configuration Utility
-An unofficial tool to configure and control a TC-Helicon GoXLR or GoXLR Mini on Linux, MacOS and Windows.
+An unofficial tool to configure and control a TC-Helicon GoXLR or GoXLR Mini on Linux, MacOS and Windows. [Click Here](https://discord.gg/BRBjkkbvmZ) to join our discord!
 
 ## Features
 * Full control over the GoXLR and GoXLR Mini (Similar to the official App)
