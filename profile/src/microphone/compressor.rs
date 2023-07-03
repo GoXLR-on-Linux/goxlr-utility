@@ -75,7 +75,7 @@ impl Compressor {
             }
 
             if attr.name == "MIC_COMP_MAKEUPGAIN" {
-                self.set_makeup_gain(attr.value.parse::<c_float>()? as i8)?;
+                self.set_makeup_gain(attr.value.parse::<c_float>().unwrap_or(0.) as i8)?;
                 continue;
             }
         }
