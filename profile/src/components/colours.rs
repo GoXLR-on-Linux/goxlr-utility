@@ -376,6 +376,10 @@ pub struct Colour {
 
 impl Colour {
     pub fn new(argb: &str) -> Result<Self, ParseError> {
+        if argb == "0" {
+            return Ok(DEFAULT_COLOUR);
+        };
+
         if argb.len() != 8 {
             return Err(ParseError::InvalidARGBLength(argb.to_string()));
         }
