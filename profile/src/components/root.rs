@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::ffi::c_float;
 use std::io::Write;
 
 use anyhow::Result;
@@ -52,7 +53,7 @@ impl RootElement {
     pub fn parse_root(&mut self, attributes: &Vec<Attribute>) -> Result<(), ParseError> {
         for attr in attributes {
             if attr.name == "version" {
-                self.version = attr.value.parse()?;
+                self.version = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
 
