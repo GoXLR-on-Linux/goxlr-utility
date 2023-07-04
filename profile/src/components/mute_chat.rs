@@ -13,16 +13,16 @@ use crate::components::mute_chat::CoughToggle::Hold;
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
 pub enum ParseError {
-    #[error("Expected int: {0}")]
+    #[error("[COUGH] Expected int: {0}")]
     ExpectedInt(#[from] std::num::ParseIntError),
 
-    #[error("Expected float: {0}")]
+    #[error("[COUGH] Expected float: {0}")]
     ExpectedFloat(#[from] std::num::ParseFloatError),
 
-    #[error("Expected enum: {0}")]
+    #[error("[COUGH] Expected enum: {0}")]
     ExpectedEnum(#[from] strum::ParseError),
 
-    #[error("Invalid colours: {0}")]
+    #[error("[COUGH] Invalid colours: {0}")]
     InvalidColours(#[from] crate::components::colours::ParseError),
 }
 use crate::profile::Attribute;
@@ -62,7 +62,7 @@ impl MuteChat {
         }
     }
 
-    pub fn parse_mute_chat(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
+    pub fn parse_mute_chat(&mut self, attributes: &Vec<Attribute>) -> Result<(), ParseError> {
         for attr in attributes {
             if attr.name == "micIsAnActiveFader" {
                 self.mic_fader_id = attr.value.parse()?;

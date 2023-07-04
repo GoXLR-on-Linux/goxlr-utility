@@ -19,16 +19,16 @@ use crate::Preset;
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
 pub enum ParseError {
-    #[error("Expected int: {0}")]
+    #[error("[HardTune] Expected int: {0}")]
     ExpectedInt(#[from] std::num::ParseIntError),
 
-    #[error("Expected float: {0}")]
+    #[error("[HardTune] Expected float: {0}")]
     ExpectedFloat(#[from] std::num::ParseFloatError),
 
-    #[error("Expected enum: {0}")]
+    #[error("[HardTune] Expected enum: {0}")]
     ExpectedEnum(#[from] strum::ParseError),
 
-    #[error("Invalid colours: {0}")]
+    #[error("[HardTune] Invalid colours: {0}")]
     InvalidColours(#[from] crate::components::colours::ParseError),
 }
 
@@ -54,7 +54,7 @@ impl HardtuneEffectBase {
         }
     }
 
-    pub fn parse_hardtune_root(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
+    pub fn parse_hardtune_root(&mut self, attributes: &Vec<Attribute>) -> Result<(), ParseError> {
         for attr in attributes {
             // I honestly have no idea why this lives here :D
             if attr.name == "HARDTUNE_SOURCE" {
@@ -74,7 +74,7 @@ impl HardtuneEffectBase {
         &mut self,
         preset_enum: Preset,
         attributes: &Vec<Attribute>,
-    ) -> Result<()> {
+    ) -> Result<(), ParseError> {
         let mut preset = HardTuneEffect::new();
         for attr in attributes {
             if attr.name == "hardtuneEffectstate" {

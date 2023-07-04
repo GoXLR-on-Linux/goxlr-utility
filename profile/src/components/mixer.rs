@@ -14,16 +14,16 @@ use crate::profile::Attribute;
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
 pub enum ParseError {
-    #[error("Expected int: {0}")]
+    #[error("[Mixer] Expected int: {0}")]
     ExpectedInt(#[from] std::num::ParseIntError),
 
-    #[error("Expected float: {0}")]
+    #[error("[Mixer] Expected float: {0}")]
     ExpectedFloat(#[from] std::num::ParseFloatError),
 
-    #[error("Expected enum: {0}")]
+    #[error("[Mixer] Expected enum: {0}")]
     ExpectedEnum(#[from] strum::ParseError),
 
-    #[error("Invalid colours: {0}")]
+    #[error("[Mixer] Invalid colours: {0}")]
     InvalidColours(#[from] crate::components::colours::ParseError),
 }
 
@@ -49,7 +49,7 @@ impl Mixers {
         }
     }
 
-    pub fn parse_mixers(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
+    pub fn parse_mixers(&mut self, attributes: &Vec<Attribute>) -> Result<(), ParseError> {
         for attr in attributes {
             if attr.name.ends_with("Level") {
                 let mut found = false;
