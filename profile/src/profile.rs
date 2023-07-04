@@ -389,7 +389,7 @@ impl ProfileSettings {
                         root.parse_root(&attributes)?;
 
                         // This code was made for XML version 2, v1 not currently supported.
-                        if root.get_version() > 2 {
+                        if root.get_version() > 3 {
                             bail!("Unsupported Profile Version {}", root.get_version());
                         }
                         continue;
