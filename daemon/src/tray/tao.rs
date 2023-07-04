@@ -42,9 +42,9 @@ pub fn handle_tray(state: DaemonState, tx: Sender<EventTriggers>) -> Result<()> 
     }
 
     let ready = Arc::new(AtomicBool::new(false));
-    let ready_inner = ready.clone();
     #[cfg(windows)]
     {
+        let ready_inner = ready.clone();
         let win_state = state.clone();
         let win_global = tx.clone();
         thread::spawn(move || create_window(win_state, win_global, ready_inner));
