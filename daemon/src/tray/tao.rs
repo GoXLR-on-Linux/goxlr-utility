@@ -1,6 +1,8 @@
 use anyhow::Result;
+use std::sync::Arc;
 
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::thread::sleep;
 use tao::event_loop::{ControlFlow, EventLoop};
 use tao::platform::run_return::EventLoopExtRunReturn;
 
@@ -39,12 +41,25 @@ pub fn handle_tray(state: DaemonState, tx: Sender<EventTriggers>) -> Result<()> 
         event_loop.set_activate_ignoring_other_apps(true);
     }
 
+    let ready = Arc::new(AtomicBool::new(false));
+    let ready_inner = ready.clone();
     #[cfg(windows)]
     {
         let win_state = state.clone();
         let win_global = tx.clone();
-        thread::spawn(move || create_window(win_state, win_global));
+        thread::spawn(move || create_window(win_state, win_global, ready_inner));
     }
+
+    #[cfg(not(windows))]
+    {
+        ready.store(true, Ordering::Relaxed);
+    }
+
+    // Ok, we need to loop here until the main window is ready..
+    while !ready.load(Ordering::Relaxed) {
+        sleep(Duration::from_millis(5));
+    }
+    debug!("Launching Tray..");
 
     let tray_id = TrayId::new("goxlr-utility-tray");
     let icon = load_icon();
@@ -125,8 +140,6 @@ pub fn handle_tray(state: DaemonState, tx: Sender<EventTriggers>) -> Result<()> 
             *control_flow = ControlFlow::Exit;
         }
     });
-    //debug!("Event Loop Terminated..");
-
     drop(system_tray);
     Ok(())
 }
@@ -145,9 +158,9 @@ fn load_icon() -> tao::system_tray::Icon {
 }
 
 #[cfg(windows)]
-fn create_window(state: DaemonState, tx: Sender<EventTriggers>) {
+fn create_window(state: DaemonState, tx: Sender<EventTriggers>, ready: Arc<AtomicBool>) {
     let win_class = WindowClass::builder("goxlr-utility").build().unwrap();
-    let window_proc = GoXLRWindowProc::new(state, tx);
+    let window_proc = GoXLRWindowProc::new(state, tx, ready);
     let hwnd = WindowBuilder::new(window_proc, &win_class).build();
 
     unsafe {
@@ -160,14 +173,16 @@ fn create_window(state: DaemonState, tx: Sender<EventTriggers>) {
 struct GoXLRWindowProc {
     state: DaemonState,
     global_tx: Sender<EventTriggers>,
+    ready: Arc<AtomicBool>,
 }
 
 #[cfg(windows)]
 impl GoXLRWindowProc {
-    pub fn new(state: DaemonState, tx: Sender<EventTriggers>) -> Self {
+    pub fn new(state: DaemonState, tx: Sender<EventTriggers>, ready: Arc<AtomicBool>) -> Self {
         Self {
             state,
             global_tx: tx,
+            ready,
         }
     }
 }
@@ -182,7 +197,13 @@ impl WindowProc for GoXLRWindowProc {
         _lparam: winapi::shared::minwindef::LPARAM,
     ) -> Option<winapi::shared::minwindef::LRESULT> {
         match msg {
+            winapi::um::winuser::WM_CREATE => {
+                // Window has spawned, allow other code to continue.
+                debug!("Window Spawned, resuming startup..");
+                self.ready.store(true, Ordering::Relaxed);
+            }
             winapi::um::winuser::WM_QUERYENDSESSION => {
+                // This will fall through and default to 'True'
                 debug!("Query End Session Received..");
             }
             winapi::um::winuser::WM_ENDSESSION => {
@@ -199,15 +220,13 @@ impl WindowProc for GoXLRWindowProc {
                         break;
                     } else {
                         debug!("Waiting..");
-                        thread::sleep(Duration::from_millis(100));
+                        sleep(Duration::from_millis(100));
                     }
                 }
 
                 debug!("Shutdown Complete?");
             }
-            _ => {
-                // We can safely ignore anything that comes here..
-            }
+            _ => {}
         }
         None
     }
