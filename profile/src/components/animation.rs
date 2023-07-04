@@ -75,6 +75,13 @@ impl AnimationTree {
         Ok(())
     }
 
+    pub fn replace(&mut self, new: &AnimationTree) {
+        self.mode = new.mode;
+        self.mod1 = new.mod1;
+        self.mod2 = new.mod2;
+        self.waterfall = new.waterfall;
+    }
+
     pub fn mode(&self) -> AnimationMode {
         self.mode
     }

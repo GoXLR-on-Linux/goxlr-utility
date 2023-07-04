@@ -146,6 +146,13 @@ impl ProfileAdapter {
 
             our_map.replace(new_map);
         }
+
+        // We also need to replace the animation tree, as animation should be applied.
+        let new_tree = new_profile.profile.settings().animation();
+        self.profile
+            .settings_mut()
+            .animation_mut()
+            .replace(new_tree);
     }
 
     pub fn load_preset(&mut self, name: String, directories: Vec<&Path>) -> Result<()> {

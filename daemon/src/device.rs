@@ -2266,7 +2266,12 @@ impl<'a> Device<'a> {
                 let profile = ProfileAdapter::from_named(profile_name, &profile_directory)?;
                 debug!("Profile Loaded, Applying Colours..");
                 self.profile.load_colour_profile(profile);
-                self.load_colour_map()?;
+
+                if self.device_supports_animations() {
+                    self.load_animation(false)?;
+                } else {
+                    self.load_colour_map()?;
+                }
                 self.update_button_states()?;
             }
             GoXLRCommand::SaveProfile() => {
