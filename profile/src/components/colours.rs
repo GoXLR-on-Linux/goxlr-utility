@@ -376,7 +376,7 @@ pub struct Colour {
 
 impl Colour {
     pub fn new(argb: &str) -> Result<Self, ParseError> {
-        if argb == "0" {
+        if argb == "0" || argb.is_empty() {
             return Ok(DEFAULT_COLOUR);
         };
 
