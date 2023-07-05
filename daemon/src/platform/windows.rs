@@ -61,9 +61,10 @@ pub async fn spawn_platform_runtime(
                 count += system.processes_by_exact_name(GOXLR_BETA_APP_NAME).count();
                 if count > 0 {
                     throw_notification();
-
-                    // The processes list isn't Sendable, so this can't be triggered asynchronously.
-                    tx.send(EventTriggers::Stop).await?;
+                    // We're calling 'DevicesStopped' here to force an end to the util, we can't use
+                    // the regular Stop because it may attempt to load profiles, which isn't possible
+                    // in a situation where the official app is running.
+                    tx.send(EventTriggers::DevicesStopped).await?;
                     break;
                 }
             },
