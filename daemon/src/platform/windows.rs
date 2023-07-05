@@ -4,13 +4,18 @@ use anyhow::{bail, Result};
 use lazy_static::lazy_static;
 use log::{debug, error};
 use mslnk::ShellLink;
+use std::ffi::OsStr;
+use std::iter::once;
+use std::os::windows::ffi::OsStrExt;
 use std::path::PathBuf;
+use std::ptr::null_mut;
 use std::{env, fs};
 use sysinfo::{ProcessRefreshKind, RefreshKind, System, SystemExt};
 use tokio::signal::windows::{ctrl_break, ctrl_close, ctrl_logoff, ctrl_shutdown};
 use tokio::sync::mpsc;
 use tokio::time::Duration;
 use tokio::{select, time};
+use winapi::um::winuser;
 use winreg::enums::HKEY_CURRENT_USER;
 use winreg::RegKey;
 use winrt_notification::{Sound, Toast};
@@ -29,12 +34,32 @@ pub fn perform_platform_preflight() -> Result<()> {
     count += system.processes_by_exact_name(GOXLR_BETA_APP_NAME).count();
 
     if count > 0 {
-        throw_notification();
+        let title = "GoXLR Utility";
+        let message =
+            "Official GoXLR Application Detected Running\r\n\r\nUnable to Start the Utility.";
+
+        let l_title = to_wide(title);
+        let l_msg: Vec<u16> = to_wide(message);
+
+        unsafe {
+            winuser::MessageBoxW(
+                null_mut(),
+                l_msg.as_ptr(),
+                l_title.as_ptr(),
+                winuser::MB_OK | winuser::MB_ICONERROR,
+            );
+        }
+
         error!("Detected Official GoXLR Application Running, Failing Preflight.");
         bail!("Official GoXLR App Running, Please terminate it before running the Daemon");
     }
 
     Ok(())
+}
+
+fn to_wide(msg: &str) -> Vec<u16> {
+    let wide: Vec<u16> = OsStr::new(msg).encode_wide().chain(once(0)).collect();
+    wide
 }
 
 pub async fn spawn_platform_runtime(
