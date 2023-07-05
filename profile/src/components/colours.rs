@@ -76,6 +76,11 @@ impl ColourMap {
     pub fn read_colours(&mut self, attribute: &Attribute) -> Result<bool, ParseError> {
         let mut attr_key = format!("{}offStyle", &self.prefix);
         if attribute.name == attr_key {
+            if attribute.value.is_empty() {
+                self.off_style = ColourOffStyle::Dimmed;
+                return Ok(true);
+            }
+
             self.off_style = ColourOffStyle::from_str(&attribute.value)?;
             return Ok(true);
         }
