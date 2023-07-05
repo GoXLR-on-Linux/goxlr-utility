@@ -11,6 +11,7 @@ use log::{debug, error, warn};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
+use std::thread::sleep;
 use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::error::TryRecvError;
@@ -108,6 +109,9 @@ impl AttachGoXLR for TUSBAudioGoXLR {
     where
         Self: Sized,
     {
+        // Before we do anything, wait 1second in case the GoXLR is still calibrating..
+        sleep(Duration::from_millis(1500));
+
         let mut device_identifier = None;
         if let Some(identifier) = &device.identifier {
             device_identifier = Some(identifier.clone());
