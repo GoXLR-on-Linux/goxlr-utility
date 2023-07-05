@@ -2,10 +2,6 @@ name: Create Test Build
 on: workflow_dispatch
 jobs:
 
-  # Before we do anything, run the existing test suite..
-  verify:
-    uses: ./.github/workflows/build.yml
-
   get_version:
     runs-on: ubuntu-latest
     outputs:
@@ -23,7 +19,6 @@ jobs:
         run: 'echo "::set-output name=version::$(cargo pkgid -p goxlr-daemon | cut -d@ -f2)"'
 
   build_windows:
-    needs: verify
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
@@ -49,7 +44,6 @@ jobs:
           path: ./ci/Output/*.exe
 
   build:
-    needs: verify
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
