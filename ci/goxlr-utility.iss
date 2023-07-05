@@ -39,9 +39,6 @@ Name: "{userstartup}\GoXLR Utility"; Filename: "{app}\goxlr-daemon.exe"; Tasks: 
 [Run]
 Filename: "{app}\goxlr-launcher.exe"; Description: "Run the GoXLR Utility"; Flags: shellexec skipifsilent nowait postinstall;
 
-[UninstallRun]
-Filename: "taskkill"; Parameters: "/im ""goxlr-daemon.exe"" /f"; Flags: runhidden; RunOnceId: Uninstaller
-
 [Code]
 // Check to see if the GoXLR API is available before installing..
 function InitializeSetup(): Boolean;
