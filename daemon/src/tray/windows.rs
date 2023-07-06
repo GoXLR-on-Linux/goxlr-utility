@@ -16,9 +16,10 @@ use winapi::um::shellapi::{NIF_ICON, NIF_MESSAGE, NIF_TIP, NIM_ADD, NIM_DELETE, 
 use winapi::um::synchapi::WaitForSingleObject;
 use winapi::um::winnt::HANDLE;
 use winapi::um::winuser::{
-    AppendMenuW, CreateIcon, DestroyWindow, DispatchMessageW, PeekMessageW,
+    AppendMenuW, CreateIcon, DestroyWindow, DispatchMessageW, PeekMessageW, ShowWindow,
     ShutdownBlockReasonCreate, ShutdownBlockReasonDestroy, TranslateMessage, MENUINFO, MF_POPUP,
-    MF_SEPARATOR, MF_STRING, MIM_APPLYTOSUBMENUS, MIM_STYLE, MNS_NOTIFYBYPOS, PM_REMOVE, WM_USER,
+    MF_SEPARATOR, MF_STRING, MIM_APPLYTOSUBMENUS, MIM_STYLE, MNS_NOTIFYBYPOS, PM_REMOVE, SW_HIDE,
+    SW_SHOW, WM_USER,
 };
 use winapi::um::{shellapi, winuser};
 
@@ -63,7 +64,10 @@ fn create_window(state: DaemonState, tx: Sender<EventTriggers>) -> Result<()> {
         AppendMenuW(hmenu, MF_STRING, 4, to_wide("Quit").as_ptr());
 
         let window_proc = GoXLRWindowProc::new(state.clone(), tx, hmenu);
-        let hwnd = WindowBuilder::new(window_proc, &win_class).build();
+        let hwnd = WindowBuilder::new(window_proc, &win_class)
+            .name("GoXLR Utility")
+            .size(20, 20)
+            .build();
 
         // Create the notification tray item..
         let mut tray_item = get_notification_struct(&hwnd);
@@ -76,7 +80,8 @@ fn create_window(state: DaemonState, tx: Sender<EventTriggers>) -> Result<()> {
             bail!("Unable to Create Tray Icon");
         }
 
-        // Run our Main loop..
+        // Make sure the window is spawned hidden, begin our main loop.
+        ShowWindow(hwnd, SW_SHOW);
         run_loop(hwnd, state);
 
         // If we get here, the loop is done, remove our tray icon.
@@ -96,6 +101,8 @@ fn run_loop(msg_window: HWND, state: DaemonState) {
             let mut msg = mem::MaybeUninit::uninit();
             if PeekMessageW(msg.as_mut_ptr(), msg_window, 0, 0, PM_REMOVE) != FALSE {
                 let msg = msg.assume_init();
+
+                debug!("Received Message: {}", msg.message);
 
                 TranslateMessage(&msg);
                 DispatchMessageW(&msg);
@@ -247,7 +254,14 @@ impl WindowProc for GoXLRWindowProc {
                 }
             }
 
-            // Shutdown Handlers..
+            // Window Handler
+            winuser::WM_CLOSE => {
+                // Prevent Windows from Closing this window..
+                debug!("WINDOWS TRYING TO CLOSE US!");
+                return Some(1);
+            }
+
+            // // Shutdown Handlers..
             winuser::WM_QUERYENDSESSION => {
                 // Tell Windows we are not yet ready to shut down..
                 debug!("Received WM_QUERYENDSESSION from Windows");
