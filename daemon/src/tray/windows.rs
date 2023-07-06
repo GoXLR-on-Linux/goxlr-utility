@@ -16,9 +16,9 @@ use winapi::um::shellapi::{NIF_ICON, NIF_MESSAGE, NIF_TIP, NIM_ADD, NIM_DELETE, 
 use winapi::um::synchapi::WaitForSingleObject;
 use winapi::um::winnt::HANDLE;
 use winapi::um::winuser::{
-    AppendMenuW, CreateIcon, DestroyWindow, DispatchMessageW, PeekMessageW, TranslateMessage,
-    MENUINFO, MF_POPUP, MF_SEPARATOR, MF_STRING, MIM_APPLYTOSUBMENUS, MIM_STYLE, MNS_NOTIFYBYPOS,
-    PM_REMOVE, WM_USER,
+    AppendMenuW, CreateIcon, DestroyWindow, DispatchMessageW, PeekMessageW,
+    ShutdownBlockReasonCreate, ShutdownBlockReasonDestroy, TranslateMessage, MENUINFO, MF_POPUP,
+    MF_SEPARATOR, MF_STRING, MIM_APPLYTOSUBMENUS, MIM_STYLE, MNS_NOTIFYBYPOS, PM_REMOVE, WM_USER,
 };
 use winapi::um::{shellapi, winuser};
 
@@ -251,7 +251,9 @@ impl WindowProc for GoXLRWindowProc {
             winuser::WM_QUERYENDSESSION => {
                 // Tell Windows we are not yet ready to shut down..
                 debug!("Received WM_QUERYENDSESSION from Windows");
-                return Some(0);
+                unsafe {
+                    ShutdownBlockReasonCreate(hwnd, to_wide("Running Shutdown").as_ptr());
+                }
             }
 
             winuser::WM_ENDSESSION => {
@@ -265,6 +267,9 @@ impl WindowProc for GoXLRWindowProc {
                 // Now wait for the daemon to actually stop..
                 loop {
                     if self.state.shutdown_blocking.load(Ordering::Relaxed) {
+                        unsafe {
+                            ShutdownBlockReasonDestroy(hwnd);
+                        }
                         break;
                     } else {
                         debug!("Waiting..");
