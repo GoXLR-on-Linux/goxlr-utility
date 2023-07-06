@@ -1,25 +1,21 @@
 use anyhow::Result;
-use std::sync::Arc;
 
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::thread::sleep;
+use std::sync::atomic::Ordering;
 use tao::event_loop::{ControlFlow, EventLoop};
 use tao::platform::run_return::EventLoopExtRunReturn;
 
 use crate::events::EventTriggers;
-use crate::{DaemonState, ICON};
-use cfg_if::cfg_if;
+use crate::tray::get_icon_from_global;
+use crate::DaemonState;
 use log::debug;
 use std::time::{Duration, Instant};
 use tao::event::Event;
-use tao::event::TrayEvent::LeftClick;
 use tao::menu::MenuItem::Separator;
 use tao::menu::{ContextMenu, MenuItemAttributes, MenuType};
 use tao::system_tray::SystemTrayBuilder;
 use tao::TrayId;
 use tokio::sync::mpsc::Sender;
 
-use crate::tray::get_icon;
 use goxlr_ipc::PathTypes::{Icons, MicProfiles, Presets, Profiles, Samples};
 use tao::platform::macos::{ActivationPolicy, EventLoopExtMacOS};
 
