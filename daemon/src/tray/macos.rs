@@ -56,41 +56,39 @@ pub fn handle_tray(state: DaemonState, tx: Sender<EventTriggers>) -> Result<()> 
         // We set this to poll, so we can monitor both the menu, and tray icon..
         *control_flow = ControlFlow::WaitUntil(Instant::now() + Duration::from_millis(50));
 
-        match event {
-            Event::MenuEvent {
-                menu_id,
-                origin: MenuType::ContextMenu,
-                ..
-            } => {
-                if menu_id == quit.clone().id() {
-                    let _ = tx.try_send(EventTriggers::Stop);
-                }
-
-                if menu_id == configure.clone().id() {
-                    let _ = tx.try_send(EventTriggers::OpenUi);
-                }
-
-                if menu_id == profiles.clone().id() {
-                    let _ = tx.try_send(EventTriggers::Open(Profiles));
-                }
-
-                if menu_id == mic_profiles.clone().id() {
-                    let _ = tx.try_send(EventTriggers::Open(MicProfiles));
-                }
-
-                if menu_id == presets.clone().id() {
-                    let _ = tx.try_send(EventTriggers::Open(Presets));
-                }
-
-                if menu_id == samples.clone().id() {
-                    let _ = tx.try_send(EventTriggers::Open(Samples));
-                }
-
-                if menu_id == icons.clone().id() {
-                    let _ = tx.try_send(EventTriggers::Open(Icons));
-                }
+        if let Event::MenuEvent {
+            menu_id,
+            origin: MenuType::ContextMenu,
+            ..
+        } = event
+        {
+            if menu_id == quit.clone().id() {
+                let _ = tx.try_send(EventTriggers::Stop);
             }
-            _ => {}
+
+            if menu_id == configure.clone().id() {
+                let _ = tx.try_send(EventTriggers::OpenUi);
+            }
+
+            if menu_id == profiles.clone().id() {
+                let _ = tx.try_send(EventTriggers::Open(Profiles));
+            }
+
+            if menu_id == mic_profiles.clone().id() {
+                let _ = tx.try_send(EventTriggers::Open(MicProfiles));
+            }
+
+            if menu_id == presets.clone().id() {
+                let _ = tx.try_send(EventTriggers::Open(Presets));
+            }
+
+            if menu_id == samples.clone().id() {
+                let _ = tx.try_send(EventTriggers::Open(Samples));
+            }
+
+            if menu_id == icons.clone().id() {
+                let _ = tx.try_send(EventTriggers::Open(Icons));
+            }
         }
 
         if state.shutdown_blocking.load(Ordering::Relaxed) {
