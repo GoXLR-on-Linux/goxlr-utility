@@ -16,10 +16,9 @@ use winapi::um::shellapi::{NIF_ICON, NIF_MESSAGE, NIF_TIP, NIM_ADD, NIM_DELETE, 
 use winapi::um::synchapi::WaitForSingleObject;
 use winapi::um::winnt::HANDLE;
 use winapi::um::winuser::{
-    AppendMenuW, CreateIcon, DestroyWindow, DispatchMessageW, PeekMessageW, ShowWindow,
+    AppendMenuW, CreateIcon, DestroyWindow, DispatchMessageW, PeekMessageW,
     ShutdownBlockReasonCreate, ShutdownBlockReasonDestroy, TranslateMessage, MENUINFO, MF_POPUP,
-    MF_SEPARATOR, MF_STRING, MIM_APPLYTOSUBMENUS, MIM_STYLE, MNS_NOTIFYBYPOS, PM_REMOVE, SW_HIDE,
-    SW_SHOW, WM_USER,
+    MF_SEPARATOR, MF_STRING, MIM_APPLYTOSUBMENUS, MIM_STYLE, MNS_NOTIFYBYPOS, PM_REMOVE, WM_USER,
 };
 use winapi::um::{shellapi, winuser};
 
@@ -81,7 +80,6 @@ fn create_window(state: DaemonState, tx: Sender<EventTriggers>) -> Result<()> {
         }
 
         // Make sure the window is spawned hidden, begin our main loop.
-        ShowWindow(hwnd, SW_SHOW);
         run_loop(hwnd, state);
 
         // If we get here, the loop is done, remove our tray icon.
@@ -101,8 +99,6 @@ fn run_loop(msg_window: HWND, state: DaemonState) {
             let mut msg = mem::MaybeUninit::uninit();
             if PeekMessageW(msg.as_mut_ptr(), msg_window, 0, 0, PM_REMOVE) != FALSE {
                 let msg = msg.assume_init();
-
-                debug!("Received Message: {}", msg.message);
 
                 TranslateMessage(&msg);
                 DispatchMessageW(&msg);
@@ -263,18 +259,30 @@ impl WindowProc for GoXLRWindowProc {
 
             // // Shutdown Handlers..
             winuser::WM_QUERYENDSESSION => {
-                // Tell Windows we are not yet ready to shut down..
                 debug!("Received WM_QUERYENDSESSION from Windows");
+
+                /*
+                 Ref: https://learn.microsoft.com/en-us/windows/win32/shutdown/wm-queryendsession
+
+                 Ok, long comment, according the docs:
+                 "When an application returns TRUE for this message, it receives the WM_ENDSESSION
+                  message, regardless of how the other applications respond to the
+                  WM_QUERYENDSESSION message."
+
+                  6 hours of testing and debugging seems to imply that's not always the case. Some
+                  users have reported that the code in WM_ENDSESSION never actually triggers,
+                  and in some cases Windows kills the process so fast after WM_QUERYENDSESSION
+                  returns TRUE that the debug line above never gets flushed to the log!
+
+                  The only 'real' answer is to this to handle our shutdown code here. If another
+                  app tells Windows it can't shutdown, it shouldn't matter anyway as per-the above
+                  the next act would be triggering WM_ENDSESSION regardless.
+                */
+
                 unsafe {
                     ShutdownBlockReasonCreate(hwnd, to_wide("Running Shutdown").as_ptr());
                 }
-            }
 
-            winuser::WM_ENDSESSION => {
-                debug!("Received WM_ENDSESSION from Windows");
-
-                // Ok, Windows has prompted an session closure here, we need to make sure the
-                // daemon shuts down correctly..
                 debug!("Attempting Shutdown..");
                 let _ = self.global_tx.try_send(EventTriggers::Stop);
 
@@ -290,12 +298,11 @@ impl WindowProc for GoXLRWindowProc {
                         sleep(Duration::from_millis(100));
                     }
                 }
-
-                debug!("Shutdown Complete?");
             }
-            event => {
-                debug!("Received Event Message: {}", event);
+            winuser::WM_ENDSESSION => {
+                debug!("Received WM_ENDSESSION from Windows (IGNORED)");
             }
+            _ => {}
         }
         None
     }
