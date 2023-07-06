@@ -18,7 +18,7 @@ use winapi::um::winnt::HANDLE;
 use winapi::um::winuser::{
     AppendMenuW, CreateIcon, DestroyWindow, DispatchMessageW, PeekMessageW, TranslateMessage,
     MENUINFO, MF_POPUP, MF_SEPARATOR, MF_STRING, MIM_APPLYTOSUBMENUS, MIM_STYLE, MNS_NOTIFYBYPOS,
-    PM_REMOVE,
+    PM_REMOVE, WM_USER,
 };
 use winapi::um::{shellapi, winuser};
 
@@ -26,6 +26,8 @@ use crate::events::EventTriggers::{Activate, Open};
 use crate::events::{DaemonState, EventTriggers};
 use crate::platform::to_wide;
 use crate::tray::get_icon_from_global;
+
+const EVENT_MESSAGE: u32 = WM_USER + 1;
 
 pub fn handle_tray(state: DaemonState, tx: Sender<EventTriggers>) -> Result<()> {
     debug!("Spawning Windows Tray..");
@@ -68,7 +70,7 @@ fn create_window(state: DaemonState, tx: Sender<EventTriggers>) -> Result<()> {
         tray_item.szTip = tooltip("GoXLR Utility");
         tray_item.hIcon = icon;
         tray_item.uFlags = NIF_MESSAGE | NIF_TIP | NIF_ICON;
-        tray_item.uCallbackMessage = winuser::WM_USER + 1;
+        tray_item.uCallbackMessage = EVENT_MESSAGE;
 
         if shellapi::Shell_NotifyIconW(NIM_ADD, &mut tray_item as *mut NOTIFYICONDATAW) == 0 {
             bail!("Unable to Create Tray Icon");
@@ -110,6 +112,7 @@ fn run_loop(msg_window: HWND, state: DaemonState) {
             WaitForSingleObject(msg_window as HANDLE, 20);
         }
     }
+    debug!("Primary Loop Ended");
 }
 
 fn load_icon() -> Result<HICON> {
@@ -186,11 +189,6 @@ impl WindowProc for GoXLRWindowProc {
                 debug!("Window Spawned, creating menu..");
                 self.create_menu();
             }
-            winuser::WM_QUERYENDSESSION => {
-                // This will fall through and default to 'True'
-                debug!("Query End Session Received..");
-            }
-
             // Menu Related Commands..
             winuser::WM_MENUCOMMAND => unsafe {
                 if lparam as HMENU == self.menu {
@@ -217,7 +215,7 @@ impl WindowProc for GoXLRWindowProc {
                 };
             },
 
-            0x401 => {
+            EVENT_MESSAGE => {
                 if lparam as UINT == winuser::WM_LBUTTONUP
                     || lparam as UINT == winuser::WM_RBUTTONUP
                 {
@@ -250,6 +248,12 @@ impl WindowProc for GoXLRWindowProc {
             }
 
             // Shutdown Handlers..
+            winuser::WM_QUERYENDSESSION => {
+                // Tell Windows we are not yet ready to shut down..
+                debug!("Received WM_QUERYENDSESSION from Windows");
+                return Some(0);
+            }
+
             winuser::WM_ENDSESSION => {
                 debug!("Received WM_ENDSESSION from Windows");
 
@@ -270,7 +274,9 @@ impl WindowProc for GoXLRWindowProc {
 
                 debug!("Shutdown Complete?");
             }
-            _event => {}
+            event => {
+                debug!("Received Event Message: {}", event);
+            }
         }
         None
     }

@@ -1,5 +1,5 @@
 use crate::events::EventTriggers;
-use crate::{DaemonState, ICON};
+use crate::DaemonState;
 use anyhow::Result;
 use tokio::sync::mpsc;
 
@@ -34,6 +34,9 @@ pub fn handle_tray(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Resul
         Ok(())
     }
 }
+
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+use crate::ICON;
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub fn get_icon_from_global() -> (Vec<u8>, u32, u32) {
