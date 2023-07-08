@@ -15,9 +15,8 @@ use std::thread;
 use std::thread::sleep;
 use std::time::Duration;
 use tokio::sync::mpsc::{Receiver, Sender};
-use usb_enumeration::{Event, Observer};
 use widestring::U16CStr;
-use windows::Win32::Foundation::{HANDLE, HWND, WIN32_ERROR};
+use windows::Win32::Foundation::{HANDLE, WIN32_ERROR};
 use windows::Win32::System::Threading::{CreateEventA, WaitForSingleObject};
 use winreg::enums::HKEY_CLASSES_ROOT;
 use winreg::RegKey;
@@ -498,6 +497,8 @@ impl TUSBAudio<'_> {
         bail!("Thread Terminated!")
     }
 
+    // This is the original pnp handler
+    #[allow(dead_code)]
     pub fn spawn_pnp_handle(&self) -> Result<()> {
         let mut spawned = self.pnp_thread_running.lock().unwrap();
         if *spawned {
