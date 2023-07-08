@@ -37,6 +37,10 @@ jobs:
       - name: Build Packages
         run: iscc.exe ci/goxlr-utility.iss
         shell: cmd
+        
+      - name: Build NSIS Packages
+        run: makensis.exe /DPRODUCT_VERSION=$version ci/nsis/goxlr-utility.nsi
+        shell: cmd
 
       - name: Build NSIS Packages
         run: makensis.exe /DPRODUCT_VERSION=$version ci/nsis/goxlr-utility.nsi
