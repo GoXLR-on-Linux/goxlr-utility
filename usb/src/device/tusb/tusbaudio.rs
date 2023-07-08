@@ -12,6 +12,8 @@ use tokio::sync::mpsc::{Receiver, Sender};
 use widestring::U16CStr;
 use windows::Win32::Foundation::{HANDLE, WIN32_ERROR};
 use windows::Win32::System::Threading::{CreateEventA, WaitForSingleObject};
+use winreg::enums::HKEY_CLASSES_ROOT;
+use winreg::RegKey;
 
 // Define the Types of the various methods..
 type EnumerateDevices = unsafe extern "C" fn() -> u32;
@@ -35,9 +37,24 @@ type CloseDevice = unsafe extern "C" fn(u32) -> u32;
 lazy_static! {
     // Initialise the Library..
     static ref LIBRARY: Library = unsafe {
-        libloading::Library::new("C:/Program Files/TC-HELICON/GoXLR_Audio_Driver/W10_x64/goxlr_audioapi_x64.dll").expect("Unable to Load GoXLR API Driver")
+       libloading::Library::new(locate_library().as_str()).expect("Unable to Load GoXLR API Driver")
     };
     pub static ref TUSB_INTERFACE: TUSBAudio<'static> = TUSBAudio::new().expect("Unable to Parse GoXLR API Driver");
+}
+
+fn locate_library() -> String {
+    let regpath = "CLSID\\{024D0372-641F-4B7B-8140-F4DFE458C982}\\InprocServer32\\";
+    let classes_root = RegKey::predef(HKEY_CLASSES_ROOT);
+    if let Ok(folders) = classes_root.open_subkey(regpath) {
+        // Name is blank because we need the default key
+        if let Ok(api) = folders.get_value::<String, &str>("") {
+            debug!("Located API From Registry at  {}", api);
+            return api;
+        }
+    }
+    // If we get here, we didn't find it, return a default and hope for the best!
+    debug!("GoXLR API not found in registry, using default path.");
+    String::from("C:/Program Files/TC-HELICON/GoXLR_Audio_Driver/W10_x64/goxlr_audioapi_x64.dll")
 }
 
 #[allow(dead_code)]
