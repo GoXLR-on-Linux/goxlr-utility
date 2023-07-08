@@ -39,7 +39,7 @@ jobs:
         shell: cmd
         
       - name: Build NSIS Packages
-        run: makensis.exe /DPRODUCT_VERSION=$version ci/nsis/goxlr-utility.nsi
+        run: makensis.exe /DPRODUCT_VERSION=${{ needs.get_version.outputs.version }} ci/nsis/goxlr-utility.nsi
         shell: cmd
 
       - name: Build NSIS Packages
