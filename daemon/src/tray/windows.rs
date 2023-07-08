@@ -256,8 +256,9 @@ impl WindowProc for GoXLRWindowProc {
             // Window Handler
             winuser::WM_CLOSE => {
                 // If something tries to close this hidden window, it's a good bet that it wants
-                // us to shutdown.
+                // us to shutdown, start the shutdown, but don't close the Window.
                 let _ = self.global_tx.try_send(EventTriggers::Stop);
+                return Some(1);
             }
 
             // // Shutdown Handlers..
