@@ -220,6 +220,9 @@ async fn main() -> Result<()> {
 
     // Configure Showing the Tray Icon
     let show_tray = Arc::new(AtomicBool::new(settings.get_show_tray_icon().await));
+    if let Some(override_tray) = args.disable_tray {
+        show_tray.store(override_tray, Ordering::Relaxed);
+    }
 
     // Configure, and Start the File Manager Service..
     let file_manager = FileManager::new(&settings).await;
@@ -314,10 +317,8 @@ async fn main() -> Result<()> {
         let _ = global_tx.send(EventTriggers::Activate).await;
     }
 
-    if !args.disable_tray && state.show_tray.load(Ordering::Relaxed) {
-        // Tray management has to occur on the main thread, so we'll start it now.
-        tray::handle_tray(state.clone(), global_tx.clone())?;
-    }
+    // Tray management has to occur on the main thread, so we'll start it now.
+    tray::handle_tray(state.clone(), global_tx.clone())?;
 
     // If the tray handler dies for any reason, we should still make sure we've been asked to
     // shut down.

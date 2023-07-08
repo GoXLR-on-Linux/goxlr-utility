@@ -20,6 +20,10 @@ use goxlr_ipc::PathTypes::{Icons, MicProfiles, Presets, Profiles, Samples};
 use tao::platform::macos::{ActivationPolicy, EventLoopExtMacOS};
 
 pub fn handle_tray(state: DaemonState, tx: Sender<EventTriggers>) -> Result<()> {
+    if !state.show_tray.load(Ordering::Relaxed) {
+        return Ok(());
+    }
+
     let mut event_loop = EventLoop::new();
     event_loop.set_activation_policy(ActivationPolicy::Accessory);
     event_loop.set_activate_ignoring_other_apps(true);

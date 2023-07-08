@@ -75,15 +75,18 @@ fn create_window(state: DaemonState, tx: Sender<EventTriggers>) -> Result<()> {
         tray_item.uFlags = NIF_MESSAGE | NIF_TIP | NIF_ICON;
         tray_item.uCallbackMessage = EVENT_MESSAGE;
 
-        if shellapi::Shell_NotifyIconW(NIM_ADD, &mut tray_item as *mut NOTIFYICONDATAW) == 0 {
+        if state.show_tray.load(Ordering::Relaxed)
+            && shellapi::Shell_NotifyIconW(NIM_ADD, &mut tray_item as *mut NOTIFYICONDATAW) == 0
+        {
             bail!("Unable to Create Tray Icon");
         }
-
         // Make sure the window is spawned hidden, begin our main loop.
-        run_loop(hwnd, state);
+        run_loop(hwnd, state.clone());
 
         // If we get here, the loop is done, remove our tray icon.
-        if shellapi::Shell_NotifyIconW(NIM_DELETE, &mut tray_item as *mut NOTIFYICONDATAW) == 0 {
+        if state.show_tray.load(Ordering::Relaxed)
+            && shellapi::Shell_NotifyIconW(NIM_DELETE, &mut tray_item as *mut NOTIFYICONDATAW) == 0
+        {
             bail!("Unable to remove Tray Icon!");
         }
     }

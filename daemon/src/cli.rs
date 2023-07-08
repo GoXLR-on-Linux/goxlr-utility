@@ -31,7 +31,7 @@ pub struct Cli {
 
     /// Disable the Tray Icon
     #[arg(long)]
-    pub disable_tray: bool,
+    pub disable_tray: Option<bool>,
 
     /// Force Run the Daemon as Root
     #[arg(long)]

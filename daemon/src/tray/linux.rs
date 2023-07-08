@@ -13,6 +13,10 @@ use std::{fs, thread};
 use tokio::sync::mpsc;
 
 pub fn handle_tray(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Result<()> {
+    if !state.show_tray.load(Ordering::Relaxed) {
+        return Ok(());
+    }
+
     // Before we spawn the tray, we're going to extract our icon to a temporary location
     // so that it can be immediately used. Depending on pixmaps seems to cause issues under
     // gnome, where occasionally the icon wont correctly spawn.
