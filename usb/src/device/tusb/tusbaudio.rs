@@ -9,6 +9,7 @@ use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::ffi::CStr;
 use std::hash::Hash;
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -54,8 +55,11 @@ fn locate_library() -> String {
     if let Ok(folders) = classes_root.open_subkey(regpath) {
         // Name is blank because we need the default key
         if let Ok(api) = folders.get_value::<String, &str>("") {
-            debug!("Located API From Registry at  {}", api);
-            return api;
+            // Check the file exists..
+            if PathBuf::from(&api).exists() {
+                debug!("Located API From Registry at  {}", api);
+                return api;
+            }
         }
     }
     // If we get here, we didn't find it, return a default and hope for the best!
