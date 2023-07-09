@@ -102,7 +102,7 @@ async fn main() -> Result<()> {
     let file_rotator = FileRotate::new(
         log_file,
         AppendCount::new(5),
-        ContentLimit::Bytes(1024 * 1024 * 5),
+        ContentLimit::Bytes(1024 * 1024 * 2),
         Compression::OnRotate(1),
         #[cfg(unix)]
         None,
