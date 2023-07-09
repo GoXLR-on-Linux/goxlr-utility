@@ -9,6 +9,7 @@ use quick_xml::events::{BytesStart, Event};
 use quick_xml::Writer;
 
 use crate::components::colours::ColourMap;
+use crate::components::mixer::FullChannelList::LineOut;
 use crate::profile::Attribute;
 
 #[derive(thiserror::Error, Debug)]
@@ -42,9 +43,14 @@ impl Default for Mixers {
 
 impl Mixers {
     pub fn new() -> Self {
+        // So here's the odd thing, some profiles don't have lineOutLevel set by default,
+        // so we assume 0, the official app assumes 255. We'll fix this here.
+        let mut volume_table = EnumMap::default();
+        volume_table[LineOut] = 255;
+
         Self {
             mixer_table: EnumMap::default(),
-            volume_table: EnumMap::default(),
+            volume_table,
             colour_map: ColourMap::new("mixerTree".to_string()),
         }
     }
