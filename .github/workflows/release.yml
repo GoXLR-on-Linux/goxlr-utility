@@ -23,7 +23,7 @@ jobs:
         run: 'echo "::set-output name=version::$(cargo pkgid -p goxlr-daemon | cut -d@ -f2)"'
 
   build_windows:
-    needs: verify
+    needs: [get_version, verify]
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
@@ -38,8 +38,8 @@ jobs:
           command: build
           args: --release --all-features
 
-      - name: Build Packages
-        run: iscc.exe ci/goxlr-utility.iss
+      - name: Build NSIS Packages
+        run: makensis.exe /DPRODUCT_VERSION=${{ needs.get_version.outputs.version }} ci/nsis/goxlr-utility.nsi
         shell: cmd
 
       - name: Upload Installer
