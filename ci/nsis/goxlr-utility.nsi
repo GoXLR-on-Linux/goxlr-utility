@@ -13,13 +13,14 @@ Unicode True
 !include "MUI2.nsh"
 !include "InstallOptions.nsh"
 !include "WinMessages.nsh"
+!include "x64.nsh"
 
 !define MUI_ABORTWARNING
 !define MUI_ICON "../../daemon/resources/goxlr-utility.ico"
 !define MUI_UNICON "../../daemon/resources/goxlr-utility.ico"
 
 ; Perform the Initial Stuff..
-!define MUI_CUSTOMFUNCTION_GUIINIT CheckDrivers
+!define MUI_CUSTOMFUNCTION_GUIINIT DoInit
 
 ; Ok, time to start with pages and stuff, firstly, welcome!
 !insertmacro MUI_PAGE_WELCOME
@@ -69,7 +70,14 @@ ShowUnInstDetails show
 
 !insertmacro MUI_LANGUAGE "English"
 
-Function CheckDrivers
+Function DoInit
+${If} ${RunningX64}
+${Else}
+    MessageBox MB_OK|MB_ICONSTOP  "The GoXLR Utility is only available on 64bit Systems"
+    Abort
+${EndIf}
+
+
 Call GetRegKeys
 
 ; Firstly, see if we can find the path in the registry..
