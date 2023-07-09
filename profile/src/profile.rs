@@ -1,7 +1,6 @@
 use std::fs::File;
 use std::io::{BufReader, Read, Write};
 use std::path::Path;
-use std::process::exit;
 use std::str::FromStr;
 
 use anyhow::{anyhow, bail, Result};
@@ -389,9 +388,8 @@ impl ProfileSettings {
                         root.parse_root(&attributes)?;
 
                         // This code was made for XML version 2, v1 not currently supported.
-                        if root.get_version() > 2 {
-                            println!("XML Version Not Supported: {}", root.get_version());
-                            exit(-1);
+                        if root.get_version() > 3 {
+                            bail!("Unsupported Profile Version {}", root.get_version());
                         }
                         continue;
                     }

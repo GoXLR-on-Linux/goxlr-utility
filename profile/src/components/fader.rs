@@ -14,16 +14,16 @@ use crate::profile::Attribute;
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
 pub enum ParseError {
-    #[error("Expected int: {0}")]
+    #[error("[Fader] Expected int: {0}")]
     ExpectedInt(#[from] std::num::ParseIntError),
 
-    #[error("Expected float: {0}")]
+    #[error("[Fader] Expected float: {0}")]
     ExpectedFloat(#[from] std::num::ParseFloatError),
 
-    #[error("Expected enum: {0}")]
+    #[error("[Fader] Expected enum: {0}")]
     ExpectedEnum(#[from] strum::ParseError),
 
-    #[error("Invalid colours: {0}")]
+    #[error("[Fader] Invalid colours: {0}")]
     InvalidColours(#[from] crate::components::colours::ParseError),
 }
 
@@ -42,7 +42,7 @@ impl Fader {
         }
     }
 
-    pub fn parse_fader(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
+    pub fn parse_fader(&mut self, attributes: &Vec<Attribute>) -> Result<(), ParseError> {
         for attr in attributes {
             if attr.name.ends_with("listIndex") {
                 let mut found = false;

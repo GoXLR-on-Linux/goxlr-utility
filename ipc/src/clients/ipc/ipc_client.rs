@@ -37,7 +37,8 @@ impl Client for IPCClient {
 
         match result {
             DaemonResponse::Status(status) => {
-                self.status = status;
+                self.status = status.clone();
+                self.http_settings = status.config.http_settings;
                 Ok(())
             }
             DaemonResponse::Ok => Ok(()),

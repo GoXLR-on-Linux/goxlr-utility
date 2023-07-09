@@ -34,10 +34,10 @@ jobs:
           command: build
           args: --release --all-features
 
-      - name: Build Packages
-        run: iscc.exe ci/goxlr-utility.iss
-        shell: cmd
-        
+#      - name: Build Packages
+#        run: iscc.exe ci/goxlr-utility.iss
+#        shell: cmd
+
       - name: Build NSIS Packages
         run: makensis.exe /DPRODUCT_VERSION=${{ needs.get_version.outputs.version }} ci/nsis/goxlr-utility.nsi
         shell: cmd

@@ -7,6 +7,7 @@ use tokio::sync::mpsc;
 cfg_if! {
     if #[cfg(windows)] {
         mod windows;
+
         pub fn perform_preflight() -> Result<()> {
             windows::perform_platform_preflight()
         }
@@ -24,6 +25,14 @@ cfg_if! {
                 return windows::create_startup_link();
             }
             windows::remove_startup_link()
+        }
+
+        use std::ffi::OsStr;
+        use std::iter::once;
+        use std::os::windows::ffi::OsStrExt;
+        pub fn to_wide(msg: &str) -> Vec<u16> {
+           let wide: Vec<u16> = OsStr::new(msg).encode_wide().chain(once(0)).collect();
+            wide
         }
     } else if #[cfg(target_os = "linux")] {
         mod linux;

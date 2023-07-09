@@ -1,18 +1,24 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use std::collections::HashMap;
 use std::str::FromStr;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
 pub enum ParseError {
-    #[error("Expected int: {0}")]
+    #[error("[COLOURS] Expected int: {0}")]
     ExpectedInt(#[from] std::num::ParseIntError),
 
-    #[error("Expected float: {0}")]
+    #[error("[COLOURS] Expected float: {0}")]
     ExpectedFloat(#[from] std::num::ParseFloatError),
 
-    #[error("Expected enum: {0}")]
+    #[error("[COLOURS] Expected enum: {0}")]
     ExpectedEnum(#[from] strum::ParseError),
+
+    #[error("[COLOURS] Expected Length: 8 (AARRGGBB), Got: {0}")]
+    InvalidARGBLength(String),
+
+    #[error("[COLOURS] Expected Length: 8 (RRGGBB), Got: {0}")]
+    InvalidRGBLength(String),
 }
 use crate::components::colours::ColourDisplay::{Gradient, GradientMeter, Meter};
 use crate::profile::Attribute;
@@ -67,11 +73,15 @@ impl ColourMap {
         }
     }
 
-    pub fn read_colours(&mut self, attribute: &Attribute) -> Result<bool> {
+    pub fn read_colours(&mut self, attribute: &Attribute) -> Result<bool, ParseError> {
         let mut attr_key = format!("{}offStyle", &self.prefix);
-
         if attribute.name == attr_key {
-            self.set_off_style(ColourOffStyle::from_str(&attribute.value)?)?;
+            if attribute.value.is_empty() {
+                self.off_style = ColourOffStyle::Dimmed;
+                return Ok(true);
+            }
+
+            self.off_style = ColourOffStyle::from_str(&attribute.value)?;
             return Ok(true);
         }
 
@@ -89,13 +99,13 @@ impl ColourMap {
 
         attr_key = format!("{}state", &self.prefix);
         if attribute.name == attr_key {
-            self.set_state(Some(ColourState::from_str(&attribute.value)?))?;
+            self.state = Some(ColourState::from_str(&attribute.value)?);
             return Ok(true);
         }
 
         attr_key = format!("{}blink", &self.prefix);
         if attribute.name == attr_key {
-            self.set_blink(Some(ColourState::from_str(&attribute.value)?))?;
+            self.blink = Some(ColourState::from_str(&attribute.value)?);
             return Ok(true);
         }
 
@@ -129,7 +139,7 @@ impl ColourMap {
 
         attr_key = format!("{}Display", &self.prefix);
         if attribute.name == attr_key {
-            self.set_fader_display(ColourDisplay::from_str(&attribute.value)?)?;
+            self.colour_display = Some(ColourDisplay::from_str(&attribute.value)?);
             return Ok(true);
         }
 
@@ -370,9 +380,13 @@ pub struct Colour {
 }
 
 impl Colour {
-    pub fn new(argb: &str) -> Result<Self> {
+    pub fn new(argb: &str) -> Result<Self, ParseError> {
+        if argb == "0" || argb.is_empty() {
+            return Ok(DEFAULT_COLOUR);
+        };
+
         if argb.len() != 8 {
-            return Err(anyhow!("Expected Length: 8 (AARRGGBB), Got: {}", argb));
+            return Err(ParseError::InvalidARGBLength(argb.to_string()));
         }
         Ok(Self {
             alpha: u8::from_str_radix(&argb[0..2], 16)?,
@@ -382,9 +396,9 @@ impl Colour {
         })
     }
 
-    pub fn fromrgb(rgb: &str) -> Result<Self> {
+    pub fn fromrgb(rgb: &str) -> Result<Self, ParseError> {
         if rgb.len() != 6 {
-            return Err(anyhow!("Expected Length: 6 (RRGGBB), Got: {}", rgb));
+            return Err(ParseError::InvalidRGBLength(rgb.to_string()));
         }
 
         Ok(Self {

@@ -1,17 +1,26 @@
 use crate::device::base::GoXLRDevice;
+use crate::{PID_GOXLR_FULL, PID_GOXLR_MINI, VID_GOXLR};
 use anyhow::{anyhow, bail, Result};
 use byteorder::{ByteOrder, LittleEndian};
 use lazy_static::lazy_static;
 use libloading::{Library, Symbol};
 use log::{debug, error, info, warn};
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
 use std::ffi::CStr;
+use std::hash::Hash;
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
+use std::thread::sleep;
+use std::time::Duration;
 use tokio::sync::mpsc::{Receiver, Sender};
 use widestring::U16CStr;
 use windows::Win32::Foundation::{HANDLE, WIN32_ERROR};
 use windows::Win32::System::Threading::{CreateEventA, WaitForSingleObject};
+use winreg::enums::HKEY_CLASSES_ROOT;
+use winreg::RegKey;
 
 // Define the Types of the various methods..
 type EnumerateDevices = unsafe extern "C" fn() -> u32;
@@ -35,9 +44,27 @@ type CloseDevice = unsafe extern "C" fn(u32) -> u32;
 lazy_static! {
     // Initialise the Library..
     static ref LIBRARY: Library = unsafe {
-        libloading::Library::new("C:/Program Files/TC-HELICON/GoXLR_Audio_Driver/W10_x64/goxlr_audioapi_x64.dll").expect("Unable to Load GoXLR API Driver")
+       libloading::Library::new(locate_library().as_str()).expect("Unable to Load GoXLR API Driver")
     };
     pub static ref TUSB_INTERFACE: TUSBAudio<'static> = TUSBAudio::new().expect("Unable to Parse GoXLR API Driver");
+}
+
+fn locate_library() -> String {
+    let regpath = "CLSID\\{024D0372-641F-4B7B-8140-F4DFE458C982}\\InprocServer32\\";
+    let classes_root = RegKey::predef(HKEY_CLASSES_ROOT);
+    if let Ok(folders) = classes_root.open_subkey(regpath) {
+        // Name is blank because we need the default key
+        if let Ok(api) = folders.get_value::<String, &str>("") {
+            // Check the file exists..
+            if PathBuf::from(&api).exists() {
+                debug!("Located API From Registry at  {}", api);
+                return api;
+            }
+        }
+    }
+    // If we get here, we didn't find it, return a default and hope for the best!
+    debug!("GoXLR API not found in registry, using default path.");
+    String::from("C:/Program Files/TC-HELICON/GoXLR_Audio_Driver/W10_x64/goxlr_audioapi_x64.dll")
 }
 
 #[allow(dead_code)]
@@ -474,6 +501,8 @@ impl TUSBAudio<'_> {
         bail!("Thread Terminated!")
     }
 
+    // This is the original pnp handler
+    #[allow(dead_code)]
     pub fn spawn_pnp_handle(&self) -> Result<()> {
         let mut spawned = self.pnp_thread_running.lock().unwrap();
         if *spawned {
@@ -505,6 +534,62 @@ impl TUSBAudio<'_> {
         *spawned = true;
         Ok(())
     }
+
+    pub fn spawn_pnp_handle_rusb(&self) -> Result<()> {
+        let mut spawned = self.pnp_thread_running.lock().unwrap();
+        if *spawned {
+            bail!("Handler Thread already running..");
+        }
+
+        debug!("Spawning RUSB PnP Thread");
+        thread::spawn(|| -> Result<()> {
+            let mut devices = vec![];
+
+            loop {
+                let mut found_devices = vec![];
+
+                if let Ok(devices) = rusb::devices() {
+                    for device in devices.iter() {
+                        if let Ok(descriptor) = device.device_descriptor() {
+                            let bus_number = device.bus_number();
+                            let address = device.address();
+
+                            if descriptor.vendor_id() == VID_GOXLR
+                                && (descriptor.product_id() == PID_GOXLR_FULL
+                                    || descriptor.product_id() == PID_GOXLR_MINI)
+                            {
+                                found_devices.push(USBDevice {
+                                    bus_number,
+                                    address,
+                                });
+                            }
+                        }
+                    }
+                }
+
+                // Make sure our two vecs are the same..
+                if !iters_equal_anyorder(
+                    devices.clone().into_iter(),
+                    found_devices.clone().into_iter(),
+                ) {
+                    debug!("Device Change Detected");
+                    let _ = TUSB_INTERFACE.detect_devices();
+                    devices.clear();
+                    devices.append(&mut found_devices);
+                }
+                sleep(Duration::from_secs(1));
+            }
+        });
+
+        *spawned = true;
+        Ok(())
+    }
+}
+
+#[derive(Debug, Copy, Clone, Hash, Eq, PartialEq)]
+struct USBDevice {
+    pub(crate) bus_number: u8,
+    pub(crate) address: u8,
 }
 
 pub struct DeviceHandle {
@@ -556,6 +641,7 @@ struct ApiVersion {
 }
 
 #[repr(C)]
+#[derive(Debug)]
 pub struct Properties {
     vendor_id: i32,
     product_id: i32,
@@ -603,7 +689,7 @@ impl Default for Properties {
 }
 
 pub fn get_devices() -> Vec<GoXLRDevice> {
-    let _ = TUSB_INTERFACE.spawn_pnp_handle();
+    let _ = TUSB_INTERFACE.spawn_pnp_handle_rusb();
     let mut list = Vec::new();
 
     // Ok, this is slightly different now..
@@ -626,4 +712,25 @@ pub struct EventChannelSender {
     pub(crate) ready_notifier: tokio::sync::oneshot::Sender<bool>,
     pub(crate) data_read: Sender<bool>,
     pub(crate) input_changed: Sender<String>,
+}
+
+fn iters_equal_anyorder<T: Eq + Hash>(
+    i1: impl Iterator<Item = T>,
+    i2: impl Iterator<Item = T>,
+) -> bool {
+    fn get_lookup<T: Eq + Hash>(iter: impl Iterator<Item = T>) -> HashMap<T, usize> {
+        let mut lookup = HashMap::<T, usize>::new();
+        for value in iter {
+            match lookup.entry(value) {
+                Entry::Occupied(entry) => {
+                    *entry.into_mut() += 1;
+                }
+                Entry::Vacant(entry) => {
+                    entry.insert(0);
+                }
+            }
+        }
+        lookup
+    }
+    get_lookup(i1) == get_lookup(i2)
 }

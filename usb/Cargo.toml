@@ -1,6 +1,6 @@
 [package]
 name = "goxlr-usb"
-version = "0.12.2"
+version = "0.12.3"
 edition = "2021"
 authors = ["Nathan Adams <dinnerbone@dinnerbone.com>", "Craig McLure <craig@mclure.net>", "Lars Mühlbauer <lm41@dismail.de>"]
 description = "A direct interface to the TC-Helicon GoXLR & GoXLR Mini via usb."
@@ -28,10 +28,11 @@ tokio = { version = "1.27.0", features = ["sync", "rt", "time"] }
 
 # Dependencies specifically for building under Windows..
 [target.'cfg(windows)'.dependencies]
-libloading = "0.7.4"
+winreg = "0.50.0"
+libloading = "0.8.0"
 widestring = "1.0.2"
 lazy_static = "1.4.0"
-windows = { version = "0.43.0", features = [
+windows = { version = "0.48.0", features = [
     "Win32_Foundation",
     "Win32_Security",
     "Win32_System_Threading",

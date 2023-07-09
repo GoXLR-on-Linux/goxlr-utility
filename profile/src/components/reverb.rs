@@ -17,16 +17,16 @@ use crate::Preset;
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
 pub enum ParseError {
-    #[error("Expected int: {0}")]
+    #[error("[Reverb] Expected int: {0}")]
     ExpectedInt(#[from] std::num::ParseIntError),
 
-    #[error("Expected float: {0}")]
+    #[error("[Reverb] Expected float: {0}")]
     ExpectedFloat(#[from] std::num::ParseFloatError),
 
-    #[error("Expected enum: {0}")]
+    #[error("[Reverb] Expected enum: {0}")]
     ExpectedEnum(#[from] strum::ParseError),
 
-    #[error("Invalid colours: {0}")]
+    #[error("[Reverb] Invalid colours: {0}")]
     InvalidColours(#[from] crate::components::colours::ParseError),
 }
 
@@ -52,7 +52,7 @@ impl ReverbEncoderBase {
         }
     }
 
-    pub fn parse_reverb_root(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
+    pub fn parse_reverb_root(&mut self, attributes: &Vec<Attribute>) -> Result<(), ParseError> {
         for attr in attributes {
             if attr.name == "active_set" {
                 self.active_set = attr.value.parse()?;
@@ -71,7 +71,7 @@ impl ReverbEncoderBase {
         &mut self,
         preset_enum: Preset,
         attributes: &Vec<Attribute>,
-    ) -> Result<()> {
+    ) -> Result<(), ParseError> {
         let mut preset = ReverbEncoder::new();
         for attr in attributes {
             if attr.name == "REVERB_STYLE" {
@@ -85,7 +85,15 @@ impl ReverbEncoderBase {
             }
 
             if attr.name == "REVERB_KNOB_POSITION" {
-                preset.set_knob_position(attr.value.parse::<c_float>()? as i8)?;
+                let mut position = attr.value.parse::<c_float>()? as i8;
+                if position < 0 {
+                    position = 0
+                };
+                if position > 24 {
+                    position = 24
+                };
+
+                preset.knob_position = position;
                 continue;
             }
 

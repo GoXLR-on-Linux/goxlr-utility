@@ -17,16 +17,16 @@ use crate::Preset;
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
 pub enum ParseError {
-    #[error("Expected int: {0}")]
+    #[error("[ROBOT] Expected int: {0}")]
     ExpectedInt(#[from] std::num::ParseIntError),
 
-    #[error("Expected float: {0}")]
+    #[error("[ROBOT] Expected float: {0}")]
     ExpectedFloat(#[from] std::num::ParseFloatError),
 
-    #[error("Expected enum: {0}")]
+    #[error("[ROBOT] Expected enum: {0}")]
     ExpectedEnum(#[from] strum::ParseError),
 
-    #[error("Invalid colours: {0}")]
+    #[error("[ROBOT] Invalid colours: {0}")]
     InvalidColours(#[from] crate::components::colours::ParseError),
 }
 
@@ -64,7 +64,7 @@ impl RobotEffectBase {
         &mut self,
         preset_enum: Preset,
         attributes: &Vec<Attribute>,
-    ) -> Result<()> {
+    ) -> Result<(), ParseError> {
         let mut preset = RobotEffect::new();
         for attr in attributes {
             if attr.name == "robotEffectstate" {

@@ -35,7 +35,7 @@ impl SettingsHandle {
             presets_directory: Some(data_dir.join("presets")),
             icons_directory: Some(data_dir.join("icons")),
             logs_directory: Some(data_dir.join("logs")),
-            log_level: Some(LogLevel::Info),
+            log_level: Some(LogLevel::Debug),
             activate: None,
             devices: Default::default(),
         });
