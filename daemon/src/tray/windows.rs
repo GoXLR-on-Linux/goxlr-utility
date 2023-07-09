@@ -273,14 +273,19 @@ impl WindowProc for GoXLRWindowProc {
                   message, regardless of how the other applications respond to the
                   WM_QUERYENDSESSION message."
 
-                  6 hours of testing and debugging seems to imply that's not always the case. Some
-                  users have reported that the code in WM_ENDSESSION never actually triggers,
-                  and in some cases Windows kills the process so fast after WM_QUERYENDSESSION
-                  returns TRUE that the debug line above never gets flushed to the log!
+                  This is not necessarily true, the problem is that if a Window on the application
+                  gets destroyed (via DestroyWindow()) Windows will immediately kill the app,
+                  regardless of how many other windows exist.
 
-                  The only 'real' answer is to this to handle our shutdown code here. If another
-                  app tells Windows it can't shutdown, it shouldn't matter anyway as per-the above
-                  the next act would be triggering WM_ENDSESSION regardless.
+                  This code was moved to here simply because a library needed to communicate with
+                  the GoXLR was spawning a hidden window to handle PnP events with and it's own
+                  mainloop. This window was killing the util before the shutdown was able to
+                  process.
+
+                  The code was moved here because we could generally catch it 80% of the time, but
+                  now the hidden PnP window has now been dealt we could *PROBABLY* move this back
+                  into ENDSESSION, but seeing as it'll work just as fine here, I'm not gonna move it
+                  lest getting dragged back into the debugging :p
                 */
 
                 unsafe {
