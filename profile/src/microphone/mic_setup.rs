@@ -9,8 +9,11 @@ use std::str::FromStr;
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
 pub enum ParseError {
-    #[error("Expected int: {0}")]
+    #[error("[Mic] Expected int: {0}")]
     ExpectedInt(#[from] std::num::ParseIntError),
+
+    #[error("[Mic] Parsing Error {0}")]
+    Error(#[from] anyhow::Error),
 }
 
 #[derive(Debug)]
@@ -39,7 +42,7 @@ impl MicSetup {
         }
     }
 
-    pub fn parse_config(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
+    pub fn parse_config(&mut self, attributes: &Vec<Attribute>) -> Result<(), ParseError> {
         for attr in attributes {
             if attr.name == "MIC_TYPE" {
                 self.set_mic_type(u8::from_str(attr.value.as_str())?)?;

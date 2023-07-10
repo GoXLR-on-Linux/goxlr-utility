@@ -7,11 +7,14 @@ use anyhow::{anyhow, Result};
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
 pub enum ParseError {
-    #[error("Expected int: {0}")]
+    #[error("[Compressor] Expected int: {0}")]
     ExpectedInt(#[from] std::num::ParseIntError),
 
-    #[error("Expected float: {0}")]
+    #[error("[Compressor] Expected float: {0}")]
     ExpectedFloat(#[from] std::num::ParseFloatError),
+
+    #[error("[Compressor] Parsing Error {0}")]
+    Error(#[from] anyhow::Error),
 }
 
 #[derive(Debug)]
@@ -40,7 +43,7 @@ impl Compressor {
         }
     }
 
-    pub fn parse_compressor(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
+    pub fn parse_compressor(&mut self, attributes: &Vec<Attribute>) -> Result<(), ParseError> {
         for attr in attributes {
             if attr.name == "MIC_COMP_THRESHOLD" {
                 self.set_threshold(attr.value.parse::<c_float>()? as i8)?;
