@@ -1,6 +1,7 @@
 use crate::events::EventTriggers;
 use crate::DaemonState;
 use anyhow::Result;
+use goxlr_usb::device::base::PnPMessage;
 use tokio::sync::mpsc;
 
 #[cfg(target_os = "linux")]
@@ -12,7 +13,11 @@ mod macos;
 #[cfg(target_os = "windows")]
 mod windows;
 
-pub fn handle_tray(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Result<()> {
+pub fn handle_tray(
+    state: DaemonState,
+    tx: mpsc::Sender<EventTriggers>,
+    pnp: mpsc::Sender<PnPMessage>,
+) -> Result<()> {
     #[cfg(target_os = "linux")]
     {
         linux::handle_tray(state, tx)
@@ -24,7 +29,7 @@ pub fn handle_tray(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Resul
     }
     #[cfg(target_os = "windows")]
     {
-        windows::handle_tray(state, tx)
+        windows::handle_tray(state, tx, pnp)
     }
 
     // For all other platforms, don't attempt to spawn a Tray Icon

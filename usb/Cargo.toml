@@ -24,7 +24,7 @@ cfg-if = "1.0.0"
 rand = "0.8.5"
 
 # New, some fun async stuff..
-tokio = { version = "1.27.0", features = ["sync", "rt", "time"] }
+tokio = { version = "1.27.0", features = ["sync", "rt", "time", "macros"] }
 
 # Dependencies specifically for building under Windows..
 [target.'cfg(windows)'.dependencies]

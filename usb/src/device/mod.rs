@@ -1,8 +1,8 @@
-use crate::device::base::AttachGoXLR;
 use crate::device::base::FullGoXLRDevice;
 use crate::device::base::GoXLRDevice;
+use crate::device::base::{AttachGoXLR, PnPMessage};
 use anyhow::Result;
-use tokio::sync::mpsc::Sender;
+use tokio::sync::mpsc::{Receiver, Sender};
 
 pub mod base;
 
@@ -11,6 +11,10 @@ cfg_if::cfg_if! {
         // Under Windows, we need to utilise the official GoXLR Driver to communicate..
         mod tusb;
         use crate::device::tusb::device;
+
+        pub async fn start_pnp_handle(receiver: Receiver<PnPMessage>) {
+            device::start_pnp_handler(receiver).await
+        }
 
         pub fn find_devices() -> Vec<GoXLRDevice> {
             device::find_devices()
