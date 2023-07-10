@@ -10,7 +10,6 @@ use std::os::windows::ffi::OsStrExt;
 use std::path::PathBuf;
 use std::ptr::null_mut;
 use std::{env, fs};
-use sysinfo::{ProcessRefreshKind, RefreshKind, System, SystemExt};
 use tokio::signal::windows::{ctrl_break, ctrl_close, ctrl_logoff, ctrl_shutdown};
 use tokio::sync::mpsc;
 use tokio::time::Duration;
@@ -29,9 +28,7 @@ lazy_static! {
 }
 
 pub fn perform_platform_preflight() -> Result<()> {
-    let system = System::new_all();
-    let mut count = system.processes_by_exact_name(GOXLR_APP_NAME).count();
-    count += system.processes_by_exact_name(GOXLR_BETA_APP_NAME).count();
+    let count = get_official_app_count();
 
     if count > 0 {
         let title = "GoXLR Utility";
@@ -62,6 +59,17 @@ pub fn to_wide(msg: &str) -> Vec<u16> {
     wide
 }
 
+fn get_official_app_count() -> usize {
+    return unsafe {
+        let tasks = tasklist::Tasklist::new();
+        tasks
+            .filter(|task| {
+                task.get_pname() == GOXLR_APP_NAME || task.get_pname() == GOXLR_BETA_APP_NAME
+            })
+            .count()
+    };
+}
+
 pub async fn spawn_platform_runtime(
     state: DaemonState,
     tx: mpsc::Sender<EventTriggers>,
@@ -69,9 +77,6 @@ pub async fn spawn_platform_runtime(
     // Grab an async shutdown event..
     let mut shutdown = state.shutdown.clone();
     let mut duration = time::interval(Duration::from_millis(1000));
-
-    let refresh_kind = RefreshKind::new().with_processes(ProcessRefreshKind::new().with_user());
-    let mut system = System::new_with_specifics(refresh_kind);
 
     let mut ctrl_break = ctrl_break()?;
     let mut ctrl_close = ctrl_close()?;
@@ -81,9 +86,7 @@ pub async fn spawn_platform_runtime(
     loop {
         select! {
             _ = duration.tick() => {
-                system.refresh_processes();
-                let mut count = system.processes_by_exact_name(GOXLR_APP_NAME).count();
-                count += system.processes_by_exact_name(GOXLR_BETA_APP_NAME).count();
+                let count = get_official_app_count();
                 if count > 0 {
                     throw_notification();
                     // We're calling 'DevicesStopped' here to force an end to the util, we can't use
