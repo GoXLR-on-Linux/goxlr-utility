@@ -60,14 +60,14 @@ pub fn to_wide(msg: &str) -> Vec<u16> {
 }
 
 fn get_official_app_count() -> usize {
-    return unsafe {
+    unsafe {
         let tasks = tasklist::Tasklist::new();
         tasks
             .filter(|task| {
                 task.get_pname() == GOXLR_APP_NAME || task.get_pname() == GOXLR_BETA_APP_NAME
             })
             .count()
-    };
+    }
 }
 
 pub async fn spawn_platform_runtime(
