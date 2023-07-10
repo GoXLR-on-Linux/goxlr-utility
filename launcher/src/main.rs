@@ -9,7 +9,6 @@ use goxlr_ipc::clients::ipc::ipc_socket::Socket;
 use goxlr_ipc::{DaemonCommand, DaemonRequest, DaemonResponse};
 use interprocess::local_socket::tokio::LocalSocketStream;
 use interprocess::local_socket::NameTypeSupport;
-use sysinfo::{ProcessRefreshKind, RefreshKind, System, SystemExt};
 use which::which;
 
 static SOCKET_PATH: &str = "/tmp/goxlr.socket";
@@ -61,6 +60,17 @@ fn launch_daemon() -> Result<()> {
     bail!("Unable to Locate GoXLR Daemon Binary");
 }
 
+#[cfg(unix)]
+fn is_daemon_running() -> bool {
+    use sysinfo::{ProcessRefreshKind, RefreshKind, System, SystemExt};
+    let refresh_kind = RefreshKind::new().with_processes(ProcessRefreshKind::new().with_user());
+    let system = System::new_with_specifics(refresh_kind);
+
+    let binding = get_daemon_binary_name();
+    let processes = system.processes_by_exact_name(&binding);
+    processes.count() > 0
+}
+
 #[cfg(windows)]
 fn launch_daemon() -> Result<()> {
     use std::process::{exit, Command, Stdio};
@@ -103,13 +113,15 @@ async fn open_ui() -> Result<()> {
     bail!("Unable to make a connection with the Daemon");
 }
 
+#[cfg(windows)]
 fn is_daemon_running() -> bool {
-    let refresh_kind = RefreshKind::new().with_processes(ProcessRefreshKind::new().with_user());
-    let system = System::new_with_specifics(refresh_kind);
+    let binary = get_daemon_binary_name();
+    let count = unsafe {
+        let tasks = tasklist::Tasklist::new();
+        tasks.filter(|task| task.get_pname() == binary).count()
+    };
 
-    let binding = get_daemon_binary_name();
-    let processes = system.processes_by_exact_name(&binding);
-    processes.count() > 0
+    count > 0
 }
 
 fn locate_daemon_binary() -> Option<PathBuf> {

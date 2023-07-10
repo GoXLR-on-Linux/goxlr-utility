@@ -47,8 +47,16 @@ impl MicProfileAdapter {
         let path = directory.join(format!("{name}.goxlrMicProfile"));
         if path.is_file() {
             let file = File::open(path).context("Couldn't open mic profile for reading")?;
-            return MicProfileAdapter::from_reader(name, file).context("Couldn't read mic profile");
+
+            match MicProfileAdapter::from_reader(name.clone(), file) {
+                Ok(result) => return Ok(result),
+                Err(error) => {
+                    warn!("Couldn't load mic profile {}: {}", name, error);
+                    bail!(error);
+                }
+            };
         }
+
         bail!(
             "Mic Profile {} does not exist inside {}",
             name,

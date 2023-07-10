@@ -6,11 +6,14 @@ use std::os::raw::c_float;
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
 pub enum ParseError {
-    #[error("Expected int: {0}")]
+    #[error("[Gate] Expected int: {0}")]
     ExpectedInt(#[from] std::num::ParseIntError),
 
-    #[error("Expected float: {0}")]
+    #[error("[Gate] Expected float: {0}")]
     ExpectedFloat(#[from] std::num::ParseFloatError),
+
+    #[error("[Gate] Parsing Error {0}")]
+    Error(#[from] anyhow::Error),
 }
 
 #[derive(Debug)]
@@ -41,7 +44,7 @@ impl Gate {
         }
     }
 
-    pub fn parse_gate(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
+    pub fn parse_gate(&mut self, attributes: &Vec<Attribute>) -> Result<(), ParseError> {
         for attr in attributes {
             if attr.name == "MIC_GATE_MACRO_AMOUNT" {
                 self.amount = attr.value.parse::<c_float>()? as u8;

@@ -8,11 +8,14 @@ use std::str::FromStr;
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
 pub enum ParseError {
-    #[error("Expected int: {0}")]
+    #[error("[EQ Mini] Expected int: {0}")]
     ExpectedInt(#[from] std::num::ParseIntError),
 
-    #[error("Expected float: {0}")]
+    #[error("[EQ Mini] Expected float: {0}")]
     ExpectedFloat(#[from] std::num::ParseFloatError),
+
+    #[error("[EQ Mini] Parsing Error {0}")]
+    Error(#[from] anyhow::Error),
 }
 
 // Mini processes mostly the same way as the main, although has a smaller frequency set.
@@ -60,7 +63,7 @@ impl EqualizerMini {
     }
 
     // TODO: These may not need to be handled as floats..
-    pub fn parse_equaliser(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
+    pub fn parse_equaliser(&mut self, attributes: &Vec<Attribute>) -> Result<(), ParseError> {
         for attr in attributes {
             if attr.name == "MIC_MINI_EQ_90HZ_GAIN" {
                 self.set_eq_90h_gain(attr.value.parse::<c_float>()? as i8)?;

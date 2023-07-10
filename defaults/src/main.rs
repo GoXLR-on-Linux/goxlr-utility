@@ -1,9 +1,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use anyhow::{bail, Result};
 use clap::Parser;
 use std::fs;
+use std::io::Error;
 
+use crate::Errors::{PathNotDir, PathNotExist};
 use include_dir::{include_dir, Dir};
 use std::path::PathBuf;
 
@@ -12,15 +13,23 @@ const MIC_PROFILES: Dir = include_dir!("./defaults/resources/mic-profiles");
 const PRESETS: Dir = include_dir!("./defaults/resources/presets");
 const ICONS: Dir = include_dir!("./defaults/resources/icons");
 
-fn main() -> Result<()> {
+#[derive(Debug)]
+enum Errors {
+    PathNotExist,
+    PathNotDir,
+    ErrorRemovingFile(Error),
+    ErrorWritingFile(Error),
+}
+
+fn main() -> Result<(), Errors> {
     let args: Cli = Cli::parse();
 
     // Check if the provided path exists, and is a directory..
     if !args.file_path.exists() {
-        bail!("Provided Path does not exist");
+        return Err(PathNotExist);
     }
     if !args.file_path.is_dir() {
-        bail!("Provided Path is not a directory");
+        return Err(PathNotDir);
     }
 
     let files = match args.file_type {
@@ -37,12 +46,14 @@ fn main() -> Result<()> {
         if file_path.exists() {
             if !args.overwrite {
                 continue;
-            } else {
-                fs::remove_file(&file_path)?;
+            } else if let Err(e) = fs::remove_file(&file_path) {
+                return Err(Errors::ErrorRemovingFile(e));
             }
         }
 
-        fs::write(&file_path, file.contents())?;
+        if let Err(e) = fs::write(&file_path, file.contents()) {
+            return Err(Errors::ErrorWritingFile(e));
+        }
     }
 
     Ok(())

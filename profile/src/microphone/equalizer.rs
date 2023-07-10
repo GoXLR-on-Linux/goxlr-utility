@@ -8,11 +8,14 @@ use anyhow::{anyhow, bail, Result};
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
 pub enum ParseError {
-    #[error("Expected int: {0}")]
+    #[error("[EQ] Expected int: {0}")]
     ExpectedInt(#[from] std::num::ParseIntError),
 
-    #[error("Expected float: {0}")]
+    #[error("[EQ] Expected float: {0}")]
     ExpectedFloat(#[from] std::num::ParseFloatError),
+
+    #[error("[EQ] Parsing Error {0}")]
+    Error(#[from] anyhow::Error),
 }
 
 // The EQ has a crap load of values (20 total), we could consider splitting
@@ -74,7 +77,7 @@ impl Equalizer {
         }
     }
 
-    pub fn parse_equaliser(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
+    pub fn parse_equaliser(&mut self, attributes: &Vec<Attribute>) -> Result<(), ParseError> {
         for attr in attributes {
             if attr.name == "MIC_EQ_31.5HZ_GAIN" {
                 self.set_eq_31h_gain(attr.value.parse::<c_float>()? as i8)?;

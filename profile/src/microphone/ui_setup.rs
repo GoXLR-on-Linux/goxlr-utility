@@ -8,8 +8,11 @@ use std::io::Write;
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
 pub enum ParseError {
-    #[error("Expected int: {0}")]
+    #[error("[UI] Expected int: {0}")]
     ExpectedInt(#[from] std::num::ParseIntError),
+
+    #[error("[UI] Parsing Error {0}")]
+    Error(#[from] anyhow::Error),
 }
 
 /**
@@ -41,7 +44,7 @@ impl UiSetup {
         }
     }
 
-    pub fn parse_ui(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
+    pub fn parse_ui(&mut self, attributes: &Vec<Attribute>) -> Result<(), ParseError> {
         for attr in attributes {
             if attr.name == "eqAdvanced" {
                 self.eq_advanced = matches!(attr.value.as_str(), "1");

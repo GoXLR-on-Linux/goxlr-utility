@@ -3,14 +3,20 @@ use anyhow::{anyhow, Result};
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Writer;
 use std::collections::HashMap;
+use std::ffi::c_float;
 use std::io::Write;
-use std::str::FromStr;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
 pub enum ParseError {
-    #[error("Expected int: {0}")]
+    #[error("[Mic] Expected int: {0}")]
     ExpectedInt(#[from] std::num::ParseIntError),
+
+    #[error("[Mic] Expected Float: {0}")]
+    ExpectedFloat(#[from] std::num::ParseFloatError),
+
+    #[error("[Mic] Parsing Error {0}")]
+    Error(#[from] anyhow::Error),
 }
 
 #[derive(Debug)]
@@ -39,25 +45,27 @@ impl MicSetup {
         }
     }
 
-    pub fn parse_config(&mut self, attributes: &Vec<Attribute>) -> Result<()> {
+    pub fn parse_config(&mut self, attributes: &Vec<Attribute>) -> Result<(), ParseError> {
         for attr in attributes {
             if attr.name == "MIC_TYPE" {
-                self.set_mic_type(u8::from_str(attr.value.as_str())?)?;
+                self.set_mic_type(attr.value.parse::<c_float>()? as u8)?;
                 continue;
             }
 
             if attr.name == "DYNAMIC_MIC_GAIN" {
-                self.set_dynamic_mic_gain((u32::from_str(attr.value.as_str())? / 65536) as u16)?;
+                self.set_dynamic_mic_gain((attr.value.parse::<c_float>()? as u32 / 65536) as u16)?;
                 continue;
             }
 
             if attr.name == "CONDENSER_MIC_GAIN" {
-                self.set_condenser_mic_gain((u32::from_str(attr.value.as_str())? / 65536) as u16)?;
+                self.set_condenser_mic_gain(
+                    (attr.value.parse::<c_float>()? as u32 / 65536) as u16,
+                )?;
                 continue;
             }
 
             if attr.name == "TRS_MIC_GAIN" {
-                self.set_trs_mic_gain((u32::from_str(attr.value.as_str())? / 65536) as u16)?;
+                self.set_trs_mic_gain((attr.value.parse::<c_float>()? as u32 / 65536) as u16)?;
                 continue;
             }
         }

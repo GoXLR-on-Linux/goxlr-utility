@@ -13,12 +13,10 @@ use winapi::shared::guiddef::GUID;
 use winapi::shared::minwindef::{DWORD, FALSE, HINSTANCE, LPARAM, LRESULT, UINT, WPARAM};
 use winapi::shared::windef::{HBRUSH, HICON, HMENU, HWND, POINT};
 use winapi::um::shellapi::{NIF_ICON, NIF_MESSAGE, NIF_TIP, NIM_ADD, NIM_DELETE, NOTIFYICONDATAW};
-use winapi::um::synchapi::WaitForSingleObject;
-use winapi::um::winnt::HANDLE;
 use winapi::um::winuser::{
-    AppendMenuW, CreateIcon, DestroyWindow, DispatchMessageW, PeekMessageW,
+    AppendMenuW, CreateIcon, DestroyWindow, DispatchMessageW, GetMessageW, SetTimer,
     ShutdownBlockReasonCreate, ShutdownBlockReasonDestroy, TranslateMessage, MENUINFO, MF_POPUP,
-    MF_SEPARATOR, MF_STRING, MIM_APPLYTOSUBMENUS, MIM_STYLE, MNS_NOTIFYBYPOS, PM_REMOVE, WM_USER,
+    MF_SEPARATOR, MF_STRING, MIM_APPLYTOSUBMENUS, MIM_STYLE, MNS_NOTIFYBYPOS, WM_USER,
 };
 use winapi::um::{shellapi, winuser};
 
@@ -97,10 +95,14 @@ fn create_window(state: DaemonState, tx: Sender<EventTriggers>) -> Result<()> {
 fn run_loop(msg_window: HWND, state: DaemonState) {
     // Because we need to keep track of other things here, we're going to use PeekMessageW rather
     // than GetMessageW, then use WaitForSingleObject with a timeout to keep the loop looping.
+
+    // Turns out, WaitForSingleObject doesn't work for window HWNDs..
     unsafe {
+        // Send a message to the window to be be processed 20ms after we hit here..
+        SetTimer(msg_window, 120, 20, None);
         loop {
             let mut msg = mem::MaybeUninit::uninit();
-            if PeekMessageW(msg.as_mut_ptr(), msg_window, 0, 0, PM_REMOVE) != FALSE {
+            if GetMessageW(msg.as_mut_ptr(), msg_window, 0, 0) != FALSE {
                 let msg = msg.assume_init();
 
                 TranslateMessage(&msg);
@@ -114,8 +116,8 @@ fn run_loop(msg_window: HWND, state: DaemonState) {
                 break;
             }
 
-            // Wait either 20ms, or until a message comes in for the next pass.
-            WaitForSingleObject(msg_window as HANDLE, 20);
+            // This will trigger a return of GetMessageW in theory..
+            SetTimer(msg_window, 120, 20, None);
         }
     }
     debug!("Primary Loop Ended");
