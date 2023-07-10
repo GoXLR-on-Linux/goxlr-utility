@@ -72,7 +72,6 @@ shell-words = "1.1.0"
 
 # Under Windows and MacOS, we use tao's tray feature
 [target.'cfg(target_os = "windows")'.dependencies]
-widestring = "1.0.2"
 image = "0.24.5"
 sysinfo = "0.27.1"
 winrt-notification = "0.5.1"
@@ -80,7 +79,7 @@ winreg = "0.10.1"
 mslnk = "0.1.8"
 dunce = "1.0.3"
 win-win = "0.1.1"
-winapi = { version = "0.3.9", features = ["winuser", "dbt", "usbiodef"] }
+winapi = { version = "0.3.9", features = ["winuser"] }
 windows-args = "0.2.0"
 
 [target.'cfg(target_os = "macos")'.dependencies]

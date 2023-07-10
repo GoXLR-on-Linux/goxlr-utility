@@ -1,8 +1,7 @@
 use crate::commands::Command;
 use crate::device::base::{
-    AttachGoXLR, ExecutableGoXLR, FullGoXLRDevice, GoXLRCommands, GoXLRDevice, PnPMessage, UsbData,
+    AttachGoXLR, ExecutableGoXLR, FullGoXLRDevice, GoXLRCommands, GoXLRDevice, UsbData,
 };
-use crate::device::tusb::tusbaudio;
 use crate::device::tusb::tusbaudio::{
     get_devices, DeviceHandle, EventChannelReceiver, EventChannelSender, TUSB_INTERFACE,
 };
@@ -16,7 +15,7 @@ use std::thread::sleep;
 use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::error::TryRecvError;
-use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::sync::mpsc::Sender;
 
 pub struct TUSBAudioGoXLR {
     // Basic Device Information..
@@ -361,9 +360,6 @@ impl ExecutableGoXLR for TUSBAudioGoXLR {
 impl GoXLRCommands for TUSBAudioGoXLR {}
 impl FullGoXLRDevice for TUSBAudioGoXLR {}
 
-pub async fn start_pnp_handler(receiver: Receiver<PnPMessage>) {
-    tusbaudio::start_pnp_handler(receiver).await
-}
 pub fn find_devices() -> Vec<GoXLRDevice> {
     get_devices()
 }

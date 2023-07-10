@@ -214,9 +214,6 @@ async fn main() -> Result<()> {
     // Create the Device shutdown signallers..
     let (device_stop_tx, device_stop_rx) = mpsc::channel(1);
 
-    // Plug and Play Handler..
-    let (pnp_tx, pnp_rx) = mpsc::channel(5);
-
     // Create the Shutdown Signallers..
     let shutdown = Shutdown::new();
     let shutdown_blocking = Arc::new(AtomicBool::new(false));
@@ -244,9 +241,6 @@ async fn main() -> Result<()> {
         error!("Error Starting Daemon: ");
         bail!("{}", ipc_socket.err().unwrap());
     }
-
-    // Spawn the Platforms PnP Handler..
-    let pnp_handle = tokio::spawn(goxlr_usb::device::start_pnp_handle(pnp_rx));
 
     // Start the USB Device Handler
     let usb_handle = tokio::spawn(spawn_usb_handler(
@@ -324,7 +318,7 @@ async fn main() -> Result<()> {
     }
 
     // Tray management has to occur on the main thread, so we'll start it now.
-    tray::handle_tray(state.clone(), global_tx.clone(), pnp_tx)?;
+    tray::handle_tray(state.clone(), global_tx.clone())?;
 
     // If the tray handler dies for any reason, we should still make sure we've been asked to
     // shut down.

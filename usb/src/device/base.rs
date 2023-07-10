@@ -587,9 +587,3 @@ impl UsbData {
         self.product_name.clone()
     }
 }
-
-#[derive(Debug)]
-pub enum PnPMessage {
-    DeviceAttached,
-    DeviceRemoved,
-}

@@ -1,6 +1,3 @@
-use std::default::Default;
-use std::ffi::c_char;
-use std::ffi::c_void;
 use std::mem;
 use std::ptr::null_mut;
 use std::sync::atomic::Ordering;
@@ -9,29 +6,19 @@ use std::time::Duration;
 
 use anyhow::{bail, Result};
 use goxlr_ipc::PathTypes;
-use goxlr_usb::device::base::PnPMessage;
-use goxlr_usb::{PID_GOXLR_FULL, PID_GOXLR_MINI, VID_GOXLR};
 use log::{debug, warn};
 use tokio::sync::mpsc::Sender;
-use widestring::{U16CStr, U16Str, U16String, WideCStr, WideString};
 use win_win::{WindowBuilder, WindowClass, WindowProc};
-use winapi::ctypes::wchar_t;
 use winapi::shared::guiddef::GUID;
-use winapi::shared::minwindef::{DWORD, FALSE, HINSTANCE, LPARAM, LPVOID, LRESULT, UINT, WPARAM};
-use winapi::shared::usbiodef::GUID_DEVINTERFACE_USB_DEVICE;
+use winapi::shared::minwindef::{DWORD, FALSE, HINSTANCE, LPARAM, LRESULT, UINT, WPARAM};
 use winapi::shared::windef::{HBRUSH, HICON, HMENU, HWND, POINT};
-use winapi::um::dbt::{
-    DBT_DEVICEARRIVAL, DBT_DEVICEREMOVECOMPLETE, DBT_DEVTYP_DEVICEINTERFACE,
-    DEV_BROADCAST_DEVICEINTERFACE_W, DEV_BROADCAST_HDR,
-};
 use winapi::um::shellapi::{NIF_ICON, NIF_MESSAGE, NIF_TIP, NIM_ADD, NIM_DELETE, NOTIFYICONDATAW};
 use winapi::um::synchapi::WaitForSingleObject;
 use winapi::um::winnt::HANDLE;
 use winapi::um::winuser::{
     AppendMenuW, CreateIcon, DestroyWindow, DispatchMessageW, PeekMessageW,
-    RegisterDeviceNotificationW, ShutdownBlockReasonCreate, ShutdownBlockReasonDestroy,
-    TranslateMessage, DEVICE_NOTIFY_WINDOW_HANDLE, MENUINFO, MF_POPUP, MF_SEPARATOR, MF_STRING,
-    MIM_APPLYTOSUBMENUS, MIM_STYLE, MNS_NOTIFYBYPOS, PM_REMOVE, WM_USER,
+    ShutdownBlockReasonCreate, ShutdownBlockReasonDestroy, TranslateMessage, MENUINFO, MF_POPUP,
+    MF_SEPARATOR, MF_STRING, MIM_APPLYTOSUBMENUS, MIM_STYLE, MNS_NOTIFYBYPOS, PM_REMOVE, WM_USER,
 };
 use winapi::um::{shellapi, winuser};
 
@@ -41,28 +28,16 @@ use crate::platform::to_wide;
 use crate::tray::get_icon_from_global;
 
 const EVENT_MESSAGE: u32 = WM_USER + 1;
-const GOXLR_VID: &str = "VID_1220";
-const GOXLR_PID_MINI: &str = "PID_8FE4";
-const GOXLR_PID_FULL: &str = "PID_8FE0";
 
-pub fn handle_tray(
-    state: DaemonState,
-    tx: Sender<EventTriggers>,
-    pnp: Sender<PnPMessage>,
-) -> Result<()> {
+pub fn handle_tray(state: DaemonState, tx: Sender<EventTriggers>) -> Result<()> {
     debug!("Spawning Windows Tray..");
 
     // We jump this into another thread because on Windows it's tricky to shut down the window
     // properly, so it'll close when main() terminates.
-    create_window(state, tx, pnp)?;
+    create_window(state, tx)?;
     Ok(())
 }
-
-fn create_window(
-    state: DaemonState,
-    tx: Sender<EventTriggers>,
-    pnp_tx: Sender<PnPMessage>,
-) -> Result<()> {
+fn create_window(state: DaemonState, tx: Sender<EventTriggers>) -> Result<()> {
     // To save some headaches, this is *ALL* unsafe!
     unsafe {
         // Load up the icon..
@@ -87,7 +62,7 @@ fn create_window(
         AppendMenuW(hmenu, MF_SEPARATOR, 3, null_mut());
         AppendMenuW(hmenu, MF_STRING, 4, to_wide("Quit").as_ptr());
 
-        let window_proc = GoXLRWindowProc::new(state.clone(), tx, hmenu, pnp_tx);
+        let window_proc = GoXLRWindowProc::new(state.clone(), tx, hmenu);
         let hwnd = WindowBuilder::new(window_proc, &win_class)
             .name("GoXLR Utility")
             .size(20, 20)
@@ -176,31 +151,15 @@ fn load_icon() -> Result<HICON> {
 struct GoXLRWindowProc {
     state: DaemonState,
     global_tx: Sender<EventTriggers>,
-    pnp_tx: Sender<PnPMessage>,
     menu: HMENU,
-    filter: DEV_BROADCAST_DEVICEINTERFACE_W,
 }
 
 impl GoXLRWindowProc {
-    pub fn new(
-        state: DaemonState,
-        tx: Sender<EventTriggers>,
-        menu: HMENU,
-        pnp_tx: Sender<PnPMessage>,
-    ) -> Self {
-        let broadcast = DEV_BROADCAST_DEVICEINTERFACE_W {
-            dbcc_size: mem::size_of::<DEV_BROADCAST_DEVICEINTERFACE_W> as usize as DWORD,
-            dbcc_devicetype: DBT_DEVTYP_DEVICEINTERFACE,
-            dbcc_classguid: GUID_DEVINTERFACE_USB_DEVICE,
-            ..Default::default()
-        };
-
+    pub fn new(state: DaemonState, tx: Sender<EventTriggers>, menu: HMENU) -> Self {
         Self {
             state,
             global_tx: tx,
             menu,
-            pnp_tx,
-            filter: broadcast,
         }
     }
 
@@ -220,35 +179,6 @@ impl GoXLRWindowProc {
             }
         }
     }
-
-    unsafe fn device_change_handle(&self, lparam: LPARAM) {
-        let broadcast: &DEV_BROADCAST_HDR = &*(lparam as *const _);
-
-        if broadcast.dbch_devicetype == DBT_DEVTYP_DEVICEINTERFACE {
-            let int: &DEV_BROADCAST_DEVICEINTERFACE_W = &*(lparam as *const _);
-
-            // Ok, calculate the 'standard' length of this message type..
-            let size = mem::size_of::<DEV_BROADCAST_DEVICEINTERFACE_W>();
-            let length = int.dbcc_size as usize - size / 2; // U16..
-            let name = U16CStr::from_ptr_truncate(int.dbcc_name.as_ptr(), length);
-            if let Ok(name) = name {
-                if let Ok(name) = name.to_string() {
-                    if name.contains(GOXLR_VID) {
-                        debug!("TC-Helicon Device Disconnected");
-                        if name.contains(GOXLR_PID_FULL) {
-                            debug!("GoXLR Full Device State Change");
-                            let _ = self.pnp_tx.try_send(PnPMessage::DeviceAttached);
-                        } else if name.contains(GOXLR_PID_MINI) {
-                            debug!("GoXLR Mini Device State Change");
-                            let _ = self.pnp_tx.try_send(PnPMessage::DeviceAttached);
-                        } else {
-                            debug!("Unknown Device");
-                        }
-                    }
-                }
-            }
-        };
-    }
 }
 
 impl WindowProc for GoXLRWindowProc {
@@ -264,11 +194,6 @@ impl WindowProc for GoXLRWindowProc {
                 // Window has spawned, Create our Menu :)
                 debug!("Window Spawned, creating menu..");
                 self.create_menu();
-                unsafe {
-                    let value =
-                        &self.filter.clone() as *const DEV_BROADCAST_DEVICEINTERFACE_W as LPVOID;
-                    RegisterDeviceNotificationW(hwnd as HANDLE, value, DEVICE_NOTIFY_WINDOW_HANDLE);
-                }
             }
             // Menu Related Commands..
             winuser::WM_MENUCOMMAND => unsafe {
@@ -386,12 +311,6 @@ impl WindowProc for GoXLRWindowProc {
             winuser::WM_ENDSESSION => {
                 debug!("Received WM_ENDSESSION from Windows (IGNORED)");
             }
-            winuser::WM_DEVICECHANGE => match wparam {
-                DBT_DEVICEARRIVAL | DBT_DEVICEREMOVECOMPLETE => unsafe {
-                    self.device_change_handle(lparam);
-                },
-                _ => {}
-            },
             _ => {}
         }
         None
@@ -408,7 +327,6 @@ fn tooltip(msg: &str) -> [u16; 128] {
     }
     array
 }
-
 fn get_notification_struct(hwnd: &HWND) -> NOTIFYICONDATAW {
     NOTIFYICONDATAW {
         cbSize: std::mem::size_of::<NOTIFYICONDATAW>() as DWORD,

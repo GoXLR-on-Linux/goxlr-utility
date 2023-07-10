@@ -1,4 +1,4 @@
-use crate::device::base::{GoXLRDevice, PnPMessage};
+use crate::device::base::GoXLRDevice;
 use crate::{PID_GOXLR_FULL, PID_GOXLR_MINI, VID_GOXLR};
 use anyhow::{anyhow, bail, Result};
 use byteorder::{ByteOrder, LittleEndian};
@@ -15,7 +15,6 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::sleep;
 use std::time::Duration;
-use tokio::select;
 use tokio::sync::mpsc::{Receiver, Sender};
 use widestring::U16CStr;
 use windows::Win32::Foundation::{HANDLE, WIN32_ERROR};
@@ -689,20 +688,8 @@ impl Default for Properties {
     }
 }
 
-pub async fn start_pnp_handler(mut receiver: Receiver<PnPMessage>) {
-    debug!("Launcing PnP Listener..");
-    loop {
-        select! {
-            Some(message) = receiver.recv() => {
-                // Something has changed, re-enumerate devices..
-                debug!("Device Change Received, Re-enumerating Devices ({:?})..", message);
-                let _ = TUSB_INTERFACE.detect_devices();
-            }
-        }
-    }
-}
-
 pub fn get_devices() -> Vec<GoXLRDevice> {
+    let _ = TUSB_INTERFACE.spawn_pnp_handle_rusb();
     let mut list = Vec::new();
 
     // Ok, this is slightly different now..
