@@ -809,14 +809,14 @@ impl<'a> Device<'a> {
             // This fader has previously been 'Muted to All', we need to restore the volume..
             let previous_volume = self.profile.get_mute_button_previous_volume(fader);
 
-            self.goxlr.set_volume(channel, previous_volume)?;
-            self.profile.set_channel_volume(channel, previous_volume)?;
-
             if channel != ChannelName::Mic
                 || (channel == ChannelName::Mic && !self.mic_muted_by_cough())
             {
                 self.goxlr.set_channel_state(channel, Unmuted)?;
             }
+
+            self.goxlr.set_volume(channel, previous_volume)?;
+            self.profile.set_channel_volume(channel, previous_volume)?;
 
             // As before, we might need transient Mic Routing..
             if channel == ChannelName::Chat {
@@ -2669,11 +2669,17 @@ impl<'a> Device<'a> {
             if let Some(current) = current {
                 if current != Muted {
                     // This channel should be fully muted
-                    debug!("Setting Channel set {} to Muted", channel);
+                    debug!(
+                        "Setting Channel {} to Muted (change from previous)",
+                        channel
+                    );
                     self.goxlr.set_channel_state(channel, Muted)?;
                 } else {
                     debug!("Fader {} is Already Muted, doing nothing.", fader);
                 }
+            } else {
+                debug!("Setting Channel {} to Muted (no previous)", channel);
+                self.goxlr.set_channel_state(channel, Muted)?;
             }
 
             return Ok(());
@@ -2682,11 +2688,14 @@ impl<'a> Device<'a> {
         // This channel isn't supposed to be muted (The Router will handle anything else).
         if let Some(current) = current {
             if current != Unmuted {
-                debug!("Channel {} set to Unmuted", channel);
+                debug!("Channel {} set to Unmuted (change from previous)", channel);
                 self.goxlr.set_channel_state(channel, Unmuted)?;
             } else {
                 debug!("Channel {} already Unmuted, doing nothing.", fader);
             }
+        } else {
+            debug!("Channel {} set to Unmuted (no previous)", channel);
+            self.goxlr.set_channel_state(channel, Unmuted)?;
         }
 
         Ok(())
