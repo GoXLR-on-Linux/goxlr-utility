@@ -7,6 +7,7 @@
  * be used later.
  */
 use byteorder::{ByteOrder, LittleEndian};
+use strum::EnumIter;
 
 const FADER_COUNT: usize = 4;
 const MOOD_COUNT: usize = 2;
@@ -222,7 +223,7 @@ impl Colour {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, EnumIter)]
 pub enum TwoColourTargets {
     // Scribble Bar first..
     Scribble1,
@@ -271,7 +272,7 @@ pub enum TwoColourTargets {
     CoughButton,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, EnumIter)]
 pub enum FaderTarget {
     FaderA,
     FaderB,
@@ -279,7 +280,7 @@ pub enum FaderTarget {
     FaderD,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, EnumIter)]
 pub enum EncoderTarget {
     Pitch,
     Gender,
