@@ -764,8 +764,12 @@ impl<'a> Device<'a> {
         // If we did this on Mute to X, we don't need to do it again..
         if !(muted_to_x && mute_function == MuteFunction::All) {
             let volume = self.profile.get_channel_volume(channel);
-            self.profile.set_mute_previous_volume(fader, volume)?;
-            self.goxlr.set_volume(channel, 0)?;
+
+            // Per the latest official release, the mini no longer sets the volume to 0 on mute
+            if self.hardware.device_type != DeviceType::Mini {
+                self.profile.set_mute_previous_volume(fader, volume)?;
+                self.goxlr.set_volume(channel, 0)?;
+            }
             self.goxlr.set_channel_state(channel, Muted)?;
             self.profile.set_mute_button_on(fader, true)?;
         }
@@ -777,7 +781,11 @@ impl<'a> Device<'a> {
         if blink {
             self.profile.set_mute_button_blink(fader, true)?;
         }
-        self.profile.set_channel_volume(channel, 0)?;
+
+        if self.hardware.device_type != DeviceType::Mini {
+            // Again, only apply this if we're a full device
+            self.profile.set_channel_volume(channel, 0)?;
+        }
 
         // If we're Chat, we may need to transiently route the Microphone..
         if channel == ChannelName::Chat {
@@ -815,8 +823,19 @@ impl<'a> Device<'a> {
                 self.goxlr.set_channel_state(channel, Unmuted)?;
             }
 
-            self.goxlr.set_volume(channel, previous_volume)?;
-            self.profile.set_channel_volume(channel, previous_volume)?;
+            // As with mute, the mini doesn't modify volumes on mute / unmute
+            if self.hardware.device_type != DeviceType::Mini {
+                self.goxlr.set_volume(channel, previous_volume)?;
+                self.profile.set_channel_volume(channel, previous_volume)?;
+            } else if self.device_supports_submixes()
+                && (channel == ChannelName::Headphones || channel == ChannelName::LineOut)
+            {
+                // This is a special case, when calling unmute on submix firmware, the LineOut
+                // and Headphones don't set correctly, so we need to forcibly restore the
+                // volume. This does mean unlatching though :(
+                let current_volume = self.profile.get_channel_volume(channel);
+                self.goxlr.set_volume(channel, current_volume)?;
+            }
 
             // As before, we might need transient Mic Routing..
             if channel == ChannelName::Chat {
@@ -1313,18 +1332,6 @@ impl<'a> Device<'a> {
                     "Updating {} volume from {} to {} as a human moved the fader",
                     channel, old_volume, new_volume
                 );
-
-                // Ok, this simply doesn't work on a full device, when mute is called the mechanical
-                // fader drops to 0, and this spams out 'fader is currently muted' during that move.
-                // If I fix that problem, re-enable that code.
-
-                // let (muted_to_x, muted_to_all, mute_function) =
-                //     self.profile.get_mute_button_state(fader);
-                // if muted_to_all || (muted_to_x && mute_function == MuteFunction::All) {
-                //     // This fader is muted, we need to alert that these changes aren't happening!
-                //     let message = format!("Fader {} is currently Muted!", fader);
-                //     let _ = self.global_events.send(TTSMessage(message)).await;
-                // }
 
                 value_changed = true;
                 self.profile.set_channel_volume(channel, new_volume)?;
