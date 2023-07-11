@@ -149,7 +149,7 @@ impl Dummy {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Copy, Clone)]
 pub struct FaderColour {
     pub colours: TwoColour,
 }
@@ -169,7 +169,7 @@ impl FaderColour {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Copy, Clone)]
 pub struct TwoColour {
     pub colour1: Colour,
     pub colour2: Colour,
@@ -184,7 +184,7 @@ impl TwoColour {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Copy, Clone)]
 pub struct EncoderColour {
     pub left: Colour,
     pub right: Colour,
@@ -202,7 +202,7 @@ impl EncoderColour {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Copy, Clone)]
 pub struct Colour {
     pub red: u32,
     pub green: u32,
@@ -222,6 +222,7 @@ impl Colour {
     }
 }
 
+#[derive(Copy, Clone)]
 pub enum TwoColourTargets {
     // Scribble Bar first..
     Scribble1,
@@ -270,6 +271,7 @@ pub enum TwoColourTargets {
     CoughButton,
 }
 
+#[derive(Copy, Clone)]
 pub enum FaderTarget {
     FaderA,
     FaderB,
@@ -277,6 +279,7 @@ pub enum FaderTarget {
     FaderD,
 }
 
+#[derive(Copy, Clone)]
 pub enum EncoderTarget {
     Pitch,
     Gender,
