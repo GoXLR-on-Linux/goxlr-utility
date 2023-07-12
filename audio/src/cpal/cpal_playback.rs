@@ -27,6 +27,7 @@ pub(crate) struct CpalPlayback {
 
 struct CpalResampler {
     resampler: FftFixedIn<f32>,
+    input_buffer: Vec<f32>,
     input: Vec<Vec<f32>>,
     output: Vec<Vec<f32>>,
     interleaved: Vec<f32>,
@@ -101,12 +102,16 @@ impl OpenOutputStream for CpalPlayback {
                 spec.spec.channels.count(),
             )?;
 
+            // Create a buffer to hold samples until we can resample..
+            let input_buffer = Vec::with_capacity(spec.buffer * spec.spec.channels.count());
+
             // Allocate the Input and Output Buffers..
             let input = vec![vec![0_f32; spec.buffer]; spec.spec.channels.count()];
             let output = Resampler::output_buffer_allocate(&resampler);
 
             Some(CpalResampler {
                 resampler,
+                input_buffer,
                 input,
                 output,
                 interleaved: vec![],
@@ -138,24 +143,27 @@ impl AudioOutput for CpalPlayback {
             return Ok(());
         }
 
-        let mut buffered_samples;
         let out_samples = if let Some(resampler) = &mut self.resampler {
-            // If we're in a position where we've not received enough samples (generally caused by
-            // premature termination of the stream / fade out), fill out the sample buffer with
-            // silent samples to complete the expected buffer size.
+            // First thing we need to do, is append these samples to the input buffer..
+            //dst.extend(src.iter().map(|&s| s.into_sample()));
+            resampler.input_buffer.extend(samples);
+
             let required_samples = resampler.input[0].capacity() * resampler.input.len();
-            let samples = if samples.len() < required_samples {
-                buffered_samples = Vec::from(samples);
-                buffered_samples.resize(required_samples, 0_f32);
-                buffered_samples.as_slice()
-            } else {
-                samples
-            };
+            if resampler.input_buffer.len() < required_samples {
+                // Don't do anything with these samples, we're not ready.
+                return Ok(());
+            }
 
             // So, first problem we run into here, is that our samples are already
             // interleaved, and our resampler expects them to not be, so lets split them.
-            resampler.input[0] = samples.iter().step_by(2).copied().collect();
-            resampler.input[1] = samples.iter().skip(1).step_by(2).copied().collect();
+            resampler.input[0] = resampler.input_buffer.iter().step_by(2).copied().collect();
+            resampler.input[1] = resampler
+                .input_buffer
+                .iter()
+                .skip(1)
+                .step_by(2)
+                .copied()
+                .collect();
 
             // Attempt to perform the resample
             let result = resampler.resampler.process_into_buffer(
@@ -163,6 +171,9 @@ impl AudioOutput for CpalPlayback {
                 &mut resampler.output,
                 None,
             );
+
+            // Regardless of whether this works or not, we should clear our buffer, lest we get stuck.
+            resampler.input_buffer.clear();
 
             match result {
                 Ok(_) => {
@@ -206,6 +217,18 @@ impl AudioOutput for CpalPlayback {
     }
 
     fn flush(&mut self) {
+        if let Some(resampler) = &mut self.resampler {
+            let length = resampler.input_buffer.len();
+            let capacity = resampler.input_buffer.capacity();
+
+            if length != 0 {
+                // There's some stuff left in the buffer, fill the buffer to capacity to
+                // flush it through to the output buffer.
+                let filling_samples = vec![0.; capacity - length];
+                let _ = self.write(&filling_samples);
+            }
+        }
+
         // Make sure the playback buffer is empty, to prevent premature pausing at
         // the end of playback
         while !self.buffer.is_empty() {
