@@ -1644,6 +1644,12 @@ impl<'a> Device<'a> {
                     bail!("Animations not supported on this firmware.");
                 }
 
+                if mode == goxlr_types::AnimationMode::Ripple
+                    && self.hardware.device_type == DeviceType::Mini
+                {
+                    bail!("Ripple Mode not supported on the GoXLR Mini");
+                }
+
                 self.profile.set_animation_mode(mode)?;
                 self.load_animation(false)?;
             }
