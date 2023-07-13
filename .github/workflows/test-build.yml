@@ -51,8 +51,10 @@ jobs:
           args: --manifest-path=goxlr-utility-ui/src-tauri/Cargo.toml --target-dir=goxlr-utility/target --release
 
       - name: Build NSIS Packages
-        run: makensis.exe /DPRODUCT_VERSION=${{ needs.get_version.outputs.version }} goxlr-utility/ci/nsis/goxlr-utility.nsi
-        shell: cmd
+        uses: joncloud/make-nsis-action
+        with:
+          script-file: goxlr-utility/ci/nsis/goxlr-utility.nsi
+          arguments: "/DPRODUCT_VERSION=${{ needs.get_version.outputs.version }}"
 
       - name: Upload Installer
         uses: actions/upload-artifact@v3
