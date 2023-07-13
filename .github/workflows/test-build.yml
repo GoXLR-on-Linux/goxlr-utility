@@ -51,7 +51,7 @@ jobs:
           args: --manifest-path=goxlr-utility-ui/src-tauri/Cargo.toml --target-dir=goxlr-utility/target --release
 
       - name: Build NSIS Packages
-        uses: joncloud/make-nsis-action
+        uses: joncloud/makensis-action@publish
         with:
           script-file: goxlr-utility/ci/nsis/goxlr-utility.nsi
           arguments: "/DPRODUCT_VERSION=${{ needs.get_version.outputs.version }}"
