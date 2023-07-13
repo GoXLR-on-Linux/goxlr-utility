@@ -14,6 +14,7 @@ An unofficial tool to configure and control a TC-Helicon GoXLR or GoXLR Mini on 
 * Exit Actions, including saving profiles and loading other profiles / lighting
 * Multiple Device Support. Run more than one GoXLR on one PC
 * A CLI and API for basic or advanced scripting and automation
+* Streamdeck Integration (through https://github.com/FrostyCoolSlug/goxlr-utility-streamdeck)
 
 ## Downloads
 Downloads are available on the [Releases Page](https://github.com/GoXLR-on-Linux/goxlr-utility/releases) under the
