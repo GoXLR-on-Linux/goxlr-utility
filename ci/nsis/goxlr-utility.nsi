@@ -246,6 +246,7 @@ Section "MainSection" SEC01
     File "..\..\target\release\goxlr-defaults.exe"
     File "..\..\target\release\goxlr-launcher.exe"
     File "..\..\target\release\goxlr-firmware.exe"
+    File "..\..\target\release\goxlr-util-ui.exe"
     File "..\..\target\release\SAAPI64.dll"
     File "..\..\target\release\nvdaControllerClient64.dll"
     File "..\..\LICENSE"

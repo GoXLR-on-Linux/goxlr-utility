@@ -22,7 +22,17 @@ jobs:
     runs-on: windows-latest
     needs: [get_version]
     steps:
+      # Firstly Checkout our Repository..
       - uses: actions/checkout@v3
+        with:
+          path: goxlr-utility
+
+      # Now Checkout the App Wrappers repository..
+      - uses: actions/checkout@v3
+        with:
+          repository: frostycoolslug/goxlr-util-ui
+          path: goxlr-utility-ui
+
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -32,14 +42,16 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --release --all-features
+          args: --manifest-path=goxlr-utility/Cargo.toml --release --all-features
 
-#      - name: Build Packages
-#        run: iscc.exe ci/goxlr-utility.iss
-#        shell: cmd
+      # Build the UI into the same target directory..
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --manifest-path=goxlr-utility-ui/src-tauri/Cargo.toml --target-dir=goxlr-utility/target --release
 
       - name: Build NSIS Packages
-        run: makensis.exe /DPRODUCT_VERSION=${{ needs.get_version.outputs.version }} ci/nsis/goxlr-utility.nsi
+        run: makensis.exe /DPRODUCT_VERSION=${{ needs.get_version.outputs.version }} goxlr-utility/ci/nsis/goxlr-utility.nsi
         shell: cmd
 
       - name: Upload Installer
