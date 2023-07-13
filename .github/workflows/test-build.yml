@@ -60,7 +60,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: windows-artifact
-          path: ./ci/Output/*.exe
+          path: ./goxlr-utility/ci/Output/*.exe
 
   build:
     runs-on: ubuntu-latest
