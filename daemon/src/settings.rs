@@ -37,7 +37,7 @@ impl SettingsHandle {
             logs_directory: Some(data_dir.join("logs")),
             log_level: Some(LogLevel::Debug),
             activate: None,
-            devices: Default::default(),
+            devices: Some(Default::default()),
         });
 
         // Set these values if they're missing from the configuration
@@ -79,6 +79,10 @@ impl SettingsHandle {
 
         if settings.allow_network_access.is_none() {
             settings.allow_network_access = Some(false);
+        }
+
+        if settings.devices.is_none() {
+            settings.devices = Some(Default::default());
         }
 
         let handle = SettingsHandle {
@@ -194,6 +198,8 @@ impl SettingsHandle {
         let settings = self.settings.read().await;
         settings
             .devices
+            .as_ref()
+            .unwrap()
             .get(device_serial)
             .map(|d| d.profile.clone())
     }
@@ -202,6 +208,8 @@ impl SettingsHandle {
         let settings = self.settings.read().await;
         settings
             .devices
+            .as_ref()
+            .unwrap()
             .get(device_serial)
             .map(|d| d.mic_profile.clone())
     }
@@ -210,6 +218,8 @@ impl SettingsHandle {
         let settings = self.settings.read().await;
         let value = settings
             .devices
+            .as_ref()
+            .unwrap()
             .get(device_serial)
             .map(|d| d.shutdown_commands.clone());
 
@@ -223,6 +233,8 @@ impl SettingsHandle {
         let settings = self.settings.read().await;
         let value = settings
             .devices
+            .as_ref()
+            .unwrap()
             .get(device_serial)
             .map(|d| d.sampler_pre_buffer.unwrap_or(0));
         if let Some(value) = value {
@@ -235,6 +247,8 @@ impl SettingsHandle {
         let settings = self.settings.read().await;
         let value = settings
             .devices
+            .as_ref()
+            .unwrap()
             .get(device_serial)
             .map(|d| d.hold_delay.unwrap_or(500));
 
@@ -249,6 +263,8 @@ impl SettingsHandle {
         let settings = self.settings.read().await;
         let value = settings
             .devices
+            .as_ref()
+            .unwrap()
             .get(device_serial)
             .map(|d| d.chat_mute_mutes_mic_to_chat.unwrap_or(true));
 
@@ -262,6 +278,8 @@ impl SettingsHandle {
         let mut settings = self.settings.write().await;
         let entry = settings
             .devices
+            .as_mut()
+            .unwrap()
             .entry(device_serial.to_owned())
             .or_insert_with(DeviceSettings::default);
         entry.profile = profile_name.to_owned();
@@ -271,6 +289,8 @@ impl SettingsHandle {
         let mut settings = self.settings.write().await;
         let entry = settings
             .devices
+            .as_mut()
+            .unwrap()
             .entry(device_serial.to_owned())
             .or_insert_with(DeviceSettings::default);
         entry.mic_profile = mic_profile_name.to_owned();
@@ -284,6 +304,8 @@ impl SettingsHandle {
         let mut settings = self.settings.write().await;
         let entry = settings
             .devices
+            .as_mut()
+            .unwrap()
             .entry(device_serial.to_owned())
             .or_insert_with(DeviceSettings::default);
         entry.shutdown_commands = commands.to_owned();
@@ -293,6 +315,8 @@ impl SettingsHandle {
         let mut settings = self.settings.write().await;
         let entry = settings
             .devices
+            .as_mut()
+            .unwrap()
             .entry(device_serial.to_owned())
             .or_insert_with(DeviceSettings::default);
         entry.sampler_pre_buffer = Some(duration);
@@ -302,6 +326,8 @@ impl SettingsHandle {
         let mut settings = self.settings.write().await;
         let entry = settings
             .devices
+            .as_mut()
+            .unwrap()
             .entry(device_serial.to_owned())
             .or_insert_with(DeviceSettings::default);
         entry.hold_delay = Some(duration);
@@ -311,6 +337,8 @@ impl SettingsHandle {
         let mut settings = self.settings.write().await;
         let entry = settings
             .devices
+            .as_mut()
+            .unwrap()
             .entry(device_serial.to_owned())
             .or_insert_with(DeviceSettings::default);
         entry.chat_mute_mutes_mic_to_chat = Some(setting);
@@ -330,7 +358,7 @@ pub struct Settings {
     logs_directory: Option<PathBuf>,
     log_level: Option<LogLevel>,
     activate: Option<String>,
-    devices: HashMap<String, DeviceSettings>,
+    devices: Option<HashMap<String, DeviceSettings>>,
 }
 
 impl Settings {
