@@ -30,7 +30,7 @@ jobs:
       # Now Checkout the App Wrappers repository..
       - uses: actions/checkout@v3
         with:
-          repository: frostycoolslug/goxlr-util-ui
+          repository: frostycoolslug/goxlr-utility-ui
           path: goxlr-utility-ui
 
       - uses: actions-rs/toolchain@v1
