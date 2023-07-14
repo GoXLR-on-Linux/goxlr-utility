@@ -20,7 +20,7 @@ use winapi::um::winuser::{
 };
 use winapi::um::{shellapi, winuser};
 
-use crate::events::EventTriggers::{Activate, Open};
+use crate::events::EventTriggers::Open;
 use crate::events::{DaemonState, EventTriggers};
 use crate::platform::to_wide;
 use crate::tray::get_icon_from_global;
@@ -207,7 +207,7 @@ impl WindowProc for GoXLRWindowProc {
                 let menu_id = winuser::GetMenuItemID(lparam as HMENU, wparam as i32) as i32;
                 let _ = match menu_id {
                     // Main Menu
-                    0 => self.global_tx.try_send(EventTriggers::OpenUi),
+                    0 => self.global_tx.try_send(EventTriggers::Activate),
                     4 => self.global_tx.try_send(EventTriggers::Stop),
 
                     // Open Paths Menu
@@ -236,7 +236,7 @@ impl WindowProc for GoXLRWindowProc {
                             return Some(1);
                         }
                         if lparam as UINT == winuser::WM_LBUTTONUP {
-                            let _ = self.global_tx.try_send(Activate);
+                            let _ = self.global_tx.try_send(EventTriggers::Activate);
                             return None;
                         }
                         if lparam as UINT == winuser::WM_RBUTTONUP {

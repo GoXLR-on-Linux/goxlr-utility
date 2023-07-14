@@ -111,7 +111,7 @@ impl Tray for GoXLRTray {
             StandardItem {
                 label: String::from("Configure GoXLR"),
                 activate: Box::new(|this: &mut GoXLRTray| {
-                    let _ = this.tx.blocking_send(EventTriggers::OpenUi);
+                    let _ = this.tx.blocking_send(EventTriggers::Activate);
                 }),
                 ..Default::default()
             }

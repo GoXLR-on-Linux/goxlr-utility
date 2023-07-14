@@ -73,7 +73,7 @@ pub fn handle_tray(state: DaemonState, tx: Sender<EventTriggers>) -> Result<()> 
             }
 
             if menu_id == configure.clone().id() {
-                let _ = tx.try_send(EventTriggers::OpenUi);
+                let _ = tx.try_send(EventTriggers::Activate);
             }
 
             if menu_id == profiles.clone().id() {
