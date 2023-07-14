@@ -104,8 +104,15 @@ FunctionEnd
 var KeyTest
 var StartMenuPath
 var StartMenuPathSet
+
 var InstallDir
 var InstallDirSet
+
+var AutoStartRegSet
+var AutoStartReg
+
+var UseAppRegSet
+var UseAppReg
 
 !macro GetRegKeys un
     Function ${un}GetRegKeys
@@ -123,6 +130,22 @@ var InstallDirSet
         ${Else}
             StrCpy $StartMenuPathSet 1
             StrCpy $StartMenuPath $KeyTest
+        ${EndIf}
+
+        ReadRegStr $KeyTest HKLM64 "${PRODUCT_REGKEY}" "AutoStart"
+        ${If} ${Errors}
+            StrCpy $AutoStartRegSet 0
+        ${Else}
+            StrCpy $AutoStartRegSet 1
+            StrCpy $AutoStartReg $KeyTest
+        ${EndIf}
+
+        ReadRegStr $KeyTest HKLM64 "${PRODUCT_REGKEY}" "UseApp"
+        ${If} ${Errors}
+            StrCpy $UseAppRegSet 0
+        ${Else}
+            StrCpy $UseAppRegSet 1
+            StrCpy $UseAppReg $KeyTest
         ${EndIf}
     FunctionEnd
 !macroend
@@ -148,12 +171,24 @@ Function PerformActions
     !insertmacro MUI_HEADER_TEXT "Select Additional Tasks" "Which additional tasks should be performed?"
 
     !insertmacro INSTALLOPTIONS_EXTRACT "post-install.ini"
+
+    ; Set any cached values..
+    AUTO_START:
+        StrCmp $AutoStartRegSet 1 0 USE_APP
+        !insertmacro INSTALLOPTIONS_WRITE "post-install.ini" "Field 2" "State" $AutoStartReg
+    USE_APP:
+        StrCmp $UseAppRegSet 1 0 END
+        !insertmacro INSTALLOPTIONS_WRITE "post-install.ini" "Field 3" "State" $UseAppReg
+
+    END:
     !insertmacro INSTALLOPTIONS_DISPLAY "post-install.ini"
 FunctionEnd
 
 Function PerformActionsLeave
     var /GLOBAL AUTO_START
+    var /GLOBAL USE_APP
     !insertmacro INSTALLOPTIONS_READ $AUTO_START "post-install.ini" "Field 2" "State"
+    !insertmacro INSTALLOPTIONS_READ $USE_APP "post-install.ini" "Field 3" "State"
 FunctionEnd
 
 Function IsUtilRunning
@@ -246,7 +281,7 @@ Section "MainSection" SEC01
     File "..\..\target\release\goxlr-defaults.exe"
     File "..\..\target\release\goxlr-launcher.exe"
     File "..\..\target\release\goxlr-firmware.exe"
-    File "..\..\target\release\goxlr-util-ui.exe"
+    File "..\..\target\release\goxlr-utility-ui.exe"
     File "..\..\target\release\SAAPI64.dll"
     File "..\..\target\release\nvdaControllerClient64.dll"
     File "..\..\LICENSE"
@@ -256,12 +291,26 @@ Section "MainSection" SEC01
     CreateDirectory "$SMPROGRAMS\$StartMenuFolder"
     CreateShortCut "$SMPROGRAMS\$StartMenuFolder\GoXLR Utility.lnk" "$INSTDIR\goxlr-launcher.exe"
 
-    StrCmp $AUTO_START 0 POST_AUTO
+    StrCmp $AUTO_START 0 AUTO_START_OFF
         ; Switch to Current User..
         SetShellVarContext current
         CreateShortCut "$SMPROGRAMS\Startup\GoXLR Utility.lnk" "$INSTDIR\goxlr-daemon.exe"
+        Goto POST_AUTO_START
 
-    POST_AUTO:
+    AUTO_START_OFF:
+        ; Switch to Current User..
+        SetShellVarContext current
+        Delete "$SMPROGRAMS\Startup\GoXLR Utility.lnk"
+
+    POST_AUTO_START:
+        StrCmp $USE_APP 0 REMOVE_APP
+        nsExec::Exec "$INSTDIR\goxlr-utility-ui.exe --install"
+        Goto POST_OPTION
+
+    REMOVE_APP:
+        nsExec::Exec "$INSTDIR\goxlr-utility-ui.exe --remove"
+
+    POST_OPTION:
 SectionEnd
 
 Section -Post
@@ -275,6 +324,8 @@ Section -Post
 
   WriteRegStr HKLM64 "${PRODUCT_REGKEY}" "InstallPath" "$INSTDIR"
   WriteRegStr HKLM64 "${PRODUCT_REGKEY}" "StartMenu" "$StartMenuFolder"
+  WriteRegStr HKLM64 "${PRODUCT_REGKEY}" "UseApp" "$USE_APP"
+  WriteRegStr HKLM64 "${PRODUCT_REGKEY}" "AutoStart" "$AUTO_START"
 SectionEnd
 
 Function un.onUninstSuccess
