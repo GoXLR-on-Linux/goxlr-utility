@@ -51,6 +51,8 @@ fn create_window(state: DaemonState, tx: Sender<EventTriggers>) -> Result<()> {
         AppendMenuW(sub, MF_STRING, 13, to_wide("Presets").as_ptr());
         AppendMenuW(sub, MF_STRING, 14, to_wide("Samples").as_ptr());
         AppendMenuW(sub, MF_STRING, 15, to_wide("Icons").as_ptr());
+        AppendMenuW(sub, MF_SEPARATOR, 16, null_mut());
+        AppendMenuW(sub, MF_STRING, 17, to_wide("Logs").as_ptr());
 
         // Create the Main Menu..
         let hmenu = winuser::CreatePopupMenu();
@@ -214,6 +216,7 @@ impl WindowProc for GoXLRWindowProc {
                     13 => self.global_tx.try_send(Open(PathTypes::Presets)),
                     14 => self.global_tx.try_send(Open(PathTypes::Samples)),
                     15 => self.global_tx.try_send(Open(PathTypes::Icons)),
+                    17 => self.global_tx.try_send(Open(PathTypes::Logs)),
 
                     // Anything Else(?!)
                     id => {

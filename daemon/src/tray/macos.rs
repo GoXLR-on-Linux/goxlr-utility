@@ -16,7 +16,7 @@ use tao::system_tray::SystemTrayBuilder;
 use tao::TrayId;
 use tokio::sync::mpsc::Sender;
 
-use goxlr_ipc::PathTypes::{Icons, MicProfiles, Presets, Profiles, Samples};
+use goxlr_ipc::PathTypes::{Icons, Logs, MicProfiles, Presets, Profiles, Samples};
 use tao::platform::macos::{ActivationPolicy, EventLoopExtMacOS};
 
 pub fn handle_tray(state: DaemonState, tx: Sender<EventTriggers>) -> Result<()> {
@@ -40,6 +40,8 @@ pub fn handle_tray(state: DaemonState, tx: Sender<EventTriggers>) -> Result<()> 
     let presets = sub_menu.add_item(MenuItemAttributes::new("Presets"));
     let samples = sub_menu.add_item(MenuItemAttributes::new("Samples"));
     let icons = sub_menu.add_item(MenuItemAttributes::new("Icons"));
+    sub_menu.add_native_item(Separator);
+    let logs = sub_menu.add_item(MenuItemAttributes::new("Logs"));
 
     let mut tray_menu = ContextMenu::new();
     let configure = tray_menu.add_item(MenuItemAttributes::new("Configure GoXLR"));
@@ -92,6 +94,10 @@ pub fn handle_tray(state: DaemonState, tx: Sender<EventTriggers>) -> Result<()> 
 
             if menu_id == icons.clone().id() {
                 let _ = tx.try_send(EventTriggers::Open(Icons));
+            }
+
+            if menu_id == logs.clone().id() {
+                let _ = tx.try_send(EventTriggers::Open(Logs));
             }
         }
 
