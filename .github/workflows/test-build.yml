@@ -51,8 +51,6 @@ jobs:
           args: --manifest-path=goxlr-utility-ui/src-tauri/Cargo.toml --target-dir=goxlr-utility/target --release
 
       # Prepare NSIS
-      - name: Preparing NSIS
-
       - name: Build NSIS Packages
         uses: joncloud/makensis-action@publish
         with:
