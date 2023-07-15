@@ -1,22 +1,8 @@
 name: Create Test Build
 on: workflow_dispatch
 jobs:
-
   get_version:
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - name: Update Cargo.lock
-        run: cargo update
-      - id: version
-        run: 'echo "::set-output name=version::$(cargo pkgid -p goxlr-daemon | cut -d@ -f2)"'
+    uses: ./.github/workflows/build.yml
 
   build_windows:
     runs-on: windows-latest
