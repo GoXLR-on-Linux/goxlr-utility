@@ -2,7 +2,7 @@ name: Create Test Build
 on: workflow_dispatch
 jobs:
   get_version:
-    uses: ./.github/workflows/build.yml
+    uses: ./.github/workflows/get-version.yml
 
   build_windows:
     runs-on: windows-latest
