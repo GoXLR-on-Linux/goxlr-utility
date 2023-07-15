@@ -22,16 +22,6 @@ jobs:
       - name: "Update Cargo.lock"
         run: cargo update
 
-      - name: "Err.."
-        run: echo $GITHUB_OUTPUT
-
-      - name: "Test Store"
-        run: echo "version=$(cargo pkgid -p goxlr-daemon | cut -d@ -f2)"
-
       - name: "Store Version"
         id: store_version
-        #run: echo "version=$(cargo pkgid -p goxlr-daemon | cut -d@ -f2)" >> "$GITHUB_OUTPUT"
-        run: |
-          echo "version=0.0.0" >> $GITHUB_OUTPUT
-          cat $GITHUB_OUTPUT
-
+        run: echo "version=$(cargo pkgid -p goxlr-daemon | cut -d@ -f2)" >> "$GITHUB_OUTPUT"
