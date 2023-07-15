@@ -22,7 +22,7 @@ jobs:
       - name: "Store Version"
         id: store_version
         #run: echo "version=$(cargo pkgid -p goxlr-daemon | cut -d@ -f2)" >> "$GITHUB_OUTPUT"
-        run: echo "version=0.0.0" >> "$GITHUB_OUTPUT"
+        run: echo "version=0.0.0" >> $GITHUB_OUTPUT
 
       - name: "Check Version"
-        run: cat "$GITHUB_OUTPUT"
+        run: cat $GITHUB_OUTPUT
