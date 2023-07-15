@@ -3,58 +3,8 @@ name: Build & Test
 on: [push, pull_request, workflow_call]
 
 jobs:
-  check:
-    name: Check
-    runs-on: ubuntu-latest
-    steps:
-      - name: "Install Dependencies.."
-        run: |
-          sudo apt-get update
-          sudo apt-get install libdbus-1-dev pkg-config libspeechd-dev
-      - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo check --all-features
-
-  test_linux:
-    name: Test Linux Suite
-    runs-on: ubuntu-latest
-    steps:
-      - name: "Install Dependencies.."
-        run: |
-          sudo apt-get update
-          sudo apt-get install libpulse0 libdbus-1-dev pkg-config libspeechd-dev
-      - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test --all-features
-
-  test_windows:
-    name: Test Windows Suite
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test --all-features
-
-  test_macos:
-    name: Test MacOS Suite
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test --all-features
-
-  fmt:
-    name: Rustfmt
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt
-      - run: cargo fmt --all -- --check
-
-  clippy_linux:
-    name: Clippy Linux
+  check_linux:
+    name: Checking for Linux
     runs-on: ubuntu-latest
     steps:
       - name: "Install Dependencies"
@@ -65,24 +15,48 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
+
+      - name: Running Tests
+      - run: cargo check --all-features
+
+      - name: Checking Formatting
+      - run: cargo fmt --all -- --check
+
+      - name: Performing Clippy Test
       - run: cargo clippy --all-targets --all-features -- -D warnings
 
-  clippy_macos:
-    name: Clippy MacOS
+  check_macos:
+    name: Checking for MacOS
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
+
+      - name: Running Tests
+      - run: cargo check --all-features
+
+      - name: Checking Formatting
+      - run: cargo fmt --all -- --check
+
+      - name: Performing Clippy Test
       - run: cargo clippy --all-targets --all-features -- -D warnings
 
-  clippy_windows:
-    name: Clippy Windows
+  check_windows:
+    name: Checking for Windows
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
+
+      - name: Running Tests
+      - run: cargo check --all-features
+
+      - name: Checking Formatting
+      - run: cargo fmt --all -- --check
+
+      - name: Performing Clippy Test
       - run: cargo clippy --all-targets --all-features -- -D warnings
