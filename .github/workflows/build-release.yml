@@ -11,10 +11,10 @@ jobs:
     needs: [get_version]
     steps:
       - name: Version Check
-        run: echo "Version - ${{ join(steps.get_version.get_version.outputs.*, '\n') }}"
+        run: echo "Version - ${{ join(needs.get_version.get_version.outputs.*, '\n') }}"
 
       - name: Version Check 2
-        run: echo "Version - ${{ join(steps.get_version.outputs.*, '\n') }}"
+        run: echo "Version - ${{ join(needs.get_version.outputs.*, '\n') }}"
 
       # Firstly Checkout our Repository..
       - name: "Check out GoXLR Utility"
