@@ -30,13 +30,13 @@ jobs:
           restore-keys: ${{ runner.os }}-cargo-
 
       - name: Running Tests
-      - run: cargo check --all-features
+        run: cargo check --all-features
 
       - name: Checking Formatting
-      - run: cargo fmt --all -- --check
+        run: cargo fmt --all -- --check
 
       - name: Performing Clippy Test
-      - run: cargo clippy --all-targets --all-features -- -D warnings
+        run: cargo clippy --all-targets --all-features -- -D warnings
 
   check_macos:
     name: Checking for MacOS
@@ -61,13 +61,13 @@ jobs:
           restore-keys: ${{ runner.os }}-cargo-
 
       - name: Running Tests
-      - run: cargo check --all-features
+        run: cargo check --all-features
 
       - name: Checking Formatting
-      - run: cargo fmt --all -- --check
+        run: cargo fmt --all -- --check
 
       - name: Performing Clippy Test
-      - run: cargo clippy --all-targets --all-features -- -D warnings
+        run: cargo clippy --all-targets --all-features -- -D warnings
 
   check_windows:
     name: Checking for Windows
@@ -92,10 +92,10 @@ jobs:
           restore-keys: ${{ runner.os }}-cargo-
 
       - name: Running Tests
-      - run: cargo check --all-features
+        run: cargo check --all-features
 
       - name: Checking Formatting
-      - run: cargo fmt --all -- --check
+        run: cargo fmt --all -- --check
 
       - name: Performing Clippy Test
-      - run: cargo clippy --all-targets --all-features -- -D warnings
+        run: cargo clippy --all-targets --all-features -- -D warnings
