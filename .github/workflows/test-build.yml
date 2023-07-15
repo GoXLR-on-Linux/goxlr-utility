@@ -2,7 +2,7 @@ name: Create Test Build
 on: workflow_dispatch
 jobs:
   get_version:
-    name: "Fetching Version"
+    name: "Version"
     uses: ./.github/workflows/get-version.yml
 
   build_windows:
