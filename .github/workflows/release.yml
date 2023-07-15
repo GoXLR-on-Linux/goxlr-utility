@@ -8,7 +8,7 @@ jobs:
 
   # Grab the current version..
   get_version:
-    uses: ./.github/workflows/get-version.yaml
+    uses: ./.github/workflows/get-version.yml
 
   # Create and upload release artifacts
   build:
