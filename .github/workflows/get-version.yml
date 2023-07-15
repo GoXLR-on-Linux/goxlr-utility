@@ -7,13 +7,14 @@ jobs:
     outputs:
       version: ${{ steps.get_version.outputs.version }}
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - name: Update Cargo.lock
+      - name: "Check out Repository"
+        uses: actions/checkout@v3
+
+      - name: "Install Rust"
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: "Update Cargo.lock"
         run: cargo update
-      - name: Save Version
+
+      - name: "Get Version"
         run: 'echo "version=$(cargo pkgid -p goxlr-daemon | cut -d@ -f2)" >> $GITHUB_OUTPUT'
