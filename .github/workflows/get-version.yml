@@ -1,11 +1,17 @@
 name: Get Current Version
-on: workflow_call
+on:
+  workflow_call:
+    outputs:
+      version:
+        description: "The GoXLR Utility Version Number"
+        value: ${{ jobs.get_version.outputs.version }}
+
 jobs:
   get_version:
     name: "Get Version"
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.get_version.outputs.version }}
+      version: ${{ steps.store_version.outputs.version }}
     steps:
       - name: "Check out Repository"
         uses: actions/checkout@v3
@@ -16,5 +22,6 @@ jobs:
       - name: "Update Cargo.lock"
         run: cargo update
 
-      - name: "Get Version"
-        run: 'echo "version=$(cargo pkgid -p goxlr-daemon | cut -d@ -f2)" >> $GITHUB_OUTPUT'
+      - name: "Store Version"
+        id: store_version
+        run: echo "version=$(cargo pkgid -p goxlr-daemon | cut -d@ -f2)" >> "$GITHUB_OUTPUT"
