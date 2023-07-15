@@ -47,9 +47,20 @@ jobs:
         run: "cargo build --manifest-path=goxlr-utility-ui/src-tauri/Cargo.toml --target-dir=goxlr-utility/target --release"
 
       # Prepare NSIS
+      - name: "Preparing NSIS"
+        run: mkdir ${{ github.workspace }}/NSIS_Plugins
+
+      - name: "Downloading Tauri Utility Plugin"
+        uses: carlosperate/download-file-action@v1.0.3
+        with:
+          file-url: https://github.com/tauri-apps/nsis-tauri-utils/releases/download/nsis_tauri_utils-v0.1.1/nsis_tauri_utils.dll
+          file-name: nsis_tauri_utils.dll
+          location: ${{ github.workspace }}/Plugins
+
       - name: "Build NSIS Packages"
         uses: joncloud/makensis-action@publish
         with:
+          additional-plugin-paths: ${{ github.workspace }}/Plugins
           script-file: goxlr-utility/ci/nsis/goxlr-utility.nsi
           arguments: "/DPRODUCT_VERSION=${{ needs.get_version.outputs.version }}"
 
