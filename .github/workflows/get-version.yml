@@ -1,0 +1,18 @@
+name: Get Current Version
+on: workflow_call
+jobs:
+  get_version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - name: Update Cargo.lock
+        run: cargo update
+      - name: Save Version
+        run: 'echo "version=$(cargo pkgid -p goxlr-daemon | cut -d@ -f2)" >> $GITHUB_OUTPUT'
