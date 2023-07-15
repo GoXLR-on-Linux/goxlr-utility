@@ -60,7 +60,7 @@ jobs:
       - name: "Build NSIS Packages"
         uses: joncloud/makensis-action@publish
         with:
-          additional-plugin-paths: ${{ github.workspace }}/Plugins
+          additional-plugin-paths: ${{ github.workspace }}/NSIS_Plugins
           script-file: goxlr-utility/ci/nsis/goxlr-utility.nsi
           arguments: "/DPRODUCT_VERSION=${{ needs.get_version.outputs.version }}"
 
