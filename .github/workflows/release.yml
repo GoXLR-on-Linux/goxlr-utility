@@ -12,7 +12,7 @@ jobs:
 
   # Create and upload release artifacts
   build:
-    uses: ./.github/workflows/build-release.yaml
+    uses: ./.github/workflows/build-release.yml
 
   # Actually Create the Release
   create_release_draft:
