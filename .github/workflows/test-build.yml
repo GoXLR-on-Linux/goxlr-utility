@@ -2,9 +2,11 @@ name: Create Test Build
 on: workflow_dispatch
 jobs:
   get_version:
+    name: "Fetching Version"
     uses: ./.github/workflows/get-version.yml
 
   build_windows:
+    name: "Create Windows Build"
     runs-on: windows-latest
     needs: [get_version]
     steps:
@@ -63,6 +65,7 @@ jobs:
           path: ./goxlr-utility/ci/Output/*.exe
 
   build:
+    name: "Create Linux Builds"
     runs-on: ubuntu-latest
     needs: [get_version]
     steps:
