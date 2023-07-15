@@ -4,6 +4,8 @@ jobs:
   get_version:
     name: "Get Version"
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
     steps:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
