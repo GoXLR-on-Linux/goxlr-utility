@@ -16,6 +16,9 @@ jobs:
       - name: "Update Cargo.lock"
         run: cargo update
 
+      - name: "Test Store"
+        run: echo "version=$(cargo pkgid -p goxlr-daemon | cut -d@ -f2)"
+
       - name: "Store Version"
         id: store_version
         run: echo "version=$(cargo pkgid -p goxlr-daemon | cut -d@ -f2)" >> "$GITHUB_OUTPUT"
