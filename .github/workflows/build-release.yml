@@ -100,7 +100,7 @@ jobs:
           restore-keys: ${{ runner.os }}-cargo-release-
 
       - name: Install cargo-deb and cargo-generate-rpm
-        run: cargo install cargo-deb cargo-generate-rpm
+        run: cargo install --force cargo-deb cargo-generate-rpm
 
       - name: "Build Packages"
         run: ./ci/build-packages
