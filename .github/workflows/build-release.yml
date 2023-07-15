@@ -75,9 +75,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install libpulse0 libdbus-1-dev pkg-config libspeechd-dev
 
-      - name: Install cargo-deb and cargo-generate-rpm
-        run: cargo install cargo-deb cargo-generate-rpm
-
       - name: "Loading Cache"
         uses: actions/cache@v3
         continue-on-error: false
@@ -90,6 +87,9 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-release-
+
+      - name: Install cargo-deb and cargo-generate-rpm
+        run: cargo install cargo-deb cargo-generate-rpm
 
       - name: "Build Packages"
         run: ./ci/build-packages
