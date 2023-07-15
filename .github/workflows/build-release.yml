@@ -10,6 +10,10 @@ jobs:
     runs-on: windows-latest
     needs: [get_version]
     steps:
+      - name: Version Check
+        run: echo "Version - ${{ needs.get_version.get_version.outputs.version }}"
+
+
       # Firstly Checkout our Repository..
       - name: "Check out GoXLR Utility"
         uses: actions/checkout@v3
@@ -51,7 +55,7 @@ jobs:
         uses: joncloud/makensis-action@publish
         with:
           script-file: goxlr-utility/ci/nsis/goxlr-utility.nsi
-          arguments: "/DPRODUCT_VERSION=${{ needs.get_version.outputs.version }}"
+          arguments: "/DPRODUCT_VERSION=${{ needs.get_version.get_version.outputs.version }}"
 
       - name: "Upload Installer"
         uses: actions/upload-artifact@v3
