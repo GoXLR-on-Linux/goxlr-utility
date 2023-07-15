@@ -2,6 +2,7 @@ name: Get Current Version
 on: workflow_call
 jobs:
   get_version:
+    name: "Fetching Version"
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
