@@ -1,4 +1,4 @@
-name: Create Test Build
+name: Create Release Build
 on: workflow_dispatch
 jobs:
   get_version:
@@ -28,7 +28,7 @@ jobs:
             ~/.cargo/git/db/
             goxlr-utility/target
           key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-release
+          restore-keys: ${{ runner.os }}-cargo-release-
 
       - uses: actions-rs/cargo@v1
         with:
