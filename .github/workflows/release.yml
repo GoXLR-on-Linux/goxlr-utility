@@ -1,4 +1,4 @@
-name: Create Release Draft
+name: Publish Release Draft
 on: workflow_dispatch
 jobs:
 
@@ -6,85 +6,17 @@ jobs:
   verify:
     uses: ./.github/workflows/build.yml
 
+  # Grab the current version..
   get_version:
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - name: Update Cargo.lock
-        run: cargo update
-      - id: version
-        run: 'echo "::set-output name=version::$(cargo pkgid -p goxlr-daemon | cut -d@ -f2)"'
+    uses: ./.github/workflows/get-version.yaml
 
-  build_windows:
-    needs: [get_version, verify]
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-
-      - uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release --all-features
-
-      - name: Build NSIS Packages
-        run: makensis.exe /DPRODUCT_VERSION=${{ needs.get_version.outputs.version }} ci/nsis/goxlr-utility.nsi
-        shell: cmd
-
-      - name: Upload Installer
-        uses: actions/upload-artifact@v3
-        with:
-          name: windows-artifact
-          path: ./ci/Output/*.exe
-
+  # Create and upload release artifacts
   build:
-    needs: verify
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
+    uses: ./.github/workflows/build-release.yaml
 
-      - name: Install Required Libraries
-        run: |
-          sudo apt-get update
-          sudo apt-get install libpulse0 libdbus-1-dev pkg-config libspeechd-dev
-
-      - name: Install cargo-deb and cargo-generate-rpm
-        run: cargo install cargo-deb cargo-generate-rpm
-
-      - name: Build Packages
-        run: ./ci/build-packages
-        shell: bash
-
-      - name: Upload DEB Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: debian-artifact
-          path: ./target/debian/*.deb
-
-      - name: Upload RPM Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: rpm-artifact
-          path: ./target/generate-rpm/*.rpm
-
+  # Actually Create the Release
   create_release_draft:
-    needs: [verify, get_version, build, build_windows]
+    needs: [verify, get_version, build]
     runs-on: ubuntu-latest
     steps:
       # Download the previously generated artifacts..
