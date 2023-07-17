@@ -723,9 +723,6 @@ impl<'a> Device<'a> {
 
     async fn mute_fader_to_x(&mut self, fader: FaderName) -> Result<()> {
         let (muted_to_x, muted_to_all, mute_function) = self.profile.get_mute_button_state(fader);
-
-        debug!("Hi?");
-
         let target = tts_target(mute_function);
 
         let channel = self.profile.get_fader_assignment(fader);
@@ -2163,25 +2160,6 @@ impl<'a> Device<'a> {
                     // V2 Here, this technically still blocks in it's current state, however, it
                     // doesn't have to anymore.
                     audio_handler.calculate_gain_thread(path, bank, button)?;
-
-                    // // This method will block until complete, but will give us a result..
-                    // let result = audio_handler.get_and_clear_calculating_result()?;
-                    //
-                    // // We can process any errors which occurred here..
-                    // if let Err(error) = result.result {
-                    //     bail!("Error Handling Sample: {}", error);
-                    // };
-                    //
-                    // let bank = result.bank;
-                    // let button = result.button;
-                    //
-                    // // Multi-part breakdown :p
-                    // let filename = result.file.file_name().unwrap();
-                    // let filename = filename.to_string_lossy().to_string();
-                    //
-                    // // Add the Track..
-                    // let track = self.profile.add_sample_file(bank, button, filename);
-                    // track.normalized_gain = result.gain;
                 }
 
                 // Update the lighting..
