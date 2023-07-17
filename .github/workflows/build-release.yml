@@ -51,11 +51,10 @@ jobs:
         run: mkdir -p ${{ github.workspace }}/NSIS_Plugins/x86-unicode/
 
       - name: "Downloading Tauri Utility Plugin"
-        uses: carlosperate/download-file-action@v1.0.3
+        uses: suisei-cn/actions-download-file@v1.4.0
         with:
-          file-url: https://github.com/tauri-apps/nsis-tauri-utils/releases/download/nsis_tauri_utils-v0.1.1/nsis_tauri_utils.dll
-          file-name: nsis_tauri_utils.dll
-          location: ${{ github.workspace }}/NSIS_Plugins/x86-unicode
+          url: https://github.com/tauri-apps/nsis-tauri-utils/releases/download/nsis_tauri_utils-v0.1.1/nsis_tauri_utils.dll
+          target: ${{ github.workspace }}/NSIS_Plugins/x86-unicode/
 
       - name: "Build NSIS Packages"
         uses: joncloud/makensis-action@publish
