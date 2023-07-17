@@ -634,6 +634,7 @@ impl<'a> Device<'a> {
             if mute_function == MuteFunction::All {
                 // In this scenario, we should just set cough_button_on and mute the channel.
                 self.goxlr.set_channel_state(ChannelName::Mic, Muted)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::MicInputMute]))?;
             }
 
             let message = format!("Mic Muted{}", target);
@@ -658,6 +659,7 @@ impl<'a> Device<'a> {
             let _ = self.global_events.send(TTSMessage(message)).await;
 
             self.goxlr.set_channel_state(ChannelName::Mic, Muted)?;
+            self.apply_effects(LinkedHashSet::from_iter([EffectKey::MicInputMute]))?;
             self.apply_routing(BasicInputDevice::Microphone)?;
             return Ok(());
         }
@@ -677,6 +679,7 @@ impl<'a> Device<'a> {
                         && !self.mic_muted_by_fader()
                     {
                         self.goxlr.set_channel_state(ChannelName::Mic, Unmuted)?;
+                        self.apply_effects(LinkedHashSet::from_iter([EffectKey::MicInputMute]))?;
                     }
 
                     let message = "Mic Unmuted".to_string();
@@ -690,6 +693,7 @@ impl<'a> Device<'a> {
 
                 if mute_function == MuteFunction::All {
                     self.goxlr.set_channel_state(ChannelName::Mic, Muted)?;
+                    self.apply_effects(LinkedHashSet::from_iter([EffectKey::MicInputMute]))?;
                 }
 
                 let message = format!("Mic Muted{}", target);
@@ -703,6 +707,7 @@ impl<'a> Device<'a> {
             self.profile.set_mute_chat_button_on(false);
             if mute_function == MuteFunction::All && !self.mic_muted_by_fader() {
                 self.goxlr.set_channel_state(ChannelName::Mic, Unmuted)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::MicInputMute]))?;
             }
 
             let message = "Mic Unmuted".to_string();
@@ -821,6 +826,7 @@ impl<'a> Device<'a> {
                 || (channel == ChannelName::Mic && !self.mic_muted_by_cough())
             {
                 self.goxlr.set_channel_state(channel, Unmuted)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::MicInputMute]))?;
             }
 
             // As with mute, the mini doesn't modify volumes on mute / unmute
