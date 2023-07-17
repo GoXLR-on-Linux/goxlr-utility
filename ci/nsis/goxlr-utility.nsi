@@ -52,8 +52,14 @@ Page custom IsUtilRunning
 ; Run the Install!
 !insertmacro MUI_PAGE_INSTFILES
 
-;!define MUI_FINISHPAGE_RUN "$INSTDIR\goxlr-launcher.exe"
-;!insertmacro MUI_PAGE_FINISH
+!define MUI_FINISHPAGE_RUN
+!define MUI_FINISHPAGE_RUN_FUNCTION runUtility
+!insertmacro MUI_PAGE_FINISH
+
+Function runUtility
+    ; We use explorer.exe here as a surrogate to de-elevate the util
+    ExecShell "" explorer.exe "$INSTDIR\goxlr-launcher.exe"
+FunctionEnd
 
 ; Uninstaller pages
 !insertmacro MUI_UNPAGE_INSTFILES
@@ -69,6 +75,7 @@ ShowInstDetails show
 ShowUnInstDetails show
 
 !insertmacro MUI_LANGUAGE "English"
+
 
 Function DoInit
 ${If} ${RunningX64}
@@ -149,7 +156,7 @@ var WebViewInstalled
             StrCpy $UseAppRegSet 1
             StrCpy $UseAppReg $KeyTest
         ${EndIf}
-		
+
 		; The registry key indicating that Edge WebView is installed (Check global, and user)
 		ReadRegStr $4 HKLM "SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" "pv"
 		ReadRegStr $5 HKCU "SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" "pv"
@@ -157,12 +164,12 @@ var WebViewInstalled
 		StrCmp $5 "" 0 WEBVIEW_PRESENT
 		StrCpy $WebViewInstalled 0
 		Goto WEBVIEW_END
-		
+
 		WEBVIEW_PRESENT:
 			StrCpy $WebViewInstalled 1
-	
+
 		WEBVIEW_END:
-	
+
 	END:
 
     FunctionEnd
@@ -291,15 +298,15 @@ Function InstallWebView
 	Delete "$TEMP\MicrosoftEdgeWebview2Setup.exe"
 	nsis_tauri_utils::download "https://go.microsoft.com/fwlink/p/?LinkId=2124703" "$TEMP\MicrosoftEdgeWebview2Setup.exe"
 	Pop $0
-	
-	${IfNot} $0 == 0 
+
+	${IfNot} $0 == 0
 		DetailPrint "Unable to Download WebView2 Setup, continuing without."
 		Goto END
 	${EndIf}
-	
+
 	DetailPrint "Installing WebView2"
 	ExecWait "$TEMP\MicrosoftEdgeWebview2Setup.exe /silent /install" $1
-	${IfNot} $1 == 0 
+	${IfNot} $1 == 0
 		DetailPrint "Failed to install WebView2, continuing without."
 		Goto END
 	${EndIf}
@@ -313,8 +320,8 @@ Section "MainSection" SEC01
 
 	; Make sure WebView2 is installed..
 	${If} $USE_APP == 1
-		${If} $WebViewInstalled == 0		
-			Call InstallWebView	
+		${If} $WebViewInstalled == 0
+			Call InstallWebView
 		${EndIf}
 	${EndIf}
 
