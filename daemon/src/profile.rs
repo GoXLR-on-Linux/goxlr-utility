@@ -1033,6 +1033,11 @@ impl ProfileAdapter {
         (mute_toggle, muted_to_x, muted_to_all, mute_function)
     }
 
+    pub fn is_mute_chat_button_toggle(&self) -> bool {
+        let mute_config = self.profile.settings().mute_chat();
+        mute_config.is_cough_toggle()
+    }
+
     pub fn set_mute_chat_button_on(&mut self, on: bool) {
         self.profile
             .settings_mut()

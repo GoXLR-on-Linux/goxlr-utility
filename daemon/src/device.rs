@@ -2410,7 +2410,30 @@ impl<'a> Device<'a> {
                 MuteState::MutedToX => self.mute_fader_to_x(fader).await?,
                 MuteState::MutedToAll => self.mute_fader_to_all(fader, true).await?,
             },
-            GoXLRCommand::SetCoughMuteState(_state) => {}
+            GoXLRCommand::SetCoughMuteState(state) => {
+                // This is more complicated because the 'state' of the mute can come from
+                // various different locations, so what we're going to do is simply update
+                // the profile, and re-apply the Mute settings from there.
+                if !self.profile.is_mute_chat_button_toggle() {
+                    bail!("Cannot Set state when Mute button is in 'Hold' Mode");
+                }
+                match state {
+                    MuteState::Unmuted => {
+                        self.profile.set_mute_chat_button_on(false);
+                        self.profile.set_mute_chat_button_blink(false);
+                    }
+                    MuteState::MutedToX => {
+                        self.profile.set_mute_chat_button_on(true);
+                        self.profile.set_mute_chat_button_blink(false);
+                    }
+                    MuteState::MutedToAll => {
+                        self.profile.set_mute_chat_button_on(false);
+                        self.profile.set_mute_chat_button_blink(true);
+                    }
+                }
+                self.apply_cough_from_profile()?;
+                self.update_button_states()?;
+            }
             GoXLRCommand::SetSubMixEnabled(enabled) => {
                 let headphones = goxlr_types::OutputDevice::Headphones;
                 if self.profile.is_submix_enabled() != enabled {

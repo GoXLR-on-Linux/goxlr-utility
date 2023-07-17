@@ -259,6 +259,11 @@ async fn main() -> Result<()> {
                             .command(&serial, GoXLRCommand::SetCoughMuteFunction(*mute_behaviour))
                             .await?;
                     }
+                    CoughButtonBehaviours::MuteState { state } => {
+                        client
+                            .command(&serial, GoXLRCommand::SetCoughMuteState(*state))
+                            .await?;
+                    }
                 },
                 SubCommands::BleepVolume { volume_percent } => {
                     // Ok, this is a value between -34 and 0, with 0 being loudest :D

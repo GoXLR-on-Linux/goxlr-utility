@@ -183,6 +183,12 @@ pub enum CoughButtonBehaviours {
         #[arg(value_enum)]
         mute_behaviour: MuteFunction,
     },
+
+    MuteState {
+        /// The new State
+        #[arg(value_enum)]
+        state: MuteState,
+    },
 }
 
 #[derive(Subcommand, Debug)]
