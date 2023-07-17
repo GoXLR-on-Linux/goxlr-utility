@@ -2762,6 +2762,13 @@ impl<'a> Device<'a> {
             }
 
             self.goxlr.set_fader(fader, new_channel)?;
+
+            // Submix firmware bug mitigation:
+            if new_channel == ChannelName::Headphones || new_channel == ChannelName::LineOut {
+                let volume = self.profile.get_channel_volume(new_channel);
+                self.goxlr.set_volume(new_channel, volume)?;
+            }
+
             return Ok(());
         }
 
