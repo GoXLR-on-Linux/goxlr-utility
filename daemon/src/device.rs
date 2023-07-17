@@ -2432,6 +2432,7 @@ impl<'a> Device<'a> {
                     }
                 }
                 self.apply_cough_from_profile()?;
+                self.apply_routing(BasicInputDevice::Microphone)?;
                 self.update_button_states()?;
             }
             GoXLRCommand::SetSubMixEnabled(enabled) => {
