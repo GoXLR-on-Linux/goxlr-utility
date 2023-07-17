@@ -267,9 +267,6 @@ impl ProfileAdapter {
         if input == InputDevice::Chat && output == OutputDevice::ChatMic {
             bail!("Invalid Route: Chat -> Chat Mic");
         }
-        if input == InputDevice::Samples && output == OutputDevice::Sampler {
-            bail!("Invalid Route: Samples -> Sampler");
-        }
 
         // Before we do anything, are we changing Headphones while they're not the active Monitor?
         if monitoring != OutputDevice::Headphones && output == OutputDevice::Headphones {
