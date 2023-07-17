@@ -4,6 +4,7 @@ use anyhow::{anyhow, bail, Context, Result};
 use byteorder::{ByteOrder, LittleEndian};
 use enum_map::EnumMap;
 use goxlr_ipc::{Compressor, Equaliser, EqualiserMini, NoiseGate};
+use goxlr_profile_loader::components::mute::MuteFunction;
 use goxlr_profile_loader::mic_profile::MicProfileSettings;
 use goxlr_types::{
     CompressorAttackTime, CompressorRatio, CompressorReleaseTime, DisplayMode, EffectKey,
@@ -744,16 +745,36 @@ impl MicProfileAdapter {
         return_value
     }
 
+    fn get_mic_mute(&self, profile: &ProfileAdapter) -> i32 {
+        // This is a little obnoxious, it's a mic param, but is heavily dependent on the profile.
+        // This essentially clones some behaviour from the main device to do checks.
+        let (_, muted_to_x, muted_to_all, mute_function) = profile.get_mute_chat_button_state();
+
+        let muted_by_fader = if profile.is_mic_on_fader() {
+            // We need to check this fader's mute button..
+            let fader = profile.get_mic_fader();
+
+            // Get the faders mute configuration
+            let (muted_to_x, muted_to_all, mute_function) = profile.get_mute_button_state(fader);
+
+            // Return whether we're muted or not by the fader
+            muted_to_all || (muted_to_x && mute_function == MuteFunction::All)
+        } else {
+            false
+        };
+
+        // Check all the cases where we might be muted to all, and return.
+        if muted_to_all || (muted_to_x && mute_function == MuteFunction::All) || muted_by_fader {
+            1
+        } else {
+            0
+        }
+    }
+
     /// This is going to require a CRAPLOAD of work to sort..
     pub fn get_effect_value(&self, effect: EffectKey, main_profile: &ProfileAdapter) -> i32 {
         match effect {
-            EffectKey::DisableMic => {
-                // TODO: Actually use this..
-                // Originally I favoured just muting the mic channel, but discovered during testing
-                // of the effects that the mic is still read even when the channel is muted, so we
-                // need to correctly send this when the mic gets muted / unmuted.
-                0
-            }
+            EffectKey::MicInputMute => self.get_mic_mute(main_profile),
             EffectKey::BleepLevel => self.profile.bleep_level().into(),
             EffectKey::GateMode => self.profile.gate_mode().into(),
             EffectKey::GateEnabled => 1, // Used for 'Mic Testing' in the UI
@@ -1048,7 +1069,7 @@ impl MicProfileAdapter {
         keys.insert(EffectKey::GateEnabled);
         keys.insert(EffectKey::BleepLevel);
         keys.insert(EffectKey::GateMode);
-        keys.insert(EffectKey::DisableMic);
+        keys.insert(EffectKey::MicInputMute);
 
         // EQ Settings
         keys.insert(EffectKey::Equalizer31HzFrequency);

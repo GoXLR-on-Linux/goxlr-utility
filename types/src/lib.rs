@@ -125,7 +125,7 @@ pub enum InputDevice {
 #[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum EffectKey {
-    DisableMic = 0x0158,
+    MicInputMute = 0x0158,
     BleepLevel = 0x0073,
     GateMode = 0x0010,
     GateThreshold = 0x0011,
