@@ -20,7 +20,7 @@ use winapi::um::winuser::{
 };
 use winapi::um::{shellapi, winuser};
 
-use crate::events::EventTriggers::{Activate, Open};
+use crate::events::EventTriggers::Open;
 use crate::events::{DaemonState, EventTriggers};
 use crate::platform::to_wide;
 use crate::tray::get_icon_from_global;
@@ -51,6 +51,8 @@ fn create_window(state: DaemonState, tx: Sender<EventTriggers>) -> Result<()> {
         AppendMenuW(sub, MF_STRING, 13, to_wide("Presets").as_ptr());
         AppendMenuW(sub, MF_STRING, 14, to_wide("Samples").as_ptr());
         AppendMenuW(sub, MF_STRING, 15, to_wide("Icons").as_ptr());
+        AppendMenuW(sub, MF_SEPARATOR, 16, null_mut());
+        AppendMenuW(sub, MF_STRING, 17, to_wide("Logs").as_ptr());
 
         // Create the Main Menu..
         let hmenu = winuser::CreatePopupMenu();
@@ -205,7 +207,7 @@ impl WindowProc for GoXLRWindowProc {
                 let menu_id = winuser::GetMenuItemID(lparam as HMENU, wparam as i32) as i32;
                 let _ = match menu_id {
                     // Main Menu
-                    0 => self.global_tx.try_send(EventTriggers::OpenUi),
+                    0 => self.global_tx.try_send(EventTriggers::Activate),
                     4 => self.global_tx.try_send(EventTriggers::Stop),
 
                     // Open Paths Menu
@@ -214,6 +216,7 @@ impl WindowProc for GoXLRWindowProc {
                     13 => self.global_tx.try_send(Open(PathTypes::Presets)),
                     14 => self.global_tx.try_send(Open(PathTypes::Samples)),
                     15 => self.global_tx.try_send(Open(PathTypes::Icons)),
+                    17 => self.global_tx.try_send(Open(PathTypes::Logs)),
 
                     // Anything Else(?!)
                     id => {
@@ -233,7 +236,7 @@ impl WindowProc for GoXLRWindowProc {
                             return Some(1);
                         }
                         if lparam as UINT == winuser::WM_LBUTTONUP {
-                            let _ = self.global_tx.try_send(Activate);
+                            let _ = self.global_tx.try_send(EventTriggers::Activate);
                             return None;
                         }
                         if lparam as UINT == winuser::WM_RBUTTONUP {

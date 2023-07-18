@@ -4,6 +4,7 @@ use anyhow::{anyhow, bail, Context, Result};
 use byteorder::{ByteOrder, LittleEndian};
 use enum_map::EnumMap;
 use goxlr_ipc::{Compressor, Equaliser, EqualiserMini, NoiseGate};
+use goxlr_profile_loader::components::mute::MuteFunction;
 use goxlr_profile_loader::mic_profile::MicProfileSettings;
 use goxlr_types::{
     CompressorAttackTime, CompressorRatio, CompressorReleaseTime, DisplayMode, EffectKey,
@@ -684,13 +685,18 @@ impl MicProfileAdapter {
             MicrophoneParamKey::GateAttenuation => self
                 .i8_to_f32(self.gate_attenuation_from_percent(self.profile.gate().attenuation())),
             MicrophoneParamKey::CompressorThreshold => {
-                self.i8_to_f32(self.profile.compressor().threshold())
+                let config_value = self.profile.compressor().threshold() as usize;
+                if let Some(ratio) = CompressorRatio::iter().nth(config_value) {
+                    self.f32_to_f32(self.threshold_from(ratio))
+                } else {
+                    self.f32_to_f32(1.)
+                }
             }
             MicrophoneParamKey::CompressorRatio => {
                 self.u8_to_f32(self.profile.compressor().ratio())
             }
             MicrophoneParamKey::CompressorAttack => {
-                self.u8_to_f32(self.profile.compressor().ratio())
+                self.u8_to_f32(self.profile.compressor().attack())
             }
             MicrophoneParamKey::CompressorRelease => {
                 self.u8_to_f32(self.profile.compressor().release())
@@ -738,22 +744,62 @@ impl MicProfileAdapter {
         }
     }
 
+    fn threshold_from(&self, ratio: CompressorRatio) -> f32 {
+        match ratio {
+            CompressorRatio::Ratio1_0 => 1.0,
+            CompressorRatio::Ratio1_1 => 1.1,
+            CompressorRatio::Ratio1_2 => 1.2,
+            CompressorRatio::Ratio1_4 => 1.4,
+            CompressorRatio::Ratio1_6 => 1.6,
+            CompressorRatio::Ratio1_8 => 1.8,
+            CompressorRatio::Ratio2_0 => 2.0,
+            CompressorRatio::Ratio2_5 => 2.5,
+            CompressorRatio::Ratio3_2 => 3.2,
+            CompressorRatio::Ratio4_0 => 4.0,
+            CompressorRatio::Ratio5_6 => 5.6,
+            CompressorRatio::Ratio8_0 => 8.0,
+            CompressorRatio::Ratio16_0 => 16.0,
+            CompressorRatio::Ratio32_0 => 32.0,
+            CompressorRatio::Ratio64_0 => 64.0,
+        }
+    }
+
     fn calculate_bleep(&self, value: i8) -> [u8; 4] {
         let mut return_value = [0; 4];
         LittleEndian::write_f32(&mut return_value, value as f32 * 65536.0);
         return_value
     }
 
+    fn get_mic_mute(&self, profile: &ProfileAdapter) -> i32 {
+        // This is a little obnoxious, it's a mic param, but is heavily dependent on the profile.
+        // This essentially clones some behaviour from the main device to do checks.
+        let (_, muted_to_x, muted_to_all, mute_function) = profile.get_mute_chat_button_state();
+
+        let muted_by_fader = if profile.is_mic_on_fader() {
+            // We need to check this fader's mute button..
+            let fader = profile.get_mic_fader();
+
+            // Get the faders mute configuration
+            let (muted_to_x, muted_to_all, mute_function) = profile.get_mute_button_state(fader);
+
+            // Return whether we're muted or not by the fader
+            muted_to_all || (muted_to_x && mute_function == MuteFunction::All)
+        } else {
+            false
+        };
+
+        // Check all the cases where we might be muted to all, and return.
+        if muted_to_all || (muted_to_x && mute_function == MuteFunction::All) || muted_by_fader {
+            1
+        } else {
+            0
+        }
+    }
+
     /// This is going to require a CRAPLOAD of work to sort..
     pub fn get_effect_value(&self, effect: EffectKey, main_profile: &ProfileAdapter) -> i32 {
         match effect {
-            EffectKey::DisableMic => {
-                // TODO: Actually use this..
-                // Originally I favoured just muting the mic channel, but discovered during testing
-                // of the effects that the mic is still read even when the channel is muted, so we
-                // need to correctly send this when the mic gets muted / unmuted.
-                0
-            }
+            EffectKey::MicInputMute => self.get_mic_mute(main_profile),
             EffectKey::BleepLevel => self.profile.bleep_level().into(),
             EffectKey::GateMode => self.profile.gate_mode().into(),
             EffectKey::GateEnabled => 1, // Used for 'Mic Testing' in the UI
@@ -1048,7 +1094,7 @@ impl MicProfileAdapter {
         keys.insert(EffectKey::GateEnabled);
         keys.insert(EffectKey::BleepLevel);
         keys.insert(EffectKey::GateMode);
-        keys.insert(EffectKey::DisableMic);
+        keys.insert(EffectKey::MicInputMute);
 
         // EQ Settings
         keys.insert(EffectKey::Equalizer31HzFrequency);

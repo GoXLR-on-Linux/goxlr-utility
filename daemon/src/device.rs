@@ -634,6 +634,7 @@ impl<'a> Device<'a> {
             if mute_function == MuteFunction::All {
                 // In this scenario, we should just set cough_button_on and mute the channel.
                 self.goxlr.set_channel_state(ChannelName::Mic, Muted)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::MicInputMute]))?;
             }
 
             let message = format!("Mic Muted{}", target);
@@ -658,6 +659,7 @@ impl<'a> Device<'a> {
             let _ = self.global_events.send(TTSMessage(message)).await;
 
             self.goxlr.set_channel_state(ChannelName::Mic, Muted)?;
+            self.apply_effects(LinkedHashSet::from_iter([EffectKey::MicInputMute]))?;
             self.apply_routing(BasicInputDevice::Microphone)?;
             return Ok(());
         }
@@ -677,6 +679,7 @@ impl<'a> Device<'a> {
                         && !self.mic_muted_by_fader()
                     {
                         self.goxlr.set_channel_state(ChannelName::Mic, Unmuted)?;
+                        self.apply_effects(LinkedHashSet::from_iter([EffectKey::MicInputMute]))?;
                     }
 
                     let message = "Mic Unmuted".to_string();
@@ -690,6 +693,7 @@ impl<'a> Device<'a> {
 
                 if mute_function == MuteFunction::All {
                     self.goxlr.set_channel_state(ChannelName::Mic, Muted)?;
+                    self.apply_effects(LinkedHashSet::from_iter([EffectKey::MicInputMute]))?;
                 }
 
                 let message = format!("Mic Muted{}", target);
@@ -703,6 +707,7 @@ impl<'a> Device<'a> {
             self.profile.set_mute_chat_button_on(false);
             if mute_function == MuteFunction::All && !self.mic_muted_by_fader() {
                 self.goxlr.set_channel_state(ChannelName::Mic, Unmuted)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::MicInputMute]))?;
             }
 
             let message = "Mic Unmuted".to_string();
@@ -718,9 +723,6 @@ impl<'a> Device<'a> {
 
     async fn mute_fader_to_x(&mut self, fader: FaderName) -> Result<()> {
         let (muted_to_x, muted_to_all, mute_function) = self.profile.get_mute_button_state(fader);
-
-        debug!("Hi?");
-
         let target = tts_target(mute_function);
 
         let channel = self.profile.get_fader_assignment(fader);
@@ -764,8 +766,12 @@ impl<'a> Device<'a> {
         // If we did this on Mute to X, we don't need to do it again..
         if !(muted_to_x && mute_function == MuteFunction::All) {
             let volume = self.profile.get_channel_volume(channel);
-            self.profile.set_mute_previous_volume(fader, volume)?;
-            self.goxlr.set_volume(channel, 0)?;
+
+            // Per the latest official release, the mini no longer sets the volume to 0 on mute
+            if self.hardware.device_type != DeviceType::Mini {
+                self.profile.set_mute_previous_volume(fader, volume)?;
+                self.goxlr.set_volume(channel, 0)?;
+            }
             self.goxlr.set_channel_state(channel, Muted)?;
             self.profile.set_mute_button_on(fader, true)?;
         }
@@ -777,7 +783,11 @@ impl<'a> Device<'a> {
         if blink {
             self.profile.set_mute_button_blink(fader, true)?;
         }
-        self.profile.set_channel_volume(channel, 0)?;
+
+        if self.hardware.device_type != DeviceType::Mini {
+            // Again, only apply this if we're a full device
+            self.profile.set_channel_volume(channel, 0)?;
+        }
 
         // If we're Chat, we may need to transiently route the Microphone..
         if channel == ChannelName::Chat {
@@ -813,10 +823,22 @@ impl<'a> Device<'a> {
                 || (channel == ChannelName::Mic && !self.mic_muted_by_cough())
             {
                 self.goxlr.set_channel_state(channel, Unmuted)?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::MicInputMute]))?;
             }
 
-            self.goxlr.set_volume(channel, previous_volume)?;
-            self.profile.set_channel_volume(channel, previous_volume)?;
+            // As with mute, the mini doesn't modify volumes on mute / unmute
+            if self.hardware.device_type != DeviceType::Mini {
+                self.goxlr.set_volume(channel, previous_volume)?;
+                self.profile.set_channel_volume(channel, previous_volume)?;
+            } else if self.device_supports_submixes()
+                && (channel == ChannelName::Headphones || channel == ChannelName::LineOut)
+            {
+                // This is a special case, when calling unmute on submix firmware, the LineOut
+                // and Headphones don't set correctly, so we need to forcibly restore the
+                // volume. This does mean unlatching though :(
+                let current_volume = self.profile.get_channel_volume(channel);
+                self.goxlr.set_volume(channel, current_volume)?;
+            }
 
             // As before, we might need transient Mic Routing..
             if channel == ChannelName::Chat {
@@ -1314,18 +1336,6 @@ impl<'a> Device<'a> {
                     channel, old_volume, new_volume
                 );
 
-                // Ok, this simply doesn't work on a full device, when mute is called the mechanical
-                // fader drops to 0, and this spams out 'fader is currently muted' during that move.
-                // If I fix that problem, re-enable that code.
-
-                // let (muted_to_x, muted_to_all, mute_function) =
-                //     self.profile.get_mute_button_state(fader);
-                // if muted_to_all || (muted_to_x && mute_function == MuteFunction::All) {
-                //     // This fader is muted, we need to alert that these changes aren't happening!
-                //     let message = format!("Fader {} is currently Muted!", fader);
-                //     let _ = self.global_events.send(TTSMessage(message)).await;
-                // }
-
                 value_changed = true;
                 self.profile.set_channel_volume(channel, new_volume)?;
 
@@ -1635,6 +1645,12 @@ impl<'a> Device<'a> {
             GoXLRCommand::SetAnimationMode(mode) => {
                 if !self.device_supports_animations() {
                     bail!("Animations not supported on this firmware.");
+                }
+
+                if mode == goxlr_types::AnimationMode::Ripple
+                    && self.hardware.device_type == DeviceType::Mini
+                {
+                    bail!("Ripple Mode not supported on the GoXLR Mini");
                 }
 
                 self.profile.set_animation_mode(mode)?;
@@ -2144,25 +2160,6 @@ impl<'a> Device<'a> {
                     // V2 Here, this technically still blocks in it's current state, however, it
                     // doesn't have to anymore.
                     audio_handler.calculate_gain_thread(path, bank, button)?;
-
-                    // // This method will block until complete, but will give us a result..
-                    // let result = audio_handler.get_and_clear_calculating_result()?;
-                    //
-                    // // We can process any errors which occurred here..
-                    // if let Err(error) = result.result {
-                    //     bail!("Error Handling Sample: {}", error);
-                    // };
-                    //
-                    // let bank = result.bank;
-                    // let button = result.button;
-                    //
-                    // // Multi-part breakdown :p
-                    // let filename = result.file.file_name().unwrap();
-                    // let filename = filename.to_string_lossy().to_string();
-                    //
-                    // // Add the Track..
-                    // let track = self.profile.add_sample_file(bank, button, filename);
-                    // track.normalized_gain = result.gain;
                 }
 
                 // Update the lighting..
@@ -2413,7 +2410,31 @@ impl<'a> Device<'a> {
                 MuteState::MutedToX => self.mute_fader_to_x(fader).await?,
                 MuteState::MutedToAll => self.mute_fader_to_all(fader, true).await?,
             },
-            GoXLRCommand::SetCoughMuteState(_state) => {}
+            GoXLRCommand::SetCoughMuteState(state) => {
+                // This is more complicated because the 'state' of the mute can come from
+                // various different locations, so what we're going to do is simply update
+                // the profile, and re-apply the Mute settings from there.
+                if !self.profile.is_mute_chat_button_toggle() {
+                    bail!("Cannot Set state when Mute button is in 'Hold' Mode");
+                }
+                match state {
+                    MuteState::Unmuted => {
+                        self.profile.set_mute_chat_button_on(false);
+                        self.profile.set_mute_chat_button_blink(false);
+                    }
+                    MuteState::MutedToX => {
+                        self.profile.set_mute_chat_button_on(true);
+                        self.profile.set_mute_chat_button_blink(false);
+                    }
+                    MuteState::MutedToAll => {
+                        self.profile.set_mute_chat_button_on(false);
+                        self.profile.set_mute_chat_button_blink(true);
+                    }
+                }
+                self.apply_cough_from_profile()?;
+                self.apply_routing(BasicInputDevice::Microphone)?;
+                self.update_button_states()?;
+            }
             GoXLRCommand::SetSubMixEnabled(enabled) => {
                 let headphones = goxlr_types::OutputDevice::Headphones;
                 if self.profile.is_submix_enabled() != enabled {
@@ -2739,6 +2760,11 @@ impl<'a> Device<'a> {
             // We don't need to do anything at all in theory, set the fader anyway..
             if new_channel == ChannelName::Mic {
                 self.profile.set_mic_fader(fader)?;
+            }
+
+            // Submix firmware bug mitigation:
+            if new_channel == ChannelName::Headphones || new_channel == ChannelName::LineOut {
+                return Ok(());
             }
 
             self.goxlr.set_fader(fader, new_channel)?;

@@ -7,6 +7,7 @@
  * be used later.
  */
 use byteorder::{ByteOrder, LittleEndian};
+use strum::EnumIter;
 
 const FADER_COUNT: usize = 4;
 const MOOD_COUNT: usize = 2;
@@ -18,19 +19,19 @@ const FX_BUTTON_COUNT: usize = 4;
 const MIC_BUTTON_COUNT: usize = 2;
 
 #[derive(Default)]
-struct ColourScheme {
-    scribbles: [TwoColour; FADER_COUNT],
-    mood: [TwoColour; MOOD_COUNT],
-    mutes: [TwoColour; FADER_COUNT],
-    faders: [FaderColour; FADER_COUNT],
+pub struct ColourScheme {
+    pub scribbles: [TwoColour; FADER_COUNT],
+    pub mood: [TwoColour; MOOD_COUNT],
+    pub mutes: [TwoColour; FADER_COUNT],
+    pub faders: [FaderColour; FADER_COUNT],
     dummy1: [Dummy; 1],
-    presets: [TwoColour; PRESET_COUNT],
-    encoders: [EncoderColour; ENCODER_COUNT],
+    pub presets: [TwoColour; PRESET_COUNT],
+    pub encoders: [EncoderColour; ENCODER_COUNT],
     dummy2: [Dummy; 1],
-    sample_banks: [TwoColour; SAMPLE_BANK_COUNT],
-    sample_buttons: [TwoColour; SAMPLE_BUTTON_COUNT],
-    fx_buttons: [TwoColour; FX_BUTTON_COUNT],
-    mic_buttons: [TwoColour; MIC_BUTTON_COUNT],
+    pub sample_banks: [TwoColour; SAMPLE_BANK_COUNT],
+    pub sample_buttons: [TwoColour; SAMPLE_BUTTON_COUNT],
+    pub fx_buttons: [TwoColour; FX_BUTTON_COUNT],
+    pub mic_buttons: [TwoColour; MIC_BUTTON_COUNT],
 }
 
 impl ColourScheme {
@@ -90,15 +91,15 @@ impl ColourScheme {
     pub fn build_colour_map(&mut self, legacy: bool) -> Vec<u8> {
         let mut map = vec![];
         for button in &self.scribbles {
-            map.append(&mut button.get_colours_as_bytes());
+            map.append(&mut button.get_bytes());
         }
 
         for button in &self.mood {
-            map.append(&mut button.get_colours_as_bytes());
+            map.append(&mut button.get_bytes());
         }
 
         for button in &self.mutes {
-            map.append(&mut button.get_colours_as_bytes());
+            map.append(&mut button.get_bytes());
         }
 
         for fader in &self.faders {
@@ -110,7 +111,7 @@ impl ColourScheme {
         }
 
         for button in &self.presets {
-            map.append(&mut button.get_colours_as_bytes());
+            map.append(&mut button.get_bytes());
         }
 
         for encoder in &self.encoders {
@@ -122,19 +123,19 @@ impl ColourScheme {
         }
 
         for button in &self.sample_banks {
-            map.append(&mut button.get_colours_as_bytes());
+            map.append(&mut button.get_bytes());
         }
 
         for button in &self.sample_buttons {
-            map.append(&mut button.get_colours_as_bytes());
+            map.append(&mut button.get_bytes());
         }
 
         for button in &self.fx_buttons {
-            map.append(&mut button.get_colours_as_bytes());
+            map.append(&mut button.get_bytes());
         }
 
         for button in &self.mic_buttons {
-            map.append(&mut button.get_colours_as_bytes());
+            map.append(&mut button.get_bytes());
         }
 
         map
@@ -149,14 +150,14 @@ impl Dummy {
     }
 }
 
-#[derive(Default)]
-struct FaderColour {
-    colours: TwoColour,
+#[derive(Default, Copy, Clone)]
+pub struct FaderColour {
+    pub colours: TwoColour,
 }
 impl FaderColour {
     fn get_bytes(&self, legacy: bool) -> Vec<u8> {
         let mut result = Vec::new();
-        result.append(&mut self.colours.get_colours_as_bytes());
+        result.append(&mut self.colours.get_bytes());
 
         if !legacy {
             // The Animation Firmware changed faders from 2 colours to 14 colours, from what I
@@ -169,13 +170,13 @@ impl FaderColour {
     }
 }
 
-#[derive(Default)]
-struct TwoColour {
-    colour1: Colour,
-    colour2: Colour,
+#[derive(Default, Copy, Clone)]
+pub struct TwoColour {
+    pub colour1: Colour,
+    pub colour2: Colour,
 }
 impl TwoColour {
-    fn get_colours_as_bytes(&self) -> Vec<u8> {
+    fn get_bytes(&self) -> Vec<u8> {
         let mut result = Vec::new();
         result.append(&mut self.colour1.get_colour_as_bytes());
         result.append(&mut self.colour2.get_colour_as_bytes());
@@ -184,11 +185,11 @@ impl TwoColour {
     }
 }
 
-#[derive(Default)]
-struct EncoderColour {
-    left: Colour,
-    right: Colour,
-    knob: Colour,
+#[derive(Default, Copy, Clone)]
+pub struct EncoderColour {
+    pub left: Colour,
+    pub right: Colour,
+    pub knob: Colour,
 }
 
 impl EncoderColour {
@@ -202,11 +203,11 @@ impl EncoderColour {
     }
 }
 
-#[derive(Default)]
-struct Colour {
-    red: u32,
-    green: u32,
-    blue: u32,
+#[derive(Default, Copy, Clone)]
+pub struct Colour {
+    pub red: u32,
+    pub green: u32,
+    pub blue: u32,
 }
 
 impl Colour {
@@ -214,7 +215,7 @@ impl Colour {
         ((self.red) << 16) | ((self.green) << 8) | (self.blue)
     }
 
-    fn get_colour_as_bytes(&self) -> Vec<u8> {
+    pub fn get_colour_as_bytes(&self) -> Vec<u8> {
         let mut value = [0; 4];
         LittleEndian::write_u32(&mut value, self.pack());
 
@@ -222,7 +223,8 @@ impl Colour {
     }
 }
 
-enum TwoColourTargets {
+#[derive(Copy, Clone, EnumIter)]
+pub enum TwoColourTargets {
     // Scribble Bar first..
     Scribble1,
     Scribble2,
@@ -270,14 +272,16 @@ enum TwoColourTargets {
     CoughButton,
 }
 
-enum FaderTarget {
+#[derive(Copy, Clone, EnumIter)]
+pub enum FaderTarget {
     FaderA,
     FaderB,
     FaderC,
     FaderD,
 }
 
-enum EncoderTarget {
+#[derive(Copy, Clone, EnumIter)]
+pub enum EncoderTarget {
     Pitch,
     Gender,
     Reverb,

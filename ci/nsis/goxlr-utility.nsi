@@ -52,8 +52,14 @@ Page custom IsUtilRunning
 ; Run the Install!
 !insertmacro MUI_PAGE_INSTFILES
 
-!define MUI_FINISHPAGE_RUN "$INSTDIR\goxlr-launcher.exe"
+!define MUI_FINISHPAGE_RUN
+!define MUI_FINISHPAGE_RUN_FUNCTION runUtility
 !insertmacro MUI_PAGE_FINISH
+
+Function runUtility
+    ; We use explorer.exe here as a surrogate to de-elevate the util
+    ExecShell "" explorer.exe "$INSTDIR\goxlr-launcher.exe"
+FunctionEnd
 
 ; Uninstaller pages
 !insertmacro MUI_UNPAGE_INSTFILES
@@ -69,6 +75,7 @@ ShowInstDetails show
 ShowUnInstDetails show
 
 !insertmacro MUI_LANGUAGE "English"
+
 
 Function DoInit
 ${If} ${RunningX64}
@@ -104,8 +111,17 @@ FunctionEnd
 var KeyTest
 var StartMenuPath
 var StartMenuPathSet
+
 var InstallDir
 var InstallDirSet
+
+var AutoStartRegSet
+var AutoStartReg
+
+var UseAppRegSet
+var UseAppReg
+
+var WebViewInstalled
 
 !macro GetRegKeys un
     Function ${un}GetRegKeys
@@ -124,6 +140,38 @@ var InstallDirSet
             StrCpy $StartMenuPathSet 1
             StrCpy $StartMenuPath $KeyTest
         ${EndIf}
+
+        ReadRegStr $KeyTest HKLM64 "${PRODUCT_REGKEY}" "AutoStart"
+        ${If} ${Errors}
+            StrCpy $AutoStartRegSet 0
+        ${Else}
+            StrCpy $AutoStartRegSet 1
+            StrCpy $AutoStartReg $KeyTest
+        ${EndIf}
+
+        ReadRegStr $KeyTest HKLM64 "${PRODUCT_REGKEY}" "UseApp"
+        ${If} ${Errors}
+            StrCpy $UseAppRegSet 0
+        ${Else}
+            StrCpy $UseAppRegSet 1
+            StrCpy $UseAppReg $KeyTest
+        ${EndIf}
+
+		; The registry key indicating that Edge WebView is installed (Check global, and user)
+		ReadRegStr $4 HKLM "SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" "pv"
+		ReadRegStr $5 HKCU "SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" "pv"
+		StrCmp $4 "" 0 WEBVIEW_PRESENT
+		StrCmp $5 "" 0 WEBVIEW_PRESENT
+		StrCpy $WebViewInstalled 0
+		Goto WEBVIEW_END
+
+		WEBVIEW_PRESENT:
+			StrCpy $WebViewInstalled 1
+
+		WEBVIEW_END:
+
+	END:
+
     FunctionEnd
 !macroend
 !insertmacro GetRegKeys ""
@@ -148,12 +196,24 @@ Function PerformActions
     !insertmacro MUI_HEADER_TEXT "Select Additional Tasks" "Which additional tasks should be performed?"
 
     !insertmacro INSTALLOPTIONS_EXTRACT "post-install.ini"
+
+    ; Set any cached values..
+    AUTO_START:
+        StrCmp $AutoStartRegSet 1 0 USE_APP
+        !insertmacro INSTALLOPTIONS_WRITE "post-install.ini" "Field 2" "State" $AutoStartReg
+    USE_APP:
+        StrCmp $UseAppRegSet 1 0 END
+        !insertmacro INSTALLOPTIONS_WRITE "post-install.ini" "Field 3" "State" $UseAppReg
+
+    END:
     !insertmacro INSTALLOPTIONS_DISPLAY "post-install.ini"
 FunctionEnd
 
 Function PerformActionsLeave
     var /GLOBAL AUTO_START
+    var /GLOBAL USE_APP
     !insertmacro INSTALLOPTIONS_READ $AUTO_START "post-install.ini" "Field 2" "State"
+    !insertmacro INSTALLOPTIONS_READ $USE_APP "post-install.ini" "Field 3" "State"
 FunctionEnd
 
 Function IsUtilRunning
@@ -233,9 +293,37 @@ Function CleanOldInstaller
     END:
 FunctionEnd
 
+Function InstallWebView
+
+	Delete "$TEMP\MicrosoftEdgeWebview2Setup.exe"
+	nsis_tauri_utils::download "https://go.microsoft.com/fwlink/p/?LinkId=2124703" "$TEMP\MicrosoftEdgeWebview2Setup.exe"
+	Pop $0
+
+	${IfNot} $0 == 0
+		DetailPrint "Unable to Download WebView2 Setup, continuing without."
+		Goto END
+	${EndIf}
+
+	DetailPrint "Installing WebView2"
+	ExecWait "$TEMP\MicrosoftEdgeWebview2Setup.exe /silent /install" $1
+	${IfNot} $1 == 0
+		DetailPrint "Failed to install WebView2, continuing without."
+		Goto END
+	${EndIf}
+
+	END:
+FunctionEnd
+
 Section "MainSection" SEC01
     Call StopUtility
     Call CleanOldInstaller
+
+	; Make sure WebView2 is installed..
+	${If} $USE_APP == 1
+		${If} $WebViewInstalled == 0
+			Call InstallWebView
+		${EndIf}
+	${EndIf}
 
     ; This is the main installer section..
     SetOutPath "$INSTDIR"
@@ -246,6 +334,7 @@ Section "MainSection" SEC01
     File "..\..\target\release\goxlr-defaults.exe"
     File "..\..\target\release\goxlr-launcher.exe"
     File "..\..\target\release\goxlr-firmware.exe"
+    File "..\..\target\release\goxlr-utility-ui.exe"
     File "..\..\target\release\SAAPI64.dll"
     File "..\..\target\release\nvdaControllerClient64.dll"
     File "..\..\LICENSE"
@@ -255,12 +344,26 @@ Section "MainSection" SEC01
     CreateDirectory "$SMPROGRAMS\$StartMenuFolder"
     CreateShortCut "$SMPROGRAMS\$StartMenuFolder\GoXLR Utility.lnk" "$INSTDIR\goxlr-launcher.exe"
 
-    StrCmp $AUTO_START 0 POST_AUTO
+    StrCmp $AUTO_START 0 AUTO_START_OFF
         ; Switch to Current User..
         SetShellVarContext current
         CreateShortCut "$SMPROGRAMS\Startup\GoXLR Utility.lnk" "$INSTDIR\goxlr-daemon.exe"
+        Goto POST_AUTO_START
 
-    POST_AUTO:
+    AUTO_START_OFF:
+        ; Switch to Current User..
+        SetShellVarContext current
+        Delete "$SMPROGRAMS\Startup\GoXLR Utility.lnk"
+
+    POST_AUTO_START:
+        StrCmp $USE_APP 0 REMOVE_APP
+        nsExec::Exec "$INSTDIR\goxlr-utility-ui.exe --install"
+        Goto POST_OPTION
+
+    REMOVE_APP:
+        nsExec::Exec "$INSTDIR\goxlr-utility-ui.exe --remove"
+
+    POST_OPTION:
 SectionEnd
 
 Section -Post
@@ -274,6 +377,8 @@ Section -Post
 
   WriteRegStr HKLM64 "${PRODUCT_REGKEY}" "InstallPath" "$INSTDIR"
   WriteRegStr HKLM64 "${PRODUCT_REGKEY}" "StartMenu" "$StartMenuFolder"
+  WriteRegStr HKLM64 "${PRODUCT_REGKEY}" "UseApp" "$USE_APP"
+  WriteRegStr HKLM64 "${PRODUCT_REGKEY}" "AutoStart" "$AUTO_START"
 SectionEnd
 
 Function un.onUninstSuccess

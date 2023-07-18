@@ -267,9 +267,6 @@ impl ProfileAdapter {
         if input == InputDevice::Chat && output == OutputDevice::ChatMic {
             bail!("Invalid Route: Chat -> Chat Mic");
         }
-        if input == InputDevice::Samples && output == OutputDevice::Sampler {
-            bail!("Invalid Route: Samples -> Sampler");
-        }
 
         // Before we do anything, are we changing Headphones while they're not the active Monitor?
         if monitoring != OutputDevice::Headphones && output == OutputDevice::Headphones {
@@ -1031,6 +1028,11 @@ impl ProfileAdapter {
         let mute_function = *mute_config.cough_mute_source();
 
         (mute_toggle, muted_to_x, muted_to_all, mute_function)
+    }
+
+    pub fn is_mute_chat_button_toggle(&self) -> bool {
+        let mute_config = self.profile.settings().mute_chat();
+        mute_config.is_cough_toggle()
     }
 
     pub fn set_mute_chat_button_on(&mut self, on: bool) {

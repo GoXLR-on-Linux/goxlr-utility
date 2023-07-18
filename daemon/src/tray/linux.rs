@@ -1,7 +1,7 @@
 use crate::events::EventTriggers;
 use crate::{DaemonState, ICON};
 use anyhow::Result;
-use goxlr_ipc::PathTypes::{Icons, MicProfiles, Presets, Profiles, Samples};
+use goxlr_ipc::PathTypes::{Icons, Logs, MicProfiles, Presets, Profiles, Samples};
 use ksni::menu::{StandardItem, SubMenu};
 use ksni::{Category, MenuItem, Status, ToolTip, Tray, TrayService};
 use log::debug;
@@ -111,7 +111,7 @@ impl Tray for GoXLRTray {
             StandardItem {
                 label: String::from("Configure GoXLR"),
                 activate: Box::new(|this: &mut GoXLRTray| {
-                    let _ = this.tx.blocking_send(EventTriggers::OpenUi);
+                    let _ = this.tx.blocking_send(EventTriggers::Activate);
                 }),
                 ..Default::default()
             }
@@ -157,6 +157,15 @@ impl Tray for GoXLRTray {
                         label: String::from("Icons"),
                         activate: Box::new(|this: &mut GoXLRTray| {
                             let _ = this.tx.blocking_send(EventTriggers::Open(Icons));
+                        }),
+                        ..Default::default()
+                    }
+                    .into(),
+                    MenuItem::Separator,
+                    StandardItem {
+                        label: String::from("Logs"),
+                        activate: Box::new(|this: &mut GoXLRTray| {
+                            let _ = this.tx.blocking_send(EventTriggers::Open(Logs));
                         }),
                         ..Default::default()
                     }
