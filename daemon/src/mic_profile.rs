@@ -685,7 +685,12 @@ impl MicProfileAdapter {
             MicrophoneParamKey::GateAttenuation => self
                 .i8_to_f32(self.gate_attenuation_from_percent(self.profile.gate().attenuation())),
             MicrophoneParamKey::CompressorThreshold => {
-                self.i8_to_f32(self.profile.compressor().threshold())
+                let config_value = self.profile.compressor().threshold() as usize;
+                if let Some(ratio) = CompressorRatio::iter().nth(config_value) {
+                    self.f32_to_f32(self.threshold_from(ratio))
+                } else {
+                    self.f32_to_f32(1.)
+                }
             }
             MicrophoneParamKey::CompressorRatio => {
                 self.u8_to_f32(self.profile.compressor().ratio())
@@ -736,6 +741,26 @@ impl MicProfileAdapter {
             MicrophoneParamKey::Equalizer8KHzGain => {
                 self.i8_to_f32(self.profile.equalizer_mini().eq_8k_gain())
             }
+        }
+    }
+
+    fn threshold_from(&self, ratio: CompressorRatio) -> f32 {
+        match ratio {
+            CompressorRatio::Ratio1_0 => 1.0,
+            CompressorRatio::Ratio1_1 => 1.1,
+            CompressorRatio::Ratio1_2 => 1.2,
+            CompressorRatio::Ratio1_4 => 1.4,
+            CompressorRatio::Ratio1_6 => 1.6,
+            CompressorRatio::Ratio1_8 => 1.8,
+            CompressorRatio::Ratio2_0 => 2.0,
+            CompressorRatio::Ratio2_5 => 2.5,
+            CompressorRatio::Ratio3_2 => 3.2,
+            CompressorRatio::Ratio4_0 => 4.0,
+            CompressorRatio::Ratio5_6 => 5.6,
+            CompressorRatio::Ratio8_0 => 8.0,
+            CompressorRatio::Ratio16_0 => 16.0,
+            CompressorRatio::Ratio32_0 => 32.0,
+            CompressorRatio::Ratio64_0 => 64.0,
         }
     }
 
