@@ -691,7 +691,7 @@ impl MicProfileAdapter {
                 self.u8_to_f32(self.profile.compressor().ratio())
             }
             MicrophoneParamKey::CompressorAttack => {
-                self.u8_to_f32(self.profile.compressor().ratio())
+                self.u8_to_f32(self.profile.compressor().attack())
             }
             MicrophoneParamKey::CompressorRelease => {
                 self.u8_to_f32(self.profile.compressor().release())
