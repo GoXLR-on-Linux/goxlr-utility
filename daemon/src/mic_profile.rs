@@ -10,7 +10,7 @@ use goxlr_types::{
     CompressorAttackTime, CompressorRatio, CompressorReleaseTime, DisplayMode, EffectKey,
     EqFrequencies, GateTimes, MicrophoneParamKey, MicrophoneType, MiniEqFrequencies,
 };
-use log::warn;
+use log::{debug, warn};
 use ritelinked::LinkedHashSet;
 use std::collections::{HashMap, HashSet};
 use std::fs::{remove_file, File};
@@ -685,15 +685,15 @@ impl MicProfileAdapter {
             MicrophoneParamKey::GateAttenuation => self
                 .i8_to_f32(self.gate_attenuation_from_percent(self.profile.gate().attenuation())),
             MicrophoneParamKey::CompressorThreshold => {
-                let config_value = self.profile.compressor().threshold() as usize;
+                self.i8_to_f32(self.profile.compressor().threshold())
+            }
+            MicrophoneParamKey::CompressorRatio => {
+                let config_value = self.profile.compressor().ratio() as usize;
                 if let Some(ratio) = CompressorRatio::iter().nth(config_value) {
-                    self.f32_to_f32(self.threshold_from(ratio))
+                    self.f32_to_f32(self.ratio_from(ratio))
                 } else {
                     self.f32_to_f32(1.)
                 }
-            }
-            MicrophoneParamKey::CompressorRatio => {
-                self.u8_to_f32(self.profile.compressor().ratio())
             }
             MicrophoneParamKey::CompressorAttack => {
                 self.u8_to_f32(self.profile.compressor().attack())
@@ -744,7 +744,7 @@ impl MicProfileAdapter {
         }
     }
 
-    fn threshold_from(&self, ratio: CompressorRatio) -> f32 {
+    fn ratio_from(&self, ratio: CompressorRatio) -> f32 {
         match ratio {
             CompressorRatio::Ratio1_0 => 1.0,
             CompressorRatio::Ratio1_1 => 1.1,
