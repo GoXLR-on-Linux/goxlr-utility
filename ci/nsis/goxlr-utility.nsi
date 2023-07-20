@@ -87,6 +87,7 @@ ${EndIf}
 
 Call GetRegKeys
 
+ClearErrors
 ; Firstly, see if we can find the path in the registry..
 ReadRegStr $0 HKCR64 "CLSID\{024D0372-641F-4B7B-8140-F4DFE458C982}\InprocServer32\" ""
 ${If} ${Errors}
@@ -125,6 +126,7 @@ var WebViewInstalled
 
 !macro GetRegKeys un
     Function ${un}GetRegKeys
+        ClearErrors
         ReadRegStr $KeyTest HKLM64 "${PRODUCT_REGKEY}" "InstallPath"
         ${If} ${Errors}
             StrCpy $InstallDirSet 0
@@ -133,6 +135,7 @@ var WebViewInstalled
             StrCpy $InstallDir $KeyTest
         ${EndIf}
 
+        ClearErrors
         ReadRegStr $KeyTest HKLM64 "${PRODUCT_REGKEY}" "StartMenu"
         ${If} ${Errors}
             StrCpy $StartMenuPathSet 0
@@ -141,6 +144,7 @@ var WebViewInstalled
             StrCpy $StartMenuPath $KeyTest
         ${EndIf}
 
+        ClearErrors
         ReadRegStr $KeyTest HKLM64 "${PRODUCT_REGKEY}" "AutoStart"
         ${If} ${Errors}
             StrCpy $AutoStartRegSet 0
@@ -149,6 +153,7 @@ var WebViewInstalled
             StrCpy $AutoStartReg $KeyTest
         ${EndIf}
 
+        ClearErrors
         ReadRegStr $KeyTest HKLM64 "${PRODUCT_REGKEY}" "UseApp"
         ${If} ${Errors}
             StrCpy $UseAppRegSet 0
@@ -157,6 +162,7 @@ var WebViewInstalled
             StrCpy $UseAppReg $KeyTest
         ${EndIf}
 
+        ClearErrors
 		; The registry key indicating that Edge WebView is installed (Check global, and user)
 		ReadRegStr $4 HKLM "SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" "pv"
 		ReadRegStr $5 HKCU "SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" "pv"
@@ -171,7 +177,7 @@ var WebViewInstalled
 		WEBVIEW_END:
 
 	END:
-
+        ClearErrors
     FunctionEnd
 !macroend
 !insertmacro GetRegKeys ""
