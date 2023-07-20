@@ -54,7 +54,7 @@ can also be served to a web browser on another computer). The UI design was mode
 in an attempt to provide a familiar interface for those moving from Windows to other platforms, rather than forcing
 people to learn a new configuration paradigm.
 
-![image](https://user-images.githubusercontent.com/574943/248385311-0bce92e6-c6c7-4933-81e1-95a36772bb7f.png)
+![image](https://user-images.githubusercontent.com/574943/255011559-90e69f0d-a42b-4be6-8d99-9e5da1a4df2c.png)
 
 ## Building
 Build instructions and other useful information can be found on the project's [wiki](https://github.com/GoXLR-on-Linux/goxlr-utility/wiki/Compilation-Guide).
