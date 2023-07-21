@@ -1121,8 +1121,8 @@ impl MicProfileAdapter {
         keys
     }
 
-    pub fn get_fx_keys(&self) -> HashSet<EffectKey> {
-        let mut keys = HashSet::new();
+    pub fn get_fx_keys(&self) -> LinkedHashSet<EffectKey> {
+        let mut keys = LinkedHashSet::new();
 
         // We can't iterate over EffectKey, simply because they are ordered by their GoXLR
         // key, and not the actual required key sending (boo!), so instead, we just make
