@@ -104,7 +104,7 @@ DEFAULT_REG:
 
 DEFAULT_NOT_FOUND:
     StrCpy $0 "C:\Program Files\TC-HELICON\GoXLR_Audio_Driver\W10_x64\goxlr_audioapi_x64.dll"
-    IfFileExists $0 END ERROR
+    IfFileExists $0 END ERROR_DEFAULT
 
 ERROR_REG:
     MessageBox MB_OK|MB_ICONSTOP  "Unable to locate the GoXLR Driver, there may be an issue with your installation."
