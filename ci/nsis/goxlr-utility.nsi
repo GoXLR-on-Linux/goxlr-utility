@@ -91,19 +91,27 @@ ClearErrors
 ; Firstly, see if we can find the path in the registry..
 ReadRegStr $0 HKCR64 "CLSID\{024D0372-641F-4B7B-8140-F4DFE458C982}\InprocServer32\" ""
 ${If} ${Errors}
-    Goto DEFAULT
+    Goto DEFAULT_REG
 ${EndIf}
 
 ; Check whether the registry path exists, otherwise try default.
-IfFileExists $0 END DEFAULT
+IfFileExists $0 END DEFAULT_NOT_FOUND
 
 ; Look for the file in the Default path..
-DEFAULT:
+DEFAULT_REG:
+    StrCpy $0 "C:\Program Files\TC-HELICON\GoXLR_Audio_Driver\W10_x64\goxlr_audioapi_x64.dll"
+    IfFileExists $0 END ERROR_REG
+
+DEFAULT_NOT_FOUND:
     StrCpy $0 "C:\Program Files\TC-HELICON\GoXLR_Audio_Driver\W10_x64\goxlr_audioapi_x64.dll"
     IfFileExists $0 END ERROR
 
-ERROR:
-    MessageBox MB_OK|MB_ICONSTOP  "Unable to locate the GoXLR Driver, please ensure it is installed."
+ERROR_REG:
+    MessageBox MB_OK|MB_ICONSTOP  "Unable to locate the GoXLR Driver, there may be an issue with your installation."
+    Goto END
+
+ERROR_DEFAULT:
+    MessageBox MB_OK|MB_ICONSTOP  "The GoXLR Driver was not found, please ensure it is installed."
     Abort
 
 END:
