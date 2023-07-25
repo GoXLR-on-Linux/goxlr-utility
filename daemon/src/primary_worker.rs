@@ -399,7 +399,7 @@ async fn load_device(
 ) -> Result<Device<'_>> {
     let device_copy = device.clone();
 
-    let mut handled_device = from_device(device, disconnect_sender, event_sender)?;
+    let mut handled_device = from_device(device, disconnect_sender, event_sender, false)?;
     let descriptor = handled_device.get_descriptor()?;
 
     let device_type = match descriptor.product_id() {

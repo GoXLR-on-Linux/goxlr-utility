@@ -20,8 +20,9 @@ cfg_if::cfg_if! {
             device: GoXLRDevice,
             disconnect_sender: Sender<String>,
             event_sender: Sender<String>,
+            skip_pause: bool,
         ) -> Result<Box<dyn FullGoXLRDevice>> {
-            device::TUSBAudioGoXLR::from_device(device, disconnect_sender, event_sender)
+            device::TUSBAudioGoXLR::from_device(device, disconnect_sender, event_sender, skip_pause)
         }
     } else {
         // If we're using Linux / MacOS / etc, utilise libUSB for control.
@@ -36,8 +37,9 @@ cfg_if::cfg_if! {
             device: GoXLRDevice,
             disconnect_sender: Sender<String>,
             event_sender: Sender<String>,
+            skip_pause: bool,
         ) -> Result<Box<dyn FullGoXLRDevice>> {
-            device::GoXLRUSB::from_device(device, disconnect_sender, event_sender)
+            device::GoXLRUSB::from_device(device, disconnect_sender, event_sender, skip_pause)
         }
     }
 }
