@@ -12,15 +12,15 @@ use strum::IntoEnumIterator;
 use tokio::sync::mpsc::Sender;
 
 use goxlr_ipc::{
-    DeviceType, Display, FaderStatus, GoXLRCommand, HardwareStatus, Levels, MicSettings,
-    MixerStatus, SampleProcessState, Settings,
+    Display, FaderStatus, GoXLRCommand, HardwareStatus, Levels, MicSettings, MixerStatus,
+    SampleProcessState, Settings,
 };
 use goxlr_profile_loader::components::mute::MuteFunction;
 use goxlr_types::{
-    Button, ChannelName, DisplayModeComponents, EffectBankPresets, EffectKey, EncoderName,
-    FaderName, HardTuneSource, InputDevice as BasicInputDevice, MicrophoneParamKey, Mix, MuteState,
-    OutputDevice as BasicOutputDevice, RobotRange, SampleBank, SampleButtons, SamplePlaybackMode,
-    VersionNumber, WaterfallDirection,
+    Button, ChannelName, DeviceType, DisplayModeComponents, EffectBankPresets, EffectKey,
+    EncoderName, FaderName, HardTuneSource, InputDevice as BasicInputDevice, MicrophoneParamKey,
+    Mix, MuteState, OutputDevice as BasicOutputDevice, RobotRange, SampleBank, SampleButtons,
+    SamplePlaybackMode, VersionNumber, WaterfallDirection,
 };
 use goxlr_usb::animation::{AnimationMode, WaterFallDir};
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
