@@ -137,6 +137,12 @@ impl<'a> Device<'a> {
             .get_device_chat_mute_mutes_mic_to_chat(&hardware.serial_number)
             .await;
 
+        debug!("--- DEVICE INFO ---");
+        debug!("Firmware: {:?}", hardware.versions.firmware);
+        debug!("DICE: {:?}", hardware.versions.dice);
+        debug!("Type: {:?}", hardware.device_type);
+        debug!("-------------------");
+
         let mut device = Self {
             profile,
             mic_profile,
