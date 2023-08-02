@@ -171,11 +171,6 @@ async fn main() -> Result<()> {
                             .command(&serial, GoXLRCommand::SetDeeser(*level))
                             .await?;
                     }
-                    MicrophoneCommands::MonitorMicWithFx { enabled } => {
-                        client
-                            .command(&serial, GoXLRCommand::SetMonitorWithFx(*enabled))
-                            .await?;
-                    }
                 },
                 SubCommands::Faders { fader } => match fader {
                     FaderCommands::Channel { fader, channel } => {
