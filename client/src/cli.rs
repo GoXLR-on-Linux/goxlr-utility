@@ -267,6 +267,11 @@ pub enum MicrophoneCommands {
         #[arg(value_parser=percent_value)]
         level: u8,
     },
+
+    MonitorMicWithFx {
+        #[arg(value_parser, action = ArgAction::Set)]
+        enabled: bool,
+    },
 }
 
 #[derive(Subcommand, Debug)]
