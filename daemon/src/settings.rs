@@ -274,6 +274,20 @@ impl SettingsHandle {
         true
     }
 
+    pub async fn get_enable_monitor_with_fx(&self, device_serial: &str) -> bool {
+        let settings = self.settings.read().await;
+        let value = settings
+            .devices
+            .as_ref()
+            .unwrap()
+            .get(device_serial)
+            .map(|d| d.enable_monitor_with_fx.unwrap_or(false));
+        if let Some(value) = value {
+            return value;
+        }
+        false
+    }
+
     pub async fn set_device_profile_name(&self, device_serial: &str, profile_name: &str) {
         let mut settings = self.settings.write().await;
         let entry = settings
@@ -343,6 +357,17 @@ impl SettingsHandle {
             .or_insert_with(DeviceSettings::default);
         entry.chat_mute_mutes_mic_to_chat = Some(setting);
     }
+
+    pub async fn set_enable_monitor_with_fx(&self, device_serial: &str, setting: bool) {
+        let mut settings = self.settings.write().await;
+        let entry = settings
+            .devices
+            .as_mut()
+            .unwrap()
+            .entry(device_serial.to_owned())
+            .or_insert_with(DeviceSettings::default);
+        entry.enable_monitor_with_fx = Some(setting);
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -406,11 +431,13 @@ struct DeviceSettings {
     mic_profile: String,
 
     hold_delay: Option<u16>,
-
     sampler_pre_buffer: Option<u16>,
 
     // 'Voice Chat Mute All Also Mutes Mic to Chat Mic' O_O
     chat_mute_mutes_mic_to_chat: Option<bool>,
+
+    // Enable Monitoring when FX are Enabled
+    enable_monitor_with_fx: Option<bool>,
 
     // 'Shutdown' commands..
     shutdown_commands: Vec<GoXLRCommand>,
@@ -425,6 +452,7 @@ impl Default for DeviceSettings {
             hold_delay: Some(500),
             sampler_pre_buffer: None,
             chat_mute_mutes_mic_to_chat: Some(true),
+            enable_monitor_with_fx: Some(false),
 
             shutdown_commands: vec![],
         }
