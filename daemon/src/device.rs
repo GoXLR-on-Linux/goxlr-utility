@@ -1273,6 +1273,9 @@ impl<'a> Device<'a> {
         key_updates.insert(EffectKey::RobotEnabled);
         self.apply_effects(key_updates)?;
 
+        // Re-apply routing to the Mic in case monitoring needs to be enabled / disabled..
+        self.apply_routing(BasicInputDevice::Microphone).await?;
+
         Ok(())
     }
 
@@ -2663,6 +2666,20 @@ impl<'a> Device<'a> {
     async fn apply_routing(&mut self, input: BasicInputDevice) -> Result<()> {
         // Load the routing for this channel from the profile..
         let mut router = self.profile.get_router(input);
+
+        // Before we apply transient routing (especially because mic), check whether we should
+        // be forcing Mic -> Headphones to 'On' due to settings..
+        if input == BasicInputDevice::Microphone {
+            // If the mic is muted, transient routing will forcefully disable this, so we should
+            // be safe to simply set it true here, and hope for the best :D
+            let serial = self.hardware.serial_number.as_str();
+            if self.settings.get_enable_monitor_with_fx(serial).await {
+                // We need to adjust this based on the FX state..
+                if self.profile.is_fx_enabled() {
+                    router[BasicOutputDevice::Headphones] = true;
+                }
+            }
+        }
 
         self.apply_transient_routing(input, &mut router)?;
         debug!("Applying Routing to {:?}:", input);
