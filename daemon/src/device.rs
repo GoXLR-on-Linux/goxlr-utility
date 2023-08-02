@@ -2390,13 +2390,6 @@ impl<'a> Device<'a> {
                 self.settings.save().await;
             }
 
-            GoXLRCommand::SetMonitorWithFx(value) => {
-                self.settings
-                    .set_enable_monitor_with_fx(self.serial(), value)
-                    .await;
-                self.settings.save().await;
-            }
-
             GoXLRCommand::SetActiveEffectPreset(preset) => {
                 self.load_effect_bank(preset).await?;
                 self.update_button_states()?;
