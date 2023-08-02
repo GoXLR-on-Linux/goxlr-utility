@@ -646,7 +646,7 @@ impl<'a> Device<'a> {
             let message = format!("Mic Muted{}", target);
             let _ = self.global_events.send(TTSMessage(message)).await;
 
-            self.apply_routing(BasicInputDevice::Microphone)?;
+            self.apply_routing(BasicInputDevice::Microphone).await?;
             return Ok(());
         }
 
@@ -666,7 +666,7 @@ impl<'a> Device<'a> {
 
             self.goxlr.set_channel_state(ChannelName::Mic, Muted)?;
             self.apply_effects(LinkedHashSet::from_iter([EffectKey::MicInputMute]))?;
-            self.apply_routing(BasicInputDevice::Microphone)?;
+            self.apply_routing(BasicInputDevice::Microphone).await?;
             return Ok(());
         }
 
@@ -690,7 +690,7 @@ impl<'a> Device<'a> {
 
                     let message = "Mic Unmuted".to_string();
                     let _ = self.global_events.send(TTSMessage(message)).await;
-                    self.apply_routing(BasicInputDevice::Microphone)?;
+                    self.apply_routing(BasicInputDevice::Microphone).await?;
                     return Ok(());
                 }
 
@@ -706,7 +706,7 @@ impl<'a> Device<'a> {
                 let _ = self.global_events.send(TTSMessage(message)).await;
 
                 // Update the transient routing..
-                self.apply_routing(BasicInputDevice::Microphone)?;
+                self.apply_routing(BasicInputDevice::Microphone).await?;
                 return Ok(());
             }
 
@@ -720,7 +720,7 @@ impl<'a> Device<'a> {
             let _ = self.global_events.send(TTSMessage(message)).await;
 
             // Disable button and refresh transient routing
-            self.apply_routing(BasicInputDevice::Microphone)?;
+            self.apply_routing(BasicInputDevice::Microphone).await?;
             return Ok(());
         }
 
@@ -754,7 +754,7 @@ impl<'a> Device<'a> {
         let input = self.get_basic_input_from_channel(channel);
         self.profile.set_mute_button_on(fader, true)?;
         if input.is_some() {
-            self.apply_routing(input.unwrap())?;
+            self.apply_routing(input.unwrap()).await?;
         }
         self.update_button_states()?;
         Ok(())
@@ -797,11 +797,11 @@ impl<'a> Device<'a> {
 
         // If we're Chat, we may need to transiently route the Microphone..
         if channel == ChannelName::Chat {
-            self.apply_routing(BasicInputDevice::Microphone)?;
+            self.apply_routing(BasicInputDevice::Microphone).await?;
         }
 
         if channel == ChannelName::Mic {
-            self.apply_routing(BasicInputDevice::Microphone)?;
+            self.apply_routing(BasicInputDevice::Microphone).await?;
         }
 
         self.update_button_states()?;
@@ -848,18 +848,18 @@ impl<'a> Device<'a> {
 
             // As before, we might need transient Mic Routing..
             if channel == ChannelName::Chat {
-                self.apply_routing(BasicInputDevice::Microphone)?;
+                self.apply_routing(BasicInputDevice::Microphone).await?;
             }
 
             if channel == ChannelName::Mic {
-                self.apply_routing(BasicInputDevice::Microphone)?;
+                self.apply_routing(BasicInputDevice::Microphone).await?;
             }
         }
 
         // Always do a Transient Routing update, just in case we went from Mute to X -> Mute to All
         let input = self.get_basic_input_from_channel(channel);
         if mute_function != MuteFunction::All && input.is_some() {
-            self.apply_routing(input.unwrap())?;
+            self.apply_routing(input.unwrap()).await?;
         }
 
         let name = self.profile.get_fader_assignment(fader);
@@ -1550,7 +1550,7 @@ impl<'a> Device<'a> {
                 self.profile.set_routing(input, output, enabled)?;
 
                 // Apply the change..
-                self.apply_routing(input)?;
+                self.apply_routing(input).await?;
             }
 
             GoXLRCommand::SetElementDisplayMode(element, display) => match element {
@@ -2124,18 +2124,18 @@ impl<'a> Device<'a> {
                     self.profile.set_hardtune_source(value)?;
 
                     // One way or another, we need to update all the inputs..
-                    self.apply_routing(BasicInputDevice::Music)?;
-                    self.apply_routing(BasicInputDevice::Game)?;
-                    self.apply_routing(BasicInputDevice::LineIn)?;
-                    self.apply_routing(BasicInputDevice::System)?;
+                    self.apply_routing(BasicInputDevice::Music).await?;
+                    self.apply_routing(BasicInputDevice::Game).await?;
+                    self.apply_routing(BasicInputDevice::LineIn).await?;
+                    self.apply_routing(BasicInputDevice::System).await?;
                 } else {
                     let current = self.profile.get_active_hardtune_source();
                     self.profile.set_hardtune_source(value)?;
                     let new = self.profile.get_active_hardtune_source();
 
                     // Remove from current, add to New.
-                    self.apply_routing(current)?;
-                    self.apply_routing(new)?;
+                    self.apply_routing(current).await?;
+                    self.apply_routing(new).await?;
                 }
 
                 // TODO: Check this..
@@ -2438,7 +2438,7 @@ impl<'a> Device<'a> {
                     }
                 }
                 self.apply_cough_from_profile()?;
-                self.apply_routing(BasicInputDevice::Microphone)?;
+                self.apply_routing(BasicInputDevice::Microphone).await?;
                 self.update_button_states()?;
             }
             GoXLRCommand::SetSubMixEnabled(enabled) => {
@@ -2448,7 +2448,7 @@ impl<'a> Device<'a> {
                         // Submixes are being disabled, we need to revert the monitor..
                         self.profile.set_monitor_mix(headphones)?;
                         for device in BasicInputDevice::iter() {
-                            self.apply_routing(device)?;
+                            self.apply_routing(device).await?;
                         }
                     }
 
@@ -2471,7 +2471,7 @@ impl<'a> Device<'a> {
 
                 // Might be a cleaner way to do this, we only need to handle 1 output..
                 for device in BasicInputDevice::iter() {
-                    self.apply_routing(device)?;
+                    self.apply_routing(device).await?;
                 }
 
                 // Make sure to switch Headphones from A to B if needed.
@@ -2666,9 +2666,10 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
-    fn apply_routing(&mut self, input: BasicInputDevice) -> Result<()> {
+    async fn apply_routing(&mut self, input: BasicInputDevice) -> Result<()> {
         // Load the routing for this channel from the profile..
         let mut router = self.profile.get_router(input);
+
         self.apply_transient_routing(input, &mut router)?;
         debug!("Applying Routing to {:?}:", input);
         debug!("{:?}", router);
@@ -3041,7 +3042,7 @@ impl<'a> Device<'a> {
         // For profile load, we should configure all the input channels from the profile,
         // this is split so we can do tweaks in places where needed.
         for input in BasicInputDevice::iter() {
-            self.apply_routing(input)?;
+            self.apply_routing(input).await?;
         }
 
         debug!("Applying Voice FX");
