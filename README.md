@@ -17,7 +17,7 @@ An unofficial tool to configure and control a TC-Helicon GoXLR or GoXLR Mini on 
 * Streamdeck Integration (through https://github.com/FrostyCoolSlug/goxlr-utility-streamdeck)
 
 ## Downloads
-Downloads are available on the [Releases Page](https://github.com/GoXLR-on-Linux/goxlr-utility/releases) under the
+Downloads are available on the [Releases Page](https://github.com/GoXLR-on-Linux/goxlr-utility/releases/latest) under the
 'Assets' header, we currently provide the following files:
 
 * `.exe` files, usable on Windows<sup>1</sup>
@@ -54,7 +54,7 @@ can also be served to a web browser on another computer). The UI design was mode
 in an attempt to provide a familiar interface for those moving from Windows to other platforms, rather than forcing
 people to learn a new configuration paradigm.
 
-![image](https://user-images.githubusercontent.com/574943/248385311-0bce92e6-c6c7-4933-81e1-95a36772bb7f.png)
+![image](https://user-images.githubusercontent.com/574943/255011559-90e69f0d-a42b-4be6-8d99-9e5da1a4df2c.png)
 
 ## Building
 Build instructions and other useful information can be found on the project's [wiki](https://github.com/GoXLR-on-Linux/goxlr-utility/wiki/Compilation-Guide).
