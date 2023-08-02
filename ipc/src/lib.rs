@@ -246,6 +246,7 @@ pub enum GoXLRCommand {
     // General Settings
     SetMuteHoldDuration(u16),
     SetVCMuteAlsoMuteCM(bool),
+    SetMonitorWithFx(bool),
 
     // These control the current GoXLR 'State'..
     SetActiveEffectPreset(EffectBankPresets),
