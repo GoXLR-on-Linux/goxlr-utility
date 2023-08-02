@@ -2395,6 +2395,7 @@ impl<'a> Device<'a> {
                     .set_enable_monitor_with_fx(self.serial(), value)
                     .await;
                 self.settings.save().await;
+                self.apply_routing(BasicInputDevice::Microphone).await?;
             }
 
             GoXLRCommand::SetActiveEffectPreset(preset) => {
