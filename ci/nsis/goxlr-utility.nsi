@@ -87,22 +87,31 @@ ${EndIf}
 
 Call GetRegKeys
 
+ClearErrors
 ; Firstly, see if we can find the path in the registry..
 ReadRegStr $0 HKCR64 "CLSID\{024D0372-641F-4B7B-8140-F4DFE458C982}\InprocServer32\" ""
 ${If} ${Errors}
-    Goto DEFAULT
+    Goto DEFAULT_REG
 ${EndIf}
 
 ; Check whether the registry path exists, otherwise try default.
-IfFileExists $0 END DEFAULT
+IfFileExists $0 END DEFAULT_NOT_FOUND
 
 ; Look for the file in the Default path..
-DEFAULT:
+DEFAULT_REG:
     StrCpy $0 "C:\Program Files\TC-HELICON\GoXLR_Audio_Driver\W10_x64\goxlr_audioapi_x64.dll"
-    IfFileExists $0 END ERROR
+    IfFileExists $0 END ERROR_REG
 
-ERROR:
-    MessageBox MB_OK|MB_ICONSTOP  "Unable to locate the GoXLR Driver, please ensure it is installed."
+DEFAULT_NOT_FOUND:
+    StrCpy $0 "C:\Program Files\TC-HELICON\GoXLR_Audio_Driver\W10_x64\goxlr_audioapi_x64.dll"
+    IfFileExists $0 END ERROR_DEFAULT
+
+ERROR_REG:
+    MessageBox MB_OK|MB_ICONSTOP  "Unable to locate the GoXLR Driver, there may be an issue with your installation."
+    Goto END
+
+ERROR_DEFAULT:
+    MessageBox MB_OK|MB_ICONSTOP  "The GoXLR Driver was not found, please ensure it is installed."
     Abort
 
 END:
@@ -125,6 +134,7 @@ var WebViewInstalled
 
 !macro GetRegKeys un
     Function ${un}GetRegKeys
+        ClearErrors
         ReadRegStr $KeyTest HKLM64 "${PRODUCT_REGKEY}" "InstallPath"
         ${If} ${Errors}
             StrCpy $InstallDirSet 0
@@ -133,6 +143,7 @@ var WebViewInstalled
             StrCpy $InstallDir $KeyTest
         ${EndIf}
 
+        ClearErrors
         ReadRegStr $KeyTest HKLM64 "${PRODUCT_REGKEY}" "StartMenu"
         ${If} ${Errors}
             StrCpy $StartMenuPathSet 0
@@ -141,6 +152,7 @@ var WebViewInstalled
             StrCpy $StartMenuPath $KeyTest
         ${EndIf}
 
+        ClearErrors
         ReadRegStr $KeyTest HKLM64 "${PRODUCT_REGKEY}" "AutoStart"
         ${If} ${Errors}
             StrCpy $AutoStartRegSet 0
@@ -149,6 +161,7 @@ var WebViewInstalled
             StrCpy $AutoStartReg $KeyTest
         ${EndIf}
 
+        ClearErrors
         ReadRegStr $KeyTest HKLM64 "${PRODUCT_REGKEY}" "UseApp"
         ${If} ${Errors}
             StrCpy $UseAppRegSet 0
@@ -157,6 +170,7 @@ var WebViewInstalled
             StrCpy $UseAppReg $KeyTest
         ${EndIf}
 
+        ClearErrors
 		; The registry key indicating that Edge WebView is installed (Check global, and user)
 		ReadRegStr $4 HKLM "SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" "pv"
 		ReadRegStr $5 HKCU "SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" "pv"
@@ -171,7 +185,7 @@ var WebViewInstalled
 		WEBVIEW_END:
 
 	END:
-
+        ClearErrors
     FunctionEnd
 !macroend
 !insertmacro GetRegKeys ""

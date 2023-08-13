@@ -27,6 +27,7 @@ pub trait AttachGoXLR {
         device: GoXLRDevice,
         disconnect_sender: Sender<String>,
         event_sender: Sender<String>,
+        skip_pause: bool,
     ) -> Result<Box<dyn FullGoXLRDevice>>
     where
         Self: Sized;

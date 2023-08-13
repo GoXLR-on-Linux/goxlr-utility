@@ -142,6 +142,7 @@ impl AttachGoXLR for GoXLRUSB {
         device: GoXLRDevice,
         disconnect_sender: Sender<String>,
         event_sender: Sender<String>,
+        _skip_pause: bool,
     ) -> Result<Box<(dyn FullGoXLRDevice)>> {
         // Firstly, we need to locate the USB device based on the location..
         let (device, descriptor) = GoXLRUSB::find_device(device)?;

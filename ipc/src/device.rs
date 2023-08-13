@@ -3,7 +3,7 @@ use enum_map::EnumMap;
 use goxlr_types::MuteState::Unmuted;
 use goxlr_types::{
     AnimationMode, Button, ButtonColourOffStyle, ChannelName, CompressorAttackTime,
-    CompressorRatio, CompressorReleaseTime, DisplayMode, EchoStyle, EffectBankPresets,
+    CompressorRatio, CompressorReleaseTime, DeviceType, DisplayMode, EchoStyle, EffectBankPresets,
     EncoderColourTargets, EqFrequencies, FaderDisplayStyle, FaderName, FirmwareVersions, GateTimes,
     GenderStyle, HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle, MicrophoneType,
     MiniEqFrequencies, Mix, MuteFunction, MuteState, OutputDevice, PitchStyle, ReverbStyle,
@@ -362,6 +362,7 @@ pub struct Settings {
     pub display: Display,
     pub mute_hold_duration: u16,
     pub vc_mute_also_mute_cm: bool,
+    pub enable_monitor_with_fx: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -407,12 +408,4 @@ pub struct UsbProductInformation {
     pub bus_number: u8,
     pub address: u8,
     pub identifier: Option<String>,
-}
-
-#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub enum DeviceType {
-    #[default]
-    Unknown,
-    Full,
-    Mini,
 }

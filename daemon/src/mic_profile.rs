@@ -1121,17 +1121,19 @@ impl MicProfileAdapter {
         keys
     }
 
-    pub fn get_fx_keys(&self) -> HashSet<EffectKey> {
-        let mut keys = HashSet::new();
+    pub fn get_fx_keys(&self) -> LinkedHashSet<EffectKey> {
+        let mut keys = LinkedHashSet::new();
 
-        // Lets go mental, return everything that's not specifically a mic key..
-        let mic_keys = self.get_mic_keys();
-
-        for effect in EffectKey::iter() {
-            if !mic_keys.contains(&effect) {
-                keys.insert(effect);
-            }
-        }
+        // We can't iterate over EffectKey, simply because they are ordered by their GoXLR
+        // key, and not the actual required key sending (boo!), so instead, we just make
+        // a huge set of all the needed keys to set the FX.
+        keys.extend(self.get_reverb_keyset());
+        keys.extend(self.get_megaphone_keyset());
+        keys.extend(self.get_robot_keyset());
+        keys.extend(self.get_hardtune_keyset());
+        keys.extend(self.get_echo_keyset());
+        keys.extend(self.get_pitch_keyset());
+        keys.extend(self.get_gender_keyset());
 
         keys
     }

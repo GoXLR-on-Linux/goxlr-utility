@@ -542,7 +542,14 @@ impl TUSBAudio<'_> {
         }
 
         debug!("Spawning RUSB PnP Thread");
-        thread::spawn(|| -> Result<()> {
+
+        // We should not return from this method until at least one run has been done by the
+        // thread, this is primarily to prevent conflicts on startup when everything changes.
+
+        let started = Arc::new(AtomicBool::new(false));
+        let started_inner = started.clone();
+
+        thread::spawn(move || -> Result<()> {
             let mut devices = vec![];
 
             loop {
@@ -577,9 +584,16 @@ impl TUSBAudio<'_> {
                     devices.clear();
                     devices.append(&mut found_devices);
                 }
+                if !started_inner.load(Ordering::Relaxed) {
+                    started_inner.store(true, Ordering::Relaxed);
+                }
                 sleep(Duration::from_secs(1));
             }
         });
+
+        while !started.load(Ordering::Relaxed) {
+            sleep(Duration::from_millis(5));
+        }
 
         *spawned = true;
         Ok(())

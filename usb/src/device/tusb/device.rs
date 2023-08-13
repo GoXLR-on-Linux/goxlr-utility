@@ -105,12 +105,15 @@ impl AttachGoXLR for TUSBAudioGoXLR {
         device: GoXLRDevice,
         disconnect_sender: Sender<String>,
         event_sender: Sender<String>,
+        skip_pause: bool,
     ) -> Result<Box<dyn FullGoXLRDevice>>
     where
         Self: Sized,
     {
-        // Before we do anything, wait 1second in case the GoXLR is still calibrating..
-        sleep(Duration::from_millis(1500));
+        if !skip_pause {
+            // Before we do anything, wait 1second in case the GoXLR is still calibrating..
+            sleep(Duration::from_millis(1500));
+        }
 
         let mut device_identifier = None;
         if let Some(identifier) = &device.identifier {

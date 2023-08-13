@@ -5,9 +5,10 @@ use crate::platform::{has_autostart, set_autostart};
 use crate::{FileManager, PatchEvent, SettingsHandle, Shutdown, VERSION};
 use anyhow::{anyhow, Result};
 use goxlr_ipc::{
-    DaemonCommand, DaemonConfig, DaemonStatus, DeviceType, Files, GoXLRCommand, HardwareStatus,
-    HttpSettings, PathTypes, Paths, UsbProductInformation,
+    DaemonCommand, DaemonConfig, DaemonStatus, Files, GoXLRCommand, HardwareStatus, HttpSettings,
+    PathTypes, Paths, UsbProductInformation,
 };
+use goxlr_types::DeviceType;
 use goxlr_usb::device::base::GoXLRDevice;
 use goxlr_usb::device::{find_devices, from_device};
 use goxlr_usb::{PID_GOXLR_FULL, PID_GOXLR_MINI};
@@ -398,7 +399,7 @@ async fn load_device(
 ) -> Result<Device<'_>> {
     let device_copy = device.clone();
 
-    let mut handled_device = from_device(device, disconnect_sender, event_sender)?;
+    let mut handled_device = from_device(device, disconnect_sender, event_sender, false)?;
     let descriptor = handled_device.get_descriptor()?;
 
     let device_type = match descriptor.product_id() {

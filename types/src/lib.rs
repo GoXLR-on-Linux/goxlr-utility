@@ -763,3 +763,13 @@ pub enum WaterfallDirection {
     Up,
     Off,
 }
+
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum DeviceType {
+    #[default]
+    Unknown,
+    Full,
+    Mini,
+}

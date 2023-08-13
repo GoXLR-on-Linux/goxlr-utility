@@ -10,6 +10,7 @@ use std::os::windows::ffi::OsStrExt;
 use std::path::PathBuf;
 use std::ptr::null_mut;
 use std::{env, fs};
+use tasklist::tasklist;
 use tokio::signal::windows::{ctrl_break, ctrl_close, ctrl_logoff, ctrl_shutdown};
 use tokio::sync::mpsc;
 use tokio::time::Duration;
@@ -61,10 +62,12 @@ pub fn to_wide(msg: &str) -> Vec<u16> {
 
 fn get_official_app_count() -> usize {
     unsafe {
-        let tasks = tasklist::Tasklist::new();
+        let tasks = tasklist();
         tasks
+            .keys()
             .filter(|task| {
-                task.get_pname() == GOXLR_APP_NAME || task.get_pname() == GOXLR_BETA_APP_NAME
+                let task = task.to_owned().to_owned();
+                task == *GOXLR_APP_NAME || task == *GOXLR_BETA_APP_NAME
             })
             .count()
     }

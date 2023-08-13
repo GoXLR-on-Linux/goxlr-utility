@@ -17,8 +17,8 @@ use goxlr_ipc::clients::ipc::ipc_client::IPCClient;
 use goxlr_ipc::clients::ipc::ipc_socket::Socket;
 use goxlr_ipc::clients::web::web_client::WebClient;
 use goxlr_ipc::GoXLRCommand;
-use goxlr_ipc::{DaemonRequest, DaemonResponse, DeviceType, MixerStatus, UsbProductInformation};
-use goxlr_types::{ChannelName, FaderName, InputDevice, MicrophoneType, OutputDevice};
+use goxlr_ipc::{DaemonRequest, DaemonResponse, MixerStatus, UsbProductInformation};
+use goxlr_types::{ChannelName, DeviceType, FaderName, InputDevice, MicrophoneType, OutputDevice};
 use interprocess::local_socket::tokio::LocalSocketStream;
 use interprocess::local_socket::NameTypeSupport;
 use strum::IntoEnumIterator;
@@ -169,6 +169,11 @@ async fn main() -> Result<()> {
                     MicrophoneCommands::DeEss { level } => {
                         client
                             .command(&serial, GoXLRCommand::SetDeeser(*level))
+                            .await?;
+                    }
+                    MicrophoneCommands::MonitorMicWithFx { enabled } => {
+                        client
+                            .command(&serial, GoXLRCommand::SetMonitorWithFx(*enabled))
                             .await?;
                     }
                 },

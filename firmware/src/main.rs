@@ -1,7 +1,7 @@
 use anyhow::{bail, Result};
 use byteorder::{LittleEndian, ReadBytesExt};
-use goxlr_ipc::{DeviceType, HardwareStatus, UsbProductInformation};
-use goxlr_types::VersionNumber;
+use goxlr_ipc::{HardwareStatus, UsbProductInformation};
+use goxlr_types::{DeviceType, VersionNumber};
 use goxlr_usb::device::base::FullGoXLRDevice;
 use goxlr_usb::device::{find_devices, from_device};
 use std::io::{Cursor, Write};
@@ -41,7 +41,7 @@ async fn main() -> Result<()> {
 
     let device = devices[0].clone();
     let device_clone = device.clone();
-    let mut handled_device = from_device(device, disconnect_sender, event_sender)?;
+    let mut handled_device = from_device(device, disconnect_sender, event_sender, true)?;
     let descriptor = handled_device.get_descriptor()?;
 
     let device_type = match descriptor.product_id() {
