@@ -1274,16 +1274,7 @@ impl<'a> Device<'a> {
         self.profile.set_effects(enabled)?;
 
         // When this changes, we need to update all the 'Enabled' keys..
-        let mut key_updates = LinkedHashSet::new();
-        key_updates.insert(EffectKey::Encoder1Enabled);
-        key_updates.insert(EffectKey::Encoder2Enabled);
-        key_updates.insert(EffectKey::Encoder3Enabled);
-        key_updates.insert(EffectKey::Encoder4Enabled);
-
-        key_updates.insert(EffectKey::MegaphoneEnabled);
-        key_updates.insert(EffectKey::HardTuneEnabled);
-        key_updates.insert(EffectKey::RobotEnabled);
-        self.apply_effects(key_updates)?;
+        self.apply_effects(self.mic_profile.get_enabled_keyset())?;
 
         // Re-apply routing to the Mic in case monitoring needs to be enabled / disabled..
         self.apply_routing(BasicInputDevice::Microphone).await?;

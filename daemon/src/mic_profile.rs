@@ -1134,6 +1134,7 @@ impl MicProfileAdapter {
         keys.extend(self.get_echo_keyset());
         keys.extend(self.get_pitch_keyset());
         keys.extend(self.get_gender_keyset());
+        keys.extend(self.get_enabled_keyset());
 
         keys
     }
@@ -1194,7 +1195,6 @@ impl MicProfileAdapter {
 
     pub fn get_megaphone_keyset(&self) -> LinkedHashSet<EffectKey> {
         let mut set = LinkedHashSet::new();
-        set.insert(EffectKey::MegaphoneEnabled);
         set.insert(EffectKey::MegaphoneStyle);
         set.insert(EffectKey::MegaphoneAmount);
         set.insert(EffectKey::MegaphoneHP);
@@ -1216,7 +1216,6 @@ impl MicProfileAdapter {
 
     pub fn get_robot_keyset(&self) -> LinkedHashSet<EffectKey> {
         let mut set = LinkedHashSet::new();
-        set.insert(EffectKey::RobotEnabled);
         set.insert(EffectKey::RobotPulseWidth);
         set.insert(EffectKey::RobotWaveform);
         set.insert(EffectKey::RobotThreshold);
@@ -1237,13 +1236,26 @@ impl MicProfileAdapter {
 
     pub fn get_hardtune_keyset(&self) -> LinkedHashSet<EffectKey> {
         let mut set = LinkedHashSet::new();
-        set.insert(EffectKey::HardTuneEnabled);
         set.insert(EffectKey::HardTuneKeySource);
         set.insert(EffectKey::HardTuneAmount);
         set.insert(EffectKey::HardTuneWindow);
         set.insert(EffectKey::HardTuneRate);
         set.insert(EffectKey::HardTuneScale);
         set.insert(EffectKey::HardTunePitchAmount);
+
+        set
+    }
+
+    pub fn get_enabled_keyset(&self) -> LinkedHashSet<EffectKey> {
+        let mut set = LinkedHashSet::new();
+        set.insert(EffectKey::Encoder1Enabled);
+        set.insert(EffectKey::Encoder2Enabled);
+        set.insert(EffectKey::Encoder3Enabled);
+        set.insert(EffectKey::Encoder4Enabled);
+
+        set.insert(EffectKey::MegaphoneEnabled);
+        set.insert(EffectKey::HardTuneEnabled);
+        set.insert(EffectKey::RobotEnabled);
 
         set
     }
