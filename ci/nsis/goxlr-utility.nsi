@@ -107,14 +107,18 @@ DEFAULT_NOT_FOUND:
     IfFileExists $0 END ERROR_DEFAULT
 
 ERROR_REG:
-    MessageBox MB_OK|MB_ICONSTOP  "Unable to locate the GoXLR Driver, there may be an issue with your installation."
+    # Registry Entry was missing and file not in default location, driver not installed.
+    MessageBox MB_OK|MB_ICONSTOP  "The GoXLR Driver was not found, please ensure it is installed."
     Goto END
 
 ERROR_DEFAULT:
-    MessageBox MB_OK|MB_ICONSTOP  "The GoXLR Driver was not found, please ensure it is installed."
+    # Registry Entry found, file not present at registry location nor at default location
+    MessageBox MB_OK|MB_ICONSTOP  "Unable to locate the GoXLR Driver, there may be an issue with your installation."
     Abort
 
 END:
+ClearErrors
+
 FunctionEnd
 
 var KeyTest
