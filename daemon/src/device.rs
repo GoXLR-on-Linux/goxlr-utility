@@ -2582,9 +2582,10 @@ impl<'a> Device<'a> {
         // to ensure that if we're handling the mic, we handle it here.
         if channel_name == ChannelName::Mic {
             self.apply_transient_chat_mic_mute(router)?;
+            self.apply_transient_cough_routing(router)?;
         }
 
-        self.apply_transient_cough_routing(channel_name, router)
+        Ok(())
     }
 
     fn apply_transient_fader_routing(
@@ -2605,7 +2606,6 @@ impl<'a> Device<'a> {
 
     fn apply_transient_cough_routing(
         &self,
-        channel_name: ChannelName,
         router: &mut EnumMap<BasicOutputDevice, bool>,
     ) -> Result<()> {
         // Same deal, pull out the current state, make needed changes.
@@ -2613,7 +2613,7 @@ impl<'a> Device<'a> {
             self.profile.get_mute_chat_button_state();
 
         self.apply_transient_channel_routing(
-            channel_name,
+            ChannelName::Mic,
             muted_to_x,
             muted_to_all,
             mute_function,
