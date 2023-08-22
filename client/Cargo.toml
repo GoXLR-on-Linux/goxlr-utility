@@ -9,7 +9,17 @@ repository = "https://github.com/GoXLR-on-Linux/GoXLR-Utility"
 license = "MIT"
 categories = ["hardware-support", "command-line-utilities"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name="client"
+path="src/lib.rs"
+
+[[bin]]
+name="goxlr-client"
+path="src/bin/main.rs"
+
+[[bin]]
+name="goxlr-client-quiet"
+path="src/bin/quiet.rs"
 
 [dependencies]
 goxlr-ipc = {path = "../ipc"}

@@ -349,6 +349,7 @@ Section "MainSection" SEC01
     ; Ok, here come the files..
     File "..\..\target\release\goxlr-daemon.exe"
     File "..\..\target\release\goxlr-client.exe"
+    File "..\..\target\release\goxlr-client-quiet.exe"
     File "..\..\target\release\goxlr-defaults.exe"
     File "..\..\target\release\goxlr-launcher.exe"
     File "..\..\target\release\goxlr-firmware.exe"

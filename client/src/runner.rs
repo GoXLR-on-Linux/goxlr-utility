@@ -1,6 +1,4 @@
-mod cli;
-mod microphone;
-
+use crate::cli::Cli;
 use crate::cli::{
     AnimationCommands, ButtonGroupLightingCommands, ButtonLightingCommands, CompressorCommands,
     CoughButtonBehaviours, Echo, EffectsCommands, EqualiserCommands, EqualiserMiniCommands,
@@ -11,7 +9,6 @@ use crate::cli::{
 use crate::microphone::apply_microphone_controls;
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
-use cli::Cli;
 use goxlr_ipc::client::Client;
 use goxlr_ipc::clients::ipc::ipc_client::IPCClient;
 use goxlr_ipc::clients::ipc::ipc_socket::Socket;
@@ -26,8 +23,7 @@ use strum::IntoEnumIterator;
 static SOCKET_PATH: &str = "/tmp/goxlr.socket";
 static NAMED_PIPE: &str = "@goxlr.socket";
 
-#[tokio::main]
-async fn main() -> Result<()> {
+pub async fn run_cli() -> Result<()> {
     let cli: Cli = Cli::parse();
 
     let mut client: Box<dyn Client>;
