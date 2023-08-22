@@ -1959,6 +1959,9 @@ impl<'a> Device<'a> {
                 // will still return it's 'Wide' value during polls which error out otherwise.
                 let value = self.profile.get_pitch_encoder_position();
                 self.goxlr.set_encoder_value(EncoderName::Pitch, value)?;
+
+                // Update the pitch 'Threshold' value which may have changed..
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::PitchThreshold]))?;
             }
             GoXLRCommand::SetPitchAmount(value) => {
                 let hard_tune_enabled = self.profile.is_hardtune_enabled(true);

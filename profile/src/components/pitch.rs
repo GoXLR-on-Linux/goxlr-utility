@@ -83,8 +83,8 @@ impl PitchEncoderBase {
 
                 // Set the threshold based on the style..
                 match preset.style {
-                    PitchStyle::Narrow => preset.threshold = -26,
-                    PitchStyle::Wide => preset.threshold = -36,
+                    PitchStyle::Narrow => preset.threshold = -36,
+                    PitchStyle::Wide => preset.threshold = -26,
                 }
 
                 continue;
@@ -300,6 +300,11 @@ impl PitchEncoder {
         // We need to update the knob value when we switch styles..
         if self.style == style {
             return;
+        }
+
+        match style {
+            PitchStyle::Narrow => self.threshold = -36,
+            PitchStyle::Wide => self.threshold = -26,
         }
 
         // If hard tune is enabled, there's a risk of going from 12 to 6, but ultimately
