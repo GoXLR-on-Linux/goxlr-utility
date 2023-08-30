@@ -6,6 +6,7 @@ use goxlr_ipc::{GoXLRCommand, LogLevel};
 use log::error;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fs;
 use std::fs::{create_dir_all, File};
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
@@ -389,10 +390,25 @@ pub struct Settings {
 impl Settings {
     pub fn read(path: &Path) -> Result<Option<Settings>> {
         match File::open(path) {
-            Ok(reader) => Ok(Some(serde_json::from_reader(reader).context(format!(
-                "Could not parse daemon settings file at {}",
-                path.to_string_lossy()
-            ))?)),
+            Ok(reader) => {
+                let settings = serde_json::from_reader(reader);
+
+                match settings {
+                    Ok(settings) => Ok(Some(settings)),
+                    Err(_) => {
+                        // Something's gone wrong loading the settings, rather than immediately
+                        // exiting, we'll try to backup the original file, and reload the defaults.
+                        let mut backup = PathBuf::from(path);
+                        backup.set_extension(".failed");
+
+                        let copy_result = fs::copy(path, backup);
+                        println!("{:?}", copy_result);
+
+                        println!("Error Loading configuration, loading defaults.");
+                        Ok(None)
+                    }
+                }
+            }
             Err(error) if error.kind() == ErrorKind::NotFound => Ok(None),
             Err(error) => Err(error).context(format!(
                 "Could not open daemon settings file for reading at {}",
