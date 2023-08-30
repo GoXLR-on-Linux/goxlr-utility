@@ -39,4 +39,5 @@ jobs:
           files: |
             ./debian-artifact/goxlr-utility_${{ needs.get_version.outputs.version }}_amd64.deb
             ./rpm-artifact/goxlr-utility-${{ needs.get_version.outputs.version }}-1.x86_64.rpm
+            ./rpm-artifact/goxlr-utility-${{ needs.get_version.outputs.version }}-suse.x86_64.rpm
             ./windows-artifact/goxlr-utility-${{ needs.get_version.outputs.version }}.exe

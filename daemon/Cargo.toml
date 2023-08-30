@@ -166,3 +166,12 @@ auto-req = "no"
 dbus-libs = ">= 1.9.14"
 pulseaudio-libs = ">= 10.0"
 speech-dispatcher = ">= 0.7"
+
+[package.metadata.generate-rpm.variants.suse]
+release = "suse"
+
+# SuSE has the same general dependencies as anything RHEL
+[package.metadata.generate-rpm.variants.suse.requires]
+libdbus-1-3 = ">= 1.9.14"
+libpulse0 = ">= 10.0"
+speech-dispatcher = ">= 0.7"

@@ -45,3 +45,4 @@ cargo deb -p goxlr-daemon --no-build
 
 # Then the RPM
 cargo generate-rpm -p daemon
+cargo generate-rpm -p daemon --variant suse
