@@ -16,5 +16,7 @@ quick-xml = "0.27.1"
 byteorder = "1.4.3"
 rand = "0.8.5"
 
+tempfile = "3.7.0"
+
 anyhow = "1.0.68"
 log = "0.4.17"

@@ -1,3 +1,4 @@
+use std::fs;
 use std::fs::File;
 use std::io::{BufReader, Read, Write};
 use std::path::Path;
@@ -82,10 +83,12 @@ impl Profile {
 
     // Ok, this is better.
     pub fn save(&mut self, path: impl AsRef<Path>) -> Result<()> {
-        debug!("Saving File: {}", &path.as_ref().to_string_lossy());
+        let temp_file = tempfile::NamedTempFile::new()?;
+
+        debug!("Creating Temporary Save File: {:?}", temp_file.path());
 
         // Create a new ZipFile at the requested location
-        let mut archive = zip::ZipWriter::new(File::create(path.as_ref())?);
+        let mut archive = zip::ZipWriter::new(temp_file.as_file());
 
         // Store the profile..
         archive.start_file("profile.xml", FileOptions::default())?;
@@ -102,6 +105,16 @@ impl Profile {
         }
         archive.finish()?;
 
+        // The archive has finished writing, we don't need it anymore (keeping it live prevents
+        // us from removing the temporary file).
+        drop(archive);
+
+        // Once complete, we simply move the file over the existing file..
+        debug!("Save Complete, copying to {:?}", path.as_ref());
+        fs::copy(temp_file.as_ref(), path)?;
+
+        debug!("Removing Temporary File: {:?}", temp_file);
+        fs::remove_file(temp_file)?;
         Ok(())
     }
 
