@@ -101,7 +101,9 @@ impl PitchEncoderBase {
             }
 
             // Threshold is a transient value based on the style..
-            // if attr.name == "PITCH_SHIFT_THRESHOLD"
+            if attr.name == "PITCH_SHIFT_THRESHOLD" {
+                continue;
+            }
 
             if attr.name == "PITCH_SHIFT_INST_RATIO" {
                 preset.inst_ratio = Some(attr.value.parse::<c_float>()? as u8);
