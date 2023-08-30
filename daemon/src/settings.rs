@@ -3,12 +3,12 @@ use crate::profile::DEFAULT_PROFILE_NAME;
 use anyhow::{Context, Result};
 use directories::ProjectDirs;
 use goxlr_ipc::{GoXLRCommand, LogLevel};
-use log::error;
+use log::{debug, error};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::fs::{create_dir_all, File};
-use std::io::ErrorKind;
+use std::io::{ErrorKind, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -418,6 +418,7 @@ impl Settings {
     }
 
     pub fn write(&self, path: &Path) -> Result<()> {
+        debug!("Writing Settings File to {:?}", path);
         if let Some(parent) = path.parent() {
             if let Err(e) = create_dir_all(parent) {
                 if e.kind() != ErrorKind::AlreadyExists {
@@ -428,14 +429,21 @@ impl Settings {
                 }
             }
         }
-        let writer = File::create(path).context(format!(
+
+        // There have been multiple reports of the settings file becoming corrupt when Windows
+        // goes to sleep followed by a power loss. I can't think of a reason why this file would
+        // be attempting to write (or in any way open) when windows enters Sleep mode, but to
+        // help reduce the probability of failure, rather than passing the writer to serde_json to
+        // serialise and write simultaneously, we'll convert the json, then write separately, so
+        // a failure is less likely to occur.
+        let output = serde_json::to_string_pretty(self)?;
+        let mut writer = File::create(path).context(format!(
             "Could not open daemon settings file for writing at {}",
             path.to_string_lossy()
         ))?;
-        serde_json::to_writer_pretty(writer, self).context(format!(
-            "Could not write to daemon settings file at {}",
-            path.to_string_lossy()
-        ))?;
+        writer.write_all(output.as_bytes())?;
+        debug!("Write Complete");
+
         Ok(())
     }
 }
