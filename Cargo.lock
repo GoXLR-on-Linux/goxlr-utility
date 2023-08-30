@@ -2065,6 +2065,7 @@ dependencies = [
  "strum 0.24.1",
  "tao",
  "tasklist",
+ "tempfile",
  "tokio",
  "tokio-serde",
  "tts",

@@ -50,6 +50,9 @@ interprocess = { version = "1.2.1", features = ["tokio_support"] }
 notify = "5.0.0"
 json-patch = "0.3.0"
 
+tempfile = "3.7.0"
+
+
 ## HTTPd Server
 actix = "0.13.0"
 actix-web-actors = "4.2.0"
