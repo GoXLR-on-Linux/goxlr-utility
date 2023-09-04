@@ -4,7 +4,10 @@ use derivative::Derivative;
 use enum_map::Enum;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+
+#[cfg(feature = "serde")]
 use serde_repr::{Deserialize_repr, Serialize_repr};
+
 use std::fmt::Formatter;
 use strum::{Display, EnumCount, EnumIter};
 
