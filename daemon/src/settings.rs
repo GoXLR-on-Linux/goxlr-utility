@@ -435,6 +435,10 @@ impl Settings {
         debug!("Writing Config to Temporary File: {:?}", temp_file.path());
         serde_json::to_writer_pretty(temp_file.as_file(), self)?;
 
+        // Sync the file written to disk..
+        debug!("Syncing Disk..");
+        temp_file.as_file().sync_all()?;
+
         debug!("Write Complete, saving to {:?}", path);
         fs::copy(temp_file.path(), path)?;
 

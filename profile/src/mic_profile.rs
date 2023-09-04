@@ -134,6 +134,9 @@ impl MicProfileSettings {
         debug!("Creating Temporary Save File: {:?}", temp_file.path());
         self.write_to(&temp_file)?;
 
+        // Sync the write to disk..
+        temp_file.as_file().sync_all()?;
+
         debug!("Save Complete, copying to {:?}", path.as_ref());
         fs::copy(temp_file.as_ref(), path)?;
 
