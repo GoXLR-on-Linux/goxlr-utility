@@ -202,10 +202,12 @@ impl AttachGoXLR for GoXLRUSB {
             // Now activate audio..
             debug!("Activating Audio...");
             goxlr.write_class_control(1, 0x0100, 0x2900, &[0x80, 0xbb, 0x00, 0x00])?;
-            goxlr.handle.release_interface(0)?;
 
             // Reset the device, so ALSA can pick it up again..
             goxlr.handle.reset()?;
+
+            // Now release the interface, so ALSA doesn't catch it mid reset..
+            goxlr.handle.release_interface(0)?;
 
             // Reattempt the reset..
             goxlr.write_control(1, 0, 0, &[])?;
