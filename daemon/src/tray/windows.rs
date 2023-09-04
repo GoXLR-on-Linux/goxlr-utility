@@ -5,8 +5,8 @@ use std::thread::sleep;
 use std::time::Duration;
 
 use anyhow::{bail, Result};
-use goxlr_ipc::PathTypes;
-use log::{debug, warn};
+use lazy_static::lazy_static;
+use log::{debug, error, warn};
 use tokio::sync::mpsc::Sender;
 use win_win::{WindowBuilder, WindowClass, WindowProc};
 use winapi::shared::guiddef::GUID;
@@ -14,11 +14,13 @@ use winapi::shared::minwindef::{DWORD, FALSE, HINSTANCE, LPARAM, LRESULT, UINT, 
 use winapi::shared::windef::{HBRUSH, HICON, HMENU, HWND, POINT};
 use winapi::um::shellapi::{NIF_ICON, NIF_MESSAGE, NIF_TIP, NIM_ADD, NIM_DELETE, NOTIFYICONDATAW};
 use winapi::um::winuser::{
-    AppendMenuW, CreateIcon, DestroyWindow, DispatchMessageW, GetMessageW, SetTimer,
-    ShutdownBlockReasonCreate, ShutdownBlockReasonDestroy, TranslateMessage, MENUINFO, MF_POPUP,
-    MF_SEPARATOR, MF_STRING, MIM_APPLYTOSUBMENUS, MIM_STYLE, MNS_NOTIFYBYPOS, WM_USER,
+    AppendMenuW, CreateIcon, DestroyWindow, DispatchMessageW, GetMessageW, RegisterWindowMessageW,
+    SetTimer, ShutdownBlockReasonCreate, ShutdownBlockReasonDestroy, TranslateMessage, MENUINFO,
+    MF_POPUP, MF_SEPARATOR, MF_STRING, MIM_APPLYTOSUBMENUS, MIM_STYLE, MNS_NOTIFYBYPOS, WM_USER,
 };
 use winapi::um::{shellapi, winuser};
+
+use goxlr_ipc::PathTypes;
 
 use crate::events::EventTriggers::Open;
 use crate::events::{DaemonState, EventTriggers};
@@ -26,6 +28,11 @@ use crate::platform::to_wide;
 use crate::tray::get_icon_from_global;
 
 const EVENT_MESSAGE: u32 = WM_USER + 1;
+
+lazy_static! {
+    static ref RESPAWN: UINT =
+        unsafe { RegisterWindowMessageW(to_wide("TaskbarCreated").as_ptr()) };
+}
 
 pub fn handle_tray(state: DaemonState, tx: Sender<EventTriggers>) -> Result<()> {
     debug!("Spawning Windows Tray..");
@@ -38,9 +45,6 @@ pub fn handle_tray(state: DaemonState, tx: Sender<EventTriggers>) -> Result<()> 
 fn create_window(state: DaemonState, tx: Sender<EventTriggers>) -> Result<()> {
     // To save some headaches, this is *ALL* unsafe!
     unsafe {
-        // Load up the icon..
-        let icon = load_icon()?;
-
         // Use win_win to setup our Window..
         let win_class = WindowClass::builder("goxlr-utility").build().unwrap();
 
@@ -68,27 +72,7 @@ fn create_window(state: DaemonState, tx: Sender<EventTriggers>) -> Result<()> {
             .size(20, 20)
             .build();
 
-        // Create the notification tray item..
-        let mut tray_item = get_notification_struct(&hwnd);
-        tray_item.szTip = tooltip("GoXLR Utility");
-        tray_item.hIcon = icon;
-        tray_item.uFlags = NIF_MESSAGE | NIF_TIP | NIF_ICON;
-        tray_item.uCallbackMessage = EVENT_MESSAGE;
-
-        if state.show_tray.load(Ordering::Relaxed)
-            && shellapi::Shell_NotifyIconW(NIM_ADD, &mut tray_item as *mut NOTIFYICONDATAW) == 0
-        {
-            bail!("Unable to Create Tray Icon");
-        }
-        // Make sure the window is spawned hidden, begin our main loop.
         run_loop(hwnd, state.clone());
-
-        // If we get here, the loop is done, remove our tray icon.
-        if state.show_tray.load(Ordering::Relaxed)
-            && shellapi::Shell_NotifyIconW(NIM_DELETE, &mut tray_item as *mut NOTIFYICONDATAW) == 0
-        {
-            bail!("Unable to remove Tray Icon!");
-        }
     }
 
     Ok(())
@@ -167,6 +151,47 @@ impl GoXLRWindowProc {
         }
     }
 
+    fn create_tray(&self, hwnd: HWND) -> Option<NOTIFYICONDATAW> {
+        if let Ok(icon) = load_icon() {
+            let mut tray_item = get_notification_struct(&hwnd);
+            tray_item.szTip = tooltip("GoXLR Utility");
+            tray_item.hIcon = icon;
+            tray_item.uFlags = NIF_MESSAGE | NIF_TIP | NIF_ICON;
+            tray_item.uCallbackMessage = EVENT_MESSAGE;
+
+            return Some(tray_item);
+        }
+        None
+    }
+
+    fn create_icon(&self, hwnd: HWND) {
+        if !self.state.show_tray.load(Ordering::Relaxed) {
+            debug!("NopeX");
+            return;
+        }
+
+        self.spawn_tray(hwnd, NIM_ADD);
+    }
+
+    fn destroy_icon(&self, hwnd: HWND) {
+        if !self.state.show_tray.load(Ordering::Relaxed) {
+            return;
+        }
+        self.spawn_tray(hwnd, NIM_DELETE);
+    }
+
+    fn spawn_tray(&self, hwnd: HWND, action: DWORD) {
+        if let Some(mut tray) = self.create_tray(hwnd) {
+            let tray = &mut tray as *mut NOTIFYICONDATAW;
+
+            unsafe {
+                if shellapi::Shell_NotifyIconW(action, tray) == 0 {
+                    error!("Unable to Load Tray Icon");
+                }
+            }
+        }
+    }
+
     fn create_menu(&self) {
         let m = MENUINFO {
             cbSize: mem::size_of::<MENUINFO>() as DWORD,
@@ -196,7 +221,7 @@ impl WindowProc for GoXLRWindowProc {
         match msg {
             winuser::WM_CREATE => {
                 // Window has spawned, Create our Menu :)
-                debug!("Window Spawned, creating menu..");
+                self.create_icon(hwnd);
                 self.create_menu();
             }
             // Menu Related Commands..
@@ -258,6 +283,10 @@ impl WindowProc for GoXLRWindowProc {
                 }
             }
 
+            winuser::WM_DESTROY => {
+                self.destroy_icon(hwnd);
+            }
+
             // Window Handler
             winuser::WM_CLOSE => {
                 // If something tries to close this hidden window, it's a good bet that it wants
@@ -316,7 +345,12 @@ impl WindowProc for GoXLRWindowProc {
             winuser::WM_ENDSESSION => {
                 debug!("Received WM_ENDSESSION from Windows (IGNORED)");
             }
-            _ => {}
+            _ => {
+                if msg == *RESPAWN {
+                    debug!("Icon respawn requested: {}", msg);
+                    self.create_icon(hwnd);
+                }
+            }
         }
         None
     }
