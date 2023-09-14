@@ -15,7 +15,7 @@ use file_rotate::{ContentLimit, FileRotate};
 use json_patch::Patch;
 use log::{debug, error, info, warn};
 use simplelog::{
-    ColorChoice, CombinedLogger, ConfigBuilder, TermLogger, TerminalMode, WriteLogger,
+    ColorChoice, CombinedLogger, ConfigBuilder, SharedLogger, TermLogger, TerminalMode, WriteLogger,
 };
 use tokio::join;
 use tokio::sync::{broadcast, mpsc};
@@ -140,6 +140,9 @@ async fn main() -> Result<()> {
         WriteLogger::new(log_level, config.build(), file_rotator),
     ])
     .context("Could not configure the logger")?;
+
+    // Enable the PANIC logger..
+    log_panics::init();
 
     if is_root() {
         if args.force_root {
