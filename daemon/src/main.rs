@@ -15,7 +15,7 @@ use file_rotate::{ContentLimit, FileRotate};
 use json_patch::Patch;
 use log::{debug, error, info, warn};
 use simplelog::{
-    ColorChoice, CombinedLogger, ConfigBuilder, SharedLogger, TermLogger, TerminalMode, WriteLogger,
+    ColorChoice, CombinedLogger, ConfigBuilder, TermLogger, TerminalMode, WriteLogger,
 };
 use tokio::join;
 use tokio::sync::{broadcast, mpsc};
