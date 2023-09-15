@@ -312,6 +312,7 @@ Function CleanOldInstaller
 FunctionEnd
 
 Function InstallWebView
+    DetailPrint "Downloading Edge Webview.."
 
 	Delete "$TEMP\MicrosoftEdgeWebview2Setup.exe"
 	nsis_tauri_utils::download "https://go.microsoft.com/fwlink/p/?LinkId=2124703" "$TEMP\MicrosoftEdgeWebview2Setup.exe"
@@ -330,11 +331,38 @@ Function InstallWebView
 	${EndIf}
 
 	END:
+	ClearErrors
+FunctionEnd
+
+Function InstallVCRuntime
+    DetailPrint "Downloading VC Runtime.."
+
+	Delete "$TEMP\vc_redist.x64.exe"
+	nsis_tauri_utils::download "https://aka.ms/vs/17/release/vc_redist.x64.exe" "$TEMP\vc_redist.x64.exe"
+	Pop $0
+
+	${IfNot} $0 == 0
+		DetailPrint "Unable to Download WebView2 Setup, continuing without."
+		Goto END
+	${EndIf}
+
+	DetailPrint "Installing VC Runtime"
+	ExecWait "$TEMP\vc_redist.x64.exe /silent /install" $1
+	${IfNot} $1 == 0
+		DetailPrint "Failed to install VC Runtime, continuing without."
+		Goto END
+	${EndIf}
+
+	END:
+	ClearErrors
 FunctionEnd
 
 Section "MainSection" SEC01
     Call StopUtility
     Call CleanOldInstaller
+
+    ; Make sure the Visual C++ Runtime is installed (TODO: Only on first install)
+    Call InstallVCRuntime
 
 	; Make sure WebView2 is installed..
 	${If} $USE_APP == 1
