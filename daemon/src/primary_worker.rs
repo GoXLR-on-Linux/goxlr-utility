@@ -28,6 +28,7 @@ pub enum DeviceCommand {
     SendDaemonStatus(oneshot::Sender<DaemonStatus>),
     RunDaemonCommand(DaemonCommand, oneshot::Sender<Result<()>>),
     RunDeviceCommand(String, GoXLRCommand, oneshot::Sender<Result<()>>),
+    GetDeviceMicLevel(String, oneshot::Sender<Result<f64>>),
 }
 
 pub type DeviceSender = Sender<DeviceCommand>;
@@ -231,6 +232,14 @@ pub async fn spawn_usb_handler(
                             let _ = sender.send(Err(anyhow!("Device {} is not connected", serial)));
                         }
                     },
+
+                    DeviceCommand::GetDeviceMicLevel(serial, sender) => {
+                        if let Some(device) = devices.get_mut(&serial) {
+                            let _ = sender.send(device.get_mic_level().await);
+                        } else {
+                            let _ = sender.send(Err(anyhow!("Device {} is not connected", serial)));
+                        }
+                    }
                 }
             },
             Some(path) = file_rx.recv() => {

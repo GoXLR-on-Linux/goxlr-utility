@@ -40,6 +40,9 @@ impl Client for WebClient {
             }
             DaemonResponse::Ok => Ok(()),
             DaemonResponse::Error(error) => bail!("{}", error),
+            DaemonResponse::MicLevel(_level) => {
+                bail!("Received Mic Level as response, shouldn't happen!")
+            }
             DaemonResponse::Patch(_patch) => {
                 bail!("Received Patch as response, shouldn't happen!")
             }

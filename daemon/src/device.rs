@@ -1464,6 +1464,13 @@ impl<'a> Device<'a> {
         Ok(value_changed)
     }
 
+    pub async fn get_mic_level(&mut self) -> Result<f64> {
+        let level = self.goxlr.get_microphone_level()?;
+
+        let db = ((f64::log(level.into(), 10.) * 20.) - 72.2).clamp(-72.2, 0.);
+        Ok(db)
+    }
+
     pub async fn perform_command(&mut self, command: GoXLRCommand) -> Result<()> {
         match command {
             GoXLRCommand::SetShutdownCommands(commands) => {

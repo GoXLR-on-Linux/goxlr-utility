@@ -22,6 +22,7 @@ pub enum DaemonRequest {
     Ping,
     GetStatus,
     Daemon(DaemonCommand),
+    GetMicLevel(String),
     Command(String, GoXLRCommand),
 }
 
@@ -29,6 +30,7 @@ pub enum DaemonRequest {
 pub enum DaemonResponse {
     Ok,
     Error(String),
+    MicLevel(f64),
     Status(DaemonStatus),
     Patch(Patch),
 }
