@@ -536,6 +536,8 @@ impl TUSBAudio<'_> {
     }
 
     pub fn spawn_pnp_handle_rusb(&self) -> Result<()> {
+        // Comment for future me: Use CM_Register_Notification instead of rusb
+
         let mut spawned = self.pnp_thread_running.lock().unwrap();
         if *spawned {
             bail!("Handler Thread already running..");
