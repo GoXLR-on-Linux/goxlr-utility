@@ -154,9 +154,7 @@ impl TUSBAudio<'_> {
         let api_version = unsafe { (tusb_audio.get_api_version)() };
 
         // API Version Checking (7.5 and 11.5 are valid)
-        if (api_version.major == 7 && api_version.minor == 5)
-            || (api_version.major == 11 && api_version.minor == 5)
-        {
+        if (api_version.major == 11 || api_version.major == 7) && api_version.minor == 5 {
             info!(
                 "Using GoXLR API Version {}.{}",
                 api_version.major, api_version.minor
