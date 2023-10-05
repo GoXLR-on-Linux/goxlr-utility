@@ -126,6 +126,7 @@ depends = "$auto"
 extended-description = """\
 A utility for monitoring and controlling a TC-Helicon GoXLR or GoXLR Mini.
 """
+revision = "1"
 
 ## cargo generate-rpm support..
 [package.metadata.generate-rpm]
