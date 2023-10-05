@@ -1136,6 +1136,9 @@ impl MicProfileAdapter {
         keys.extend(self.get_gender_keyset());
         keys.extend(self.get_enabled_keyset());
 
+        // Make sure the Mic Mute State key is handled..
+        keys.insert(EffectKey::MicInputMute);
+
         keys
     }
 
