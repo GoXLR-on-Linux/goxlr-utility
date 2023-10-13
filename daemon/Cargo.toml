@@ -145,10 +145,10 @@ assets = [
     { source = "../deployment/deb/_goxlr-daemon", dest = "/usr/share/zsh/vendor-completions/_goxlr-daemon", mode = "0644" },
 ]
 
-# Tiny scriptlet, should reload udev.
+# Tiny scriptlet, should reload udev, unless we are running an immutable OS like Fedora Silverblue.
 post_install_script = """
-udevadm control --reload-rules
-udevadm trigger
+[[ -f /run/ostree-booted ]] || udevadm control --reload-rules
+[[ -f /run/ostree-booted ]] || udevadm trigger
 """
 
 #release = "1"
