@@ -357,7 +357,7 @@ pub fn create_path(path: &Path) -> Result<()> {
     if !path.exists() {
         // Attempt to create the profile directory..
         if let Err(e) = create_dir_all(path) {
-            return Err(e).context(format!("Could not create path {}", &path.to_string_lossy()))?;
+            Err(e).context(format!("Could not create path {}", &path.to_string_lossy()))?;
         } else {
             info!("Created Path: {}", path.to_string_lossy());
         }

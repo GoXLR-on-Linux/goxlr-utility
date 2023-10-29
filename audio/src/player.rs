@@ -92,13 +92,7 @@ impl Player {
         let format_options = Default::default();
         let metadata_options = Default::default();
 
-        let probe_result = symphonia::default::get_probe().format(
-            &hint,
-            stream,
-            &format_options,
-            &metadata_options,
-        );
-        probe_result
+        symphonia::default::get_probe().format(&hint, stream, &format_options, &metadata_options)
     }
 
     pub fn calculate_gain(&mut self) {
