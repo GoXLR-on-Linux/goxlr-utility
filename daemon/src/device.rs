@@ -204,6 +204,8 @@ impl<'a> Device<'a> {
             .get_enable_monitor_with_fx(self.serial())
             .await;
 
+        let locked_faders = self.settings.get_device_lock_faders(self.serial()).await;
+
         let submix_supported = self.device_supports_submixes();
 
         let mut sample_progress = None;
@@ -268,6 +270,7 @@ impl<'a> Device<'a> {
                 mute_hold_duration: self.hold_time,
                 vc_mute_also_mute_cm: self.vc_mute_also_mute_cm,
                 enable_monitor_with_fx: monitor_with_fx,
+                lock_faders: locked_faders,
             },
             button_down: button_states,
             profile_name: self.profile.name().to_owned(),
