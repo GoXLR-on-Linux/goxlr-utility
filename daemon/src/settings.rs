@@ -275,6 +275,21 @@ impl SettingsHandle {
         true
     }
 
+    pub async fn get_device_lock_faders(&self, device_serial: &str) -> bool {
+        let settings = self.settings.read().await;
+        let value = settings
+            .devices
+            .as_ref()
+            .unwrap()
+            .get(device_serial)
+            .map(|d| d.lock_faders.unwrap_or(true));
+
+        if let Some(value) = value {
+            return value;
+        }
+        true
+    }
+
     pub async fn get_enable_monitor_with_fx(&self, device_serial: &str) -> bool {
         let settings = self.settings.read().await;
         let value = settings
@@ -357,6 +372,17 @@ impl SettingsHandle {
             .entry(device_serial.to_owned())
             .or_insert_with(DeviceSettings::default);
         entry.chat_mute_mutes_mic_to_chat = Some(setting);
+    }
+
+    pub async fn set_device_lock_faders(&self, device_serial: &str, setting: bool) {
+        let mut settings = self.settings.write().await;
+        let entry = settings
+            .devices
+            .as_mut()
+            .unwrap()
+            .entry(device_serial.to_owned())
+            .or_insert_with(DeviceSettings::default);
+        entry.lock_faders = Some(setting);
     }
 
     pub async fn set_enable_monitor_with_fx(&self, device_serial: &str, setting: bool) {
@@ -462,6 +488,9 @@ struct DeviceSettings {
     // 'Voice Chat Mute All Also Mutes Mic to Chat Mic' O_O
     chat_mute_mutes_mic_to_chat: Option<bool>,
 
+    // Disables the Movement of the Faders when Muting to All (full device only)
+    lock_faders: Option<bool>,
+
     // Enable Monitoring when FX are Enabled
     enable_monitor_with_fx: Option<bool>,
 
@@ -478,6 +507,7 @@ impl Default for DeviceSettings {
             hold_delay: Some(500),
             sampler_pre_buffer: None,
             chat_mute_mutes_mic_to_chat: Some(true),
+            lock_faders: Some(false),
             enable_monitor_with_fx: Some(false),
 
             shutdown_commands: vec![],
