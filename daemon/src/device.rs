@@ -746,7 +746,6 @@ impl<'a> Device<'a> {
             return Ok(());
         }
 
-        // This will only ever trigger if called via the API, so don't announce this for now..
         if mute_function == MuteFunction::All {
             // Throw this across to the 'Mute to All' code..
             return self.mute_fader_to_all(fader, false).await;
@@ -799,6 +798,9 @@ impl<'a> Device<'a> {
         if self.hardware.device_type != DeviceType::Mini {
             // Again, only apply this if we're a full device
             self.profile.set_channel_volume(channel, 0)?;
+        } else {
+            // Reload the colour map on the mini (will disable fader lighting)
+            self.load_colour_map()?;
         }
 
         // If we're Chat, we may need to transiently route the Microphone..
@@ -842,14 +844,19 @@ impl<'a> Device<'a> {
             if self.hardware.device_type != DeviceType::Mini {
                 self.goxlr.set_volume(channel, previous_volume)?;
                 self.profile.set_channel_volume(channel, previous_volume)?;
-            } else if self.device_supports_submixes()
-                && (channel == ChannelName::Headphones || channel == ChannelName::LineOut)
-            {
-                // This is a special case, when calling unmute on submix firmware, the LineOut
-                // and Headphones don't set correctly, so we need to forcibly restore the
-                // volume. This does mean unlatching though :(
-                let current_volume = self.profile.get_channel_volume(channel);
-                self.goxlr.set_volume(channel, current_volume)?;
+            } else {
+                if self.device_supports_submixes()
+                    && (channel == ChannelName::Headphones || channel == ChannelName::LineOut)
+                {
+                    // This is a special case, when calling unmute on submix firmware, the LineOut
+                    // and Headphones don't set correctly, so we need to forcibly restore the
+                    // volume. This does mean unlatching though :(
+                    let current_volume = self.profile.get_channel_volume(channel);
+                    self.goxlr.set_volume(channel, current_volume)?;
+                }
+
+                // Reload the Minis colour Map to re-establish colours.
+                self.load_colour_map()?;
             }
 
             // As before, we might need transient Mic Routing..
@@ -2925,8 +2932,10 @@ impl<'a> Device<'a> {
         // The new colour format occurred on different firmware versions depending on device,
         // so do the check here.
 
+        let blank_mute = self.hardware.device_type == DeviceType::Mini;
+
         let use_1_3_40_format = self.device_supports_animations();
-        let colour_map = self.profile.get_colour_map(use_1_3_40_format);
+        let colour_map = self.profile.get_colour_map(use_1_3_40_format, blank_mute);
 
         if use_1_3_40_format {
             self.goxlr.set_button_colours_1_3_40(colour_map)?;
