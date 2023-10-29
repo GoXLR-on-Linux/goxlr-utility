@@ -142,6 +142,11 @@ pub enum SubCommands {
         #[clap[subcommand]]
         command: SamplerCommands,
     },
+
+    Settings {
+        #[clap[subcommand]]
+        command: DeviceSettings,
+    },
 }
 
 fn percent_value(s: &str) -> Result<u8, String> {
@@ -1116,5 +1121,44 @@ pub enum SamplerCommands {
 
         #[arg(value_parser=percent_value_float)]
         stop_position: f32,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+#[command(arg_required_else_help = true)]
+pub enum DeviceSettings {
+    /// How long to Hold a Mute button before it Mutes to All
+    MuteHoldDuration {
+        /// The Duration to Hold
+        #[arg(value_parser, action = ArgAction::Set)]
+        duration: u16,
+    },
+
+    /// How far in the past the sampler should listen for audio
+    SamplePreRecordBuffer {
+        /// The duration in Milliseconds
+        #[arg(value_parser, action = ArgAction::Set)]
+        duration: u16,
+    },
+
+    /// Enable Mic Monitoring when FX are enabled
+    MonitorWithFx {
+        /// Whether the setting is enabled
+        #[arg(value_parser, action = ArgAction::Set)]
+        enabled: bool,
+    },
+
+    /// Whether to mute The Microphone when Voice Chat is Muted
+    DeafenOnChatMute {
+        /// Whether the setting is enabled
+        #[arg(value_parser, action = ArgAction::Set)]
+        enabled: bool,
+    },
+
+    /// Locks the Faders to their current value on MuteToAll
+    LockFaders {
+        /// Whether the setting is enabled
+        #[arg(value_parser, action = ArgAction::Set)]
+        enabled: bool,
     },
 }
