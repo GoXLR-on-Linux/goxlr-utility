@@ -208,7 +208,7 @@ impl ProfileAdapter {
         ChannelState::Unmuted
     }
 
-    fn get_fader_mute_state(&self, fader: FaderName) -> ChannelState {
+    pub fn get_fader_mute_state(&self, fader: FaderName) -> ChannelState {
         let (muted_to_x, muted_to_all, mute_function) = self.get_mute_button_state(fader);
 
         if muted_to_all || (muted_to_x && mute_function == MuteFunction::All) {

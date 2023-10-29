@@ -892,6 +892,47 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
+    fn lock_faders(&mut self) -> Result<()> {
+        if self.hardware.device_type == DeviceType::Mini {
+            return Ok(());
+        }
+
+        for fader in FaderName::iter() {
+            if self.profile.get_fader_mute_state(fader) == Muted {
+                // Ok, to lock the fader, we need to restore this to it's stored value..
+                let volume = self.profile.get_mute_button_previous_volume(fader);
+                let channel = self.profile.get_fader_assignment(fader);
+
+                // Set the volume of the channel back to where it should be
+                self.goxlr.set_volume(channel, volume)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn unlock_faders(&mut self) -> Result<()> {
+        if self.hardware.device_type == DeviceType::Mini {
+            return Ok(());
+        }
+
+        // We need to drop any muted faders to 0 volume..
+        for fader in FaderName::iter() {
+            if self.profile.get_fader_mute_state(fader) == Muted {
+                // Get the current volume for the fader..
+                let channel = self.profile.get_fader_assignment(fader);
+                let volume = self.profile.get_channel_volume(channel);
+
+                // Set the previous volume
+                self.profile.set_mute_previous_volume(fader, volume)?;
+
+                // Set the volume of the channel to 0
+                self.goxlr.set_volume(channel, 0)?;
+            }
+        }
+
+        Ok(())
+    }
+
     fn get_basic_input_from_channel(&self, channel: ChannelName) -> Option<BasicInputDevice> {
         match channel {
             ChannelName::Mic => Some(BasicInputDevice::Microphone),
@@ -2419,6 +2460,23 @@ impl<'a> Device<'a> {
                     .await;
                 self.settings.save().await;
                 self.apply_routing(BasicInputDevice::Microphone).await?;
+            }
+
+            GoXLRCommand::SetLockFaders(value) => {
+                let current = self.settings.get_device_lock_faders(self.serial()).await;
+
+                if current != value {
+                    self.settings
+                        .set_device_lock_faders(self.serial(), value)
+                        .await;
+
+                    if value {
+                        self.lock_faders()?;
+                    } else {
+                        self.unlock_faders()?;
+                    }
+                    self.load_colour_map().await?;
+                }
             }
 
             GoXLRCommand::SetActiveEffectPreset(preset) => {
