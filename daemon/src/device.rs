@@ -2470,6 +2470,8 @@ impl<'a> Device<'a> {
                         .set_device_lock_faders(self.serial(), value)
                         .await;
 
+                    self.settings.save().await;
+
                     if value {
                         self.lock_faders()?;
                     } else {
