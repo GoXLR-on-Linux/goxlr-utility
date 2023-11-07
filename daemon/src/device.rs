@@ -1275,13 +1275,7 @@ impl<'a> Device<'a> {
         self.load_encoder_effects()?;
         self.set_pitch_mode()?;
 
-        self.apply_effects(self.mic_profile.get_reverb_keyset())?;
-        self.apply_effects(self.mic_profile.get_megaphone_keyset())?;
-        self.apply_effects(self.mic_profile.get_robot_keyset())?;
-        self.apply_effects(self.mic_profile.get_hardtune_keyset())?;
-        self.apply_effects(self.mic_profile.get_echo_keyset())?;
-        self.apply_effects(self.mic_profile.get_pitch_keyset())?;
-        self.apply_effects(self.mic_profile.get_gender_keyset())?;
+        self.apply_effects(self.mic_profile.get_fx_keys())?;
 
         Ok(())
     }
