@@ -1,7 +1,7 @@
 use crate::client::Client;
 use crate::clients::ipc::ipc_socket::Socket;
 use crate::{DaemonRequest, DaemonResponse, DaemonStatus, GoXLRCommand, HttpSettings};
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use async_trait::async_trait;
 
 #[derive(Debug)]
@@ -43,6 +43,9 @@ impl Client for IPCClient {
             }
             DaemonResponse::Ok => Ok(()),
             DaemonResponse::Error(error) => Err(anyhow!("{}", error)),
+            DaemonResponse::MicLevel(_level) => {
+                bail!("Received Mic Level as Response, shouldn't happen!");
+            }
             DaemonResponse::Patch(_patch) => {
                 Err(anyhow!("Received Patch as response, shouldn't happen!"))
             }

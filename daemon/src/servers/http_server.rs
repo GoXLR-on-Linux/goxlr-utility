@@ -120,6 +120,12 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for Websocket {
                                             data: DaemonResponse::Status(status),
                                         }));
                                     }
+                                    DaemonResponse::MicLevel(level) => {
+                                        recipient.do_send(WsResponse(WebsocketResponse {
+                                            id: request_id,
+                                            data: DaemonResponse::MicLevel(level),
+                                        }))
+                                    }
                                     _ => {}
                                 },
                                 Err(error) => {

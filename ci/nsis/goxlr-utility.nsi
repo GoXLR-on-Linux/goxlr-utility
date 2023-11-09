@@ -107,14 +107,18 @@ DEFAULT_NOT_FOUND:
     IfFileExists $0 END ERROR_DEFAULT
 
 ERROR_REG:
-    MessageBox MB_OK|MB_ICONSTOP  "Unable to locate the GoXLR Driver, there may be an issue with your installation."
+    # Registry Entry was missing and file not in default location, driver not installed.
+    MessageBox MB_OK|MB_ICONSTOP  "The GoXLR Driver was not found, please ensure it is installed."
     Goto END
 
 ERROR_DEFAULT:
-    MessageBox MB_OK|MB_ICONSTOP  "The GoXLR Driver was not found, please ensure it is installed."
+    # Registry Entry found, file not present at registry location nor at default location
+    MessageBox MB_OK|MB_ICONSTOP  "Unable to locate the GoXLR Driver, there may be an issue with your installation."
     Abort
 
 END:
+ClearErrors
+
 FunctionEnd
 
 var KeyTest
@@ -308,6 +312,7 @@ Function CleanOldInstaller
 FunctionEnd
 
 Function InstallWebView
+    DetailPrint "Downloading Edge Webview.."
 
 	Delete "$TEMP\MicrosoftEdgeWebview2Setup.exe"
 	nsis_tauri_utils::download "https://go.microsoft.com/fwlink/p/?LinkId=2124703" "$TEMP\MicrosoftEdgeWebview2Setup.exe"
@@ -326,11 +331,38 @@ Function InstallWebView
 	${EndIf}
 
 	END:
+	ClearErrors
+FunctionEnd
+
+Function InstallVCRuntime
+    DetailPrint "Downloading VC Runtime.."
+
+	Delete "$TEMP\vc_redist.x64.exe"
+	nsis_tauri_utils::download "https://aka.ms/vs/17/release/vc_redist.x64.exe" "$TEMP\vc_redist.x64.exe"
+	Pop $0
+
+	${IfNot} $0 == 0
+		DetailPrint "Unable to Download WebView2 Setup, continuing without."
+		Goto END
+	${EndIf}
+
+	DetailPrint "Installing VC Runtime"
+	ExecWait "$TEMP\vc_redist.x64.exe /silent /install" $1
+	${IfNot} $1 == 0
+		DetailPrint "Failed to install VC Runtime, continuing without."
+		Goto END
+	${EndIf}
+
+	END:
+	ClearErrors
 FunctionEnd
 
 Section "MainSection" SEC01
     Call StopUtility
     Call CleanOldInstaller
+
+    ; Make sure the Visual C++ Runtime is installed (TODO: Only on first install)
+    Call InstallVCRuntime
 
 	; Make sure WebView2 is installed..
 	${If} $USE_APP == 1
@@ -345,9 +377,9 @@ Section "MainSection" SEC01
     ; Ok, here come the files..
     File "..\..\target\release\goxlr-daemon.exe"
     File "..\..\target\release\goxlr-client.exe"
+    File "..\..\target\release\goxlr-client-quiet.exe"
     File "..\..\target\release\goxlr-defaults.exe"
     File "..\..\target\release\goxlr-launcher.exe"
-    File "..\..\target\release\goxlr-firmware.exe"
     File "..\..\target\release\goxlr-utility-ui.exe"
     File "..\..\target\release\SAAPI64.dll"
     File "..\..\target\release\nvdaControllerClient64.dll"

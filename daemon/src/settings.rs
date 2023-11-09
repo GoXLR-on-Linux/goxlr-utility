@@ -3,9 +3,10 @@ use crate::profile::DEFAULT_PROFILE_NAME;
 use anyhow::{Context, Result};
 use directories::ProjectDirs;
 use goxlr_ipc::{GoXLRCommand, LogLevel};
-use log::error;
+use log::{debug, error};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fs;
 use std::fs::{create_dir_all, File};
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
@@ -274,6 +275,21 @@ impl SettingsHandle {
         true
     }
 
+    pub async fn get_device_lock_faders(&self, device_serial: &str) -> bool {
+        let settings = self.settings.read().await;
+        let value = settings
+            .devices
+            .as_ref()
+            .unwrap()
+            .get(device_serial)
+            .map(|d| d.lock_faders.unwrap_or(true));
+
+        if let Some(value) = value {
+            return value;
+        }
+        true
+    }
+
     pub async fn get_enable_monitor_with_fx(&self, device_serial: &str) -> bool {
         let settings = self.settings.read().await;
         let value = settings
@@ -358,6 +374,17 @@ impl SettingsHandle {
         entry.chat_mute_mutes_mic_to_chat = Some(setting);
     }
 
+    pub async fn set_device_lock_faders(&self, device_serial: &str, setting: bool) {
+        let mut settings = self.settings.write().await;
+        let entry = settings
+            .devices
+            .as_mut()
+            .unwrap()
+            .entry(device_serial.to_owned())
+            .or_insert_with(DeviceSettings::default);
+        entry.lock_faders = Some(setting);
+    }
+
     pub async fn set_enable_monitor_with_fx(&self, device_serial: &str, setting: bool) {
         let mut settings = self.settings.write().await;
         let entry = settings
@@ -389,10 +416,25 @@ pub struct Settings {
 impl Settings {
     pub fn read(path: &Path) -> Result<Option<Settings>> {
         match File::open(path) {
-            Ok(reader) => Ok(Some(serde_json::from_reader(reader).context(format!(
-                "Could not parse daemon settings file at {}",
-                path.to_string_lossy()
-            ))?)),
+            Ok(reader) => {
+                let settings = serde_json::from_reader(reader);
+
+                match settings {
+                    Ok(settings) => Ok(Some(settings)),
+                    Err(_) => {
+                        // Something's gone wrong loading the settings, rather than immediately
+                        // exiting, we'll try to backup the original file, and reload the defaults.
+                        let mut backup = PathBuf::from(path);
+                        backup.set_extension(".failed");
+
+                        let copy_result = fs::copy(path, backup);
+                        println!("{:?}", copy_result);
+
+                        println!("Error Loading configuration, loading defaults.");
+                        Ok(None)
+                    }
+                }
+            }
             Err(error) if error.kind() == ErrorKind::NotFound => Ok(None),
             Err(error) => Err(error).context(format!(
                 "Could not open daemon settings file for reading at {}",
@@ -402,6 +444,7 @@ impl Settings {
     }
 
     pub fn write(&self, path: &Path) -> Result<()> {
+        debug!("Saving Settings");
         if let Some(parent) = path.parent() {
             if let Err(e) = create_dir_all(parent) {
                 if e.kind() != ErrorKind::AlreadyExists {
@@ -412,14 +455,23 @@ impl Settings {
                 }
             }
         }
-        let writer = File::create(path).context(format!(
-            "Could not open daemon settings file for writing at {}",
-            path.to_string_lossy()
-        ))?;
-        serde_json::to_writer_pretty(writer, self).context(format!(
-            "Could not write to daemon settings file at {}",
-            path.to_string_lossy()
-        ))?;
+
+        let temp_file = tempfile::NamedTempFile::new()?;
+
+        debug!("Writing Config to Temporary File: {:?}", temp_file.path());
+        serde_json::to_writer_pretty(temp_file.as_file(), self)?;
+
+        // Sync the file written to disk..
+        debug!("Syncing Disk..");
+        temp_file.as_file().sync_all()?;
+
+        debug!("Write Complete, saving to {:?}", path);
+        fs::copy(temp_file.path(), path)?;
+
+        debug!("Removing Temporary File..");
+        fs::remove_file(temp_file.path())?;
+
+        debug!("Settings Saved.");
         Ok(())
     }
 }
@@ -435,6 +487,9 @@ struct DeviceSettings {
 
     // 'Voice Chat Mute All Also Mutes Mic to Chat Mic' O_O
     chat_mute_mutes_mic_to_chat: Option<bool>,
+
+    // Disables the Movement of the Faders when Muting to All (full device only)
+    lock_faders: Option<bool>,
 
     // Enable Monitoring when FX are Enabled
     enable_monitor_with_fx: Option<bool>,
@@ -452,6 +507,7 @@ impl Default for DeviceSettings {
             hold_delay: Some(500),
             sampler_pre_buffer: None,
             chat_mute_mutes_mic_to_chat: Some(true),
+            lock_faders: Some(false),
             enable_monitor_with_fx: Some(false),
 
             shutdown_commands: vec![],

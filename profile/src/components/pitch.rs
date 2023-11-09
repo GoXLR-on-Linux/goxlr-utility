@@ -80,6 +80,13 @@ impl PitchEncoderBase {
                         break;
                     }
                 }
+
+                // Set the threshold based on the style..
+                match preset.style {
+                    PitchStyle::Narrow => preset.threshold = -36,
+                    PitchStyle::Wide => preset.threshold = -26,
+                }
+
                 continue;
             }
 
@@ -92,8 +99,9 @@ impl PitchEncoderBase {
                 preset.range = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
+
+            // Threshold is a transient value based on the style..
             if attr.name == "PITCH_SHIFT_THRESHOLD" {
-                preset.threshold = attr.value.parse::<c_float>()? as i8;
                 continue;
             }
 
@@ -156,7 +164,7 @@ impl PitchEncoderBase {
         attributes.insert("PITCH_RANGE".to_string(), format!("{}", value.range));
         attributes.insert(
             "PITCH_SHIFT_THRESHOLD".to_string(),
-            format!("{}", value.threshold),
+            format!("{}", value.threshold()),
         );
 
         if let Some(inst_ratio) = value.inst_ratio {
@@ -201,7 +209,8 @@ impl PitchEncoder {
             knob_position: 0,
             style: PitchStyle::Narrow,
             range: 0,
-            threshold: 0,
+
+            threshold: -26,
             inst_ratio: None,
         }
     }
@@ -295,6 +304,11 @@ impl PitchEncoder {
             return;
         }
 
+        match style {
+            PitchStyle::Narrow => self.threshold = -36,
+            PitchStyle::Wide => self.threshold = -26,
+        }
+
         // If hard tune is enabled, there's a risk of going from 12 to 6, but ultimately
         // the Daemon will fix that during the next poll.
         if self.style == PitchStyle::Wide && style == PitchStyle::Narrow {
@@ -310,7 +324,6 @@ impl PitchEncoder {
         self.range
     }
 
-    // TODO: Work out how this is changed and set.
     pub fn threshold(&self) -> i8 {
         self.threshold
     }

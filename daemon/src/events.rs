@@ -83,12 +83,12 @@ pub async fn spawn_event_handler(
                             PathTypes::Icons => state.settings_handle.get_icons_directory().await,
                             PathTypes::Logs => state.settings_handle.get_log_directory().await,
                         }) {
-                            warn!("Error Opening Path: {}", error);
+                            warn!("Error Opening Path: {:?}", error);
                         };
                     },
                     EventTriggers::OpenUi => {
                         if let Err(error) = opener::open(get_util_url(&state)) {
-                            warn!("Error Opening URL: {}", error);
+                            warn!("Error Opening URL: {:?}", error);
                         }
                     },
                     EventTriggers::Activate => {
@@ -114,14 +114,14 @@ pub async fn spawn_event_handler(
                                         if let Err(error) = result {
                                             warn!("Error Executing command: {:?}, falling back", error);
                                             if let Err(error) = opener::open(url) {
-                                                warn!("Error Opening URL: {}", error);
+                                                warn!("Error Opening URL: {:?}", error);
                                             }
                                         }
                                     }
                                 },
                                 None => {
                                     if let Err(error) = opener::open(url) {
-                                        warn!("Error Opening URL: {}", error);
+                                        warn!("Error Opening URL: {:?}", error);
                                     }
                                 }
                             }
@@ -144,17 +144,17 @@ pub async fn spawn_event_handler(
                                         if let Err(error) = result {
                                             warn!("Error Executing command: {:?}, falling back", error);
                                             if let Err(error) = opener::open(url) {
-                                                warn!("Error Opening URL: {}", error);
+                                                warn!("Error Opening URL: {:?}", error);
                                             }
                                         }
 
                                     } else if let Err(error) = opener::open(url) {
-                                        warn!("Error Opening URL: {}", error);
+                                        warn!("Error Opening URL: {:?}", error);
                                     }
                                 },
                                 None => {
                                     if let Err(error) = opener::open(url) {
-                                        warn!("Error Opening URL: {}", error);
+                                        warn!("Error Opening URL: {:?}", error);
                                     }
                                 }
                             }

@@ -1,6 +1,3 @@
-mod cli;
-mod microphone;
-
 use crate::cli::{
     AnimationCommands, ButtonGroupLightingCommands, ButtonLightingCommands, CompressorCommands,
     CoughButtonBehaviours, Echo, EffectsCommands, EqualiserCommands, EqualiserMiniCommands,
@@ -8,10 +5,10 @@ use crate::cli::{
     LightingCommands, Megaphone, MicrophoneCommands, NoiseGateCommands, Pitch, ProfileAction,
     ProfileType, Reverb, Robot, SamplerCommands, Scribbles, SubCommands, SubmixCommands,
 };
+use crate::cli::{Cli, DeviceSettings};
 use crate::microphone::apply_microphone_controls;
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
-use cli::Cli;
 use goxlr_ipc::client::Client;
 use goxlr_ipc::clients::ipc::ipc_client::IPCClient;
 use goxlr_ipc::clients::ipc::ipc_socket::Socket;
@@ -26,8 +23,7 @@ use strum::IntoEnumIterator;
 static SOCKET_PATH: &str = "/tmp/goxlr.socket";
 static NAMED_PIPE: &str = "@goxlr.socket";
 
-#[tokio::main]
-async fn main() -> Result<()> {
+pub async fn run_cli() -> Result<()> {
     let cli: Cli = Cli::parse();
 
     let mut client: Box<dyn Client>;
@@ -973,6 +969,36 @@ async fn main() -> Result<()> {
                     SubmixCommands::MonitorMix { device } => {
                         client
                             .command(&serial, GoXLRCommand::SetMonitorMix(*device))
+                            .await?;
+                    }
+                },
+                SubCommands::Settings { command } => match command {
+                    DeviceSettings::MuteHoldDuration { duration } => {
+                        client
+                            .command(&serial, GoXLRCommand::SetMuteHoldDuration(*duration))
+                            .await?;
+                    }
+                    DeviceSettings::SamplePreRecordBuffer { duration } => {
+                        client
+                            .command(
+                                &serial,
+                                GoXLRCommand::SetSamplerPreBufferDuration(*duration),
+                            )
+                            .await?;
+                    }
+                    DeviceSettings::MonitorWithFx { enabled } => {
+                        client
+                            .command(&serial, GoXLRCommand::SetMonitorWithFx(*enabled))
+                            .await?;
+                    }
+                    DeviceSettings::DeafenOnChatMute { enabled } => {
+                        client
+                            .command(&serial, GoXLRCommand::SetVCMuteAlsoMuteCM(*enabled))
+                            .await?;
+                    }
+                    DeviceSettings::LockFaders { enabled } => {
+                        client
+                            .command(&serial, GoXLRCommand::SetLockFaders(*enabled))
                             .await?;
                     }
                 },

@@ -201,14 +201,19 @@ impl ProfileAdapter {
     fn get_channel_mute_state(&self, channel: ChannelName) -> ChannelState {
         // Is this assigned to a fader?
         if let Some(fader) = self.get_fader_from_channel(channel) {
-            let (muted_to_x, muted_to_all, mute_function) = self.get_mute_button_state(fader);
-
-            if muted_to_all || (muted_to_x && mute_function == MuteFunction::All) {
-                return ChannelState::Muted;
-            }
+            return self.get_fader_mute_state(fader);
         }
 
         // Not assigned, always unmuted
+        ChannelState::Unmuted
+    }
+
+    pub fn get_fader_mute_state(&self, fader: FaderName) -> ChannelState {
+        let (muted_to_x, muted_to_all, mute_function) = self.get_mute_button_state(fader);
+
+        if muted_to_all || (muted_to_x && mute_function == MuteFunction::All) {
+            return ChannelState::Muted;
+        }
         ChannelState::Unmuted
     }
 
@@ -493,7 +498,7 @@ impl ProfileAdapter {
             .set_channel_volume(standard_to_profile_channel(channel), volume)
     }
 
-    pub fn get_colour_map(&self, use_format_1_3_40: bool) -> [u8; 520] {
+    pub fn get_colour_map(&self, use_format_1_3_40: bool, blank_mute: bool) -> [u8; 520] {
         let mut colour_array = [0; 520];
 
         for colour in ColourTargets::iter() {
@@ -513,6 +518,18 @@ impl ProfileAdapter {
                         colour_array[position..position + 4]
                             .copy_from_slice(&self.get_sampler_lighting(colour, i));
                     }
+                    ColourTargets::FadeMeter1
+                    | ColourTargets::FadeMeter2
+                    | ColourTargets::FadeMeter3
+                    | ColourTargets::FadeMeter4 => {
+                        let array = if blank_mute {
+                            self.get_fader_lighting(colour, i)
+                        } else {
+                            colour_map.colour(i).to_reverse_bytes()
+                        };
+                        colour_array[position..position + 4].copy_from_slice(&array);
+                    }
+
                     _ => {
                         // Update the correct 4 bytes in the map..
                         colour_array[position..position + 4]
@@ -527,17 +544,41 @@ impl ProfileAdapter {
 
     fn get_sampler_lighting(&self, target: ColourTargets, index: u8) -> [u8; 4] {
         match target {
-            ColourTargets::SamplerBottomLeft => self.get_colour_array(target, BottomLeft, index),
-            ColourTargets::SamplerBottomRight => self.get_colour_array(target, BottomRight, index),
-            ColourTargets::SamplerTopLeft => self.get_colour_array(target, TopLeft, index),
-            ColourTargets::SamplerTopRight => self.get_colour_array(target, TopRight, index),
+            ColourTargets::SamplerBottomLeft => {
+                self.get_sample_colour_array(target, BottomLeft, index)
+            }
+            ColourTargets::SamplerBottomRight => {
+                self.get_sample_colour_array(target, BottomRight, index)
+            }
+            ColourTargets::SamplerTopLeft => self.get_sample_colour_array(target, TopLeft, index),
+            ColourTargets::SamplerTopRight => self.get_sample_colour_array(target, TopRight, index),
 
             // Honestly, we should never reach this, return nothing.
             _ => [00, 00, 00, 00],
         }
     }
 
-    fn get_colour_array(&self, target: ColourTargets, button: SampleButtons, index: u8) -> [u8; 4] {
+    fn get_fader_lighting(&self, target: ColourTargets, index: u8) -> [u8; 4] {
+        // This is a little roundabout, I could probably skip the channel lookup..
+        let fader = map_colour_target_to_fader(target);
+        let state = self.get_fader_mute_state(fader);
+
+        match state {
+            ChannelState::Muted => [00, 00, 00, 00],
+            ChannelState::Unmuted => {
+                // Return the default colour.
+                let map = get_profile_colour_map(self.profile.settings(), target);
+                map.colour(index).to_reverse_bytes()
+            }
+        }
+    }
+
+    fn get_sample_colour_array(
+        &self,
+        target: ColourTargets,
+        button: SampleButtons,
+        index: u8,
+    ) -> [u8; 4] {
         if self.current_sample_bank_has_samples(profile_to_standard_sample_button(button)) {
             return get_profile_colour_map(self.profile.settings(), target)
                 .colour(index)
@@ -2810,6 +2851,17 @@ fn map_fader_to_colour_target(fader: FaderName) -> ColourTargets {
         FaderName::B => ColourTargets::FadeMeter2,
         FaderName::C => ColourTargets::FadeMeter3,
         FaderName::D => ColourTargets::FadeMeter4,
+    }
+}
+
+fn map_colour_target_to_fader(fader: ColourTargets) -> FaderName {
+    match fader {
+        ColourTargets::FadeMeter1 => FaderName::A,
+        ColourTargets::FadeMeter2 => FaderName::B,
+        ColourTargets::FadeMeter3 => FaderName::C,
+        ColourTargets::FadeMeter4 => FaderName::D,
+
+        _ => FaderName::A,
     }
 }
 

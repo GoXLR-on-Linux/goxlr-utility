@@ -10,7 +10,7 @@ use log::debug;
 use quick_xml::events::{BytesDecl, BytesEnd, BytesStart, Event};
 use quick_xml::{Reader, Writer};
 use std::collections::HashMap;
-use std::fs::File;
+use std::fs;
 use std::io::{BufReader, Read, Write};
 use std::os::raw::c_float;
 use std::path::Path;
@@ -129,11 +129,19 @@ impl MicProfileSettings {
     }
 
     pub fn save(&self, path: impl AsRef<Path>) -> Result<()> {
-        debug!("Saving File: {}", &path.as_ref().to_string_lossy());
+        let temp_file = tempfile::NamedTempFile::new()?;
 
-        let out_file = File::create(path)?;
-        self.write_to(out_file)?;
+        debug!("Creating Temporary Save File: {:?}", temp_file.path());
+        self.write_to(&temp_file)?;
 
+        // Sync the write to disk..
+        temp_file.as_file().sync_all()?;
+
+        debug!("Save Complete, copying to {:?}", path.as_ref());
+        fs::copy(temp_file.as_ref(), path)?;
+
+        debug!("Removing Temporary File: {:?}", temp_file);
+        fs::remove_file(temp_file)?;
         Ok(())
     }
 

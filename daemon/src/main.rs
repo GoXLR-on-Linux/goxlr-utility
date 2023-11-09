@@ -98,6 +98,8 @@ async fn main() -> Result<()> {
     // it's only useful in a development setting!
     config.add_filter_ignore_str("symphonia");
 
+    let timezone_calculated = config.set_time_offset_to_local().is_ok();
+
     // Create a file rotator, that will compress and rotate files after 5Mb
     let file_rotator = FileRotate::new(
         log_file,
@@ -140,6 +142,13 @@ async fn main() -> Result<()> {
         WriteLogger::new(log_level, config.build(), file_rotator),
     ])
     .context("Could not configure the logger")?;
+
+    // Enable the PANIC logger..
+    log_panics::init();
+
+    if !timezone_calculated {
+        warn!("Unable to calculate timezone, using UTC for log timestamps");
+    }
 
     if is_root() {
         if args.force_root {

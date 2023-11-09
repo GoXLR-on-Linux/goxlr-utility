@@ -183,6 +183,10 @@ impl AttachGoXLR for GoXLRUSB {
         if result == Err(Pipe) {
             // The GoXLR is not initialised, we need to fix that..
             info!("Found uninitialised GoXLR, attempting initialisation..");
+
+            // Before we claim the interface, give things like Pipewire a change to finish up..
+            sleep(Duration::from_millis(1500));
+
             if device_is_claimed {
                 goxlr.handle.release_interface(0)?;
             }
@@ -198,10 +202,12 @@ impl AttachGoXLR for GoXLRUSB {
             // Now activate audio..
             debug!("Activating Audio...");
             goxlr.write_class_control(1, 0x0100, 0x2900, &[0x80, 0xbb, 0x00, 0x00])?;
-            goxlr.handle.release_interface(0)?;
 
             // Reset the device, so ALSA can pick it up again..
             goxlr.handle.reset()?;
+
+            // Now release the interface, so ALSA doesn't catch it mid reset..
+            goxlr.handle.release_interface(0)?;
 
             // Reattempt the reset..
             goxlr.write_control(1, 0, 0, &[])?;
@@ -209,9 +215,6 @@ impl AttachGoXLR for GoXLRUSB {
             warn!(
                 "Initialisation complete. If you are using the JACK script, you may need to reboot for audio to work."
             );
-
-            // Pause for a second, as we can grab devices a little too quickly!
-            sleep(Duration::from_secs(2));
         }
 
         // Force command pipe activation in all cases.

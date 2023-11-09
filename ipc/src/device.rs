@@ -363,6 +363,7 @@ pub struct Settings {
     pub mute_hold_duration: u16,
     pub vc_mute_also_mute_cm: bool,
     pub enable_monitor_with_fx: bool,
+    pub lock_faders: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

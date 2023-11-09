@@ -31,6 +31,24 @@ pub async fn handle_packet(
                 .context("Could not execute the command on the GoXLR device")??;
             Ok(DaemonResponse::Ok)
         }
+        DaemonRequest::GetMicLevel(serial) => {
+            let (tx, rx) = oneshot::channel();
+            usb_tx
+                .send(DeviceCommand::GetDeviceMicLevel(serial, tx))
+                .await
+                .map_err(|e| anyhow!(e.to_string()))
+                .map_err(|e| anyhow!(e.to_string()))
+                .context("Could not communicate with the GoXLR device")?;
+            let result = rx
+                .await
+                .context("Could not execute the command on the GoXLR device")?;
+
+            match result {
+                Ok(value) => Ok(DaemonResponse::MicLevel(value)),
+                Err(e) => Ok(DaemonResponse::Error(e.to_string())),
+            }
+        }
+
         DaemonRequest::Command(serial, command) => {
             let (tx, rx) = oneshot::channel();
             usb_tx

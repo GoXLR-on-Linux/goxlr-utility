@@ -204,6 +204,8 @@ impl<'a> Device<'a> {
             .get_enable_monitor_with_fx(self.serial())
             .await;
 
+        let locked_faders = self.settings.get_device_lock_faders(self.serial()).await;
+
         let submix_supported = self.device_supports_submixes();
 
         let mut sample_progress = None;
@@ -268,6 +270,7 @@ impl<'a> Device<'a> {
                 mute_hold_duration: self.hold_time,
                 vc_mute_also_mute_cm: self.vc_mute_also_mute_cm,
                 enable_monitor_with_fx: monitor_with_fx,
+                lock_faders: locked_faders,
             },
             button_down: button_states,
             profile_name: self.profile.name().to_owned(),
@@ -345,7 +348,7 @@ impl<'a> Device<'a> {
             };
 
             if refresh_colour_map {
-                self.load_colour_map()?;
+                self.load_colour_map().await?;
             }
         }
 
@@ -547,15 +550,15 @@ impl<'a> Device<'a> {
 
             Buttons::SamplerSelectA => {
                 self.load_sample_bank(SampleBank::A).await?;
-                self.load_colour_map()?;
+                self.load_colour_map().await?;
             }
             Buttons::SamplerSelectB => {
                 self.load_sample_bank(SampleBank::B).await?;
-                self.load_colour_map()?;
+                self.load_colour_map().await?;
             }
             Buttons::SamplerSelectC => {
                 self.load_sample_bank(SampleBank::C).await?;
-                self.load_colour_map()?;
+                self.load_colour_map().await?;
             }
 
             Buttons::SamplerBottomLeft => {
@@ -746,7 +749,6 @@ impl<'a> Device<'a> {
             return Ok(());
         }
 
-        // This will only ever trigger if called via the API, so don't announce this for now..
         if mute_function == MuteFunction::All {
             // Throw this across to the 'Mute to All' code..
             return self.mute_fader_to_all(fader, false).await;
@@ -769,6 +771,7 @@ impl<'a> Device<'a> {
     async fn mute_fader_to_all(&mut self, fader: FaderName, blink: bool) -> Result<()> {
         let (muted_to_x, muted_to_all, mute_function) = self.profile.get_mute_button_state(fader);
         let channel = self.profile.get_fader_assignment(fader);
+        let lock_faders = self.settings.get_device_lock_faders(self.serial()).await;
 
         // Are we already muted to all?
         if muted_to_all {
@@ -781,8 +784,14 @@ impl<'a> Device<'a> {
 
             // Per the latest official release, the mini no longer sets the volume to 0 on mute
             if self.hardware.device_type != DeviceType::Mini {
+                // We need to set the previous volume regardless, because if the below setting
+                // changes, we need to correctly reset the position.
                 self.profile.set_mute_previous_volume(fader, volume)?;
-                self.goxlr.set_volume(channel, 0)?;
+
+                if !lock_faders {
+                    // User has asked us not to move the volume,
+                    self.goxlr.set_volume(channel, 0)?;
+                }
             }
             self.goxlr.set_channel_state(channel, Muted)?;
             self.profile.set_mute_button_on(fader, true)?;
@@ -796,9 +805,12 @@ impl<'a> Device<'a> {
             self.profile.set_mute_button_blink(fader, true)?;
         }
 
-        if self.hardware.device_type != DeviceType::Mini {
+        if self.hardware.device_type != DeviceType::Mini && !lock_faders {
             // Again, only apply this if we're a full device
             self.profile.set_channel_volume(channel, 0)?;
+        } else {
+            // Reload the colour map on the mini (will disable fader lighting)
+            self.load_colour_map().await?;
         }
 
         // If we're Chat, we may need to transiently route the Microphone..
@@ -817,6 +829,7 @@ impl<'a> Device<'a> {
     async fn unmute_fader(&mut self, fader: FaderName) -> Result<()> {
         let (muted_to_x, muted_to_all, mute_function) = self.profile.get_mute_button_state(fader);
         let channel = self.profile.get_fader_assignment(fader);
+        let lock_faders = self.settings.get_device_lock_faders(self.serial()).await;
 
         if !muted_to_x && !muted_to_all {
             // Nothing to do.
@@ -839,17 +852,20 @@ impl<'a> Device<'a> {
             }
 
             // As with mute, the mini doesn't modify volumes on mute / unmute
-            if self.hardware.device_type != DeviceType::Mini {
+            if self.hardware.device_type != DeviceType::Mini && !lock_faders {
                 self.goxlr.set_volume(channel, previous_volume)?;
                 self.profile.set_channel_volume(channel, previous_volume)?;
-            } else if self.device_supports_submixes()
-                && (channel == ChannelName::Headphones || channel == ChannelName::LineOut)
-            {
-                // This is a special case, when calling unmute on submix firmware, the LineOut
-                // and Headphones don't set correctly, so we need to forcibly restore the
-                // volume. This does mean unlatching though :(
-                let current_volume = self.profile.get_channel_volume(channel);
-                self.goxlr.set_volume(channel, current_volume)?;
+            } else {
+                if self.needs_submix_correction(channel) {
+                    // This is a special case, when calling unmute on submix firmware, the LineOut
+                    // and Headphones don't set correctly, so we need to forcibly restore the
+                    // volume. This does mean unlatching though :(
+                    let current_volume = self.profile.get_channel_volume(channel);
+                    self.goxlr.set_volume(channel, current_volume)?;
+                }
+
+                // Reload the Minis colour Map to re-establish colours.
+                self.load_colour_map().await?;
             }
 
             // As before, we might need transient Mic Routing..
@@ -873,6 +889,47 @@ impl<'a> Device<'a> {
         let _ = self.global_events.send(TTSMessage(message)).await;
 
         self.update_button_states()?;
+        Ok(())
+    }
+
+    fn lock_faders(&mut self) -> Result<()> {
+        if self.hardware.device_type == DeviceType::Mini {
+            return Ok(());
+        }
+
+        for fader in FaderName::iter() {
+            if self.profile.get_fader_mute_state(fader) == Muted {
+                // Ok, to lock the fader, we need to restore this to it's stored value..
+                let volume = self.profile.get_mute_button_previous_volume(fader);
+                let channel = self.profile.get_fader_assignment(fader);
+
+                // Set the volume of the channel back to where it should be
+                self.goxlr.set_volume(channel, volume)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn unlock_faders(&mut self) -> Result<()> {
+        if self.hardware.device_type == DeviceType::Mini {
+            return Ok(());
+        }
+
+        // We need to drop any muted faders to 0 volume..
+        for fader in FaderName::iter() {
+            if self.profile.get_fader_mute_state(fader) == Muted {
+                // Get the current volume for the fader..
+                let channel = self.profile.get_fader_assignment(fader);
+                let volume = self.profile.get_channel_volume(channel);
+
+                // Set the previous volume
+                self.profile.set_mute_previous_volume(fader, volume)?;
+
+                // Set the volume of the channel to 0
+                self.goxlr.set_volume(channel, 0)?;
+            }
+        }
+
         Ok(())
     }
 
@@ -930,7 +987,7 @@ impl<'a> Device<'a> {
 
         // Because we may have removed the 'last' sample on a button, we need to refresh
         // the states to make sure everything is correctly updated.
-        self.load_colour_map()?;
+        self.load_colour_map().await?;
         self.update_button_states()
     }
 
@@ -1061,7 +1118,7 @@ impl<'a> Device<'a> {
             self.profile.set_sample_clear_active(false)?;
 
             debug!("Disabled Buttons..");
-            self.load_colour_map()?;
+            self.load_colour_map().await?;
 
             debug!("Reset Colours");
             return Ok(());
@@ -1094,7 +1151,7 @@ impl<'a> Device<'a> {
             }
             // In all cases, we should stop the colour flashing.
             self.profile.set_sample_button_blink(button, false)?;
-            self.load_colour_map()?;
+            self.load_colour_map().await?;
 
             return Ok(());
         }
@@ -1218,13 +1275,7 @@ impl<'a> Device<'a> {
         self.load_encoder_effects()?;
         self.set_pitch_mode()?;
 
-        self.apply_effects(self.mic_profile.get_reverb_keyset())?;
-        self.apply_effects(self.mic_profile.get_megaphone_keyset())?;
-        self.apply_effects(self.mic_profile.get_robot_keyset())?;
-        self.apply_effects(self.mic_profile.get_hardtune_keyset())?;
-        self.apply_effects(self.mic_profile.get_echo_keyset())?;
-        self.apply_effects(self.mic_profile.get_pitch_keyset())?;
-        self.apply_effects(self.mic_profile.get_gender_keyset())?;
+        self.apply_effects(self.mic_profile.get_fx_keys())?;
 
         Ok(())
     }
@@ -1274,16 +1325,7 @@ impl<'a> Device<'a> {
         self.profile.set_effects(enabled)?;
 
         // When this changes, we need to update all the 'Enabled' keys..
-        let mut key_updates = LinkedHashSet::new();
-        key_updates.insert(EffectKey::Encoder1Enabled);
-        key_updates.insert(EffectKey::Encoder2Enabled);
-        key_updates.insert(EffectKey::Encoder3Enabled);
-        key_updates.insert(EffectKey::Encoder4Enabled);
-
-        key_updates.insert(EffectKey::MegaphoneEnabled);
-        key_updates.insert(EffectKey::HardTuneEnabled);
-        key_updates.insert(EffectKey::RobotEnabled);
-        self.apply_effects(key_updates)?;
+        self.apply_effects(self.mic_profile.get_enabled_keyset())?;
 
         // Re-apply routing to the Mic in case monitoring needs to be enabled / disabled..
         self.apply_routing(BasicInputDevice::Microphone).await?;
@@ -1471,6 +1513,13 @@ impl<'a> Device<'a> {
         }
 
         Ok(value_changed)
+    }
+
+    pub async fn get_mic_level(&mut self) -> Result<f64> {
+        let level = self.goxlr.get_microphone_level()?;
+
+        let db = ((f64::log(level.into(), 10.) * 20.) - 72.2).clamp(-72.2, 0.);
+        Ok(db)
     }
 
     pub async fn perform_command(&mut self, command: GoXLRCommand) -> Result<()> {
@@ -1669,7 +1718,7 @@ impl<'a> Device<'a> {
                 }
 
                 self.profile.set_animation_mode(mode)?;
-                self.load_animation(false)?;
+                self.load_animation(false).await?;
             }
             GoXLRCommand::SetAnimationMod1(value) => {
                 if !self.device_supports_animations() {
@@ -1677,7 +1726,7 @@ impl<'a> Device<'a> {
                 }
 
                 self.profile.set_animation_mod1(value)?;
-                self.load_animation(false)?;
+                self.load_animation(false).await?;
             }
             GoXLRCommand::SetAnimationMod2(value) => {
                 if !self.device_supports_animations() {
@@ -1685,7 +1734,7 @@ impl<'a> Device<'a> {
                 }
 
                 self.profile.set_animation_mod2(value)?;
-                self.load_animation(false)?;
+                self.load_animation(false).await?;
             }
             GoXLRCommand::SetAnimationWaterfall(direction) => {
                 if !self.device_supports_animations() {
@@ -1693,12 +1742,12 @@ impl<'a> Device<'a> {
                 }
 
                 self.profile.set_animation_waterfall(direction)?;
-                self.load_animation(false)?;
+                self.load_animation(false).await?;
             }
 
             GoXLRCommand::SetGlobalColour(colour) => {
                 self.profile.set_global_colour(colour)?;
-                self.load_colour_map()?;
+                self.load_colour_map().await?;
                 self.update_button_states()?;
                 self.set_all_fader_display_from_profile()?;
             }
@@ -1709,7 +1758,7 @@ impl<'a> Device<'a> {
             GoXLRCommand::SetFaderColours(fader, top, bottom) => {
                 // Need to get the fader colour map, and set values..
                 self.profile.set_fader_colours(fader, top, bottom)?;
-                self.load_colour_map()?;
+                self.load_colour_map().await?;
             }
             GoXLRCommand::SetAllFaderColours(top, bottom) => {
                 // I considered this as part of SetFaderColours, but spamming a new colour map
@@ -1719,7 +1768,7 @@ impl<'a> Device<'a> {
                     self.profile
                         .set_fader_colours(fader, top.to_owned(), bottom.to_owned())?;
                 }
-                self.load_colour_map()?;
+                self.load_colour_map().await?;
             }
             GoXLRCommand::SetAllFaderDisplayStyle(display_style) => {
                 for fader in FaderName::iter() {
@@ -1732,46 +1781,46 @@ impl<'a> Device<'a> {
                     .set_button_colours(target, colour, colour2.as_ref())?;
 
                 // Reload the colour map and button states..
-                self.load_colour_map()?;
+                self.load_colour_map().await?;
                 self.update_button_states()?;
             }
             GoXLRCommand::SetButtonOffStyle(target, off_style) => {
                 self.profile.set_button_off_style(target, off_style)?;
 
-                self.load_colour_map()?;
+                self.load_colour_map().await?;
                 self.update_button_states()?;
             }
             GoXLRCommand::SetButtonGroupColours(target, colour, colour_2) => {
                 self.profile
                     .set_group_button_colours(target, colour, colour_2)?;
 
-                self.load_colour_map()?;
+                self.load_colour_map().await?;
                 self.update_button_states()?;
             }
             GoXLRCommand::SetButtonGroupOffStyle(target, off_style) => {
                 self.profile.set_group_button_off_style(target, off_style)?;
-                self.load_colour_map()?;
+                self.load_colour_map().await?;
                 self.update_button_states()?;
             }
             GoXLRCommand::SetSimpleColour(target, colour) => {
                 self.profile.set_simple_colours(target, colour)?;
-                self.load_colour_map()?;
+                self.load_colour_map().await?;
                 self.update_button_states()?;
             }
             GoXLRCommand::SetEncoderColour(target, colour, colour_2, colour_3) => {
                 self.profile
                     .set_encoder_colours(target, colour, colour_2, colour_3)?;
-                self.load_colour_map()?;
+                self.load_colour_map().await?;
             }
             GoXLRCommand::SetSampleColour(target, colour, colour_2, colour_3) => {
                 self.profile
                     .set_sampler_colours(target, colour, colour_2, colour_3)?;
                 self.profile.sync_sample_if_active(target)?;
-                self.load_colour_map()?;
+                self.load_colour_map().await?;
             }
             GoXLRCommand::SetSampleOffStyle(target, style) => {
                 self.profile.set_sampler_off_style(target, style)?;
-                self.load_colour_map()?;
+                self.load_colour_map().await?;
                 self.update_button_states()?;
             }
 
@@ -1968,6 +2017,9 @@ impl<'a> Device<'a> {
                 // will still return it's 'Wide' value during polls which error out otherwise.
                 let value = self.profile.get_pitch_encoder_position();
                 self.goxlr.set_encoder_value(EncoderName::Pitch, value)?;
+
+                // Update the pitch 'Threshold' value which may have changed..
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::PitchThreshold]))?;
             }
             GoXLRCommand::SetPitchAmount(value) => {
                 let hard_tune_enabled = self.profile.is_hardtune_enabled(true);
@@ -2178,7 +2230,7 @@ impl<'a> Device<'a> {
                 }
 
                 // Update the lighting..
-                self.load_colour_map()?;
+                self.load_colour_map().await?;
             }
             GoXLRCommand::SetSampleStartPercent(bank, button, index, percent) => {
                 self.profile
@@ -2194,7 +2246,7 @@ impl<'a> Device<'a> {
                     .remove_sample_file_by_index(bank, button, index)?;
 
                 if remaining == 0 {
-                    self.load_colour_map()?;
+                    self.load_colour_map().await?;
                 }
             }
             GoXLRCommand::PlaySampleByIndex(bank, button, index) => {
@@ -2280,9 +2332,9 @@ impl<'a> Device<'a> {
                 self.profile.load_colour_profile(profile);
 
                 if self.device_supports_animations() {
-                    self.load_animation(false)?;
+                    self.load_animation(false).await?;
                 } else {
-                    self.load_colour_map()?;
+                    self.load_colour_map().await?;
                 }
                 self.update_button_states()?;
             }
@@ -2404,13 +2456,32 @@ impl<'a> Device<'a> {
                 self.apply_routing(BasicInputDevice::Microphone).await?;
             }
 
+            GoXLRCommand::SetLockFaders(value) => {
+                let current = self.settings.get_device_lock_faders(self.serial()).await;
+
+                if current != value {
+                    self.settings
+                        .set_device_lock_faders(self.serial(), value)
+                        .await;
+
+                    self.settings.save().await;
+
+                    if value {
+                        self.lock_faders()?;
+                    } else {
+                        self.unlock_faders()?;
+                    }
+                    self.load_colour_map().await?;
+                }
+            }
+
             GoXLRCommand::SetActiveEffectPreset(preset) => {
                 self.load_effect_bank(preset).await?;
                 self.update_button_states()?;
             }
             GoXLRCommand::SetActiveSamplerBank(bank) => {
                 self.load_sample_bank(bank).await?;
-                self.load_colour_map()?;
+                self.load_colour_map().await?;
             }
             GoXLRCommand::SetMegaphoneEnabled(enabled) => {
                 self.set_megaphone(enabled).await?;
@@ -2591,9 +2662,10 @@ impl<'a> Device<'a> {
         // to ensure that if we're handling the mic, we handle it here.
         if channel_name == ChannelName::Mic {
             self.apply_transient_chat_mic_mute(router)?;
+            self.apply_transient_cough_routing(router)?;
         }
 
-        self.apply_transient_cough_routing(channel_name, router)
+        Ok(())
     }
 
     fn apply_transient_fader_routing(
@@ -2614,7 +2686,6 @@ impl<'a> Device<'a> {
 
     fn apply_transient_cough_routing(
         &self,
-        channel_name: ChannelName,
         router: &mut EnumMap<BasicOutputDevice, bool>,
     ) -> Result<()> {
         // Same deal, pull out the current state, make needed changes.
@@ -2622,7 +2693,7 @@ impl<'a> Device<'a> {
             self.profile.get_mute_chat_button_state();
 
         self.apply_transient_channel_routing(
-            channel_name,
+            ChannelName::Mic,
             muted_to_x,
             muted_to_all,
             mute_function,
@@ -2920,12 +2991,17 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
-    fn load_colour_map(&mut self) -> Result<()> {
+    async fn load_colour_map(&mut self) -> Result<()> {
         // The new colour format occurred on different firmware versions depending on device,
         // so do the check here.
 
+        let device_mini = self.hardware.device_type == DeviceType::Mini;
+        let lock_faders = self.settings.get_device_lock_faders(self.serial()).await;
+
+        let blank_mute = device_mini || lock_faders;
+
         let use_1_3_40_format = self.device_supports_animations();
-        let colour_map = self.profile.get_colour_map(use_1_3_40_format);
+        let colour_map = self.profile.get_colour_map(use_1_3_40_format, blank_mute);
 
         if use_1_3_40_format {
             self.goxlr.set_button_colours_1_3_40(colour_map)?;
@@ -2938,7 +3014,7 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
-    fn load_animation(&mut self, map_set: bool) -> Result<()> {
+    async fn load_animation(&mut self, map_set: bool) -> Result<()> {
         let enabled = self.profile.get_animation_mode() != goxlr_types::AnimationMode::None;
 
         // This one is kinda weird, we go from profile -> types -> usb..
@@ -2967,7 +3043,7 @@ impl<'a> Device<'a> {
                 || mode == AnimationMode::Ripple
                 || mode == AnimationMode::Simple)
         {
-            self.load_colour_map()?;
+            self.load_colour_map().await?;
         }
 
         Ok(())
@@ -3047,11 +3123,11 @@ impl<'a> Device<'a> {
         self.load_submix_settings(true)?;
 
         debug!("Loading Colour Map..");
-        self.load_colour_map()?;
+        self.load_colour_map().await?;
 
         if self.device_supports_animations() {
             // Load any animation settings..
-            self.load_animation(true)?;
+            self.load_animation(true).await?;
         }
 
         debug!("Setting Fader display modes..");
@@ -3376,6 +3452,11 @@ impl<'a> Device<'a> {
             }
         }
         Ok(())
+    }
+
+    fn needs_submix_correction(&self, channel: ChannelName) -> bool {
+        self.device_supports_submixes()
+            && (channel == ChannelName::Headphones || channel == ChannelName::LineOut)
     }
 
     fn device_supports_submixes(&self) -> bool {

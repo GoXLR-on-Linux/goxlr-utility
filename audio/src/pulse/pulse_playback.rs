@@ -72,7 +72,7 @@ impl AudioOutput for PulsePlayback {
             buffer.extend_from_slice(&sample.to_le_bytes());
         }
 
-        if self.pulse_simple.write(buffer.as_slice()).is_ok() {}
+        let _ = self.pulse_simple.write(buffer.as_slice());
         Ok(())
     }
 

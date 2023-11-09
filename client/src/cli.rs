@@ -86,6 +86,7 @@ pub enum SubCommands {
         volume_percent: u8,
     },
 
+    /// Adjust Submix Settings
     Submix {
         #[command(subcommand)]
         command: SubmixCommands,
@@ -141,6 +142,11 @@ pub enum SubCommands {
         #[clap[subcommand]]
         command: SamplerCommands,
     },
+
+    Settings {
+        #[clap[subcommand]]
+        command: DeviceSettings,
+    },
 }
 
 fn percent_value(s: &str) -> Result<u8, String> {
@@ -173,17 +179,20 @@ fn percent_value_float(s: &str) -> Result<f32, String> {
 #[derive(Subcommand, Debug)]
 #[command(arg_required_else_help = true)]
 pub enum CoughButtonBehaviours {
+    /// Sets whether the button is only active when held (so not toggled)
     ButtonIsHold {
         #[arg(value_parser, action = ArgAction::Set)]
         is_hold: bool,
     },
 
+    /// Change the Mute Target on Press
     MuteBehaviour {
         /// Where a single press will mute (Hold will always Mute to All)
         #[arg(value_enum)]
         mute_behaviour: MuteFunction,
     },
 
+    /// Change the current button Mute State
     MuteState {
         /// The new State
         #[arg(value_enum)]
@@ -268,6 +277,7 @@ pub enum MicrophoneCommands {
         level: u8,
     },
 
+    /// Enable Microphone Monitor whenever FX are enabled
     MonitorMicWithFx {
         #[arg(value_parser, action = ArgAction::Set)]
         enabled: bool,
@@ -277,12 +287,15 @@ pub enum MicrophoneCommands {
 #[derive(Subcommand, Debug)]
 #[command(arg_required_else_help = true)]
 pub enum SubmixCommands {
+    /// Enable / Disable SubMixes
     Enabled {
         #[arg(value_parser, action = ArgAction::Set)]
         enabled: bool,
     },
 
+    /// Change Submix Volumes
     Volume {
+        /// The Channel to Change
         #[arg(value_enum)]
         channel: ChannelName,
 
@@ -291,23 +304,31 @@ pub enum SubmixCommands {
         volume_percent: u8,
     },
 
+    /// Link / Unlink a volume -> submix volume
     Linked {
+        /// The Channel to Change        
         #[arg(value_enum)]
         channel: ChannelName,
 
+        /// Whether the channels volumes are linked
         #[arg(value_parser, action = ArgAction::Set)]
         linked: bool,
     },
 
+    /// Set the output mix for a channel
     OutputMix {
+        /// The Output Device to Change
         #[arg(value_enum)]
         device: OutputDevice,
 
+        /// The Mix to Assign
         #[arg(value_enum)]
         mix: Mix,
     },
 
+    /// Activate Mix Monitoring
     MonitorMix {
+        /// The Channel to Monitor
         #[arg(value_enum)]
         device: OutputDevice,
     },
@@ -456,6 +477,7 @@ pub enum FaderCommands {
         state: MuteState,
     },
 
+    /// Configure the Scribble Screen on a Fader
     Scribbles {
         #[command(subcommand)]
         command: Scribbles,
@@ -463,28 +485,43 @@ pub enum FaderCommands {
 }
 #[derive(Subcommand, Debug)]
 pub enum Scribbles {
+    /// Change a Scribble Icon
     Icon {
+        /// The Fader to Change
         #[arg(value_enum)]
         fader: FaderName,
+
+        /// The name of the Icon file
         name: Option<String>,
     },
 
+    /// Change the Text on a Scribble
     Text {
+        /// The Fader to Change
         #[arg(value_enum)]
         fader: FaderName,
+
+        /// The text to display
         text: String,
     },
 
+    /// Change the Number field (Top Left)
     Number {
+        /// The Fader to Change
         #[arg(value_enum)]
         fader: FaderName,
+
+        /// The Text to display
         text: String,
     },
 
+    /// Inverts a scribble display
     Invert {
+        /// The Fader to Change
         #[arg(value_enum)]
         fader: FaderName,
 
+        /// Whether the screen is inverted
         #[arg(value_parser, action = ArgAction::Set)]
         inverted: bool,
     },
@@ -504,6 +541,7 @@ pub enum CoughCommands {
 #[derive(Subcommand, Debug)]
 #[command(arg_required_else_help = true)]
 pub enum LightingCommands {
+    /// Change Global Animation States
     Animation {
         #[command(subcommand)]
         command: AnimationCommands,
@@ -536,12 +574,17 @@ pub enum LightingCommands {
         command: ButtonGroupLightingCommands,
     },
 
+    /// Change a 'Simple' (one colour) target
     SimpleColour {
+        /// The Lighting to Change
         #[arg(value_enum)]
         target: SimpleColourTargets,
+
+        /// The New Colour
         colour: String,
     },
 
+    /// Change an Encoder Colour
     EncoderColour {
         /// The Encoder to Change
         #[arg(value_enum)]
@@ -561,15 +604,35 @@ pub enum LightingCommands {
 #[derive(Subcommand, Debug)]
 #[command(arg_required_else_help = true)]
 pub enum AnimationCommands {
-    Mode { mode: AnimationMode },
-    Mod1 { mod1: u8 },
-    Mod2 { mod2: u8 },
-    WaterFall { waterfall: WaterfallDirection },
+    /// Change the Animation Mod
+    Mode {
+        /// The new Mode
+        mode: AnimationMode,
+    },
+
+    /// Change the Mod1 Value
+    Mod1 {
+        /// The New Value
+        mod1: u8,
+    },
+
+    /// Change the Mod2 Value
+    Mod2 {
+        /// The new Value
+        mod2: u8,
+    },
+
+    /// Change the Waterfall Direction
+    WaterFall {
+        /// The Waterfall Direction
+        waterfall: WaterfallDirection,
+    },
 }
 
 #[derive(Subcommand, Debug)]
 #[command(arg_required_else_help = true)]
 pub enum FaderLightingCommands {
+    /// Change the Faders Lighting Mode
     Display {
         /// The Fader to Change
         #[arg(value_enum)]
@@ -597,6 +660,7 @@ pub enum FaderLightingCommands {
 #[derive(Subcommand, Debug)]
 #[command(arg_required_else_help = true)]
 pub enum FadersAllLightingCommands {
+    /// Change the Faders Lighting Mode
     Display {
         /// The new display method
         #[arg(value_enum)]
@@ -616,6 +680,7 @@ pub enum FadersAllLightingCommands {
 #[derive(Subcommand, Debug)]
 #[command(arg_required_else_help = true)]
 pub enum ButtonLightingCommands {
+    /// Change a Buttons Colours
     Colour {
         /// The Button to change
         #[arg(value_enum)]
@@ -628,6 +693,7 @@ pub enum ButtonLightingCommands {
         colour_two: Option<String>,
     },
 
+    /// Set a Button's "Off" style
     OffStyle {
         /// The Button to change
         #[arg(value_enum)]
@@ -642,6 +708,7 @@ pub enum ButtonLightingCommands {
 #[derive(Subcommand, Debug)]
 #[command(arg_required_else_help = true)]
 pub enum ButtonGroupLightingCommands {
+    /// Change a Buttons Groups Colours
     Colour {
         /// The group to change
         #[arg(value_enum)]
@@ -654,6 +721,7 @@ pub enum ButtonGroupLightingCommands {
         colour_two: Option<String>,
     },
 
+    /// Change a Button Group's "Off" style
     OffStyle {
         /// The group to change
         #[arg(value_enum)]
@@ -1053,5 +1121,44 @@ pub enum SamplerCommands {
 
         #[arg(value_parser=percent_value_float)]
         stop_position: f32,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+#[command(arg_required_else_help = true)]
+pub enum DeviceSettings {
+    /// How long to Hold a Mute button before it Mutes to All
+    MuteHoldDuration {
+        /// The Duration to Hold
+        #[arg(value_parser, action = ArgAction::Set)]
+        duration: u16,
+    },
+
+    /// How far in the past the sampler should listen for audio
+    SamplePreRecordBuffer {
+        /// The duration in Milliseconds
+        #[arg(value_parser, action = ArgAction::Set)]
+        duration: u16,
+    },
+
+    /// Enable Mic Monitoring when FX are enabled
+    MonitorWithFx {
+        /// Whether the setting is enabled
+        #[arg(value_parser, action = ArgAction::Set)]
+        enabled: bool,
+    },
+
+    /// Whether to mute The Microphone when Voice Chat is Muted
+    DeafenOnChatMute {
+        /// Whether the setting is enabled
+        #[arg(value_parser, action = ArgAction::Set)]
+        enabled: bool,
+    },
+
+    /// Locks the Faders to their current value on MuteToAll
+    LockFaders {
+        /// Whether the setting is enabled
+        #[arg(value_parser, action = ArgAction::Set)]
+        enabled: bool,
     },
 }
