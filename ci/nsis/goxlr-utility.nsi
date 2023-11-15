@@ -347,7 +347,7 @@ Function InstallVCRuntime
 	${EndIf}
 
 	DetailPrint "Installing VC Runtime"
-	ExecWait "$TEMP\vc_redist.x64.exe /silent /install" $1
+	ExecWait "$TEMP\vc_redist.x64.exe /silent /install /norestart" $1
 	${IfNot} $1 == 0
 		DetailPrint "Failed to install VC Runtime, continuing without."
 		Goto END
