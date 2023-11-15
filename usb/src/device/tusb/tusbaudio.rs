@@ -550,11 +550,11 @@ impl TUSBAudio<'_> {
         // We should not return from this method until at least one run has been done by the
         // thread, this is primarily to prevent conflicts on startup when everything changes.
 
-        let started = Arc::new(AtomicBool::new(false));
-        let started_inner = started.clone();
+        let (ready_tx, mut ready_rx) = tokio::sync::oneshot::channel::<bool>();
 
         thread::spawn(move || -> Result<()> {
             let mut devices = vec![];
+            let mut ready_sender = Some(ready_tx);
 
             loop {
                 let mut found_devices = vec![];
@@ -588,16 +588,19 @@ impl TUSBAudio<'_> {
                     devices.clear();
                     devices.append(&mut found_devices);
                 }
-                if !started_inner.load(Ordering::Relaxed) {
-                    started_inner.store(true, Ordering::Relaxed);
+                if let Some(sender) = ready_sender.take() {
+                    let _ = sender.send(true);
                 }
                 sleep(Duration::from_secs(1));
             }
         });
 
-        while !started.load(Ordering::Relaxed) {
+        // Block until the 'ready' message has been sent..
+        while ready_rx.try_recv().is_err() {
+            debug!("Waiting for Pnp Handler..");
             sleep(Duration::from_millis(5));
         }
+        debug!("RUSB PnP Handler Started");
 
         *spawned = true;
         Ok(())
