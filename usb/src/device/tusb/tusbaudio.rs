@@ -556,29 +556,46 @@ impl TUSBAudio<'_> {
             let mut devices = vec![];
             let mut ready_sender = Some(ready_tx);
 
+            debug!("PnP Thread Spawned");
             loop {
+                debug!("Looping..");
                 let mut found_devices = vec![];
 
+                debug!("Polling Devices");
                 if let Ok(devices) = rusb::devices() {
+                    debug!("Devices Found, iterating");
                     for device in devices.iter() {
+                        debug!("Device Found, Fetching Descriptor");
                         if let Ok(descriptor) = device.device_descriptor() {
+                            debug!("Descriptor Found, fetching bus and address");
+
                             let bus_number = device.bus_number();
                             let address = device.address();
 
+                            debug!("Checking if Device is GoXLR");
                             if descriptor.vendor_id() == VID_GOXLR
                                 && (descriptor.product_id() == PID_GOXLR_FULL
                                     || descriptor.product_id() == PID_GOXLR_MINI)
                             {
+                                debug!("Device is GoXLR! Adding to List");
                                 found_devices.push(USBDevice {
                                     bus_number,
                                     address,
                                 });
+                            } else {
+                                debug!("Device is not GoXLR");
                             }
+                        } else {
+                            debug!("Unable to Fetch Descriptor");
                         }
                     }
+                } else {
+                    debug!("Unable to Poll Devices");
                 }
 
                 // Make sure our two vecs are the same..
+
+                debug!("Comparing Device Lists");
                 if !iters_equal_anyorder(
                     devices.clone().into_iter(),
                     found_devices.clone().into_iter(),
@@ -588,16 +605,19 @@ impl TUSBAudio<'_> {
                     devices.clear();
                     devices.append(&mut found_devices);
                 }
+
+                debug!("Sending First Message");
                 if let Some(sender) = ready_sender.take() {
                     let _ = sender.send(true);
                 }
+
+                debug!("Sleeping");
                 sleep(Duration::from_secs(1));
             }
         });
 
         // Block until the 'ready' message has been sent..
         while ready_rx.try_recv().is_err() {
-            debug!("Waiting for Pnp Handler..");
             sleep(Duration::from_millis(5));
         }
         debug!("RUSB PnP Handler Started");
