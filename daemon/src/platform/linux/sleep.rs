@@ -69,8 +69,10 @@ pub async fn run() -> Result<()> {
         debug!("Received Arg: {}", arg.sleep);
 
         if arg.sleep {
-            debug!("Dropping Handle.");
-            drop(inhibitor.take());
+            if let Some(handle) = inhibitor.take() {
+                debug!("Dropping Handle.");
+                drop(handle);
+            }
         } else {
             debug!("Taking New Handle..");
             if let Ok(descriptor) = manager.inhibit(what, who, why, mode).await {
