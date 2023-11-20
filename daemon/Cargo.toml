@@ -73,6 +73,7 @@ ksni = "0.2.0"
 rust-ini = "0.18.0"
 rand = "0.8.5"
 shell-words = "1.1.0"
+zbus = "3.14.1"
 
 # Under Windows and MacOS, we use tao's tray feature
 [target.'cfg(target_os = "windows")'.dependencies]
