@@ -221,7 +221,7 @@ async fn main() -> Result<()> {
     let (httpd_tx, httpd_rx) = tokio::sync::oneshot::channel();
 
     // Create the Device shutdown signallers..
-    let (device_stop_tx, device_stop_rx) = mpsc::channel(1);
+    let (device_state_tx, device_state_rx) = mpsc::channel(1);
 
     // Create the Shutdown Signallers..
     let shutdown = Shutdown::new();
@@ -255,7 +255,7 @@ async fn main() -> Result<()> {
     let usb_handle = tokio::spawn(spawn_usb_handler(
         usb_rx,
         file_rx,
-        device_stop_rx,
+        device_state_rx,
         broadcast_tx.clone(),
         global_tx.clone(),
         shutdown.clone(),
@@ -315,7 +315,7 @@ async fn main() -> Result<()> {
     let event_handle = tokio::spawn(spawn_event_handler(
         state.clone(),
         global_rx,
-        device_stop_tx,
+        device_state_tx,
     ));
 
     // Spawn the Platform Runtime (if needed)

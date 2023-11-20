@@ -13,7 +13,7 @@ use goxlr_usb::device::base::GoXLRDevice;
 use goxlr_usb::device::{find_devices, from_device};
 use goxlr_usb::{PID_GOXLR_FULL, PID_GOXLR_MINI};
 use json_patch::diff;
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use tokio::sync::broadcast::Sender as BroadcastSender;
@@ -31,6 +31,13 @@ pub enum DeviceCommand {
     GetDeviceMicLevel(String, oneshot::Sender<Result<f64>>),
 }
 
+#[allow(dead_code)]
+pub enum DeviceStateChange {
+    Shutdown,
+    Sleep,
+    Wake,
+}
+
 pub type DeviceSender = Sender<DeviceCommand>;
 pub type DeviceReceiver = Receiver<DeviceCommand>;
 
@@ -39,7 +46,7 @@ pub type DeviceReceiver = Receiver<DeviceCommand>;
 pub async fn spawn_usb_handler(
     mut command_rx: DeviceReceiver,
     mut file_rx: Receiver<PathTypes>,
-    mut device_stop_rx: Receiver<()>,
+    mut device_state_rx: Receiver<DeviceStateChange>,
     broadcast_tx: BroadcastSender<PatchEvent>,
     global_tx: Sender<EventTriggers>,
     mut shutdown: Shutdown,
@@ -135,20 +142,33 @@ pub async fn spawn_usb_handler(
                     warn!("Cannot find registered device with serial: {}", &serial);
                 }
             }
-            _ = device_stop_rx.recv() => {
-                // Make sure this only happens once..
-                if shutdown_triggered {
-                    continue;
-                }
-                shutdown_triggered = true;
+            Some(event) = device_state_rx.recv() => {
+                match event {
+                    DeviceStateChange::Shutdown => {
+                        // Make sure this only happens once..
+                        if shutdown_triggered {
+                            continue;
+                        }
+                        shutdown_triggered = true;
 
-                // Flip through all the devices, send a shutdown signal..
-                for device in devices.values_mut() {
-                    device.shutdown().await;
+                        // Flip through all the devices, send a shutdown signal..
+                        for device in devices.values_mut() {
+                            device.shutdown().await;
+                        }
+
+                        // Send a notification that we're done here..
+                        let _ = global_tx.send(EventTriggers::DevicesStopped).await;
+                    },
+                    DeviceStateChange::Sleep => {
+                        debug!("Received Sleep Notification");
+                    },
+                    DeviceStateChange::Wake => {
+                        debug!("Received Wake Notification")
+                    }
+
                 }
 
-                // Send a notification that we're done here..
-                let _ = global_tx.send(EventTriggers::DevicesStopped).await;
+
             }
             () = shutdown.recv() => {
                 info!("Shutting down device worker");

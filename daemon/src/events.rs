@@ -1,6 +1,7 @@
 // This file primarily handles 'global' events which may occur inside the daemon from a potential
 // variety of sources, which affect other parts of the daemon.
 
+use crate::primary_worker::DeviceStateChange;
 use crate::{SettingsHandle, Shutdown};
 use goxlr_ipc::{HttpSettings, PathTypes};
 use log::{debug, warn};
@@ -39,7 +40,7 @@ pub struct DaemonState {
 pub async fn spawn_event_handler(
     state: DaemonState,
     mut rx: Receiver<EventTriggers>,
-    device_stop_tx: Sender<()>,
+    device_state_tx: Sender<DeviceStateChange>,
 ) {
     let mut triggered_device_stop = false;
     debug!("Starting Event Loop..");
@@ -51,7 +52,7 @@ pub async fn spawn_event_handler(
                 // Ctrl+C is a generic capture, although we should also check for SIGTERM under Linux..
                 if !triggered_device_stop {
                     triggered_device_stop = true;
-                    let _ = device_stop_tx.send(()).await;
+                    let _ = device_state_tx.send(DeviceStateChange::Shutdown).await;
                 }
             },
             Some(event) = rx.recv() => {
@@ -63,7 +64,7 @@ pub async fn spawn_event_handler(
                         debug!("Shutdown Phase 1 Triggered..");
                         if !triggered_device_stop {
                             triggered_device_stop = true;
-                            let _ = device_stop_tx.send(()).await;
+                            let _ = device_state_tx.send(DeviceStateChange::Shutdown).await;
                         }
                     }
                     EventTriggers::DevicesStopped => {
