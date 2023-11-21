@@ -324,6 +324,7 @@ async fn get_daemon_status(
             tts_enabled: settings.get_tts_enabled().await,
             allow_network_access: settings.get_allow_network_access().await,
             log_level: settings.get_log_level().await,
+            open_ui_on_launch: settings.get_open_ui_on_launch().await,
         },
         paths: Paths {
             profile_directory: settings.get_profile_directory().await,
