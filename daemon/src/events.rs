@@ -13,6 +13,7 @@ use tokio::sync::oneshot;
 use tokio::{select, signal};
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum EventTriggers {
     TTSMessage(String),
     Stop,
