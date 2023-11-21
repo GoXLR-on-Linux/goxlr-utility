@@ -37,6 +37,7 @@ impl SettingsHandle {
             icons_directory: Some(data_dir.join("icons")),
             logs_directory: Some(data_dir.join("logs")),
             log_level: Some(LogLevel::Debug),
+            open_ui_on_launch: None,
             activate: None,
             devices: Some(Default::default()),
         });
@@ -68,6 +69,10 @@ impl SettingsHandle {
 
         if settings.log_level.is_none() {
             settings.log_level = Some(LogLevel::Info);
+        }
+
+        if settings.open_ui_on_launch.is_none() {
+            settings.open_ui_on_launch = Some(false);
         }
 
         if settings.show_tray_icon.is_none() {
@@ -182,6 +187,15 @@ impl SettingsHandle {
     pub async fn get_log_level(&self) -> LogLevel {
         let settings = self.settings.read().await;
         settings.log_level.clone().unwrap_or(LogLevel::Info)
+    }
+
+    pub async fn get_open_ui_on_launch(&self) -> bool {
+        let settings = self.settings.read().await;
+        settings.open_ui_on_launch.unwrap_or(false)
+    }
+    pub async fn set_open_ui_on_launch(&self, enable: bool) {
+        let mut settings = self.settings.write().await;
+        settings.open_ui_on_launch = Some(enable);
     }
 
     pub async fn get_activate(&self) -> Option<String> {
@@ -409,6 +423,7 @@ pub struct Settings {
     icons_directory: Option<PathBuf>,
     logs_directory: Option<PathBuf>,
     log_level: Option<LogLevel>,
+    open_ui_on_launch: Option<bool>,
     activate: Option<String>,
     devices: Option<HashMap<String, DeviceSettings>>,
 }
