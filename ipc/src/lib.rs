@@ -250,6 +250,7 @@ pub enum GoXLRCommand {
     SetVCMuteAlsoMuteCM(bool),
     SetMonitorWithFx(bool),
     SetLockFaders(bool),
+    SetUiLaunchOnLoad(bool),
 
     // These control the current GoXLR 'State'..
     SetActiveEffectPreset(EffectBankPresets),
