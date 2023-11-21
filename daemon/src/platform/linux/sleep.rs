@@ -57,7 +57,7 @@ pub async fn run(tx: mpsc::Sender<EventTriggers>) -> Result<()> {
             inhibitor.replace(descriptor);
         }
         Err(error) => {
-            debug!("Error: {:?}", error);
+            debug!("Unable to Create Inhibitor: {:?}", error);
         }
     }
 
@@ -69,33 +69,37 @@ pub async fn run(tx: mpsc::Sender<EventTriggers>) -> Result<()> {
     while let Some(signal) = result.next().await {
         let arg = signal.args()?;
         if arg.sleep {
-            debug!("Going to Sleep, Sending the message...");
+            debug!("Going to Sleep, Letting the Primary Worker know...");
             let (sleep_tx, sleep_rx) = oneshot::channel();
 
             if tx.send(EventTriggers::Sleep(sleep_tx)).await.is_ok() {
                 // Wait for a Response back..
-                debug!("Sleep Message Sent, awaiting Response..");
+                debug!("Sleep Message Sent, awaiting completion..");
                 let _ = sleep_rx.await;
             }
 
-            debug!("Sleep Handled, Dropping Inhibitor");
+            debug!("Sleep Handling Complete, Attempting to Drop Inhibitor");
             if let Some(handle) = inhibitor.take() {
-                debug!("Dropping Handle.");
+                debug!("Inhibitor Found, Dropping...");
                 drop(handle);
+            } else {
+                debug!("No Inhibitor Present, hope for the best!");
             }
         } else {
-            debug!("Waking Up, Send the message...");
+            debug!("Waking Up, Letting Primary Worker Know...");
 
             let (wake_tx, wake_rx) = oneshot::channel();
             if tx.send(EventTriggers::Wake(wake_tx)).await.is_ok() {
-                debug!("Wake Message Sent, awaiting Response..");
+                debug!("Wake Message Sent, awaiting completion..");
                 let _ = wake_rx.await;
             }
 
-            debug!("Wake Handled, Creating new Inhibitor");
+            debug!("Wake Handling Complete, Attempting to replace Inhibitor");
             if let Ok(descriptor) = manager.inhibit(what, who, why, mode).await {
-                debug!("Inhibitor Successfully Replaced.");
+                debug!("Inhibitor Successfully Replaced");
                 inhibitor.replace(descriptor);
+            } else {
+                debug!("Unable to create Inhibitor");
             }
         }
     }
