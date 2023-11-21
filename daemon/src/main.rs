@@ -321,8 +321,7 @@ async fn main() -> Result<()> {
     // Spawn the Platform Runtime (if needed)
     let platform_handle = tokio::spawn(spawn_runtime(state.clone(), global_tx.clone()));
 
-    if args.start_ui {
-        //thread::sleep(Duration::from_millis(250));
+    if args.start_ui || settings.get_open_ui_on_launch().await {
         let _ = global_tx.send(EventTriggers::Activate).await;
     }
 
