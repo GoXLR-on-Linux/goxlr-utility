@@ -9,12 +9,15 @@ use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::sync::oneshot;
 use tokio::{select, signal};
 
 #[derive(Debug)]
 pub enum EventTriggers {
     TTSMessage(String),
     Stop,
+    Sleep(oneshot::Sender<()>),
+    Wake(oneshot::Sender<()>),
     Open(PathTypes),
     Activate,
     OpenUi,
@@ -75,6 +78,17 @@ pub async fn spawn_event_handler(
                         state.shutdown_blocking.store(true, Ordering::Relaxed);
                         break;
                     }
+
+                    // In the case of Sleep / Wake, code elsewhere is going to be managing the
+                    // things like inhibitors, so we need to pass on a sender so they can be
+                    // notified when actions have been completed.
+                    EventTriggers::Sleep(sender) => {
+                        let _ = device_state_tx.send(DeviceStateChange::Sleep(sender)).await;
+                    }
+                    EventTriggers::Wake(sender) => {
+                        let _ = device_state_tx.send(DeviceStateChange::Wake(sender)).await;
+                    }
+
                     EventTriggers::Open(path_type) => {
                         if let Err(error) = opener::open(match path_type {
                             PathTypes::Profiles => state.settings_handle.get_profile_directory().await,

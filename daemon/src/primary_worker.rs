@@ -34,8 +34,8 @@ pub enum DeviceCommand {
 #[allow(dead_code)]
 pub enum DeviceStateChange {
     Shutdown,
-    Sleep,
-    Wake,
+    Sleep(oneshot::Sender<()>),
+    Wake(oneshot::Sender<()>),
 }
 
 pub type DeviceSender = Sender<DeviceCommand>;
@@ -159,13 +159,20 @@ pub async fn spawn_usb_handler(
                         // Send a notification that we're done here..
                         let _ = global_tx.send(EventTriggers::DevicesStopped).await;
                     },
-                    DeviceStateChange::Sleep => {
+                    DeviceStateChange::Sleep(sender) => {
                         debug!("Received Sleep Notification");
+                        for device in devices.values_mut() {
+                            device.sleep().await;
+                        }
+                        let _ = sender.send(());
                     },
-                    DeviceStateChange::Wake => {
-                        debug!("Received Wake Notification")
+                    DeviceStateChange::Wake(sender) => {
+                        debug!("Received Wake Notification");
+                        for device in devices.values_mut() {
+                            device.wake().await;
+                        }
+                        let _ = sender.send(());
                     }
-
                 }
 
 

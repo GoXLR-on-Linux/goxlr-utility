@@ -294,6 +294,14 @@ impl<'a> Device<'a> {
         }
     }
 
+    pub async fn sleep(&mut self) {
+        debug!("Sleeping...");
+    }
+
+    pub async fn wake(&mut self) {
+        debug!("Waking...");
+    }
+
     pub fn profile(&self) -> &ProfileAdapter {
         &self.profile
     }

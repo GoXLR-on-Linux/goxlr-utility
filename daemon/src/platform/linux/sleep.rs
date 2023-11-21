@@ -14,8 +14,10 @@
    https://www.freedesktop.org/wiki/Software/systemd/inhibit/
 */
 
+use crate::events::EventTriggers;
 use anyhow::Result;
 use log::debug;
+use tokio::sync::{mpsc, oneshot};
 use zbus::export::futures_util::StreamExt;
 use zbus::zvariant::OwnedFd;
 use zbus::{dbus_proxy, Connection};
@@ -34,7 +36,7 @@ trait Manager {
     fn prepare_for_sleep(sleep: bool) -> Result<()>;
 }
 
-pub async fn run() -> Result<()> {
+pub async fn run(tx: mpsc::Sender<EventTriggers>) -> Result<()> {
     let mut inhibitor = None;
 
     debug!("Spawning Sleep Handler..");
@@ -66,15 +68,31 @@ pub async fn run() -> Result<()> {
     // We're gonna simply block here for a while until we get our signal..
     while let Some(signal) = result.next().await {
         let arg = signal.args()?;
-        debug!("Received Arg: {}", arg.sleep);
-
         if arg.sleep {
+            debug!("Going to Sleep, Sending the message...");
+            let (sleep_tx, sleep_rx) = oneshot::channel();
+
+            if tx.send(EventTriggers::Sleep(sleep_tx)).await.is_ok() {
+                // Wait for a Response back..
+                debug!("Sleep Message Sent, awaiting Response..");
+                let _ = sleep_rx.await;
+            }
+
+            debug!("Sleep Handled, Dropping Inhibitor");
             if let Some(handle) = inhibitor.take() {
                 debug!("Dropping Handle.");
                 drop(handle);
             }
         } else {
-            debug!("Taking New Handle..");
+            debug!("Waking Up, Send the message...");
+
+            let (wake_tx, wake_rx) = oneshot::channel();
+            if tx.send(EventTriggers::Wake(wake_tx)).await.is_ok() {
+                debug!("Wake Message Sent, awaiting Response..");
+                let _ = wake_rx.await;
+            }
+
+            debug!("Wake Handled, Creating new Inhibitor");
             if let Ok(descriptor) = manager.inhibit(what, who, why, mode).await {
                 debug!("Inhibitor Successfully Replaced.");
                 inhibitor.replace(descriptor);
