@@ -225,6 +225,12 @@ pub async fn spawn_usb_handler(
                                 change_found = true;
                                 let _ = sender.send(Ok(()));
                             }
+                            DaemonCommand::SetUiLaunchOnLoad(value) => {
+                                settings.set_open_ui_on_launch(value).await;
+                                settings.save().await;
+
+                                let _ = sender.send(Ok(()))
+                            }
                             DaemonCommand::SetShowTrayIcon(enabled) => {
                                 settings.set_show_tray_icon(enabled).await;
                                 settings.save().await;

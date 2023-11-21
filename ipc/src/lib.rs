@@ -79,6 +79,7 @@ pub enum DaemonCommand {
     SetTTSEnabled(bool),
     SetAutoStartEnabled(bool),
     SetAllowNetworkAccess(bool),
+    SetUiLaunchOnLoad(bool),
     RecoverDefaults(PathTypes),
 }
 
@@ -250,7 +251,6 @@ pub enum GoXLRCommand {
     SetVCMuteAlsoMuteCM(bool),
     SetMonitorWithFx(bool),
     SetLockFaders(bool),
-    SetUiLaunchOnLoad(bool),
 
     // These control the current GoXLR 'State'..
     SetActiveEffectPreset(EffectBankPresets),

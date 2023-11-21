@@ -2482,15 +2482,6 @@ impl<'a> Device<'a> {
                     self.load_colour_map().await?;
                 }
             }
-            GoXLRCommand::SetUiLaunchOnLoad(value) => {
-                let current = self.settings.get_open_ui_on_launch().await;
-
-                if current != value {
-                    self.settings.set_open_ui_on_launch(value).await;
-                    self.settings.save().await;
-                }
-            }
-
             GoXLRCommand::SetActiveEffectPreset(preset) => {
                 self.load_effect_bank(preset).await?;
                 self.update_button_states()?;
