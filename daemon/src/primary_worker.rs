@@ -229,7 +229,7 @@ pub async fn spawn_usb_handler(
                                 settings.set_open_ui_on_launch(value).await;
                                 settings.save().await;
 
-                                let _ = sender.send(Ok(()))
+                                let _ = sender.send(Ok(()));
                             }
                             DaemonCommand::SetShowTrayIcon(enabled) => {
                                 settings.set_show_tray_icon(enabled).await;
