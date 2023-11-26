@@ -1,7 +1,7 @@
 [package]
 name = "goxlr-usb"
-version = "1.0.0"
-edition = "2021"
+version = "1.0.1"
+edition = "2023"
 authors = ["Nathan Adams <dinnerbone@dinnerbone.com>", "Craig McLure <craig@mclure.net>", "Lars Mühlbauer <lm41@dismail.de>"]
 description = "A direct interface to the TC-Helicon GoXLR & GoXLR Mini via usb."
 repository = "https://github.com/GoXLR-on-Linux/GoXLR-Utility"
