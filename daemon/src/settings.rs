@@ -244,6 +244,36 @@ impl SettingsHandle {
         vec![]
     }
 
+    pub async fn get_device_sleep_commands(&self, device_serial: &str) -> Vec<GoXLRCommand> {
+        let settings = self.settings.read().await;
+        let value = settings
+            .devices
+            .as_ref()
+            .unwrap()
+            .get(device_serial)
+            .map(|d| d.sleep_commands.clone());
+
+        if let Some(value) = value {
+            return value;
+        }
+        vec![]
+    }
+
+    pub async fn get_device_wake_commands(&self, device_serial: &str) -> Vec<GoXLRCommand> {
+        let settings = self.settings.read().await;
+        let value = settings
+            .devices
+            .as_ref()
+            .unwrap()
+            .get(device_serial)
+            .map(|d| d.wake_commands.clone());
+
+        if let Some(value) = value {
+            return value;
+        }
+        vec![]
+    }
+
     pub async fn get_device_sampler_pre_buffer(&self, device_serial: &str) -> u16 {
         let settings = self.settings.read().await;
         let value = settings
@@ -353,6 +383,32 @@ impl SettingsHandle {
             .entry(device_serial.to_owned())
             .or_insert_with(DeviceSettings::default);
         entry.shutdown_commands = commands.to_owned();
+    }
+
+    pub async fn set_device_sleep_commands(
+        &self,
+        device_serial: &str,
+        commands: Vec<GoXLRCommand>,
+    ) {
+        let mut settings = self.settings.write().await;
+        let entry = settings
+            .devices
+            .as_mut()
+            .unwrap()
+            .entry(device_serial.to_owned())
+            .or_insert_with(DeviceSettings::default);
+        entry.sleep_commands = commands.to_owned();
+    }
+
+    pub async fn set_device_wake_commands(&self, device_serial: &str, commands: Vec<GoXLRCommand>) {
+        let mut settings = self.settings.write().await;
+        let entry = settings
+            .devices
+            .as_mut()
+            .unwrap()
+            .entry(device_serial.to_owned())
+            .or_insert_with(DeviceSettings::default);
+        entry.wake_commands = commands.to_owned();
     }
 
     pub async fn set_device_sampler_pre_buffer(&self, device_serial: &str, duration: u16) {
@@ -511,6 +567,8 @@ struct DeviceSettings {
 
     // 'Shutdown' commands..
     shutdown_commands: Vec<GoXLRCommand>,
+    sleep_commands: Vec<GoXLRCommand>,
+    wake_commands: Vec<GoXLRCommand>,
 }
 
 impl Default for DeviceSettings {
@@ -526,6 +584,8 @@ impl Default for DeviceSettings {
             enable_monitor_with_fx: Some(false),
 
             shutdown_commands: vec![],
+            sleep_commands: vec![],
+            wake_commands: vec![],
         }
     }
 }
