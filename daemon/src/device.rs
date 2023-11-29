@@ -286,20 +286,36 @@ impl<'a> Device<'a> {
             .get_device_shutdown_commands(&self.hardware.serial_number)
             .await;
 
-        for command in commands {
-            debug!("{:?}", command);
-
-            // These could fail, but fuck it, we gotta do it..
-            let _ = self.perform_command(command).await;
-        }
+        self.execute_command_list(commands).await;
     }
 
     pub async fn sleep(&mut self) {
         debug!("Sleeping...");
+
+        let commands = self
+            .settings
+            .get_device_sleep_commands(&self.hardware.serial_number)
+            .await;
+
+        self.execute_command_list(commands).await;
     }
 
     pub async fn wake(&mut self) {
         debug!("Waking...");
+
+        let commands = self
+            .settings
+            .get_device_wake_commands(&self.hardware.serial_number)
+            .await;
+
+        self.execute_command_list(commands).await;
+    }
+
+    async fn execute_command_list(&mut self, commands: Vec<GoXLRCommand>) {
+        for command in commands {
+            debug!("{:?}", command);
+            let _ = self.perform_command(command).await;
+        }
     }
 
     pub fn profile(&self) -> &ProfileAdapter {
