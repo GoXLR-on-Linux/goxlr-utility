@@ -86,6 +86,8 @@ pub enum DaemonCommand {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum GoXLRCommand {
     SetShutdownCommands(Vec<GoXLRCommand>),
+    SetSleepCommands(Vec<GoXLRCommand>),
+    SetWakeCommands(Vec<GoXLRCommand>),
     SetSamplerPreBufferDuration(u16),
 
     SetFader(FaderName, ChannelName),

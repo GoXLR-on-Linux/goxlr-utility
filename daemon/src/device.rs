@@ -1560,6 +1560,18 @@ impl<'a> Device<'a> {
                     .await;
                 self.settings.save().await;
             }
+            GoXLRCommand::SetSleepCommands(commands) => {
+                self.settings
+                    .set_device_sleep_commands(self.serial(), commands)
+                    .await;
+                self.settings.save().await;
+            }
+            GoXLRCommand::SetWakeCommands(commands) => {
+                self.settings
+                    .set_device_wake_commands(self.serial(), commands)
+                    .await;
+                self.settings.save().await;
+            }
             GoXLRCommand::SetSamplerPreBufferDuration(duration) => {
                 if duration > 30000 {
                     bail!("Buffer must be below 30seconds");
