@@ -46,6 +46,8 @@ pub struct HttpSettings {
 pub struct MixerStatus {
     pub hardware: HardwareStatus,
     pub shutdown_commands: Vec<GoXLRCommand>,
+    pub sleep_commands: Vec<GoXLRCommand>,
+    pub wake_commands: Vec<GoXLRCommand>,
     pub fader_status: EnumMap<FaderName, FaderStatus>,
     pub mic_status: MicSettings,
     pub levels: Levels,

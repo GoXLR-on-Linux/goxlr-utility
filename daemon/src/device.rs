@@ -194,6 +194,10 @@ impl<'a> Device<'a> {
             .get_device_shutdown_commands(self.serial())
             .await;
 
+        let sleep_commands = self.settings.get_device_sleep_commands(self.serial()).await;
+
+        let wake_commands = self.settings.get_device_wake_commands(self.serial()).await;
+
         let sampler_prerecord = self
             .settings
             .get_device_sampler_pre_buffer(self.serial())
@@ -228,6 +232,8 @@ impl<'a> Device<'a> {
         MixerStatus {
             hardware: self.hardware.clone(),
             shutdown_commands,
+            sleep_commands,
+            wake_commands,
             fader_status: fader_map,
             cough_button: self.profile.get_cough_status(),
             levels: Levels {
