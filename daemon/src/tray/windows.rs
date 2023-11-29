@@ -8,6 +8,7 @@ use anyhow::{bail, Result};
 use lazy_static::lazy_static;
 use log::{debug, error, warn};
 use tokio::sync::mpsc::Sender;
+use tokio::sync::oneshot;
 use win_win::{WindowBuilder, WindowClass, WindowProc};
 use winapi::shared::guiddef::GUID;
 use winapi::shared::minwindef::{DWORD, FALSE, HINSTANCE, LPARAM, LRESULT, UINT, WPARAM};
@@ -360,6 +361,40 @@ impl WindowProc for GoXLRWindowProc {
             }
             winuser::WM_ENDSESSION => {
                 debug!("Received WM_ENDSESSION from Windows (IGNORED)");
+            }
+            winuser::WM_POWERBROADCAST => {
+                debug!("Received POWER Broadcast from Windows");
+
+                if wparam == winuser::PBT_APMSUSPEND {
+                    debug!("Suspend Requested by Windows, Handling..");
+                    let (tx, mut rx) = oneshot::channel();
+
+                    // Give a maximum of 1 second for a response..
+                    let milli_wait = 5;
+                    let max_wait = 1000 / milli_wait;
+                    let mut count = 0;
+
+                    // Only hold on the receiver if the send was successful..
+                    if self.global_tx.try_send(EventTriggers::Sleep(tx)).is_ok() {
+                        debug!("Awaiting Sleep Response..");
+                        while rx.try_recv().is_err() {
+                            sleep(Duration::from_millis(milli_wait));
+                            count += 1;
+                            if count > max_wait {
+                                debug!("Timeout Exceeded, bailing.");
+                                break;
+                            }
+                        }
+                        debug!("Task Completed, allowing Windows to Sleep");
+                    }
+                }
+                if wparam == winuser::PBT_APMRESUMESUSPEND {
+                    debug!("Wake Signal Received..");
+                    let (tx, _rx) = oneshot::channel();
+
+                    // We're awake again, we don't need to care about the response here.
+                    let _ = self.global_tx.try_send(EventTriggers::Wake(tx));
+                }
             }
             _ => {
                 if msg == *RESPAWN {
