@@ -239,6 +239,7 @@ pub enum GoXLRCommand {
     SaveProfile(),
     SaveProfileAs(String),
     DeleteProfile(String),
+    ReloadSettings(),
 
     NewMicProfile(String),
     LoadMicProfile(String, bool),

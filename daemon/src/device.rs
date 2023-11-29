@@ -2375,6 +2375,10 @@ impl<'a> Device<'a> {
                 self.profile
                     .delete_profile(profile_name.clone(), &profile_directory)?;
             }
+            GoXLRCommand::ReloadSettings() => {
+                // This is a simple command that will reload the current profile settings
+                self.apply_profile(None).await?;
+            }
             GoXLRCommand::NewMicProfile(mic_profile_name) => {
                 let mic_profile_directory = self.settings.get_mic_profile_directory().await;
 
