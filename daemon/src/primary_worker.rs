@@ -258,13 +258,14 @@ pub async fn spawn_usb_handler(
                                 settings.set_sample_gain_percent(sample, gain).await;
                                 let _ = sender.send(Ok(()));
                             }
-                            DaemonCommand::ApplySampleChange() => {
+                            DaemonCommand::ApplySampleChange => {
                                 // Change is committed, save it..
                                 settings.save().await;
 
                                 // Resend the value.
                                 files = update_files(files, PathTypes::Samples, &mut file_manager, &settings).await;
                                 change_found = true;
+                                let _ = sender.send(Ok(()));
                             }
                         }
                     },
