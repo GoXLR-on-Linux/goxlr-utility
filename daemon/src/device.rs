@@ -355,6 +355,8 @@ impl<'a> Device<'a> {
                     let filename = result.file.file_name().unwrap();
                     let filename = filename.to_string_lossy().to_string();
 
+                    debug!("Calculated Gain: {}", result.gain);
+
                     let track = self.profile.add_sample_file(bank, button, filename);
                     track.normalized_gain = result.gain;
 
