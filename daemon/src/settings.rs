@@ -360,6 +360,16 @@ impl SettingsHandle {
         100
     }
 
+    /// This exists so we don't have to repeatedly lock / unlock the struct to get individual
+    /// gain values. We can simply clone off the list, and let it be handled elsewhere.
+    pub async fn get_sample_gain_list(&self) -> HashMap<String, u8> {
+        let settings = self.settings.read().await;
+        if let Some(gain) = &settings.sample_gain {
+            return gain.clone();
+        }
+        HashMap::default()
+    }
+
     pub async fn set_device_profile_name(&self, device_serial: &str, profile_name: &str) {
         let mut settings = self.settings.write().await;
         let entry = settings

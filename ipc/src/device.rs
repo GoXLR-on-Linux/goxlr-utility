@@ -392,8 +392,14 @@ pub struct Files {
     pub profiles: Vec<String>,
     pub mic_profiles: Vec<String>,
     pub presets: Vec<String>,
-    pub samples: BTreeMap<String, String>,
+    pub samples: BTreeMap<String, SampleFile>,
     pub icons: Vec<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct SampleFile {
+    pub name: String,
+    pub gain_pct: u8,
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]

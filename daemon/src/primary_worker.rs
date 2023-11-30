@@ -6,7 +6,7 @@ use crate::{FileManager, PatchEvent, SettingsHandle, Shutdown, VERSION};
 use anyhow::{anyhow, Result};
 use goxlr_ipc::{
     DaemonCommand, DaemonConfig, DaemonStatus, Files, GoXLRCommand, HardwareStatus, HttpSettings,
-    PathTypes, Paths, UsbProductInformation,
+    PathTypes, Paths, SampleFile, UsbProductInformation,
 };
 use goxlr_types::DeviceType;
 use goxlr_usb::device::base::GoXLRDevice;
@@ -14,7 +14,7 @@ use goxlr_usb::device::{find_devices, from_device};
 use goxlr_usb::{PID_GOXLR_FULL, PID_GOXLR_MINI};
 use json_patch::diff;
 use log::{debug, error, info, warn};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::time::{Duration, Instant};
 use tokio::sync::broadcast::Sender as BroadcastSender;
 use tokio::sync::mpsc::{Receiver, Sender};
@@ -72,7 +72,7 @@ pub async fn spawn_usb_handler(
     let mut devices: HashMap<String, Device> = HashMap::new();
     let mut ignore_list = HashMap::new();
 
-    let mut files = get_files(&mut file_manager).await;
+    let mut files = get_files(&mut file_manager, &settings).await;
     let mut daemon_status =
         get_daemon_status(&devices, &settings, &http_settings, files.clone()).await;
 
@@ -283,7 +283,7 @@ pub async fn spawn_usb_handler(
                     }
                 }
 
-                files = update_files(files, path, &mut file_manager).await;
+                files = update_files(files, path, &mut file_manager, &settings).await;
                 change_found = true;
             }
         }
@@ -347,17 +347,49 @@ async fn get_daemon_status(
     status
 }
 
-async fn get_files(file_manager: &mut FileManager) -> Files {
+async fn get_sample_files(
+    file_manager: &mut FileManager,
+    settings: &SettingsHandle,
+) -> BTreeMap<String, SampleFile> {
+    let file_samples = file_manager.get_samples();
+    let config_samples = settings.get_sample_gain_list().await;
+
+    // We need to pair the two together, starting with the file samples..
+    let mut samples: BTreeMap<String, SampleFile> = Default::default();
+    for (key, value) in file_samples {
+        let mut gain = 100;
+
+        if let Some(config_gain) = config_samples.get(&*value) {
+            gain = *config_gain;
+        }
+
+        samples.insert(
+            key,
+            SampleFile {
+                name: value,
+                gain_pct: gain,
+            },
+        );
+    }
+    samples
+}
+
+async fn get_files(file_manager: &mut FileManager, settings: &SettingsHandle) -> Files {
     Files {
         profiles: file_manager.get_profiles(),
         mic_profiles: file_manager.get_mic_profiles(),
         presets: file_manager.get_presets(),
-        samples: file_manager.get_samples(),
+        samples: get_sample_files(file_manager, settings).await,
         icons: file_manager.get_icons(),
     }
 }
 
-async fn update_files(files: Files, file_type: PathTypes, file_manager: &mut FileManager) -> Files {
+async fn update_files(
+    files: Files,
+    file_type: PathTypes,
+    file_manager: &mut FileManager,
+    settings: &SettingsHandle,
+) -> Files {
     // Only re-poll for the changed type.
     Files {
         profiles: if file_type != PathTypes::Profiles {
@@ -381,7 +413,7 @@ async fn update_files(files: Files, file_type: PathTypes, file_manager: &mut Fil
         samples: if file_type != PathTypes::Samples {
             files.samples
         } else {
-            file_manager.get_samples()
+            get_sample_files(file_manager, settings).await
         },
 
         icons: if file_type != PathTypes::Icons {
