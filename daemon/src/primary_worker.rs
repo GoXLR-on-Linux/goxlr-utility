@@ -254,6 +254,18 @@ pub async fn spawn_usb_handler(
                                 let _ = global_tx.send(EventTriggers::Open(path_type)).await;
                                 let _ = sender.send(Ok(()));
                             }
+                            DaemonCommand::SetSampleGainPct(sample, gain) => {
+                                settings.set_sample_gain_percent(sample, gain).await;
+                                let _ = sender.send(Ok(()));
+                            }
+                            DaemonCommand::ApplySampleChange() => {
+                                // Change is committed, save it..
+                                settings.save().await;
+
+                                // Resend the value.
+                                files = update_files(files, PathTypes::Samples, &mut file_manager, &settings).await;
+                                change_found = true;
+                            }
                         }
                     },
 

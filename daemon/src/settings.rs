@@ -487,6 +487,16 @@ impl SettingsHandle {
             .or_insert_with(DeviceSettings::default);
         entry.enable_monitor_with_fx = Some(setting);
     }
+
+    pub async fn set_sample_gain_percent(&self, name: String, value: u8) {
+        let mut settings = self.settings.write().await;
+        if settings.sample_gain.is_none() {
+            settings.sample_gain.replace(HashMap::default());
+        }
+
+        let entry = settings.sample_gain.as_mut().unwrap().entry(name);
+        entry.and_modify(|v| *v = value).or_insert(value);
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
