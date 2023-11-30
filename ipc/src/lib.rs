@@ -92,7 +92,7 @@ pub enum DaemonCommand {
         value for the Sample in the DaemonStatus object.
     */
     SetSampleGainPct(String, u8),
-    ApplySampleChange(),
+    ApplySampleChange,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
