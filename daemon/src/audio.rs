@@ -2,10 +2,10 @@ use crate::{OVERRIDE_SAMPLER_INPUT, OVERRIDE_SAMPLER_OUTPUT};
 use anyhow::{anyhow, bail, Result};
 use enum_map::EnumMap;
 use fancy_regex::Regex;
-use goxlr_audio::get_audio_inputs;
 use goxlr_audio::player::{Player, PlayerState};
 use goxlr_audio::recorder::BufferedRecorder;
 use goxlr_audio::recorder::RecorderState;
+use goxlr_audio::{get_audio_inputs, AtomicF64};
 use goxlr_types::SampleBank;
 use goxlr_types::SampleButtons;
 use log::{debug, error, info, warn};
@@ -437,6 +437,7 @@ impl AudioHandler {
 
             let state = RecorderState {
                 stop: Arc::new(AtomicBool::new(false)),
+                gain: Arc::new(AtomicF64::new(1.)),
             };
 
             let inner_recorder = recorder.clone();
@@ -481,6 +482,11 @@ impl AudioHandler {
             if let Some(recording_state) = &mut player.recording {
                 recording_state.state.stop.store(true, Ordering::Relaxed);
                 recording_state.wait();
+
+                debug!(
+                    "Gain: {}",
+                    recording_state.state.gain.load(Ordering::Relaxed)
+                );
 
                 // Recording Complete, check the file was made...
                 if recording_state.file.exists() {
