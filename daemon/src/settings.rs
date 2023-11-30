@@ -40,6 +40,7 @@ impl SettingsHandle {
             open_ui_on_launch: None,
             activate: None,
             devices: Some(Default::default()),
+            sample_gain: Some(Default::default()),
         });
 
         // Set these values if they're missing from the configuration
@@ -348,6 +349,17 @@ impl SettingsHandle {
         false
     }
 
+    pub async fn get_sample_gain_percent(&self, name: String) -> u8 {
+        let settings = self.settings.read().await;
+        if let Some(gain) = &settings.sample_gain {
+            if let Some(percent) = gain.get(&*name) {
+                return *percent;
+            }
+            return 100;
+        }
+        100
+    }
+
     pub async fn set_device_profile_name(&self, device_serial: &str, profile_name: &str) {
         let mut settings = self.settings.write().await;
         let entry = settings
@@ -482,6 +494,7 @@ pub struct Settings {
     open_ui_on_launch: Option<bool>,
     activate: Option<String>,
     devices: Option<HashMap<String, DeviceSettings>>,
+    sample_gain: Option<HashMap<String, u8>>,
 }
 
 impl Settings {

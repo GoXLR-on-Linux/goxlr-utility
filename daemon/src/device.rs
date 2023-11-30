@@ -1214,6 +1214,15 @@ impl<'a> Device<'a> {
         let sample_path = self.get_path_for_sample(audio.file).await?;
         audio.file = sample_path;
 
+        // Calculate the Gain from the settings..
+        let name = audio.name.clone();
+        let percent = self.settings.get_sample_gain_percent(name).await;
+        audio.gain = if let Some(gain) = audio.gain {
+            Some(gain / 100. * percent as f64)
+        } else {
+            Some(1. / 100. * percent as f64)
+        };
+
         if let Some(audio_handler) = &mut self.audio_handler {
             audio_handler.stop_playback(bank, button, true).await?;
 

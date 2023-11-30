@@ -32,6 +32,7 @@ pub struct AudioHandler {
 
 pub struct AudioFile {
     pub(crate) file: PathBuf,
+    pub(crate) name: String,
     pub(crate) gain: Option<f64>,
     pub(crate) start_pct: Option<f64>,
     pub(crate) stop_pct: Option<f64>,
