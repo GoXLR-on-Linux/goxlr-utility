@@ -1801,9 +1801,7 @@ impl ProfileAdapter {
             .get_stack(standard_to_profile_sample_bank(bank))
             .get_track_by_index(index);
 
-        if let Ok(mut track) = track {
-            track.normalized_gain = 0.0;
-
+        if let Ok(track) = track {
             return Ok(ProfileAdapter::track_to_audio(track));
         }
         bail!("Unable to find track");
