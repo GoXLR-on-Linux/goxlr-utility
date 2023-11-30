@@ -1175,8 +1175,9 @@ impl<'a> Device<'a> {
                     .unwrap()
                     .stop_record(sample_bank, button)?;
 
-                if let Some(file_name) = file_name {
-                    self.profile.add_sample_file(sample_bank, button, file_name);
+                if let Some((file_name, gain)) = file_name {
+                    let track = self.profile.add_sample_file(sample_bank, button, file_name);
+                    track.normalized_gain = gain;
                 }
             }
             // In all cases, we should stop the colour flashing.

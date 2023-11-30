@@ -471,8 +471,8 @@ impl AudioHandler {
         &mut self,
         bank: SampleBank,
         button: SampleButtons,
-    ) -> Result<Option<String>> {
-        let mut filename = None;
+    ) -> Result<Option<(String, f64)>> {
+        let mut file = None;
 
         if let Some(player) = &mut self.active_streams[bank][button] {
             if player.stream_type == StreamType::Playback {
@@ -484,14 +484,15 @@ impl AudioHandler {
                 recording_state.wait();
 
                 debug!(
-                    "Gain: {}",
+                    "Calculated Gain: {}",
                     recording_state.state.gain.load(Ordering::Relaxed)
                 );
 
                 // Recording Complete, check the file was made...
                 if recording_state.file.exists() {
                     if let Some(file_name) = recording_state.file.file_name() {
-                        filename.replace(String::from(file_name.to_string_lossy()));
+                        let gain = recording_state.state.gain.load(Ordering::Relaxed);
+                        file.replace((String::from(file_name.to_string_lossy()), gain));
                     } else {
                         bail!("Unable to Extract Filename from Path! (This shouldn't be possible!)")
                     }
@@ -503,7 +504,7 @@ impl AudioHandler {
 
         // Sample has been stopped, clear the state of this button.
         self.active_streams[bank][button] = None;
-        Ok(filename)
+        Ok(file)
     }
 
     pub fn calculate_gain_thread(
