@@ -9,7 +9,7 @@ use std::iter::once;
 use std::os::windows::ffi::OsStrExt;
 use std::path::PathBuf;
 use std::ptr::null_mut;
-use std::{env, fs, panic};
+use std::{env, fs};
 use tasklist::tasklist;
 use tokio::signal::windows::{ctrl_break, ctrl_close, ctrl_logoff, ctrl_shutdown};
 use tokio::sync::mpsc;
@@ -62,14 +62,7 @@ pub fn to_wide(msg: &str) -> Vec<u16> {
 
 fn get_official_app_count() -> usize {
     unsafe {
-        // This method could panic in some situations, set a hook so we don't spam the log..
-        panic::set_hook(Box::new(|_| {}));
-
-        return if let Ok(tasks) = panic::catch_unwind(|| tasklist()) {
-            // Didn't panic, remove the hook..
-            let _ = panic::take_hook();
-
-            // Return the Keys
+        return if let Ok(tasks) = std::panic::catch_unwind(|| tasklist()) {
             tasks
                 .keys()
                 .filter(|task| {
@@ -78,9 +71,6 @@ fn get_official_app_count() -> usize {
                 })
                 .count()
         } else {
-            // Panicked, remove the hook and return nothing.
-            let _ = panic::take_hook();
-
             // This isn't ideal, but something in tasklist is preventing the list from being
             // propagated. So we'll simply not do the check.
             0
