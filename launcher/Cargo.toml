@@ -15,7 +15,7 @@ tokio = { version = "1.23.0", features=["full"] }
 which = "4.3.0"
 
 [target.'cfg(windows)'.dependencies]
-tasklist = "0.2.12"
+tasklist = { git = "https://github.com/FrostyCoolSlug/tasklist-rs.git" }
 
 [target.'cfg(target_family = "unix")'.dependencies]
 nix = "0.26.2"
