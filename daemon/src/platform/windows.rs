@@ -62,7 +62,7 @@ pub fn to_wide(msg: &str) -> Vec<u16> {
 
 fn get_official_app_count() -> usize {
     unsafe {
-        return if let Ok(tasks) = std::panic::catch_unwind(|| tasklist()) {
+        return if let Ok(tasks) = std::panic::catch_unwind(tasklist()) {
             tasks
                 .keys()
                 .filter(|task| {
