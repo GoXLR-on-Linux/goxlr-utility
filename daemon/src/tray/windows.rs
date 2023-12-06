@@ -314,7 +314,10 @@ impl WindowProc for GoXLRWindowProc {
 
             // // Shutdown Handlers..
             winuser::WM_QUERYENDSESSION => {
-                debug!("Received WM_QUERYENDSESSION from Windows");
+                debug!("Received WM_QUERYENDSESSION from Windows, returning default true");
+            }
+            winuser::WM_ENDSESSION => {
+                debug!("Received WM_ENDSESSION from Windows, Shutting Down..");
 
                 /*
                  Ref: https://learn.microsoft.com/en-us/windows/win32/shutdown/wm-queryendsession
@@ -324,19 +327,10 @@ impl WindowProc for GoXLRWindowProc {
                   message, regardless of how the other applications respond to the
                   WM_QUERYENDSESSION message."
 
-                  This is not necessarily true, the problem is that if a Window on the application
-                  gets destroyed (via DestroyWindow()) Windows will immediately kill the app,
-                  regardless of how many other windows exist.
-
-                  This code was moved to here simply because a library needed to communicate with
-                  the GoXLR was spawning a hidden window to handle PnP events with and it's own
-                  mainloop. This window was killing the util before the shutdown was able to
-                  process.
-
-                  The code was moved here because we could generally catch it 80% of the time, but
-                  now the hidden PnP window has now been dealt we could *PROBABLY* move this back
-                  into ENDSESSION, but seeing as it'll work just as fine here, I'm not gonna move it
-                  lest getting dragged back into the debugging :p
+                  This code has been moved back into WM_ENDSESSION because Windows expects an
+                  immediate response from WM_QUERYENDSESSION, and the docs say to defer cleanup
+                  until this point. Now that the DestroyWindow issue is resolved, and we have
+                  cleaner handles, we should be safe again here.
                 */
 
                 unsafe {
@@ -358,9 +352,6 @@ impl WindowProc for GoXLRWindowProc {
                         sleep(Duration::from_millis(100));
                     }
                 }
-            }
-            winuser::WM_ENDSESSION => {
-                debug!("Received WM_ENDSESSION from Windows (IGNORED)");
             }
             winuser::WM_POWERBROADCAST => {
                 debug!("Received POWER Broadcast from Windows");
