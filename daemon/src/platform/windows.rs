@@ -62,19 +62,14 @@ pub fn to_wide(msg: &str) -> Vec<u16> {
 
 fn get_official_app_count() -> usize {
     unsafe {
-        return if let Ok(tasks) = std::panic::catch_unwind(tasklist()) {
-            tasks
-                .keys()
-                .filter(|task| {
-                    let task = task.to_owned().to_owned();
-                    task == *GOXLR_APP_NAME || task == *GOXLR_BETA_APP_NAME
-                })
-                .count()
-        } else {
-            // This isn't ideal, but something in tasklist is preventing the list from being
-            // propagated. So we'll simply not do the check.
-            0
-        };
+        let tasks = tasklist();
+        tasks
+            .keys()
+            .filter(|task| {
+                let task = task.to_owned().to_owned();
+                task == *GOXLR_APP_NAME || task == *GOXLR_BETA_APP_NAME
+            })
+            .count()
     }
 }
 
