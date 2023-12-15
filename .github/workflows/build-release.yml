@@ -73,13 +73,15 @@ jobs:
         uses: suisei-cn/actions-download-file@v1.4.0
         with:
           url: https://go.microsoft.com/fwlink/p/?LinkId=2124703
-          target: goxlr-utility/ci/nsis/MicrosoftEdgeWebview2Setup.exe
+          filename: MicrosoftEdgeWebview2Setup.exe
+          target: goxlr-utility/ci/nsis/
 
       - name: "Downloading VC Runtime"
         uses: suisei-cn/actions-download-file@v1.4.0
         with:
           url: https://aka.ms/vs/17/release/vc_redist.x64.exe
-          target: goxlr-utility/ci/nsis/vc_redist.x64.exe
+          filename: vc_redist.x64.exe
+          target: goxlr-utility/ci/nsis/
 
       - name: "Build NSIS Packages"
         uses: joncloud/makensis-action@publish
