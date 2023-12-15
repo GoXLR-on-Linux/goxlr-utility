@@ -27,11 +27,14 @@ jobs:
       # release version, this is to allow test builds to work correctly in the event of a Status Structure change that
       # hasn't yet been released.
       - name: "Update Utility UI IPC Location"
-        uses: jacobtomlinson/gha-find-replace@v3
+        uses: Nambers/ReplaceStringInFile@v1
         with:
-          find: "^goxlr-ipc.*$"
-          replace: "goxlr-ipc = { path = \"../../goxlr-utility/ipc\" }"
-          include: "goxlr-utility-ui/src-tauri/Cargo.toml"
+          path: "goxlr-utility-ui/src-tauri/Cargo.toml"
+          regexOptions: 'gm'
+          oldString: "^goxlr-ipc.*$"
+          newString: "goxlr-ipc = { path = \"../../goxlr-utility/ipc\" }"
+          showFileContent: true
+
 
       - name: "Install Rust"
         uses: dtolnay/rust-toolchain@stable
