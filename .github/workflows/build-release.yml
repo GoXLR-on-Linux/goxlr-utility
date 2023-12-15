@@ -27,7 +27,7 @@ jobs:
       # release version, this is to allow test builds to work correctly in the event of a Status Structure change that
       # hasn't yet been released.
       - name: "Update Utility UI IPC Location"
-        uses: Nambers/ReplaceStringInFile@v1
+        uses: Nambers/ReplaceStringInFile@v1.3
         with:
           path: "goxlr-utility-ui/src-tauri/Cargo.toml"
           regexOptions: 'gm'
