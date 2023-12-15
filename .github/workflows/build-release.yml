@@ -32,7 +32,7 @@ jobs:
           path: "goxlr-utility-ui/src-tauri/Cargo.toml"
           regexOptions: 'gm'
           oldString: "^goxlr-ipc.*$"
-          newString: "goxlr-ipc = { path = \"../../goxlr-utility/ipc\" }"
+          newString: "goxlr-ipc = { path = \\\"../../goxlr-utility/ipc\\\" }"
           showFileContent: true
 
 
