@@ -23,6 +23,16 @@ jobs:
           repository: frostycoolslug/goxlr-utility-ui
           path: goxlr-utility-ui
 
+      # For the use of CI, we need the UI to use the 'local' version of the `goxlr-ipc` crate, rather than the latest
+      # release version, this is to allow test builds to work correctly in the event of a Status Structure change that
+      # hasn't yet been released.
+      - name: "Update Utility UI IPC Location"
+        uses: jacobtomlinson/gha-find-replace@v3
+        with:
+          find: "^goxlr-ipc.*$"
+          replace: "goxlr-ipc = { path = \"../../goxlr-utility/ipc\" }"
+          include: "goxlr-utility-ui/src-tauri/Cargo.toml"
+
       - name: "Install Rust"
         uses: dtolnay/rust-toolchain@stable
 
