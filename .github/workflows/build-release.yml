@@ -69,6 +69,18 @@ jobs:
           url: https://github.com/tauri-apps/nsis-tauri-utils/releases/download/nsis_tauri_utils-v0.1.1/nsis_tauri_utils.dll
           target: ${{ github.workspace }}/NSIS_Plugins/x86-unicode/
 
+      - name: "Downloading WebView2 Bootstrapper"
+        uses: suisei-cn/actions-download-file@v1.4.0
+        with:
+          url: https://go.microsoft.com/fwlink/p/?LinkId=2124703
+          target: goxlr-utility/ci/nsis/MicrosoftEdgeWebview2Setup.exe
+
+      - name: "Downloading VC Runtime"
+        uses: suisei-cn/actions-download-file@v1.4.0
+        with:
+          url: https://aka.ms/vs/17/release/vc_redist.x64.exe
+          target: goxlr-utility/ci/nsis/vc_redist.x64.exe
+
       - name: "Build NSIS Packages"
         uses: joncloud/makensis-action@publish
         with:
