@@ -17,7 +17,7 @@ use std::thread::sleep;
 use std::time::Duration;
 use tokio::sync::mpsc::{Receiver, Sender};
 use widestring::U16CStr;
-use windows::Win32::Foundation::{HANDLE, WIN32_ERROR};
+use windows::Win32::Foundation::{HANDLE, WAIT_TIMEOUT};
 use windows::Win32::System::Threading::{CreateEventA, WaitForSingleObject};
 use winreg::enums::HKEY_CLASSES_ROOT;
 use winreg::RegKey;
@@ -399,7 +399,7 @@ impl TUSBAudio<'_> {
         loop {
             // Wait for the event Trigger (I'd love for this to be async one day :p)..
             let wait_result = unsafe { WaitForSingleObject(event, 500) };
-            if wait_result != WIN32_ERROR(258) {
+            if wait_result != WAIT_TIMEOUT {
                 // Check the Queued Events :)
                 loop {
                     let event_result = unsafe {
@@ -523,7 +523,7 @@ impl TUSBAudio<'_> {
 
             loop {
                 let wait_result = unsafe { WaitForSingleObject(event, 1000) };
-                if wait_result == WIN32_ERROR(258) {
+                if wait_result == WAIT_TIMEOUT {
                     // Timeout on wait, go again!
                     continue;
                 }

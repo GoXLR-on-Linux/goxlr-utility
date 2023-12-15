@@ -1,4 +1,5 @@
 use std::mem;
+use std::mem::zeroed;
 use std::ptr::null_mut;
 use std::sync::atomic::Ordering;
 use std::thread::sleep;
@@ -10,7 +11,6 @@ use log::{debug, error, warn};
 use tokio::sync::mpsc::Sender;
 use tokio::sync::oneshot;
 use win_win::{WindowBuilder, WindowClass, WindowProc};
-use winapi::shared::guiddef::GUID;
 use winapi::shared::minwindef::{DWORD, FALSE, HINSTANCE, LPARAM, LRESULT, UINT, WPARAM};
 use winapi::shared::windef::{HBRUSH, HICON, HMENU, HWND, POINT};
 use winapi::um::shellapi::{NIF_ICON, NIF_MESSAGE, NIF_TIP, NIM_ADD, NIM_DELETE, NOTIFYICONDATAW};
@@ -409,21 +409,12 @@ fn tooltip(msg: &str) -> [u16; 128] {
     array
 }
 fn get_notification_struct(hwnd: &HWND) -> NOTIFYICONDATAW {
-    NOTIFYICONDATAW {
-        cbSize: std::mem::size_of::<NOTIFYICONDATAW>() as DWORD,
-        hWnd: *hwnd,
-        uID: 1,
-        uFlags: 0,
-        uCallbackMessage: 0,
-        hIcon: 0 as HICON,
-        szTip: [0; 128],
-        dwState: 0,
-        dwStateMask: 0,
-        szInfo: [0; 256],
-        u: Default::default(),
-        szInfoTitle: [0; 64],
-        dwInfoFlags: 0,
-        guidItem: GUID::default(),
-        hBalloonIcon: 0 as HICON,
-    }
+    let mut icon: NOTIFYICONDATAW = unsafe { zeroed() };
+    icon.cbSize = std::mem::size_of::<NOTIFYICONDATAW>() as DWORD;
+    icon.hWnd = *hwnd;
+    icon.uID = 1;
+    icon.uFlags = 0;
+    icon.uCallbackMessage = 0;
+
+    icon
 }
