@@ -6,17 +6,17 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-enum-map = "2.4.2"
-enum-map-derive = "0.11.0"
-thiserror = "1.0.38"
-zip = { version = "0.6.4", default-features = false, features = ["deflate"] }
-strum = { version = "0.24.1", features = ["derive"] }
+enum-map = "2.7.3"
+enum-map-derive = "0.17.0"
+thiserror = "1.0.50"
+zip = { version = "0.6.6", default-features = false, features = ["deflate"] }
+strum = { version = "0.25.0", features = ["derive"] }
 ritelinked = "0.3.2"
-quick-xml = "0.27.1"
-byteorder = "1.4.3"
+quick-xml = "0.31.0"
+byteorder = "1.5.0"
 rand = "0.8.5"
 
-tempfile = "3.7.0"
+tempfile = "3.8.1"
 
-anyhow = "1.0.68"
-log = "0.4.17"
+anyhow = "1.0.75"
+log = "0.4.20"

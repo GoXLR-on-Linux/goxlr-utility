@@ -19,83 +19,88 @@ goxlr-audio = { path = "../audio" }
 goxlr-profile-loader = { path = "../profile" }
 goxlr-scribbles = { path = "../scribbles" }
 
-log = "0.4.17"
-simplelog = "0.12.0"
-file-rotate = "0.7.4"
+log = "0.4.20"
+simplelog = "0.12.1"
+file-rotate = "0.7.5"
 log-panics = { version = "2.1.0", features = ["with-backtrace"]}
 
-tokio = { version = "1.23.0", features = ["full"] }
+tokio = { version = "1.35.0", features = ["full"] }
 tokio-serde = "0.8.0"
 
-anyhow = "1.0.68"
-strum = { version = "0.24.1" }
-enumset = "1.0.12"
-serde = { version = "1.0.152", features = ["derive"] }
-serde_json = { version = "1.0.91" }
-directories = "4.0.1"
-byteorder = "1.4.3"
-enum-map = "2.4.2"
+anyhow = "1.0.75"
+strum = { version = "0.25.0" }
+enumset = "1.1.3"
+serde = { version = "1.0.193", features = ["derive"] }
+serde_json = { version = "1.0.108" }
+directories = "5.0.1"
+byteorder = "1.5.0"
+enum-map = "2.7.3"
 ritelinked = "0.3.2"
-clap = { version = "4.0.32", features = ["derive"] }
-opener = "0.5.0"
-fancy-regex = "0.11.0"
-chrono = { version = "0.4.23", default-features = false, features = ["clock"] }
-glob = "0.3.0"
+clap = { version = "4.4.11", features = ["derive"] }
+opener = "0.6.1"
+fancy-regex = "0.12.0"
+chrono = { version = "0.4.31", default-features = false, features = ["clock"] }
+glob = "0.3.1"
 cfg-if = "1.0.0"
 lazy_static = "1.4.0"
-jsonpath-rust = "0.3.0"
+jsonpath-rust = "0.3.5"
 
-tts = { version = "0.25.1", features = ["tolk"], optional = true }
+tts = { version = "0.25.6", features = ["tolk"], optional = true }
 interprocess = { version = "1.2.1", features = ["tokio_support"] }
 
-notify = "5.0.0"
-json-patch = "0.3.0"
+notify = "6.1.1"
+json-patch = "1.2.0"
 
-tempfile = "3.7.0"
+tempfile = "3.8.1"
 
 
 ## HTTPd Server
-actix = "0.13.0"
+actix = "0.13.1"
 actix-web-actors = "4.2.0"
 
 # All we really need from actix-web are macros and compression, TLS and cookies aren't required
-actix-web = { version = "4.3.1", default-features = false, features = ["macros", "compress-brotli", "compress-gzip"] }
-actix-cors = "0.6.4"
+actix-web = { version = "4.4.0", default-features = false, features = ["macros", "compress-brotli", "compress-gzip"] }
+actix-cors = "0.6.5"
 mime_guess = "2.0.4"
 include_dir = "0.7.3"
 
 [target.'cfg(target_family = "unix")'.dependencies]
-nix = { version = "0.26.1", features = ["user"] }
+nix = { version = "0.27.1", features = ["user"] }
 
 # Under Linux, we use ksni for our tray icon..
 [target.'cfg(target_os = "linux")'.dependencies]
-ksni = "0.2.0"
-rust-ini = "0.18.0"
+ksni = "0.2.1"
+rust-ini = "0.20.0"
 rand = "0.8.5"
 shell-words = "1.1.0"
 zbus = "3.14.1"
 
 # Under Windows and MacOS, we use tao's tray feature
 [target.'cfg(target_os = "windows")'.dependencies]
-image = "0.24.5"
+image = "0.24.7"
 tasklist = { git = "https://github.com/yalishandar/tasklist-rs.git" }
 winrt-notification = "0.5.1"
-winreg = "0.10.1"
+winreg = "0.52.0"
 mslnk = "0.1.8"
-dunce = "1.0.3"
+dunce = "1.0.4"
 win-win = "0.1.1"
 winapi = { version = "0.3.9", features = ["winuser"] }
 windows-args = "0.2.0"
 
 [target.'cfg(target_os = "macos")'.dependencies]
-tao = { version = "0.15.8", features = ["tray"] }
-image = "0.24.5"
+
+# TAO has moved the tray feature to it's own crate, we need to work this in before we can update, 0.21.1 is the latest
+# version that supports the tray feature
+# https://github.com/tauri-apps/tray-icon
+tao = { version = "0.21.1", features = ["tray"] }
+
+image = "0.24.7"
 shell-words = "1.1.0"
 
 [build-dependencies]
-clap = { version = "4.0.32", features = ["derive"] }
-clap_complete = "4.0.7"
-directories = "4.0.1"
+clap = { version = "4.4.11", features = ["derive"] }
+clap_complete = "4.4.4"
+directories = "5.0.1"
 
 [target.'cfg(target_os = "windows")'.build-dependencies]
 windres = "0.2.2"

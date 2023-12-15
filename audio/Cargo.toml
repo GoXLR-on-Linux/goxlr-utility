@@ -7,19 +7,19 @@ edition = "2021"
 
 [dependencies]
 # Symphonia for Audio Decoding..
-symphonia = { version = "0.5.1", features = [ "wav", "mp3", "ogg"] }
+symphonia = { version = "0.5.3", features = [ "wav", "mp3", "ogg"] }
 
 # Hound for WAV Encoding..
-hound = "3.5.0"
+hound = "3.5.1"
 
 # Audio Normalisation
-ebur128 = "0.1.6"
+ebur128 = "0.1.8"
 
 # Exceptions
-anyhow = "1.0.65"
+anyhow = "1.0.75"
 
 # Logging..
-log = "0.4.17"
+log = "0.4.20"
 
 # A wrapper around VecDeque to enforce length.
 bounded-vec-deque = "0.1.1"
@@ -28,15 +28,15 @@ bounded-vec-deque = "0.1.1"
 rb = "0.4.1"
 
 # Regular Expressions to help with device finding..
-fancy-regex = "0.11.0"
+fancy-regex = "0.12.0"
 
 # Under Linux, we'll use PulseAudio to output to the GoXLR..
 # We can't find the specific audio channels using CPAL, so will ask Pulse instead.
 [target.'cfg(target_os = "linux")'.dependencies]
-libpulse-binding = "2.5.0"
-libpulse-simple-binding = "2.5.0"
+libpulse-binding = "2.28.1"
+libpulse-simple-binding = "2.28.1"
 
 # Under Other Operating Systems, we'll use CPAL
 [target.'cfg(not(target_os = "linux"))'.dependencies]
-cpal = "0.15.1"
-rubato = "0.12.0"
+cpal = "0.15.2"
+rubato = "0.14.1"
