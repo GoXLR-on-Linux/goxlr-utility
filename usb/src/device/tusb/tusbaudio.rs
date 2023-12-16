@@ -417,7 +417,7 @@ impl TUSBAudio<'_> {
                     let event_response =
                         unsafe { std::slice::from_raw_parts(buffer_ptr, response_len as usize) };
 
-                    if event_response.len() != 6 {
+                    if event_response.len() != 6 && !event_response.is_empty() {
                         debug!(
                             "Unexpected Event Response Length: {}: {:?}",
                             event_response.len(),
