@@ -314,11 +314,7 @@ impl WindowProc for GoXLRWindowProc {
 
             // // Shutdown Handlers..
             winuser::WM_QUERYENDSESSION => {
-                debug!("Received WM_QUERYENDSESSION from Windows, returning default true");
-            }
-            winuser::WM_ENDSESSION => {
-                debug!("Received WM_ENDSESSION from Windows, Shutting Down..");
-
+                debug!("Received WM_QUERYENDSESSION from Windows, Shutting Down..");
                 /*
                  Ref: https://learn.microsoft.com/en-us/windows/win32/shutdown/wm-queryendsession
 
@@ -327,10 +323,14 @@ impl WindowProc for GoXLRWindowProc {
                   message, regardless of how the other applications respond to the
                   WM_QUERYENDSESSION message."
 
-                  This code has been moved back into WM_ENDSESSION because Windows expects an
-                  immediate response from WM_QUERYENDSESSION, and the docs say to defer cleanup
-                  until this point. Now that the DestroyWindow issue is resolved, and we have
-                  cleaner handles, we should be safe again here.
+                  The problem we run into, is that the TTS service spawns an invisible window to
+                  handle media playback, and if it receives the WM_ENDSESSION message and calls
+                  DestroyWindow, Windows will assume the entire Utility is done and kill the
+                  process. This prevents the WM_ENDSESSION message from reaching us here preventing
+                  us from correctly handling the shutdown.
+
+                  Consequently, we're forced to try and get ahead of it and handle our shutdown
+                  behaviours in the 'wrong' place, but we're at least guaranteed to be handled.
                 */
 
                 unsafe {
@@ -352,6 +352,9 @@ impl WindowProc for GoXLRWindowProc {
                         sleep(Duration::from_millis(100));
                     }
                 }
+            }
+            winuser::WM_ENDSESSION => {
+                debug!("Received WM_ENDSESSION from Windows, Doing nothing..");
             }
             winuser::WM_POWERBROADCAST => {
                 debug!("Received POWER Broadcast from Windows");
