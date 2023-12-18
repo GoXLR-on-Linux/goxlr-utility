@@ -426,6 +426,11 @@ impl TUSBAudio<'_> {
                         continue;
                     }
 
+                    // Generally caused by an 'audio end' event.
+                    if event_response.is_empty() {
+                        continue;
+                    }
+
                     if event_response[0] == 1 && event_response[1] == 1 && event_response[2] == 1 {
                         // This event indicates something waiting to be read..
                         let se = callbacks.data_read.blocking_send(true);
