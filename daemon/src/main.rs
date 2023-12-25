@@ -287,7 +287,10 @@ async fn main() -> Result<()> {
             http_settings.clone(),
             file_paths.clone(),
         ));
-        http_server = Some(httpd_rx.await?);
+        http_server = httpd_rx.await?;
+        if http_server.is_none() {
+            bail!("Unable to Start HTTP Server");
+        }
     } else {
         warn!("HTTP Server Disabled");
     }
