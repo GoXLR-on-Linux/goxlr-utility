@@ -231,23 +231,20 @@ pub async fn spawn_http_server(
     })
     .bind((settings.bind_address.clone(), settings.port));
 
-    match server {
-        Ok(_) => {
-            let server = server.unwrap().run();
-            info!(
-                "Started GoXLR configuration interface at http://{}:{}/",
-                settings.bind_address.as_str(),
-                settings.port,
-            );
-
-            let _ = handle_tx.send(Some(server.handle()));
-            let _ = server.await;
-        }
-        Err(e) => {
-            warn!("Error Running HTTP Server: {:?}", e);
-            let _ = handle_tx.send(None);
-        }
+    if let Err(e) = server {
+        warn!("Error Running HTTP Server: {:#?}", e);
+        return;
     }
+
+    let server = server.unwrap().run();
+    info!(
+        "Started GoXLR configuration interface at http://{}:{}/",
+        settings.bind_address.as_str(),
+        settings.port,
+    );
+
+    let _ = handle_tx.send(Some(server.handle()));
+    let _ = server.await;
 }
 
 #[get("/api/websocket")]
