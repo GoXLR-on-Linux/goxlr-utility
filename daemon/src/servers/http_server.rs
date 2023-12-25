@@ -244,7 +244,12 @@ pub async fn spawn_http_server(
     );
 
     let _ = handle_tx.send(Some(server.handle()));
-    let _ = server.await;
+
+    if server.await.is_ok() {
+        info!("HTTP Server Stopped.");
+    } else {
+        warn!("HTTP Server Stopped with Error");
+    }
 }
 
 #[get("/api/websocket")]
