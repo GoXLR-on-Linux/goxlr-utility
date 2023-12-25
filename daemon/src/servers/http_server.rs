@@ -205,7 +205,7 @@ pub async fn spawn_http_server(
     broadcast_tx: tokio::sync::broadcast::Sender<PatchEvent>,
     settings: HttpSettings,
     file_paths: FilePaths,
-) -> Result<()> {
+) {
     let server = HttpServer::new(move || {
         let cors = Cors::default()
             .allowed_origin_fn(|origin, _req_head| {
@@ -233,7 +233,7 @@ pub async fn spawn_http_server(
 
     match server {
         Ok(_) => {
-            let server = server?.run();
+            let server = server.unwrap().run();
             info!(
                 "Started GoXLR configuration interface at http://{}:{}/",
                 settings.bind_address.as_str(),
@@ -241,13 +241,11 @@ pub async fn spawn_http_server(
             );
 
             let _ = handle_tx.send(Some(server.handle()));
-            server.await?;
-            Ok(())
+            let _ = server.await;
         }
         Err(e) => {
             warn!("Error Running HTTP Server: {:?}", e);
             let _ = handle_tx.send(None);
-            Err(e.into())
         }
     }
 }
