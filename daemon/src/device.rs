@@ -194,6 +194,10 @@ impl<'a> Device<'a> {
             .get_device_shutdown_commands(self.serial())
             .await;
 
+        let sleep_commands = self.settings.get_device_sleep_commands(self.serial()).await;
+
+        let wake_commands = self.settings.get_device_wake_commands(self.serial()).await;
+
         let sampler_prerecord = self
             .settings
             .get_device_sampler_pre_buffer(self.serial())
@@ -228,6 +232,8 @@ impl<'a> Device<'a> {
         MixerStatus {
             hardware: self.hardware.clone(),
             shutdown_commands,
+            sleep_commands,
+            wake_commands,
             fader_status: fader_map,
             cough_button: self.profile.get_cough_status(),
             levels: Levels {
@@ -286,10 +292,34 @@ impl<'a> Device<'a> {
             .get_device_shutdown_commands(&self.hardware.serial_number)
             .await;
 
+        self.execute_command_list(commands).await;
+    }
+
+    pub async fn sleep(&mut self) {
+        debug!("Sleeping...");
+
+        let commands = self
+            .settings
+            .get_device_sleep_commands(&self.hardware.serial_number)
+            .await;
+
+        self.execute_command_list(commands).await;
+    }
+
+    pub async fn wake(&mut self) {
+        debug!("Waking...");
+
+        let commands = self
+            .settings
+            .get_device_wake_commands(&self.hardware.serial_number)
+            .await;
+
+        self.execute_command_list(commands).await;
+    }
+
+    async fn execute_command_list(&mut self, commands: Vec<GoXLRCommand>) {
         for command in commands {
             debug!("{:?}", command);
-
-            // These could fail, but fuck it, we gotta do it..
             let _ = self.perform_command(command).await;
         }
     }
@@ -324,6 +354,8 @@ impl<'a> Device<'a> {
 
                     let filename = result.file.file_name().unwrap();
                     let filename = filename.to_string_lossy().to_string();
+
+                    debug!("Calculated Gain: {}", result.gain);
 
                     let track = self.profile.add_sample_file(bank, button, filename);
                     track.normalized_gain = result.gain;
@@ -1145,8 +1177,9 @@ impl<'a> Device<'a> {
                     .unwrap()
                     .stop_record(sample_bank, button)?;
 
-                if let Some(file_name) = file_name {
-                    self.profile.add_sample_file(sample_bank, button, file_name);
+                if let Some((file_name, gain)) = file_name {
+                    let track = self.profile.add_sample_file(sample_bank, button, file_name);
+                    track.normalized_gain = gain;
                 }
             }
             // In all cases, we should stop the colour flashing.
@@ -1183,6 +1216,15 @@ impl<'a> Device<'a> {
         // Fill out the path..
         let sample_path = self.get_path_for_sample(audio.file).await?;
         audio.file = sample_path;
+
+        // Calculate the Gain from the settings..
+        let name = audio.name.clone();
+        let percent = self.settings.get_sample_gain_percent(name).await;
+        audio.gain = if let Some(gain) = audio.gain {
+            Some(gain / 100. * percent as f64)
+        } else {
+            Some(1. / 100. * percent as f64)
+        };
 
         if let Some(audio_handler) = &mut self.audio_handler {
             audio_handler.stop_playback(bank, button, true).await?;
@@ -1527,6 +1569,18 @@ impl<'a> Device<'a> {
             GoXLRCommand::SetShutdownCommands(commands) => {
                 self.settings
                     .set_device_shutdown_commands(self.serial(), commands)
+                    .await;
+                self.settings.save().await;
+            }
+            GoXLRCommand::SetSleepCommands(commands) => {
+                self.settings
+                    .set_device_sleep_commands(self.serial(), commands)
+                    .await;
+                self.settings.save().await;
+            }
+            GoXLRCommand::SetWakeCommands(commands) => {
+                self.settings
+                    .set_device_wake_commands(self.serial(), commands)
                     .await;
                 self.settings.save().await;
             }
@@ -2367,6 +2421,10 @@ impl<'a> Device<'a> {
                 self.profile
                     .delete_profile(profile_name.clone(), &profile_directory)?;
             }
+            GoXLRCommand::ReloadSettings() => {
+                // This is a simple command that will reload the current profile settings
+                self.apply_profile(None).await?;
+            }
             GoXLRCommand::NewMicProfile(mic_profile_name) => {
                 let mic_profile_directory = self.settings.get_mic_profile_directory().await;
 
@@ -2474,7 +2532,6 @@ impl<'a> Device<'a> {
                     self.load_colour_map().await?;
                 }
             }
-
             GoXLRCommand::SetActiveEffectPreset(preset) => {
                 self.load_effect_bank(preset).await?;
                 self.update_button_states()?;

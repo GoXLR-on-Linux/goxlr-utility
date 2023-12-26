@@ -6,20 +6,20 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0.68"
+anyhow = "1.0.75"
 goxlr-ipc = { path = "../ipc" }
 goxlr-types = { path = "../types" }
 
 interprocess = { version = "1.2.1", features=["tokio_support"] }
-tokio = { version = "1.23.0", features=["full"] }
-which = "4.3.0"
+tokio = { version = "1.35.0", features=["full"] }
+which = "5.0.0"
 
 [target.'cfg(windows)'.dependencies]
-tasklist = "0.2.12"
+tasklist = { git = "https://github.com/yalishandar/tasklist-rs.git" }
 
 [target.'cfg(target_family = "unix")'.dependencies]
-nix = "0.26.2"
-sysinfo = "0.29.4"
+nix = { version =  "0.27.1", features = ["process"] }
+sysinfo = "0.29.11"
 
 [target.'cfg(target_os = "windows")'.build-dependencies]
 windres = "0.2.2"

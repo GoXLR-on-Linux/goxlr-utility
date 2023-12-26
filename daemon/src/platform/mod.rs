@@ -37,23 +37,26 @@ cfg_if! {
     } else if #[cfg(target_os = "linux")] {
         mod linux;
         mod unix;
+
+
         pub fn perform_preflight() -> Result<()> {
             Ok(())
         }
 
         pub async fn spawn_runtime(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Result<()> {
+            tokio::spawn(linux::sleep::run(tx.clone()));
             unix::spawn_platform_runtime(state, tx).await
         }
 
         pub fn has_autostart() -> bool {
-            linux::has_autostart()
+            linux::autostart::has_autostart()
         }
 
         pub fn set_autostart(enabled: bool) -> Result<()> {
             if enabled {
-                return linux::create_startup_link();
+                return linux::autostart::create_startup_link();
             }
-            linux::remove_startup_link()
+            linux::autostart::remove_startup_link()
         }
     } else if #[cfg(target_os = "macos")] {
         mod unix;

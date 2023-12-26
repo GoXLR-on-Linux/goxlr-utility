@@ -201,11 +201,11 @@ struct AppData {
 
 pub async fn spawn_http_server(
     usb_tx: DeviceSender,
-    handle_tx: Sender<ServerHandle>,
+    handle_tx: Sender<Option<ServerHandle>>,
     broadcast_tx: tokio::sync::broadcast::Sender<PatchEvent>,
     settings: HttpSettings,
     file_paths: FilePaths,
-) -> Result<()> {
+) {
     let server = HttpServer::new(move || {
         let cors = Cors::default()
             .allowed_origin_fn(|origin, _req_head| {
@@ -229,18 +229,27 @@ pub async fn spawn_http_server(
             .service(websocket)
             .default_service(web::to(default))
     })
-    .bind((settings.bind_address.clone(), settings.port))?
-    .run();
+    .bind((settings.bind_address.clone(), settings.port));
 
+    if let Err(e) = server {
+        warn!("Error Running HTTP Server: {:#?}", e);
+        return;
+    }
+
+    let server = server.unwrap().run();
     info!(
         "Started GoXLR configuration interface at http://{}:{}/",
         settings.bind_address.as_str(),
         settings.port,
     );
 
-    let _ = handle_tx.send(server.handle());
-    server.await?;
-    Ok(())
+    let _ = handle_tx.send(Some(server.handle()));
+
+    if server.await.is_ok() {
+        info!("HTTP Server Stopped.");
+    } else {
+        warn!("HTTP Server Stopped with Error");
+    }
 }
 
 #[get("/api/websocket")]

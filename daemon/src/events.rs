@@ -1,6 +1,7 @@
 // This file primarily handles 'global' events which may occur inside the daemon from a potential
 // variety of sources, which affect other parts of the daemon.
 
+use crate::primary_worker::DeviceStateChange;
 use crate::{SettingsHandle, Shutdown};
 use goxlr_ipc::{HttpSettings, PathTypes};
 use log::{debug, warn};
@@ -8,12 +9,16 @@ use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::sync::oneshot;
 use tokio::{select, signal};
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum EventTriggers {
     TTSMessage(String),
     Stop,
+    Sleep(oneshot::Sender<()>),
+    Wake(oneshot::Sender<()>),
     Open(PathTypes),
     Activate,
     OpenUi,
@@ -39,7 +44,7 @@ pub struct DaemonState {
 pub async fn spawn_event_handler(
     state: DaemonState,
     mut rx: Receiver<EventTriggers>,
-    device_stop_tx: Sender<()>,
+    device_state_tx: Sender<DeviceStateChange>,
 ) {
     let mut triggered_device_stop = false;
     debug!("Starting Event Loop..");
@@ -51,7 +56,7 @@ pub async fn spawn_event_handler(
                 // Ctrl+C is a generic capture, although we should also check for SIGTERM under Linux..
                 if !triggered_device_stop {
                     triggered_device_stop = true;
-                    let _ = device_stop_tx.send(()).await;
+                    let _ = device_state_tx.send(DeviceStateChange::Shutdown).await;
                 }
             },
             Some(event) = rx.recv() => {
@@ -63,7 +68,7 @@ pub async fn spawn_event_handler(
                         debug!("Shutdown Phase 1 Triggered..");
                         if !triggered_device_stop {
                             triggered_device_stop = true;
-                            let _ = device_stop_tx.send(()).await;
+                            let _ = device_state_tx.send(DeviceStateChange::Shutdown).await;
                         }
                     }
                     EventTriggers::DevicesStopped => {
@@ -74,6 +79,17 @@ pub async fn spawn_event_handler(
                         state.shutdown_blocking.store(true, Ordering::Relaxed);
                         break;
                     }
+
+                    // In the case of Sleep / Wake, code elsewhere is going to be managing the
+                    // things like inhibitors, so we need to pass on a sender so they can be
+                    // notified when actions have been completed.
+                    EventTriggers::Sleep(sender) => {
+                        let _ = device_state_tx.send(DeviceStateChange::Sleep(sender)).await;
+                    }
+                    EventTriggers::Wake(sender) => {
+                        let _ = device_state_tx.send(DeviceStateChange::Wake(sender)).await;
+                    }
+
                     EventTriggers::Open(path_type) => {
                         if let Err(error) = opener::open(match path_type {
                             PathTypes::Profiles => state.settings_handle.get_profile_directory().await,

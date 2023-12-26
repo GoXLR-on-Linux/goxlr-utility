@@ -187,8 +187,6 @@ var WebViewInstalled
 			StrCpy $WebViewInstalled 1
 
 		WEBVIEW_END:
-
-	END:
         ClearErrors
     FunctionEnd
 !macroend
@@ -216,9 +214,9 @@ Function PerformActions
     !insertmacro INSTALLOPTIONS_EXTRACT "post-install.ini"
 
     ; Set any cached values..
-    AUTO_START:
-        StrCmp $AutoStartRegSet 1 0 USE_APP
-        !insertmacro INSTALLOPTIONS_WRITE "post-install.ini" "Field 2" "State" $AutoStartReg
+    StrCmp $AutoStartRegSet 1 0 USE_APP
+    !insertmacro INSTALLOPTIONS_WRITE "post-install.ini" "Field 2" "State" $AutoStartReg
+
     USE_APP:
         StrCmp $UseAppRegSet 1 0 END
         !insertmacro INSTALLOPTIONS_WRITE "post-install.ini" "Field 3" "State" $UseAppReg
@@ -247,8 +245,6 @@ StrCmp $0 0 STOP
 
 STOP:
     Abort
-    Goto END
-
 END:
 FunctionEnd
 
@@ -312,48 +308,34 @@ Function CleanOldInstaller
 FunctionEnd
 
 Function InstallWebView
-    DetailPrint "Downloading Edge Webview.."
+    DetailPrint "Installing Edge Webview"
+    SetOutPath "$TEMP"
 
 	Delete "$TEMP\MicrosoftEdgeWebview2Setup.exe"
-	nsis_tauri_utils::download "https://go.microsoft.com/fwlink/p/?LinkId=2124703" "$TEMP\MicrosoftEdgeWebview2Setup.exe"
-	Pop $0
+	File "MicrosoftEdgeWebview2Setup.exe"
 
-	${IfNot} $0 == 0
-		DetailPrint "Unable to Download WebView2 Setup, continuing without."
-		Goto END
-	${EndIf}
-
-	DetailPrint "Installing WebView2"
 	ExecWait "$TEMP\MicrosoftEdgeWebview2Setup.exe /silent /install" $1
 	${IfNot} $1 == 0
-		DetailPrint "Failed to install WebView2, continuing without."
-		Goto END
+		DetailPrint "Failed to install WebView Runtime, continuing without."
 	${EndIf}
 
-	END:
+	Delete "$TEMP\MicrosoftEdgeWebview2Setup.exe"
 	ClearErrors
 FunctionEnd
 
 Function InstallVCRuntime
-    DetailPrint "Downloading VC Runtime.."
+    DetailPrint "Installing VC Runtime.."
+    SetOutPath "$TEMP"
 
 	Delete "$TEMP\vc_redist.x64.exe"
-	nsis_tauri_utils::download "https://aka.ms/vs/17/release/vc_redist.x64.exe" "$TEMP\vc_redist.x64.exe"
-	Pop $0
+	File "vc_redist.x64.exe"
 
-	${IfNot} $0 == 0
-		DetailPrint "Unable to Download WebView2 Setup, continuing without."
-		Goto END
-	${EndIf}
-
-	DetailPrint "Installing VC Runtime"
-	ExecWait "$TEMP\vc_redist.x64.exe /silent /install" $1
+	ExecWait "$TEMP\vc_redist.x64.exe /silent /install /norestart" $1
 	${IfNot} $1 == 0
 		DetailPrint "Failed to install VC Runtime, continuing without."
-		Goto END
 	${EndIf}
 
-	END:
+	Delete "$TEMP\vc_redist.x64.exe"
 	ClearErrors
 FunctionEnd
 

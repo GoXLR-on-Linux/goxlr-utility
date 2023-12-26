@@ -31,6 +31,7 @@ pub struct DaemonConfig {
     pub tts_enabled: Option<bool>,
     pub allow_network_access: bool,
     pub log_level: LogLevel,
+    pub open_ui_on_launch: bool,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -45,6 +46,8 @@ pub struct HttpSettings {
 pub struct MixerStatus {
     pub hardware: HardwareStatus,
     pub shutdown_commands: Vec<GoXLRCommand>,
+    pub sleep_commands: Vec<GoXLRCommand>,
+    pub wake_commands: Vec<GoXLRCommand>,
     pub fader_status: EnumMap<FaderName, FaderStatus>,
     pub mic_status: MicSettings,
     pub levels: Levels,
@@ -389,8 +392,14 @@ pub struct Files {
     pub profiles: Vec<String>,
     pub mic_profiles: Vec<String>,
     pub presets: Vec<String>,
-    pub samples: BTreeMap<String, String>,
+    pub samples: BTreeMap<String, SampleFile>,
     pub icons: Vec<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct SampleFile {
+    pub name: String,
+    pub gain_pct: u8,
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]

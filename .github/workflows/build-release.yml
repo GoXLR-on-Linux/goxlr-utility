@@ -23,6 +23,19 @@ jobs:
           repository: frostycoolslug/goxlr-utility-ui
           path: goxlr-utility-ui
 
+      # For the use of CI, we need the UI to use the 'local' version of the `goxlr-ipc` crate, rather than the latest
+      # release version, this is to allow test builds to work correctly in the event of a Status Structure change that
+      # hasn't yet been released.
+      - name: "Update Utility UI IPC Location"
+        uses: Nambers/ReplaceStringInFile@v1.3
+        with:
+          path: "goxlr-utility-ui/src-tauri/Cargo.toml"
+          regexOptions: 'gm'
+          oldString: "^goxlr-ipc.*$"
+          newString: "goxlr-ipc = { path = \\\"../../goxlr-utility/ipc\\\" }"
+          showFileContent: true
+
+
       - name: "Install Rust"
         uses: dtolnay/rust-toolchain@stable
 
@@ -55,6 +68,20 @@ jobs:
         with:
           url: https://github.com/tauri-apps/nsis-tauri-utils/releases/download/nsis_tauri_utils-v0.1.1/nsis_tauri_utils.dll
           target: ${{ github.workspace }}/NSIS_Plugins/x86-unicode/
+
+      - name: "Downloading WebView2 Bootstrapper"
+        uses: suisei-cn/actions-download-file@v1.4.0
+        with:
+          url: https://go.microsoft.com/fwlink/p/?LinkId=2124703
+          filename: MicrosoftEdgeWebview2Setup.exe
+          target: goxlr-utility/ci/nsis/
+
+      - name: "Downloading VC Runtime"
+        uses: suisei-cn/actions-download-file@v1.4.0
+        with:
+          url: https://aka.ms/vs/17/release/vc_redist.x64.exe
+          filename: vc_redist.x64.exe
+          target: goxlr-utility/ci/nsis/
 
       - name: "Build NSIS Packages"
         uses: joncloud/makensis-action@publish

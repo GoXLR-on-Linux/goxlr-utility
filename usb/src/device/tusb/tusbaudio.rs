@@ -17,7 +17,7 @@ use std::thread::sleep;
 use std::time::Duration;
 use tokio::sync::mpsc::{Receiver, Sender};
 use widestring::U16CStr;
-use windows::Win32::Foundation::{HANDLE, WIN32_ERROR};
+use windows::Win32::Foundation::{HANDLE, WAIT_TIMEOUT};
 use windows::Win32::System::Threading::{CreateEventA, WaitForSingleObject};
 use winreg::enums::HKEY_CLASSES_ROOT;
 use winreg::RegKey;
@@ -399,7 +399,7 @@ impl TUSBAudio<'_> {
         loop {
             // Wait for the event Trigger (I'd love for this to be async one day :p)..
             let wait_result = unsafe { WaitForSingleObject(event, 500) };
-            if wait_result != WIN32_ERROR(258) {
+            if wait_result != WAIT_TIMEOUT {
                 // Check the Queued Events :)
                 loop {
                     let event_result = unsafe {
@@ -416,6 +416,11 @@ impl TUSBAudio<'_> {
 
                     let event_response =
                         unsafe { std::slice::from_raw_parts(buffer_ptr, response_len as usize) };
+
+                    // Generally caused by an 'audio end' event.
+                    if event_response.is_empty() {
+                        continue;
+                    }
 
                     if event_response.len() != 6 {
                         debug!(
@@ -523,7 +528,7 @@ impl TUSBAudio<'_> {
 
             loop {
                 let wait_result = unsafe { WaitForSingleObject(event, 1000) };
-                if wait_result == WIN32_ERROR(258) {
+                if wait_result == WAIT_TIMEOUT {
                     // Timeout on wait, go again!
                     continue;
                 }
@@ -550,12 +555,13 @@ impl TUSBAudio<'_> {
         // We should not return from this method until at least one run has been done by the
         // thread, this is primarily to prevent conflicts on startup when everything changes.
 
-        let started = Arc::new(AtomicBool::new(false));
-        let started_inner = started.clone();
+        let (ready_tx, mut ready_rx) = tokio::sync::oneshot::channel::<bool>();
 
         thread::spawn(move || -> Result<()> {
             let mut devices = vec![];
+            let mut ready_sender = Some(ready_tx);
 
+            debug!("PnP Thread Spawned");
             loop {
                 let mut found_devices = vec![];
 
@@ -576,9 +582,12 @@ impl TUSBAudio<'_> {
                             }
                         }
                     }
+                } else {
+                    debug!("Unable to Poll Devices");
                 }
 
                 // Make sure our two vecs are the same..
+
                 if !iters_equal_anyorder(
                     devices.clone().into_iter(),
                     found_devices.clone().into_iter(),
@@ -588,16 +597,20 @@ impl TUSBAudio<'_> {
                     devices.clear();
                     devices.append(&mut found_devices);
                 }
-                if !started_inner.load(Ordering::Relaxed) {
-                    started_inner.store(true, Ordering::Relaxed);
+
+                if let Some(sender) = ready_sender.take() {
+                    let _ = sender.send(true);
                 }
+
                 sleep(Duration::from_secs(1));
             }
         });
 
-        while !started.load(Ordering::Relaxed) {
+        // Block until the 'ready' message has been sent..
+        while ready_rx.try_recv().is_err() {
             sleep(Duration::from_millis(5));
         }
+        debug!("RUSB PnP Handler Started");
 
         *spawned = true;
         Ok(())

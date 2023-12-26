@@ -2,10 +2,10 @@ use crate::{OVERRIDE_SAMPLER_INPUT, OVERRIDE_SAMPLER_OUTPUT};
 use anyhow::{anyhow, bail, Result};
 use enum_map::EnumMap;
 use fancy_regex::Regex;
-use goxlr_audio::get_audio_inputs;
 use goxlr_audio::player::{Player, PlayerState};
 use goxlr_audio::recorder::BufferedRecorder;
 use goxlr_audio::recorder::RecorderState;
+use goxlr_audio::{get_audio_inputs, AtomicF64};
 use goxlr_types::SampleBank;
 use goxlr_types::SampleButtons;
 use log::{debug, error, info, warn};
@@ -32,6 +32,7 @@ pub struct AudioHandler {
 
 pub struct AudioFile {
     pub(crate) file: PathBuf,
+    pub(crate) name: String,
     pub(crate) gain: Option<f64>,
     pub(crate) start_pct: Option<f64>,
     pub(crate) stop_pct: Option<f64>,
@@ -436,6 +437,7 @@ impl AudioHandler {
 
             let state = RecorderState {
                 stop: Arc::new(AtomicBool::new(false)),
+                gain: Arc::new(AtomicF64::new(1.)),
             };
 
             let inner_recorder = recorder.clone();
@@ -469,8 +471,8 @@ impl AudioHandler {
         &mut self,
         bank: SampleBank,
         button: SampleButtons,
-    ) -> Result<Option<String>> {
-        let mut filename = None;
+    ) -> Result<Option<(String, f64)>> {
+        let mut file = None;
 
         if let Some(player) = &mut self.active_streams[bank][button] {
             if player.stream_type == StreamType::Playback {
@@ -481,10 +483,16 @@ impl AudioHandler {
                 recording_state.state.stop.store(true, Ordering::Relaxed);
                 recording_state.wait();
 
+                debug!(
+                    "Calculated Gain: {}",
+                    recording_state.state.gain.load(Ordering::Relaxed)
+                );
+
                 // Recording Complete, check the file was made...
                 if recording_state.file.exists() {
                     if let Some(file_name) = recording_state.file.file_name() {
-                        filename.replace(String::from(file_name.to_string_lossy()));
+                        let gain = recording_state.state.gain.load(Ordering::Relaxed);
+                        file.replace((String::from(file_name.to_string_lossy()), gain));
                     } else {
                         bail!("Unable to Extract Filename from Path! (This shouldn't be possible!)")
                     }
@@ -496,7 +504,7 @@ impl AudioHandler {
 
         // Sample has been stopped, clear the state of this button.
         self.active_streams[bank][button] = None;
-        Ok(filename)
+        Ok(file)
     }
 
     pub fn calculate_gain_thread(

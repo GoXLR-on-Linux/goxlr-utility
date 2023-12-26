@@ -1,4 +1,5 @@
 use std::mem;
+use std::mem::zeroed;
 use std::ptr::null_mut;
 use std::sync::atomic::Ordering;
 use std::thread::sleep;
@@ -8,8 +9,8 @@ use anyhow::{bail, Result};
 use lazy_static::lazy_static;
 use log::{debug, error, warn};
 use tokio::sync::mpsc::Sender;
+use tokio::sync::oneshot;
 use win_win::{WindowBuilder, WindowClass, WindowProc};
-use winapi::shared::guiddef::GUID;
 use winapi::shared::minwindef::{DWORD, FALSE, HINSTANCE, LPARAM, LRESULT, UINT, WPARAM};
 use winapi::shared::windef::{HBRUSH, HICON, HMENU, HWND, POINT};
 use winapi::um::shellapi::{NIF_ICON, NIF_MESSAGE, NIF_TIP, NIM_ADD, NIM_DELETE, NOTIFYICONDATAW};
@@ -313,8 +314,7 @@ impl WindowProc for GoXLRWindowProc {
 
             // // Shutdown Handlers..
             winuser::WM_QUERYENDSESSION => {
-                debug!("Received WM_QUERYENDSESSION from Windows");
-
+                debug!("Received WM_QUERYENDSESSION from Windows, Shutting Down..");
                 /*
                  Ref: https://learn.microsoft.com/en-us/windows/win32/shutdown/wm-queryendsession
 
@@ -323,19 +323,14 @@ impl WindowProc for GoXLRWindowProc {
                   message, regardless of how the other applications respond to the
                   WM_QUERYENDSESSION message."
 
-                  This is not necessarily true, the problem is that if a Window on the application
-                  gets destroyed (via DestroyWindow()) Windows will immediately kill the app,
-                  regardless of how many other windows exist.
+                  The problem we run into, is that the TTS service spawns an invisible window to
+                  handle media playback, and if it receives the WM_ENDSESSION message and calls
+                  DestroyWindow, Windows will assume the entire Utility is done and kill the
+                  process. This prevents the WM_ENDSESSION message from reaching us here preventing
+                  us from correctly handling the shutdown.
 
-                  This code was moved to here simply because a library needed to communicate with
-                  the GoXLR was spawning a hidden window to handle PnP events with and it's own
-                  mainloop. This window was killing the util before the shutdown was able to
-                  process.
-
-                  The code was moved here because we could generally catch it 80% of the time, but
-                  now the hidden PnP window has now been dealt we could *PROBABLY* move this back
-                  into ENDSESSION, but seeing as it'll work just as fine here, I'm not gonna move it
-                  lest getting dragged back into the debugging :p
+                  Consequently, we're forced to try and get ahead of it and handle our shutdown
+                  behaviours in the 'wrong' place, but we're at least guaranteed to be handled.
                 */
 
                 unsafe {
@@ -359,7 +354,41 @@ impl WindowProc for GoXLRWindowProc {
                 }
             }
             winuser::WM_ENDSESSION => {
-                debug!("Received WM_ENDSESSION from Windows (IGNORED)");
+                debug!("Received WM_ENDSESSION from Windows, Doing nothing..");
+            }
+            winuser::WM_POWERBROADCAST => {
+                debug!("Received POWER Broadcast from Windows");
+
+                if wparam == winuser::PBT_APMSUSPEND {
+                    debug!("Suspend Requested by Windows, Handling..");
+                    let (tx, mut rx) = oneshot::channel();
+
+                    // Give a maximum of 1 second for a response..
+                    let milli_wait = 5;
+                    let max_wait = 1000 / milli_wait;
+                    let mut count = 0;
+
+                    // Only hold on the receiver if the send was successful..
+                    if self.global_tx.try_send(EventTriggers::Sleep(tx)).is_ok() {
+                        debug!("Awaiting Sleep Response..");
+                        while rx.try_recv().is_err() {
+                            sleep(Duration::from_millis(milli_wait));
+                            count += 1;
+                            if count > max_wait {
+                                debug!("Timeout Exceeded, bailing.");
+                                break;
+                            }
+                        }
+                        debug!("Task Completed, allowing Windows to Sleep");
+                    }
+                }
+                if wparam == winuser::PBT_APMRESUMESUSPEND {
+                    debug!("Wake Signal Received..");
+                    let (tx, _rx) = oneshot::channel();
+
+                    // We're awake again, we don't need to care about the response here.
+                    let _ = self.global_tx.try_send(EventTriggers::Wake(tx));
+                }
             }
             _ => {
                 if msg == *RESPAWN {
@@ -383,21 +412,12 @@ fn tooltip(msg: &str) -> [u16; 128] {
     array
 }
 fn get_notification_struct(hwnd: &HWND) -> NOTIFYICONDATAW {
-    NOTIFYICONDATAW {
-        cbSize: std::mem::size_of::<NOTIFYICONDATAW>() as DWORD,
-        hWnd: *hwnd,
-        uID: 1,
-        uFlags: 0,
-        uCallbackMessage: 0,
-        hIcon: 0 as HICON,
-        szTip: [0; 128],
-        dwState: 0,
-        dwStateMask: 0,
-        szInfo: [0; 256],
-        u: Default::default(),
-        szInfoTitle: [0; 64],
-        dwInfoFlags: 0,
-        guidItem: GUID::default(),
-        hBalloonIcon: 0 as HICON,
-    }
+    let mut icon: NOTIFYICONDATAW = unsafe { zeroed() };
+    icon.cbSize = std::mem::size_of::<NOTIFYICONDATAW>() as DWORD;
+    icon.hWnd = *hwnd;
+    icon.uID = 1;
+    icon.uFlags = 0;
+    icon.uCallbackMessage = 0;
+
+    icon
 }

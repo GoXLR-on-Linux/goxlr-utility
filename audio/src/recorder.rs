@@ -18,7 +18,7 @@ use rb::{Producer, RbConsumer, RbProducer, SpscRb, RB};
 use symphonia::core::audio::{Layout, SignalSpec};
 
 use crate::audio::{get_input, AudioInput, AudioSpecification};
-use crate::get_audio_inputs;
+use crate::{get_audio_inputs, AtomicF64};
 
 static NEXT_ID: AtomicU32 = AtomicU32::new(0);
 static READ_TIMEOUT: Duration = Duration::from_millis(100);
@@ -40,6 +40,7 @@ pub struct RingProducer {
 #[derive(Debug, Clone)]
 pub struct RecorderState {
     pub stop: Arc<AtomicBool>,
+    pub gain: Arc<AtomicF64>,
 }
 
 impl Debug for BufferedRecorder {
@@ -206,13 +207,26 @@ impl BufferedRecorder {
         };
         let mut writer = hound::WavWriter::create(path, spec)?;
 
-        // Set up the Audio Checker for volume..
-        let mut ebu_r128 = EbuR128::new(2, 48000, Mode::I)?;
+        // EBU Prep is here to make sure that recent samples have hit a threshold to start recording.
+        let mut ebu_prep_r128 = EbuR128::new(2, 48000, Mode::I)?;
+
+        // EBU Rec is here to perform the needed gain calculations on what has already been recorded
+        let mut ebu_rec_r128 = EbuR128::new(2, 48000, Mode::I)?;
+
+        // Whether we're writing to a file.
         let mut writing = false;
+
+        state.gain.store(2., Ordering::Relaxed);
 
         // We are all setup, now write the contents of the buffer into the file..
         if self.buffer_size > 0 {
-            match self.handle_samples(pre_samples, &mut ebu_r128, writing, &mut writer) {
+            match self.handle_samples(
+                pre_samples,
+                &mut ebu_prep_r128,
+                &mut ebu_rec_r128,
+                writing,
+                &mut writer,
+            ) {
                 Ok(result) => writing = result,
                 Err(error) => {
                     error!("Error Writing Samples {}", error);
@@ -228,7 +242,13 @@ impl BufferedRecorder {
             {
                 // Read these out into a vec..
                 let samples: Vec<f32> = Vec::from(&read_buffer[0..samples]);
-                match self.handle_samples(samples, &mut ebu_r128, writing, &mut writer) {
+                match self.handle_samples(
+                    samples,
+                    &mut ebu_prep_r128,
+                    &mut ebu_rec_r128,
+                    writing,
+                    &mut writer,
+                ) {
                     Ok(result) => writing = result,
                     Err(error) => {
                         // Something's gone wrong, we need to fail safe..
@@ -249,6 +269,24 @@ impl BufferedRecorder {
             // No noise received..
             info!("No Noise Received, or error in recording, Cancelling.");
             fs::remove_file(path)?;
+        } else {
+            // We have noise recorded, try to normalise it..
+            let mut loudness = ebu_rec_r128.loudness_global()?;
+            if loudness == f64::NEG_INFINITY {
+                debug!("Unable to Obtain loudness in Mode I, trying M..");
+                loudness = ebu_rec_r128.loudness_momentary()?;
+            }
+
+            if loudness == f64::NEG_INFINITY {
+                debug!("Unable to Obtain loudness in Mode M, Setting Default..");
+                state.gain.store(1.0, Ordering::Relaxed);
+            } else {
+                let target = -23.0;
+                let gain_db = target - loudness;
+                let value = f64::powf(10., gain_db / 20.);
+
+                state.gain.store(value, Ordering::Relaxed);
+            }
         }
 
         self.del_producer(producer_id);
@@ -258,7 +296,8 @@ impl BufferedRecorder {
     fn handle_samples(
         &self,
         samples: Vec<f32>,
-        ebu_r128: &mut EbuR128,
+        ebu_prep_r128: &mut EbuR128,
+        ebu_rec_r128: &mut EbuR128,
         writing: bool,
         writer: &mut WavWriter<BufWriter<File>>,
     ) -> Result<bool> {
@@ -267,10 +306,13 @@ impl BufferedRecorder {
         // Split into 50ms chunks
         for slice in samples.chunks(4800) {
             if !recording_started {
-                recording_started = self.is_audio(ebu_r128, slice)?;
+                recording_started = self.is_audio(ebu_prep_r128, slice)?;
             }
 
             if recording_started {
+                // We are recording, add the samples to the recorded gain calc
+                let _ = ebu_rec_r128.add_frames_f32(slice);
+
                 for sample in slice {
                     // Multiply the sample by 2^23, to convert to a pseudo I24
                     writer.write_sample((*sample * 8388608.0) as i32)?;

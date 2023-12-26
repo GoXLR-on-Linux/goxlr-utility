@@ -37,8 +37,10 @@ impl SettingsHandle {
             icons_directory: Some(data_dir.join("icons")),
             logs_directory: Some(data_dir.join("logs")),
             log_level: Some(LogLevel::Debug),
+            open_ui_on_launch: None,
             activate: None,
             devices: Some(Default::default()),
+            sample_gain: Some(Default::default()),
         });
 
         // Set these values if they're missing from the configuration
@@ -68,6 +70,10 @@ impl SettingsHandle {
 
         if settings.log_level.is_none() {
             settings.log_level = Some(LogLevel::Info);
+        }
+
+        if settings.open_ui_on_launch.is_none() {
+            settings.open_ui_on_launch = Some(false);
         }
 
         if settings.show_tray_icon.is_none() {
@@ -184,6 +190,15 @@ impl SettingsHandle {
         settings.log_level.clone().unwrap_or(LogLevel::Info)
     }
 
+    pub async fn get_open_ui_on_launch(&self) -> bool {
+        let settings = self.settings.read().await;
+        settings.open_ui_on_launch.unwrap_or(false)
+    }
+    pub async fn set_open_ui_on_launch(&self, enable: bool) {
+        let mut settings = self.settings.write().await;
+        settings.open_ui_on_launch = Some(enable);
+    }
+
     pub async fn get_activate(&self) -> Option<String> {
         let settings = self.settings.read().await;
         settings.activate.clone()
@@ -223,6 +238,36 @@ impl SettingsHandle {
             .unwrap()
             .get(device_serial)
             .map(|d| d.shutdown_commands.clone());
+
+        if let Some(value) = value {
+            return value;
+        }
+        vec![]
+    }
+
+    pub async fn get_device_sleep_commands(&self, device_serial: &str) -> Vec<GoXLRCommand> {
+        let settings = self.settings.read().await;
+        let value = settings
+            .devices
+            .as_ref()
+            .unwrap()
+            .get(device_serial)
+            .map(|d| d.sleep_commands.clone());
+
+        if let Some(value) = value {
+            return value;
+        }
+        vec![]
+    }
+
+    pub async fn get_device_wake_commands(&self, device_serial: &str) -> Vec<GoXLRCommand> {
+        let settings = self.settings.read().await;
+        let value = settings
+            .devices
+            .as_ref()
+            .unwrap()
+            .get(device_serial)
+            .map(|d| d.wake_commands.clone());
 
         if let Some(value) = value {
             return value;
@@ -304,6 +349,27 @@ impl SettingsHandle {
         false
     }
 
+    pub async fn get_sample_gain_percent(&self, name: String) -> u8 {
+        let settings = self.settings.read().await;
+        if let Some(gain) = &settings.sample_gain {
+            if let Some(percent) = gain.get(&*name) {
+                return *percent;
+            }
+            return 100;
+        }
+        100
+    }
+
+    /// This exists so we don't have to repeatedly lock / unlock the struct to get individual
+    /// gain values. We can simply clone off the list, and let it be handled elsewhere.
+    pub async fn get_sample_gain_list(&self) -> HashMap<String, u8> {
+        let settings = self.settings.read().await;
+        if let Some(gain) = &settings.sample_gain {
+            return gain.clone();
+        }
+        HashMap::default()
+    }
+
     pub async fn set_device_profile_name(&self, device_serial: &str, profile_name: &str) {
         let mut settings = self.settings.write().await;
         let entry = settings
@@ -339,6 +405,32 @@ impl SettingsHandle {
             .entry(device_serial.to_owned())
             .or_insert_with(DeviceSettings::default);
         entry.shutdown_commands = commands.to_owned();
+    }
+
+    pub async fn set_device_sleep_commands(
+        &self,
+        device_serial: &str,
+        commands: Vec<GoXLRCommand>,
+    ) {
+        let mut settings = self.settings.write().await;
+        let entry = settings
+            .devices
+            .as_mut()
+            .unwrap()
+            .entry(device_serial.to_owned())
+            .or_insert_with(DeviceSettings::default);
+        entry.sleep_commands = commands.to_owned();
+    }
+
+    pub async fn set_device_wake_commands(&self, device_serial: &str, commands: Vec<GoXLRCommand>) {
+        let mut settings = self.settings.write().await;
+        let entry = settings
+            .devices
+            .as_mut()
+            .unwrap()
+            .entry(device_serial.to_owned())
+            .or_insert_with(DeviceSettings::default);
+        entry.wake_commands = commands.to_owned();
     }
 
     pub async fn set_device_sampler_pre_buffer(&self, device_serial: &str, duration: u16) {
@@ -395,6 +487,16 @@ impl SettingsHandle {
             .or_insert_with(DeviceSettings::default);
         entry.enable_monitor_with_fx = Some(setting);
     }
+
+    pub async fn set_sample_gain_percent(&self, name: String, value: u8) {
+        let mut settings = self.settings.write().await;
+        if settings.sample_gain.is_none() {
+            settings.sample_gain.replace(HashMap::default());
+        }
+
+        let entry = settings.sample_gain.as_mut().unwrap().entry(name);
+        entry.and_modify(|v| *v = value).or_insert(value);
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -409,8 +511,10 @@ pub struct Settings {
     icons_directory: Option<PathBuf>,
     logs_directory: Option<PathBuf>,
     log_level: Option<LogLevel>,
+    open_ui_on_launch: Option<bool>,
     activate: Option<String>,
     devices: Option<HashMap<String, DeviceSettings>>,
+    sample_gain: Option<HashMap<String, u8>>,
 }
 
 impl Settings {
@@ -496,6 +600,8 @@ struct DeviceSettings {
 
     // 'Shutdown' commands..
     shutdown_commands: Vec<GoXLRCommand>,
+    sleep_commands: Vec<GoXLRCommand>,
+    wake_commands: Vec<GoXLRCommand>,
 }
 
 impl Default for DeviceSettings {
@@ -511,6 +617,8 @@ impl Default for DeviceSettings {
             enable_monitor_with_fx: Some(false),
 
             shutdown_commands: vec![],
+            sleep_commands: vec![],
+            wake_commands: vec![],
         }
     }
 }

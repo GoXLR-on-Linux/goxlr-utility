@@ -6,15 +6,15 @@ use crate::{FileManager, PatchEvent, SettingsHandle, Shutdown, VERSION};
 use anyhow::{anyhow, Result};
 use goxlr_ipc::{
     DaemonCommand, DaemonConfig, DaemonStatus, Files, GoXLRCommand, HardwareStatus, HttpSettings,
-    PathTypes, Paths, UsbProductInformation,
+    PathTypes, Paths, SampleFile, UsbProductInformation,
 };
 use goxlr_types::DeviceType;
 use goxlr_usb::device::base::GoXLRDevice;
 use goxlr_usb::device::{find_devices, from_device};
 use goxlr_usb::{PID_GOXLR_FULL, PID_GOXLR_MINI};
 use json_patch::diff;
-use log::{error, info, warn};
-use std::collections::HashMap;
+use log::{debug, error, info, warn};
+use std::collections::{BTreeMap, HashMap};
 use std::time::{Duration, Instant};
 use tokio::sync::broadcast::Sender as BroadcastSender;
 use tokio::sync::mpsc::{Receiver, Sender};
@@ -31,6 +31,13 @@ pub enum DeviceCommand {
     GetDeviceMicLevel(String, oneshot::Sender<Result<f64>>),
 }
 
+#[allow(dead_code)]
+pub enum DeviceStateChange {
+    Shutdown,
+    Sleep(oneshot::Sender<()>),
+    Wake(oneshot::Sender<()>),
+}
+
 pub type DeviceSender = Sender<DeviceCommand>;
 pub type DeviceReceiver = Receiver<DeviceCommand>;
 
@@ -39,7 +46,7 @@ pub type DeviceReceiver = Receiver<DeviceCommand>;
 pub async fn spawn_usb_handler(
     mut command_rx: DeviceReceiver,
     mut file_rx: Receiver<PathTypes>,
-    mut device_stop_rx: Receiver<()>,
+    mut device_state_rx: Receiver<DeviceStateChange>,
     broadcast_tx: BroadcastSender<PatchEvent>,
     global_tx: Sender<EventTriggers>,
     mut shutdown: Shutdown,
@@ -65,7 +72,7 @@ pub async fn spawn_usb_handler(
     let mut devices: HashMap<String, Device> = HashMap::new();
     let mut ignore_list = HashMap::new();
 
-    let mut files = get_files(&mut file_manager).await;
+    let mut files = get_files(&mut file_manager, &settings).await;
     let mut daemon_status =
         get_daemon_status(&devices, &settings, &http_settings, files.clone()).await;
 
@@ -135,20 +142,40 @@ pub async fn spawn_usb_handler(
                     warn!("Cannot find registered device with serial: {}", &serial);
                 }
             }
-            _ = device_stop_rx.recv() => {
-                // Make sure this only happens once..
-                if shutdown_triggered {
-                    continue;
-                }
-                shutdown_triggered = true;
+            Some(event) = device_state_rx.recv() => {
+                match event {
+                    DeviceStateChange::Shutdown => {
+                        // Make sure this only happens once..
+                        if shutdown_triggered {
+                            continue;
+                        }
+                        shutdown_triggered = true;
 
-                // Flip through all the devices, send a shutdown signal..
-                for device in devices.values_mut() {
-                    device.shutdown().await;
+                        // Flip through all the devices, send a shutdown signal..
+                        for device in devices.values_mut() {
+                            device.shutdown().await;
+                        }
+
+                        // Send a notification that we're done here..
+                        let _ = global_tx.send(EventTriggers::DevicesStopped).await;
+                    },
+                    DeviceStateChange::Sleep(sender) => {
+                        debug!("Received Sleep Notification");
+                        for device in devices.values_mut() {
+                            device.sleep().await;
+                        }
+                        let _ = sender.send(());
+                    },
+                    DeviceStateChange::Wake(sender) => {
+                        debug!("Received Wake Notification");
+                        for device in devices.values_mut() {
+                            device.wake().await;
+                        }
+                        let _ = sender.send(());
+                    }
                 }
 
-                // Send a notification that we're done here..
-                let _ = global_tx.send(EventTriggers::DevicesStopped).await;
+
             }
             () = shutdown.recv() => {
                 info!("Shutting down device worker");
@@ -198,6 +225,12 @@ pub async fn spawn_usb_handler(
                                 change_found = true;
                                 let _ = sender.send(Ok(()));
                             }
+                            DaemonCommand::SetUiLaunchOnLoad(value) => {
+                                settings.set_open_ui_on_launch(value).await;
+                                settings.save().await;
+
+                                let _ = sender.send(Ok(()));
+                            }
                             DaemonCommand::SetShowTrayIcon(enabled) => {
                                 settings.set_show_tray_icon(enabled).await;
                                 settings.save().await;
@@ -219,6 +252,19 @@ pub async fn spawn_usb_handler(
                             DaemonCommand::OpenPath(path_type) => {
                                 // There's nothing we can really do if this errors..
                                 let _ = global_tx.send(EventTriggers::Open(path_type)).await;
+                                let _ = sender.send(Ok(()));
+                            }
+                            DaemonCommand::SetSampleGainPct(sample, gain) => {
+                                settings.set_sample_gain_percent(sample, gain).await;
+                                let _ = sender.send(Ok(()));
+                            }
+                            DaemonCommand::ApplySampleChange => {
+                                // Change is committed, save it..
+                                settings.save().await;
+
+                                // Resend the value.
+                                files = update_files(files, PathTypes::Samples, &mut file_manager, &settings).await;
+                                change_found = true;
                                 let _ = sender.send(Ok(()));
                             }
                         }
@@ -250,7 +296,7 @@ pub async fn spawn_usb_handler(
                     }
                 }
 
-                files = update_files(files, path, &mut file_manager).await;
+                files = update_files(files, path, &mut file_manager, &settings).await;
                 change_found = true;
             }
         }
@@ -291,6 +337,7 @@ async fn get_daemon_status(
             tts_enabled: settings.get_tts_enabled().await,
             allow_network_access: settings.get_allow_network_access().await,
             log_level: settings.get_log_level().await,
+            open_ui_on_launch: settings.get_open_ui_on_launch().await,
         },
         paths: Paths {
             profile_directory: settings.get_profile_directory().await,
@@ -313,17 +360,49 @@ async fn get_daemon_status(
     status
 }
 
-async fn get_files(file_manager: &mut FileManager) -> Files {
+async fn get_sample_files(
+    file_manager: &mut FileManager,
+    settings: &SettingsHandle,
+) -> BTreeMap<String, SampleFile> {
+    let file_samples = file_manager.get_samples();
+    let config_samples = settings.get_sample_gain_list().await;
+
+    // We need to pair the two together, starting with the file samples..
+    let mut samples: BTreeMap<String, SampleFile> = Default::default();
+    for (key, value) in file_samples {
+        let mut gain = 100;
+
+        if let Some(config_gain) = config_samples.get(&*value) {
+            gain = *config_gain;
+        }
+
+        samples.insert(
+            key,
+            SampleFile {
+                name: value,
+                gain_pct: gain,
+            },
+        );
+    }
+    samples
+}
+
+async fn get_files(file_manager: &mut FileManager, settings: &SettingsHandle) -> Files {
     Files {
         profiles: file_manager.get_profiles(),
         mic_profiles: file_manager.get_mic_profiles(),
         presets: file_manager.get_presets(),
-        samples: file_manager.get_samples(),
+        samples: get_sample_files(file_manager, settings).await,
         icons: file_manager.get_icons(),
     }
 }
 
-async fn update_files(files: Files, file_type: PathTypes, file_manager: &mut FileManager) -> Files {
+async fn update_files(
+    files: Files,
+    file_type: PathTypes,
+    file_manager: &mut FileManager,
+    settings: &SettingsHandle,
+) -> Files {
     // Only re-poll for the changed type.
     Files {
         profiles: if file_type != PathTypes::Profiles {
@@ -347,7 +426,7 @@ async fn update_files(files: Files, file_type: PathTypes, file_manager: &mut Fil
         samples: if file_type != PathTypes::Samples {
             files.samples
         } else {
-            file_manager.get_samples()
+            get_sample_files(file_manager, settings).await
         },
 
         icons: if file_type != PathTypes::Icons {

@@ -79,12 +79,27 @@ pub enum DaemonCommand {
     SetTTSEnabled(bool),
     SetAutoStartEnabled(bool),
     SetAllowNetworkAccess(bool),
+    SetUiLaunchOnLoad(bool),
     RecoverDefaults(PathTypes),
+
+    /** This is handled globally for now, and needs to be performed in 2 steps..
+
+        The fist stage is changing the value, this will result in a lot of heavy RW locks, so we
+        keep it simple. This command will not update the DaemonStatus struct, but will internally
+        change the valve for the Sample.
+
+        The second stage is 'Applying', this will cause a settings file save, and report the updated
+        value for the Sample in the DaemonStatus object.
+    */
+    SetSampleGainPct(String, u8),
+    ApplySampleChange,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum GoXLRCommand {
     SetShutdownCommands(Vec<GoXLRCommand>),
+    SetSleepCommands(Vec<GoXLRCommand>),
+    SetWakeCommands(Vec<GoXLRCommand>),
     SetSamplerPreBufferDuration(u16),
 
     SetFader(FaderName, ChannelName),
@@ -238,6 +253,7 @@ pub enum GoXLRCommand {
     SaveProfile(),
     SaveProfileAs(String),
     DeleteProfile(String),
+    ReloadSettings(),
 
     NewMicProfile(String),
     LoadMicProfile(String, bool),

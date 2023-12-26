@@ -16,7 +16,7 @@ use tokio::sync::mpsc;
 use tokio::time::Duration;
 use tokio::{select, time};
 use winapi::um::winuser;
-use winreg::enums::HKEY_CURRENT_USER;
+use winreg::enums::{HKEY_CLASSES_ROOT, HKEY_CURRENT_USER};
 use winreg::RegKey;
 use winrt_notification::{Sound, Toast};
 
@@ -29,30 +29,46 @@ lazy_static! {
 }
 
 pub fn perform_platform_preflight() -> Result<()> {
+    if !locate_goxlr_driver() {
+        let message = String::from("Unable to locate the GoXLR Driver, the utility cannot start.\r\n\r\nPlease reinstall the driver and try again.");
+
+        disaply_error(message);
+
+        error!("Driver not found, Failing Preflight.");
+        bail!("The GoXLR Driver was not found, please reinstall before proceeding.");
+    }
+
     let count = get_official_app_count();
 
     if count > 0 {
-        let title = "GoXLR Utility";
-        let message =
-            "Official GoXLR Application Detected Running\r\n\r\nUnable to Start the Utility.";
+        let message = String::from(
+            "Official GoXLR Application Detected Running\r\n\r\nUnable to Start the Utility.",
+        );
 
-        let l_title = to_wide(title);
-        let l_msg: Vec<u16> = to_wide(message);
-
-        unsafe {
-            winuser::MessageBoxW(
-                null_mut(),
-                l_msg.as_ptr(),
-                l_title.as_ptr(),
-                winuser::MB_OK | winuser::MB_ICONERROR,
-            );
-        }
+        disaply_error(message);
 
         error!("Detected Official GoXLR Application Running, Failing Preflight.");
         bail!("Official GoXLR App Running, Please terminate it before running the Daemon");
     }
 
     Ok(())
+}
+
+fn disaply_error(message: String) {
+    let title = "GoXLR Utility";
+    let message = &message;
+
+    let l_title = to_wide(title);
+    let l_msg: Vec<u16> = to_wide(message);
+
+    unsafe {
+        winuser::MessageBoxW(
+            null_mut(),
+            l_msg.as_ptr(),
+            l_title.as_ptr(),
+            winuser::MB_OK | winuser::MB_ICONERROR,
+        );
+    }
 }
 
 pub fn to_wide(msg: &str) -> Vec<u16> {
@@ -198,4 +214,26 @@ fn get_startup_dir() -> Option<PathBuf> {
         }
     }
     None
+}
+
+fn locate_goxlr_driver() -> bool {
+    let regpath = "CLSID\\{024D0372-641F-4B7B-8140-F4DFE458C982}\\InprocServer32\\";
+    let classes_root = RegKey::predef(HKEY_CLASSES_ROOT);
+    if let Ok(folders) = classes_root.open_subkey(regpath) {
+        // Name is blank because we need the default key
+        if let Ok(api) = folders.get_value::<String, &str>("") {
+            // Check the file exists..
+            if PathBuf::from(&api).exists() {
+                return true;
+            }
+        }
+    }
+    // If we get here, we didn't find it, return a default and hope for the best!
+    let path = String::from(
+        "C:/Program Files/TC-HELICON/GoXLR_Audio_Driver/W10_x64/goxlr_audioapi_x64.dll",
+    );
+    if PathBuf::from(&path).exists() {
+        return true;
+    }
+    false
 }
