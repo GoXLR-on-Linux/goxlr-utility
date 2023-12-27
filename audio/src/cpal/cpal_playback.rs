@@ -107,7 +107,7 @@ impl OpenOutputStream for CpalPlayback {
 
             // Allocate the Input and Output Buffers..
             let input = vec![vec![0_f32; spec.buffer]; spec.spec.channels.count()];
-            let output = Resampler::output_buffer_allocate(&resampler, false);
+            let output = Resampler::output_buffer_allocate(&resampler);
 
             Some(CpalResampler {
                 resampler,

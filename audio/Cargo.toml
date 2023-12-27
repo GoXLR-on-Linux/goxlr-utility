@@ -39,4 +39,4 @@ libpulse-simple-binding = "2.28.1"
 # Under Other Operating Systems, we'll use CPAL
 [target.'cfg(not(target_os = "linux"))'.dependencies]
 cpal = "0.15.2"
-rubato = "0.14.1"
+rubato = "0.12.0"
