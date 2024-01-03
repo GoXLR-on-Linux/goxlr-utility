@@ -1844,7 +1844,7 @@ impl ProfileAdapter {
 
         return AudioFile {
             file: PathBuf::from(track.track()),
-            name: track.track,
+            name: track.track.clone(),
             gain,
             start_pct,
             stop_pct,
