@@ -152,7 +152,7 @@ impl AttachGoXLR for GoXLRUSB {
 
         let languages = handle.read_languages(timeout)?;
         let language = languages
-            .get(0)
+            .first()
             .ok_or_else(|| anyhow!("Not GoXLR?"))?
             .to_owned();
 

@@ -305,21 +305,27 @@ impl SampleStack {
     pub fn get_tracks_mut(&mut self) -> &mut Vec<Track> {
         &mut self.tracks
     }
-    pub fn get_track_by_index(&self, index: usize) -> Result<Track> {
+    pub fn get_track_by_index(&self, index: usize) -> Result<&Track> {
         if self.tracks.len() <= index {
             bail!("Track not Found");
         }
-        Ok(self.tracks[index].clone())
+        Ok(&self.tracks[index])
+    }
+    pub fn get_track_by_index_mut(&mut self, index: usize) -> Result<&mut Track> {
+        if self.tracks.len() <= index {
+            bail!("Track not Found");
+        }
+        Ok(&mut self.tracks[index])
     }
 
     pub fn get_track_count(&self) -> usize {
         self.tracks.len()
     }
-    pub fn get_first_track(&self) -> Track {
-        self.tracks[0].clone()
+    pub fn get_first_track(&self) -> &Track {
+        &self.tracks[0]
     }
 
-    pub fn get_next_track(&mut self) -> Option<Track> {
+    pub fn get_next_track(&mut self) -> Option<&Track> {
         if self.get_track_count() == 1 {
             return Some(self.get_first_track());
         }
@@ -340,11 +346,11 @@ impl SampleStack {
                     self.transient_seq_position = 0;
                 }
 
-                return Some(track.clone());
+                return Some(track);
             } else if order == &Random {
                 let track = self.tracks.choose(&mut rand::thread_rng());
                 if let Some(track) = track {
-                    return Some(track.clone());
+                    return Some(track);
                 }
             }
         }

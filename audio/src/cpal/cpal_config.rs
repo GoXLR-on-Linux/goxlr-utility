@@ -73,7 +73,7 @@ impl CpalConfiguration {
         for host_id in available_hosts {
             let host = cpal::host_from_id(host_id).unwrap();
             let devices = host.output_devices().unwrap();
-            for (_device_index, device) in devices.enumerate() {
+            for device in devices {
                 list.push(format!("{}*{}", host_id.name(), device.name().unwrap()));
             }
         }
@@ -87,7 +87,7 @@ impl CpalConfiguration {
         for host_id in available_hosts {
             let host = cpal::host_from_id(host_id).unwrap();
             let devices = host.input_devices().unwrap();
-            for (_device_index, device) in devices.enumerate() {
+            for device in devices {
                 list.push(format!("{}*{}", host_id.name(), device.name().unwrap()));
             }
         }

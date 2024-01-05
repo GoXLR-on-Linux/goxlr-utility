@@ -1825,7 +1825,7 @@ impl ProfileAdapter {
         bail!("Unable to find track");
     }
 
-    pub fn track_to_audio(track: Track) -> AudioFile {
+    pub fn track_to_audio(track: &Track) -> AudioFile {
         let mut gain = None;
         let mut start_pct = None;
         let mut stop_pct = None;
@@ -1844,7 +1844,7 @@ impl ProfileAdapter {
 
         return AudioFile {
             file: PathBuf::from(track.track()),
-            name: track.track,
+            name: track.track.clone(),
             gain,
             start_pct,
             stop_pct,
@@ -2066,12 +2066,12 @@ impl ProfileAdapter {
         index: usize,
         percent: f32,
     ) -> Result<()> {
-        let mut track = self
+        let track = self
             .profile
             .settings_mut()
             .sample_button_mut(standard_to_profile_sample_button(button))
             .get_stack_mut(standard_to_profile_sample_bank(bank))
-            .get_track_by_index(index)?;
+            .get_track_by_index_mut(index)?;
 
         track.set_start_position(percent)?;
         Ok(())
@@ -2084,12 +2084,12 @@ impl ProfileAdapter {
         index: usize,
         percent: f32,
     ) -> Result<()> {
-        let mut track = self
+        let track = self
             .profile
             .settings_mut()
             .sample_button_mut(standard_to_profile_sample_button(button))
             .get_stack_mut(standard_to_profile_sample_bank(bank))
-            .get_track_by_index(index)?;
+            .get_track_by_index_mut(index)?;
 
         track.set_end_position(percent)?;
         Ok(())
