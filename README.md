@@ -28,6 +28,8 @@ If you're an Arch user, updated versions of the utility are available via [AUR](
 using the `goxlr-utility` package.  
 If you're a MacOS user, check out the [MacOS Project](https://github.com/Adelenade/GoXlr-Macos) for a more integrated implementation.
 
+The GoXLR Utility is also available via `winget` on Windows, and will automatically update when new releases occur.
+
 <sup>1</sup> Windows requires the official device drivers provided by TC-Helicon. If you have the official app 
 installed you don't need to do anything, otherwise download the latest drivers from TC-Helicon's website [here](https://go.tc-helicon.com/GoXLR_driver_5.12).
 
