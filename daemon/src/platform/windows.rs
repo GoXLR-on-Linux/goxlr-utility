@@ -83,6 +83,7 @@ fn get_official_app_count() -> usize {
             .keys()
             .filter(|task| {
                 let task = task.to_owned().to_owned();
+                let task = String::from(task.split('\0').collect::<Vec<_>>()[0]);
                 task == *GOXLR_APP_NAME || task == *GOXLR_BETA_APP_NAME
             })
             .count()

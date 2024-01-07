@@ -116,11 +116,21 @@ async fn open_ui() -> Result<()> {
 #[cfg(windows)]
 fn is_daemon_running() -> bool {
     let binary = get_daemon_binary_name();
+    println!("Locating Daemon.. {}", binary);
+
     let count = unsafe {
         let tasks = tasklist::Tasklist::new();
-        tasks.filter(|task| task.get_pname() == binary).count()
+
+        tasks
+            .filter(|task| {
+                let task_name = task.get_pname();
+                let name = task_name.split('\0').collect::<Vec<_>>()[0];
+                name == binary
+            })
+            .count()
     };
 
+    println!("Found: {}", count);
     count > 0
 }
 
