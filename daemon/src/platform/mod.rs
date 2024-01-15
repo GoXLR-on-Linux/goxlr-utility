@@ -44,7 +44,7 @@ cfg_if! {
         }
 
         pub async fn spawn_runtime(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Result<()> {
-            tokio::spawn(linux::sleep::run(tx.clone()));
+            tokio::spawn(linux::sleep::run(tx.clone(), state.shutdown.clone()));
             unix::spawn_platform_runtime(state, tx).await
         }
 
