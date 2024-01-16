@@ -69,7 +69,7 @@ impl SettingsHandle {
         }
 
         if settings.log_level.is_none() {
-            settings.log_level = Some(LogLevel::Info);
+            settings.log_level = Some(LogLevel::Debug);
         }
 
         if settings.open_ui_on_launch.is_none() {
