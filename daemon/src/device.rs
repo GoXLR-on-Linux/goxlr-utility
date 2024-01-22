@@ -2578,11 +2578,12 @@ impl<'a> Device<'a> {
                         self.profile.set_mute_chat_button_blink(false);
                     }
                     MuteState::MutedToAll => {
-                        self.profile.set_mute_chat_button_on(false);
+                        self.profile.set_mute_chat_button_on(true);
                         self.profile.set_mute_chat_button_blink(true);
                     }
                 }
                 self.apply_cough_from_profile()?;
+                self.apply_effects(LinkedHashSet::from_iter([EffectKey::MicInputMute]))?;
                 self.apply_routing(BasicInputDevice::Microphone).await?;
                 self.update_button_states()?;
             }
