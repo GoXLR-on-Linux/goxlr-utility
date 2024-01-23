@@ -16,6 +16,10 @@ use windows::Win32::Foundation::{FALSE, HINSTANCE, HWND, LPARAM, LRESULT, POINT,
 use windows::Win32::Graphics::Gdi::HBRUSH;
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::System::Shutdown::{ShutdownBlockReasonCreate, ShutdownBlockReasonDestroy};
+use windows::Win32::UI::Shell::{
+    Shell_NotifyIconW, NIF_ICON, NIF_MESSAGE, NIF_TIP, NIM_ADD, NIM_DELETE, NOTIFYICONDATAW,
+    NOTIFY_ICON_DATA_FLAGS, NOTIFY_ICON_MESSAGE,
+};
 use windows::Win32::UI::WindowsAndMessaging::{
     AppendMenuW, CreateIcon, CreatePopupMenu, CreateWindowExW, DefWindowProcW, DestroyWindow,
     DispatchMessageW, GetMessageW, GetWindowLongPtrW, RegisterClassW, RegisterWindowMessageW,
@@ -201,16 +205,14 @@ impl GoXLRWindowProc {
         }
     }
 
-    fn create_tray(&self, hwnd: HWND) -> Option<windows::Win32::UI::Shell::NOTIFYICONDATAW> {
+    fn create_tray(&self, hwnd: HWND) -> Option<NOTIFYICONDATAW> {
         if let Ok(icon) = load_icon() {
             debug!("Generating Tray Item");
 
             let mut tray_item = get_notification_struct(hwnd);
             tray_item.szTip = tooltip("GoXLR Utility");
             tray_item.hIcon = icon;
-            tray_item.uFlags = windows::Win32::UI::Shell::NIF_MESSAGE
-                | windows::Win32::UI::Shell::NIF_TIP
-                | windows::Win32::UI::Shell::NIF_ICON;
+            tray_item.uFlags = NIF_MESSAGE | NIF_TIP | NIF_ICON;
             tray_item.uCallbackMessage = EVENT_MESSAGE;
 
             return Some(tray_item);
@@ -225,7 +227,7 @@ impl GoXLRWindowProc {
         }
 
         debug!("Calling Tray Spawner");
-        self.spawn_tray(hwnd, windows::Win32::UI::Shell::NIM_ADD);
+        self.spawn_tray(hwnd, NIM_ADD);
     }
 
     fn destroy_icon(&self, hwnd: HWND) {
@@ -233,17 +235,17 @@ impl GoXLRWindowProc {
             return;
         }
         debug!("Destroying Tray Icon");
-        self.spawn_tray(hwnd, windows::Win32::UI::Shell::NIM_DELETE);
+        self.spawn_tray(hwnd, NIM_DELETE);
     }
 
-    fn spawn_tray(&self, hwnd: HWND, action: windows::Win32::UI::Shell::NOTIFY_ICON_MESSAGE) {
+    fn spawn_tray(&self, hwnd: HWND, action: NOTIFY_ICON_MESSAGE) {
         debug!("Creating Tray Handler");
         if let Some(mut tray) = self.create_tray(hwnd) {
-            let tray = &mut tray as *mut windows::Win32::UI::Shell::NOTIFYICONDATAW;
+            let tray = &mut tray as *mut NOTIFYICONDATAW;
 
             unsafe {
                 debug!("Performing Tray Action");
-                if windows::Win32::UI::Shell::Shell_NotifyIconW(action, tray) == FALSE {
+                if Shell_NotifyIconW(action, tray) == FALSE {
                     error!("Unable to Load Tray Icon");
                 }
             }
@@ -454,11 +456,11 @@ fn tooltip(msg: &str) -> [u16; 128] {
     }
     array
 }
-fn get_notification_struct(hwnd: HWND) -> windows::Win32::UI::Shell::NOTIFYICONDATAW {
-    windows::Win32::UI::Shell::NOTIFYICONDATAW {
+fn get_notification_struct(hwnd: HWND) -> NOTIFYICONDATAW {
+    NOTIFYICONDATAW {
         hWnd: hwnd,
         uID: 1,
-        uFlags: windows::Win32::UI::Shell::NOTIFY_ICON_DATA_FLAGS(0),
+        uFlags: NOTIFY_ICON_DATA_FLAGS(0),
         uCallbackMessage: 0,
         ..Default::default()
     }
