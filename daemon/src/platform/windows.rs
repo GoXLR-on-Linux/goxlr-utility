@@ -4,18 +4,15 @@ use anyhow::{bail, Result};
 use lazy_static::lazy_static;
 use log::{debug, error};
 use mslnk::ShellLink;
-use std::ffi::OsStr;
-use std::iter::once;
-use std::os::windows::ffi::OsStrExt;
 use std::path::PathBuf;
-use std::ptr::null_mut;
 use std::{env, fs};
 use tasklist::tasklist;
 use tokio::signal::windows::{ctrl_break, ctrl_close, ctrl_logoff, ctrl_shutdown};
 use tokio::sync::mpsc;
 use tokio::time::Duration;
 use tokio::{select, time};
-use winapi::um::winuser;
+use windows::core::{w, HSTRING};
+use windows::Win32::UI::WindowsAndMessaging::{MessageBoxW, MB_ICONERROR, MB_OK};
 use winreg::enums::{HKEY_CLASSES_ROOT, HKEY_CURRENT_USER};
 use winreg::RegKey;
 use winrt_notification::{Sound, Toast};
@@ -55,25 +52,11 @@ pub fn perform_platform_preflight() -> Result<()> {
 }
 
 fn disaply_error(message: String) {
-    let title = "GoXLR Utility";
-    let message = &message;
-
-    let l_title = to_wide(title);
-    let l_msg: Vec<u16> = to_wide(message);
+    let message = HSTRING::from(message);
 
     unsafe {
-        winuser::MessageBoxW(
-            null_mut(),
-            l_msg.as_ptr(),
-            l_title.as_ptr(),
-            winuser::MB_OK | winuser::MB_ICONERROR,
-        );
+        MessageBoxW(None, &message, w!("GoXLR Utility"), MB_OK | MB_ICONERROR);
     }
-}
-
-pub fn to_wide(msg: &str) -> Vec<u16> {
-    let wide: Vec<u16> = OsStr::new(msg).encode_wide().chain(once(0)).collect();
-    wide
 }
 
 fn get_official_app_count() -> usize {

@@ -22,7 +22,7 @@ goxlr-scribbles = { path = "../scribbles" }
 log = "0.4.20"
 simplelog = "0.12.1"
 file-rotate = "0.7.5"
-log-panics = { version = "2.1.0", features = ["with-backtrace"]}
+log-panics = { version = "2.1.0", features = ["with-backtrace"] }
 
 tokio = { version = "1.35.0", features = ["full"] }
 tokio-serde = "0.8.0"
@@ -83,9 +83,18 @@ winrt-notification = "0.5.1"
 winreg = "0.52.0"
 mslnk = "0.1.8"
 dunce = "1.0.4"
-win-win = "0.1.1"
-winapi = { version = "0.3.9", features = ["winuser"] }
 windows-args = "0.2.0"
+
+# Experimental Package..
+windows = { version = "0.52.0", features = [
+    "Win32_Foundation",
+    "Win32_UI_Shell",
+    "Win32_UI_Shell_Common",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_Graphics_Gdi",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Shutdown"
+] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 

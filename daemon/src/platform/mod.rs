@@ -26,14 +26,6 @@ cfg_if! {
             }
             windows::remove_startup_link()
         }
-
-        use std::ffi::OsStr;
-        use std::iter::once;
-        use std::os::windows::ffi::OsStrExt;
-        pub fn to_wide(msg: &str) -> Vec<u16> {
-           let wide: Vec<u16> = OsStr::new(msg).encode_wide().chain(once(0)).collect();
-            wide
-        }
     } else if #[cfg(target_os = "linux")] {
         mod linux;
         mod unix;
