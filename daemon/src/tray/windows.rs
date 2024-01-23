@@ -15,6 +15,9 @@ use windows::core::w;
 use windows::Win32::Foundation::{FALSE, HINSTANCE, HWND, LPARAM, LRESULT, POINT, WPARAM};
 use windows::Win32::Graphics::Gdi::HBRUSH;
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
+use windows::Win32::System::RemoteDesktop::{
+    WTSRegisterSessionNotification, NOTIFY_FOR_THIS_SESSION,
+};
 use windows::Win32::System::Shutdown::{ShutdownBlockReasonCreate, ShutdownBlockReasonDestroy};
 use windows::Win32::UI::Shell::{
     Shell_NotifyIconW, NIF_ICON, NIF_MESSAGE, NIF_TIP, NIM_ADD, NIM_DELETE, NOTIFYICONDATAW,
@@ -160,6 +163,12 @@ fn create_hwnd(proc: Rc<Box<dyn WindowProc>>) -> Result<HWND> {
     // Attempt to Create the Tray Icon..
     if hwnd == HWND(0) {
         bail!(unsafe { GetLastError() });
+    }
+
+    unsafe {
+        if WTSRegisterSessionNotification(hwnd, NOTIFY_FOR_THIS_SESSION).is_err() {
+            warn!("Unable to Register Current Session Notifications");
+        }
     }
 
     Ok(hwnd)
@@ -433,6 +442,20 @@ impl WindowProc for GoXLRWindowProc {
 
                     // We're awake again, we don't need to care about the response here.
                     let _ = self.global_tx.try_send(EventTriggers::Wake(tx));
+                }
+            }
+            WM_WTSSESSION_CHANGE => {
+                let id = wparam.0 as *const u32 as u32;
+                match id {
+                    WTS_SESSION_LOCK => {
+                        debug!("Got Session Locked");
+                    }
+                    WTS_SESSION_UNLOCK => {
+                        debug!("Got Session Unlocked");
+                    }
+                    _ => {
+                        debug!("Received Unknown Session Event ID: {}", id)
+                    }
                 }
             }
             _ => {

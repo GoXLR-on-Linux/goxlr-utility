@@ -93,7 +93,8 @@ windows = { version = "0.52.0", features = [
     "Win32_UI_WindowsAndMessaging",
     "Win32_Graphics_Gdi",
     "Win32_System_LibraryLoader",
-    "Win32_System_Shutdown"
+    "Win32_System_Shutdown",
+    "Win32_System_RemoteDesktop"
 ] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
