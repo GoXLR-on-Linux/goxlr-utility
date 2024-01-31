@@ -6,7 +6,7 @@ use tokio::sync::mpsc;
 
 cfg_if! {
     if #[cfg(windows)] {
-        mod windows;
+        pub mod windows;
 
         pub fn perform_preflight() -> Result<()> {
             windows::perform_platform_preflight()
