@@ -29,7 +29,7 @@ pub fn perform_platform_preflight() -> Result<()> {
     if !locate_goxlr_driver() {
         let message = String::from("Unable to locate the GoXLR Driver, the utility cannot start.\r\n\r\nPlease reinstall the driver and try again.");
 
-        disaply_error(message);
+        display_error(message);
 
         error!("Driver not found, Failing Preflight.");
         bail!("The GoXLR Driver was not found, please reinstall before proceeding.");
@@ -42,7 +42,7 @@ pub fn perform_platform_preflight() -> Result<()> {
             "Official GoXLR Application Detected Running\r\n\r\nUnable to Start the Utility.",
         );
 
-        disaply_error(message);
+        display_error(message);
 
         error!("Detected Official GoXLR Application Running, Failing Preflight.");
         bail!("Official GoXLR App Running, Please terminate it before running the Daemon");
@@ -51,7 +51,7 @@ pub fn perform_platform_preflight() -> Result<()> {
     Ok(())
 }
 
-fn disaply_error(message: String) {
+pub(crate) fn display_error(message: String) {
     let message = HSTRING::from(message);
 
     unsafe {
