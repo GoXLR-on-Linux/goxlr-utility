@@ -282,6 +282,15 @@ pub async fn spawn_usb_handler(
                                 change_found = true;
                                 let _ = sender.send(Ok(()));
                             }
+                            DaemonCommand::SetActivatorPath(path) => {
+                                if let Some(path) = path {
+                                    settings.set_activate(Some(path.to_string_lossy().to_string())).await;
+                                    settings.save().await;
+                                } else {
+                                    settings.set_activate(None).await;
+                                    settings.save().await;
+                                }
+                            }
                         }
                     },
 
