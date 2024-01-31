@@ -26,12 +26,19 @@ pub struct DaemonStatus {
 pub struct DaemonConfig {
     pub http_settings: HttpSettings,
     pub daemon_version: String,
+    pub activation: Activation,
     pub autostart_enabled: bool,
     pub show_tray_icon: bool,
     pub tts_enabled: Option<bool>,
     pub allow_network_access: bool,
     pub log_level: LogLevel,
     pub open_ui_on_launch: bool,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct Activation {
+    pub active_path: Option<String>,
+    pub app_path: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

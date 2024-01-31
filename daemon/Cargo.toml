@@ -53,6 +53,7 @@ json-patch = "1.2.0"
 
 tempfile = "3.8.1"
 
+which = "6.0.0"
 
 ## HTTPd Server
 actix = "0.13.1"

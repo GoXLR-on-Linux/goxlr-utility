@@ -1,12 +1,12 @@
 use crate::device::Device;
 use crate::events::EventTriggers;
 use crate::files::extract_defaults;
-use crate::platform::{has_autostart, set_autostart};
+use crate::platform::{get_ui_app_path, has_autostart, set_autostart};
 use crate::{FileManager, PatchEvent, SettingsHandle, Shutdown, VERSION};
 use anyhow::{anyhow, Result};
 use goxlr_ipc::{
-    DaemonCommand, DaemonConfig, DaemonStatus, Files, GoXLRCommand, HardwareStatus, HttpSettings,
-    PathTypes, Paths, SampleFile, UsbProductInformation,
+    Activation, DaemonCommand, DaemonConfig, DaemonStatus, Files, GoXLRCommand, HardwareStatus,
+    HttpSettings, PathTypes, Paths, SampleFile, UsbProductInformation,
 };
 use goxlr_types::DeviceType;
 use goxlr_usb::device::base::GoXLRDevice;
@@ -15,7 +15,8 @@ use goxlr_usb::{PID_GOXLR_FULL, PID_GOXLR_MINI};
 use json_patch::diff;
 use log::{debug, error, info, warn};
 use std::collections::{BTreeMap, HashMap};
-use std::time::{Duration, Instant};
+use std::path::PathBuf;
+use std::time::{Duration, Instant, SystemTime};
 use tokio::sync::broadcast::Sender as BroadcastSender;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::sync::{mpsc, oneshot};
@@ -38,6 +39,12 @@ pub enum DeviceStateChange {
     Wake(oneshot::Sender<()>),
 }
 
+#[derive(Default)]
+struct AppPathCheck {
+    path: Option<PathBuf>,
+    check: Option<SystemTime>,
+}
+
 pub type DeviceSender = Sender<DeviceCommand>;
 pub type DeviceReceiver = Receiver<DeviceCommand>;
 
@@ -54,6 +61,8 @@ pub async fn spawn_usb_handler(
     http_settings: HttpSettings,
     mut file_manager: FileManager,
 ) {
+    let mut app_check = AppPathCheck::default();
+
     // We can probably either merge these, or struct them..
     let (disconnect_sender, mut disconnect_receiver) = mpsc::channel(16);
     let (event_sender, mut event_receiver) = mpsc::channel(16);
@@ -73,8 +82,14 @@ pub async fn spawn_usb_handler(
     let mut ignore_list = HashMap::new();
 
     let mut files = get_files(&mut file_manager, &settings).await;
-    let mut daemon_status =
-        get_daemon_status(&devices, &settings, &http_settings, files.clone()).await;
+    let mut daemon_status = get_daemon_status(
+        &devices,
+        &settings,
+        &http_settings,
+        files.clone(),
+        &mut app_check,
+    )
+    .await;
 
     let mut shutdown_triggered = false;
 
@@ -302,8 +317,14 @@ pub async fn spawn_usb_handler(
         }
 
         if change_found {
-            let new_status =
-                get_daemon_status(&devices, &settings, &http_settings, files.clone()).await;
+            let new_status = get_daemon_status(
+                &devices,
+                &settings,
+                &http_settings,
+                files.clone(),
+                &mut app_check,
+            )
+            .await;
 
             // Convert them to JSON..
             let json_old = serde_json::to_value(&daemon_status).unwrap();
@@ -327,7 +348,20 @@ async fn get_daemon_status(
     settings: &SettingsHandle,
     http_settings: &HttpSettings,
     files: Files,
+    app_check: &mut AppPathCheck,
 ) -> DaemonStatus {
+    // We need to limit this to every 30 seconds or so, simply because otherwise changing
+    // any setting will start a probe on the drive, which is undesirable.
+    if app_check.check.is_none() {
+        get_app_path(app_check);
+    }
+
+    if let Some(check) = app_check.check {
+        if SystemTime::now().duration_since(check).unwrap().as_secs() > 30 {
+            get_app_path(app_check);
+        }
+    }
+
     let mut status = DaemonStatus {
         config: DaemonConfig {
             http_settings: http_settings.clone(),
@@ -338,6 +372,10 @@ async fn get_daemon_status(
             allow_network_access: settings.get_allow_network_access().await,
             log_level: settings.get_log_level().await,
             open_ui_on_launch: settings.get_open_ui_on_launch().await,
+            activation: Activation {
+                active_path: settings.get_activate().await,
+                app_path: app_check.path.clone(),
+            },
         },
         paths: Paths {
             profile_directory: settings.get_profile_directory().await,
@@ -358,6 +396,17 @@ async fn get_daemon_status(
     }
 
     status
+}
+
+#[allow(const_item_mutation)]
+fn get_app_path(app_check: &mut AppPathCheck) {
+    debug!("Refreshing App Path..");
+    if let Some(path) = get_ui_app_path() {
+        app_check.path.replace(path);
+    } else {
+        app_check.path.take();
+    }
+    app_check.check.replace(SystemTime::now());
 }
 
 async fn get_sample_files(
