@@ -28,8 +28,8 @@ use windows::Win32::UI::WindowsAndMessaging::{
     DispatchMessageW, GetMessageW, GetWindowLongPtrW, RegisterClassW, RegisterWindowMessageW,
     SetMenuInfo, SetTimer, SetWindowLongPtrW, TranslateMessage, CREATESTRUCTW, CS_HREDRAW,
     CS_VREDRAW, CW_USEDEFAULT, GWLP_USERDATA, HICON, HMENU, MENUINFO, MF_POPUP, MF_SEPARATOR,
-    MF_STRING, MIM_APPLYTOSUBMENUS, MIM_STYLE, MNS_NOTIFYBYPOS, WINDOW_EX_STYLE, WM_CREATE,
-    WM_NCDESTROY, WM_USER, WNDCLASSW, WS_OVERLAPPEDWINDOW,
+    MF_STRING, MIM_APPLYTOSUBMENUS, MIM_STYLE, MNS_NOTIFYBYPOS, WINDOW_EX_STYLE, WINDOW_STYLE,
+    WM_CREATE, WM_NCDESTROY, WM_USER, WNDCLASSW,
 };
 
 use goxlr_ipc::PathTypes;
@@ -148,7 +148,7 @@ fn create_hwnd(proc: Rc<Box<dyn WindowProc>>) -> Result<HWND> {
             WINDOW_EX_STYLE(0),
             window_class.lpszClassName,
             lp_sz_window_name,
-            WS_OVERLAPPEDWINDOW,
+            WINDOW_STYLE(0),
             CW_USEDEFAULT,
             CW_USEDEFAULT,
             CW_USEDEFAULT,
@@ -341,7 +341,7 @@ impl WindowProc for GoXLRWindowProc {
                             // Create the menu at the coordinates of the mouse.
                             TrackPopupMenu(
                                 self.menu,
-                                TRACK_POPUP_MENU_FLAGS(0),
+                                TPM_BOTTOMALIGN | TPM_LEFTALIGN,
                                 point.x,
                                 point.y,
                                 0,
