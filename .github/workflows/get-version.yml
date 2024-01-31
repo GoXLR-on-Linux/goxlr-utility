@@ -9,7 +9,7 @@ on:
 jobs:
   get_version:
     name: "Get Version"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     outputs:
       version: ${{ steps.store_version.outputs.version }}
     steps:
