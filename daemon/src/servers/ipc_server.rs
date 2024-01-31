@@ -20,30 +20,56 @@ static NAMED_PIPE: &str = "@goxlr.socket";
 async fn ipc_tidy() -> Result<()> {
     // We only need a possible cleanup if we're using file based sockets..
     let socket_type = NameTypeSupport::query();
-    if socket_type == OnlyNamespaced {
-        return Ok(());
-    }
 
     // Check to see if the socket exists,
-    if !Path::new(SOCKET_PATH).exists() {
+    if (socket_type == OnlyPaths || socket_type == Both) && !Path::new(SOCKET_PATH).exists() {
         return Ok(());
     }
 
-    debug!("Existing Socket Present, testing..");
-    // Try sending a message to the socket, see if we get a reply..
-    let connection = LocalSocketStream::connect(SOCKET_PATH).await;
+    let name = match socket_type {
+        OnlyPaths | Both => {
+            debug!("Unix Socket file present, performing connection test..");
+            SOCKET_PATH
+        }
+        OnlyNamespaced => {
+            debug!("Checking for Presence of Windows Named Pipe..");
+            NAMED_PIPE
+        }
+    };
+
+    // Try connecting to the socket, see if we're accepted..
+    let connection = LocalSocketStream::connect(name).await;
     if connection.is_err() {
-        debug!("Unable to connect to the socket, removing..");
-        fs::remove_file(SOCKET_PATH)?;
+        match socket_type {
+            OnlyPaths | Both => {
+                debug!("Connection Failed. Socket File is stale, removing..");
+                fs::remove_file(SOCKET_PATH)?;
+            }
+            OnlyNamespaced => {
+                debug!("Named Pipe not running, continuing..");
+            }
+        }
         return Ok(());
     }
 
     debug!("Connected to socket, seeing if there's a Daemon on the other side..");
     let connection = connection.unwrap();
     let mut socket: Socket<DaemonResponse, DaemonRequest> = Socket::new(connection);
-    if socket.send(DaemonRequest::Ping).await.is_err() {
-        debug!("Socket Not Active, removing file..");
-        fs::remove_file(SOCKET_PATH)?;
+    if let Err(e) = socket.send(DaemonRequest::Ping).await {
+        match socket_type {
+            OnlyPaths | Both => {
+                // In some cases, a connection may be able to occur, even if there's nothing
+                // on the other end. So we'll simply nuke the socket.
+                debug!("Unable to send messages, removing socket..");
+                fs::remove_file(SOCKET_PATH)?;
+            }
+            OnlyNamespaced => {
+                // On Windows however, we don't have the luxury of nuking the named pipe externally,
+                // so if we can't send a message, it's GGs, we have to bail.
+                debug!("Our named pipe is broken, something is horribly wrong..");
+                bail!("Named Pipe Error: {}", e);
+            }
+        }
         return Ok(());
     }
 

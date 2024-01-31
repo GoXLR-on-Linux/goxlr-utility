@@ -68,9 +68,35 @@ pub struct PatchEvent {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let args: Cli = Cli::parse();
+    // If running the utility has an error, make sure log level is debug, and propagate the
+    // error up to the user on Windows.
+    if let Err(e) = run_utility().await {
+        let args: Cli = Cli::parse();
+        let settings = SettingsHandle::load(args.config).await?;
 
-    // Before we do absolutely anything, we need to load the config file, as it implies log settings
+        if settings.get_log_level().await != LogLevel::Debug {
+            info!("Setting Log Level to Debug for next run..");
+            settings.set_log_level(LogLevel::Debug).await;
+            settings.save().await;
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            use platform::windows::display_error;
+            let message = format!("Error Starting the GoXLR Utility:\r\n\r\n{}", e);
+            display_error(message);
+        }
+
+        bail!("{}", e);
+    }
+
+    Ok(())
+}
+
+async fn run_utility() -> Result<()> {
+    // We're just going to re-parse the args here, while we've technically done it above,
+    // they get moved into the settings loader, which just causes headaches :D
+    let args: Cli = Cli::parse();
     let settings = SettingsHandle::load(args.config).await?;
 
     // Configure and / or create the log path, and file name.
@@ -246,9 +272,9 @@ async fn main() -> Result<()> {
 
     // Spawn the IPC Socket..
     let ipc_socket = bind_socket().await;
-    if ipc_socket.is_err() {
-        error!("Error Starting Daemon: ");
-        bail!("{}", ipc_socket.err().unwrap());
+    if let Err(e) = ipc_socket {
+        error!("Error Binding IPC Socket: {}", e);
+        bail!("{}", e);
     }
 
     // Start the USB Device Handler
@@ -265,7 +291,7 @@ async fn main() -> Result<()> {
     ));
 
     // Launch the IPC Server..
-    let ipc_socket = ipc_socket.unwrap();
+    let ipc_socket = ipc_socket?;
     let communications_handle = tokio::spawn(spawn_ipc_server(
         ipc_socket,
         usb_tx.clone(),

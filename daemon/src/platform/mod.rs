@@ -6,7 +6,7 @@ use tokio::sync::mpsc;
 
 cfg_if! {
     if #[cfg(windows)] {
-        mod windows;
+        pub mod windows;
 
         pub fn perform_preflight() -> Result<()> {
             windows::perform_platform_preflight()
@@ -26,14 +26,6 @@ cfg_if! {
             }
             windows::remove_startup_link()
         }
-
-        use std::ffi::OsStr;
-        use std::iter::once;
-        use std::os::windows::ffi::OsStrExt;
-        pub fn to_wide(msg: &str) -> Vec<u16> {
-           let wide: Vec<u16> = OsStr::new(msg).encode_wide().chain(once(0)).collect();
-            wide
-        }
     } else if #[cfg(target_os = "linux")] {
         mod linux;
         mod unix;
@@ -44,7 +36,7 @@ cfg_if! {
         }
 
         pub async fn spawn_runtime(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Result<()> {
-            tokio::spawn(linux::sleep::run(tx.clone()));
+            tokio::spawn(linux::sleep::run(tx.clone(), state.shutdown.clone()));
             unix::spawn_platform_runtime(state, tx).await
         }
 
