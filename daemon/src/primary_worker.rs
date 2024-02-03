@@ -233,6 +233,7 @@ pub async fn spawn_usb_handler(
                             }
                             DaemonCommand::SetAutoStartEnabled(enabled) => {
                                 let _ = sender.send(set_autostart(enabled));
+                                change_found = true;
                             }
                             DaemonCommand::SetLogLevel(level) => {
                                 settings.set_log_level(level).await;
@@ -290,6 +291,7 @@ pub async fn spawn_usb_handler(
                                     settings.set_activate(None).await;
                                     settings.save().await;
                                 }
+                                change_found = true;
                             }
                         }
                     },
