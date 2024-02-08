@@ -292,6 +292,7 @@ pub async fn spawn_usb_handler(
                                     settings.save().await;
                                 }
                                 change_found = true;
+                                let _ = sender.send(Ok(()));
                             }
                         }
                     },
