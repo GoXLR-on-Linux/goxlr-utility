@@ -21,7 +21,7 @@ jobs:
     steps:
       # Download the previously generated artifacts..
       - name: Download Artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
 
       - name: List Downloaded Files..
         run: ls -lahR

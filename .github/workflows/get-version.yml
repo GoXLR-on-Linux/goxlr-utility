@@ -14,7 +14,7 @@ jobs:
       version: ${{ steps.store_version.outputs.version }}
     steps:
       - name: "Check out Repository"
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: "Install Rust"
         uses: dtolnay/rust-toolchain@stable

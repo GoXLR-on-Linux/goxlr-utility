@@ -12,13 +12,13 @@ jobs:
     steps:
       # Firstly Checkout our Repository..
       - name: "Check out GoXLR Utility"
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: goxlr-utility
 
       # Now Checkout the App Wrappers repository..
       - name: "Check out GoXLR Utility UI"
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: frostycoolslug/goxlr-utility-ui
           path: goxlr-utility-ui
@@ -27,7 +27,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: "Loading Cache"
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         continue-on-error: false
         with:
           path: |
@@ -78,7 +78,7 @@ jobs:
           arguments: "/DPRODUCT_VERSION=${{ needs.get_version.outputs.version }}"
 
       - name: "Upload Installer"
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: windows-artifact
           path: ./goxlr-utility/ci/Output/*.exe
@@ -89,7 +89,7 @@ jobs:
     needs: [get_version]
     steps:
       - name: "Check out Repository"
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: "Install Rust"
         uses: dtolnay/rust-toolchain@stable
@@ -100,7 +100,7 @@ jobs:
           sudo apt-get install libpulse0 libdbus-1-dev pkg-config libspeechd-dev
 
       - name: "Loading Cache"
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         continue-on-error: false
         with:
           path: |
@@ -120,13 +120,13 @@ jobs:
         shell: bash
 
       - name: "Upload DEB Artifact"
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: debian-artifact
           path: ./target/debian/*.deb
 
       - name: "Upload RPM Artifact"
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: rpm-artifact
           path: ./target/generate-rpm/*.rpm
