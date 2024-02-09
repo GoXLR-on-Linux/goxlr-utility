@@ -6,6 +6,7 @@ use cpal::Stream;
 use log::{debug, warn};
 use rb::{Producer, RbConsumer, RbInspector, RbProducer, SpscRb, RB};
 use rubato::{FftFixedIn, Resampler};
+use std::panic::catch_unwind;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
@@ -35,12 +36,20 @@ struct CpalResampler {
 
 impl OpenOutputStream for CpalPlayback {
     fn open(spec: AudioSpecification) -> Result<Box<dyn AudioOutput>> {
-        let device = CpalConfiguration::get_device(spec.device, false)?;
+        let device = match catch_unwind(|| CpalConfiguration::get_device(spec.device, false)) {
+            Ok(Ok(device)) => device,
+            Ok(Err(e)) => bail!("Error Fetching Device: {}", e),
+            Err(e) => bail!("PANIC attempting to Fetch Device! {:#?}", e),
+        };
 
         let config = if cfg!(target_os = "windows") {
             // Windows expects the file to be resampled to the output config, so we can't use the
             // input audio. Instead, we gotta resample.
-            device.default_output_config()?.config()
+            match catch_unwind(|| device.default_output_config()) {
+                Ok(Ok(output)) => output.config(),
+                Ok(Err(e)) => bail!("Unable to get Default Stream: {}", e),
+                Err(e) => bail!("PANIC Attempting to Default Stream: {:#?}", e),
+            }
         } else {
             // MacOS will resample inside CoreAudio, so we send the samples directly.
             cpal::StreamConfig {
