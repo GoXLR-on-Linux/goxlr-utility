@@ -107,7 +107,7 @@ impl OpenOutputStream for CpalPlayback {
                 spec.spec.rate as usize,
                 config.sample_rate.0 as usize,
                 spec.buffer,
-                1,
+                2,
                 spec.spec.channels.count(),
             )?;
 
