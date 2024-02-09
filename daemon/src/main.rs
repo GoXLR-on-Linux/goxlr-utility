@@ -218,13 +218,14 @@ async fn run_utility() -> Result<()> {
     info!("Performing Platform Preflight...");
     perform_preflight()?;
 
-    let mut bind_address = String::from("localhost");
-    if let Some(address) = args.http_bind_address {
+    let bind_address = if let Some(address) = args.http_bind_address {
         debug!("Command Line Override, binding to: {}", address);
-        bind_address = address;
+        address
     } else if settings.get_allow_network_access().await {
-        bind_address = String::from("0.0.0.0");
-    }
+        String::from("0.0.0.0")
+    } else {
+        String::from("localhost")
+    };
 
     debug!("HTTP Bind Address: {}", bind_address);
     let http_settings = HttpSettings {
