@@ -98,8 +98,8 @@ impl OpenOutputStream for CpalPlayback {
         // Do we need to resample?
         let resampler = if spec.spec.rate != config.sample_rate.0 {
             debug!(
-                "Creating Resampler from {} to {}",
-                spec.spec.rate, config.sample_rate.0
+                "Creating Resampler from {} to {} using Buffer: {}",
+                spec.spec.rate, config.sample_rate.0, spec.buffer
             );
 
             // Create a resampler..
@@ -107,7 +107,7 @@ impl OpenOutputStream for CpalPlayback {
                 spec.spec.rate as usize,
                 config.sample_rate.0 as usize,
                 spec.buffer,
-                2,
+                1,
                 spec.spec.channels.count(),
             )?;
 
@@ -116,7 +116,7 @@ impl OpenOutputStream for CpalPlayback {
 
             // Allocate the Input and Output Buffers..
             let input = vec![vec![0_f32; spec.buffer]; spec.spec.channels.count()];
-            let output = Resampler::output_buffer_allocate(&resampler);
+            let output = Resampler::output_buffer_allocate(&resampler, true);
 
             Some(CpalResampler {
                 resampler,
@@ -185,11 +185,14 @@ impl AudioOutput for CpalPlayback {
             resampler.input_buffer.clear();
 
             match result {
-                Ok(_) => {
+                Ok(resample_result) => {
                     // We need to re-interleave the results, channels * channel length
                     let channels = resampler.output.len();
 
-                    let length = channels * resampler.output[0].len();
+                    // Get the 'needed_len' from the resample result, it tells us how many samples
+                    // are coming out of the result, then multiply by channels.
+                    let length = resample_result.1 * channels;
+
                     if resampler.interleaved.len() != length {
                         resampler.interleaved.resize(length, 0_f32);
                     }
