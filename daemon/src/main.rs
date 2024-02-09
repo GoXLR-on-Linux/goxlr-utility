@@ -88,7 +88,7 @@ async fn main() -> Result<()> {
 
         #[cfg(target_os = "linux")]
         {
-            platform::linux::display_error(message);
+            platform::unix::display_error(message);
         }
 
         bail!("{}", e);
