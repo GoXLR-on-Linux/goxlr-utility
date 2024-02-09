@@ -38,7 +38,7 @@ pub struct DaemonConfig {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Activation {
     pub active_path: Option<String>,
-    pub app_path: Option<PathBuf>,
+    pub app_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

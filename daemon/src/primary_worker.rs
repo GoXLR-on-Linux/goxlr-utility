@@ -15,7 +15,6 @@ use goxlr_usb::{PID_GOXLR_FULL, PID_GOXLR_MINI};
 use json_patch::diff;
 use log::{debug, error, info, warn};
 use std::collections::{BTreeMap, HashMap};
-use std::path::PathBuf;
 use std::time::{Duration, Instant, SystemTime};
 use tokio::sync::broadcast::Sender as BroadcastSender;
 use tokio::sync::mpsc::{Receiver, Sender};
@@ -41,7 +40,7 @@ pub enum DeviceStateChange {
 
 #[derive(Default)]
 struct AppPathCheck {
-    path: Option<PathBuf>,
+    path: Option<String>,
     check: Option<SystemTime>,
 }
 
@@ -414,6 +413,9 @@ async fn get_daemon_status(
 fn get_app_path(app_check: &mut AppPathCheck) {
     debug!("Refreshing App Path..");
     if let Some(path) = get_ui_app_path() {
+        // We need to escape the value..
+        let wrap = if cfg!(windows) { "\"" } else { "'" };
+        let path = format!("{}{}{}", wrap, path.to_string_lossy(), wrap);
         app_check.path.replace(path);
     } else {
         app_check.path.take();
