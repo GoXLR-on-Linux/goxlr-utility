@@ -80,7 +80,10 @@ async fn main() -> Result<()> {
             settings.save().await;
         }
 
+        // This message is only used on Windows and Linux..
+        #[allow(unused)]
         let message = format!("Error Starting the GoXLR Utility:\r\n\r\n{}", e);
+
         #[cfg(target_os = "windows")]
         {
             platform::windows::display_error(message);

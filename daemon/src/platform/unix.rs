@@ -27,6 +27,8 @@ pub async fn spawn_platform_runtime(
     Ok(())
 }
 
+// This is only used on Linux, but is available on MacOS
+#[allow(unused)]
 pub(crate) fn display_error(message: String) {
     use std::process::Command;
     // We have two choices here, kdialog, or zenity. We'll try both.

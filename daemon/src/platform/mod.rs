@@ -31,7 +31,7 @@ cfg_if! {
         }
     } else if #[cfg(target_os = "linux")] {
         mod linux;
-        mod unix;
+        pub mod unix;
 
 
         pub fn perform_preflight() -> Result<()> {
