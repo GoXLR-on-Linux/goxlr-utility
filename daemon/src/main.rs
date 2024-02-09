@@ -3,7 +3,6 @@
 extern crate core;
 
 use std::fs::create_dir_all;
-use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
@@ -81,18 +80,15 @@ async fn main() -> Result<()> {
             settings.save().await;
         }
 
+        let message = format!("Error Starting the GoXLR Utility:\r\n\r\n{}", e);
         #[cfg(target_os = "windows")]
         {
-            use platform::windows::display_error;
-            let message = format!("Error Starting the GoXLR Utility:\r\n\r\n{}", e);
-            display_error(message);
+            platform::windows::display_error(message);
         }
 
         #[cfg(target_os = "linux")]
         {
-            // If this fails, so be it, but we'll do it anyway..
-            let message = format!("--text=Error Starting the GoXLR Utility\r\n\r\n{}", e);
-            let _ = Command::new("zenity").arg("--error").arg(message).output();
+            platform::linux::display_error(message);
         }
 
         bail!("{}", e);
