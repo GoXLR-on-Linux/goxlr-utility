@@ -1,4 +1,3 @@
-use std::env;
 cfg_if::cfg_if! {
     if #[cfg(not(windows))] {
         use anyhow::{Context, Error};
@@ -63,7 +62,7 @@ async fn main() -> Result<(), String> {
             // This should only ever execute, and be needed, once
             if tx_clone.capacity() > 0 {
                 // We don't actually care about the event received, just that we get one.
-                let _ = tx_clone.send(()).await;
+                let _ = tx_clone.blocking_send(());
             }
         });
 
@@ -171,12 +170,6 @@ fn find_devices() {
                 }
             }
         }
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        let args = env::args().collect();
-        if args.contains("--xpc") {}
     }
 }
 
