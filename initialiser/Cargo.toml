@@ -12,3 +12,8 @@ categories = ["hardware-support", "command-line-utilities"]
 rusb = "0.9.3"
 anyhow = "1.0.75"
 cfg-if = "1.0.0"
+tokio = { version = "1.0.0", features = ["rt", "macros", "sync"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+block = "0.1.6"
+xpc-connection-sys = { git="https://github.com/dfrankland/xpc-connection-rs.git" }
