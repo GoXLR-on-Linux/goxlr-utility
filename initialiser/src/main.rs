@@ -1,3 +1,4 @@
+use std::env;
 cfg_if::cfg_if! {
     if #[cfg(not(windows))] {
         use anyhow::{Context, Error};
@@ -21,7 +22,7 @@ async fn main() -> Result<(), String> {
     #[cfg(windows)]
     {
         println!("This application should not be run on Windows");
-        std::process::exit(-1);
+        return Err(String::from("Incompatible Platform"));
     }
 
     #[cfg(not(windows))]
@@ -62,7 +63,7 @@ async fn main() -> Result<(), String> {
             // This should only ever execute, and be needed, once
             if tx_clone.capacity() > 0 {
                 // We don't actually care about the event received, just that we get one.
-                let _ = tx_clone.send(());
+                let _ = tx_clone.send(()).await;
             }
         });
 
@@ -77,12 +78,12 @@ async fn main() -> Result<(), String> {
 
         // Wait for the handler to trigger, and send us a message that it has..
         if let Some(()) = rx.recv().await {
-            println!("Success!");
+            println!("Complete");
         }
     }
 
-    println!("Run Concluded");
-
+    // It's impossible for Windows to ever get here :D
+    #[allow(unreachable_code)]
     Ok(())
 }
 
@@ -170,6 +171,12 @@ fn find_devices() {
                 }
             }
         }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let args = env::args().collect();
+        if args.contains("--xpc") {}
     }
 }
 
