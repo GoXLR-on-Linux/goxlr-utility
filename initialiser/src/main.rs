@@ -71,6 +71,8 @@ async fn main() -> Result<(), String> {
             // Set up the handler with XPC..
             xpc_set_event_stream_handler(target.as_ptr(), std::ptr::null_mut(), handler.deref() as *const _ as *mut _);
         }
+
+        // Wait for the handler to trigger, and send us a message that it has..
         if let Some(()) = rx.recv().await {
             println!("Success!");
         }
