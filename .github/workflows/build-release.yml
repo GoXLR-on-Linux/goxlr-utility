@@ -133,7 +133,10 @@ jobs:
 
   build_macos:
     name: "Create MacOS Builds"
-    runs-on: macos-latest
+    strategy:
+      matrix:
+        targets: [x86_64-apple-darwin, aarch64-apple-darwin]
+    runs-on: macos-12
     needs: [get_version]
     steps:
       - name: "Checkout Repository"
@@ -151,18 +154,54 @@ jobs:
       - name: "Install Rust"
         uses: dtolnay/rust-toolchain@stable
 
-      - name: "Add rust x86_64 support"
-        run: rustup target add x86_64-apple-darwin
-
-      - name: "Add rust aarch64 support"
-        run: rustup target add aarch64-apple-darwin
+      - name: "Add rust target support"
+        run: rustup target add ${{ matrix.targets }}
 
       - name: "Build Package"
-        run: ./goxlr-utility/ci/build-packages-macos '${{ needs.get_version.outputs.version }}'
+        run: ./goxlr-utility/ci/build-macos '${{ matrix.targets }}' '${{ needs.get_version.outputs.version }}'
         shell: bash
 
       - name: "Upload MacOS zip Artifact"
         uses: actions/upload-artifact@v4
         with:
+          name: macos-artifact-${{ matrix.targets }}
+          path: ./macos_binaries_*.tgz
+
+  package_macos:
+    name: "Package MacOS Binaries"
+    runs-on: macos-12
+    needs: [get_version, build_macos]
+
+    steps:
+      - name: "Checkout Repository"
+        uses: actions/checkout@v4
+
+      - name: "Download x86_64 Artifact"
+        uses: actions/download-artifact@v4
+        with:
+          name: "macos-artifact-x86_64-apple-darwin"
+
+      - name: "Download aarch64 Artifact"
+        uses: actions/download-artifact@v4
+        with:
+          name: "macos-artifact-aarch64-apple-darwin"
+
+      - name: "Build LIPO Binaries"
+        run: ./ci/build-macos-package '${{ needs.get_version.outputs.version }}'
+        shell: bash
+
+      - name: "Upload MacOS final Artifact"
+        uses: actions/upload-artifact@v4
+        with:
           name: macos-artifact
           path: ./macos_binaries_*.tgz
+
+      - name: "Remove x64 artifact"
+        uses: geekyeggo/delete-artifact@v4
+        with:
+          name: macos-artifact-x86_64-apple-darwin
+
+      - name: "Remove aarch artifact"
+        uses: geekyeggo/delete-artifact@v4
+        with:
+          name: macos-artifact-aarch64-apple-darwin
