@@ -155,14 +155,14 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: "Add rust target support"
-        run: rustup target add ${{ matrix.target }}
+        run: rustup target add ${{ matrix.targets }}
 
       - name: "Build Package"
-        run: ./goxlr-utility/ci/build-packages-macos '${{ matrix.target }}' '${{ needs.get_version.outputs.version }}'
+        run: ./goxlr-utility/ci/build-packages-macos '${{ matrix.targets }}' '${{ needs.get_version.outputs.version }}'
         shell: bash
 
       - name: "Upload MacOS zip Artifact"
         uses: actions/upload-artifact@v4
         with:
-          name: macos-artifact-${{ matrix.target }}
+          name: macos-artifact-${{ matrix.targets }}
           path: ./macos_binaries_*.tgz
