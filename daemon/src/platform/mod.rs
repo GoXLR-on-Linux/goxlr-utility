@@ -55,6 +55,7 @@ cfg_if! {
         }
     } else if #[cfg(target_os = "macos")] {
         mod unix;
+        mod macos;
         use anyhow::bail;
 
         pub fn perform_preflight() -> Result<()> {
