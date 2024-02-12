@@ -158,7 +158,7 @@ jobs:
         run: rustup target add ${{ matrix.targets }}
 
       - name: "Build Package"
-        run: ./goxlr-utility/ci/build-packages-macos '${{ matrix.targets }}' '${{ needs.get_version.outputs.version }}'
+        run: ./goxlr-utility/ci/build-macos '${{ matrix.targets }}' '${{ needs.get_version.outputs.version }}'
         shell: bash
 
       - name: "Upload MacOS zip Artifact"
@@ -166,3 +166,34 @@ jobs:
         with:
           name: macos-artifact-${{ matrix.targets }}
           path: ./macos_binaries_*.tgz
+
+  package_macos:
+    name: "Package MacOS Binaries"
+    runs-on: macos-12
+    needs: [get_version, build_macos]
+
+    steps:
+      - name: "Checkout Repository"
+        uses: actions/checkout@v4
+
+      - name: "Download x86_64 Artifact"
+        uses: actions/download-artifact@v4
+        with:
+          name: "macos-artifact-x86_64-apple-darwin"
+
+      - name: "Download aarch64 Artifact"
+        uses: actions/download-artifact@v4
+        with:
+          name: "macos-artifact-aarch64-apple-darwin"
+
+      - name: "Build LIPO Binaries"
+        run: ./ci/build-macos-package '${{ needs.get_version.outputs.version }}'
+        shell: bash
+
+      - name: "Upload MacOS zip Artifact"
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-artifact
+          path: ./macos_binaries_*.tgz
+
+

@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# This grabs the binaries made in previous steps, and turns them into 'Universal' binaries which can be used on
+# either x64 or M1 hardware.
+VERSION=$1
+
+mkdir package
+mkdir package/x86_64
+mkdir package/aarch64
+
+tar -zxvf macos_binaries_*-x86_64-apple-darwin* -C package/x86_64
+tar -zxvf macos_binaries_*-aarch64-apple-darwin* -C package/aarch64
+
+cd package
+mkdir final
+
+lipo -create -output final/goxlr-client x86_64/goxlr-client aarch64/goxlr-client
+lipo -create -output final/goxlr-daemon x86_64/goxlr-client aarch64/goxlr-daemon
+lipo -create -output final/goxlr-launcher x86_64/goxlr-client aarch64/goxlr-launcher
+lipo -create -output final/goxlr-defaults x86_64/goxlr-client aarch64/goxlr-defaults
+lipo -create -output final/goxlr-initialiser x86_64/goxlr-client aarch64/goxlr-initialiser
+lipo -create -output final/goxlr-utility-ui x86_64/goxlr-client aarch64/goxlr-utility-ui
+
+# Package is back up..
+cd final
+tar zcvf ../../macos_binaries_$VERSION.tgz *
+
+# Maybe later build the .app?
