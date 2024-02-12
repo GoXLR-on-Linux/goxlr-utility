@@ -36,7 +36,6 @@ use goxlr_ipc::PathTypes;
 
 use crate::events::EventTriggers::Open;
 use crate::events::{DaemonState, EventTriggers};
-use crate::tray::get_icon_from_global;
 
 const EVENT_MESSAGE: u32 = WM_USER + 1;
 
@@ -487,6 +486,15 @@ fn get_notification_struct(hwnd: HWND) -> NOTIFYICONDATAW {
         uCallbackMessage: 0,
         ..Default::default()
     }
+}
+
+pub fn get_icon_from_global() -> (Vec<u8>, u32, u32) {
+    let image = image::load_from_memory(crate::ICON)
+        .expect("Failed to load Icon")
+        .into_rgba8();
+    let (width, height) = image.dimensions();
+    let rgba = image.into_raw();
+    (rgba, width, height)
 }
 
 unsafe extern "system" fn raw_window_proc(
