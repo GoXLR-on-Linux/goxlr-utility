@@ -30,12 +30,12 @@ strip goxlr-utility/target/x86_64-apple-darwin/release/goxlr-utility-ui
 mkdir combined/
 
 # Ok, now use lipo to create the 'Universal' binaries..
-lipo -create combined/goxlr-client goxlr-utility/target/aarch64-apple-darwin/release/goxlr-client goxlr-utility/target/x86_64-apple-darwin/release/goxlr-client
-lipo -create combined/goxlr-daemon goxlr-utility/target/aarch64-apple-darwin/release/goxlr-daemon goxlr-utility/target/x86_64-apple-darwin/release/goxlr-daemon
-lipo -create combined/goxlr-launcher goxlr-utility/target/aarch64-apple-darwin/release/goxlr-launcher goxlr-utility/target/x86_64-apple-darwin/release/goxlr-launcher
-lipo -create combined/goxlr-defaults goxlr-utility/target/aarch64-apple-darwin/release/goxlr-defaults goxlr-utility/target/x86_64-apple-darwin/release/goxlr-defaults
-lipo -create combined/goxlr-initialiser goxlr-utility/target/aarch64-apple-darwin/release/goxlr-initialiser tgoxlr-utility/arget/x86_64-apple-darwin/release/goxlr-initialiser
-lipo -create combined/goxlr-utility-ui goxlr-utility/target/aarch64-apple-darwin/release/goxlr-utility-ui goxlr-utility/target/x86_64-apple-darwin/release/goxlr-utility-ui
+lipo -create -output combined/goxlr-client goxlr-utility/target/aarch64-apple-darwin/release/goxlr-client goxlr-utility/target/x86_64-apple-darwin/release/goxlr-client
+lipo -create -output combined/goxlr-daemon goxlr-utility/target/aarch64-apple-darwin/release/goxlr-daemon goxlr-utility/target/x86_64-apple-darwin/release/goxlr-daemon
+lipo -create -output combined/goxlr-launcher goxlr-utility/target/aarch64-apple-darwin/release/goxlr-launcher goxlr-utility/target/x86_64-apple-darwin/release/goxlr-launcher
+lipo -create -output combined/goxlr-defaults goxlr-utility/target/aarch64-apple-darwin/release/goxlr-defaults goxlr-utility/target/x86_64-apple-darwin/release/goxlr-defaults
+lipo -create -output combined/goxlr-initialiser goxlr-utility/target/aarch64-apple-darwin/release/goxlr-initialiser tgoxlr-utility/arget/x86_64-apple-darwin/release/goxlr-initialiser
+lipo -create -output combined/goxlr-utility-ui goxlr-utility/target/aarch64-apple-darwin/release/goxlr-utility-ui goxlr-utility/target/x86_64-apple-darwin/release/goxlr-utility-ui
 
 # Bundle all the created binaries (we'll do more with this later!)
 tar zcvf macos_binaries_$1.tgz combined/*
