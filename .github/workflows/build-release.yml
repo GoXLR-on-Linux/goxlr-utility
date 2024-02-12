@@ -134,6 +134,7 @@ jobs:
   build_macos:
     name: "Create MacOS Builds"
     runs-on: macos-latest
+    needs: [get_version]
     steps:
       - name: "Checkout Repository"
         uses: actions/checkout@v4
@@ -147,7 +148,6 @@ jobs:
           repository: frostycoolslug/goxlr-utility-ui
           path: goxlr-utility-ui
 
-
       - name: "Install Rust"
         uses: dtolnay/rust-toolchain@stable
 
@@ -158,11 +158,11 @@ jobs:
         run: rustup target add aarch64-apple-darwin
 
       - name: "Build Package"
-        run: ./ci/build-packages-macos '${{ needs.get_version.outputs.version }}'
+        run: ./goxlr-utility/ci/build-packages-macos '${{ needs.get_version.outputs.version }}'
         shell: bash
 
       - name: "Upload MacOS zip Artifact"
         uses: actions/upload-artifact@v4
         with:
           name: macos-artifact
-          path: ./macos_binaries.tgz
+          path: ./goxlr-utility/macos_binaries.tgz

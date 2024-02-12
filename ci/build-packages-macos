@@ -3,6 +3,8 @@
 set -e
 D="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
+cd goxlr-utility
+
 # We need to build for both x86_64 and aarch64, so lets do that first..
 cargo build --manifest-path=goxlr-utility/Cargo.toml --release --all-features --target=x86_64-apple-darwin
 cargo build --manifest-path=goxlr-utility/Cargo.toml --release --all-features --target=aarch64-apple-darwin
