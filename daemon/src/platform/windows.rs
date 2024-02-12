@@ -51,7 +51,7 @@ pub fn perform_platform_preflight() -> Result<()> {
     Ok(())
 }
 
-pub(crate) fn display_error(message: String) {
+pub fn display_error(message: String) {
     let message = HSTRING::from(message);
 
     unsafe {

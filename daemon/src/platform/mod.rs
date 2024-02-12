@@ -9,7 +9,7 @@ use which::which;
 
 cfg_if! {
     if #[cfg(windows)] {
-        pub mod windows;
+        mod windows;
 
         pub fn perform_preflight() -> Result<()> {
             windows::perform_platform_preflight()
@@ -29,9 +29,13 @@ cfg_if! {
             }
             windows::remove_startup_link()
         }
+
+        pub fn display_error(message: String) {
+            windows::display_error(message);
+        }
     } else if #[cfg(target_os = "linux")] {
         mod linux;
-        pub mod unix;
+        mod unix;
 
 
         pub fn perform_preflight() -> Result<()> {
@@ -53,6 +57,10 @@ cfg_if! {
             }
             linux::autostart::remove_startup_link()
         }
+
+        pub fn display_error(message: String) {
+            linux::display_error(message);
+        }
     } else if #[cfg(target_os = "macos")] {
         mod unix;
         mod macos;
@@ -73,6 +81,10 @@ cfg_if! {
         pub fn set_autostart(_enabled: bool) -> Result<()> {
             bail!("Autostart Not Supported on this Platform");
         }
+
+         pub fn display_error(message: String) {
+            macos::display_error(message);
+         }
     } else {
         use anyhow::bail;
 
@@ -91,6 +103,8 @@ cfg_if! {
         pub fn set_autostart(_enabled: bool) -> Result<()> {
             bail!("Autostart Not Supported on this Platform");
         }
+
+        pub fn display_error(message: String) {}
     }
 }
 

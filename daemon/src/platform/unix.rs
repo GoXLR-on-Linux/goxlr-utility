@@ -26,26 +26,3 @@ pub async fn spawn_platform_runtime(
     debug!("Platform Runtime Ended");
     Ok(())
 }
-
-// This is only used on Linux, but is available on MacOS
-#[allow(unused)]
-pub(crate) fn display_error(message: String) {
-    use std::process::Command;
-    // We have two choices here, kdialog, or zenity. We'll try both.
-    if let Err(e) = Command::new("kdialog")
-        .arg("--title")
-        .arg("GoXLR Utility")
-        .arg("--error")
-        .arg(message.clone())
-        .output()
-    {
-        println!("Error Running kdialog: {}, falling back to zenity..", e);
-        let _ = Command::new("zenity")
-            .arg("--title")
-            .arg("GoXLR Utility")
-            .arg("--error")
-            .arg("--text")
-            .arg(message)
-            .output();
-    }
-}
