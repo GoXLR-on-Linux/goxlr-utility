@@ -135,7 +135,7 @@ jobs:
     name: "Create MacOS Builds"
     strategy:
       matrix:
-        os: [macos-13, macos-13-xlarge]
+        os: [macos-13, macos-14]
     runs-on: ${{ matrix.os }}
     needs: [get_version]
     steps:
