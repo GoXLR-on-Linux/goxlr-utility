@@ -16,4 +16,4 @@ tokio = { version = "1.0.0", features = ["rt", "rt-multi-thread", "macros", "syn
 
 [target.'cfg(target_os = "macos")'.dependencies]
 block = "0.1.6"
-xpc-connection-sys = "0.1.1"
+xpc-connection-sys = { git="https://github.com/dfrankland/xpc-connection-rs.git" }
