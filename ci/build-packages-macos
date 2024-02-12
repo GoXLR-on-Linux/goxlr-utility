@@ -3,39 +3,37 @@
 set -e
 D="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
-# We need to build for both x86_64 and aarch64, so lets do that first..
-cargo build --manifest-path=goxlr-utility/Cargo.toml --release --all-features --target=x86_64-apple-darwin
-cargo build --manifest-path=goxlr-utility/Cargo.toml --release --all-features --target=aarch64-apple-darwin
+
+cargo build --manifest-path=goxlr-utility/Cargo.toml --release --all-features
 
 # Now Build the UI
-cargo build --manifest-path=goxlr-utility-ui/src-tauri/Cargo.toml --target-dir=goxlr-utility/target --target=x86_64-apple-darwin --release
-cargo build --manifest-path=goxlr-utility-ui/src-tauri/Cargo.toml --target-dir=goxlr-utility/target --target=aarch64-apple-darwin --release
+cargo build --manifest-path=goxlr-utility-ui/src-tauri/Cargo.toml --target-dir=goxlr-utility/target --release
 
 # Strip all our binaries..
-strip goxlr-utility/target/aarch64-apple-darwin/release/goxlr-client
-strip goxlr-utility/target/aarch64-apple-darwin/release/goxlr-daemon
-strip goxlr-utility/target/aarch64-apple-darwin/release/goxlr-launcher
-strip goxlr-utility/target/aarch64-apple-darwin/release/goxlr-defaults
-strip goxlr-utility/target/aarch64-apple-darwin/release/goxlr-initialiser
-strip goxlr-utility/target/aarch64-apple-darwin/release/goxlr-utility-ui
+strip goxlr-utility/target/release/goxlr-client
+strip goxlr-utility/target/release/goxlr-daemon
+strip goxlr-utility/target/release/goxlr-launcher
+strip goxlr-utility/target/release/goxlr-defaults
+strip goxlr-utility/target/release/goxlr-initialiser
+strip goxlr-utility/target/release/goxlr-utility-ui
 
-strip goxlr-utility/target/x86_64-apple-darwin/release/goxlr-client
-strip goxlr-utility/target/x86_64-apple-darwin/release/goxlr-daemon
-strip goxlr-utility/target/x86_64-apple-darwin/release/goxlr-launcher
-strip goxlr-utility/target/x86_64-apple-darwin/release/goxlr-defaults
-strip goxlr-utility/target/x86_64-apple-darwin/release/goxlr-initialiser
-strip goxlr-utility/target/x86_64-apple-darwin/release/goxlr-utility-ui
 
 # Next, we need to make a folder for the 'final' binaries..
 mkdir combined/
+cp goxlr-utility/target/release/goxlr-client combined/
+cp goxlr-utility/target/release/goxlr-daemon combined/
+cp goxlr-utility/target/release/goxlr-launcher combined/
+cp goxlr-utility/target/release/goxlr-initialiser combined/
+cp goxlr-utility/target/release/goxlr-utility-ui combined/
+
 
 # Ok, now use lipo to create the 'Universal' binaries..
-lipo -create -output combined/goxlr-client goxlr-utility/target/aarch64-apple-darwin/release/goxlr-client goxlr-utility/target/x86_64-apple-darwin/release/goxlr-client
-lipo -create -output combined/goxlr-daemon goxlr-utility/target/aarch64-apple-darwin/release/goxlr-daemon goxlr-utility/target/x86_64-apple-darwin/release/goxlr-daemon
-lipo -create -output combined/goxlr-launcher goxlr-utility/target/aarch64-apple-darwin/release/goxlr-launcher goxlr-utility/target/x86_64-apple-darwin/release/goxlr-launcher
-lipo -create -output combined/goxlr-defaults goxlr-utility/target/aarch64-apple-darwin/release/goxlr-defaults goxlr-utility/target/x86_64-apple-darwin/release/goxlr-defaults
-lipo -create -output combined/goxlr-initialiser goxlr-utility/target/aarch64-apple-darwin/release/goxlr-initialiser goxlr-utility/target/x86_64-apple-darwin/release/goxlr-initialiser
-lipo -create -output combined/goxlr-utility-ui goxlr-utility/target/aarch64-apple-darwin/release/goxlr-utility-ui goxlr-utility/target/x86_64-apple-darwin/release/goxlr-utility-ui
+#lipo -create -output combined/goxlr-client goxlr-utility/target/aarch64-apple-darwin/release/goxlr-client goxlr-utility/target/x86_64-apple-darwin/release/goxlr-client
+#lipo -create -output combined/goxlr-daemon goxlr-utility/target/aarch64-apple-darwin/release/goxlr-daemon goxlr-utility/target/x86_64-apple-darwin/release/goxlr-daemon
+#lipo -create -output combined/goxlr-launcher goxlr-utility/target/aarch64-apple-darwin/release/goxlr-launcher goxlr-utility/target/x86_64-apple-darwin/release/goxlr-launcher
+#lipo -create -output combined/goxlr-defaults goxlr-utility/target/aarch64-apple-darwin/release/goxlr-defaults goxlr-utility/target/x86_64-apple-darwin/release/goxlr-defaults
+#lipo -create -output combined/goxlr-initialiser goxlr-utility/target/aarch64-apple-darwin/release/goxlr-initialiser goxlr-utility/target/x86_64-apple-darwin/release/goxlr-initialiser
+#lipo -create -output combined/goxlr-utility-ui goxlr-utility/target/aarch64-apple-darwin/release/goxlr-utility-ui goxlr-utility/target/x86_64-apple-darwin/release/goxlr-utility-ui
 
 # Bundle all the created binaries (we'll do more with this later!)
-tar zcvf macos_binaries_$1.tgz combined/*
+tar zcvf macos_binaries_$1-$2.tgz combined/*

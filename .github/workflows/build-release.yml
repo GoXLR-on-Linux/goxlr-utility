@@ -133,7 +133,10 @@ jobs:
 
   build_macos:
     name: "Create MacOS Builds"
-    runs-on: macos-latest
+    strategy:
+      matrix:
+        os: [macos-13, macos-13-xlarge]
+    runs-on: ${{ matrix.os }}
     needs: [get_version]
     steps:
       - name: "Checkout Repository"
@@ -158,7 +161,7 @@ jobs:
         run: rustup target add aarch64-apple-darwin
 
       - name: "Build Package"
-        run: ./goxlr-utility/ci/build-packages-macos '${{ needs.get_version.outputs.version }}'
+        run: ./goxlr-utility/ci/build-packages-macos '${{ needs.get_version.outputs.version }}' '${{ matrix.os }}'
         shell: bash
 
       - name: "Upload MacOS zip Artifact"
