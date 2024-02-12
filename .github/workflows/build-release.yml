@@ -165,4 +165,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: macos-artifact
-          path: ./goxlr-utility/macos_binaries.tgz
+          path: ./combined/*.tgz
