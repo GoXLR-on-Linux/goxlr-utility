@@ -83,7 +83,7 @@ jobs:
           name: windows-artifact
           path: ./goxlr-utility/ci/Output/*.exe
 
-  build:
+  build_linux:
     name: "Create Linux Builds"
     runs-on: ubuntu-22.04
     needs: [get_version]
@@ -130,3 +130,39 @@ jobs:
         with:
           name: rpm-artifact
           path: ./target/generate-rpm/*.rpm
+
+  build_macos:
+    name: "Create MacOS Builds"
+    runs-on: macos-latest
+    steps:
+      - name: "Checkout Repository"
+        uses: actions/checkout@v4
+        with:
+          path: goxlr-utility
+
+      # Now Checkout the App Wrappers repository..
+      - name: "Check out GoXLR Utility UI"
+        uses: actions/checkout@v4
+        with:
+          repository: frostycoolslug/goxlr-utility-ui
+          path: goxlr-utility-ui
+
+
+      - name: "Install Rust"
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: "Add rust x86_64 support"
+        run: rustup target add x86_64-apple-darwin
+
+      - name: "Add rust aarch64 support"
+        run: rustup target add aarch64-apple-darwin
+
+      - name: "Build Package"
+        run: ./ci/build-packages-macos '${{ needs.get_version.outputs.version }}'
+        shell: bash
+
+      - name: "Upload MacOS zip Artifact"
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-artifact
+          path: ./macos_binaries.tgz
