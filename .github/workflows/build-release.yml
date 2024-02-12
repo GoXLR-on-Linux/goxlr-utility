@@ -190,10 +190,18 @@ jobs:
         run: ./ci/build-macos-package '${{ needs.get_version.outputs.version }}'
         shell: bash
 
-      - name: "Upload MacOS zip Artifact"
+      - name: "Upload MacOS final Artifact"
         uses: actions/upload-artifact@v4
         with:
           name: macos-artifact
           path: ./macos_binaries_*.tgz
 
+      - name: "Remove x64 artifact"
+        uses: geekyeggo/delete-artifact@v4
+        with:
+          name: macos-artifact-x86_64-apple-darwin
 
+      - name: "Remove aarch artifact"
+        uses: geekyeggo/delete-artifact@v4
+        with:
+          name: macos-artifact-aarch64-apple-darwin
