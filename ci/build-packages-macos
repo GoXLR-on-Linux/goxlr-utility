@@ -17,7 +17,7 @@ strip goxlr-utility/target/aarch64-apple-darwin/release/goxlr-daemon
 strip goxlr-utility/target/aarch64-apple-darwin/release/goxlr-launcher
 strip goxlr-utility/target/aarch64-apple-darwin/release/goxlr-defaults
 strip goxlr-utility/target/aarch64-apple-darwin/release/goxlr-initialiser
-#strip goxlr-utility/target/aarch64-apple-darwin/release/goxlr-utility-ui
+strip goxlr-utility/target/aarch64-apple-darwin/release/goxlr-utility-ui
 
 strip goxlr-utility/target/x86_64-apple-darwin/release/goxlr-client
 strip goxlr-utility/target/x86_64-apple-darwin/release/goxlr-daemon
