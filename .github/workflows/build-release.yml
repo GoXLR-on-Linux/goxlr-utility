@@ -135,8 +135,8 @@ jobs:
     name: "Create MacOS Builds"
     strategy:
       matrix:
-        os: [macos-13, macos-14]
-    runs-on: ${{ matrix.os }}
+        targets: [x86_64-apple-darwin, aarch64-apple-darwin]
+    runs-on: macos-12
     needs: [get_version]
     steps:
       - name: "Checkout Repository"
@@ -154,18 +154,15 @@ jobs:
       - name: "Install Rust"
         uses: dtolnay/rust-toolchain@stable
 
-      - name: "Add rust x86_64 support"
-        run: rustup target add x86_64-apple-darwin
-
-      - name: "Add rust aarch64 support"
-        run: rustup target add aarch64-apple-darwin
+      - name: "Add rust target support"
+        run: rustup target add ${{ matrix.target }}
 
       - name: "Build Package"
-        run: ./goxlr-utility/ci/build-packages-macos '${{ needs.get_version.outputs.version }}' '${{ matrix.os }}'
+        run: ./goxlr-utility/ci/build-packages-macos '${{ matrix.target }}' '${{ needs.get_version.outputs.version }}'
         shell: bash
 
       - name: "Upload MacOS zip Artifact"
         uses: actions/upload-artifact@v4
         with:
-          name: macos-artifact
+          name: macos-artifact-${{ matrix.target }}
           path: ./macos_binaries_*.tgz

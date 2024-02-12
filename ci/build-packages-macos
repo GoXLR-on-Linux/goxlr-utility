@@ -1,30 +1,38 @@
 #!/bin/bash
 
+SYSROOT=/build/root
+
+export PKG_CONFIG_DIR=
+export PKG_CONFIG_LIBDIR=${SYSROOT}/usr/lib/pkgconfig:${SYSROOT}/usr/share/pkgconfig
+export PKG_CONFIG_SYSROOT_DIR=${SYSROOT}
+export PKG_CONFIG_ALLOW_CROSS=1
+
 set -e
 D="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
+TARGET=$1
+VERSION=$2
 
-cargo build --manifest-path=goxlr-utility/Cargo.toml --release --all-features
-
-# Now Build the UI
-cargo build --manifest-path=goxlr-utility-ui/src-tauri/Cargo.toml --target-dir=goxlr-utility/target --release
+# Build the Utility and the UI..
+cargo build --manifest-path=goxlr-utility/Cargo.toml --release --all-features --target=$TARGET
+cargo build --manifest-path=goxlr-utility-ui/src-tauri/Cargo.toml --target-dir=goxlr-utility/target --target=$TARGET --release
 
 # Strip all our binaries..
-strip goxlr-utility/target/release/goxlr-client
-strip goxlr-utility/target/release/goxlr-daemon
-strip goxlr-utility/target/release/goxlr-launcher
-strip goxlr-utility/target/release/goxlr-defaults
-strip goxlr-utility/target/release/goxlr-initialiser
-strip goxlr-utility/target/release/goxlr-utility-ui
+strip goxlr-utility/target/$TARGET/release/goxlr-client
+strip goxlr-utility/target/$TARGET/release/goxlr-daemon
+strip goxlr-utility/target/$TARGET/release/goxlr-launcher
+strip goxlr-utility/target/$TARGET/release/goxlr-defaults
+strip goxlr-utility/target/$TARGET/release/goxlr-initialiser
+strip goxlr-utility/target/$TARGET/release/goxlr-utility-ui
 
 
 # Next, we need to make a folder for the 'final' binaries..
 mkdir combined/
-cp goxlr-utility/target/release/goxlr-client combined/
-cp goxlr-utility/target/release/goxlr-daemon combined/
-cp goxlr-utility/target/release/goxlr-launcher combined/
-cp goxlr-utility/target/release/goxlr-initialiser combined/
-cp goxlr-utility/target/release/goxlr-utility-ui combined/
+cp goxlr-utility/target/$TARGET/release/goxlr-client combined/
+cp goxlr-utility/target/$TARGET/release/goxlr-daemon combined/
+cp goxlr-utility/target/$TARGET/release/goxlr-launcher combined/
+cp goxlr-utility/target/$TARGET/release/goxlr-initialiser combined/
+cp goxlr-utility/target/$TARGET/release/goxlr-utility-ui combined/
 
 
 # Ok, now use lipo to create the 'Universal' binaries..
@@ -36,4 +44,4 @@ cp goxlr-utility/target/release/goxlr-utility-ui combined/
 #lipo -create -output combined/goxlr-utility-ui goxlr-utility/target/aarch64-apple-darwin/release/goxlr-utility-ui goxlr-utility/target/x86_64-apple-darwin/release/goxlr-utility-ui
 
 # Bundle all the created binaries (we'll do more with this later!)
-tar zcvf macos_binaries_$1-$2.tgz combined/*
+tar zcvf macos_binaries_$VERSION-$TARGET.tgz combined/*
