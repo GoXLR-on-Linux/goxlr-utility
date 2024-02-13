@@ -30,7 +30,7 @@ mkdir 'GoXLR Utility.app'
 mkdir -p 'GoXLR Utility.app/Contents/MacOS'
 mkdir -p 'GoXLR Utility.app/Contents/Resources'
 cp final/* 'GoXLR Utility.app/Contents/MacOS'
-cp ../ci/macos/icons.icns 'GoXLR Utility.app/Contents/Resources'
+cp ../ci/macos/icon.icns 'GoXLR Utility.app/Contents/Resources'
 
 # Generate the plist for the App..
 sed -e "s/{{VERSION}}/$VERSION/g" ../ci/macos/Info.plist.template | sed -e "s/{{DATE}}/$DATE/g" > 'GoXLR Utility.app/Contents/Info.plist'
