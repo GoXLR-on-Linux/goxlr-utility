@@ -1,0 +1,7 @@
+#!/bin/bash
+
+VERSION=$1
+DATE=$(date +"%Y%m%d.%H%M%S")
+
+# Ok, simple enough, we're going to use sed to pipe this into valid data :D
+sed -e "s/{{VERSION}}/$VERSION/g" ./Info.plist.template | sed -e "s/{{DATE}}/$DATE/g"

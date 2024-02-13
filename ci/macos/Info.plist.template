@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+    <dict>
+        <key>CFBundleDevelopmentRegion</key>
+        <string>English</string>
+        <key>CFBundleDisplayName</key>
+        <string>GoXLR Utility</string>
+        <key>CFBundleExecutable</key>
+        <string>goxlr-launcher</string>
+        <key>CFBundleIconFile</key>
+        <string>icon.icns</string>
+        <key>CFBundleIdentifier</key>
+        <string>com.github.goxlr-on-linux.goxlr-utility</string>
+        <key>CFBundleInfoDictionaryVersion</key>
+        <string>6.0</string>
+        <key>CFBundleName</key>
+        <string>goxlr-utility</string>
+        <key>CFBundlePackageType</key>
+        <string>APPL</string>
+        <key>CFBundleShortVersionString</key>
+        <string>{{VERSION}}</string>
+        <key>CFBundleVersion</key>
+        <string>{{DATE}}</string>
+        <key>CSResourcesFileMapped</key>
+        <true/>
+        <key>LSMinimumSystemVersion</key>
+        <string>10.13</string>
+        <key>LSRequiresCarbon</key>
+        <true/>
+        <key>NSHighResolutionCapable</key>
+        <true/>
+    </dict>
+</plist>
