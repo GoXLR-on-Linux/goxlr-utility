@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+    <dict>
+        <key>KeepAlive</key>
+        <false/>
+
+        <key>Label</key>
+        <string>com.github.goxlr-on-linux.goxlr-utility.initialiser.full</string>
+
+        <!-- Launch the Initialiser with XPC Settings -->
+        <key>ProgramArguments</key>
+        <array>
+            <string>/Library/Application Support/com.github.goxlr-on-linux.goxlr-utility/goxlr-initialiser</string>
+            <string>--xpc</string>
+        </array>
+
+        <key>LaunchEvents</key>
+        <dict>
+            <key>com.apple.iokit.matching</key>
+            <dict>
+                <key>com.apple.device-attach</key>
+                <dict>
+                    <!-- GoXLR Full: VID: 0x1220 PID: 0x8fe0 -->
+                    <key>idVendor</key>
+                    <integer>4640</integer>
+
+                    <key>idProduct</key>
+                    <integer>36832</integer>
+
+                    <!-- Specify it as a USB Device -->
+                    <key>IOProviderClass</key>
+                    <string>IOUSBDevice</string>
+
+                    <key>IOMatchStream</key>
+                    <true/>
+
+                    <key>IOMatchLaunchStream</key>
+                    <true/>
+                </dict>
+            </dict>
+        </dict>
+    </dict>
+</plist>
