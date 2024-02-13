@@ -60,15 +60,20 @@ impl MuteButton {
                     continue;
                 }
 
+                let value = if attr.value == "Mute To Chat Mic" {
+                    String::from("Mute to Voice Chat")
+                } else {
+                    attr.value.clone()
+                };
                 for function in MuteFunction::iter() {
-                    if function.get_str("Value").unwrap() == attr.value {
+                    if function.get_str("Value").unwrap() == value {
                         self.mute_function = function;
                         found = true;
                         break;
                     }
                 }
                 if !found {
-                    println!("Couldn't find Mute Function: {}", attr.value);
+                    println!("Couldn't find Mute Function: {}", value);
                 }
                 continue;
             }
@@ -106,10 +111,12 @@ impl MuteButton {
         let mut elem = BytesStart::new(element_name.as_str());
 
         let mut attributes: HashMap<String, String> = HashMap::default();
-        attributes.insert(
-            format!("{element_name}Function"),
-            self.mute_function.get_str("Value").unwrap().to_string(),
-        );
+        let mute_value = if self.mute_function == MuteFunction::ToVoiceChat {
+            String::from("Mute to Chat Mic")
+        } else {
+            self.mute_function.get_str("Value").unwrap().to_string()
+        };
+        attributes.insert(format!("{element_name}Function"), mute_value);
         attributes.insert(
             format!("{element_name}prevLevel"),
             format!("{}", self.previous_volume),
