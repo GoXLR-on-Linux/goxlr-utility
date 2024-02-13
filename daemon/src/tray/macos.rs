@@ -2,6 +2,8 @@ use std::ffi::c_void;
 use std::mem;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::thread::sleep;
+use std::time::Duration;
 
 use cocoa::appkit::{
     NSApplication, NSApplicationActivateIgnoringOtherApps, NSApplicationActivationPolicyAccessory,
@@ -20,6 +22,7 @@ use objc::{class, msg_send, sel, sel_impl};
 use strum::{Display, EnumIter, IntoEnumIterator};
 use tokio::select;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio::sync::oneshot;
 
 use goxlr_ipc::PathTypes;
 
@@ -38,20 +41,37 @@ pub fn handle_tray(state: DaemonState, tx: Sender<EventTriggers>) -> anyhow::Res
     let show_tray = state.show_tray.clone();
 
     let (tray_tx, tray_rx) = channel(10);
-    tokio::spawn(run_tray(tray_rx, state, tx));
+    tokio::spawn(run_tray(RunParams {
+        tray_receiver: tray_rx,
+        event_sender: tx.clone(),
+        state: state.clone(),
+    }));
 
     debug!("Starting MacOS Tray Runtime..");
-    App::create(tray_tx, show_tray);
+    App::create(AppParams {
+        sender: tray_tx,
+        show_tray,
+        state,
+        global_tx: tx.clone(),
+    });
     debug!("MacOS Tray Runtime Stopped..");
 
     Ok(())
 }
 
-async fn run_tray(mut rx: Receiver<TrayOption>, mut state: DaemonState, tx: Sender<EventTriggers>) {
+struct RunParams {
+    tray_receiver: Receiver<TrayOption>,
+    event_sender: Sender<EventTriggers>,
+    state: DaemonState,
+}
+
+async fn run_tray(mut p: RunParams) {
     loop {
         select! {
-            Some(tray) = rx.recv() => {
+            Some(tray) = p.tray_receiver.recv() => {
                 debug!("Received Tray Message! {:?}", tray);
+
+                let tx = p.event_sender.clone();
                 let _ = match tray {
                     Configure => tx.try_send(EventTriggers::Activate),
                     OpenPathProfiles => tx.try_send(Open(PathTypes::Profiles)),
@@ -63,7 +83,7 @@ async fn run_tray(mut rx: Receiver<TrayOption>, mut state: DaemonState, tx: Send
                     Quit => tx.try_send(EventTriggers::Stop)
                 };
             },
-            () = state.shutdown.recv() => {
+            () = p.state.shutdown.recv() => {
                debug!("Shutting Down, Attempting to kill the NSApp..");
                 unsafe {
                     stop_ns_application();
@@ -112,13 +132,19 @@ enum TrayOption {
 
 struct App {}
 
+struct AppParams {
+    sender: Sender<TrayOption>,
+    show_tray: Arc<AtomicBool>,
+    state: DaemonState,
+    global_tx: Sender<EventTriggers>,
+}
+
 impl App {
-    pub fn create(sender: Sender<TrayOption>, show_tray: Arc<AtomicBool>) {
+    pub fn create(p: AppParams) {
         debug!("Preparing Tray..");
 
         // Step 1, create the initial release pool, and base menu..
         unsafe { NSAutoreleasePool::new(nil) };
-        let menu = unsafe { NSMenu::new(nil).autorelease() };
 
         // Configure the Application..
         unsafe {
@@ -135,7 +161,7 @@ impl App {
             app
         };
 
-        let status = if show_tray.load(Ordering::Relaxed) {
+        let status = if p.show_tray.load(Ordering::Relaxed) {
             debug!("Spawning Tray..");
             unsafe {
                 let status = NSStatusBar::systemStatusBar(nil)
@@ -159,61 +185,108 @@ impl App {
                 let () = msg_send![button, setImagePosition: 2];
                 let () = msg_send![nsimage, setTemplate: false];
 
-                status
+                Some(status)
             }
         } else {
-            nil
+            None
         };
 
         // Ok, lets add some items to the tray :)
-        debug!("Building Menu..");
-        let sub_title = unsafe { NSString::alloc(nil).init_str("Open Path") };
+        if let Some(status) = status {
+            debug!("Building Menu..");
 
-        // Create the Main Tray Labels..
-        let configure = App::get_label("Configure GoXLR", Configure, sender.clone());
-        let quit = App::get_label("Quit", Quit, sender.clone());
+            let menu = unsafe { NSMenu::new(nil).autorelease() };
+            let sub_title = unsafe { NSString::alloc(nil).init_str("Open Path") };
 
-        // Create SubMenu Items..
-        let profiles = App::get_label("Profiles", OpenPathProfiles, sender.clone());
-        let mic_profiles = App::get_label("Mic Profiles", OpenPathMicProfiles, sender.clone());
-        let presets = App::get_label("Presets", OpenPathPresets, sender.clone());
-        let samples = App::get_label("Samples", OpenPathSamples, sender.clone());
-        let icons = App::get_label("Icons", OpenPathIcons, sender.clone());
-        let logs = App::get_label("Logs", OpenPathLogs, sender.clone());
+            // Create the Main Tray Labels..
+            let configure = App::get_label("Configure GoXLR", Configure, p.sender.clone());
+            let quit = App::get_label("Quit", Quit, p.sender.clone());
 
-        debug!("Generating Sub Menu...");
-        let sub_menu = unsafe {
-            let menu_item = NSMenuItem::alloc(nil);
-            let menu = NSMenu::new(nil).autorelease();
+            // Create SubMenu Items..
+            let profiles = App::get_label("Profiles", OpenPathProfiles, p.sender.clone());
+            let mic_profiles =
+                App::get_label("Mic Profiles", OpenPathMicProfiles, p.sender.clone());
+            let presets = App::get_label("Presets", OpenPathPresets, p.sender.clone());
+            let samples = App::get_label("Samples", OpenPathSamples, p.sender.clone());
+            let icons = App::get_label("Icons", OpenPathIcons, p.sender.clone());
+            let logs = App::get_label("Logs", OpenPathLogs, p.sender.clone());
 
-            let () = msg_send![menu, setTitle: sub_title];
-            let () = msg_send![menu_item, setTitle: sub_title];
-            let () = msg_send![menu_item, setSubmenu: menu];
+            debug!("Generating Sub Menu...");
+            let sub_menu = unsafe {
+                let menu_item = NSMenuItem::alloc(nil);
+                let menu = NSMenu::new(nil).autorelease();
 
-            menu.addItem_(profiles);
-            menu.addItem_(mic_profiles);
-            menu.addItem_(App::get_separator());
-            menu.addItem_(presets);
-            menu.addItem_(samples);
-            menu.addItem_(icons);
-            menu.addItem_(App::get_separator());
-            menu.addItem_(logs);
+                let () = msg_send![menu, setTitle: sub_title];
+                let () = msg_send![menu_item, setTitle: sub_title];
+                let () = msg_send![menu_item, setSubmenu: menu];
 
-            menu_item
-        };
-        unsafe {
-            // Create the Tray Labels..
-            debug!("Generating Main Menu..");
-            menu.addItem_(configure);
-            menu.addItem_(App::get_separator());
-            menu.addItem_(sub_menu);
-            menu.addItem_(App::get_separator());
-            menu.addItem_(quit);
+                menu.addItem_(profiles);
+                menu.addItem_(mic_profiles);
+                menu.addItem_(App::get_separator());
+                menu.addItem_(presets);
+                menu.addItem_(samples);
+                menu.addItem_(icons);
+                menu.addItem_(App::get_separator());
+                menu.addItem_(logs);
+
+                menu_item
+            };
+            unsafe {
+                // Create the Tray Labels..
+                debug!("Generating Main Menu..");
+                menu.addItem_(configure);
+                menu.addItem_(App::get_separator());
+                menu.addItem_(sub_menu);
+                menu.addItem_(App::get_separator());
+                menu.addItem_(quit);
+            }
+
+            unsafe {
+                status.setMenu_(menu);
+            }
         }
 
         unsafe {
-            status.setMenu_(menu);
+            // Before we run, register with the observer to see if shutdown is going to happen..
+            let workspace: id = msg_send![class!(NSWorkspace), sharedWorkspace];
+            let notification_center: id = msg_send![workspace, notificationCenter];
 
+            debug!("Creating Controller..");
+            let controller: id = msg_send![App::make_shutdown_hook_class(), alloc];
+
+            debug!("Initialising..");
+            let () = msg_send![controller, init];
+
+            debug!("Boxing Sender..");
+            let boxed = Box::new(p.global_tx.clone());
+            let ptr = Box::into_raw(boxed);
+            let ptr = ptr as *mut c_void as usize;
+            (*controller).set_ivar("EVENT_SENDER", ptr);
+
+            debug!("Boxing AtomicBool..");
+            let boxed = Box::new(p.state.shutdown_blocking.clone());
+            let ptr = Box::into_raw(boxed);
+            let ptr = ptr as *mut c_void as usize;
+            (*controller).set_ivar("STOP_BOOL", ptr);
+
+            debug!("Registering Event..");
+            let event = "NSWorkspaceWillPowerOffNotification";
+            let event = NSString::alloc(nil).init_str(event).autorelease();
+
+            debug!("Registering Class..");
+            let () = msg_send![notification_center, addObserver:controller selector:sel!(computerWillShutDownNotification:) name:event object: nil];
+
+            // We probably shouldn't share pointers to the senders, but seeing as MacOS locks
+            // the entire NS runtime into a single thread, we should be safe here.
+            let event = "NSWorkspaceWillSleepNotification";
+            let event = NSString::alloc(nil).init_str(event).autorelease();
+            let () = msg_send![notification_center, addObserver:controller selector:sel!(computerWillSleepNotification:) name: event object: nil];
+
+            let event = "NSWorkspaceDidWakeNotification";
+            let event = NSString::alloc(nil).init_str(event).autorelease();
+            let () = msg_send![notification_center, addObserver:controller selector:sel!(computerWillWakeNotification:) name: event object: nil];
+
+            debug!("Running..");
             app.run();
         }
     }
@@ -279,6 +352,112 @@ impl App {
                 decl.add_method(sel!(action:), handle as extern "C" fn(&Object, _, _));
                 decl.add_ivar::<usize>("CALLBACK");
                 decl.add_ivar::<usize>("SENDER");
+            }
+
+            decl.register()
+        })
+    }
+
+    fn make_shutdown_hook_class() -> &'static Class {
+        let class_name = "PowerHandler";
+        Class::get(class_name).unwrap_or_else(|| {
+            let superclass = class!(NSObject);
+            let mut decl = ClassDecl::new(class_name, superclass).unwrap();
+
+            extern "C" fn handle_shutdown(this: &Object, _: Sel, notification: *const Object) {
+                debug!("Received Shutdown Notification! {:?}", notification);
+                let sender: Box<Sender<EventTriggers>> = unsafe {
+                    let pointer_value: usize = *this.get_ivar("EVENT_SENDER");
+                    let pointer = pointer_value as *mut c_void;
+                    let pointer = pointer as *mut Sender<EventTriggers>;
+                    Box::from_raw(pointer)
+                };
+
+                let stop: Box<Arc<AtomicBool>> = unsafe {
+                    let pointer_value: usize = *this.get_ivar("STOP_BOOL");
+                    let pointer = pointer_value as *mut c_void;
+                    let pointer = pointer as *mut Arc<AtomicBool>;
+                    Box::from_raw(pointer)
+                };
+
+                // This is pretty similar to Windows, we loop until we're ready to die..
+                let _ = sender.try_send(EventTriggers::Stop);
+
+                // Now wait for the daemon to actually stop..
+                loop {
+                    if stop.load(Ordering::Relaxed) {
+                        break;
+                    } else {
+                        debug!("Waiting..");
+                        sleep(Duration::from_millis(100));
+                    }
+                }
+
+                mem::forget(sender);
+                mem::forget(stop);
+            }
+
+            extern "C" fn handle_sleep(this: &Object, _: Sel, notification: *const Object) {
+                debug!("Received Sleep Notification! {:?}", notification);
+                let sender: Box<Sender<EventTriggers>> = unsafe {
+                    let pointer_value: usize = *this.get_ivar("EVENT_SENDER");
+                    let pointer = pointer_value as *mut c_void;
+                    let pointer = pointer as *mut Sender<EventTriggers>;
+                    Box::from_raw(pointer)
+                };
+
+                // Pretty much copypasta from Windows which behaves in a similar way..
+                let (tx, mut rx) = oneshot::channel();
+
+                // Give a maximum of 1 second for a response..
+                let milli_wait = 5;
+                let max_wait = 1000 / milli_wait;
+                let mut count = 0;
+
+                if sender.try_send(EventTriggers::Sleep(tx)).is_ok() {
+                    debug!("Awaiting Sleep Response..");
+                    while rx.try_recv().is_err() {
+                        sleep(Duration::from_millis(milli_wait));
+                        count += 1;
+                        if count > max_wait {
+                            debug!("Timeout Exceeded, bailing.");
+                            break;
+                        }
+                    }
+                    debug!("Task Completed, allowing MacOS to Sleep");
+                }
+                mem::forget(sender);
+            }
+            extern "C" fn handle_wake(this: &Object, _: Sel, notification: *const Object) {
+                debug!("Received Wake Notification! {:?}", notification);
+                let sender: Box<Sender<EventTriggers>> = unsafe {
+                    let pointer_value: usize = *this.get_ivar("EVENT_SENDER");
+                    let pointer = pointer_value as *mut c_void;
+                    let pointer = pointer as *mut Sender<EventTriggers>;
+                    Box::from_raw(pointer)
+                };
+
+                let (tx, _rx) = oneshot::channel();
+                let _ = sender.try_send(EventTriggers::Wake(tx));
+
+                mem::forget(sender);
+            }
+
+            unsafe {
+                decl.add_method(
+                    sel!(computerWillShutDownNotification:),
+                    handle_shutdown as extern "C" fn(&Object, Sel, *const Object),
+                );
+                decl.add_method(
+                    sel!(computerWillSleepNotification:),
+                    handle_sleep as extern "C" fn(&Object, Sel, *const Object),
+                );
+                decl.add_method(
+                    sel!(computerWillWakeNotification:),
+                    handle_wake as extern "C" fn(&Object, Sel, *const Object),
+                );
+                decl.add_ivar::<usize>("EVENT_SENDER");
+                decl.add_ivar::<usize>("STOP_BOOL");
             }
 
             decl.register()
