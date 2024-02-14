@@ -36,8 +36,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             goxlr-utility/target
-            goxlr-utility-ui/src-tauri/target
-          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('goxlr-utility/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-release-
 
       - name: "Build Utility"
@@ -110,7 +109,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('goxlr-utility/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-release-
 
       - name: Install cargo-deb and cargo-generate-rpm
@@ -165,7 +164,6 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             goxlr-utility/target
-            goxlr-utility-ui/src-tauri/target
           key: ${{ runner.os }}-${{ matrix.targets }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-${{ matrix.targets }}-cargo-release-
 
