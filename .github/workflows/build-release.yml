@@ -186,6 +186,11 @@ jobs:
         with:
           name: "macos-artifact-aarch64-apple-darwin"
 
+      - name: "Install Packages App.."
+        run: |
+          wget http://s.sudre.free.fr/Software/files/Packages.dmg
+          hdiutil attach Packages.dmg
+          sudo installer -pkg /Volumes/Packages\ 1.2.9/Install\ Packages.pkg -target /
       - name: "Build LIPO Binaries"
         run: ./ci/build-macos-package '${{ needs.get_version.outputs.version }}'
         shell: bash
