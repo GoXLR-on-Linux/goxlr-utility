@@ -47,8 +47,10 @@ cp ../ci/macos/helpers/* pkg/scripts
 
 mkdir pkg/plist
 cp ../ci/macos/goxlr-utility.plist.xml pkg/plist/com.github.goxlr-on-linux.goxlr-utility.plist
-cp ../ci/macos/initialise.mini.xml pkg/plist/com.github.goxlr-on-linux.goxlr-utility.initialiser.mini.plist
-cp ../ci/macos/initialise.full.xml pkg/plist/com.github.goxlr-on-linux.goxlr-utility.initialiser.full.plist
+cp ../ci/macos/initialise.mini.plist.xml pkg/plist/com.github.goxlr-on-linux.goxlr-utility.initialiser.mini.plist
+cp ../ci/macos/initialise.full.plist.xml pkg/plist/com.github.goxlr-on-linux.goxlr-utility.initialiser.full.plist
+
+cp ../ci/macos/LICENSE pkg/LICENSE.txt
 
 # Run the Package Build..
 cd pkg || exit
