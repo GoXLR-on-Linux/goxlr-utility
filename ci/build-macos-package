@@ -35,5 +35,25 @@ cp ../ci/macos/icon.icns 'GoXLR Utility.app/Contents/Resources'
 # Generate the plist for the App..
 sed -e "s/{{VERSION}}/$VERSION/g" ../ci/macos/Info.plist.template.xml | sed -e "s/{{DATE}}/$DATE/g" > 'GoXLR Utility.app/Contents/Info.plist'
 
+
+
+# Build the .pkg..
+mkdir pkg
+mv 'GoXLR Utility.app' pkg/
+sed -e "s/{{VERSION}}/$VERSION/g" '../ci/macos/GoXLR Utility.pkgproj' > 'pkg/GoXLR Utility.pkgproj'
+
+mkdir pkg/scripts
+cp ../ci/macos/helpers/* pkg/scripts
+
+mkdir pkg/plist
+cp ../ci/macos/goxlr-utility.plist.xml pkg/plist/com.github.goxlr-on-linux.goxlr-utility.plist
+cp ../ci/macos/initialise.mini.xml pkg/plist/com.github.goxlr-on-linux.goxlr-utility.initialiser.mini.plist
+cp ../ci/macos/initialise.full.xml pkg/plist/com.github.goxlr-on-linux.goxlr-utility.initialiser.full.plist
+
+# Run the Package Build..
+cd pkg || exit
+packagesbuild --project 'GoXLR Utility.pkproj'
+mv 'build/GoXLR Utility.pkg' ../../goxlr-utility-macos-$VERSION.pkg
+
 # Compress the .app..
-tar zcvf "../goxlr-utility-macos-$VERSION.tgz" 'GoXLR Utility.app'
+#tar zcvf "../goxlr-utility-macos-$VERSION.tgz" 'GoXLR Utility.app'
