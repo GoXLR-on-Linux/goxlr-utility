@@ -154,6 +154,19 @@ jobs:
       - name: "Install Rust"
         uses: dtolnay/rust-toolchain@stable
 
+      - name: "Loading Cache"
+        uses: actions/cache@v4
+        continue-on-error: false
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            goxlr-utility/target
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-release-
+
       - name: "Add rust target support"
         run: rustup target add ${{ matrix.targets }}
 
