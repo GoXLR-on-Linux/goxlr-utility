@@ -52,7 +52,7 @@ cp ../ci/macos/initialise.full.xml pkg/plist/com.github.goxlr-on-linux.goxlr-uti
 
 # Run the Package Build..
 cd pkg || exit
-packagesbuild --project 'GoXLR Utility.pkproj'
+packagesbuild --project 'GoXLR Utility.pkgproj'
 mv 'build/GoXLR Utility.pkg' ../../goxlr-utility-macos-$VERSION.pkg
 
 # Compress the .app..
