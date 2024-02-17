@@ -1,10 +1,10 @@
 use crate::events::EventTriggers;
 use crate::{DaemonState, ICON};
-use anyhow::Result;
+use anyhow::{bail, Result};
 use goxlr_ipc::PathTypes::{Icons, Logs, MicProfiles, Presets, Profiles, Samples};
 use ksni::menu::{StandardItem, SubMenu};
-use ksni::{Category, MenuItem, Status, ToolTip, Tray, TrayService};
-use log::debug;
+use ksni::{Category, MenuItem, Status, ToolTip, Tray};
+use log::{debug, warn};
 use rand::Rng;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::Ordering;
@@ -36,16 +36,25 @@ pub fn handle_tray(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Resul
     fs::write(&tmp_file_path, ICON)?;
 
     // Attempt to immediately update the environment..
-    let tray_service = TrayService::new(GoXLRTray::new(tx, &tmp_file_path));
-    let tray_handle = tray_service.handle();
-    tray_service.spawn();
+    let handle = ksni::spawn(GoXLRTray::new(tx, &tmp_file_path));
+    let handle = match handle {
+        Ok(handle) => handle,
+        Err(e) => {
+            // There's no harm in running without a tray icon, in some cases this may actually
+            // be preferable (for example, when running under the CLI), so we just warn, tidy
+            // up, and consider our work here done.
+            fs::remove_file(&tmp_file_path)?;
+            warn!("Unable to Spawn the Tray Handler: {}", e);
+            return Ok(());
+        }
+    };
 
     while !state.shutdown_blocking.load(Ordering::Relaxed) {
         thread::sleep(Duration::from_millis(100));
     }
 
     debug!("Shutting Down Tray Handler..");
-    tray_handle.shutdown();
+    let _ = handle.shutdown();
     fs::remove_file(&tmp_file_path)?;
     Ok(())
 }
