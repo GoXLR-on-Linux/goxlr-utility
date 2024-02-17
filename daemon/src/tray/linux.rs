@@ -1,6 +1,6 @@
 use crate::events::EventTriggers;
 use crate::{DaemonState, ICON};
-use anyhow::{bail, Result};
+use anyhow::Result;
 use goxlr_ipc::PathTypes::{Icons, Logs, MicProfiles, Presets, Profiles, Samples};
 use ksni::menu::{StandardItem, SubMenu};
 use ksni::{Category, MenuItem, Status, ToolTip, Tray};
@@ -73,7 +73,7 @@ impl GoXLRTray {
 
 impl Tray for GoXLRTray {
     fn activate(&mut self, _x: i32, _y: i32) {
-        let _ = self.tx.blocking_send(EventTriggers::Activate);
+        let _ = self.tx.try_send(EventTriggers::Activate);
     }
 
     fn category(&self) -> Category {
@@ -120,7 +120,7 @@ impl Tray for GoXLRTray {
             StandardItem {
                 label: String::from("Configure GoXLR"),
                 activate: Box::new(|this: &mut GoXLRTray| {
-                    let _ = this.tx.blocking_send(EventTriggers::Activate);
+                    let _ = this.tx.try_send(EventTriggers::Activate);
                 }),
                 ..Default::default()
             }
@@ -132,7 +132,7 @@ impl Tray for GoXLRTray {
                     StandardItem {
                         label: String::from("Profiles"),
                         activate: Box::new(|this: &mut GoXLRTray| {
-                            let _ = this.tx.blocking_send(EventTriggers::Open(Profiles));
+                            let _ = this.tx.try_send(EventTriggers::Open(Profiles));
                         }),
                         ..Default::default()
                     }
@@ -140,7 +140,7 @@ impl Tray for GoXLRTray {
                     StandardItem {
                         label: String::from("Mic Profiles"),
                         activate: Box::new(|this: &mut GoXLRTray| {
-                            let _ = this.tx.blocking_send(EventTriggers::Open(MicProfiles));
+                            let _ = this.tx.try_send(EventTriggers::Open(MicProfiles));
                         }),
                         ..Default::default()
                     }
@@ -149,7 +149,7 @@ impl Tray for GoXLRTray {
                     StandardItem {
                         label: String::from("Presets"),
                         activate: Box::new(|this: &mut GoXLRTray| {
-                            let _ = this.tx.blocking_send(EventTriggers::Open(Presets));
+                            let _ = this.tx.try_send(EventTriggers::Open(Presets));
                         }),
                         ..Default::default()
                     }
@@ -157,7 +157,7 @@ impl Tray for GoXLRTray {
                     StandardItem {
                         label: String::from("Samples"),
                         activate: Box::new(|this: &mut GoXLRTray| {
-                            let _ = this.tx.blocking_send(EventTriggers::Open(Samples));
+                            let _ = this.tx.try_send(EventTriggers::Open(Samples));
                         }),
                         ..Default::default()
                     }
@@ -165,7 +165,7 @@ impl Tray for GoXLRTray {
                     StandardItem {
                         label: String::from("Icons"),
                         activate: Box::new(|this: &mut GoXLRTray| {
-                            let _ = this.tx.blocking_send(EventTriggers::Open(Icons));
+                            let _ = this.tx.try_send(EventTriggers::Open(Icons));
                         }),
                         ..Default::default()
                     }
@@ -174,7 +174,7 @@ impl Tray for GoXLRTray {
                     StandardItem {
                         label: String::from("Logs"),
                         activate: Box::new(|this: &mut GoXLRTray| {
-                            let _ = this.tx.blocking_send(EventTriggers::Open(Logs));
+                            let _ = this.tx.try_send(EventTriggers::Open(Logs));
                         }),
                         ..Default::default()
                     }
@@ -187,7 +187,7 @@ impl Tray for GoXLRTray {
             StandardItem {
                 label: String::from("Quit"),
                 activate: Box::new(|this: &mut GoXLRTray| {
-                    let _ = this.tx.blocking_send(EventTriggers::Stop);
+                    let _ = this.tx.try_send(EventTriggers::Stop);
                 }),
                 ..Default::default()
             }
