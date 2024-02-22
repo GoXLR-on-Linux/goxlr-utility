@@ -254,7 +254,7 @@ impl EchoEncoder {
         Self {
             knob_position: 0,
             style: EchoStyle::Quarter,
-            source: 0,
+            source: 1,
             div_l: 0,
             div_r: 0,
             feedback_left: 0,
