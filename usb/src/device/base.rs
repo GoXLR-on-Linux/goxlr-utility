@@ -67,7 +67,6 @@ pub trait GoXLRCommands: ExecutableGoXLR {
             Command::GetHardwareInfo(HardwareInfoCommand::FirmwareVersion),
             &[],
         )?;
-        debug!("{:x?}", result);
         let mut cursor = Cursor::new(result);
         let firmware_packed = cursor.read_u32::<LittleEndian>()?;
         let firmware_build = cursor.read_u32::<LittleEndian>()?;
