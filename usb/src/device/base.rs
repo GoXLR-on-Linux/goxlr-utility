@@ -15,7 +15,6 @@ use goxlr_types::{
     ChannelName, EffectKey, EncoderName, FaderName, FirmwareVersions, MicrophoneParamKey,
     MicrophoneType, Mix, SubMixChannelName, VersionNumber,
 };
-use log::debug;
 use std::io::{Cursor, Write};
 use tokio::sync::mpsc::Sender;
 
