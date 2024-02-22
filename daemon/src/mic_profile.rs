@@ -1121,7 +1121,7 @@ impl MicProfileAdapter {
         keys
     }
 
-    pub fn get_fx_keys(&self) -> LinkedHashSet<EffectKey> {
+    pub fn get_fx_keys(&self, use_echo_tempo: bool) -> LinkedHashSet<EffectKey> {
         let mut keys = LinkedHashSet::new();
 
         // We can't iterate over EffectKey, simply because they are ordered by their GoXLR
@@ -1131,7 +1131,7 @@ impl MicProfileAdapter {
         keys.extend(self.get_megaphone_keyset());
         keys.extend(self.get_robot_keyset());
         keys.extend(self.get_hardtune_keyset());
-        keys.extend(self.get_echo_keyset());
+        keys.extend(self.get_echo_keyset(use_echo_tempo));
         keys.extend(self.get_pitch_keyset());
         keys.extend(self.get_gender_keyset());
         keys.extend(self.get_enabled_keyset());
@@ -1161,7 +1161,7 @@ impl MicProfileAdapter {
         set
     }
 
-    pub fn get_echo_keyset(&self) -> LinkedHashSet<EffectKey> {
+    pub fn get_echo_keyset(&self, use_echo_tempo: bool) -> LinkedHashSet<EffectKey> {
         let mut set = LinkedHashSet::new();
         set.insert(EffectKey::EchoAmount);
         set.insert(EffectKey::EchoSource);
@@ -1173,9 +1173,14 @@ impl MicProfileAdapter {
         set.insert(EffectKey::EchoXFBRtoL);
         set.insert(EffectKey::EchoFeedback);
         set.insert(EffectKey::EchoFilterStyle);
-        set.insert(EffectKey::EchoTempo);
-        set.insert(EffectKey::EchoDelayL);
-        set.insert(EffectKey::EchoDelayR);
+
+        // The keys we add for Echo are dependent on the settings..
+        if use_echo_tempo {
+            set.insert(EffectKey::EchoTempo);
+        } else {
+            set.insert(EffectKey::EchoDelayL);
+            set.insert(EffectKey::EchoDelayR);
+        }
 
         set
     }

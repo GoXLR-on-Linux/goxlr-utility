@@ -1501,6 +1501,10 @@ impl ProfileAdapter {
             .get_preset_mut(current)
     }
 
+    pub fn use_echo_tempo(&self) -> bool {
+        self.get_active_echo_profile().style() != &EchoStyle::ClassicSlap
+    }
+
     pub fn get_echo_value(&self) -> i8 {
         let current = self.profile.settings().context().selected_effects();
         self.profile

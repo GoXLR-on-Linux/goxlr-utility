@@ -1317,7 +1317,7 @@ impl<'a> Device<'a> {
         self.set_pitch_mode()?;
         self.load_encoder_effects()?;
 
-        self.apply_effects(self.mic_profile.get_fx_keys())?;
+        self.apply_effects(self.mic_profile.get_fx_keys(self.profile.use_echo_tempo()))?;
 
         Ok(())
     }
@@ -2000,7 +2000,10 @@ impl<'a> Device<'a> {
             // Echo..
             GoXLRCommand::SetEchoStyle(value) => {
                 self.profile.set_echo_style(value)?;
-                self.apply_effects(self.mic_profile.get_echo_keyset())?;
+                self.apply_effects(
+                    self.mic_profile
+                        .get_echo_keyset(self.profile.use_echo_tempo()),
+                )?;
             }
             GoXLRCommand::SetEchoAmount(value) => {
                 self.profile
@@ -3303,7 +3306,7 @@ impl<'a> Device<'a> {
         }
 
         // Grab all keys that aren't common between devices
-        let fx_keys = self.mic_profile.get_fx_keys();
+        let fx_keys = self.mic_profile.get_fx_keys(self.profile.use_echo_tempo());
 
         // Setup to send these keys..
         let mut send_keys = LinkedHashSet::new();
