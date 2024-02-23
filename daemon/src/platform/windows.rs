@@ -27,25 +27,15 @@ lazy_static! {
 
 pub fn perform_platform_preflight() -> Result<()> {
     if !locate_goxlr_driver() {
-        let message = String::from("Unable to locate the GoXLR Driver, the utility cannot start.\r\n\r\nPlease reinstall the driver and try again.");
-
-        display_error(message);
-
         error!("Driver not found, Failing Preflight.");
-        bail!("The GoXLR Driver was not found, please reinstall before proceeding.");
+        bail!("The GoXLR Driver was not found, please install it and try again.");
     }
 
     let count = get_official_app_count();
 
     if count > 0 {
-        let message = String::from(
-            "Official GoXLR Application Detected Running\r\n\r\nUnable to Start the Utility.",
-        );
-
-        display_error(message);
-
         error!("Detected Official GoXLR Application Running, Failing Preflight.");
-        bail!("Official GoXLR App Running, Please terminate it before running the Daemon");
+        bail!("The official GoXLR Application is currently running, Please close it before running the Utility");
     }
 
     Ok(())

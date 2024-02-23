@@ -80,8 +80,7 @@ async fn main() -> Result<()> {
             settings.save().await;
         }
 
-        // This message is only used on Windows and Linux..
-        #[allow(unused)]
+        // Message is Cross-Platform now :)
         let message = format!("Error Starting the GoXLR Utility:\r\n\r\n{}", e);
         platform::display_error(message);
 
