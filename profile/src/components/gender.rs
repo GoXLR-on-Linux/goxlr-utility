@@ -184,12 +184,12 @@ impl GenderEncoder {
 
     pub fn amount(&self) -> i8 {
         // Amount is dependent on Style, and knob position, lets work with positive numbers.
-        let knob_position = (self.knob_position + 24) as i32; // Between 0 and 48..
+        let knob_position = self.knob_position as i32; // Between -24 and 24..
 
         match self.style {
-            GenderStyle::Narrow => ((24 * knob_position) / 48 - 12) as i8,
-            GenderStyle::Medium => ((50 * knob_position) / 48 - 25) as i8,
-            GenderStyle::Wide => ((100 * knob_position) / 48 - 50) as i8,
+            GenderStyle::Narrow => ((12. * knob_position as f32) / 24.).round() as i8,
+            GenderStyle::Medium => ((25. * knob_position as f32) / 24.).round() as i8,
+            GenderStyle::Wide => ((50. * knob_position as f32) / 24.).round() as i8,
         }
     }
 
