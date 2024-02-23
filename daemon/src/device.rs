@@ -1475,6 +1475,18 @@ impl<'a> Device<'a> {
         // the profile value if hardtune is enabled, so we'll pre-emptively calculate pitch here..
         let mut value_changed = false;
 
+        for encoder in EncoderName::iter() {
+            if self.encoder_states[encoder] != encoders[encoder as usize] {
+                value_changed = true;
+                self.encoder_states[encoder] = encoders[encoder as usize];
+            }
+        }
+
+        if self.encoder_states[EncoderName::Pitch] != encoders[0] {
+            value_changed = true;
+            self.encoder_states[EncoderName::Pitch] = encoders[0];
+        }
+
         if self.profile.calculate_pitch_knob_position(encoders[0])
             != self.profile.get_pitch_knob_position()
         {
@@ -1485,7 +1497,6 @@ impl<'a> Device<'a> {
             );
             value_changed = true;
             self.profile.set_pitch_knob_position(encoders[0])?;
-            self.encoder_states[EncoderName::Pitch] = encoders[0];
             self.apply_effects(LinkedHashSet::from_iter([EffectKey::PitchAmount]))?;
 
             let user_value = self
@@ -1507,7 +1518,6 @@ impl<'a> Device<'a> {
                 .get_effect_value(EffectKey::GenderAmount, self.profile());
 
             self.profile.set_gender_value(encoders[1])?;
-            self.encoder_states[EncoderName::Gender] = encoders[1];
             value_changed = true;
 
             let new_value = self
@@ -1530,7 +1540,6 @@ impl<'a> Device<'a> {
 
             value_changed = true;
             self.profile.set_reverb_value(encoders[2])?;
-            self.encoder_states[EncoderName::Reverb] = encoders[2];
 
             let new_value = self
                 .mic_profile
@@ -1551,7 +1560,6 @@ impl<'a> Device<'a> {
             );
             value_changed = true;
             self.profile.set_echo_value(encoders[3])?;
-            self.encoder_states[EncoderName::Echo] = encoders[3];
             self.apply_effects(LinkedHashSet::from_iter([EffectKey::EchoAmount]))?;
 
             let mut user_value = self
