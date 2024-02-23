@@ -1500,8 +1500,11 @@ impl<'a> Device<'a> {
             let user_value = self
                 .mic_profile
                 .get_effect_value(EffectKey::PitchAmount, self.profile());
-            let message = format!("Pitch {}", user_value);
-            let _ = self.global_events.send(TTSMessage(message)).await;
+
+            if self.hardware.device_type != DeviceType::Mini {
+                let message = format!("Pitch {}", user_value);
+                let _ = self.global_events.send(TTSMessage(message)).await;
+            }
         }
 
         if encoders[1] != self.profile.get_gender_value() {
@@ -1524,8 +1527,11 @@ impl<'a> Device<'a> {
 
             if new_value != current_value {
                 self.apply_effects(LinkedHashSet::from_iter([EffectKey::GenderAmount]))?;
-                let message = format!("Gender {}", new_value);
-                let _ = self.global_events.send(TTSMessage(message)).await;
+
+                if self.hardware.device_type != DeviceType::Mini {
+                    let message = format!("Gender {}", new_value);
+                    let _ = self.global_events.send(TTSMessage(message)).await;
+                }
             }
         }
 
@@ -1546,8 +1552,11 @@ impl<'a> Device<'a> {
             self.apply_effects(LinkedHashSet::from_iter([EffectKey::ReverbAmount]))?;
 
             let percent = 100 - ((new_value as f32 / -36.) * 100.) as i32;
-            let message = format!("Reverb {} percent", percent);
-            let _ = self.global_events.send(TTSMessage(message)).await;
+
+            if self.hardware.device_type != DeviceType::Mini {
+                let message = format!("Reverb {} percent", percent);
+                let _ = self.global_events.send(TTSMessage(message)).await;
+            }
         }
 
         if encoders[3] != self.profile.get_echo_value() {
@@ -1564,8 +1573,11 @@ impl<'a> Device<'a> {
                 .mic_profile
                 .get_effect_value(EffectKey::EchoAmount, self.profile());
             user_value = 100 - ((user_value as f32 / -36.) * 100.) as i32;
-            let message = format!("Echo {} percent", user_value);
-            let _ = self.global_events.send(TTSMessage(message)).await;
+
+            if self.hardware.device_type != DeviceType::Mini {
+                let message = format!("Echo {} percent", user_value);
+                let _ = self.global_events.send(TTSMessage(message)).await;
+            }
         }
 
         Ok(value_changed)
