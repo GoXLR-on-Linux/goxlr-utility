@@ -270,6 +270,7 @@ pub struct Reverb {
     pub diffuse: i8,
     pub mod_speed: i8,
     pub mod_depth: i8,
+    pub raw_encoder: i8,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -284,6 +285,7 @@ pub struct Echo {
     pub feedback_right: u8,
     pub feedback_xfb_l_to_r: u8,
     pub feedback_xfb_r_to_l: u8,
+    pub raw_encoder: i8,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -291,12 +293,14 @@ pub struct Pitch {
     pub style: PitchStyle,
     pub amount: i8,
     pub character: u8,
+    pub raw_encoder: i8,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Gender {
     pub style: GenderStyle,
     pub amount: i8,
+    pub raw_encoder: i8,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

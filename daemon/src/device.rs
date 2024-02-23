@@ -44,6 +44,7 @@ pub struct Device<'a> {
     hardware: HardwareStatus,
     last_buttons: EnumSet<Buttons>,
     button_states: EnumMap<Buttons, ButtonState>,
+    encoder_states: EnumMap<EncoderName, i8>,
     fader_last_seen: EnumMap<FaderName, u8>,
     fader_pause_until: EnumMap<FaderName, PauseUntil>,
     profile: ProfileAdapter,
@@ -152,6 +153,7 @@ impl<'a> Device<'a> {
             vc_mute_also_mute_cm,
             last_buttons: EnumSet::empty(),
             button_states: EnumMap::default(),
+            encoder_states: EnumMap::default(),
             fader_last_seen: EnumMap::default(),
             fader_pause_until: EnumMap::default(),
             audio_handler,
@@ -256,7 +258,9 @@ impl<'a> Device<'a> {
             lighting: self
                 .profile
                 .get_lighting_ipc(is_mini, self.device_supports_animations()),
-            effects: self.profile.get_effects_ipc(is_mini),
+            effects: self
+                .profile
+                .get_effects_ipc(is_mini, self.encoder_states.clone()),
             sampler: self.profile.get_sampler_ipc(
                 is_mini,
                 &self.audio_handler,
@@ -1481,6 +1485,7 @@ impl<'a> Device<'a> {
             );
             value_changed = true;
             self.profile.set_pitch_knob_position(encoders[0])?;
+            self.encoder_states[EncoderName::Pitch] = encoders[0];
             self.apply_effects(LinkedHashSet::from_iter([EffectKey::PitchAmount]))?;
 
             let user_value = self
@@ -1502,6 +1507,7 @@ impl<'a> Device<'a> {
                 .get_effect_value(EffectKey::GenderAmount, self.profile());
 
             self.profile.set_gender_value(encoders[1])?;
+            self.encoder_states[EncoderName::Gender] = encoders[1];
             value_changed = true;
 
             let new_value = self
@@ -1524,6 +1530,7 @@ impl<'a> Device<'a> {
 
             value_changed = true;
             self.profile.set_reverb_value(encoders[2])?;
+            self.encoder_states[EncoderName::Reverb] = encoders[2];
 
             let new_value = self
                 .mic_profile
@@ -1544,6 +1551,7 @@ impl<'a> Device<'a> {
             );
             value_changed = true;
             self.profile.set_echo_value(encoders[3])?;
+            self.encoder_states[EncoderName::Echo] = encoders[3];
             self.apply_effects(LinkedHashSet::from_iter([EffectKey::EchoAmount]))?;
 
             let mut user_value = self

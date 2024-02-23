@@ -39,7 +39,7 @@ use goxlr_profile_loader::{Faders, Preset, SampleButtons};
 use goxlr_scribbles::get_scribble;
 use goxlr_types::{
     Button, ButtonColourGroups, ButtonColourOffStyle as BasicColourOffStyle, ChannelName,
-    EffectBankPresets, EncoderColourTargets, FaderDisplayStyle as BasicColourDisplay,
+    EffectBankPresets, EncoderColourTargets, EncoderName, FaderDisplayStyle as BasicColourDisplay,
     FaderDisplayStyle, FaderName, InputDevice, MuteFunction as BasicMuteFunction, MuteState,
     OutputDevice, SamplePlayOrder, SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets,
     SubMixChannelName, VersionNumber,
@@ -765,7 +765,11 @@ impl ProfileAdapter {
         }
     }
 
-    pub fn get_effects_ipc(&self, is_device_mini: bool) -> Option<Effects> {
+    pub fn get_effects_ipc(
+        &self,
+        is_device_mini: bool,
+        map: EnumMap<EncoderName, i8>,
+    ) -> Option<Effects> {
         // There's no point returning effects for a Mini, it doesn't support them!
         if is_device_mini {
             return None;
@@ -799,6 +803,7 @@ impl ProfileAdapter {
             diffuse: self.get_active_reverb_profile().diffuse(),
             mod_speed: self.get_active_reverb_profile().mod_speed(),
             mod_depth: self.get_active_reverb_profile().mod_depth(),
+            raw_encoder: map[EncoderName::Reverb],
         };
 
         let echo = Echo {
@@ -812,6 +817,7 @@ impl ProfileAdapter {
             feedback_right: self.get_active_echo_profile().feedback_right(),
             feedback_xfb_l_to_r: self.get_active_echo_profile().xfb_l_to_r(),
             feedback_xfb_r_to_l: self.get_active_echo_profile().xfb_r_to_l(),
+            raw_encoder: map[EncoderName::Echo],
         };
 
         let pitch = Pitch {
@@ -820,11 +826,13 @@ impl ProfileAdapter {
                 .get_active_pitch_profile()
                 .knob_position(self.is_hardtune_enabled(true)),
             character: self.get_active_pitch_profile().inst_ratio_value(),
+            raw_encoder: map[EncoderName::Pitch],
         };
 
         let gender = Gender {
             style: profile_to_standard_gender_style(self.get_active_gender_profile().style()),
             amount: self.get_active_gender_profile().amount(),
+            raw_encoder: map[EncoderName::Gender],
         };
 
         let megaphone = Megaphone {
