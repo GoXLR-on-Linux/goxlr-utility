@@ -5,6 +5,7 @@ use enum_map_derive::Enum;
 use strum::{EnumIter, EnumProperty, IntoEnumIterator};
 
 use anyhow::Result;
+use log::warn;
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Writer;
 
@@ -60,7 +61,7 @@ impl MuteButton {
                     continue;
                 }
 
-                let value = if attr.value == "Mute To Chat Mic" {
+                let value = if attr.value == "Mute to Chat Mic" {
                     String::from("Mute to Voice Chat")
                 } else {
                     attr.value.clone()
@@ -73,7 +74,7 @@ impl MuteButton {
                     }
                 }
                 if !found {
-                    println!("Couldn't find Mute Function: {}", value);
+                    warn!("Couldn't find Mute Function: {}", value);
                 }
                 continue;
             }
