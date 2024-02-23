@@ -258,9 +258,7 @@ impl<'a> Device<'a> {
             lighting: self
                 .profile
                 .get_lighting_ipc(is_mini, self.device_supports_animations()),
-            effects: self
-                .profile
-                .get_effects_ipc(is_mini, self.encoder_states.clone()),
+            effects: self.profile.get_effects_ipc(is_mini, self.encoder_states),
             sampler: self.profile.get_sampler_ipc(
                 is_mini,
                 &self.audio_handler,
