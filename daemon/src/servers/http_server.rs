@@ -201,7 +201,7 @@ struct AppData {
 
 pub async fn spawn_http_server(
     usb_tx: DeviceSender,
-    handle_tx: Sender<Option<ServerHandle>>,
+    handle_tx: Sender<Result<Option<ServerHandle>>>,
     broadcast_tx: tokio::sync::broadcast::Sender<PatchEvent>,
     settings: HttpSettings,
     file_paths: FilePaths,
@@ -232,10 +232,17 @@ pub async fn spawn_http_server(
     .bind((settings.bind_address.clone(), settings.port));
 
     if let Err(e) = server {
-        warn!("Error Running HTTP Server: {:#?}", e);
+        // Log the Error Message..
+        warn!("Unable to Start HTTP Server: {}", e);
+
+        // Let 'Upstream' know an error has occurred
+        let _ = handle_tx.send(Err(anyhow!(e)));
+
+        // Give up :D
         return;
     }
 
+    // Run the server..
     let server = server.unwrap().run();
     info!(
         "Started GoXLR configuration interface at http://{}:{}/",
@@ -243,13 +250,17 @@ pub async fn spawn_http_server(
         settings.port,
     );
 
-    let _ = handle_tx.send(Some(server.handle()));
+    // Let upstream know we're running..
+    let _ = handle_tx.send(Ok(Some(server.handle())));
 
-    if server.await.is_ok() {
-        info!("HTTP Server Stopped.");
-    } else {
-        warn!("HTTP Server Stopped with Error");
+    // Wait for the server to exit with its reason
+    let result = server.await;
+    if result.is_err() {
+        error!("HTTP Server Stopped with Error: {}", result.err().unwrap());
+        return;
     }
+
+    info!("HTTP Server Stopped.");
 }
 
 #[get("/api/websocket")]

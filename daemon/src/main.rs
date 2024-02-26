@@ -298,7 +298,7 @@ async fn run_utility() -> Result<()> {
     ));
 
     // Run the HTTP Server (if enabled)..
-    let mut http_server: Option<ServerHandle> = None;
+    let mut http_server: Result<Option<ServerHandle>> = Ok(None);
     if http_settings.enabled {
         // Spawn a oneshot channel for managing the HTTP Server
         if http_settings.cors_enabled {
@@ -313,8 +313,8 @@ async fn run_utility() -> Result<()> {
             file_paths.clone(),
         ));
         http_server = httpd_rx.await?;
-        if http_server.is_none() {
-            bail!("Unable to Start HTTP Server");
+        if let Err(e) = http_server {
+            bail!("Unable to Start HTTP Server: {}", e);
         }
     } else {
         warn!("HTTP Server Disabled");
@@ -361,7 +361,7 @@ async fn run_utility() -> Result<()> {
     local_shutdown.recv().await;
     info!("Shutting down daemon");
 
-    if let Some(server) = http_server {
+    if let Ok(Some(server)) = http_server {
         // We only need to Join on the HTTP Server if it exists..
         let _ = join!(
             usb_handle,
