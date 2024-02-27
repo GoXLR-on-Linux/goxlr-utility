@@ -3,8 +3,8 @@ use crate::{DaemonState, ICON};
 use anyhow::Result;
 use goxlr_ipc::PathTypes::{Icons, Logs, MicProfiles, Presets, Profiles, Samples};
 use ksni::menu::{StandardItem, SubMenu};
-use ksni::{Category, MenuItem, Status, ToolTip, Tray, TrayService};
-use log::debug;
+use ksni::{Category, MenuItem, Status, ToolTip, Tray};
+use log::{debug, warn};
 use rand::Rng;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::Ordering;
@@ -36,16 +36,25 @@ pub fn handle_tray(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Resul
     fs::write(&tmp_file_path, ICON)?;
 
     // Attempt to immediately update the environment..
-    let tray_service = TrayService::new(GoXLRTray::new(tx, &tmp_file_path));
-    let tray_handle = tray_service.handle();
-    tray_service.spawn();
+    let handle = ksni::spawn(GoXLRTray::new(tx, &tmp_file_path));
+    let handle = match handle {
+        Ok(handle) => handle,
+        Err(e) => {
+            // There's no harm in running without a tray icon, in some cases this may actually
+            // be preferable (for example, when running under the CLI), so we just warn, tidy
+            // up, and consider our work here done.
+            fs::remove_file(&tmp_file_path)?;
+            warn!("Unable to Spawn the Tray Handler: {}", e);
+            return Ok(());
+        }
+    };
 
     while !state.shutdown_blocking.load(Ordering::Relaxed) {
         thread::sleep(Duration::from_millis(100));
     }
 
     debug!("Shutting Down Tray Handler..");
-    tray_handle.shutdown();
+    let _ = handle.shutdown();
     fs::remove_file(&tmp_file_path)?;
     Ok(())
 }
@@ -64,7 +73,7 @@ impl GoXLRTray {
 
 impl Tray for GoXLRTray {
     fn activate(&mut self, _x: i32, _y: i32) {
-        let _ = self.tx.blocking_send(EventTriggers::Activate);
+        let _ = self.tx.try_send(EventTriggers::Activate);
     }
 
     fn category(&self) -> Category {
@@ -111,7 +120,7 @@ impl Tray for GoXLRTray {
             StandardItem {
                 label: String::from("Configure GoXLR"),
                 activate: Box::new(|this: &mut GoXLRTray| {
-                    let _ = this.tx.blocking_send(EventTriggers::Activate);
+                    let _ = this.tx.try_send(EventTriggers::Activate);
                 }),
                 ..Default::default()
             }
@@ -123,7 +132,7 @@ impl Tray for GoXLRTray {
                     StandardItem {
                         label: String::from("Profiles"),
                         activate: Box::new(|this: &mut GoXLRTray| {
-                            let _ = this.tx.blocking_send(EventTriggers::Open(Profiles));
+                            let _ = this.tx.try_send(EventTriggers::Open(Profiles));
                         }),
                         ..Default::default()
                     }
@@ -131,7 +140,7 @@ impl Tray for GoXLRTray {
                     StandardItem {
                         label: String::from("Mic Profiles"),
                         activate: Box::new(|this: &mut GoXLRTray| {
-                            let _ = this.tx.blocking_send(EventTriggers::Open(MicProfiles));
+                            let _ = this.tx.try_send(EventTriggers::Open(MicProfiles));
                         }),
                         ..Default::default()
                     }
@@ -140,7 +149,7 @@ impl Tray for GoXLRTray {
                     StandardItem {
                         label: String::from("Presets"),
                         activate: Box::new(|this: &mut GoXLRTray| {
-                            let _ = this.tx.blocking_send(EventTriggers::Open(Presets));
+                            let _ = this.tx.try_send(EventTriggers::Open(Presets));
                         }),
                         ..Default::default()
                     }
@@ -148,7 +157,7 @@ impl Tray for GoXLRTray {
                     StandardItem {
                         label: String::from("Samples"),
                         activate: Box::new(|this: &mut GoXLRTray| {
-                            let _ = this.tx.blocking_send(EventTriggers::Open(Samples));
+                            let _ = this.tx.try_send(EventTriggers::Open(Samples));
                         }),
                         ..Default::default()
                     }
@@ -156,7 +165,7 @@ impl Tray for GoXLRTray {
                     StandardItem {
                         label: String::from("Icons"),
                         activate: Box::new(|this: &mut GoXLRTray| {
-                            let _ = this.tx.blocking_send(EventTriggers::Open(Icons));
+                            let _ = this.tx.try_send(EventTriggers::Open(Icons));
                         }),
                         ..Default::default()
                     }
@@ -165,7 +174,7 @@ impl Tray for GoXLRTray {
                     StandardItem {
                         label: String::from("Logs"),
                         activate: Box::new(|this: &mut GoXLRTray| {
-                            let _ = this.tx.blocking_send(EventTriggers::Open(Logs));
+                            let _ = this.tx.try_send(EventTriggers::Open(Logs));
                         }),
                         ..Default::default()
                     }
@@ -178,7 +187,7 @@ impl Tray for GoXLRTray {
             StandardItem {
                 label: String::from("Quit"),
                 activate: Box::new(|this: &mut GoXLRTray| {
-                    let _ = this.tx.blocking_send(EventTriggers::Stop);
+                    let _ = this.tx.try_send(EventTriggers::Stop);
                 }),
                 ..Default::default()
             }

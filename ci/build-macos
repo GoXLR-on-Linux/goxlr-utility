@@ -1,0 +1,40 @@
+#!/bin/bash
+
+SYSROOT=/build/root
+
+export PKG_CONFIG_DIR=
+export PKG_CONFIG_LIBDIR=${SYSROOT}/usr/lib/pkgconfig:${SYSROOT}/usr/share/pkgconfig
+export PKG_CONFIG_SYSROOT_DIR=${SYSROOT}
+export PKG_CONFIG_ALLOW_CROSS=1
+
+set -e
+D="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+
+TARGET=$1
+VERSION=$2
+
+# Build the Utility and the UI..
+cargo build --manifest-path=goxlr-utility/Cargo.toml --release --all-features --target=$TARGET
+cargo build --manifest-path=goxlr-utility-ui/src-tauri/Cargo.toml --target-dir=goxlr-utility/target --target=$TARGET --release
+
+# Strip all our binaries..
+strip goxlr-utility/target/$TARGET/release/goxlr-client
+strip goxlr-utility/target/$TARGET/release/goxlr-daemon
+strip goxlr-utility/target/$TARGET/release/goxlr-launcher
+strip goxlr-utility/target/$TARGET/release/goxlr-defaults
+strip goxlr-utility/target/$TARGET/release/goxlr-initialiser
+strip goxlr-utility/target/$TARGET/release/goxlr-utility-ui
+
+
+# Next, we need to make a folder for the 'final' binaries..
+mkdir package/
+cp goxlr-utility/target/$TARGET/release/goxlr-client package/
+cp goxlr-utility/target/$TARGET/release/goxlr-daemon package/
+cp goxlr-utility/target/$TARGET/release/goxlr-launcher package/
+cp goxlr-utility/target/$TARGET/release/goxlr-defaults package/
+cp goxlr-utility/target/$TARGET/release/goxlr-initialiser package/
+cp goxlr-utility/target/$TARGET/release/goxlr-utility-ui package/
+
+# Bundle all the created binaries (we'll do more with this later!)
+cd package
+tar zcvf ../macos_binaries_$VERSION-$TARGET.tgz *

@@ -26,12 +26,19 @@ pub struct DaemonStatus {
 pub struct DaemonConfig {
     pub http_settings: HttpSettings,
     pub daemon_version: String,
+    pub activation: Activation,
     pub autostart_enabled: bool,
     pub show_tray_icon: bool,
     pub tts_enabled: Option<bool>,
     pub allow_network_access: bool,
     pub log_level: LogLevel,
     pub open_ui_on_launch: bool,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct Activation {
+    pub active_path: Option<String>,
+    pub app_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -263,6 +270,7 @@ pub struct Reverb {
     pub diffuse: i8,
     pub mod_speed: i8,
     pub mod_depth: i8,
+    pub raw_encoder: i8,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -277,6 +285,7 @@ pub struct Echo {
     pub feedback_right: u8,
     pub feedback_xfb_l_to_r: u8,
     pub feedback_xfb_r_to_l: u8,
+    pub raw_encoder: i8,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -284,12 +293,14 @@ pub struct Pitch {
     pub style: PitchStyle,
     pub amount: i8,
     pub character: u8,
+    pub raw_encoder: i8,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Gender {
     pub style: GenderStyle,
     pub amount: i8,
+    pub raw_encoder: i8,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -14,11 +14,14 @@ pub const VID_GOXLR: u16 = 0x1220;
 pub const PID_GOXLR_MINI: u16 = 0x8fe4;
 pub const PID_GOXLR_FULL: u16 = 0x8fe0;
 
-fn main() {
+#[tokio::main]
+async fn main() -> Result<(), String> {
+    println!("Beginning Run..");
+
     #[cfg(windows)]
     {
         println!("This application should not be run on Windows");
-        std::process::exit(-1);
+        return Err(String::from("Incompatible Platform"));
     }
 
     #[cfg(not(windows))]
@@ -26,6 +29,61 @@ fn main() {
         println!("Checking for available GoXLR devices..");
         find_devices();
     }
+
+    #[cfg(target_os = "macos")]
+    {
+        // Various packages needed for the XPC Handle..
+        use block::ConcreteBlock;
+        use std::env;
+        use std::ffi::CString;
+        use std::ops::Deref;
+        use tokio::sync::mpsc::channel;
+        use xpc_connection_sys::{xpc_object_t, xpc_set_event_stream_handler};
+
+        println!("Beginning MacOS Handle..");
+
+        let args: Vec<String> = env::args().collect();
+        if !args.contains(&String::from("--xpc")) {
+            // Not an XPC caller, we're fine..
+            return Ok(());
+        }
+
+        let target = match CString::new("com.apple.iokit.matching") {
+            Ok(target) => target,
+            Err(e) => return Err(format!("Error Parsing String: {:?}", e)),
+        };
+
+        println!("Attempting to pull the event from XPC..");
+        let (tx, mut rx) = channel(1);
+        let tx_clone = tx.clone();
+
+        // Create the handler for the XPC Event Stream..
+        let handler = ConcreteBlock::new(move |_: xpc_object_t| {
+            // This should only ever execute, and be needed, once
+            if tx_clone.capacity() > 0 {
+                // We don't actually care about the event received, just that we get one.
+                let _ = tx_clone.blocking_send(());
+            }
+        });
+
+        unsafe {
+            // Set up the handler with XPC..
+            xpc_set_event_stream_handler(
+                target.as_ptr(),
+                std::ptr::null_mut(),
+                handler.deref() as *const _ as *mut _,
+            );
+        }
+
+        // Wait for the handler to trigger, and send us a message that it has..
+        if let Some(()) = rx.recv().await {
+            println!("Complete");
+        }
+    }
+
+    // It's impossible for Windows to ever get here :D
+    #[allow(unreachable_code)]
+    Ok(())
 }
 
 #[cfg(not(windows))]

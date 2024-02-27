@@ -31,7 +31,7 @@ If you're a MacOS user, check out the [MacOS Project](https://github.com/Adelena
 The GoXLR Utility is also available via `winget` on Windows, and will automatically update when new releases occur.
 
 <sup>1</sup> Windows requires the official device drivers provided by TC-Helicon. If you have the official app 
-installed you don't need to do anything, otherwise download the latest drivers from TC-Helicon's website [here](https://go.tc-helicon.com/GoXLR_driver_5.12).
+installed you don't need to do anything, otherwise download the latest drivers from TC-Helicon's website [here](https://mediadl.musictribe.com/download/software/tchelicon/GoXLR/TC-Helicon_GoXLR_Driver.zip).
 
 ## Getting Started
 Once installed, you can launch the Utility using the `GoXLR Utility` item in your Applications Menu, this will launch

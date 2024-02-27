@@ -17,11 +17,11 @@ jobs:
   # Actually Create the Release
   create_release_draft:
     needs: [verify, get_version, build]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       # Download the previously generated artifacts..
       - name: Download Artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
 
       - name: List Downloaded Files..
         run: ls -lahR

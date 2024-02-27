@@ -65,10 +65,12 @@ pub async fn spawn_event_handler(
                         let _ = state.tts_sender.send(message).await;
                     }
                     EventTriggers::Stop => {
-                        debug!("Shutdown Phase 1 Triggered..");
                         if !triggered_device_stop {
+                            debug!("Shutdown Phase 1 Triggered..");
                             triggered_device_stop = true;
                             let _ = device_state_tx.send(DeviceStateChange::Shutdown).await;
+                        } else {
+                            debug!("Shutdown Phase 1 already in Progress");
                         }
                     }
                     EventTriggers::DevicesStopped => {

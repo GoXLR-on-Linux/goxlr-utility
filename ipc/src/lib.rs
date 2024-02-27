@@ -1,5 +1,6 @@
 use json_patch::Patch;
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 pub mod client;
 pub mod clients;
@@ -81,6 +82,7 @@ pub enum DaemonCommand {
     SetAllowNetworkAccess(bool),
     SetUiLaunchOnLoad(bool),
     RecoverDefaults(PathTypes),
+    SetActivatorPath(Option<PathBuf>),
 
     SetSampleGainPct(String, u8),
     ApplySampleChange,

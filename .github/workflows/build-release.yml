@@ -12,35 +12,22 @@ jobs:
     steps:
       # Firstly Checkout our Repository..
       - name: "Check out GoXLR Utility"
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: goxlr-utility
 
       # Now Checkout the App Wrappers repository..
       - name: "Check out GoXLR Utility UI"
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: frostycoolslug/goxlr-utility-ui
           path: goxlr-utility-ui
-
-      # For the use of CI, we need the UI to use the 'local' version of the `goxlr-ipc` crate, rather than the latest
-      # release version, this is to allow test builds to work correctly in the event of a Status Structure change that
-      # hasn't yet been released.
-      - name: "Update Utility UI IPC Location"
-        uses: Nambers/ReplaceStringInFile@v1.3
-        with:
-          path: "goxlr-utility-ui/src-tauri/Cargo.toml"
-          regexOptions: 'gm'
-          oldString: "^goxlr-ipc.*$"
-          newString: "goxlr-ipc = { path = \\\"../../goxlr-utility/ipc\\\" }"
-          showFileContent: true
-
 
       - name: "Install Rust"
         uses: dtolnay/rust-toolchain@stable
 
       - name: "Loading Cache"
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         continue-on-error: false
         with:
           path: |
@@ -49,7 +36,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             goxlr-utility/target
-          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('goxlr-utility/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-release-
 
       - name: "Build Utility"
@@ -64,20 +51,20 @@ jobs:
         run: mkdir -p ${{ github.workspace }}/NSIS_Plugins/x86-unicode/
 
       - name: "Downloading Tauri Utility Plugin"
-        uses: suisei-cn/actions-download-file@v1.4.0
+        uses: suisei-cn/actions-download-file@v1.6.0
         with:
           url: https://github.com/tauri-apps/nsis-tauri-utils/releases/download/nsis_tauri_utils-v0.1.1/nsis_tauri_utils.dll
           target: ${{ github.workspace }}/NSIS_Plugins/x86-unicode/
 
       - name: "Downloading WebView2 Bootstrapper"
-        uses: suisei-cn/actions-download-file@v1.4.0
+        uses: suisei-cn/actions-download-file@v1.6.0
         with:
           url: https://go.microsoft.com/fwlink/p/?LinkId=2124703
           filename: MicrosoftEdgeWebview2Setup.exe
           target: goxlr-utility/ci/nsis/
 
       - name: "Downloading VC Runtime"
-        uses: suisei-cn/actions-download-file@v1.4.0
+        uses: suisei-cn/actions-download-file@v1.6.0
         with:
           url: https://aka.ms/vs/17/release/vc_redist.x64.exe
           filename: vc_redist.x64.exe
@@ -91,18 +78,18 @@ jobs:
           arguments: "/DPRODUCT_VERSION=${{ needs.get_version.outputs.version }}"
 
       - name: "Upload Installer"
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: windows-artifact
           path: ./goxlr-utility/ci/Output/*.exe
 
-  build:
+  build_linux:
     name: "Create Linux Builds"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: [get_version]
     steps:
       - name: "Check out Repository"
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: "Install Rust"
         uses: dtolnay/rust-toolchain@stable
@@ -113,7 +100,7 @@ jobs:
           sudo apt-get install libpulse0 libdbus-1-dev pkg-config libspeechd-dev
 
       - name: "Loading Cache"
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         continue-on-error: false
         with:
           path: |
@@ -122,7 +109,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('goxlr-utility/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-release-
 
       - name: Install cargo-deb and cargo-generate-rpm
@@ -133,13 +120,106 @@ jobs:
         shell: bash
 
       - name: "Upload DEB Artifact"
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: debian-artifact
           path: ./target/debian/*.deb
 
       - name: "Upload RPM Artifact"
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: rpm-artifact
           path: ./target/generate-rpm/*.rpm
+
+  build_macos:
+    name: "Create MacOS Builds"
+    strategy:
+      matrix:
+        targets: [x86_64-apple-darwin, aarch64-apple-darwin]
+    runs-on: macos-12
+    needs: [get_version]
+    steps:
+      - name: "Checkout Repository"
+        uses: actions/checkout@v4
+        with:
+          path: goxlr-utility
+
+      # Now Checkout the App Wrappers repository..
+      - name: "Check out GoXLR Utility UI"
+        uses: actions/checkout@v4
+        with:
+          repository: frostycoolslug/goxlr-utility-ui
+          path: goxlr-utility-ui
+
+      - name: "Install Rust"
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: "Loading Cache"
+        uses: actions/cache@v4
+        continue-on-error: false
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            goxlr-utility/target
+          key: ${{ runner.os }}-${{ matrix.targets }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-${{ matrix.targets }}-cargo-release-
+
+      - name: "Add rust target support"
+        run: rustup target add ${{ matrix.targets }}
+
+      - name: "Build Package"
+        run: ./goxlr-utility/ci/build-macos '${{ matrix.targets }}' '${{ needs.get_version.outputs.version }}'
+        shell: bash
+
+      - name: "Upload MacOS zip Artifact"
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-artifact-${{ matrix.targets }}
+          path: ./macos_binaries_*.tgz
+
+  package_macos:
+    name: "Package MacOS Binaries"
+    runs-on: macos-12
+    needs: [get_version, build_macos]
+
+    steps:
+      - name: "Checkout Repository"
+        uses: actions/checkout@v4
+
+      - name: "Download x86_64 Artifact"
+        uses: actions/download-artifact@v4
+        with:
+          name: "macos-artifact-x86_64-apple-darwin"
+
+      - name: "Download aarch64 Artifact"
+        uses: actions/download-artifact@v4
+        with:
+          name: "macos-artifact-aarch64-apple-darwin"
+
+      - name: "Install Packages App.."
+        run: |
+          wget http://s.sudre.free.fr/Software/files/Packages.dmg
+          hdiutil attach Packages.dmg
+          sudo installer -pkg /Volumes/Packages\ 1.2.10/Install\ Packages.pkg -target /
+      - name: "Build LIPO Binaries"
+        run: ./ci/build-macos-package '${{ needs.get_version.outputs.version }}'
+        shell: bash
+
+      - name: "Upload MacOS final Artifact"
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-artifact
+          path: ./goxlr-utility-macos-*.pkg
+
+      - name: "Remove x64 artifact"
+        uses: geekyeggo/delete-artifact@v4
+        with:
+          name: macos-artifact-x86_64-apple-darwin
+
+      - name: "Remove aarch artifact"
+        uses: geekyeggo/delete-artifact@v4
+        with:
+          name: macos-artifact-aarch64-apple-darwin

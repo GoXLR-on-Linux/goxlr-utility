@@ -34,16 +34,3 @@ pub fn handle_tray(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Resul
         Ok(())
     }
 }
-
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-use crate::ICON;
-
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-pub fn get_icon_from_global() -> (Vec<u8>, u32, u32) {
-    let image = image::load_from_memory(ICON)
-        .expect("Failed to load Icon")
-        .into_rgba8();
-    let (width, height) = image.dimensions();
-    let rgba = image.into_raw();
-    (rgba, width, height)
-}

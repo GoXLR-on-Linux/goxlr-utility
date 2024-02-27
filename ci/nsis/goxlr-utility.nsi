@@ -234,7 +234,7 @@ FunctionEnd
 
 Function IsUtilRunning
 ; The util spawns a window we can look for..
-FindWindow $0 "goxlr-utility"
+FindWindow $0 "GoXLR Utility"
 StrCmp $0 0 STOP
     ReserveFile "running-warn.ini"
     !insertmacro MUI_HEADER_TEXT "Preparing to Install" "Setup is preparing to install ${PRODUCT_NAME} on your computer."
@@ -253,7 +253,7 @@ Var count
 Function ${un}StopUtility
 DetailPrint "Checking for GoXLR Utility.."
 
-FindWindow $0 "goxlr-utility"
+FindWindow $0 "GoXLR Utility"
 StrCmp $0 0 END
 DetailPrint "GoXLR Utility Found, attempting to stop.."
 
@@ -262,7 +262,7 @@ SendMessage $0 ${WM_CLOSE} 0 0
 StrCpy $count 0
 
 LOOP:
-FindWindow $0 "goxlr-utility"
+FindWindow $0 "GoXLR Utility"
 StrCmp $0 0 ENDSLEEP
 Sleep 100
 IntOp $count $count + 1

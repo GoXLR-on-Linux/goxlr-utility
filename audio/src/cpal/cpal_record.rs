@@ -1,3 +1,4 @@
+use std::panic::catch_unwind;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
@@ -31,7 +32,11 @@ const BUFFER_SIZE: usize = 19200;
 impl OpenInputStream for CpalRecord {
     fn open(spec: AudioSpecification) -> Result<Box<dyn AudioInput>> {
         // Ok, grab the device we want to open..
-        let device = CpalConfiguration::get_device(spec.device, true)?;
+        let device = match catch_unwind(|| CpalConfiguration::get_device(spec.device, true)) {
+            Ok(Ok(device)) => device,
+            Ok(Err(e)) => bail!("Error Fetching Device: {}", e),
+            Err(e) => bail!("PANIC attempting to Fetch Device! {:#?}", e),
+        };
 
         // Input
         let config = cpal::StreamConfig {

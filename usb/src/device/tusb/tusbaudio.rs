@@ -587,7 +587,6 @@ impl TUSBAudio<'_> {
                 }
 
                 // Make sure our two vecs are the same..
-
                 if !iters_equal_anyorder(
                     devices.clone().into_iter(),
                     found_devices.clone().into_iter(),
@@ -596,6 +595,18 @@ impl TUSBAudio<'_> {
                     let _ = TUSB_INTERFACE.detect_devices();
                     devices.clear();
                     devices.append(&mut found_devices);
+                }
+
+                // If a driver takes a couple of hundred milliseconds to load, it's theoretically
+                // possible that we'll have detected the device and run detect_devices() too early
+                // leaving the detected device list empty and causing a desync in the lists.
+                //
+                // The following simply checks what's already been found, and if the list size
+                // isn't the same as we have detected here, attempts to force a resync of the
+                // devices from the API.
+                if devices.len() != TUSB_INTERFACE.get_devices().len() {
+                    debug!("Device Desync Detected, attempting to resync..");
+                    let _ = TUSB_INTERFACE.detect_devices();
                 }
 
                 if let Some(sender) = ready_sender.take() {

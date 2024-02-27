@@ -80,12 +80,9 @@ async fn main() -> Result<()> {
             settings.save().await;
         }
 
-        #[cfg(target_os = "windows")]
-        {
-            use platform::windows::display_error;
-            let message = format!("Error Starting the GoXLR Utility:\r\n\r\n{}", e);
-            display_error(message);
-        }
+        // Message is Cross-Platform now :)
+        let message = format!("Error Starting the GoXLR Utility:\r\n\r\n{}", e);
+        platform::display_error(message);
 
         bail!("{}", e);
     }
@@ -119,6 +116,7 @@ async fn run_utility() -> Result<()> {
     config.add_filter_ignore_str("actix_server::worker");
     config.add_filter_ignore_str("actix_server::server");
     config.add_filter_ignore_str("actix_server::builder");
+    config.add_filter_ignore_str("zbus");
 
     // I'm generally not interested in the Symphonia header announcements which go to INFO,
     // it's only useful in a development setting!
@@ -214,13 +212,14 @@ async fn run_utility() -> Result<()> {
     info!("Performing Platform Preflight...");
     perform_preflight()?;
 
-    let mut bind_address = String::from("localhost");
-    if let Some(address) = args.http_bind_address {
+    let bind_address = if let Some(address) = args.http_bind_address {
         debug!("Command Line Override, binding to: {}", address);
-        bind_address = address;
+        address
     } else if settings.get_allow_network_access().await {
-        bind_address = String::from("0.0.0.0");
-    }
+        String::from("0.0.0.0")
+    } else {
+        String::from("localhost")
+    };
 
     debug!("HTTP Bind Address: {}", bind_address);
     let http_settings = HttpSettings {
@@ -299,7 +298,7 @@ async fn run_utility() -> Result<()> {
     ));
 
     // Run the HTTP Server (if enabled)..
-    let mut http_server: Option<ServerHandle> = None;
+    let mut http_server: Result<Option<ServerHandle>> = Ok(None);
     if http_settings.enabled {
         // Spawn a oneshot channel for managing the HTTP Server
         if http_settings.cors_enabled {
@@ -314,8 +313,8 @@ async fn run_utility() -> Result<()> {
             file_paths.clone(),
         ));
         http_server = httpd_rx.await?;
-        if http_server.is_none() {
-            bail!("Unable to Start HTTP Server");
+        if let Err(e) = http_server {
+            bail!("Unable to Start HTTP Server: {}", e);
         }
     } else {
         warn!("HTTP Server Disabled");
@@ -362,7 +361,7 @@ async fn run_utility() -> Result<()> {
     local_shutdown.recv().await;
     info!("Shutting down daemon");
 
-    if let Some(server) = http_server {
+    if let Ok(Some(server)) = http_server {
         // We only need to Join on the HTTP Server if it exists..
         let _ = join!(
             usb_handle,

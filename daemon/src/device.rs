@@ -44,6 +44,7 @@ pub struct Device<'a> {
     hardware: HardwareStatus,
     last_buttons: EnumSet<Buttons>,
     button_states: EnumMap<Buttons, ButtonState>,
+    encoder_states: EnumMap<EncoderName, i8>,
     fader_last_seen: EnumMap<FaderName, u8>,
     fader_pause_until: EnumMap<FaderName, PauseUntil>,
     profile: ProfileAdapter,
@@ -152,6 +153,7 @@ impl<'a> Device<'a> {
             vc_mute_also_mute_cm,
             last_buttons: EnumSet::empty(),
             button_states: EnumMap::default(),
+            encoder_states: EnumMap::default(),
             fader_last_seen: EnumMap::default(),
             fader_pause_until: EnumMap::default(),
             audio_handler,
@@ -256,7 +258,7 @@ impl<'a> Device<'a> {
             lighting: self
                 .profile
                 .get_lighting_ipc(is_mini, self.device_supports_animations()),
-            effects: self.profile.get_effects_ipc(is_mini),
+            effects: self.profile.get_effects_ipc(is_mini, self.encoder_states),
             sampler: self.profile.get_sampler_ipc(
                 is_mini,
                 &self.audio_handler,
@@ -1314,10 +1316,10 @@ impl<'a> Device<'a> {
         let _ = self.global_events.send(TTSMessage(tts_message)).await;
 
         self.profile.load_effect_bank(preset)?;
-        self.load_encoder_effects()?;
         self.set_pitch_mode()?;
+        self.load_encoder_effects()?;
 
-        self.apply_effects(self.mic_profile.get_fx_keys())?;
+        self.apply_effects(self.mic_profile.get_fx_keys(self.profile.use_echo_tempo()))?;
 
         Ok(())
     }
@@ -1471,6 +1473,18 @@ impl<'a> Device<'a> {
         // the profile value if hardtune is enabled, so we'll pre-emptively calculate pitch here..
         let mut value_changed = false;
 
+        for encoder in EncoderName::iter() {
+            if self.encoder_states[encoder] != encoders[encoder as usize] {
+                value_changed = true;
+                self.encoder_states[encoder] = encoders[encoder as usize];
+            }
+        }
+
+        if self.encoder_states[EncoderName::Pitch] != encoders[0] {
+            value_changed = true;
+            self.encoder_states[EncoderName::Pitch] = encoders[0];
+        }
+
         if self.profile.calculate_pitch_knob_position(encoders[0])
             != self.profile.get_pitch_knob_position()
         {
@@ -1486,8 +1500,11 @@ impl<'a> Device<'a> {
             let user_value = self
                 .mic_profile
                 .get_effect_value(EffectKey::PitchAmount, self.profile());
-            let message = format!("Pitch {}", user_value);
-            let _ = self.global_events.send(TTSMessage(message)).await;
+
+            if self.hardware.device_type != DeviceType::Mini {
+                let message = format!("Pitch {}", user_value);
+                let _ = self.global_events.send(TTSMessage(message)).await;
+            }
         }
 
         if encoders[1] != self.profile.get_gender_value() {
@@ -1510,8 +1527,11 @@ impl<'a> Device<'a> {
 
             if new_value != current_value {
                 self.apply_effects(LinkedHashSet::from_iter([EffectKey::GenderAmount]))?;
-                let message = format!("Gender {}", new_value);
-                let _ = self.global_events.send(TTSMessage(message)).await;
+
+                if self.hardware.device_type != DeviceType::Mini {
+                    let message = format!("Gender {}", new_value);
+                    let _ = self.global_events.send(TTSMessage(message)).await;
+                }
             }
         }
 
@@ -1532,8 +1552,11 @@ impl<'a> Device<'a> {
             self.apply_effects(LinkedHashSet::from_iter([EffectKey::ReverbAmount]))?;
 
             let percent = 100 - ((new_value as f32 / -36.) * 100.) as i32;
-            let message = format!("Reverb {} percent", percent);
-            let _ = self.global_events.send(TTSMessage(message)).await;
+
+            if self.hardware.device_type != DeviceType::Mini {
+                let message = format!("Reverb {} percent", percent);
+                let _ = self.global_events.send(TTSMessage(message)).await;
+            }
         }
 
         if encoders[3] != self.profile.get_echo_value() {
@@ -1550,8 +1573,11 @@ impl<'a> Device<'a> {
                 .mic_profile
                 .get_effect_value(EffectKey::EchoAmount, self.profile());
             user_value = 100 - ((user_value as f32 / -36.) * 100.) as i32;
-            let message = format!("Echo {} percent", user_value);
-            let _ = self.global_events.send(TTSMessage(message)).await;
+
+            if self.hardware.device_type != DeviceType::Mini {
+                let message = format!("Echo {} percent", user_value);
+                let _ = self.global_events.send(TTSMessage(message)).await;
+            }
         }
 
         Ok(value_changed)
@@ -2000,7 +2026,10 @@ impl<'a> Device<'a> {
             // Echo..
             GoXLRCommand::SetEchoStyle(value) => {
                 self.profile.set_echo_style(value)?;
-                self.apply_effects(self.mic_profile.get_echo_keyset())?;
+                self.apply_effects(
+                    self.mic_profile
+                        .get_echo_keyset(self.profile.use_echo_tempo()),
+                )?;
             }
             GoXLRCommand::SetEchoAmount(value) => {
                 self.profile
@@ -3303,7 +3332,7 @@ impl<'a> Device<'a> {
         }
 
         // Grab all keys that aren't common between devices
-        let fx_keys = self.mic_profile.get_fx_keys();
+        let fx_keys = self.mic_profile.get_fx_keys(self.profile.use_echo_tempo());
 
         // Setup to send these keys..
         let mut send_keys = LinkedHashSet::new();

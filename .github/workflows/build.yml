@@ -5,19 +5,19 @@ on: [push, pull_request, workflow_call]
 jobs:
   check_linux:
     name: Checking for Linux
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: "Install Dependencies"
         run: |
           sudo apt-get update
           sudo apt-get install libdbus-1-dev pkg-config libspeechd-dev
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
 
       - name: Preparing Cache..
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         continue-on-error: false
         with:
           path: |
@@ -42,13 +42,13 @@ jobs:
     name: Checking for MacOS
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
 
       - name: Preparing Cache..
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         continue-on-error: false
         with:
           path: |
@@ -73,13 +73,13 @@ jobs:
     name: Checking for Windows
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
 
       - name: Preparing Cache..
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         continue-on-error: false
         with:
           path: |

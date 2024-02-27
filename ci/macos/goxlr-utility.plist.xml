@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist>
+    <dict>
+        <key>Label</key>
+        <string>com.github.goxlr-on-linux.goxlr-utility</string>
+
+        <key>ProgramArguments</key>
+        <array>
+            <string>/Applications/GoXLR Utility.app/Contents/MacOS/goxlr-daemon</string>
+        </array>
+
+        <key>RunAtLoad</key>
+        <true />
+
+        <!-- If the User Quits the Utility, don't restart it automatically! -->
+        <key>KeepAlive</key>
+        <dict>
+            <key>SuccessfulExit</key>
+            <false/>
+        </dict>
+    </dict>
+</plist>

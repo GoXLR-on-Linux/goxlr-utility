@@ -1,6 +1,6 @@
 [package]
 name = "goxlr-initialiser"
-version = "1.0.5"
+version = "1.0.6"
 edition = "2021"
 authors = ["Nathan Adams <dinnerbone@dinnerbone.com>", "Craig McLure <craig@mclure.net>", "Lars Mühlbauer <lm41@dismail.de>"]
 description = "Finds, checks and initialises any unconfigured GoXLR devices"
@@ -12,3 +12,8 @@ categories = ["hardware-support", "command-line-utilities"]
 rusb = "0.9.3"
 anyhow = "1.0.75"
 cfg-if = "1.0.0"
+tokio = { version = "1.0.0", features = ["rt", "rt-multi-thread", "macros", "sync"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+block = "0.1.6"
+xpc-connection-sys = { git="https://github.com/dfrankland/xpc-connection-rs.git" }
