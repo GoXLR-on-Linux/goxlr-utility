@@ -19,6 +19,7 @@ use anyhow::{anyhow, Result};
 use include_dir::{include_dir, Dir};
 use jsonpath_rust::JsonPathQuery;
 use log::{debug, error, info, warn};
+use mime_guess::mime::IMAGE_PNG;
 use mime_guess::MimeGuess;
 use serde_json::Value;
 use tokio::sync::broadcast::Sender as BroadcastSender;
@@ -30,6 +31,8 @@ use crate::PatchEvent;
 use goxlr_ipc::{
     DaemonRequest, DaemonResponse, DaemonStatus, HttpSettings, WebsocketRequest, WebsocketResponse,
 };
+use goxlr_scribbles::get_scribble_png;
+use goxlr_types::FaderName;
 
 use crate::primary_worker::DeviceSender;
 use crate::servers::server_packet::handle_packet;
@@ -225,6 +228,7 @@ pub async fn spawn_http_server(
             .service(execute_command)
             .service(get_devices)
             .service(get_sample)
+            .service(get_scribble)
             .service(get_path)
             .service(websocket)
             .default_service(web::to(default))
@@ -334,8 +338,76 @@ async fn get_path(app_data: Data<Mutex<AppData>>, req: HttpRequest) -> HttpRespo
     HttpResponse::InternalServerError().finish()
 }
 
+#[get("/files/scribble/{serial}/{fader}.png")]
+async fn get_scribble(
+    path: web::Path<(String, FaderName)>,
+    app_data: Data<Mutex<AppData>>,
+    req: HttpRequest,
+) -> HttpResponse {
+    let serial = &path.0;
+    let fader = path.1;
+
+    let params = web::Query::<HashMap<String, String>>::from_query(req.query_string());
+    let mut final_width = 128;
+    let mut final_height = 64;
+
+    // Try and Parse the width and height out the request (?width=X&height=Y)
+    if let Ok(params) = params {
+        if let Some(width) = params.get("width") {
+            if let Ok(width_numeric) = width.parse() {
+                final_width = width_numeric;
+            }
+        }
+        if let Some(height) = params.get("height") {
+            if let Ok(height_numeric) = height.parse() {
+                final_height = height_numeric;
+            }
+        }
+    }
+
+    // Now we need to grab the DaemonResponse to get the layout of the scribble..
+    let mut guard = app_data.lock().await;
+    let sender = guard.deref_mut();
+    let request = DaemonRequest::GetStatus;
+
+    if let Ok(DaemonResponse::Status(status)) = handle_packet(request, &mut sender.usb_tx).await {
+        let scribble_path = status.paths.icons_directory;
+
+        if let Some(mixer) = status.mixers.get(serial) {
+            // Locate the Scribble..
+            if let Some(scribble) = &mixer.fader_status[fader].scribble {
+                let mut icon_path = None;
+                if let Some(file) = &scribble.file_name {
+                    icon_path = Some(scribble_path.join(file));
+                }
+
+                // We have access to the Scribble package, so generate and throw out..
+                let png = get_scribble_png(
+                    icon_path,
+                    scribble.bottom_text.clone(),
+                    scribble.left_text.clone(),
+                    scribble.inverted,
+                    final_width,
+                    final_height,
+                );
+                debug!("Creating Image {}x{}", final_width, final_height);
+
+                let mime_type = ContentType(IMAGE_PNG);
+                let mut builder = HttpResponse::Ok();
+                builder.insert_header(mime_type);
+                return builder.body(png.unwrap());
+            }
+        }
+    }
+
+    debug!("Unable to Build Image: {} - {}", serial, fader);
+    HttpResponse::NotFound().finish()
+}
+
 #[get("/files/samples/{sample}")]
 async fn get_sample(sample: web::Path<String>, app_data: Data<Mutex<AppData>>) -> HttpResponse {
+    debug!("Err?");
+
     // Get the Base Samples Path..
     let mut guard = app_data.lock().await;
     let sender = guard.deref_mut();
