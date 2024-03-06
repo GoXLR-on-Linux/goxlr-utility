@@ -2546,7 +2546,7 @@
 			<key>PACKAGE_SETTINGS</key>
 			<dict>
 				<key>AUTHENTICATION</key>
-				<integer>0</integer>
+				<integer>1</integer>
 				<key>CONCLUSION_ACTION</key>
 				<integer>0</integer>
 				<key>FOLLOW_SYMBOLIC_LINKS</key>
