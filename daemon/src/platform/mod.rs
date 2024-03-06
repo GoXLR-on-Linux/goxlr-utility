@@ -62,7 +62,6 @@ cfg_if! {
             linux::display_error(message);
         }
     } else if #[cfg(target_os = "macos")] {
-        mod unix;
         mod macos;
         use anyhow::bail;
 
@@ -71,7 +70,7 @@ cfg_if! {
         }
 
         pub async fn spawn_runtime(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Result<()> {
-            unix::spawn_platform_runtime(state, tx).await
+            macos::runtime::run(tx.clone(), state.shutdown.clone()).await
         }
 
         pub fn has_autostart() -> bool {
