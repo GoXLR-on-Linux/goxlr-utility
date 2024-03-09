@@ -55,6 +55,9 @@ tempfile = "3.8.1"
 
 which = "6.0.0"
 
+# Language Determination..
+sys-locale = "0.3.1"
+
 ## HTTPd Server
 actix = "0.13.1"
 actix-web-actors = "4.2.0"

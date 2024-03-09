@@ -2,11 +2,11 @@ use crate::device::Device;
 use crate::events::EventTriggers;
 use crate::files::extract_defaults;
 use crate::platform::{get_ui_app_path, has_autostart, set_autostart};
-use crate::{FileManager, PatchEvent, SettingsHandle, Shutdown, VERSION};
+use crate::{FileManager, PatchEvent, SettingsHandle, Shutdown, SYSTEM_LOCALE, VERSION};
 use anyhow::{anyhow, Result};
 use goxlr_ipc::{
     Activation, DaemonCommand, DaemonConfig, DaemonStatus, Files, GoXLRCommand, HardwareStatus,
-    HttpSettings, PathTypes, Paths, SampleFile, UsbProductInformation,
+    HttpSettings, Locale, PathTypes, Paths, SampleFile, UsbProductInformation,
 };
 use goxlr_types::DeviceType;
 use goxlr_usb::device::base::GoXLRDevice;
@@ -377,6 +377,10 @@ async fn get_daemon_status(
         config: DaemonConfig {
             http_settings: http_settings.clone(),
             daemon_version: String::from(VERSION),
+            locale: Locale {
+                user_locale: settings.get_selected_locale().await,
+                system_locale: SYSTEM_LOCALE.clone(),
+            },
             autostart_enabled: has_autostart(),
             show_tray_icon: settings.get_show_tray_icon().await,
             tts_enabled: settings.get_tts_enabled().await,

@@ -51,6 +51,7 @@ impl SettingsHandle {
 
         let mut settings = Settings::read(&path)?.unwrap_or_else(|| Settings {
             show_tray_icon: Some(true),
+            selected_locale: None,
             tts_enabled: Some(false),
             allow_network_access: Some(false),
             profile_directory: None,
@@ -166,6 +167,16 @@ impl SettingsHandle {
     pub async fn set_show_tray_icon(&self, enabled: bool) {
         let mut settings = self.settings.write().await;
         settings.show_tray_icon = Some(enabled);
+    }
+
+    pub async fn get_selected_locale(&self) -> Option<String> {
+        let settings = self.settings.read().await;
+        settings.selected_locale.clone()
+    }
+
+    pub async fn set_selected_locale(&self, locale: Option<String>) {
+        let mut settings = self.settings.write().await;
+        settings.selected_locale = locale;
     }
 
     pub async fn get_tts_enabled(&self) -> Option<bool> {
@@ -573,6 +584,7 @@ impl SettingsHandle {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Settings {
     show_tray_icon: Option<bool>,
+    selected_locale: Option<String>,
     tts_enabled: Option<bool>,
     allow_network_access: Option<bool>,
     profile_directory: Option<PathBuf>,

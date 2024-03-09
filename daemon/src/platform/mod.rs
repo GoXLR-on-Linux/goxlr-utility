@@ -33,6 +33,10 @@ cfg_if! {
         pub fn display_error(message: String) {
             windows::display_error(message);
         }
+
+        pub fn get_language() -> String {
+            "en_GB".into()
+        }
     } else if #[cfg(target_os = "linux")] {
         mod linux;
         mod unix;
@@ -61,6 +65,10 @@ cfg_if! {
         pub fn display_error(message: String) {
             linux::display_error(message);
         }
+
+        pub fn get_language() -> String {
+            "en_GB".into()
+        }
     } else if #[cfg(target_os = "macos")] {
         mod macos;
         use anyhow::bail;
@@ -84,6 +92,10 @@ cfg_if! {
          pub fn display_error(message: String) {
             macos::display_error(message);
          }
+
+         pub fn get_language() -> String {
+            "en_GB".into()
+         }
     } else {
         use anyhow::bail;
 
@@ -104,6 +116,10 @@ cfg_if! {
         }
 
         pub fn display_error(message: String) {}
+
+        pub fn get_language() -> String {
+            "en_GB".into()
+        }
     }
 }
 

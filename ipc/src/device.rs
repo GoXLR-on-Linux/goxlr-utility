@@ -26,6 +26,7 @@ pub struct DaemonStatus {
 pub struct DaemonConfig {
     pub http_settings: HttpSettings,
     pub daemon_version: String,
+    pub locale: Locale,
     pub activation: Activation,
     pub autostart_enabled: bool,
     pub show_tray_icon: bool,
@@ -33,6 +34,12 @@ pub struct DaemonConfig {
     pub allow_network_access: bool,
     pub log_level: LogLevel,
     pub open_ui_on_launch: bool,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct Locale {
+    pub user_locale: Option<String>,
+    pub system_locale: String,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
