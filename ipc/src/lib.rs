@@ -77,6 +77,7 @@ pub enum DaemonCommand {
     OpenPath(PathTypes),
     SetLogLevel(LogLevel),
     SetShowTrayIcon(bool),
+    SetLocale(Option<String>),
     SetTTSEnabled(bool),
     SetAutoStartEnabled(bool),
     SetAllowNetworkAccess(bool),
