@@ -7,15 +7,8 @@
 
         <key>ProgramArguments</key>
         <array>
-            <string>/Applications/GoXLR Utility.app/Contents/MacOS/goxlr-daemon</string>
+            <string>{{BINARY_PATH}}</string>
         </array>
-
-        <!--
-         Runtime will generally be controlled by the daemon, and addition / removal happening while it's actively
-         running, so in this context, we shouldn't start the daemon when we're loaded.
-         -->
-        <key>RunAtLoad</key>
-        <false />
 
         <!-- If the User Quits the Utility, don't restart it automatically! -->
         <key>KeepAlive</key>

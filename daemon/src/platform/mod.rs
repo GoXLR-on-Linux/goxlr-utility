@@ -63,7 +63,6 @@ cfg_if! {
         }
     } else if #[cfg(target_os = "macos")] {
         mod macos;
-        use anyhow::bail;
 
         pub fn perform_preflight() -> Result<()> {
             Ok(())
@@ -74,11 +73,11 @@ cfg_if! {
         }
 
         pub fn has_autostart() -> bool {
-            false
+            macos::has_autostart()
         }
 
-        pub fn set_autostart(_enabled: bool) -> Result<()> {
-            bail!("Autostart Not Supported on this Platform");
+        pub fn set_autostart(enabled: bool) -> Result<()> {
+            macos::set_autostart(enabled)
         }
 
          pub fn display_error(message: String) {
