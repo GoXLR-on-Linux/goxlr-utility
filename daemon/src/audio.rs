@@ -137,32 +137,14 @@ impl AudioHandler {
         }
 
         let patterns = vec![
+            // Linux
             Regex::new("goxlr_sample").expect("Invalid Regex in Audio Handler"),
             Regex::new("GoXLR_0_8_9").expect("Invalid Regex in Audio Handler"),
             Regex::new("GoXLR.*HiFi__Line3__sink").expect("Invalid Regex in Audio Handler"),
-            Regex::new("CoreAudio\\*Sample").expect("Invalid Regex in Audio Handler"),
+            // MacOS
+            Regex::new("CoreAudio\\*Sample(?:(?!Mini).)*$").expect("Invalid Regex"),
+            // Windows
             Regex::new("^WASAPI\\*Sample(?:(?!Mini).)*$").expect("Invalid Regex in Audio Handler"),
-            // If we ever support the sampler on the Mini, this can be used as a fallback, so we defer
-            // to any attached Full Sized device, but if one isn't present, we can use the mini.
-            //Regex::new("^WASAPI\\*Sample.*$").expect("Invalid Regex in Audio Handler"),
-        ];
-        patterns
-    }
-
-    #[allow(dead_code)]
-    fn get_output_device_string_patterns(&self) -> Vec<String> {
-        let override_output = OVERRIDE_SAMPLER_OUTPUT.lock().unwrap().deref().clone();
-        if let Some(device) = override_output {
-            return vec![device];
-        }
-
-        let patterns = vec![
-            String::from("goxlr_sample"),
-            String::from("GoXLR_0_8_9"),
-            String::from("GoXLR.*HiFi__Line3__sink"),
-            String::from("CoreAudio\\*Sample"),
-            String::from("^WASAPI\\*Sample(?:(?!Mini).)*$"),
-            //String::from("^WASAPI\\*Sample.*$"),
         ];
         patterns
     }
@@ -174,12 +156,14 @@ impl AudioHandler {
         }
 
         let patterns = vec![
+            // Linux
             Regex::new("goxlr_sample.*source").expect("Invalid Regex in Audio Handler"),
             Regex::new("GoXLR_0_4_5.*source").expect("Invalid Regex in Audio Handler"),
             Regex::new("GoXLR.*HiFi__Line5__source").expect("Invalid Regex in Audio Handler"),
-            Regex::new("CoreAudio\\*Sampler").expect("Invalid Regex in Audio Handler"),
+            // MacOS
+            Regex::new("CoreAudio\\*Sampler(?:(?!Mini).)*$").expect("Invalid Regex"),
+            // Windows
             Regex::new("^WASAPI\\*Sample(?:(?!Mini).)*$").expect("Invalid Regex in Audio Handler"),
-            //Regex::new("^WASAPI\\*Sample.*$").expect("Invalid Regex in Audio Handler"),
         ];
         patterns
     }
@@ -191,12 +175,14 @@ impl AudioHandler {
         }
 
         let patterns = vec![
+            // Linux
             String::from("goxlr_sample.*source"),
             String::from("GoXLR_0_4_5.*source"),
             String::from("GoXLR.*HiFi__Line5__source"),
-            String::from("CoreAudio\\*Sampler"),
+            // MacOS
+            String::from("CoreAudio\\*Sampler(?:(?!Mini).)*$"),
+            // Windows
             String::from("^WASAPI\\*Sample(?:(?!Mini).)*$"),
-            //String::from("^WASAPI\\*Sample.*$"),
         ];
 
         patterns
