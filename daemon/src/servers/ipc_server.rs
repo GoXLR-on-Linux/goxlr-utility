@@ -141,7 +141,13 @@ async fn handle_connection(
                     }
                 }
             },
-            Err(e) => warn!("Invalid message from {:?}: {}", socket.address(), e),
+            Err(e) => {
+                warn!("Invalid message from {:?}: {}", socket.address(), e);
+                if let Err(e) = socket.send(DaemonResponse::Error(e.to_string())).await {
+                    warn!("Could not reply to {:?}: {}", socket.address(), e);
+                    return;
+                }
+            }
         }
     }
     debug!("Disconnected {:?}", socket.address());
