@@ -53,7 +53,6 @@ pub fn has_autostart() -> bool {
             .join("LaunchAgents")
             .join(PLIST_FILENAME);
 
-        debug!("Checking for {:?}", path);
         path.exists()
     } else {
         false
@@ -66,8 +65,6 @@ pub fn set_autostart(enabled: bool) -> Result<()> {
             .join("Library")
             .join("LaunchAgents")
             .join(PLIST_FILENAME);
-
-        debug!("Checking for {:?}", path);
 
         if path.exists() && !enabled {
             return fs::remove_file(path).map_err(anyhow::Error::from);
