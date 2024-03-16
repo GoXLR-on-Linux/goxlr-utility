@@ -1,3 +1,4 @@
+use std::cmp::max;
 use std::fmt::{Debug, Formatter};
 use std::fs;
 use std::fs::File;
@@ -54,8 +55,11 @@ impl Debug for BufferedRecorder {
 
 impl BufferedRecorder {
     pub fn new(devices: Vec<String>, buffer_millis: usize) -> Result<Self> {
-        // Buffer size is simple, 48 samples a milli for 2 channels..
-        let buffer_size = (48 * 2) * buffer_millis;
+        // We're going to force a 100ms buffer on the recording, to account for time and delays
+        // which may be caused from registering the button press..
+        let forced_buffer = (48 * 2) * 100;
+        let user_buffer = (48 * 2) * buffer_millis;
+        let buffer_size = max(forced_buffer, user_buffer);
 
         // Convert the list of Strings into a Regexp vec..
         let regex = devices
@@ -208,7 +212,7 @@ impl BufferedRecorder {
         let mut writer = hound::WavWriter::create(path, spec)?;
 
         // EBU Prep is here to make sure that recent samples have hit a threshold to start recording.
-        let mut ebu_prep_r128 = EbuR128::new(2, 48000, Mode::I)?;
+        let mut ebu_prep_r128 = EbuR128::new(2, 48000, Mode::SAMPLE_PEAK)?;
 
         // EBU Rec is here to perform the needed gain calculations on what has already been recorded
         let mut ebu_rec_r128 = EbuR128::new(2, 48000, Mode::I)?;
@@ -319,14 +323,16 @@ impl BufferedRecorder {
                 }
             }
         }
+
         Ok(recording_started)
     }
 
     fn is_audio(&self, ebu_r128: &mut EbuR128, samples: &[f32]) -> Result<bool> {
+        //        return Ok(true);
         // The GoXLR seems to have a noise floor of roughly -100dB, so we're going
         // to listen for anything louder than -80dB and consider that 'useful' audio.
         ebu_r128.add_frames_f32(samples)?;
-        if let Ok(loudness) = ebu_r128.loudness_momentary() {
+        if let Ok(loudness) = ebu_r128.sample_peak(1) {
             if loudness > -45. {
                 return Ok(true);
             }
