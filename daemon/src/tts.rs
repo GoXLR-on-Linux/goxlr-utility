@@ -2,7 +2,9 @@ use crate::settings::SettingsHandle;
 use crate::shutdown::Shutdown;
 use anyhow::Result;
 use log::{debug, info, warn};
+use std::time::Duration;
 use tokio::sync::mpsc::Receiver;
+use tokio::time;
 
 #[cfg(feature = "tts")]
 use tts::Tts;
@@ -10,21 +12,25 @@ use tts::Tts;
 #[allow(clippy::upper_case_acronyms)]
 pub(crate) struct TTS {
     settings: SettingsHandle,
-    tts: Tts,
+    tts: Option<Tts>,
 }
 
 impl TTS {
     pub fn new(settings: SettingsHandle) -> Result<TTS> {
-        let mut tts = Tts::default()?;
-        if cfg!(target_os = "macos") {
-            tts.set_rate(tts.max_rate())?;
-        }
-        Ok(Self { tts, settings })
+        Ok(Self {
+            settings,
+            tts: None,
+        })
     }
 
     pub async fn listen(&mut self, mut rx: Receiver<String>, mut shutdown: Shutdown) {
+        let mut ticker = time::interval(Duration::from_secs(5));
+
         loop {
             tokio::select! {
+                _ = ticker.tick() => {
+                    //self.check_active().await;
+                },
                 () = shutdown.recv() => {
                     info!("Shutting down TTS Service");
                     return;
@@ -32,6 +38,31 @@ impl TTS {
                 Some(message) = rx.recv() => {
                     debug!("Received TTS Message: {}", message);
                     self.speak_tts(message).await;
+                },
+            }
+        }
+    }
+
+    // So this is problematic due to a bug in `windows::Media::Playback::MediaPlayer`. Dropping
+    // a MediaPlayer instance does not correctly clean up left over resources, resulting in
+    // huge numbers of MediaPlayers spawning if I try to drop them.
+    #[allow(dead_code)]
+    async fn check_active(&mut self) {
+        if let Some(tts) = &self.tts {
+            // If the follow get_tts_enabled code returns 'None', this code doesn't exist,
+            // as they're both behind the same TTS feature flag!
+            if let Some(enabled) = self.settings.get_tts_enabled().await {
+                // We're no longer enabled, teardown the TTS handler..
+                if !enabled {
+                    self.tts.take();
+                    return;
+                }
+            }
+
+            if let Ok(speaking) = tts.is_speaking() {
+                // If we're not currently speaking, teardown the TTS handler
+                if !speaking {
+                    self.tts.take();
                 }
             }
         }
@@ -52,15 +83,31 @@ impl TTS {
             return;
         }
 
-        if self.tts.stop().is_err() {
-            warn!("Unable to Stop TTS Output");
-            return;
+        if self.tts.is_none() {
+            let tts = match Tts::default() {
+                Ok(mut tts) => {
+                    if cfg!(target_os = "macos") {
+                        let _ = tts.set_rate(tts.max_rate());
+                    }
+                    tts
+                }
+                Err(e) => {
+                    warn!("Unable to Spawn TTS instance: {:?}", e);
+                    return;
+                }
+            };
+            self.tts.replace(tts);
         }
 
-        match self.tts.speak(message, true) {
-            Ok(_) => {}
-            Err(error) => {
-                warn!("Error Sending TTS: {}", error);
+        // This should, in 100% of cases, be true..
+        if let Some(tts) = &mut self.tts {
+            if let Err(e) = tts.stop() {
+                warn!("Error Stopping TTS {:?}", e);
+                return;
+            }
+
+            if let Err(e) = tts.speak(message, true) {
+                warn!("Error Sending TTS: {:?}", e);
             }
         }
     }
@@ -93,6 +140,10 @@ impl Tts {
 
     pub fn stop(&self) -> Result<()> {
         Ok(())
+    }
+
+    pub fn is_speaking(&self) -> Result<bool> {
+        Ok(true)
     }
 
     pub fn speak(&self, _: String, _: bool) -> Result<()> {
