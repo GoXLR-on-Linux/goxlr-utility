@@ -267,6 +267,15 @@ impl AudioHandler {
         false
     }
 
+    pub fn get_playing_file(&self, bank: SampleBank, button: SampleButtons) -> Option<PathBuf> {
+        if let Some(stream) = &self.active_streams[bank][button] {
+            if let Some(manager) = &stream.playback {
+                return Some(manager.state.playing_file.clone());
+            }
+        }
+        None
+    }
+
     pub fn sample_recording(&self, bank: SampleBank, button: SampleButtons) -> bool {
         if let Some(stream) = &self.active_streams[bank][button] {
             if stream.recording.is_some() {
@@ -358,6 +367,31 @@ impl AudioHandler {
             return Err(anyhow!("Unable to play Sample, Output device not found"));
         }
 
+        Ok(())
+    }
+
+    pub async fn restart_for_button(
+        &mut self,
+        bank: SampleBank,
+        button: SampleButtons,
+    ) -> Result<()> {
+        if let Some(player) = &mut self.active_streams[bank][button] {
+            if player.stream_type == StreamType::Recording {
+                return Err(anyhow!(
+                    "Attempted to Restart Playback on Recording Stream.."
+                ));
+            }
+
+            if let Some(playback_state) = &mut player.playback {
+                // We'll set the value to true, which will be a signal to the
+                // audio player to restart the track, once that signal is processed
+                // it'll be reset back to false.
+                playback_state
+                    .state
+                    .restart_track
+                    .store(true, Ordering::Relaxed);
+            }
+        }
         Ok(())
     }
 

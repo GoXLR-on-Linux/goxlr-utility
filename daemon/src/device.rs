@@ -1229,7 +1229,17 @@ impl<'a> Device<'a> {
         };
 
         if let Some(audio_handler) = &mut self.audio_handler {
-            audio_handler.stop_playback(bank, button, true).await?;
+            // Call Stop if we're playing something, and it's not a restart..
+            if let Some(sample) = audio_handler.get_playing_file(bank, button) {
+                if sample == audio.file {
+                    // We're already playing this file, seek back to the start..
+                    debug!("Restarting Audio File");
+                    audio_handler.restart_for_button(bank, button).await?;
+                    return Ok(());
+                } else {
+                    audio_handler.stop_playback(bank, button, true).await?;
+                }
+            }
 
             let result = audio_handler
                 .play_for_button(bank, button, audio, loop_track)
