@@ -306,7 +306,14 @@ impl BufferedRecorder {
                 let gain_db = target - loudness;
                 let value = f64::powf(10., gain_db / 20.);
 
-                state.gain.store(value, Ordering::Relaxed);
+                // If we need to multiply the input by over 150, we're pulling in something
+                // *FAR* to quiet to handle properly, so we'll reject it.
+                if value > 150. {
+                    debug!("Received Noise too quiet, cannot handle sanely, Cancelling.");
+                    fs::remove_file(path)?;
+                } else {
+                    state.gain.store(value, Ordering::Relaxed);
+                }
             }
         }
 
