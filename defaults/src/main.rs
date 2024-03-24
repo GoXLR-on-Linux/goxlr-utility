@@ -2,7 +2,6 @@
 
 use clap::Parser;
 use std::fs;
-use std::io::Error;
 
 use crate::Errors::{PathNotDir, PathNotExist};
 use include_dir::{include_dir, Dir};
@@ -17,8 +16,8 @@ const ICONS: Dir = include_dir!("./defaults/resources/icons");
 enum Errors {
     PathNotExist,
     PathNotDir,
-    ErrorRemovingFile(Error),
-    ErrorWritingFile(Error),
+    ErrorRemovingFile,
+    ErrorWritingFile,
 }
 
 fn main() -> Result<(), Errors> {
@@ -47,12 +46,14 @@ fn main() -> Result<(), Errors> {
             if !args.overwrite {
                 continue;
             } else if let Err(e) = fs::remove_file(&file_path) {
-                return Err(Errors::ErrorRemovingFile(e));
+                eprintln!("Error Removing File: {}", e);
+                return Err(Errors::ErrorRemovingFile);
             }
         }
 
         if let Err(e) = fs::write(&file_path, file.contents()) {
-            return Err(Errors::ErrorWritingFile(e));
+            eprintln!("Error Writing File: {}", e);
+            return Err(Errors::ErrorWritingFile);
         }
     }
 
