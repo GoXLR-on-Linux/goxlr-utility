@@ -71,9 +71,9 @@ impl BufferedRecorder {
         //
         // So we'll make this buffer OS relevant.
         let forced_buffer = if cfg!(target_os = "windows") {
-            (48 * 2) * 10
+            (48 * 2) * 15
         } else {
-            (48 * 2) * 25
+            (48 * 2) * 30
         };
         let user_buffer = (48 * 2) * buffer_millis;
         let buffer_size = max(forced_buffer, user_buffer);
