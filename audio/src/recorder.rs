@@ -306,9 +306,9 @@ impl BufferedRecorder {
                 let gain_db = target - loudness;
                 let value = f64::powf(10., gain_db / 20.);
 
-                // If we need to multiply the input by over 150, we're pulling in something
+                // If we need to multiply the input by over 200, we're pulling in something
                 // *FAR* to quiet to handle properly, so we'll reject it.
-                if value > 150. {
+                if value > 200. {
                     debug!("Received Noise too quiet, cannot handle sanely, Cancelling.");
                     fs::remove_file(path)?;
                 } else {
@@ -352,13 +352,23 @@ impl BufferedRecorder {
     }
 
     fn is_audio(&self, ebu_r128: &mut EbuR128, samples: &[f32]) -> Result<bool> {
-        //        return Ok(true);
-        // The GoXLR seems to have a noise floor of roughly -100dB, so we're going
-        // to listen for anything louder than -80dB and consider that 'useful' audio.
-        ebu_r128.add_frames_f32(samples)?;
-        if let Ok(loudness) = ebu_r128.sample_peak(1) {
-            if loudness > -45. {
-                return Ok(true);
+        // We're going to check this on a 8 frame basis..
+        for samples in samples.chunks(16) {
+            ebu_r128.add_frames_f32(samples)?;
+
+            // We're now going to take a look at the 'Loudness' of these 8 frames..
+            if let Ok(loudness) = ebu_r128.loudness_window((samples.len() / 2) as u32) {
+                // We have a target of -23dB, work out the distance from there..
+                let target = -23.0;
+                let gain_db = target - loudness;
+                let value = f64::powf(10., gain_db / 20.);
+
+                // So when we get here, loudness * value = -23dB, this gives 'value' a linear
+                // distance from the target, so if we're having to multiply the samples over 200
+                // times to get there, the source audio is likely too quiet to use.
+                if value < 200. {
+                    return Ok(true);
+                }
             }
         }
 
