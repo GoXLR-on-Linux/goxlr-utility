@@ -55,9 +55,26 @@ impl Debug for BufferedRecorder {
 
 impl BufferedRecorder {
     pub fn new(devices: Vec<String>, buffer_millis: usize) -> Result<Self> {
-        // We're going to force a 100ms buffer on the recording, to account for time and delays
-        // which may be caused from registering the button press..
-        let forced_buffer = (48 * 2) * 100;
+        // We need to attempt to accommodate for the time it takes between a user hitting a button
+        // on the GoXLR, and us being signalled for record.
+        //
+        // From my testing, the time from 'Button Notification' to 'Ready for Samples' takes about
+        // 4ms.
+        //
+        // On Linux, the polling time for 'Notifications' is 20ms, so we can safely assume that
+        // 25ms is the absolute max amount of time between someone pressing a button, and the
+        // audio handler being ready.
+        //
+        // On Windows, we receive 'Notification' messages via USB URB INTERRUPTS, which are far
+        // more responsive, allowing us to get the Notification in under 5ms from when the button
+        // is pressed, so a 10ms buffer should be sufficient.
+        //
+        // So we'll make this buffer OS relevant.
+        let forced_buffer = if cfg!(target_os = "windows") {
+            (48 * 2) * 10
+        } else {
+            (48 * 2) * 25
+        };
         let user_buffer = (48 * 2) * buffer_millis;
         let buffer_size = max(forced_buffer, user_buffer);
 
