@@ -249,6 +249,7 @@ pub async fn spawn_usb_handler(
                             DaemonCommand::SetUiLaunchOnLoad(value) => {
                                 settings.set_open_ui_on_launch(value).await;
                                 settings.save().await;
+                                change_found = true;
 
                                 let _ = sender.send(Ok(()));
                             }
