@@ -431,6 +431,17 @@ impl SettingsHandle {
         false
     }
 
+    pub async fn get_sampler_reset_on_clear(&self, device_serial: &str) -> bool {
+        let settings = self.settings.read().await;
+        settings
+            .devices
+            .as_ref()
+            .unwrap()
+            .get(device_serial)
+            .map(|d| d.sampler_reset_on_clear.unwrap_or(true))
+            .unwrap_or(true)
+    }
+
     pub async fn get_sample_gain_percent(&self, name: String) -> u8 {
         let settings = self.settings.read().await;
         if let Some(gain) = &settings.sample_gain {
@@ -570,6 +581,17 @@ impl SettingsHandle {
         entry.enable_monitor_with_fx = Some(setting);
     }
 
+    pub async fn set_sampler_reset_on_clear(&self, device_serial: &str, setting: bool) {
+        let mut settings = self.settings.write().await;
+        let entry = settings
+            .devices
+            .as_mut()
+            .unwrap()
+            .entry(device_serial.to_owned())
+            .or_insert_with(DeviceSettings::default);
+        entry.sampler_reset_on_clear = Some(setting);
+    }
+
     pub async fn set_sample_gain_percent(&self, name: String, value: u8) {
         let mut settings = self.settings.write().await;
         if settings.sample_gain.is_none() {
@@ -681,6 +703,9 @@ struct DeviceSettings {
     // Enable Monitoring when FX are Enabled
     enable_monitor_with_fx: Option<bool>,
 
+    // Clear Sample Settings when Clearing Button
+    sampler_reset_on_clear: Option<bool>,
+
     // 'Shutdown' commands..
     shutdown_commands: Vec<GoXLRCommand>,
     sleep_commands: Vec<GoXLRCommand>,
@@ -698,6 +723,7 @@ impl Default for DeviceSettings {
             chat_mute_mutes_mic_to_chat: Some(true),
             lock_faders: Some(false),
             enable_monitor_with_fx: Some(false),
+            sampler_reset_on_clear: Some(true),
 
             shutdown_commands: vec![],
             sleep_commands: vec![],

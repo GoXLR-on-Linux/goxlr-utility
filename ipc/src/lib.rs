@@ -259,6 +259,7 @@ pub enum GoXLRCommand {
     SetMuteHoldDuration(u16),
     SetVCMuteAlsoMuteCM(bool),
     SetMonitorWithFx(bool),
+    SetSamplerResetOnClear(bool),
     SetLockFaders(bool),
 
     // These control the current GoXLR 'State'..

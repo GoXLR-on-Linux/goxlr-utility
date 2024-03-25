@@ -210,6 +210,11 @@ impl<'a> Device<'a> {
             .get_enable_monitor_with_fx(self.serial())
             .await;
 
+        let sampler_reset_on_clear = self
+            .settings
+            .get_sampler_reset_on_clear(self.serial())
+            .await;
+
         let locked_faders = self.settings.get_device_lock_faders(self.serial()).await;
 
         let submix_supported = self.device_supports_submixes();
@@ -278,6 +283,7 @@ impl<'a> Device<'a> {
                 mute_hold_duration: self.hold_time,
                 vc_mute_also_mute_cm: self.vc_mute_also_mute_cm,
                 enable_monitor_with_fx: monitor_with_fx,
+                reset_sampler_on_clear: sampler_reset_on_clear,
                 lock_faders: locked_faders,
             },
             button_down: button_states,
@@ -1150,6 +1156,19 @@ impl<'a> Device<'a> {
 
             debug!("Cleared samples..");
             self.profile.set_sample_clear_active(false)?;
+
+            // Check whether we should reset the Sampler Function..
+            if self
+                .settings
+                .get_sampler_reset_on_clear(self.serial())
+                .await
+            {
+                self.profile.set_sampler_function(
+                    active_bank,
+                    button,
+                    SamplePlaybackMode::PlayNext,
+                );
+            }
 
             debug!("Disabled Buttons..");
             self.load_colour_map().await?;
@@ -2551,6 +2570,13 @@ impl<'a> Device<'a> {
                     .await;
                 self.settings.save().await;
                 self.apply_routing(BasicInputDevice::Microphone).await?;
+            }
+
+            GoXLRCommand::SetSamplerResetOnClear(value) => {
+                self.settings
+                    .set_sampler_reset_on_clear(self.serial(), value)
+                    .await;
+                self.settings.save().await;
             }
 
             GoXLRCommand::SetLockFaders(value) => {
