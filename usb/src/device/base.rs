@@ -72,8 +72,8 @@ pub trait GoXLRCommands: ExecutableGoXLR {
         let firmware = VersionNumber(
             firmware_packed >> 12,
             (firmware_packed >> 8) & 0xF,
-            firmware_packed & 0xFF,
-            firmware_build,
+            Some(firmware_packed & 0xFF),
+            Some(firmware_build),
         );
 
         let _unknown = cursor.read_u32::<LittleEndian>()?;
@@ -84,8 +84,8 @@ pub trait GoXLRCommands: ExecutableGoXLR {
         let dice = VersionNumber(
             (dice_packed >> 20) & 0xF,
             (dice_packed >> 12) & 0xFF,
-            dice_packed & 0xFFF,
-            dice_build,
+            Some(dice_packed & 0xFFF),
+            Some(dice_build),
         );
 
         Ok(FirmwareVersions {

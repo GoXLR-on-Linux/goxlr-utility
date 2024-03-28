@@ -3384,14 +3384,28 @@ pub fn version_newer_or_equal_to(version: &VersionNumber, comparison: VersionNum
         Ordering::Equal => {}
     }
 
-    match version.2.cmp(&comparison.2) {
-        Ordering::Greater => return true,
-        Ordering::Less => return false,
-        Ordering::Equal => {}
+    if let Some(patch) = version.2 {
+        if let Some(comparison) = comparison.2 {
+            match patch.cmp(&comparison) {
+                Ordering::Greater => return true,
+                Ordering::Less => return false,
+                Ordering::Equal => {}
+            }
+        } else {
+            return true;
+        }
+    } else if comparison.2.is_some() {
+        return false;
     }
 
-    if version.3 >= comparison.3 {
-        return true;
+    if let Some(build) = version.3 {
+        if let Some(comparison) = comparison.3 {
+            if build >= comparison {
+                return true;
+            }
+        } else {
+            return true;
+        }
     }
 
     false

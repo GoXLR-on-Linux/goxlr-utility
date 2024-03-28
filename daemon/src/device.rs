@@ -3587,11 +3587,11 @@ impl<'a> Device<'a> {
             DeviceType::Unknown => false,
             DeviceType::Full => version_newer_or_equal_to(
                 &self.hardware.versions.firmware,
-                VersionNumber(1, 4, 2, 107),
+                VersionNumber(1, 4, Some(2), Some(107)),
             ),
             DeviceType::Mini => version_newer_or_equal_to(
                 &self.hardware.versions.firmware,
-                VersionNumber(1, 2, 0, 46),
+                VersionNumber(1, 2, Some(0), Some(46)),
             ),
         }
     }
@@ -3601,11 +3601,11 @@ impl<'a> Device<'a> {
             DeviceType::Unknown => true,
             DeviceType::Full => version_newer_or_equal_to(
                 &self.hardware.versions.firmware,
-                VersionNumber(1, 3, 40, 0),
+                VersionNumber(1, 3, Some(40), Some(0)),
             ),
             DeviceType::Mini => version_newer_or_equal_to(
                 &self.hardware.versions.firmware,
-                VersionNumber(1, 1, 8, 0),
+                VersionNumber(1, 1, Some(8), Some(0)),
             ),
         }
     }
