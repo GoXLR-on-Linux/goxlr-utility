@@ -1,7 +1,6 @@
 use crate::device::base::AttachGoXLR;
 use crate::device::base::FullGoXLRDevice;
 use crate::device::base::GoXLRDevice;
-use crate::device::libusb::device::get_interface_version;
 use anyhow::Result;
 use goxlr_types::{DriverInterface, VersionNumber};
 use tokio::sync::mpsc::Sender;
@@ -15,7 +14,7 @@ cfg_if::cfg_if! {
         use crate::device::tusb::device;
 
         pub fn get_version() -> (DriverInterface, VersionNumber) {
-            get_interface_version()
+            device::get_interface_version()
         }
 
         pub fn find_devices() -> Vec<GoXLRDevice> {
@@ -36,7 +35,7 @@ cfg_if::cfg_if! {
         use crate::device::libusb::device;
 
         pub fn get_version() -> (DriverInterface, VersionNumber) {
-            get_interface_version()
+            device::get_interface_version()
         }
 
         pub fn find_devices() -> Vec<GoXLRDevice> {
