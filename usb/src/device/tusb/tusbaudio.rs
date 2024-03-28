@@ -2,6 +2,7 @@ use crate::device::base::GoXLRDevice;
 use crate::{PID_GOXLR_FULL, PID_GOXLR_MINI, VID_GOXLR};
 use anyhow::{anyhow, bail, Result};
 use byteorder::{ByteOrder, LittleEndian};
+use goxlr_types::VersionNumber;
 use lazy_static::lazy_static;
 use libloading::{Library, Symbol};
 use log::{debug, error, info, warn};
@@ -24,6 +25,7 @@ use winreg::RegKey;
 
 // Define the Types of the various methods..
 type EnumerateDevices = unsafe extern "C" fn() -> u32;
+type GetDriverInfo = unsafe extern "C" fn(*mut DriverInfo) -> u32;
 type GetAPIVersion = unsafe extern "C" fn() -> ApiVersion;
 type CheckAPIVersion = unsafe extern "C" fn(u32, u32) -> bool;
 type GetDeviceCount = unsafe extern "C" fn() -> u32;
@@ -69,6 +71,9 @@ fn locate_library() -> String {
 
 #[allow(dead_code)]
 pub struct TUSBAudio<'lib> {
+    // DriverInfo
+    driver_info: DriverInfo,
+
     // Need to enumerate..
     initial_enumeration: Arc<Mutex<bool>>,
     pnp_thread_running: Arc<Mutex<bool>>,
@@ -77,6 +82,9 @@ pub struct TUSBAudio<'lib> {
     // API Related Commands
     get_api_version: Symbol<'lib, GetAPIVersion>,
     check_api_version: Symbol<'lib, CheckAPIVersion>,
+
+    // Driver Version
+    get_driver_info: Symbol<'lib, GetDriverInfo>,
 
     // Enumeration / Opening..
     enumerate_devices: Symbol<'lib, EnumerateDevices>,
@@ -106,6 +114,8 @@ impl TUSBAudio<'_> {
         let get_api_version: Symbol<_> = unsafe { LIBRARY.get(b"TUSBAUDIO_GetApiVersion")? };
         let check_api_version = unsafe { LIBRARY.get(b"TUSBAUDIO_CheckApiVersion")? };
 
+        let get_driver_info = unsafe { LIBRARY.get(b"TUSBAUDIO_GetDriverInfo")? };
+
         let enumerate_devices = unsafe { LIBRARY.get(b"TUSBAUDIO_EnumerateDevices")? };
         let open_device_by_index = unsafe { LIBRARY.get(b"TUSBAUDIO_OpenDeviceByIndex")? };
 
@@ -126,13 +136,26 @@ impl TUSBAudio<'_> {
         let status_code_string = unsafe { LIBRARY.get(b"TUSBAUDIO_StatusCodeStringA")? };
         let close_device = unsafe { LIBRARY.get(b"TUSBAUDIO_CloseDevice")? };
 
+        debug!("Performing initial Enumeration..");
+        unsafe { (enumerate_devices)() };
+
+        debug!("Fetching Versioning Information..");
+        let mut driver_info = DriverInfo::default();
+        let driver_info_ptr: *mut DriverInfo = &mut driver_info;
+        let result = unsafe { (get_driver_info)(driver_info_ptr) };
+        if result != 0 {
+            warn!("Unable to Obtain Driver Info: {}", result);
+        }
+
         let tusb_audio = Self {
+            driver_info,
             initial_enumeration: Arc::new(Mutex::new(false)),
             pnp_thread_running: Arc::new(Mutex::new(false)),
             discovered_devices: Arc::new(Mutex::new(Vec::new())),
 
             get_api_version,
             check_api_version,
+            get_driver_info,
             enumerate_devices,
             open_device_by_index,
             get_device_count,
@@ -170,6 +193,15 @@ impl TUSBAudio<'_> {
         }
 
         Ok(tusb_audio)
+    }
+
+    pub fn get_driver_version(&self) -> VersionNumber {
+        VersionNumber(
+            self.driver_info.driver_major,
+            self.driver_info.driver_minor,
+            self.driver_info.driver_patch,
+            None,
+        )
     }
 
     fn get_error(&self, error: u32) -> String {
@@ -683,6 +715,16 @@ struct ApiVersion {
 }
 
 #[repr(C)]
+struct DriverInfo {
+    api_major: u32,
+    api_minor: u32,
+    driver_major: u32,
+    driver_minor: u32,
+    driver_patch: u32,
+    flags: u32,
+}
+
+#[repr(C)]
 #[derive(Debug)]
 pub struct Properties {
     vendor_id: i32,
@@ -744,6 +786,10 @@ pub fn get_devices() -> Vec<GoXLRDevice> {
         })
     }
     list
+}
+
+pub fn get_version() -> VersionNumber {
+    let info = TUSB_INTERFACE.get_driver_version();
 }
 
 pub struct EventChannelReceiver {

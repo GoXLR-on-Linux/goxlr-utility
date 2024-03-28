@@ -7,6 +7,7 @@ use crate::device::tusb::tusbaudio::{
 };
 use anyhow::{bail, Result};
 use byteorder::{ByteOrder, LittleEndian};
+use goxlr_types::{DriverInterface, VersionNumber};
 use log::{debug, error, warn};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -365,4 +366,9 @@ impl FullGoXLRDevice for TUSBAudioGoXLR {}
 
 pub fn find_devices() -> Vec<GoXLRDevice> {
     get_devices()
+}
+
+pub fn get_interface_version() -> (DriverInterface, VersionNumber) {
+    let version = rusb::version();
+    (DriverInterface::TUSB, get_version_number())
 }

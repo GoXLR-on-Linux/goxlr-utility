@@ -80,7 +80,7 @@ pub struct FirmwareVersions {
     pub dice: VersionNumber,
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct VersionNumber(pub u32, pub u32, pub Option<u32>, pub Option<u32>);
 
@@ -782,4 +782,13 @@ pub enum DeviceType {
     Unknown,
     Full,
     Mini,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(ValueEnum))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum DriverInterface {
+    #[default]
+    TUSB,
+    LIBUSB,
 }

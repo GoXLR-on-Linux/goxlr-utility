@@ -3,12 +3,13 @@ use enum_map::EnumMap;
 use goxlr_types::MuteState::Unmuted;
 use goxlr_types::{
     AnimationMode, Button, ButtonColourOffStyle, ChannelName, CompressorAttackTime,
-    CompressorRatio, CompressorReleaseTime, DeviceType, DisplayMode, EchoStyle, EffectBankPresets,
-    EncoderColourTargets, EqFrequencies, FaderDisplayStyle, FaderName, FirmwareVersions, GateTimes,
-    GenderStyle, HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle, MicrophoneType,
-    MiniEqFrequencies, Mix, MuteFunction, MuteState, OutputDevice, PitchStyle, ReverbStyle,
-    RobotStyle, SampleBank, SampleButtons, SamplePlayOrder, SamplePlaybackMode,
-    SamplerColourTargets, SimpleColourTargets, SubMixChannelName, WaterfallDirection,
+    CompressorRatio, CompressorReleaseTime, DeviceType, DisplayMode, DriverInterface, EchoStyle,
+    EffectBankPresets, EncoderColourTargets, EqFrequencies, FaderDisplayStyle, FaderName,
+    FirmwareVersions, GateTimes, GenderStyle, HardTuneSource, HardTuneStyle, InputDevice,
+    MegaphoneStyle, MicrophoneType, MiniEqFrequencies, Mix, MuteFunction, MuteState, OutputDevice,
+    PitchStyle, ReverbStyle, RobotStyle, SampleBank, SampleButtons, SamplePlayOrder,
+    SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets, SubMixChannelName,
+    VersionNumber, WaterfallDirection,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
@@ -26,6 +27,7 @@ pub struct DaemonStatus {
 pub struct DaemonConfig {
     pub http_settings: HttpSettings,
     pub daemon_version: String,
+    pub driver_interface: DriverDetails,
     pub locale: Locale,
     pub activation: Activation,
     pub autostart_enabled: bool,
@@ -34,6 +36,12 @@ pub struct DaemonConfig {
     pub allow_network_access: bool,
     pub log_level: LogLevel,
     pub open_ui_on_launch: bool,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct DriverDetails {
+    pub interface: DriverInterface,
+    pub version: VersionNumber,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
