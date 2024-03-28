@@ -3406,7 +3406,9 @@ pub fn version_newer_or_equal_to(version: &VersionNumber, comparison: VersionNum
         } else {
             return true;
         }
+    } else if comparison.3.is_some() {
+        return false;
     }
 
-    false
+    true
 }
