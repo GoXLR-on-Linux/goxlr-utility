@@ -114,9 +114,10 @@ impl TUSBAudio<'_> {
         let get_api_version: Symbol<_> = unsafe { LIBRARY.get(b"TUSBAUDIO_GetApiVersion")? };
         let check_api_version = unsafe { LIBRARY.get(b"TUSBAUDIO_CheckApiVersion")? };
 
-        let get_driver_info = unsafe { LIBRARY.get(b"TUSBAUDIO_GetDriverInfo")? };
+        let get_driver_info = unsafe { LIBRARY.get::<GetDriverInfo>(b"TUSBAUDIO_GetDriverInfo")? };
 
-        let enumerate_devices = unsafe { LIBRARY.get(b"TUSBAUDIO_EnumerateDevices")? };
+        let enumerate_devices =
+            unsafe { LIBRARY.get::<EnumerateDevices>(b"TUSBAUDIO_EnumerateDevices")? };
         let open_device_by_index = unsafe { LIBRARY.get(b"TUSBAUDIO_OpenDeviceByIndex")? };
 
         let get_device_count = unsafe { LIBRARY.get(b"TUSBAUDIO_GetDeviceCount")? };
@@ -199,7 +200,7 @@ impl TUSBAudio<'_> {
         VersionNumber(
             self.driver_info.driver_major,
             self.driver_info.driver_minor,
-            self.driver_info.driver_patch,
+            Some(self.driver_info.driver_patch),
             None,
         )
     }
@@ -715,6 +716,7 @@ struct ApiVersion {
 }
 
 #[repr(C)]
+#[derive(Debug, Default)]
 struct DriverInfo {
     api_major: u32,
     api_minor: u32,
@@ -789,7 +791,7 @@ pub fn get_devices() -> Vec<GoXLRDevice> {
 }
 
 pub fn get_version() -> VersionNumber {
-    let info = TUSB_INTERFACE.get_driver_version();
+    TUSB_INTERFACE.get_driver_version()
 }
 
 pub struct EventChannelReceiver {

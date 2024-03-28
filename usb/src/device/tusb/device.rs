@@ -3,7 +3,8 @@ use crate::device::base::{
     AttachGoXLR, ExecutableGoXLR, FullGoXLRDevice, GoXLRCommands, GoXLRDevice, UsbData,
 };
 use crate::device::tusb::tusbaudio::{
-    get_devices, DeviceHandle, EventChannelReceiver, EventChannelSender, TUSB_INTERFACE,
+    get_devices, get_version, DeviceHandle, EventChannelReceiver, EventChannelSender,
+    TUSB_INTERFACE,
 };
 use anyhow::{bail, Result};
 use byteorder::{ByteOrder, LittleEndian};
@@ -369,6 +370,5 @@ pub fn find_devices() -> Vec<GoXLRDevice> {
 }
 
 pub fn get_interface_version() -> (DriverInterface, VersionNumber) {
-    let version = rusb::version();
-    (DriverInterface::TUSB, get_version_number())
+    (DriverInterface::TUSB, get_version())
 }
