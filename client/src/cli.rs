@@ -226,6 +226,10 @@ pub enum ProfileAction {
     Load {
         /// The profile name to load
         profile_name: String,
+
+        /// Persist the Load
+        #[arg(num_args=0..=1, default_missing_value="true")]
+        persist: Option<bool>,
     },
 
     /// Load a Profiles Colours Only
