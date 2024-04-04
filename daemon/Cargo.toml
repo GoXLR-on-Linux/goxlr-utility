@@ -190,7 +190,7 @@ auto-req = "no"
 # required, this leaves us with dbus and pulseaudio libs :)
 dbus-libs = ">= 1.9.14"
 pulseaudio-libs = ">= 10.0"
-speech-dispatcher = ">= 0.7"
+libspeechd.so.2 = "*"
 
 [package.metadata.generate-rpm.variants.suse]
 release = "suse"
