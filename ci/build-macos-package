@@ -16,12 +16,14 @@ rm -f macos_binaries_*
 cd package || exit
 mkdir final
 
-lipo -create -output final/goxlr-client x86_64/goxlr-client aarch64/goxlr-client
-lipo -create -output final/goxlr-daemon x86_64/goxlr-daemon aarch64/goxlr-daemon
-lipo -create -output final/goxlr-launcher x86_64/goxlr-launcher aarch64/goxlr-launcher
-lipo -create -output final/goxlr-defaults x86_64/goxlr-defaults aarch64/goxlr-defaults
-lipo -create -output final/goxlr-initialiser x86_64/goxlr-initialiser aarch64/goxlr-initialiser
-lipo -create -output final/goxlr-utility-ui x86_64/goxlr-utility-ui aarch64/goxlr-utility-ui
+# Universal binaries seem to have permission problems, so split back to individual builds..
+# Tracking: https://github.com/tauri-apps/tauri/issues/8041
+#lipo -create -output final/goxlr-client x86_64/goxlr-client aarch64/goxlr-client
+#lipo -create -output final/goxlr-daemon x86_64/goxlr-daemon aarch64/goxlr-daemon
+#lipo -create -output final/goxlr-launcher x86_64/goxlr-launcher aarch64/goxlr-launcher
+#lipo -create -output final/goxlr-defaults x86_64/goxlr-defaults aarch64/goxlr-defaults
+#lipo -create -output final/goxlr-initialiser x86_64/goxlr-initialiser aarch64/goxlr-initialiser
+#lipo -create -output final/goxlr-utility-ui x86_64/goxlr-utility-ui aarch64/goxlr-utility-ui
 
 # Ok, build our .app..
 DATE=$(date +"%Y%m%d.%H%M%S")
@@ -29,13 +31,11 @@ DATE=$(date +"%Y%m%d.%H%M%S")
 mkdir 'GoXLR Utility.app'
 mkdir -p 'GoXLR Utility.app/Contents/MacOS'
 mkdir -p 'GoXLR Utility.app/Contents/Resources'
-cp final/* 'GoXLR Utility.app/Contents/MacOS'
+cp x86_64/* 'GoXLR Utility.app/Contents/MacOS'
 cp ../ci/macos/icon.icns 'GoXLR Utility.app/Contents/Resources'
 
 # Generate the plist for the App..
 sed -e "s/{{VERSION}}/$VERSION/g" ../ci/macos/Info.plist.template.xml | sed -e "s/{{DATE}}/$DATE/g" > 'GoXLR Utility.app/Contents/Info.plist'
-
-
 
 # Build the .pkg..
 mkdir pkg
@@ -55,7 +55,10 @@ cp ../ci/macos/LICENSE pkg/LICENSE.txt
 # Run the Package Build..
 cd pkg || exit
 packagesbuild --project 'GoXLR Utility.pkgproj'
-mv 'build/GoXLR Utility.pkg' ../../goxlr-utility-macos-$VERSION.pkg
+mv 'build/GoXLR Utility.pkg' ../../goxlr-utility-macos-$VERSION-x86_64.pkg
 
-# Compress the .app..
-#tar zcvf "../goxlr-utility-macos-$VERSION.tgz" 'GoXLR Utility.app'
+# Switch with the aarch64 binaries, and re-run the build..
+rm -rf build/
+cp ../aarch64/* 'GoXLR Utility.app/Contents/MacOS'
+packagesbuild --project 'GoXLR Utility.pkgproj'
+mv 'build/GoXLR Utility.pkg' ../../goxlr-utility-macos-$VERSION-aarch64.pkg
