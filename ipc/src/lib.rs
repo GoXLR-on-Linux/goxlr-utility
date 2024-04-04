@@ -49,6 +49,12 @@ pub struct WebsocketResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+pub enum ColourWay {
+    Black,
+    White,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub enum PathTypes {
     Profiles,
     MicProfiles,

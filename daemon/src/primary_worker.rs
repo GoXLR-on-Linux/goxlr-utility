@@ -5,8 +5,9 @@ use crate::platform::{get_ui_app_path, has_autostart, set_autostart};
 use crate::{FileManager, PatchEvent, SettingsHandle, Shutdown, SYSTEM_LOCALE, VERSION};
 use anyhow::{anyhow, Result};
 use goxlr_ipc::{
-    Activation, DaemonCommand, DaemonConfig, DaemonStatus, DriverDetails, Files, GoXLRCommand,
-    HardwareStatus, HttpSettings, Locale, PathTypes, Paths, SampleFile, UsbProductInformation,
+    Activation, ColourWay, DaemonCommand, DaemonConfig, DaemonStatus, DriverDetails, Files,
+    GoXLRCommand, HardwareStatus, HttpSettings, Locale, PathTypes, Paths, SampleFile,
+    UsbProductInformation,
 };
 use goxlr_types::DeviceType;
 use goxlr_usb::device::base::GoXLRDevice;
@@ -603,11 +604,18 @@ async fn load_device(
     }
     handled_device.set_unique_identifier(serial_number.clone());
 
+    let colour_way = if serial_number.ends_with("AAI") || serial_number.ends_with("3AA") {
+        ColourWay::White
+    } else {
+        ColourWay::Black
+    };
+
     let hardware = HardwareStatus {
         versions: handled_device.get_firmware_version()?,
         serial_number: serial_number.clone(),
         manufactured_date,
         device_type,
+        colour_way,
         usb_device,
     };
     let profile_directory = settings.get_profile_directory().await;

@@ -1,4 +1,4 @@
-use crate::{GoXLRCommand, LogLevel};
+use crate::{ColourWay, GoXLRCommand, LogLevel};
 use enum_map::EnumMap;
 use goxlr_types::MuteState::Unmuted;
 use goxlr_types::{
@@ -104,6 +104,7 @@ pub struct HardwareStatus {
     pub serial_number: String,
     pub manufactured_date: String,
     pub device_type: DeviceType,
+    pub colour_way: ColourWay,
     pub usb_device: UsbProductInformation,
 }
 
