@@ -25,12 +25,16 @@ mkdir final
 #lipo -create -output final/goxlr-initialiser x86_64/goxlr-initialiser aarch64/goxlr-initialiser
 #lipo -create -output final/goxlr-utility-ui x86_64/goxlr-utility-ui aarch64/goxlr-utility-ui
 
+echo "Constructing App.."
+
 # Ok, build our .app..
 DATE=$(date +"%Y%m%d.%H%M%S")
 
 mkdir 'GoXLR Utility.app'
 mkdir -p 'GoXLR Utility.app/Contents/MacOS'
 mkdir -p 'GoXLR Utility.app/Contents/Resources'
+
+echo "Using x64 binaries..";
 cp x86_64/* 'GoXLR Utility.app/Contents/MacOS'
 cp ../ci/macos/icon.icns 'GoXLR Utility.app/Contents/Resources'
 
@@ -46,7 +50,6 @@ mkdir pkg/scripts
 cp ../ci/macos/helpers/* pkg/scripts
 
 mkdir pkg/plist
-cp ../ci/macos/goxlr-utility.plist.xml pkg/plist/com.github.goxlr-on-linux.goxlr-utility.plist
 cp ../ci/macos/initialise.mini.plist.xml pkg/plist/com.github.goxlr-on-linux.goxlr-utility.initialiser.mini.plist
 cp ../ci/macos/initialise.full.plist.xml pkg/plist/com.github.goxlr-on-linux.goxlr-utility.initialiser.full.plist
 
@@ -58,6 +61,7 @@ packagesbuild --project 'GoXLR Utility.pkgproj'
 mv 'build/GoXLR Utility.pkg' ../../goxlr-utility-macos-$VERSION-x86_64.pkg
 
 # Switch with the aarch64 binaries, and re-run the build..
+echo "Building with aarch64 binaries..";
 rm -rf build/
 cp ../aarch64/* 'GoXLR Utility.app/Contents/MacOS'
 packagesbuild --project 'GoXLR Utility.pkgproj'
