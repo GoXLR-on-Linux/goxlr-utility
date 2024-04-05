@@ -21,13 +21,14 @@ pub struct CpalRecord {
     read_buffer: [f32; BUFFER_SIZE],
 }
 
-// Set max 'interim' buffer size to 1s. This defines the maximum time between the audio being
+// Set max 'interim' buffer size to 2s. This defines the maximum time between the audio being
 // handled here, and the external reader pulling it out before samples are lost.
 //
 // This may seem a little high, but the buffered recorder needs to handle thread locks, mutexes,
 // and redistributing the samples out to anything that needs them. This can lead to small delays
-// when reading. I've seen this reach 6-7,000 samples before, so this buffer should be clear.
-const BUFFER_SIZE: usize = 48000 * 2;
+// when reading. When performing an EBU check on 30 seconds of silence, I've seen this take over a
+// second. So we'll deal with it here.
+const BUFFER_SIZE: usize = 48000 * 2 * 2;
 
 impl OpenInputStream for CpalRecord {
     fn open(spec: AudioSpecification) -> Result<Box<dyn AudioInput>> {
