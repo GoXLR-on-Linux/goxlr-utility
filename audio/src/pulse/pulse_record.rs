@@ -62,7 +62,7 @@ impl PulseRecord {
         // have that going for us, which is nice.
         match pulse {
             Ok(pulse_simple) => Ok(Box::new(PulseRecord {
-                buffer: [0; 1024],
+                buffer: [0; 48000 * 2 * 2],
                 pulse_simple,
             })),
             Err(_) => Err(anyhow!("Unable to Connect to Pulse")),
