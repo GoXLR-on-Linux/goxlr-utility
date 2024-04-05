@@ -7,7 +7,7 @@ use libpulse_simple_binding::Simple;
 
 pub struct PulseRecord {
     pulse_simple: Simple,
-    buffer: [u8; 1024],
+    buffer: [u8; 48000 * 2],
 }
 
 impl PulseRecord {
