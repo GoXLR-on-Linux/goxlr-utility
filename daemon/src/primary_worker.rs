@@ -32,12 +32,11 @@ pub enum DeviceCommand {
     GetDeviceMicLevel(String, oneshot::Sender<Result<f64>>),
 }
 
+#[allow(dead_code)]
 pub enum DeviceStateChange {
     Shutdown,
     Sleep(oneshot::Sender<()>),
     Wake(oneshot::Sender<()>),
-    Lock,
-    Unlock,
 }
 
 #[derive(Default)]
@@ -193,21 +192,10 @@ pub async fn spawn_usb_handler(
                             device.wake().await;
                         }
                         let _ = sender.send(());
-                    },
-                    DeviceStateChange::Lock => {
-                        for device in devices.values_mut() {
-                            device.stop_audio_handler().await;
-                        }
-
-                    },
-                    DeviceStateChange::Unlock => {
-                        for device in devices.values_mut() {
-                            if let Err(e) = device.start_audio_handler().await {
-                                warn!("Failed to Start Audio Handler: {}", e);
-                            }
-                        }
                     }
                 }
+
+
             }
             () = shutdown.recv() => {
                 info!("Shutting down device worker");
