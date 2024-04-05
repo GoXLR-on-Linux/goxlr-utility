@@ -7,14 +7,14 @@ use std::path::Path;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread::sleep;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use anyhow::{bail, Result};
 use bounded_vec_deque::BoundedVecDeque;
 use ebur128::{EbuR128, Mode};
 use fancy_regex::Regex;
 use hound::WavWriter;
-use log::{debug, error, info, warn};
+use log::{debug, error, info, trace, warn};
 use rb::{Producer, RbConsumer, RbProducer, SpscRb, RB};
 use symphonia::core::audio::{Layout, SignalSpec};
 
@@ -23,6 +23,7 @@ use crate::{get_audio_inputs, AtomicF64};
 
 static NEXT_ID: AtomicU32 = AtomicU32::new(0);
 static READ_TIMEOUT: Duration = Duration::from_millis(100);
+static CHECK_PERIOD: Duration = Duration::from_secs(60);
 
 pub struct BufferedRecorder {
     devices: Vec<Regex>,
@@ -67,7 +68,7 @@ impl BufferedRecorder {
         //
         // On Windows, we receive 'Notification' messages via USB URB INTERRUPTS, which are far
         // more responsive, allowing us to get the Notification in under 5ms from when the button
-        // is pressed, so a 10ms buffer should be sufficient.
+        // is pressed, so a 15ms buffer should be sufficient.
         //
         // So we'll make this buffer OS relevant.
         let forced_buffer = if cfg!(target_os = "windows") {
@@ -104,6 +105,8 @@ impl BufferedRecorder {
 
         // We need to find a matching input..
         let mut input: Option<Box<dyn AudioInput>> = None;
+
+        let mut now = Instant::now();
 
         while !self.stop.load(Ordering::Relaxed) {
             if input.is_none() {
@@ -155,6 +158,41 @@ impl BufferedRecorder {
                     }
                 }
             }
+
+            // Has a minute passed?
+            if now.elapsed() > CHECK_PERIOD {
+                // Update the timer for next poll regardless..
+                now = Instant::now();
+
+                if self.producers.lock().unwrap().len() > 0 {
+                    debug!("Not Checking, Something is attempting Recording..");
+                    continue;
+                }
+
+                // If the EBU failed to initialise, we're SOL really..
+                if let Ok(ebu) = &mut EbuR128::new(2, 48000, Mode::SAMPLE_PEAK) {
+                    // Grab the samples from the buffer..
+                    let samples = self.get_samples_from_buffer();
+
+                    // Check if any of them would constitute 'recordable' audio..
+                    let mut received_audio = false;
+                    if let Ok(has_audio) = self.is_audio(ebu, samples.as_slice()) {
+                        received_audio = has_audio;
+                    }
+
+                    // Push out and let it continue..
+                    if received_audio {
+                        continue;
+                    }
+                } else {
+                    continue;
+                }
+
+                // If we get here, nothing has stopped us, tear down the audio handler, and sleep..
+                input = None;
+                self.is_ready.store(false, Ordering::Relaxed);
+                self.buffer.lock().unwrap().clear();
+            }
         }
 
         debug!("Audio Listener Terminated");
@@ -190,9 +228,9 @@ impl BufferedRecorder {
         // So this will likely be spawned in a different thread, to actually handle the record
         // process.. with path being the file path to handle!
 
-        // We create a second long buffer for audio input as we need to continue receiving
+        // We create a 4 second buffer for audio input as we need to continue receiving
         // audio while we're creating files, setting up the encoder, and handling the initial buffer.
-        let ring_buf = SpscRb::<f32>::new(48000 * 2);
+        let ring_buf = SpscRb::<f32>::new(48000 * 4);
         let (ring_buf_producer, ring_buf_consumer) = (ring_buf.producer(), ring_buf.consumer());
 
         let producer_id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
@@ -204,17 +242,7 @@ impl BufferedRecorder {
         });
 
         // Grab the contents of the buffer, and push it into a simple vec
-        let mut pre_samples = vec![];
-        if self.buffer_size > 0 {
-            let buffer = self.buffer.lock().unwrap();
-            let (front, back) = buffer.as_slices();
-            for sample in front {
-                pre_samples.push(*sample);
-            }
-            for sample in back {
-                pre_samples.push(*sample);
-            }
-        }
+        let pre_samples = self.get_samples_from_buffer();
 
         // Get the read buffer to pull a quarter of a second at a time..
         let mut read_buffer: [f32; 24000] = [0.0; 24000];
@@ -321,6 +349,21 @@ impl BufferedRecorder {
         Ok(())
     }
 
+    fn get_samples_from_buffer(&self) -> Vec<f32> {
+        let mut pre_samples = vec![];
+        if self.buffer_size > 0 {
+            let buffer = self.buffer.lock().unwrap();
+            let (front, back) = buffer.as_slices();
+            for sample in front {
+                pre_samples.push(*sample);
+            }
+            for sample in back {
+                pre_samples.push(*sample);
+            }
+        }
+        pre_samples
+    }
+
     fn handle_samples(
         &self,
         samples: Vec<f32>,
@@ -391,7 +434,7 @@ impl BufferedRecorder {
             .cloned();
 
         if let Some(device) = &device {
-            debug!("Found Device: {}", device);
+            trace!("Found Device: {}", device);
             return Some(device.clone());
         }
         None
