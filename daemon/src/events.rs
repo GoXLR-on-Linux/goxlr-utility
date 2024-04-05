@@ -94,10 +94,10 @@ pub async fn spawn_event_handler(
                         let _ = device_state_tx.send(DeviceStateChange::Wake(sender)).await;
                     }
                     EventTriggers::Lock => {
-                        debug!("Received Screen Lock Event..");
+                        let _ = device_state_tx.send(DeviceStateChange::Lock).await;
                     }
                     EventTriggers::Unlock => {
-                        debug!("Received Screen Unlock Event");
+                        let _ = device_state_tx.send(DeviceStateChange::Unlock).await;
                     }
 
                     EventTriggers::Open(path_type) => {

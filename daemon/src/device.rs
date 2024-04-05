@@ -340,6 +340,30 @@ impl<'a> Device<'a> {
         &self.mic_profile
     }
 
+    pub async fn stop_audio_handler(&mut self) {
+        let _ = self.stop_all_samples().await;
+        self.audio_handler.take();
+    }
+
+    pub async fn start_audio_handler(&mut self) -> Result<()> {
+        if self.hardware.device_type == DeviceType::Mini {
+            // No point spamming a warning in this case!
+            return Ok(());
+        }
+
+        if self.audio_handler.is_some() {
+            bail!("Audio Handler already running, refusing to start a new one");
+        }
+
+        let audio_buffer = self
+            .settings
+            .get_device_sampler_pre_buffer(&self.hardware.serial_number)
+            .await;
+
+        self.audio_handler.replace(AudioHandler::new(audio_buffer)?);
+        Ok(())
+    }
+
     pub async fn update_state(&mut self) -> Result<bool> {
         let mut state_updated = false;
         let mut refresh_colour_map = false;
@@ -1654,7 +1678,7 @@ impl<'a> Device<'a> {
 
                 // Drop the Audio Handler..
                 let new_handler = AudioHandler::new(duration)?;
-                self.audio_handler = Some(new_handler);
+                self.audio_handler.replace(new_handler);
             }
 
             GoXLRCommand::SetFader(fader, channel) => {
