@@ -252,7 +252,7 @@ impl App {
             let notification_center: id = msg_send![workspace, notificationCenter];
 
             // Get the Distributed Notification Center (for Lock / Unlock Notifications)
-            let dnc = msg_send![class!(NSDistributedNotificationCenter), defaultCenter];
+            let dnc: id = msg_send![class!(NSDistributedNotificationCenter), defaultCenter];
 
             debug!("Creating Controller..");
             let controller: id = msg_send![App::make_shutdown_hook_class(), alloc];
@@ -455,11 +455,30 @@ impl App {
             }
 
             extern "C" fn handle_lock(this: &Object, _: Sel, notification: *const Object) {
-                debug!("Received Lock Notification..");
+                debug!("Received Lock Notification.. {:?}", notification);
+
+                let sender: Box<Sender<EventTriggers>> = unsafe {
+                    let pointer_value: usize = *this.get_ivar("EVENT_SENDER");
+                    let pointer = pointer_value as *mut c_void;
+                    let pointer = pointer as *mut Sender<EventTriggers>;
+                    Box::from_raw(pointer)
+                };
+
+                let _ = sender.try_send(EventTriggers::Lock);
+                mem::forget(sender);
             }
 
             extern "C" fn handle_unlock(this: &Object, _: Sel, notification: *const Object) {
-                debug!("Received Unlock Notification..");
+                debug!("Received Unlock Notification.. {:?}", notification);
+                let sender: Box<Sender<EventTriggers>> = unsafe {
+                    let pointer_value: usize = *this.get_ivar("EVENT_SENDER");
+                    let pointer = pointer_value as *mut c_void;
+                    let pointer = pointer as *mut Sender<EventTriggers>;
+                    Box::from_raw(pointer)
+                };
+
+                let _ = sender.try_send(EventTriggers::Unlock);
+                mem::forget(sender);
             }
 
             unsafe {
