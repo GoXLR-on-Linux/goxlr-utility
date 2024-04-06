@@ -5,7 +5,7 @@ use libpulse_binding::sample::{Format, Spec};
 use libpulse_binding::stream::Direction;
 use libpulse_simple_binding::Simple;
 
-const BUFFER_SIZE: usize = 4800 * 2 * 2;
+const BUFFER_SIZE: usize = 1024;
 
 pub struct PulseRecord {
     pulse_simple: Simple,
