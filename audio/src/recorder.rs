@@ -284,8 +284,10 @@ impl BufferedRecorder {
             };
         }
 
-        // Now jump into the current 'live' audio.
-        while !state.stop.load(Ordering::Relaxed) {
+        // Now jump into the current 'live' audio. This is essentially a do-while loop, just to
+        // make sure we don't lose the last 'chunk' of audio which may have been partially recorded
+        // when the button was released.
+        loop {
             if let Ok(Some(samples)) =
                 ring_buf_consumer.read_blocking_timeout(&mut read_buffer, READ_TIMEOUT)
             {
@@ -306,6 +308,9 @@ impl BufferedRecorder {
                         state.stop.store(true, Ordering::Relaxed);
                     }
                 }
+            }
+            if state.stop.load(Ordering::Relaxed) {
+                break;
             }
         }
 
