@@ -120,18 +120,24 @@ pub async fn spawn_event_handler(
                     EventTriggers::Activate => {
                         let activate = state.settings_handle.get_activate().await;
                         let url = get_util_url(&state);
+                        
+                        // Use the temp directory as the runtime for any launched apps..
+                        let tmp_dir = std::env::temp_dir();
 
-                        // For now, we only support this on Linux, until more Windows tests
-                        // can be done.
                         #[cfg(not(unix))]
                         {
                             use windows_args;
                             match activate {
                                 Some(exec) => {
+                                    // Ok, we're going to force the app runtime into %TMP%, to
+                                    // prevent situations where it may need to write files.
+
+                                
                                     let exec = exec.replace("%URL%", &url);
                                     let mut args = windows_args::Args::parse_cmd(&exec);
                                     if let Some(command) = args.next() {
                                         let result = Command::new(command)
+                                            .current_dir(tmp_dir)
                                             .args(args)
                                             .stdout(Stdio::null())
                                             .stderr(Stdio::null())
@@ -162,6 +168,7 @@ pub async fn spawn_event_handler(
                                     if let Ok(params) = shell_words::split(&exec) {
                                         debug!("Attempting to Execute: {:?}", params);
                                         let result = Command::new(&params[0])
+                                            .current_dir(tmp_dir)        
                                             .args(&params[1..])
                                             .stdout(Stdio::null())
                                             .stderr(Stdio::null())
