@@ -58,11 +58,11 @@ cp ../ci/macos/LICENSE pkg/LICENSE.txt
 # Run the Package Build..
 cd pkg || exit
 packagesbuild --project 'GoXLR Utility.pkgproj'
-mv 'build/GoXLR Utility.pkg' ../../goxlr-utility-macos-$VERSION-x86_64.pkg
+mv 'build/GoXLR Utility.pkg' ../../goxlr-utility-macos-$VERSION-intel.pkg
 
 # Switch with the aarch64 binaries, and re-run the build..
 echo "Building with aarch64 binaries..";
 rm -rf build/
 cp ../aarch64/* 'GoXLR Utility.app/Contents/MacOS'
 packagesbuild --project 'GoXLR Utility.pkgproj'
-mv 'build/GoXLR Utility.pkg' ../../goxlr-utility-macos-$VERSION-aarch64.pkg
+mv 'build/GoXLR Utility.pkg' ../../goxlr-utility-macos-$VERSION-m1.pkg
