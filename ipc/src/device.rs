@@ -1,14 +1,15 @@
-use crate::{GoXLRCommand, LogLevel};
+use crate::{ColourWay, GoXLRCommand, LogLevel};
 use enum_map::EnumMap;
 use goxlr_types::MuteState::Unmuted;
 use goxlr_types::{
     AnimationMode, Button, ButtonColourOffStyle, ChannelName, CompressorAttackTime,
-    CompressorRatio, CompressorReleaseTime, DeviceType, DisplayMode, EchoStyle, EffectBankPresets,
-    EncoderColourTargets, EqFrequencies, FaderDisplayStyle, FaderName, FirmwareVersions, GateTimes,
-    GenderStyle, HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle, MicrophoneType,
-    MiniEqFrequencies, Mix, MuteFunction, MuteState, OutputDevice, PitchStyle, ReverbStyle,
-    RobotStyle, SampleBank, SampleButtons, SamplePlayOrder, SamplePlaybackMode,
-    SamplerColourTargets, SimpleColourTargets, SubMixChannelName, WaterfallDirection,
+    CompressorRatio, CompressorReleaseTime, DeviceType, DisplayMode, DriverInterface, EchoStyle,
+    EffectBankPresets, EncoderColourTargets, EqFrequencies, FaderDisplayStyle, FaderName,
+    FirmwareVersions, GateTimes, GenderStyle, HardTuneSource, HardTuneStyle, InputDevice,
+    MegaphoneStyle, MicrophoneType, MiniEqFrequencies, Mix, MuteFunction, MuteState, OutputDevice,
+    PitchStyle, ReverbStyle, RobotStyle, SampleBank, SampleButtons, SamplePlayOrder,
+    SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets, SubMixChannelName,
+    VersionNumber, WaterfallDirection,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
@@ -26,6 +27,8 @@ pub struct DaemonStatus {
 pub struct DaemonConfig {
     pub http_settings: HttpSettings,
     pub daemon_version: String,
+    pub driver_interface: DriverDetails,
+    pub locale: Locale,
     pub activation: Activation,
     pub autostart_enabled: bool,
     pub show_tray_icon: bool,
@@ -33,6 +36,18 @@ pub struct DaemonConfig {
     pub allow_network_access: bool,
     pub log_level: LogLevel,
     pub open_ui_on_launch: bool,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct DriverDetails {
+    pub interface: DriverInterface,
+    pub version: VersionNumber,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct Locale {
+    pub user_locale: Option<String>,
+    pub system_locale: String,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -89,6 +104,7 @@ pub struct HardwareStatus {
     pub serial_number: String,
     pub manufactured_date: String,
     pub device_type: DeviceType,
+    pub colour_way: ColourWay,
     pub usb_device: UsbProductInformation,
 }
 
@@ -377,6 +393,7 @@ pub struct Settings {
     pub mute_hold_duration: u16,
     pub vc_mute_also_mute_cm: bool,
     pub enable_monitor_with_fx: bool,
+    pub reset_sampler_on_clear: bool,
     pub lock_faders: bool,
 }
 

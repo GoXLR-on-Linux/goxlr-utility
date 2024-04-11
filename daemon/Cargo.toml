@@ -1,6 +1,6 @@
 [package]
 name = "goxlr-daemon"
-version = "1.0.6"
+version = "1.1.0"
 edition = "2021"
 authors = ["Nathan Adams <dinnerbone@dinnerbone.com>", "Craig McLure <craig@mclure.net>", "Lars Mühlbauer <lm41@dismail.de>"]
 description = "Allows control of a TC-Helicon GoXLR or GoXLR Mini, by maintaining an interaction with it over USB in the background."
@@ -55,6 +55,9 @@ tempfile = "3.8.1"
 
 which = "6.0.0"
 
+# Language Determination..
+sys-locale = "0.3.1"
+
 ## HTTPd Server
 actix = "0.13.1"
 actix-web-actors = "4.2.0"
@@ -70,7 +73,7 @@ nix = { version = "0.27.1", features = ["user"] }
 
 # Under Linux, we use ksni for our tray icon..
 [target.'cfg(target_os = "linux")'.dependencies]
-ksni = { git="https://github.com/talonvoice/ksni.git", branch="zbus" }
+ksni = { git = "https://github.com/talonvoice/ksni.git", branch = "zbus" }
 rust-ini = "0.20.0"
 rand = "0.8.5"
 shell-words = "1.1.0"
@@ -107,6 +110,11 @@ cocoa-foundation = "0.1.2"
 cocoa = "0.25.0"
 objc-foundation = "0.1.1"
 objc = "0.2.7"
+
+# Used for Aggregate Device Management
+coreaudio-sys = "0.2.15"
+core-foundation = "0.9.4"
+io-kit-sys = "0.4.0"
 
 [build-dependencies]
 clap = { version = "4.4.11", features = ["derive"] }
@@ -182,7 +190,9 @@ auto-req = "no"
 # required, this leaves us with dbus and pulseaudio libs :)
 dbus-libs = ">= 1.9.14"
 pulseaudio-libs = ">= 10.0"
-speech-dispatcher = ">= 0.7"
+
+# Seriously Fedora?
+"libspeechd.so.2()(64bit)" = "*"
 
 [package.metadata.generate-rpm.variants.suse]
 release = "suse"

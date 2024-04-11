@@ -1,6 +1,6 @@
 [package]
 name = "goxlr-client"
-version = "1.0.6"
+version = "1.1.0"
 edition = "2021"
 build = "build.rs"
 authors = ["Nathan Adams <dinnerbone@dinnerbone.com>", "Craig McLure <craig@mclure.net>", "Lars Mühlbauer <lm41@dismail.de>"]
@@ -10,28 +10,28 @@ license = "MIT"
 categories = ["hardware-support", "command-line-utilities"]
 
 [lib]
-name="client"
-path="src/lib.rs"
+name = "client"
+path = "src/lib.rs"
 
 [[bin]]
-name="goxlr-client"
-path="src/bin/main.rs"
+name = "goxlr-client"
+path = "src/bin/main.rs"
 
 [[bin]]
-name="goxlr-client-quiet"
-path="src/bin/quiet.rs"
+name = "goxlr-client-quiet"
+path = "src/bin/quiet.rs"
 
 [dependencies]
-goxlr-ipc = {path = "../ipc"}
+goxlr-ipc = { path = "../ipc" }
 goxlr-types = { path = "../types", features = ["clap"] }
-tokio = {version = "1.35.0", features=["full"]}
+tokio = { version = "1.35.0", features = ["full"] }
 simplelog = "0.12.1"
 anyhow = "1.0.75"
 clap = { version = "4.4.11", features = ["derive"] }
-strum = { version = "0.25.0"}
+strum = { version = "0.25.0" }
 serde_json = { version = "1.0.108" }
-tokio-serde = { version = "0.8.0", features=["json"]}
-interprocess = { version = "1.2.1", features=["tokio_support"] }
+tokio-serde = { version = "0.8.0", features = ["json"] }
+interprocess = { version = "1.2.1", features = ["tokio_support"] }
 
 [build-dependencies]
 clap = { version = "4.4.11", features = ["derive"] }

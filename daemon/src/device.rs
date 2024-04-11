@@ -210,6 +210,11 @@ impl<'a> Device<'a> {
             .get_enable_monitor_with_fx(self.serial())
             .await;
 
+        let sampler_reset_on_clear = self
+            .settings
+            .get_sampler_reset_on_clear(self.serial())
+            .await;
+
         let locked_faders = self.settings.get_device_lock_faders(self.serial()).await;
 
         let submix_supported = self.device_supports_submixes();
@@ -278,6 +283,7 @@ impl<'a> Device<'a> {
                 mute_hold_duration: self.hold_time,
                 vc_mute_also_mute_cm: self.vc_mute_also_mute_cm,
                 enable_monitor_with_fx: monitor_with_fx,
+                reset_sampler_on_clear: sampler_reset_on_clear,
                 lock_faders: locked_faders,
             },
             button_down: button_states,
@@ -1151,6 +1157,19 @@ impl<'a> Device<'a> {
             debug!("Cleared samples..");
             self.profile.set_sample_clear_active(false)?;
 
+            // Check whether we should reset the Sampler Function..
+            if self
+                .settings
+                .get_sampler_reset_on_clear(self.serial())
+                .await
+            {
+                self.profile.set_sampler_function(
+                    active_bank,
+                    button,
+                    SamplePlaybackMode::PlayNext,
+                );
+            }
+
             debug!("Disabled Buttons..");
             self.load_colour_map().await?;
 
@@ -1229,7 +1248,17 @@ impl<'a> Device<'a> {
         };
 
         if let Some(audio_handler) = &mut self.audio_handler {
-            audio_handler.stop_playback(bank, button, true).await?;
+            // Call Stop if we're playing something, and it's not a restart..
+            if let Some(sample) = audio_handler.get_playing_file(bank, button) {
+                if sample == audio.file {
+                    // We're already playing this file, seek back to the start..
+                    debug!("Restarting Audio File");
+                    audio_handler.restart_for_button(bank, button).await?;
+                    return Ok(());
+                } else {
+                    audio_handler.stop_playback(bank, button, true).await?;
+                }
+            }
 
             let result = audio_handler
                 .play_for_button(bank, button, audio, loop_track)
@@ -2543,6 +2572,13 @@ impl<'a> Device<'a> {
                 self.apply_routing(BasicInputDevice::Microphone).await?;
             }
 
+            GoXLRCommand::SetSamplerResetOnClear(value) => {
+                self.settings
+                    .set_sampler_reset_on_clear(self.serial(), value)
+                    .await;
+                self.settings.save().await;
+            }
+
             GoXLRCommand::SetLockFaders(value) => {
                 let current = self.settings.get_device_lock_faders(self.serial()).await;
 
@@ -3551,11 +3587,11 @@ impl<'a> Device<'a> {
             DeviceType::Unknown => false,
             DeviceType::Full => version_newer_or_equal_to(
                 &self.hardware.versions.firmware,
-                VersionNumber(1, 4, 2, 107),
+                VersionNumber(1, 4, Some(2), Some(107)),
             ),
             DeviceType::Mini => version_newer_or_equal_to(
                 &self.hardware.versions.firmware,
-                VersionNumber(1, 2, 0, 46),
+                VersionNumber(1, 2, Some(0), Some(46)),
             ),
         }
     }
@@ -3565,11 +3601,11 @@ impl<'a> Device<'a> {
             DeviceType::Unknown => true,
             DeviceType::Full => version_newer_or_equal_to(
                 &self.hardware.versions.firmware,
-                VersionNumber(1, 3, 40, 0),
+                VersionNumber(1, 3, Some(40), Some(0)),
             ),
             DeviceType::Mini => version_newer_or_equal_to(
                 &self.hardware.versions.firmware,
-                VersionNumber(1, 1, 8, 0),
+                VersionNumber(1, 1, Some(8), Some(0)),
             ),
         }
     }

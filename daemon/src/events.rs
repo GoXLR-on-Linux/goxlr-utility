@@ -19,6 +19,8 @@ pub enum EventTriggers {
     Stop,
     Sleep(oneshot::Sender<()>),
     Wake(oneshot::Sender<()>),
+    Lock,
+    Unlock,
     Open(PathTypes),
     Activate,
     OpenUi,
@@ -90,6 +92,12 @@ pub async fn spawn_event_handler(
                     }
                     EventTriggers::Wake(sender) => {
                         let _ = device_state_tx.send(DeviceStateChange::Wake(sender)).await;
+                    }
+                    EventTriggers::Lock => {
+                        debug!("Received Screen Lock Event..");
+                    }
+                    EventTriggers::Unlock => {
+                        debug!("Received Screen Unlock Event");
                     }
 
                     EventTriggers::Open(path_type) => {

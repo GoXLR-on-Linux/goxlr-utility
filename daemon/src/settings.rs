@@ -3,7 +3,7 @@ use crate::profile::DEFAULT_PROFILE_NAME;
 use anyhow::{Context, Result};
 use directories::ProjectDirs;
 use goxlr_ipc::{GoXLRCommand, LogLevel};
-use log::{debug, error};
+use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -16,7 +16,30 @@ use tokio::sync::RwLock;
 #[derive(Debug, Clone)]
 pub struct SettingsHandle {
     path: PathBuf,
+    data_dir: PathBuf,
     settings: Arc<RwLock<Settings>>,
+}
+
+enum Paths {
+    Profiles,
+    MicProfiles,
+    Samples,
+    Presets,
+    Icons,
+    Logs,
+}
+
+impl AsRef<Path> for Paths {
+    fn as_ref(&self) -> &Path {
+        match self {
+            Paths::Profiles => Path::new("profiles"),
+            Paths::MicProfiles => Path::new("mic-profiles"),
+            Paths::Samples => Path::new("samples"),
+            Paths::Presets => Path::new("presets"),
+            Paths::Icons => Path::new("icons"),
+            Paths::Logs => Path::new("logs"),
+        }
+    }
 }
 
 impl SettingsHandle {
@@ -28,14 +51,15 @@ impl SettingsHandle {
 
         let mut settings = Settings::read(&path)?.unwrap_or_else(|| Settings {
             show_tray_icon: Some(true),
+            selected_locale: None,
             tts_enabled: Some(false),
             allow_network_access: Some(false),
-            profile_directory: Some(data_dir.join("profiles")),
-            mic_profile_directory: Some(data_dir.join("mic-profiles")),
-            samples_directory: Some(data_dir.join("samples")),
-            presets_directory: Some(data_dir.join("presets")),
-            icons_directory: Some(data_dir.join("icons")),
-            logs_directory: Some(data_dir.join("logs")),
+            profile_directory: None,
+            mic_profile_directory: None,
+            samples_directory: None,
+            presets_directory: None,
+            icons_directory: None,
+            logs_directory: None,
             log_level: Some(LogLevel::Debug),
             open_ui_on_launch: None,
             activate: None,
@@ -43,29 +67,48 @@ impl SettingsHandle {
             sample_gain: Some(Default::default()),
         });
 
-        // Set these values if they're missing from the configuration
-        if settings.profile_directory.is_none() {
-            settings.profile_directory = Some(data_dir.join("profiles"));
+        // Forward compatibility, if the configured path is the same as the default path
+        // remove the configured path (all path lookups will return the default if not set)
+        if let Some(profiles) = &settings.profile_directory {
+            if profiles == &data_dir.join(Paths::Profiles) {
+                info!("Clearing 'Default' Profiles Directory configuration..");
+                settings.profile_directory = None;
+            }
         }
 
-        if settings.mic_profile_directory.is_none() {
-            settings.mic_profile_directory = Some(data_dir.join("mic-profiles"));
+        if let Some(ref mic_profiles) = settings.mic_profile_directory {
+            if mic_profiles == &data_dir.join(Paths::MicProfiles) {
+                info!("Clearing 'Default' Mic Profiles Directory configuration..");
+                settings.mic_profile_directory = None;
+            }
         }
 
-        if settings.samples_directory.is_none() {
-            settings.samples_directory = Some(data_dir.join("samples"));
+        if let Some(ref samples) = settings.samples_directory {
+            if samples == &data_dir.join(Paths::Samples) {
+                info!("Clearing 'Default' Samples Directory configuration..");
+                settings.samples_directory = None;
+            }
         }
 
-        if settings.presets_directory.is_none() {
-            settings.presets_directory = Some(data_dir.join("presets"));
+        if let Some(ref presets) = settings.presets_directory {
+            if presets == &data_dir.join(Paths::Presets) {
+                info!("Clearing 'Default' Presets Directory configuration..");
+                settings.presets_directory = None;
+            }
         }
 
-        if settings.icons_directory.is_none() {
-            settings.icons_directory = Some(data_dir.join("icons"));
+        if let Some(ref icons) = settings.icons_directory {
+            if icons == &data_dir.join(Paths::Icons) {
+                info!("Clearing 'Default' Icon Directory configuration..");
+                settings.icons_directory = None;
+            }
         }
 
-        if settings.logs_directory.is_none() {
-            settings.logs_directory = Some(data_dir.join("logs"));
+        if let Some(ref logs) = settings.logs_directory {
+            if logs == &data_dir.join(Paths::Logs) {
+                info!("Clearing 'Default' Logs Directory configuration..");
+                settings.logs_directory = None;
+            }
         }
 
         if settings.log_level.is_none() {
@@ -94,6 +137,7 @@ impl SettingsHandle {
 
         let handle = SettingsHandle {
             path,
+            data_dir: data_dir.to_path_buf(),
             settings: Arc::new(RwLock::new(settings)),
         };
         handle.save().await;
@@ -111,6 +155,10 @@ impl SettingsHandle {
         }
     }
 
+    fn get_default_path(&self, suffix: Paths) -> PathBuf {
+        self.data_dir.join(suffix)
+    }
+
     pub async fn get_show_tray_icon(&self) -> bool {
         let settings = self.settings.read().await;
         settings.show_tray_icon.unwrap()
@@ -119,6 +167,16 @@ impl SettingsHandle {
     pub async fn set_show_tray_icon(&self, enabled: bool) {
         let mut settings = self.settings.write().await;
         settings.show_tray_icon = Some(enabled);
+    }
+
+    pub async fn get_selected_locale(&self) -> Option<String> {
+        let settings = self.settings.read().await;
+        settings.selected_locale.clone()
+    }
+
+    pub async fn set_selected_locale(&self, locale: Option<String>) {
+        let mut settings = self.settings.write().await;
+        settings.selected_locale = locale;
     }
 
     pub async fn get_tts_enabled(&self) -> Option<bool> {
@@ -152,32 +210,56 @@ impl SettingsHandle {
 
     pub async fn get_profile_directory(&self) -> PathBuf {
         let settings = self.settings.read().await;
-        settings.profile_directory.clone().unwrap()
+        if let Some(directory) = settings.profile_directory.clone() {
+            directory
+        } else {
+            self.get_default_path(Paths::Profiles)
+        }
     }
 
     pub async fn get_mic_profile_directory(&self) -> PathBuf {
         let settings = self.settings.read().await;
-        settings.mic_profile_directory.clone().unwrap()
+        if let Some(directory) = settings.mic_profile_directory.clone() {
+            directory
+        } else {
+            self.get_default_path(Paths::MicProfiles)
+        }
     }
 
     pub async fn get_samples_directory(&self) -> PathBuf {
         let settings = self.settings.read().await;
-        settings.samples_directory.clone().unwrap()
+        if let Some(directory) = settings.samples_directory.clone() {
+            directory
+        } else {
+            self.get_default_path(Paths::Samples)
+        }
     }
 
     pub async fn get_presets_directory(&self) -> PathBuf {
         let settings = self.settings.read().await;
-        settings.presets_directory.clone().unwrap()
+        if let Some(directory) = settings.presets_directory.clone() {
+            directory
+        } else {
+            self.get_default_path(Paths::Presets)
+        }
     }
 
     pub async fn get_icons_directory(&self) -> PathBuf {
         let settings = self.settings.read().await;
-        settings.icons_directory.clone().unwrap()
+        if let Some(directory) = settings.icons_directory.clone() {
+            directory
+        } else {
+            self.get_default_path(Paths::Icons)
+        }
     }
 
     pub async fn get_log_directory(&self) -> PathBuf {
         let settings = self.settings.read().await;
-        settings.logs_directory.clone().unwrap()
+        if let Some(directory) = settings.logs_directory.clone() {
+            directory
+        } else {
+            self.get_default_path(Paths::Logs)
+        }
     }
 
     pub async fn set_log_level(&self, level: LogLevel) {
@@ -349,6 +431,17 @@ impl SettingsHandle {
         false
     }
 
+    pub async fn get_sampler_reset_on_clear(&self, device_serial: &str) -> bool {
+        let settings = self.settings.read().await;
+        settings
+            .devices
+            .as_ref()
+            .unwrap()
+            .get(device_serial)
+            .map(|d| d.sampler_reset_on_clear.unwrap_or(true))
+            .unwrap_or(true)
+    }
+
     pub async fn get_sample_gain_percent(&self, name: String) -> u8 {
         let settings = self.settings.read().await;
         if let Some(gain) = &settings.sample_gain {
@@ -488,6 +581,17 @@ impl SettingsHandle {
         entry.enable_monitor_with_fx = Some(setting);
     }
 
+    pub async fn set_sampler_reset_on_clear(&self, device_serial: &str, setting: bool) {
+        let mut settings = self.settings.write().await;
+        let entry = settings
+            .devices
+            .as_mut()
+            .unwrap()
+            .entry(device_serial.to_owned())
+            .or_insert_with(DeviceSettings::default);
+        entry.sampler_reset_on_clear = Some(setting);
+    }
+
     pub async fn set_sample_gain_percent(&self, name: String, value: u8) {
         let mut settings = self.settings.write().await;
         if settings.sample_gain.is_none() {
@@ -502,6 +606,7 @@ impl SettingsHandle {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Settings {
     show_tray_icon: Option<bool>,
+    selected_locale: Option<String>,
     tts_enabled: Option<bool>,
     allow_network_access: Option<bool>,
     profile_directory: Option<PathBuf>,
@@ -598,6 +703,9 @@ struct DeviceSettings {
     // Enable Monitoring when FX are Enabled
     enable_monitor_with_fx: Option<bool>,
 
+    // Clear Sample Settings when Clearing Button
+    sampler_reset_on_clear: Option<bool>,
+
     // 'Shutdown' commands..
     shutdown_commands: Vec<GoXLRCommand>,
     sleep_commands: Vec<GoXLRCommand>,
@@ -615,6 +723,7 @@ impl Default for DeviceSettings {
             chat_mute_mutes_mic_to_chat: Some(true),
             lock_faders: Some(false),
             enable_monitor_with_fx: Some(false),
+            sampler_reset_on_clear: Some(true),
 
             shutdown_commands: vec![],
             sleep_commands: vec![],

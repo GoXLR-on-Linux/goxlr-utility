@@ -1,6 +1,6 @@
 [package]
 name = "goxlr-ipc"
-version = "1.0.6"
+version = "1.1.0"
 edition = "2021"
 authors = ["Nathan Adams <dinnerbone@dinnerbone.com>", "Craig McLure <craig@mclure.net>", "Lars Mühlbauer <lm41@dismail.de>"]
 description = "An indirect interface to the TC-Helicon GoXLR & GoXLR Mini via IPC and a daemon."
@@ -13,15 +13,15 @@ categories = ["hardware-support", "api-bindings"]
 [dependencies]
 goxlr-types = { path = "../types", features = ["serde"] }
 serde = { version = "1.0.193", features = ["derive"] }
-tokio = {version = "1.35.0", features = ["net"]}
-tokio-util = { version = "0.7.10", features=["codec", "compat"]}
-tokio-serde = { version = "0.8.0", features=["bincode", "json"] }
-interprocess = { version = "1.2.1", features=["tokio_support"]}
+tokio = { version = "1.35.0", features = ["net"] }
+tokio-util = { version = "0.7.10", features = ["codec", "compat"] }
+tokio-serde = { version = "0.8.0", features = ["bincode", "json"] }
+interprocess = { version = "1.2.1", features = ["tokio_support"] }
 serde_repr = "0.1.17"
 futures = "0.3.29"
 strum = { version = "0.25.0" }
-enumset = {version = "1.1.3", features=["serde"] }
-enum-map = { version = "2.7.3", features=["serde"] }
+enumset = { version = "1.1.3", features = ["serde"] }
+enum-map = { version = "2.7.3", features = ["serde"] }
 anyhow = "1.0.75"
 async-trait = "0.1.74"
 

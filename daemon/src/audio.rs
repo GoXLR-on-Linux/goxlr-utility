@@ -137,32 +137,14 @@ impl AudioHandler {
         }
 
         let patterns = vec![
+            // Linux
             Regex::new("goxlr_sample").expect("Invalid Regex in Audio Handler"),
             Regex::new("GoXLR_0_8_9").expect("Invalid Regex in Audio Handler"),
             Regex::new("GoXLR.*HiFi__Line3__sink").expect("Invalid Regex in Audio Handler"),
-            Regex::new("CoreAudio\\*Sample").expect("Invalid Regex in Audio Handler"),
+            // MacOS
+            Regex::new("CoreAudio\\*Sample(?:(?!Mini).)*$").expect("Invalid Regex"),
+            // Windows
             Regex::new("^WASAPI\\*Sample(?:(?!Mini).)*$").expect("Invalid Regex in Audio Handler"),
-            // If we ever support the sampler on the Mini, this can be used as a fallback, so we defer
-            // to any attached Full Sized device, but if one isn't present, we can use the mini.
-            //Regex::new("^WASAPI\\*Sample.*$").expect("Invalid Regex in Audio Handler"),
-        ];
-        patterns
-    }
-
-    #[allow(dead_code)]
-    fn get_output_device_string_patterns(&self) -> Vec<String> {
-        let override_output = OVERRIDE_SAMPLER_OUTPUT.lock().unwrap().deref().clone();
-        if let Some(device) = override_output {
-            return vec![device];
-        }
-
-        let patterns = vec![
-            String::from("goxlr_sample"),
-            String::from("GoXLR_0_8_9"),
-            String::from("GoXLR.*HiFi__Line3__sink"),
-            String::from("CoreAudio\\*Sample"),
-            String::from("^WASAPI\\*Sample(?:(?!Mini).)*$"),
-            //String::from("^WASAPI\\*Sample.*$"),
         ];
         patterns
     }
@@ -174,12 +156,14 @@ impl AudioHandler {
         }
 
         let patterns = vec![
+            // Linux
             Regex::new("goxlr_sample.*source").expect("Invalid Regex in Audio Handler"),
             Regex::new("GoXLR_0_4_5.*source").expect("Invalid Regex in Audio Handler"),
             Regex::new("GoXLR.*HiFi__Line5__source").expect("Invalid Regex in Audio Handler"),
-            Regex::new("CoreAudio\\*Sampler").expect("Invalid Regex in Audio Handler"),
+            // MacOS
+            Regex::new("CoreAudio\\*Sampler(?:(?!Mini).)*$").expect("Invalid Regex"),
+            // Windows
             Regex::new("^WASAPI\\*Sample(?:(?!Mini).)*$").expect("Invalid Regex in Audio Handler"),
-            //Regex::new("^WASAPI\\*Sample.*$").expect("Invalid Regex in Audio Handler"),
         ];
         patterns
     }
@@ -191,12 +175,14 @@ impl AudioHandler {
         }
 
         let patterns = vec![
+            // Linux
             String::from("goxlr_sample.*source"),
             String::from("GoXLR_0_4_5.*source"),
             String::from("GoXLR.*HiFi__Line5__source"),
-            String::from("CoreAudio\\*Sampler"),
+            // MacOS
+            String::from("CoreAudio\\*Sampler(?:(?!Mini).)*$"),
+            // Windows
             String::from("^WASAPI\\*Sample(?:(?!Mini).)*$"),
-            //String::from("^WASAPI\\*Sample.*$"),
         ];
 
         patterns
@@ -279,6 +265,15 @@ impl AudioHandler {
             }
         }
         false
+    }
+
+    pub fn get_playing_file(&self, bank: SampleBank, button: SampleButtons) -> Option<PathBuf> {
+        if let Some(stream) = &self.active_streams[bank][button] {
+            if let Some(manager) = &stream.playback {
+                return Some(manager.state.playing_file.clone());
+            }
+        }
+        None
     }
 
     pub fn sample_recording(&self, bank: SampleBank, button: SampleButtons) -> bool {
@@ -372,6 +367,31 @@ impl AudioHandler {
             return Err(anyhow!("Unable to play Sample, Output device not found"));
         }
 
+        Ok(())
+    }
+
+    pub async fn restart_for_button(
+        &mut self,
+        bank: SampleBank,
+        button: SampleButtons,
+    ) -> Result<()> {
+        if let Some(player) = &mut self.active_streams[bank][button] {
+            if player.stream_type == StreamType::Recording {
+                return Err(anyhow!(
+                    "Attempted to Restart Playback on Recording Stream.."
+                ));
+            }
+
+            if let Some(playback_state) = &mut player.playback {
+                // We'll set the value to true, which will be a signal to the
+                // audio player to restart the track, once that signal is processed
+                // it'll be reset back to false.
+                playback_state
+                    .state
+                    .restart_track
+                    .store(true, Ordering::Relaxed);
+            }
+        }
         Ok(())
     }
 

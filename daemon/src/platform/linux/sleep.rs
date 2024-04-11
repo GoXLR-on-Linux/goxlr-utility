@@ -163,9 +163,9 @@ pub async fn run(tx: mpsc::Sender<EventTriggers>, mut stop: Shutdown) -> Result<
                 if args.changed.contains_key("LockedHint") {
                     let value = bool::try_from(args.changed.get("LockedHint").unwrap())?;
                     if value {
-                        debug!("Got Lock..");
+                        let _ = tx.send(EventTriggers::Lock).await;
                     } else {
-                        debug!("Got Unlock..");
+                        let _ = tx.send(EventTriggers::Unlock).await;
                     }
                 }
             },

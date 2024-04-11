@@ -5,6 +5,7 @@ use crate::device::base::{
 use crate::{PID_GOXLR_FULL, PID_GOXLR_MINI, VID_GOXLR};
 use anyhow::{anyhow, bail, Error, Result};
 use byteorder::{ByteOrder, LittleEndian};
+use goxlr_types::{DriverInterface, VersionNumber};
 use log::{debug, error, info, warn};
 use rusb::Error::Pipe;
 use rusb::{
@@ -457,4 +458,17 @@ pub fn find_devices() -> Vec<GoXLRDevice> {
     }
 
     found_devices
+}
+
+pub fn get_interface_version() -> (DriverInterface, VersionNumber) {
+    let version = rusb::version();
+    (
+        DriverInterface::LIBUSB,
+        VersionNumber(
+            version.major() as u32,
+            version.minor() as u32,
+            Some(version.micro() as u32),
+            None,
+        ),
+    )
 }

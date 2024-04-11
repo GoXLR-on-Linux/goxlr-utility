@@ -13,10 +13,13 @@ use file_rotate::compression::Compression;
 use file_rotate::suffix::AppendCount;
 use file_rotate::{ContentLimit, FileRotate};
 use json_patch::Patch;
+use lazy_static::lazy_static;
 use log::{debug, error, info, warn};
 use simplelog::{
     ColorChoice, CombinedLogger, ConfigBuilder, TermLogger, TerminalMode, WriteLogger,
 };
+use sys_locale::get_locale;
+
 use tokio::join;
 use tokio::sync::{broadcast, mpsc};
 
@@ -59,6 +62,16 @@ rather than through additional parameters. When that comes, this will be removed
 */
 static OVERRIDE_SAMPLER_INPUT: Mutex<Option<String>> = Mutex::new(None);
 static OVERRIDE_SAMPLER_OUTPUT: Mutex<Option<String>> = Mutex::new(None);
+
+lazy_static! {
+    /**
+        This is a fetcher of the system locale, used for language and translations of the UI.
+        the sys-locale package should give us valid readings on Linux, MacOS and Windows
+     */
+    static ref SYSTEM_LOCALE: String = get_locale()
+        .unwrap_or_else(|| String::from("en_GB"))
+        .replace('-', "_");
+}
 
 // This is for global 'JSON Patches', for when something changes.
 #[derive(Debug, Clone)]
@@ -206,6 +219,7 @@ async fn run_utility() -> Result<()> {
     }
 
     info!("Starting GoXLR Daemon v{}", VERSION);
+    info!("System Locale: {}", *SYSTEM_LOCALE);
 
     // Before we do anything, perform platform pre-flight to make
     // sure we're allowed to start.

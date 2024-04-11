@@ -5,9 +5,11 @@ use libpulse_binding::sample::{Format, Spec};
 use libpulse_binding::stream::Direction;
 use libpulse_simple_binding::Simple;
 
+const BUFFER_SIZE: usize = 1024;
+
 pub struct PulseRecord {
     pulse_simple: Simple,
-    buffer: [u8; 1024],
+    buffer: [u8; BUFFER_SIZE],
 }
 
 impl PulseRecord {
@@ -62,7 +64,7 @@ impl PulseRecord {
         // have that going for us, which is nice.
         match pulse {
             Ok(pulse_simple) => Ok(Box::new(PulseRecord {
-                buffer: [0; 1024],
+                buffer: [0; BUFFER_SIZE],
                 pulse_simple,
             })),
             Err(_) => Err(anyhow!("Unable to Connect to Pulse")),

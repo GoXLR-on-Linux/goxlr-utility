@@ -1,13 +1,13 @@
 [package]
 name = "goxlr-audio"
-version = "1.0.6"
+version = "1.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 # Symphonia for Audio Decoding..
-symphonia = { version = "0.5.3", features = [ "wav", "mp3", "ogg"] }
+symphonia = { version = "0.5.3", features = ["wav", "mp3", "ogg"] }
 
 # Hound for WAV Encoding..
 hound = "3.5.1"

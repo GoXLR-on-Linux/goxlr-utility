@@ -1937,6 +1937,8 @@ dependencies = [
  "clap_complete",
  "cocoa",
  "cocoa-foundation",
+ "core-foundation",
+ "coreaudio-sys",
  "directories",
  "dunce",
  "enum-map",
@@ -1953,6 +1955,7 @@ dependencies = [
  "image",
  "include_dir",
  "interprocess",
+ "io-kit-sys",
  "json-patch",
  "jsonpath-rust",
  "ksni",
@@ -1974,6 +1977,7 @@ dependencies = [
  "shell-words",
  "simplelog",
  "strum 0.25.0",
+ "sys-locale",
  "tasklist",
  "tempfile",
  "tokio",
@@ -2453,6 +2457,16 @@ name = "intmap"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ae52f28f45ac2bc96edb7714de995cffc174a395fb0abf5bff453587c980d7b9"
+
+[[package]]
+name = "io-kit-sys"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4769cb30e5dcf1710fc6730d3e94f78c47723a014a567de385e113c737394640"
+dependencies = [
+ "core-foundation-sys",
+ "mach2",
+]
 
 [[package]]
 name = "io-lifetimes"
@@ -4356,6 +4370,15 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
+]
+
+[[package]]
+name = "sys-locale"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e801cf239ecd6ccd71f03d270d67dd53d13e90aab208bf4b8fe4ad957ea949b0"
+dependencies = [
+ "libc",
 ]
 
 [[package]]

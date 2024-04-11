@@ -62,24 +62,22 @@ cfg_if! {
             linux::display_error(message);
         }
     } else if #[cfg(target_os = "macos")] {
-        mod unix;
         mod macos;
-        use anyhow::bail;
 
         pub fn perform_preflight() -> Result<()> {
             Ok(())
         }
 
         pub async fn spawn_runtime(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Result<()> {
-            unix::spawn_platform_runtime(state, tx).await
+            macos::runtime::run(tx.clone(), state.shutdown.clone()).await
         }
 
         pub fn has_autostart() -> bool {
-            false
+            macos::has_autostart()
         }
 
-        pub fn set_autostart(_enabled: bool) -> Result<()> {
-            bail!("Autostart Not Supported on this Platform");
+        pub fn set_autostart(enabled: bool) -> Result<()> {
+            macos::set_autostart(enabled)
         }
 
          pub fn display_error(message: String) {

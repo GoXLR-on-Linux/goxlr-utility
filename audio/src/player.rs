@@ -23,8 +23,11 @@ pub struct Player {
     probe: ProbeResult,
 
     volume: f32,
+
+    // I should really introduce messaging for this..
     stopping: Arc<AtomicBool>,
     force_stop: Arc<AtomicBool>,
+    restart_track: Arc<AtomicBool>,
 
     device: Option<String>,
     fade_duration: Option<f32>,
@@ -62,6 +65,7 @@ impl Player {
             volume: 1.0_f32,
             stopping: Arc::new(AtomicBool::new(false)),
             force_stop: Arc::new(AtomicBool::new(false)),
+            restart_track: Arc::new(AtomicBool::new(false)),
 
             progress: Arc::new(AtomicU8::new(0)),
             error: Arc::new(Mutex::new(None)),
@@ -340,6 +344,32 @@ impl Player {
                             }
                         }
 
+                        if self.restart_track.load(Ordering::Relaxed) {
+                            // We've been prompted to restart the current track..
+                            let start_frame = if let Some(frame) = first_frame {
+                                frame
+                            } else {
+                                0
+                            };
+
+                            let seek_time = SeekTo::TimeStamp {
+                                ts: start_frame,
+                                track_id,
+                            };
+
+                            // Seek the reader backwards to the start..
+                            samples_processed = match reader.seek(SeekMode::Accurate, seek_time) {
+                                Ok(seeked_to) => seeked_to.actual_ts * channels as u64,
+                                Err(e) => {
+                                    debug!("Error Seeking: {}", e);
+                                    0
+                                }
+                            };
+
+                            // Set the back to FALSE
+                            self.restart_track.store(false, Ordering::Relaxed);
+                        }
+
                         // If we've been instructed to break, end it here.
                         if break_playback {
                             break Ok(());
@@ -409,8 +439,10 @@ impl Player {
 
     pub fn get_state(&self) -> PlayerState {
         PlayerState {
+            playing_file: self.file.clone(),
             stopping: self.stopping.clone(),
             force_stop: self.force_stop.clone(),
+            restart_track: self.restart_track.clone(),
             progress: self.progress.clone(),
             error: self.error.clone(),
             calculated_gain: self.normalized_gain.clone(),
@@ -420,8 +452,14 @@ impl Player {
 
 #[derive(Debug)]
 pub struct PlayerState {
+    // Note the file being played..
+    pub playing_file: PathBuf,
+
     pub stopping: Arc<AtomicBool>,
     pub force_stop: Arc<AtomicBool>,
+
+    // This is used for triggering a seek back the the beginning
+    pub restart_track: Arc<AtomicBool>,
 
     // These are generally read only from the outside..
     pub progress: Arc<AtomicU8>,

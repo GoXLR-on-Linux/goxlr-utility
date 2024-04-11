@@ -1,20 +1,79 @@
 use anyhow::{bail, Result};
 use image::imageops::{dither, overlay, BiLevel, FilterType};
+use image::ImageOutputFormat::Png;
 use image::{ColorType, DynamicImage, GenericImage, GenericImageView, GrayImage, Luma, Rgba};
 use imageproc::drawing::{draw_text_mut, text_size};
 use log::warn;
 use rusttype::{Font, Scale};
 use std::borrow::BorrowMut;
+use std::io::Cursor;
 use std::path::PathBuf;
 
 static FONT: &[u8] = include_bytes!("../fonts/Play-Bold.ttf");
 
 pub fn get_scribble(
     path: Option<PathBuf>,
-    bottom_text: Option<String>,
-    top_right: Option<String>,
+    bottom: Option<String>,
+    top: Option<String>,
     invert: bool,
 ) -> [u8; 1024] {
+    let image = get_scribble_base(path, bottom, top);
+
+    if let Ok(image) = to_goxlr(image, invert) {
+        image
+    } else {
+        [0; 1024]
+    }
+}
+
+pub fn get_scribble_png(
+    path: Option<PathBuf>,
+    bottom: Option<String>,
+    top: Option<String>,
+    invert: bool,
+    width: u32,
+    height: u32,
+) -> Result<Vec<u8>> {
+    // First, get the GrayScale version..
+    let mut image = get_scribble_base(path, bottom, top);
+
+    let white = Luma::from([255_u8]);
+    let black = Luma::from([0_u8]);
+
+    // Do we need to invert this?
+    if invert {
+        image.pixels_mut().for_each(|f| {
+            *f = if *f == white { black } else { white };
+        })
+    }
+
+    // Now, we convert it into a dynamic image and resize..
+    let mut image: DynamicImage = DynamicImage::from(image);
+    image = image.resize_exact(width, height, FilterType::Nearest);
+
+    // Next step, is to reintroduce transparency, and correctly set the pixels..
+    let white = Rgba::from([255, 255, 255, 255]);
+    let transparent = Rgba::from([255, 255, 255, 0]);
+
+    let mut image: DynamicImage = image.to_rgba8().into();
+    for (x, y, pixel) in image.clone().pixels() {
+        if pixel == white {
+            image.put_pixel(x, y, transparent);
+        }
+    }
+
+    // Finally, return a PNG..
+    let mut bytes = Vec::new();
+    image.write_to(&mut Cursor::new(&mut bytes), Png)?;
+
+    Ok(bytes)
+}
+
+pub fn get_scribble_base(
+    path: Option<PathBuf>,
+    bottom: Option<String>,
+    top: Option<String>,
+) -> GrayImage {
     let mut processed_image = None;
     let mut bottom_image = None;
     let mut top_right_image = None;
@@ -25,25 +84,19 @@ pub fn get_scribble(
         }
     }
 
-    if let Some(text) = bottom_text {
+    if let Some(text) = bottom {
         if let Ok(image) = create_text_image(&text) {
             bottom_image = Some(image);
         }
     }
 
-    if let Some(text) = top_right {
+    if let Some(text) = top {
         if let Ok(image) = create_text_image(&text) {
             top_right_image = Some(image);
         }
     }
 
-    let image = create_final_image(processed_image, bottom_image, top_right_image);
-
-    if let Ok(result) = to_goxlr(image, invert) {
-        result
-    } else {
-        [0; 1024]
-    }
+    create_final_image(processed_image, bottom_image, top_right_image)
 }
 
 fn load_grayscale_image(path: PathBuf) -> Result<DynamicImage> {

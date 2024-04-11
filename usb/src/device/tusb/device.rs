@@ -3,10 +3,12 @@ use crate::device::base::{
     AttachGoXLR, ExecutableGoXLR, FullGoXLRDevice, GoXLRCommands, GoXLRDevice, UsbData,
 };
 use crate::device::tusb::tusbaudio::{
-    get_devices, DeviceHandle, EventChannelReceiver, EventChannelSender, TUSB_INTERFACE,
+    get_devices, get_version, DeviceHandle, EventChannelReceiver, EventChannelSender,
+    TUSB_INTERFACE,
 };
 use anyhow::{bail, Result};
 use byteorder::{ByteOrder, LittleEndian};
+use goxlr_types::{DriverInterface, VersionNumber};
 use log::{debug, error, warn};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -365,4 +367,8 @@ impl FullGoXLRDevice for TUSBAudioGoXLR {}
 
 pub fn find_devices() -> Vec<GoXLRDevice> {
     get_devices()
+}
+
+pub fn get_interface_version() -> (DriverInterface, VersionNumber) {
+    (DriverInterface::TUSB, get_version())
 }

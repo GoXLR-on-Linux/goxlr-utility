@@ -251,6 +251,9 @@ impl App {
             let workspace: id = msg_send![class!(NSWorkspace), sharedWorkspace];
             let notification_center: id = msg_send![workspace, notificationCenter];
 
+            // Get the Distributed Notification Center (for Lock / Unlock Notifications)
+            let dnc: id = msg_send![class!(NSDistributedNotificationCenter), defaultCenter];
+
             debug!("Creating Controller..");
             let controller: id = msg_send![App::make_shutdown_hook_class(), alloc];
 
@@ -285,6 +288,14 @@ impl App {
             let event = "NSWorkspaceDidWakeNotification";
             let event = NSString::alloc(nil).init_str(event).autorelease();
             let () = msg_send![notification_center, addObserver:controller selector:sel!(computerWillWakeNotification:) name: event object: nil];
+
+            let event = "com.apple.screenIsLocked";
+            let event = NSString::alloc(nil).init_str(event).autorelease();
+            let () = msg_send![dnc, addObserver:controller selector:sel!(screenIsLocked:) name: event object: nil];
+
+            let event = "com.apple.screenIsUnlocked";
+            let event = NSString::alloc(nil).init_str(event).autorelease();
+            let () = msg_send![dnc, addObserver:controller selector:sel!(screenIsUnlocked:) name: event object: nil];
 
             debug!("Running..");
             app.run();
@@ -443,6 +454,33 @@ impl App {
                 mem::forget(sender);
             }
 
+            extern "C" fn handle_lock(this: &Object, _: Sel, notification: *const Object) {
+                debug!("Received Lock Notification.. {:?}", notification);
+
+                let sender: Box<Sender<EventTriggers>> = unsafe {
+                    let pointer_value: usize = *this.get_ivar("EVENT_SENDER");
+                    let pointer = pointer_value as *mut c_void;
+                    let pointer = pointer as *mut Sender<EventTriggers>;
+                    Box::from_raw(pointer)
+                };
+
+                let _ = sender.try_send(EventTriggers::Lock);
+                mem::forget(sender);
+            }
+
+            extern "C" fn handle_unlock(this: &Object, _: Sel, notification: *const Object) {
+                debug!("Received Unlock Notification.. {:?}", notification);
+                let sender: Box<Sender<EventTriggers>> = unsafe {
+                    let pointer_value: usize = *this.get_ivar("EVENT_SENDER");
+                    let pointer = pointer_value as *mut c_void;
+                    let pointer = pointer as *mut Sender<EventTriggers>;
+                    Box::from_raw(pointer)
+                };
+
+                let _ = sender.try_send(EventTriggers::Unlock);
+                mem::forget(sender);
+            }
+
             unsafe {
                 decl.add_method(
                     sel!(computerWillShutDownNotification:),
@@ -455,6 +493,14 @@ impl App {
                 decl.add_method(
                     sel!(computerWillWakeNotification:),
                     handle_wake as extern "C" fn(&Object, Sel, *const Object),
+                );
+                decl.add_method(
+                    sel!(screenIsLocked:),
+                    handle_lock as extern "C" fn(&Object, Sel, *const Object),
+                );
+                decl.add_method(
+                    sel!(screenIsUnlocked:),
+                    handle_unlock as extern "C" fn(&Object, Sel, *const Object),
                 );
                 decl.add_ivar::<usize>("EVENT_SENDER");
                 decl.add_ivar::<usize>("STOP_BOOL");

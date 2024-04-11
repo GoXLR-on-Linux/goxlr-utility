@@ -447,11 +447,17 @@ pub async fn run_cli() -> Result<()> {
                                 .await
                                 .context("Unable to create new profile")?;
                         }
-                        ProfileAction::Load { profile_name } => {
+                        ProfileAction::Load {
+                            profile_name,
+                            persist,
+                        } => {
                             client
                                 .command(
                                     &serial,
-                                    GoXLRCommand::LoadProfile(profile_name.to_string(), true),
+                                    GoXLRCommand::LoadProfile(
+                                        profile_name.to_string(),
+                                        persist.unwrap_or(true),
+                                    ),
                                 )
                                 .await
                                 .context("Unable to Load Profile")?;
@@ -491,11 +497,17 @@ pub async fn run_cli() -> Result<()> {
                                 .await
                                 .context("Unable to create new profile")?;
                         }
-                        ProfileAction::Load { profile_name } => {
+                        ProfileAction::Load {
+                            profile_name,
+                            persist,
+                        } => {
                             client
                                 .command(
                                     &serial,
-                                    GoXLRCommand::LoadMicProfile(profile_name.to_string(), true),
+                                    GoXLRCommand::LoadMicProfile(
+                                        profile_name.to_string(),
+                                        persist.unwrap_or(true),
+                                    ),
                                 )
                                 .await
                                 .context("Unable to Load Microphone Profile")?;

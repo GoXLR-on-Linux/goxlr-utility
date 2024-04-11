@@ -2,15 +2,16 @@ use crate::device::Device;
 use crate::events::EventTriggers;
 use crate::files::extract_defaults;
 use crate::platform::{get_ui_app_path, has_autostart, set_autostart};
-use crate::{FileManager, PatchEvent, SettingsHandle, Shutdown, VERSION};
+use crate::{FileManager, PatchEvent, SettingsHandle, Shutdown, SYSTEM_LOCALE, VERSION};
 use anyhow::{anyhow, Result};
 use goxlr_ipc::{
-    Activation, DaemonCommand, DaemonConfig, DaemonStatus, Files, GoXLRCommand, HardwareStatus,
-    HttpSettings, PathTypes, Paths, SampleFile, UsbProductInformation,
+    Activation, ColourWay, DaemonCommand, DaemonConfig, DaemonStatus, DriverDetails, Files,
+    GoXLRCommand, HardwareStatus, HttpSettings, Locale, PathTypes, Paths, SampleFile,
+    UsbProductInformation,
 };
 use goxlr_types::DeviceType;
 use goxlr_usb::device::base::GoXLRDevice;
-use goxlr_usb::device::{find_devices, from_device};
+use goxlr_usb::device::{find_devices, from_device, get_version};
 use goxlr_usb::{PID_GOXLR_FULL, PID_GOXLR_MINI};
 use json_patch::diff;
 use log::{debug, error, info, warn};
@@ -76,6 +77,10 @@ pub async fn spawn_usb_handler(
     let update_sleep = sleep(update_duration);
     tokio::pin!(update_sleep);
 
+    // Get the Driver Type and Details..
+    let (interface, version) = get_version();
+    let driver_interface = DriverDetails { interface, version };
+
     // Create the Primary Device List, and 'Ignore' list..
     let mut devices: HashMap<String, Device> = HashMap::new();
     let mut ignore_list = HashMap::new();
@@ -85,6 +90,7 @@ pub async fn spawn_usb_handler(
         &devices,
         &settings,
         &http_settings,
+        &driver_interface,
         files.clone(),
         &mut app_check,
     )
@@ -240,9 +246,16 @@ pub async fn spawn_usb_handler(
                                 change_found = true;
                                 let _ = sender.send(Ok(()));
                             }
+                            DaemonCommand::SetLocale(language) => {
+                                settings.set_selected_locale(language).await;
+                                settings.save().await;
+                                change_found = true;
+                                let _ = sender.send(Ok(()));
+                            }
                             DaemonCommand::SetUiLaunchOnLoad(value) => {
                                 settings.set_open_ui_on_launch(value).await;
                                 settings.save().await;
+                                change_found = true;
 
                                 let _ = sender.send(Ok(()));
                             }
@@ -332,6 +345,7 @@ pub async fn spawn_usb_handler(
                 &devices,
                 &settings,
                 &http_settings,
+                &driver_interface,
                 files.clone(),
                 &mut app_check,
             )
@@ -358,6 +372,7 @@ async fn get_daemon_status(
     devices: &HashMap<String, Device<'_>>,
     settings: &SettingsHandle,
     http_settings: &HttpSettings,
+    driver_details: &DriverDetails,
     files: Files,
     app_check: &mut AppPathCheck,
 ) -> DaemonStatus {
@@ -377,6 +392,11 @@ async fn get_daemon_status(
         config: DaemonConfig {
             http_settings: http_settings.clone(),
             daemon_version: String::from(VERSION),
+            driver_interface: driver_details.clone(),
+            locale: Locale {
+                user_locale: settings.get_selected_locale().await,
+                system_locale: SYSTEM_LOCALE.clone(),
+            },
             autostart_enabled: has_autostart(),
             show_tray_icon: settings.get_show_tray_icon().await,
             tts_enabled: settings.get_tts_enabled().await,
@@ -584,11 +604,18 @@ async fn load_device(
     }
     handled_device.set_unique_identifier(serial_number.clone());
 
+    let colour_way = if serial_number.ends_with("AAI") || serial_number.ends_with("3AA") {
+        ColourWay::White
+    } else {
+        ColourWay::Black
+    };
+
     let hardware = HardwareStatus {
         versions: handled_device.get_firmware_version()?,
         serial_number: serial_number.clone(),
         manufactured_date,
         device_type,
+        colour_way,
         usb_device,
     };
     let profile_directory = settings.get_profile_directory().await;

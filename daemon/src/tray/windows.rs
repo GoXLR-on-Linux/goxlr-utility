@@ -447,10 +447,10 @@ impl WindowProc for GoXLRWindowProc {
                 let id = wparam.0 as *const u32 as u32;
                 match id {
                     WTS_SESSION_LOCK => {
-                        debug!("Got Session Locked");
+                        let _ = self.global_tx.try_send(EventTriggers::Lock);
                     }
                     WTS_SESSION_UNLOCK => {
-                        debug!("Got Session Unlocked");
+                        let _ = self.global_tx.try_send(EventTriggers::Unlock);
                     }
                     _ => {
                         debug!("Received Unknown Session Event ID: {}", id)

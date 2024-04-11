@@ -49,6 +49,12 @@ pub struct WebsocketResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+pub enum ColourWay {
+    Black,
+    White,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub enum PathTypes {
     Profiles,
     MicProfiles,
@@ -77,6 +83,7 @@ pub enum DaemonCommand {
     OpenPath(PathTypes),
     SetLogLevel(LogLevel),
     SetShowTrayIcon(bool),
+    SetLocale(Option<String>),
     SetTTSEnabled(bool),
     SetAutoStartEnabled(bool),
     SetAllowNetworkAccess(bool),
@@ -258,6 +265,7 @@ pub enum GoXLRCommand {
     SetMuteHoldDuration(u16),
     SetVCMuteAlsoMuteCM(bool),
     SetMonitorWithFx(bool),
+    SetSamplerResetOnClear(bool),
     SetLockFaders(bool),
 
     // These control the current GoXLR 'State'..

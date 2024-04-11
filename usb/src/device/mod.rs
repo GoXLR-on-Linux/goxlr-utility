@@ -2,6 +2,7 @@ use crate::device::base::AttachGoXLR;
 use crate::device::base::FullGoXLRDevice;
 use crate::device::base::GoXLRDevice;
 use anyhow::Result;
+use goxlr_types::{DriverInterface, VersionNumber};
 use tokio::sync::mpsc::Sender;
 
 pub mod base;
@@ -11,6 +12,10 @@ cfg_if::cfg_if! {
         // Under Windows, we need to utilise the official GoXLR Driver to communicate..
         mod tusb;
         use crate::device::tusb::device;
+
+        pub fn get_version() -> (DriverInterface, VersionNumber) {
+            device::get_interface_version()
+        }
 
         pub fn find_devices() -> Vec<GoXLRDevice> {
             device::find_devices()
@@ -28,6 +33,10 @@ cfg_if::cfg_if! {
         // If we're using Linux / MacOS / etc, utilise libUSB for control.
         mod libusb;
         use crate::device::libusb::device;
+
+        pub fn get_version() -> (DriverInterface, VersionNumber) {
+            device::get_interface_version()
+        }
 
         pub fn find_devices() -> Vec<GoXLRDevice> {
             device::find_devices()
