@@ -68,7 +68,8 @@ can also be served to a web browser on another computer). The UI design was mode
 in an attempt to provide a familiar interface for those moving from Windows to other platforms, rather than forcing
 people to learn a new configuration paradigm.
 
-![image](https://user-images.githubusercontent.com/574943/255011559-90e69f0d-a42b-4be6-8d99-9e5da1a4df2c.png)
+![image](https://github.com/GoXLR-on-Linux/goxlr-utility/assets/574943/8f14bd2c-e67a-42e5-bd9f-b3cb367e171d)
+
 
 ## Building
 
