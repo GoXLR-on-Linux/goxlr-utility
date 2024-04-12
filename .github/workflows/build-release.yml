@@ -1,5 +1,5 @@
 name: Create Release Build
-on: [workflow_dispatch, workflow_call]
+on: [ workflow_dispatch, workflow_call ]
 jobs:
   get_version:
     name: "Version"
@@ -8,7 +8,7 @@ jobs:
   build_windows:
     name: "Create Windows Build"
     runs-on: windows-latest
-    needs: [get_version]
+    needs: [ get_version ]
     steps:
       # Firstly Checkout our Repository..
       - name: "Check out GoXLR Utility"
@@ -43,8 +43,14 @@ jobs:
         run: "cargo build --manifest-path=goxlr-utility/Cargo.toml --release --all-features"
 
       # Build the UI into the same target directory..
-      - name: "Build UI"
-        run: "cargo build --manifest-path=goxlr-utility-ui/src-tauri/Cargo.toml --target-dir=goxlr-utility/target --release"
+      # - name: "Build UI"
+      #  run: "cargo build --manifest-path=goxlr-utility-ui/src-tauri/Cargo.toml --target-dir=goxlr-utility/target --release"
+
+      - name: "Downloading UI 0.0.4"
+        uses: suisei-cn/actions-download-file@v1.6.0
+        with:
+          url: https://github.com/FrostyCoolSlug/goxlr-utility-ui/releases/download/v0.0.4/goxlr-utility-ui-0.0.4.exe
+          target: goxlr-utility/target/release/goxlr-utility-ui.exe
 
       # Prepare NSIS
       - name: "Preparing NSIS"
@@ -86,7 +92,7 @@ jobs:
   build_linux:
     name: "Create Linux Builds"
     runs-on: ubuntu-22.04
-    needs: [get_version]
+    needs: [ get_version ]
     steps:
       - name: "Check out Repository"
         uses: actions/checkout@v4
@@ -135,9 +141,9 @@ jobs:
     name: "Create MacOS Builds"
     strategy:
       matrix:
-        targets: [x86_64-apple-darwin, aarch64-apple-darwin]
+        targets: [ x86_64-apple-darwin, aarch64-apple-darwin ]
     runs-on: macos-12
-    needs: [get_version]
+    needs: [ get_version ]
     steps:
       - name: "Checkout Repository"
         uses: actions/checkout@v4
@@ -183,7 +189,7 @@ jobs:
   package_macos:
     name: "Package MacOS Binaries"
     runs-on: macos-12
-    needs: [get_version, build_macos]
+    needs: [ get_version, build_macos ]
 
     steps:
       - name: "Checkout Repository"
