@@ -800,7 +800,7 @@ impl<'a> Device<'a> {
         let _ = self.global_events.send(TTSMessage(message)).await;
 
         let input = self.get_basic_input_from_channel(channel);
-        self.profile.set_mute_button_on(fader, true)?;
+        self.profile.set_mute_button_on(fader, true);
         if input.is_some() {
             self.apply_routing(input.unwrap()).await?;
         }
@@ -834,7 +834,7 @@ impl<'a> Device<'a> {
                 }
             }
             self.goxlr.set_channel_state(channel, Muted)?;
-            self.profile.set_mute_button_on(fader, true)?;
+            self.profile.set_mute_button_on(fader, true);
         }
 
         let name = self.profile.get_fader_assignment(fader);
@@ -842,7 +842,7 @@ impl<'a> Device<'a> {
         let _ = self.global_events.send(TTSMessage(message)).await;
 
         if blink {
-            self.profile.set_mute_button_blink(fader, true)?;
+            self.profile.set_mute_button_blink(fader, true);
         }
 
         if self.hardware.device_type != DeviceType::Mini && !lock_faders {
@@ -877,8 +877,8 @@ impl<'a> Device<'a> {
         }
 
         // Disable the lighting regardless of action
-        self.profile.set_mute_button_on(fader, false)?;
-        self.profile.set_mute_button_blink(fader, false)?;
+        self.profile.set_mute_button_on(fader, false);
+        self.profile.set_mute_button_blink(fader, false);
 
         if muted_to_all || mute_function == MuteFunction::All {
             // This fader has previously been 'Muted to All', we need to restore the volume..
@@ -989,7 +989,7 @@ impl<'a> Device<'a> {
 
     async fn handle_swear_button(&mut self, press: bool) -> Result<()> {
         // Pretty simple, turn the light on when pressed, off when released..
-        self.profile.set_swear_button_on(press)?;
+        self.profile.set_swear_button_on(press);
         Ok(())
     }
 
@@ -1004,7 +1004,7 @@ impl<'a> Device<'a> {
         if let Some(audio) = &self.audio_handler {
             for button in SampleButtons::iter() {
                 if audio.is_sample_playing(bank, button) {
-                    self.profile.set_sample_button_state(button, true)?;
+                    self.profile.set_sample_button_state(button, true);
                 }
             }
         }
@@ -1116,11 +1116,11 @@ impl<'a> Device<'a> {
                 for button in SampleButtons::iter() {
                     if audio.is_sample_playing(bank, button) {
                         audio.stop_playback(bank, button, true).await?;
-                        self.profile.set_sample_button_state(button, false)?;
+                        self.profile.set_sample_button_state(button, false);
                     }
                     if audio.sample_recording(bank, button) {
                         audio.stop_record(bank, button)?;
-                        self.profile.set_sample_button_blink(button, false)?;
+                        self.profile.set_sample_button_blink(button, false);
                     }
                 }
             }
@@ -1135,7 +1135,7 @@ impl<'a> Device<'a> {
                 let message = format!("Sample Clear {}", tts_bool_to_state(!state));
                 self.global_events.send(TTSMessage(message)).await?;
 
-                self.profile.set_sample_clear_active(!state)?;
+                self.profile.set_sample_clear_active(!state);
             }
         }
         Ok(())
@@ -1155,7 +1155,7 @@ impl<'a> Device<'a> {
             self.profile.clear_all_samples(button);
 
             debug!("Cleared samples..");
-            self.profile.set_sample_clear_active(false)?;
+            self.profile.set_sample_clear_active(false);
 
             // Check whether we should reset the Sampler Function..
             if self
@@ -1204,7 +1204,7 @@ impl<'a> Device<'a> {
                 }
             }
             // In all cases, we should stop the colour flashing.
-            self.profile.set_sample_button_blink(button, false)?;
+            self.profile.set_sample_button_blink(button, false);
             self.load_colour_map().await?;
 
             return Ok(());
@@ -1265,7 +1265,7 @@ impl<'a> Device<'a> {
                 .await;
 
             if result.is_ok() {
-                self.profile.set_sample_button_state(button, true)?;
+                self.profile.set_sample_button_state(button, true);
             } else {
                 error!("{}", result.err().unwrap());
             }
@@ -1296,7 +1296,7 @@ impl<'a> Device<'a> {
         if let Some(audio_handler) = &mut self.audio_handler {
             let result = audio_handler.record_for_button(sample_path, sample_bank, button);
             if result.is_ok() {
-                self.profile.set_sample_button_blink(button, true)?;
+                self.profile.set_sample_button_blink(button, true);
             }
         }
 
@@ -1326,7 +1326,7 @@ impl<'a> Device<'a> {
                 .is_sample_playing(self.profile.get_active_sample_bank(), button);
 
             if self.profile.is_sample_active(button) && !playing {
-                self.profile.set_sample_button_state(button, false)?;
+                self.profile.set_sample_button_state(button, false);
                 changed = true;
             }
         }
@@ -1358,7 +1358,7 @@ impl<'a> Device<'a> {
         let tts_message = format!("Megaphone {}", tts_bool_to_state(enabled));
         let _ = self.global_events.send(TTSMessage(tts_message)).await;
 
-        self.profile.set_megaphone(enabled)?;
+        self.profile.set_megaphone(enabled);
         self.apply_effects(LinkedHashSet::from_iter([EffectKey::MegaphoneEnabled]))?;
         Ok(())
     }
@@ -1368,7 +1368,7 @@ impl<'a> Device<'a> {
         let tts_message = format!("Robot {}", tts_bool_to_state(enabled));
         let _ = self.global_events.send(TTSMessage(tts_message)).await;
 
-        self.profile.set_robot(enabled)?;
+        self.profile.set_robot(enabled);
         self.apply_effects(LinkedHashSet::from_iter([EffectKey::RobotEnabled]))?;
         Ok(())
     }
@@ -1378,7 +1378,7 @@ impl<'a> Device<'a> {
         let tts_message = format!("Hard tune {}", tts_bool_to_state(enabled));
         let _ = self.global_events.send(TTSMessage(tts_message)).await;
 
-        self.profile.set_hardtune(enabled)?;
+        self.profile.set_hardtune(enabled);
         self.apply_effects(LinkedHashSet::from_iter([EffectKey::HardTuneEnabled]))?;
         self.set_pitch_mode()?;
 
@@ -1395,7 +1395,7 @@ impl<'a> Device<'a> {
         let tts_message = format!("Effects {}", tts_bool_to_state(enabled));
         let _ = self.global_events.send(TTSMessage(tts_message)).await;
 
-        self.profile.set_effects(enabled)?;
+        self.profile.set_effects(enabled);
 
         // When this changes, we need to update all the 'Enabled' keys..
         self.apply_effects(self.mic_profile.get_enabled_keyset())?;
@@ -1861,7 +1861,7 @@ impl<'a> Device<'a> {
                 self.set_all_fader_display_from_profile()?;
             }
             GoXLRCommand::SetFaderDisplayStyle(fader, display) => {
-                self.profile.set_fader_display(fader, display)?;
+                self.profile.set_fader_display(fader, display);
                 self.set_fader_display_from_profile(fader)?;
             }
             GoXLRCommand::SetFaderColours(fader, top, bottom) => {
@@ -1881,7 +1881,7 @@ impl<'a> Device<'a> {
             }
             GoXLRCommand::SetAllFaderDisplayStyle(display_style) => {
                 for fader in FaderName::iter() {
-                    self.profile.set_fader_display(fader, display_style)?;
+                    self.profile.set_fader_display(fader, display_style);
                     self.set_fader_display_from_profile(fader)?;
                 }
             }
@@ -1894,7 +1894,7 @@ impl<'a> Device<'a> {
                 self.update_button_states()?;
             }
             GoXLRCommand::SetButtonOffStyle(target, off_style) => {
-                self.profile.set_button_off_style(target, off_style)?;
+                self.profile.set_button_off_style(target, off_style);
 
                 self.load_colour_map().await?;
                 self.update_button_states()?;
@@ -1928,7 +1928,7 @@ impl<'a> Device<'a> {
                 self.load_colour_map().await?;
             }
             GoXLRCommand::SetSampleOffStyle(target, style) => {
-                self.profile.set_sampler_off_style(target, style)?;
+                self.profile.set_sampler_off_style(target, style);
                 self.load_colour_map().await?;
                 self.update_button_states()?;
             }

@@ -206,6 +206,10 @@ impl ColourMap {
         }
     }
 
+    pub(crate) fn set_colour_group(&mut self, group: String) {
+        self.colour_group = Some(group);
+    }
+
     pub fn colour(&self, index: u8) -> &Colour {
         self.colour_or_default(index)
     }
@@ -253,9 +257,8 @@ impl ColourMap {
         false
     }
 
-    pub fn set_fader_display(&mut self, display: ColourDisplay) -> Result<()> {
+    pub fn set_fader_display(&mut self, display: ColourDisplay) {
         self.colour_display = Some(display);
-        Ok(())
     }
 
     pub fn state(&self) -> &Option<ColourState> {
@@ -282,13 +285,12 @@ impl ColourMap {
         self.state = state;
         Ok(())
     }
-    pub fn set_state_on(&mut self, on: bool) -> Result<()> {
+    pub fn set_state_on(&mut self, on: bool) {
         if on {
             self.state = Some(ColourState::On);
         } else {
             self.state = Some(ColourState::Off);
         }
-        Ok(())
     }
 
     pub fn set_blink(&mut self, blink: Option<ColourState>) -> Result<()> {
@@ -296,16 +298,15 @@ impl ColourMap {
         Ok(())
     }
 
-    pub fn set_blink_on(&mut self, on: bool) -> Result<()> {
+    pub fn set_blink_on(&mut self, on: bool) {
         if on {
             self.blink = Some(ColourState::On);
         } else {
             self.blink = Some(ColourState::Off);
         }
-        Ok(())
     }
 
-    pub fn set_colour(&mut self, index: usize, input: Colour) -> Result<()> {
+    pub fn set_colour(&mut self, index: usize, input: Colour) {
         if let Some(colour) = &mut self.colour_list {
             colour[index] = Some(input);
         } else {
@@ -315,11 +316,9 @@ impl ColourMap {
             default[index] = Some(input);
             self.colour_list = Some(default);
         }
-        Ok(())
     }
-    pub fn set_off_style(&mut self, off_style: ColourOffStyle) -> Result<()> {
+    pub fn set_off_style(&mut self, off_style: ColourOffStyle) {
         self.off_style = off_style;
-        Ok(())
     }
     pub fn fader_display(&self) -> &Option<ColourDisplay> {
         &self.colour_display
