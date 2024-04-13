@@ -17,11 +17,11 @@ jobs:
           path: goxlr-utility
 
       # Now Checkout the App Wrappers repository..
-      - name: "Check out GoXLR Utility UI"
-        uses: actions/checkout@v4
-        with:
-          repository: frostycoolslug/goxlr-utility-ui
-          path: goxlr-utility-ui
+      # - name: "Check out GoXLR Utility UI"
+      #   uses: actions/checkout@v4
+      #   with:
+      #     repository: frostycoolslug/goxlr-utility-ui
+      #     path: goxlr-utility-ui
 
       - name: "Install Rust"
         uses: dtolnay/rust-toolchain@stable
