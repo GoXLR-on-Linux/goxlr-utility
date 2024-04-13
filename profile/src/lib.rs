@@ -52,10 +52,17 @@ pub enum Preset {
     Preset6,
 }
 
-#[derive(Debug, Enum, EnumIter, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Enum, EnumIter, EnumProperty, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum Faders {
+    #[strum(props(scribbleContext = "scribble1"))]
     A,
+
+    #[strum(props(scribbleContext = "scribble2"))]
     B,
+
+    #[strum(props(scribbleContext = "scribble3"))]
     C,
+
+    #[strum(props(scribbleContext = "scribble4"))]
     D,
 }
