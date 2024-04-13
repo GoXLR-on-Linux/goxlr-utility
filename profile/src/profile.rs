@@ -149,10 +149,12 @@ pub struct ProfileSettings {
     mixer: Mixers,
     context: Context,
     mute_chat: MuteChat,
-    mute_buttons: EnumMap<Faders, Option<MuteButton>>,
+
     faders: EnumMap<Faders, Option<Fader>>,
-    effects: EnumMap<Preset, Effects>,
+    mute_buttons: EnumMap<Faders, MuteButton>,
     scribbles: EnumMap<Faders, Scribble>,
+
+    effects: EnumMap<Preset, Effects>,
     sampler_map: EnumMap<SampleButtons, SampleBase>,
     simple_elements: EnumMap<SimpleElements, Option<SimpleElement>>,
     megaphone_effect: MegaphoneEffectBase,
@@ -184,8 +186,14 @@ impl ProfileSettings {
         let mut context = Context::new("selectedContext".to_string());
         let mut mute_chat = MuteChat::new("muteChat".to_string());
 
-        let mut mute_buttons: EnumMap<Faders, Option<MuteButton>> = EnumMap::default();
         let mut faders: EnumMap<Faders, Option<Fader>> = EnumMap::default();
+
+        let mut mute_buttons: EnumMap<Faders, MuteButton> = enum_map! {
+            Faders::A => MuteButton::new(Faders::A),
+            Faders::B => MuteButton::new(Faders::B),
+            Faders::C => MuteButton::new(Faders::C),
+            Faders::D => MuteButton::new(Faders::D),
+        };
 
         // Create Defaults For the Scribbles..
         let mut scribbles = enum_map! {
@@ -272,19 +280,13 @@ impl ProfileSettings {
 
                     // Might need to pattern match this..
                     if name.starts_with("mute") && name != "muteChat" {
-                        // In the XML, the count starts as 1, here, we're gonna store as 0.
-                        if let Some(id) = name
-                            .chars()
-                            .last()
-                            .map(|s| u8::from_str(&s.to_string()))
-                            .transpose()?
-                        {
-                            let mut mute_button = MuteButton::new(id);
-                            mute_button.parse_button(&attributes)?;
-                            mute_buttons[Faders::iter().nth((id - 1).into()).unwrap()] =
-                                Some(mute_button);
-                            continue;
+                        for fader in Faders::iter() {
+                            if fader.get_str("muteContext").unwrap() == name {
+                                mute_buttons[fader].parse_button(&attributes)?;
+                                break;
+                            }
                         }
+                        continue;
                     }
 
                     if name.starts_with("FaderMeter") {
@@ -515,10 +517,10 @@ impl ProfileSettings {
             mixer,
             context,
             mute_chat,
-            mute_buttons,
             faders,
-            effects,
+            mute_buttons,
             scribbles,
+            effects,
             sampler_map,
             simple_elements: simple,
             megaphone_effect,
@@ -647,13 +649,6 @@ impl ProfileSettings {
 
         self.mute_chat.write_mute_chat(&mut writer)?;
 
-        for (faders, mute_button) in self.mute_buttons.iter() {
-            if let Some(mute_button) = mute_button {
-                let name = format!("mute{}", (faders as u8) + 1);
-                mute_button.write_button(name, &mut writer)?;
-            }
-        }
-
         for (faders, fader) in self.faders.iter() {
             if let Some(fader) = fader {
                 let name = format!("FaderMeter{}", faders as u8);
@@ -661,12 +656,16 @@ impl ProfileSettings {
             }
         }
 
-        for (_key, value) in &self.effects {
-            value.write_effects(&mut writer)?;
+        for button in self.mute_buttons.values() {
+            button.write_button(&mut writer)?;
         }
 
-        for (_fader, scribble) in self.scribbles.iter() {
+        for scribble in self.scribbles.values() {
             scribble.write_scribble(&mut writer)?;
+        }
+
+        for effect in self.effects.values() {
+            effect.write_effects(&mut writer)?;
         }
 
         self.megaphone_effect.write_megaphone(&mut writer)?;
@@ -810,16 +809,16 @@ impl ProfileSettings {
         self.faders[fader].as_ref().unwrap()
     }
 
-    pub fn mute_buttons(&mut self) -> &mut EnumMap<Faders, Option<MuteButton>> {
+    pub fn mute_buttons(&mut self) -> &mut EnumMap<Faders, MuteButton> {
         &mut self.mute_buttons
     }
 
     pub fn mute_button_mut(&mut self, fader: Faders) -> &mut MuteButton {
-        self.mute_buttons[fader].as_mut().unwrap()
+        &mut self.mute_buttons[fader]
     }
 
     pub fn mute_button(&self, fader: Faders) -> &MuteButton {
-        self.mute_buttons[fader].as_ref().unwrap()
+        &self.mute_buttons[fader]
     }
 
     pub fn scribbles_mut(&mut self) -> &mut EnumMap<Faders, Scribble> {
