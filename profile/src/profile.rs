@@ -918,25 +918,11 @@ impl ProfileSettings {
     }
 
     pub fn simple_element_mut(&mut self, name: SimpleElements) -> &mut SimpleElement {
-        if self.simple_elements[name].is_some() {
-            return self.simple_elements[name].as_mut().unwrap();
-        }
-
-        // If for whatever reason, this is missing, we'll use the global colour.
-        return self.simple_elements[SimpleElements::GlobalColour]
-            .as_mut()
-            .unwrap();
+        &mut self.simple_elements[name]
     }
 
     pub fn simple_element(&self, name: SimpleElements) -> &SimpleElement {
-        if self.simple_elements[name].is_some() {
-            return self.simple_elements[name].as_ref().unwrap();
-        }
-
-        // If for whatever reason, this is missing, we'll use the global colour.
-        return self.simple_elements[SimpleElements::GlobalColour]
-            .as_ref()
-            .unwrap();
+        &self.simple_elements[name]
     }
 
     pub fn context(&self) -> &Context {
