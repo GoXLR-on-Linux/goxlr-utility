@@ -452,7 +452,7 @@ impl ProfileSettings {
 
                     // These can probably be a little cleaner..
                     if name == "sampleTopLeft" {
-                        let mut sampler = SampleBase::new("sampleTopLeft".to_string());
+                        let mut sampler = SampleBase::new(TopLeft);
                         sampler.parse_sample_root(&attributes)?;
                         sampler_map[TopLeft] = Some(sampler);
                         active_sample_button = sampler_map[TopLeft].as_mut();
@@ -460,7 +460,7 @@ impl ProfileSettings {
                     }
 
                     if name == "sampleTopRight" {
-                        let mut sampler = SampleBase::new("sampleTopRight".to_string());
+                        let mut sampler = SampleBase::new(TopRight);
                         sampler.parse_sample_root(&attributes)?;
                         sampler_map[TopRight] = Some(sampler);
                         active_sample_button = sampler_map[TopRight].as_mut();
@@ -468,7 +468,7 @@ impl ProfileSettings {
                     }
 
                     if name == "sampleBottomLeft" {
-                        let mut sampler = SampleBase::new("sampleBottomLeft".to_string());
+                        let mut sampler = SampleBase::new(BottomLeft);
                         sampler.parse_sample_root(&attributes)?;
                         sampler_map[BottomLeft] = Some(sampler);
                         active_sample_button = sampler_map[BottomLeft].as_mut();
@@ -476,7 +476,7 @@ impl ProfileSettings {
                     }
 
                     if name == "sampleBottomRight" {
-                        let mut sampler = SampleBase::new("sampleBottomRight".to_string());
+                        let mut sampler = SampleBase::new(BottomRight);
                         sampler.parse_sample_root(&attributes)?;
                         sampler_map[BottomRight] = Some(sampler);
                         active_sample_button = sampler_map[BottomRight].as_mut();
@@ -484,7 +484,7 @@ impl ProfileSettings {
                     }
 
                     if name == "sampleClear" {
-                        let mut sampler = SampleBase::new("sampleClear".to_string());
+                        let mut sampler = SampleBase::new(Clear);
                         sampler.parse_sample_root(&attributes)?;
                         sampler_map[Clear] = Some(sampler);
                         active_sample_button = sampler_map[Clear].as_mut();
