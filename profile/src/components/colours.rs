@@ -207,9 +207,7 @@ impl ColourMap {
     }
 
     pub fn colour(&self, index: u8) -> &Colour {
-        self.colour_list.as_ref().unwrap()[index as usize]
-            .as_ref()
-            .unwrap()
+        self.colour_or_default(index)
     }
 
     pub fn colour_or_default(&self, index: u8) -> &Colour {
