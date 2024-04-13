@@ -150,13 +150,14 @@ pub struct ProfileSettings {
     context: Context,
     mute_chat: MuteChat,
 
-    faders: EnumMap<Faders, Option<Fader>>,
+    faders: EnumMap<Faders, Fader>,
     mute_buttons: EnumMap<Faders, MuteButton>,
     scribbles: EnumMap<Faders, Scribble>,
 
-    effects: EnumMap<Preset, Effects>,
     sampler_map: EnumMap<SampleButtons, SampleBase>,
     simple_elements: EnumMap<SimpleElements, Option<SimpleElement>>,
+
+    effects: EnumMap<Preset, Effects>,
     megaphone_effect: MegaphoneEffectBase,
     robot_effect: RobotEffectBase,
     hardtune_effect: HardtuneEffectBase,
@@ -186,7 +187,12 @@ impl ProfileSettings {
         let mut context = Context::new("selectedContext".to_string());
         let mut mute_chat = MuteChat::new("muteChat".to_string());
 
-        let mut faders: EnumMap<Faders, Option<Fader>> = EnumMap::default();
+        let mut faders = enum_map! {
+            Faders::A => Fader::new(Faders::A),
+            Faders::B => Fader::new(Faders::B),
+            Faders::C => Fader::new(Faders::C),
+            Faders::D => Fader::new(Faders::D),
+        };
 
         let mut mute_buttons: EnumMap<Faders, MuteButton> = enum_map! {
             Faders::A => MuteButton::new(Faders::A),
@@ -278,37 +284,21 @@ impl ProfileSettings {
                         continue;
                     }
 
-                    // Might need to pattern match this..
-                    if name.starts_with("mute") && name != "muteChat" {
+                    if name.starts_with("FaderMeter") {
                         for fader in Faders::iter() {
-                            if fader.get_str("muteContext").unwrap() == name {
-                                mute_buttons[fader].parse_button(&attributes)?;
+                            if fader.get_str("faderContext").unwrap() == name {
+                                faders[fader].parse_fader(&attributes)?;
                                 break;
                             }
                         }
                         continue;
                     }
 
-                    if name.starts_with("FaderMeter") {
-                        // In the XML, the count starts at 0, and we have different capitalisation :D
-                        if let Some(id) = name
-                            .chars()
-                            .last()
-                            .map(|s| u8::from_str(&s.to_string()))
-                            .transpose()?
-                        {
-                            let mut fader = Fader::new(id);
-                            fader.parse_fader(&attributes)?;
-                            faders[Faders::iter().nth(id.into()).unwrap()] = Some(fader);
-                            continue;
-                        }
-                    }
-
-                    if name.starts_with("effects") {
-                        // Version 2, now with more enum, search for the prefix..
-                        for preset in Preset::iter() {
-                            if preset.get_str("contextTitle").unwrap() == name {
-                                effects[preset].parse_effect(&attributes)?;
+                    // Might need to pattern match this..
+                    if name.starts_with("mute") && name != "muteChat" {
+                        for fader in Faders::iter() {
+                            if fader.get_str("muteContext").unwrap() == name {
+                                mute_buttons[fader].parse_button(&attributes)?;
                                 break;
                             }
                         }
@@ -323,6 +313,16 @@ impl ProfileSettings {
                             }
                         }
 
+                        continue;
+                    }
+
+                    if name.starts_with("effects") {
+                        for preset in Preset::iter() {
+                            if preset.get_str("contextTitle").unwrap() == name {
+                                effects[preset].parse_effect(&attributes)?;
+                                break;
+                            }
+                        }
                         continue;
                     }
 
@@ -649,11 +649,8 @@ impl ProfileSettings {
 
         self.mute_chat.write_mute_chat(&mut writer)?;
 
-        for (faders, fader) in self.faders.iter() {
-            if let Some(fader) = fader {
-                let name = format!("FaderMeter{}", faders as u8);
-                fader.write_fader(name, &mut writer)?;
-            }
+        for fader in self.faders.values() {
+            fader.write_fader(&mut writer)?;
         }
 
         for button in self.mute_buttons.values() {
@@ -797,16 +794,16 @@ impl ProfileSettings {
         &self.mixer
     }
 
-    pub fn faders_mut(&mut self) -> &mut EnumMap<Faders, Option<Fader>> {
+    pub fn faders_mut(&mut self) -> &mut EnumMap<Faders, Fader> {
         &mut self.faders
     }
 
     pub fn fader_mut(&mut self, fader: Faders) -> &mut Fader {
-        self.faders[fader].as_mut().unwrap()
+        &mut self.faders[fader]
     }
 
     pub fn fader(&self, fader: Faders) -> &Fader {
-        self.faders[fader].as_ref().unwrap()
+        &self.faders[fader]
     }
 
     pub fn mute_buttons(&mut self) -> &mut EnumMap<Faders, MuteButton> {
