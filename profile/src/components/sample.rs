@@ -14,6 +14,7 @@ use strum::{Display, EnumIter, EnumProperty, EnumString};
 use crate::components::colours::ColourMap;
 use crate::components::sample::PlayOrder::{Random, Sequential};
 use crate::profile::Attribute;
+use crate::SampleButtons;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -46,7 +47,8 @@ pub struct SampleBase {
 }
 
 impl SampleBase {
-    pub fn new(element_name: String) -> Self {
+    pub fn new(button: SampleButtons) -> Self {
+        let element_name = button.get_str("contextTitle").unwrap().to_string();
         let colour_map = element_name.clone();
         Self {
             element_name,

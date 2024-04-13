@@ -7,12 +7,21 @@ pub mod mic_profile;
 pub mod microphone;
 pub mod profile;
 
-#[derive(Debug, Display, Enum, EnumIter, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Display, Enum, EnumIter, EnumProperty, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum SampleButtons {
+    #[strum(props(contextTitle = "sampleTopLeft"))]
     TopLeft,
+
+    #[strum(props(contextTitle = "sampleTopRight"))]
     TopRight,
+
+    #[strum(props(contextTitle = "sampleBottomLeft"))]
     BottomLeft,
+
+    #[strum(props(contextTitle = "sampleBottomRight"))]
     BottomRight,
+
+    #[strum(props(contextTitle = "sampleClear"))]
     Clear,
 }
 
