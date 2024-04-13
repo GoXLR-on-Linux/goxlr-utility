@@ -209,6 +209,9 @@ impl ColourMap {
     pub(crate) fn set_colour_group(&mut self, group: String) {
         self.colour_group = Some(group);
     }
+    pub(crate) fn set_velocity(&mut self, velocity: i8) {
+        self.velocity = Some(velocity);
+    }
 
     pub fn colour(&self, index: u8) -> &Colour {
         self.colour_or_default(index)

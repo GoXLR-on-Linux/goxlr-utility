@@ -9,7 +9,7 @@ use log::warn;
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Writer;
 
-use crate::components::colours::ColourMap;
+use crate::components::colours::{Colour, ColourMap, ColourOffStyle};
 use crate::profile::Attribute;
 use crate::Faders;
 
@@ -45,10 +45,18 @@ pub struct MuteButton {
 impl MuteButton {
     pub fn new(fader: Faders) -> Self {
         let context = fader.get_str("muteContext").unwrap();
+
+        let mut colour_map = ColourMap::new(context.to_string());
+        colour_map.set_off_style(ColourOffStyle::Dimmed);
+        colour_map.set_blink_on(false);
+        colour_map.set_state_on(false);
+        colour_map.set_colour(0, Colour::fromrgb("00FFFF").unwrap());
+        colour_map.set_colour(1, Colour::fromrgb("000000").unwrap());
+        colour_map.set_colour_group("muteGroup".to_string());
+
         Self {
             element_name: context.to_string(),
-
-            colour_map: ColourMap::new(context.to_string()),
+            colour_map,
             mute_function: MuteFunction::All,
             previous_volume: 0,
 

@@ -7,7 +7,7 @@ use anyhow::Result;
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Writer;
 
-use crate::components::colours::ColourMap;
+use crate::components::colours::{Colour, ColourDisplay, ColourMap, ColourOffStyle};
 use crate::components::mixer::FullChannelList;
 use crate::profile::Attribute;
 use crate::Faders;
@@ -40,10 +40,18 @@ impl Fader {
     pub fn new(fader: Faders) -> Self {
         let context = fader.get_str("faderContext").unwrap();
 
+        // Build a Default ColourMap..
+        let mut colour_map = ColourMap::new(context.to_string());
+        colour_map.set_fader_display(ColourDisplay::TwoColour);
+        colour_map.set_off_style(ColourOffStyle::Dimmed);
+        colour_map.set_colour(0, Colour::fromrgb("000000").unwrap());
+        colour_map.set_colour(1, Colour::fromrgb("00FFFF").unwrap());
+        colour_map.set_colour_group("faderGroup".to_string());
+
         Self {
             element_name: context.to_string(),
 
-            colour_map: ColourMap::new(context.to_string()),
+            colour_map,
             channel: FullChannelList::Mic,
         }
     }
