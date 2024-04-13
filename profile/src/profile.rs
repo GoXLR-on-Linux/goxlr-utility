@@ -187,8 +187,15 @@ impl ProfileSettings {
         let mut mute_buttons: EnumMap<Faders, Option<MuteButton>> = EnumMap::default();
         let mut faders: EnumMap<Faders, Option<Fader>> = EnumMap::default();
         let mut scribbles: EnumMap<Faders, Option<Scribble>> = EnumMap::default();
+        for fader in Faders::iter() {
+            // Probably need to do something about this, ::new(u8) aint great..
+            scribbles[fader] = Some(Scribble::new(fader as u8 + 1));
+        }
 
         let mut effects: EnumMap<Preset, Option<Effects>> = EnumMap::default();
+        for preset in Preset::iter() {
+            effects[preset] = Some(Effects::new(preset));
+        }
 
         let mut simple_elements: EnumMap<SimpleElements, Option<SimpleElement>> =
             Default::default();
@@ -202,6 +209,10 @@ impl ProfileSettings {
         let mut gender_encoder = GenderEncoderBase::new("genderEncoder".to_string());
 
         let mut sampler_map: EnumMap<SampleButtons, Option<SampleBase>> = EnumMap::default();
+        for button in SampleButtons::iter() {
+            sampler_map[button] = Some(SampleBase::new(button));
+        }
+
         let mut active_sample_button: Option<&mut SampleBase> = None;
 
         let mut buf = Vec::new();
