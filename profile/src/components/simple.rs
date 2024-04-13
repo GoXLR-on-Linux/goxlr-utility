@@ -38,7 +38,8 @@ pub struct SimpleElement {
 }
 
 impl SimpleElement {
-    pub fn new(element_name: String) -> Self {
+    pub fn new(element: SimpleElements) -> Self {
+        let element_name = element.to_string();
         let colour_map = element_name.clone();
         Self {
             element_name,

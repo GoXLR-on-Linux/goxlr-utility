@@ -155,7 +155,7 @@ pub struct ProfileSettings {
     scribbles: EnumMap<Faders, Scribble>,
 
     sampler_map: EnumMap<SampleButtons, SampleBase>,
-    simple_elements: EnumMap<SimpleElements, Option<SimpleElement>>,
+    simple_elements: EnumMap<SimpleElements, SimpleElement>,
 
     effects: EnumMap<Preset, Effects>,
     megaphone_effect: MegaphoneEffectBase,
@@ -194,7 +194,7 @@ impl ProfileSettings {
             Faders::D => Fader::new(Faders::D),
         };
 
-        let mut mute_buttons: EnumMap<Faders, MuteButton> = enum_map! {
+        let mut mute_buttons = enum_map! {
             Faders::A => MuteButton::new(Faders::A),
             Faders::B => MuteButton::new(Faders::B),
             Faders::C => MuteButton::new(Faders::C),
@@ -218,7 +218,17 @@ impl ProfileSettings {
             Preset::Preset6 => Effects::new(Preset::Preset6),
         };
 
-        let mut simple: EnumMap<SimpleElements, Option<SimpleElement>> = Default::default();
+        let mut simple_elements = enum_map! {
+            SimpleElements::SampleBankA => SimpleElement::new(SimpleElements::SampleBankA),
+            SimpleElements::SampleBankB => SimpleElement::new(SimpleElements::SampleBankB),
+            SimpleElements::SampleBankC => SimpleElement::new(SimpleElements::SampleBankC),
+            SimpleElements::FxClear => SimpleElement::new(SimpleElements::FxClear),
+            SimpleElements::Swear => SimpleElement::new(SimpleElements::Swear),
+            SimpleElements::GlobalColour => SimpleElement::new(SimpleElements::GlobalColour),
+            SimpleElements::LogoX => SimpleElement::new(SimpleElements::LogoX),
+        };
+
+        //let mut simple: EnumMap<SimpleElements, Option<SimpleElement>> = Default::default();
 
         let mut megaphone_effect = MegaphoneEffectBase::new("megaphoneEffect".to_string());
         let mut robot_effect = RobotEffectBase::new("robotEffect".to_string());
@@ -236,6 +246,7 @@ impl ProfileSettings {
             Clear => SampleBase::new(Clear),
         };
 
+        // This value isn't stored in the struct.
         let mut active_sample_button: Option<&mut SampleBase> = None;
 
         let mut buf = Vec::new();
@@ -391,9 +402,8 @@ impl ProfileSettings {
                         || name == "logoX"
                     {
                         // In this case, the tag name, and attribute prefixes are the same..
-                        let mut simple_element = SimpleElement::new(name.clone());
-                        simple_element.parse_simple(&attributes)?;
-                        simple[SimpleElements::from_str(&name)?] = Some(simple_element);
+                        let element = SimpleElements::from_str(&name)?;
+                        simple_elements[element].parse_simple(&attributes)?;
 
                         continue;
                     }
@@ -522,7 +532,7 @@ impl ProfileSettings {
             scribbles,
             effects,
             sampler_map,
-            simple_elements: simple,
+            simple_elements,
             megaphone_effect,
             robot_effect,
             hardtune_effect,
@@ -674,15 +684,12 @@ impl ProfileSettings {
         self.pitch_encoder.write_pitch(&mut writer)?;
         self.gender_encoder.write_gender(&mut writer)?;
 
-        for (_key, value) in &self.sampler_map {
-            value.write_sample(&mut writer)?;
+        for sampler in self.sampler_map.values() {
+            sampler.write_sample(&mut writer)?;
         }
 
-        for simple_element in SimpleElements::iter() {
-            self.simple_elements[simple_element]
-                .as_ref()
-                .unwrap()
-                .write_simple(&mut writer)?;
+        for element in self.simple_elements.values() {
+            element.write_simple(&mut writer)?;
         }
 
         // Finalise the XML..
