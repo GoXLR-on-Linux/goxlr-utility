@@ -54,15 +54,31 @@ pub enum Preset {
 
 #[derive(Debug, Enum, EnumIter, EnumProperty, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum Faders {
-    #[strum(props(scribbleContext = "scribble1", muteContext = "mute1"))]
+    #[strum(props(
+        faderContext = "FaderMeter0",
+        muteContext = "mute1",
+        scribbleContext = "scribble1"
+    ))]
     A,
 
-    #[strum(props(scribbleContext = "scribble2", muteContext = "mute1"))]
+    #[strum(props(
+        faderContext = "FaderMeter1",
+        muteContext = "mute2",
+        scribbleContext = "scribble2",
+    ))]
     B,
 
-    #[strum(props(scribbleContext = "scribble3", muteContext = "mute1"))]
+    #[strum(props(
+        faderContext = "FaderMeter2",
+        muteContext = "mute3",
+        scribbleContext = "scribble3",
+    ))]
     C,
 
-    #[strum(props(scribbleContext = "scribble4", muteContext = "mute1"))]
+    #[strum(props(
+        faderContext = "FaderMeter3",
+        muteContext = "mute4",
+        scribbleContext = "scribble4",
+    ))]
     D,
 }
