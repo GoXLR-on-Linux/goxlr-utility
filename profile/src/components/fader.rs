@@ -38,7 +38,7 @@ pub struct Fader {
 
 impl Fader {
     pub fn new(fader: Faders) -> Self {
-        let context = fader.get_str("muteContext").unwrap();
+        let context = fader.get_str("faderContext").unwrap();
 
         Self {
             element_name: context.to_string(),
