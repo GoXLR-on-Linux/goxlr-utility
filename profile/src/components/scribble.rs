@@ -7,7 +7,7 @@ use quick_xml::events::{BytesStart, Event};
 use quick_xml::Writer;
 use strum::EnumProperty;
 
-use crate::components::colours::ColourMap;
+use crate::components::colours::{Colour, ColourMap};
 use crate::components::scribble::ScribbleStyle::{Inverted, Normal};
 use crate::profile::Attribute;
 use crate::Faders;
@@ -63,12 +63,22 @@ pub struct Scribble {
 impl Scribble {
     pub fn new(fader: Faders) -> Self {
         let element_name = fader.get_str("scribbleContext").unwrap();
+        let mut colour_map = ColourMap::new(element_name.to_string());
+        colour_map.set_colour(0, Colour::fromrgb("00FFFF").unwrap());
+
+        let text = match fader {
+            Faders::A => "Mic",
+            Faders::B => "Music",
+            Faders::C => "Chat",
+            Faders::D => "System",
+        };
+
         Self {
             element_name: element_name.to_string(),
-            colour_map: ColourMap::new(element_name.to_string()),
+            colour_map,
             icon_file: None,
             text_top_left: "".to_string(),
-            text_bottom_middle: "".to_string(),
+            text_bottom_middle: text.to_string(),
             text_size: 0,
             alpha: 0.0,
             style: Normal,
