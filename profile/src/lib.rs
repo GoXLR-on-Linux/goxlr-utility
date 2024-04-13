@@ -25,7 +25,7 @@ pub enum SampleButtons {
     Clear,
 }
 
-#[derive(Debug, EnumIter, Enum, EnumProperty, Copy, Clone)]
+#[derive(Debug, EnumIter, Enum, EnumProperty, Copy, Clone, PartialEq)]
 pub enum Preset {
     #[strum(props(tagSuffix = "preset1", contextTitle = "effects1"))]
     #[strum(to_string = "PRESET_1")]

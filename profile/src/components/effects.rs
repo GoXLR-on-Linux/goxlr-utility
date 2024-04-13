@@ -6,7 +6,7 @@ use quick_xml::events::{BytesStart, Event};
 use quick_xml::Writer;
 use strum::EnumProperty;
 
-use crate::components::colours::ColourMap;
+use crate::components::colours::{Colour, ColourMap, ColourOffStyle};
 use crate::profile::Attribute;
 use crate::Preset;
 
@@ -38,11 +38,23 @@ pub struct Effects {
 impl Effects {
     pub fn new(preset: Preset) -> Self {
         let element_name = preset.get_str("contextTitle").unwrap().to_string();
-        let colour_map = preset.get_str("contextTitle").unwrap().to_string();
         let default_name = format!("Effects Group {}", preset.get_str("contextTitle").unwrap());
+
+        let mut colour_map = ColourMap::new(element_name.clone());
+        colour_map.set_off_style(ColourOffStyle::Dimmed);
+        colour_map.set_blink_on(false);
+        colour_map.set_state_on(false);
+        colour_map.set_colour(0, Colour::fromrgb("00FFFF").unwrap());
+        colour_map.set_colour(1, Colour::fromrgb("000000").unwrap());
+        colour_map.set_colour_group("samplesGroup".to_string());
+
+        if preset == Preset::Preset1 {
+            colour_map.set_state_on(true);
+        }
+
         Self {
             element_name,
-            colour_map: ColourMap::new(colour_map),
+            colour_map,
             name: default_name,
         }
     }

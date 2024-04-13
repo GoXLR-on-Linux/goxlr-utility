@@ -11,7 +11,7 @@ use rand::seq::SliceRandom;
 use ritelinked::LinkedHashMap;
 use strum::{Display, EnumIter, EnumProperty, EnumString};
 
-use crate::components::colours::ColourMap;
+use crate::components::colours::{Colour, ColourMap, ColourOffStyle};
 use crate::components::sample::PlayOrder::{Random, Sequential};
 use crate::profile::Attribute;
 use crate::SampleButtons;
@@ -49,10 +49,22 @@ pub struct SampleBase {
 impl SampleBase {
     pub fn new(button: SampleButtons) -> Self {
         let element_name = button.get_str("contextTitle").unwrap().to_string();
-        let colour_map = element_name.clone();
+
+        let mut colour_map = ColourMap::new(element_name.clone());
+        colour_map.set_off_style(ColourOffStyle::Dimmed);
+        colour_map.set_blink_on(false);
+        colour_map.set_state_on(false);
+        colour_map.set_colour(0, Colour::fromrgb("00FFFF").unwrap());
+        colour_map.set_colour(1, Colour::fromrgb("000000").unwrap());
+        colour_map.set_colour_group("samplesGroup".to_string());
+
+        if button == SampleButtons::Clear {
+            colour_map.set_velocity(127);
+        }
+
         Self {
             element_name,
-            colour_map: ColourMap::new(colour_map),
+            colour_map,
             state: "Empty".to_string(),
             sample_stack: Default::default(),
         }

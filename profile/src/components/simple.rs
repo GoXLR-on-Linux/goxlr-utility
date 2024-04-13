@@ -61,6 +61,10 @@ impl SimpleElement {
             colour_map.set_colour(1, Colour::fromrgb("000000").unwrap());
         }
 
+        if element == SimpleElements::LogoX {
+            colour_map.set_velocity(127);
+        }
+
         Self {
             element_name,
             colour_map,
