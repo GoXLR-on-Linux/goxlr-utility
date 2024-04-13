@@ -48,11 +48,18 @@ impl Fader {
         colour_map.set_colour(1, Colour::fromrgb("00FFFF").unwrap());
         colour_map.set_colour_group("faderGroup".to_string());
 
+        // Get a Default Channel..
+        let channel = match fader {
+            Faders::A => FullChannelList::Mic,
+            Faders::B => FullChannelList::Music,
+            Faders::C => FullChannelList::Chat,
+            Faders::D => FullChannelList::System,
+        };
+
         Self {
             element_name: context.to_string(),
-
             colour_map,
-            channel: FullChannelList::Mic,
+            channel,
         }
     }
 
