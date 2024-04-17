@@ -383,8 +383,10 @@ async fn get_daemon_status(
     }
 
     if let Some(check) = app_check.check {
-        if SystemTime::now().duration_since(check).unwrap().as_secs() > 30 {
-            get_app_path(app_check);
+        if let Ok(duration) = SystemTime::now().duration_since(check) {
+            if duration.as_secs() > 30 {
+                get_app_path(app_check);
+            }
         }
     }
 
