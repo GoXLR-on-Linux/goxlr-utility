@@ -139,6 +139,12 @@ fn find_devices() {
                                         );
                                     }
                                 }
+                            } else if let Err(e) = result {
+                                eprintln!(
+                                    "Error Checking Device {}: {:?}",
+                                    device_address(&device),
+                                    e
+                                );
                             } else {
                                 // We need to read the last command out the buffer..
                                 let mut buf = vec![0; 1040];
