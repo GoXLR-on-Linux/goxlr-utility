@@ -3578,8 +3578,28 @@ impl<'a> Device<'a> {
     }
 
     fn needs_submix_correction(&self, channel: ChannelName) -> bool {
-        self.device_supports_submixes()
-            && (channel == ChannelName::Headphones || channel == ChannelName::LineOut)
+        // Don't need correction if device doesn't support sub mixes!
+        if !self.device_supports_submixes() {
+            return false;
+        }
+
+        // Correction only needs to Occur on Headphones and LineOut
+        if channel != ChannelName::Headphones && channel != ChannelName::LineOut {
+            return false;
+        }
+
+        // The Correction code is no longer needed after the following firmwares
+        let fix_full = VersionNumber(1, 4, Some(2), Some(110));
+        let fix_mini = VersionNumber(1, 2, Some(0), Some(47));
+
+        let current = &self.hardware.versions.firmware;
+
+        // Now we simply compare the versions..
+        match self.hardware.device_type {
+            DeviceType::Unknown => false,
+            DeviceType::Full => !version_newer_or_equal_to(current, fix_full),
+            DeviceType::Mini => !version_newer_or_equal_to(current, fix_mini)
+        }
     }
 
     fn device_supports_submixes(&self) -> bool {
