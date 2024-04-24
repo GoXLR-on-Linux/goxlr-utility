@@ -2368,7 +2368,7 @@ impl<'a> Device<'a> {
                     self.profile.get_track_by_index(bank, button, index)?,
                     false,
                 )
-                    .await?;
+                .await?;
                 self.update_button_states()?;
             }
             GoXLRCommand::PlayNextSample(bank, button) => {
@@ -3163,8 +3163,8 @@ impl<'a> Device<'a> {
 
         if !map_set
             && (mode == AnimationMode::None
-            || mode == AnimationMode::Ripple
-            || mode == AnimationMode::Simple)
+                || mode == AnimationMode::Ripple
+                || mode == AnimationMode::Simple)
         {
             self.load_colour_map().await?;
         }
@@ -3598,7 +3598,7 @@ impl<'a> Device<'a> {
         match self.hardware.device_type {
             DeviceType::Unknown => false,
             DeviceType::Full => !version_newer_or_equal_to(current, fix_full),
-            DeviceType::Mini => !version_newer_or_equal_to(current, fix_mini)
+            DeviceType::Mini => !version_newer_or_equal_to(current, fix_mini),
         }
     }
 
