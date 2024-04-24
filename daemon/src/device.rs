@@ -2368,7 +2368,7 @@ impl<'a> Device<'a> {
                     self.profile.get_track_by_index(bank, button, index)?,
                     false,
                 )
-                .await?;
+                    .await?;
                 self.update_button_states()?;
             }
             GoXLRCommand::PlayNextSample(bank, button) => {
@@ -3163,8 +3163,8 @@ impl<'a> Device<'a> {
 
         if !map_set
             && (mode == AnimationMode::None
-                || mode == AnimationMode::Ripple
-                || mode == AnimationMode::Simple)
+            || mode == AnimationMode::Ripple
+            || mode == AnimationMode::Simple)
         {
             self.load_colour_map().await?;
         }
@@ -3583,30 +3583,28 @@ impl<'a> Device<'a> {
     }
 
     fn device_supports_submixes(&self) -> bool {
+        let support_full = VersionNumber(1, 4, Some(2), Some(107));
+        let support_mini = VersionNumber(1, 2, Some(0), Some(46));
+
+        let current = &self.hardware.versions.firmware;
+
         match self.hardware.device_type {
             DeviceType::Unknown => false,
-            DeviceType::Full => version_newer_or_equal_to(
-                &self.hardware.versions.firmware,
-                VersionNumber(1, 4, Some(2), Some(107)),
-            ),
-            DeviceType::Mini => version_newer_or_equal_to(
-                &self.hardware.versions.firmware,
-                VersionNumber(1, 2, Some(0), Some(46)),
-            ),
+            DeviceType::Full => version_newer_or_equal_to(current, support_full),
+            DeviceType::Mini => version_newer_or_equal_to(current, support_mini),
         }
     }
 
     fn device_supports_animations(&self) -> bool {
+        let support_full = VersionNumber(1, 3, Some(40), Some(0));
+        let support_mini = VersionNumber(1, 1, Some(8), Some(0));
+
+        let current = &self.hardware.versions.firmware;
+
         match self.hardware.device_type {
             DeviceType::Unknown => true,
-            DeviceType::Full => version_newer_or_equal_to(
-                &self.hardware.versions.firmware,
-                VersionNumber(1, 3, Some(40), Some(0)),
-            ),
-            DeviceType::Mini => version_newer_or_equal_to(
-                &self.hardware.versions.firmware,
-                VersionNumber(1, 1, Some(8), Some(0)),
-            ),
+            DeviceType::Full => version_newer_or_equal_to(current, support_full),
+            DeviceType::Mini => version_newer_or_equal_to(current, support_mini),
         }
     }
 
