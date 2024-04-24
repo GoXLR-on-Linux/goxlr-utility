@@ -2995,7 +2995,7 @@ impl<'a> Device<'a> {
             }
 
             // Submix firmware bug mitigation:
-            if new_channel == ChannelName::Headphones || new_channel == ChannelName::LineOut {
+            if self.needs_submix_correction(new_channel) {
                 return Ok(());
             }
 
@@ -3036,7 +3036,7 @@ impl<'a> Device<'a> {
             )?;
 
             // Make sure the new channel comes in with the correct volume..
-            if new_channel == ChannelName::Headphones || new_channel == ChannelName::LineOut {
+            if self.needs_submix_correction(new_channel) {
                 let volume = self.profile.get_channel_volume(new_channel);
                 self.goxlr.set_volume(new_channel, volume)?;
             }
@@ -3069,11 +3069,11 @@ impl<'a> Device<'a> {
         self.goxlr.set_fader(fader_to_switch, existing_channel)?;
 
         // If the channel being moved is either Headphone or Line Out, reset the volume..
-        if new_channel == ChannelName::Headphones || new_channel == ChannelName::LineOut {
+        if self.needs_submix_correction(new_channel) {
             let volume = self.profile.get_channel_volume(new_channel);
             self.goxlr.set_volume(new_channel, volume)?;
         }
-        if existing_channel == ChannelName::Headphones || existing_channel == ChannelName::LineOut {
+        if self.needs_submix_correction(existing_channel) {
             let volume = self.profile.get_channel_volume(existing_channel);
             self.goxlr.set_volume(existing_channel, volume)?;
         }
