@@ -2995,7 +2995,7 @@ impl<'a> Device<'a> {
             }
 
             // Submix firmware bug mitigation:
-            if new_channel == ChannelName::Headphones || new_channel == ChannelName::LineOut {
+            if self.needs_submix_correction(new_channel) {
                 return Ok(());
             }
 
@@ -3036,7 +3036,7 @@ impl<'a> Device<'a> {
             )?;
 
             // Make sure the new channel comes in with the correct volume..
-            if new_channel == ChannelName::Headphones || new_channel == ChannelName::LineOut {
+            if self.needs_submix_correction(new_channel) {
                 let volume = self.profile.get_channel_volume(new_channel);
                 self.goxlr.set_volume(new_channel, volume)?;
             }
@@ -3069,11 +3069,11 @@ impl<'a> Device<'a> {
         self.goxlr.set_fader(fader_to_switch, existing_channel)?;
 
         // If the channel being moved is either Headphone or Line Out, reset the volume..
-        if new_channel == ChannelName::Headphones || new_channel == ChannelName::LineOut {
+        if self.needs_submix_correction(new_channel) {
             let volume = self.profile.get_channel_volume(new_channel);
             self.goxlr.set_volume(new_channel, volume)?;
         }
-        if existing_channel == ChannelName::Headphones || existing_channel == ChannelName::LineOut {
+        if self.needs_submix_correction(existing_channel) {
             let volume = self.profile.get_channel_volume(existing_channel);
             self.goxlr.set_volume(existing_channel, volume)?;
         }
@@ -3578,35 +3578,53 @@ impl<'a> Device<'a> {
     }
 
     fn needs_submix_correction(&self, channel: ChannelName) -> bool {
-        self.device_supports_submixes()
-            && (channel == ChannelName::Headphones || channel == ChannelName::LineOut)
+        // Don't need correction if device doesn't support sub mixes!
+        if !self.device_supports_submixes() {
+            return false;
+        }
+
+        // Correction only needs to Occur on Headphones and LineOut
+        if channel != ChannelName::Headphones && channel != ChannelName::LineOut {
+            return false;
+        }
+
+        // The Correction code is no longer needed after the following firmwares
+        let fix_full = VersionNumber(1, 4, Some(2), Some(110));
+        let fix_mini = VersionNumber(1, 2, Some(0), Some(47));
+
+        let current = &self.hardware.versions.firmware;
+
+        // Now we simply compare the versions..
+        match self.hardware.device_type {
+            DeviceType::Unknown => false,
+            DeviceType::Full => !version_newer_or_equal_to(current, fix_full),
+            DeviceType::Mini => !version_newer_or_equal_to(current, fix_mini),
+        }
     }
 
     fn device_supports_submixes(&self) -> bool {
+        let support_full = VersionNumber(1, 4, Some(2), Some(107));
+        let support_mini = VersionNumber(1, 2, Some(0), Some(46));
+
+        let current = &self.hardware.versions.firmware;
+
         match self.hardware.device_type {
             DeviceType::Unknown => false,
-            DeviceType::Full => version_newer_or_equal_to(
-                &self.hardware.versions.firmware,
-                VersionNumber(1, 4, Some(2), Some(107)),
-            ),
-            DeviceType::Mini => version_newer_or_equal_to(
-                &self.hardware.versions.firmware,
-                VersionNumber(1, 2, Some(0), Some(46)),
-            ),
+            DeviceType::Full => version_newer_or_equal_to(current, support_full),
+            DeviceType::Mini => version_newer_or_equal_to(current, support_mini),
         }
     }
 
     fn device_supports_animations(&self) -> bool {
+        let support_full = VersionNumber(1, 3, Some(40), Some(0));
+        let support_mini = VersionNumber(1, 1, Some(8), Some(0));
+
+        let current = &self.hardware.versions.firmware;
+
         match self.hardware.device_type {
             DeviceType::Unknown => true,
-            DeviceType::Full => version_newer_or_equal_to(
-                &self.hardware.versions.firmware,
-                VersionNumber(1, 3, Some(40), Some(0)),
-            ),
-            DeviceType::Mini => version_newer_or_equal_to(
-                &self.hardware.versions.firmware,
-                VersionNumber(1, 1, Some(8), Some(0)),
-            ),
+            DeviceType::Full => version_newer_or_equal_to(current, support_full),
+            DeviceType::Mini => version_newer_or_equal_to(current, support_mini),
         }
     }
 
