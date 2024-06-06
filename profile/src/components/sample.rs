@@ -4,16 +4,17 @@ use std::str::FromStr;
 
 use anyhow::{bail, Result};
 
-use enum_map::Enum;
+use enum_map::{Enum, EnumMap};
 use quick_xml::events::{BytesEnd, BytesStart, Event};
 use quick_xml::Writer;
 use rand::seq::SliceRandom;
 use ritelinked::LinkedHashMap;
 use strum::{Display, EnumIter, EnumProperty, EnumString};
 
-use crate::components::colours::ColourMap;
+use crate::components::colours::{Colour, ColourMap, ColourOffStyle};
 use crate::components::sample::PlayOrder::{Random, Sequential};
 use crate::profile::Attribute;
+use crate::SampleButtons;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -42,15 +43,28 @@ pub struct SampleBase {
     element_name: String,
     colour_map: ColourMap,
     state: String, // Seems to be "Empty" most of the time..
-    sample_stack: HashMap<SampleBank, SampleStack>,
+    sample_stack: EnumMap<SampleBank, SampleStack>,
 }
 
 impl SampleBase {
-    pub fn new(element_name: String) -> Self {
-        let colour_map = element_name.clone();
+    pub fn new(button: SampleButtons) -> Self {
+        let element_name = button.get_str("contextTitle").unwrap().to_string();
+
+        let mut colour_map = ColourMap::new(element_name.clone());
+        colour_map.set_off_style(ColourOffStyle::Dimmed);
+        colour_map.set_blink_on(false);
+        colour_map.set_state_on(false);
+        colour_map.set_colour(0, Colour::fromrgb("00FFFF").unwrap());
+        colour_map.set_colour(1, Colour::fromrgb("000000").unwrap());
+        colour_map.set_colour_group("samplesGroup".to_string());
+
+        if button == SampleButtons::Clear {
+            colour_map.set_velocity(127);
+        }
+
         Self {
             element_name,
-            colour_map: ColourMap::new(colour_map),
+            colour_map,
             state: "Empty".to_string(),
             sample_stack: Default::default(),
         }
@@ -77,6 +91,7 @@ impl SampleBase {
     pub fn parse_sample_stack(&mut self, id: char, attributes: &Vec<Attribute>) -> Result<()> {
         // The easiest way to handle this is to parse everything into key-value pairs, then try
         // to locate all the settings for each track inside it..
+        let bank = SampleBank::from_str(id.to_string().as_str())?;
         let mut map: HashMap<String, String> = HashMap::default();
 
         for attr in attributes {
@@ -98,9 +113,7 @@ impl SampleBase {
         let key = format!("sampleStack{id}stackSize");
 
         if !map.contains_key(key.as_str()) {
-            // Stack doesn't contain any tracks, we're done here.
-            self.sample_stack
-                .insert(SampleBank::from_str(id.to_string().as_str())?, sample_stack);
+            self.sample_stack[bank] = sample_stack;
             return Ok(());
         }
 
@@ -144,9 +157,7 @@ impl SampleBase {
             }
         }
 
-        self.sample_stack
-            .insert(SampleBank::from_str(id.to_string().as_str())?, sample_stack);
-
+        self.sample_stack[bank] = sample_stack;
         Ok(())
     }
 
@@ -251,10 +262,10 @@ impl SampleBase {
     }
 
     pub fn get_stack(&self, bank: SampleBank) -> &SampleStack {
-        self.sample_stack.get(&bank).unwrap()
+        &self.sample_stack[bank]
     }
     pub fn get_stack_mut(&mut self, bank: SampleBank) -> &mut SampleStack {
-        self.sample_stack.get_mut(&bank).unwrap()
+        &mut self.sample_stack[bank]
     }
 }
 

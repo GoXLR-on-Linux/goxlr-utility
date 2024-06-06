@@ -8,7 +8,7 @@ use quick_xml::events::{BytesStart, Event};
 use quick_xml::Writer;
 use strum::{Display, EnumIter, EnumString};
 
-use crate::components::colours::ColourMap;
+use crate::components::colours::{Colour, ColourMap, ColourOffStyle};
 use crate::profile::Attribute;
 
 #[derive(thiserror::Error, Debug)]
@@ -38,11 +38,36 @@ pub struct SimpleElement {
 }
 
 impl SimpleElement {
-    pub fn new(element_name: String) -> Self {
-        let colour_map = element_name.clone();
+    pub fn new(element: SimpleElements) -> Self {
+        let element_name = element.to_string();
+
+        let mut colour_map = ColourMap::new(element_name.clone());
+        colour_map.set_off_style(ColourOffStyle::Dimmed);
+        colour_map.set_blink_on(false);
+        colour_map.set_state_on(false);
+        colour_map.set_colour(0, Colour::fromrgb("00FFFF").unwrap());
+        colour_map.set_colour(1, Colour::fromrgb("FFFFFF").unwrap());
+
+        if element == SimpleElements::SampleBankA {
+            colour_map.set_state_on(true);
+            colour_map.set_colour(2, Colour::fromrgb("000000").unwrap())
+        }
+
+        if element == SimpleElements::SampleBankB || element == SimpleElements::SampleBankC {
+            colour_map.set_colour(2, Colour::fromrgb("000000").unwrap())
+        }
+
+        if element == SimpleElements::GlobalColour {
+            colour_map.set_colour(1, Colour::fromrgb("000000").unwrap());
+        }
+
+        if element == SimpleElements::LogoX {
+            colour_map.set_velocity(127);
+        }
+
         Self {
             element_name,
-            colour_map: ColourMap::new(colour_map),
+            colour_map,
         }
     }
 
@@ -82,7 +107,7 @@ impl SimpleElement {
     }
 }
 
-#[derive(Debug, Display, EnumString, EnumIter, Enum, Clone, Copy)]
+#[derive(Debug, Display, EnumString, EnumIter, Enum, Clone, Copy, PartialEq)]
 pub enum SimpleElements {
     #[strum(to_string = "sampleBankA")]
     SampleBankA,

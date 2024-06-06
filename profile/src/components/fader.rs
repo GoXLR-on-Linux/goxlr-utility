@@ -7,9 +7,10 @@ use anyhow::Result;
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Writer;
 
-use crate::components::colours::ColourMap;
+use crate::components::colours::{Colour, ColourDisplay, ColourMap, ColourOffStyle};
 use crate::components::mixer::FullChannelList;
 use crate::profile::Attribute;
+use crate::Faders;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -29,16 +30,36 @@ pub enum ParseError {
 
 #[derive(Debug)]
 pub struct Fader {
+    element_name: String,
+
     colour_map: ColourMap,
     channel: FullChannelList,
 }
 
 impl Fader {
-    pub fn new(id: u8) -> Self {
-        let colour_map = format!("FaderMeter{id}");
+    pub fn new(fader: Faders) -> Self {
+        let context = fader.get_str("faderContext").unwrap();
+
+        // Build a Default ColourMap..
+        let mut colour_map = ColourMap::new(context.to_string());
+        colour_map.set_fader_display(ColourDisplay::TwoColour);
+        colour_map.set_off_style(ColourOffStyle::Dimmed);
+        colour_map.set_colour(0, Colour::fromrgb("000000").unwrap());
+        colour_map.set_colour(1, Colour::fromrgb("00FFFF").unwrap());
+        colour_map.set_colour_group("faderGroup".to_string());
+
+        // Get a Default Channel..
+        let channel = match fader {
+            Faders::A => FullChannelList::Mic,
+            Faders::B => FullChannelList::Music,
+            Faders::C => FullChannelList::Chat,
+            Faders::D => FullChannelList::System,
+        };
+
         Self {
-            colour_map: ColourMap::new(colour_map),
-            channel: FullChannelList::Mic,
+            element_name: context.to_string(),
+            colour_map,
+            channel,
         }
     }
 
@@ -71,11 +92,9 @@ impl Fader {
         Ok(())
     }
 
-    pub fn write_fader<W: Write>(
-        &self,
-        element_name: String,
-        writer: &mut Writer<W>,
-    ) -> Result<()> {
+    pub fn write_fader<W: Write>(&self, writer: &mut Writer<W>) -> Result<()> {
+        let element_name = &self.element_name;
+
         let mut elem = BytesStart::new(element_name.as_str());
 
         let mut attributes: HashMap<String, String> = HashMap::default();

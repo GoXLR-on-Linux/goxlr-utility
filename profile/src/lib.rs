@@ -7,16 +7,25 @@ pub mod mic_profile;
 pub mod microphone;
 pub mod profile;
 
-#[derive(Debug, Display, Enum, EnumIter, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Display, Enum, EnumIter, EnumProperty, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum SampleButtons {
+    #[strum(props(contextTitle = "sampleTopLeft"))]
     TopLeft,
+
+    #[strum(props(contextTitle = "sampleTopRight"))]
     TopRight,
+
+    #[strum(props(contextTitle = "sampleBottomLeft"))]
     BottomLeft,
+
+    #[strum(props(contextTitle = "sampleBottomRight"))]
     BottomRight,
+
+    #[strum(props(contextTitle = "sampleClear"))]
     Clear,
 }
 
-#[derive(Debug, EnumIter, Enum, EnumProperty, Copy, Clone)]
+#[derive(Debug, EnumIter, Enum, EnumProperty, Copy, Clone, PartialEq)]
 pub enum Preset {
     #[strum(props(tagSuffix = "preset1", contextTitle = "effects1"))]
     #[strum(to_string = "PRESET_1")]
@@ -43,10 +52,33 @@ pub enum Preset {
     Preset6,
 }
 
-#[derive(Debug, Enum, EnumIter, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Enum, EnumIter, EnumProperty, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum Faders {
+    #[strum(props(
+        faderContext = "FaderMeter0",
+        muteContext = "mute1",
+        scribbleContext = "scribble1"
+    ))]
     A,
+
+    #[strum(props(
+        faderContext = "FaderMeter1",
+        muteContext = "mute2",
+        scribbleContext = "scribble2",
+    ))]
     B,
+
+    #[strum(props(
+        faderContext = "FaderMeter2",
+        muteContext = "mute3",
+        scribbleContext = "scribble3",
+    ))]
     C,
+
+    #[strum(props(
+        faderContext = "FaderMeter3",
+        muteContext = "mute4",
+        scribbleContext = "scribble4",
+    ))]
     D,
 }

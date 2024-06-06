@@ -9,7 +9,7 @@ use anyhow::{anyhow, Result};
 use quick_xml::events::{BytesEnd, BytesStart, Event};
 use quick_xml::Writer;
 
-use crate::components::colours::ColourMap;
+use crate::components::colours::{Colour, ColourMap};
 use crate::profile::Attribute;
 use crate::Preset;
 
@@ -43,9 +43,14 @@ pub struct PitchEncoderBase {
 
 impl PitchEncoderBase {
     pub fn new(element_name: String) -> Self {
-        let colour_map = element_name;
+        let mut colour_map = ColourMap::new(element_name.clone());
+        colour_map.set_colour(0, Colour::fromrgb("00FFFF").unwrap());
+        colour_map.set_colour(1, Colour::fromrgb("00FFFF").unwrap());
+        colour_map.set_colour(2, Colour::fromrgb("00FFFF").unwrap());
+        colour_map.set_colour_group("encoderGroup".to_string());
+
         Self {
-            colour_map: ColourMap::new(colour_map),
+            colour_map,
             preset_map: EnumMap::default(),
             active_set: 0,
         }

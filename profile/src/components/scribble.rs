@@ -5,10 +5,12 @@ use std::str::FromStr;
 use anyhow::Result;
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Writer;
+use strum::EnumProperty;
 
-use crate::components::colours::ColourMap;
+use crate::components::colours::{Colour, ColourMap};
 use crate::components::scribble::ScribbleStyle::{Inverted, Normal};
 use crate::profile::Attribute;
+use crate::Faders;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -59,15 +61,24 @@ pub struct Scribble {
 }
 
 impl Scribble {
-    pub fn new(id: u8) -> Self {
-        let element_name = format!("scribble{id}");
-        let colour_map = format!("scribble{id}");
+    pub fn new(fader: Faders) -> Self {
+        let element_name = fader.get_str("scribbleContext").unwrap();
+        let mut colour_map = ColourMap::new(element_name.to_string());
+        colour_map.set_colour(0, Colour::fromrgb("00FFFF").unwrap());
+
+        let text = match fader {
+            Faders::A => "Mic",
+            Faders::B => "Music",
+            Faders::C => "Chat",
+            Faders::D => "System",
+        };
+
         Self {
-            element_name,
-            colour_map: ColourMap::new(colour_map),
+            element_name: element_name.to_string(),
+            colour_map,
             icon_file: None,
             text_top_left: "".to_string(),
-            text_bottom_middle: "".to_string(),
+            text_bottom_middle: text.to_string(),
             text_size: 0,
             alpha: 0.0,
             style: Normal,
