@@ -23,7 +23,7 @@ use crate::{get_audio_inputs, AtomicF64};
 
 static NEXT_ID: AtomicU32 = AtomicU32::new(0);
 static READ_TIMEOUT: Duration = Duration::from_millis(100);
-static CHECK_PERIOD: Duration = Duration::from_secs(60 * 30);
+static CHECK_PERIOD: Duration = Duration::from_secs(60 * 15);
 
 pub struct BufferedRecorder {
     devices: Vec<Regex>,
