@@ -364,10 +364,7 @@ impl SampleStack {
 
             return Some(track);
         } else if order == Random {
-            let track = self.tracks.choose(&mut rand::thread_rng());
-            if let Some(track) = track {
-                return Some(track);
-            }
+            return self.tracks.choose(&mut rand::thread_rng());
         }
 
         None
