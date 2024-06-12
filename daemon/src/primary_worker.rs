@@ -4,12 +4,13 @@ use crate::files::extract_defaults;
 use crate::platform::{get_ui_app_path, has_autostart, set_autostart};
 use crate::{FileManager, PatchEvent, SettingsHandle, Shutdown, SYSTEM_LOCALE, VERSION};
 use anyhow::{anyhow, Result};
+use enum_map::EnumMap;
 use goxlr_ipc::{
     Activation, ColourWay, DaemonCommand, DaemonConfig, DaemonStatus, DriverDetails, Files,
     GoXLRCommand, HardwareStatus, HttpSettings, Locale, PathTypes, Paths, SampleFile,
     UsbProductInformation,
 };
-use goxlr_types::DeviceType;
+use goxlr_types::{DeviceType, FirmwareVersions, VersionNumber};
 use goxlr_usb::device::base::GoXLRDevice;
 use goxlr_usb::device::{find_devices, from_device, get_version};
 use goxlr_usb::{PID_GOXLR_FULL, PID_GOXLR_MINI};
@@ -21,6 +22,7 @@ use tokio::sync::broadcast::Sender as BroadcastSender;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::sync::{mpsc, oneshot};
 use tokio::time::sleep;
+use xmltree::Element;
 
 // Adding a third entry has tripped enum_variant_names, I'll probably need to rename
 // RunDeviceCommand, but that'll need to be in a separate commit, for now, suppress.
@@ -62,10 +64,15 @@ pub async fn spawn_usb_handler(
     mut file_manager: FileManager,
 ) {
     let mut app_check = AppPathCheck::default();
+    let mut firmware_version = None;
 
     // We can probably either merge these, or struct them..
     let (disconnect_sender, mut disconnect_receiver) = mpsc::channel(16);
     let (event_sender, mut event_receiver) = mpsc::channel(16);
+    let (firmware_sender, mut firmware_receiver) = mpsc::channel(1);
+
+    // Spawn a task in the background to check for the latest firmware versions.
+    tokio::spawn(check_firmware_versions(firmware_sender));
 
     // Create the device detection Sleep Timer..
     let detection_duration = Duration::from_millis(1000);
@@ -91,6 +98,7 @@ pub async fn spawn_usb_handler(
         &settings,
         &http_settings,
         &driver_interface,
+        &firmware_version,
         files.clone(),
         &mut app_check,
     )
@@ -101,6 +109,10 @@ pub async fn spawn_usb_handler(
     loop {
         let mut change_found = false;
         tokio::select! {
+            Some(version) = firmware_receiver.recv() => {
+                firmware_version = Some(version);
+                change_found = true;
+            },
             () = &mut detection_sleep => {
                 if let Some(device) = find_new_device(&daemon_status, &ignore_list) {
                     let existing_serials: Vec<String> = get_all_serials(&devices);
@@ -346,6 +358,7 @@ pub async fn spawn_usb_handler(
                 &settings,
                 &http_settings,
                 &driver_interface,
+                &firmware_version,
                 files.clone(),
                 &mut app_check,
             )
@@ -373,6 +386,7 @@ async fn get_daemon_status(
     settings: &SettingsHandle,
     http_settings: &HttpSettings,
     driver_details: &DriverDetails,
+    firmware_versions: &Option<EnumMap<DeviceType, Option<VersionNumber>>>,
     files: Files,
     app_check: &mut AppPathCheck,
 ) -> DaemonStatus {
@@ -395,6 +409,7 @@ async fn get_daemon_status(
             http_settings: http_settings.clone(),
             daemon_version: String::from(VERSION),
             driver_interface: driver_details.clone(),
+            latest_firmware: firmware_versions.clone(),
             locale: Locale {
                 user_locale: settings.get_selected_locale().await,
                 system_locale: SYSTEM_LOCALE.clone(),
@@ -643,4 +658,37 @@ async fn load_device(
         .await;
     settings.save().await;
     Ok(device)
+}
+
+async fn check_firmware_versions(x: Sender<EnumMap<DeviceType, Option<VersionNumber>>>) {
+    let full_key = "version";
+    let mini_key = "miniVersion";
+
+    let mut map: EnumMap<DeviceType, Option<VersionNumber>> = EnumMap::default();
+
+    debug!("Checking For Firmware Update..");
+    let url = "https://mediadl.musictribe.com/media/PLM/sftp/incoming/hybris/import/GOXLR/UpdateManifest_v3.xml";
+    if let Ok(response) = reqwest::get(url).await {
+        if let Ok(text) = response.text().await {
+            // Parse this into an XML tree..
+            if let Ok(root) = Element::parse(text.as_bytes()) {
+                if root.attributes.contains_key(mini_key) {
+                    map[DeviceType::Mini] =
+                        Some(VersionNumber::from(root.attributes[mini_key].clone()));
+                }
+                if root.attributes.contains_key(full_key) {
+                    map[DeviceType::Full] =
+                        Some(VersionNumber::from(root.attributes[full_key].clone()));
+                }
+            } else {
+                debug!("Unable to Parse the XML Response");
+            }
+        } else {
+            debug!("Unable to Fetch Response");
+        }
+    } else {
+        debug!("Unable to Connect..");
+    }
+
+    let _ = x.send(map).await;
 }

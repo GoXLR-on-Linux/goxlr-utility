@@ -28,6 +28,7 @@ pub struct DaemonConfig {
     pub http_settings: HttpSettings,
     pub daemon_version: String,
     pub driver_interface: DriverDetails,
+    pub latest_firmware: Option<EnumMap<DeviceType, Option<VersionNumber>>>,
     pub locale: Locale,
     pub activation: Activation,
     pub autostart_enabled: bool,
