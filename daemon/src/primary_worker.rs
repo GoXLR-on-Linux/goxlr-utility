@@ -10,7 +10,7 @@ use goxlr_ipc::{
     GoXLRCommand, HardwareStatus, HttpSettings, Locale, PathTypes, Paths, SampleFile,
     UsbProductInformation,
 };
-use goxlr_types::{DeviceType, FirmwareVersions, VersionNumber};
+use goxlr_types::{DeviceType, VersionNumber};
 use goxlr_usb::device::base::GoXLRDevice;
 use goxlr_usb::device::{find_devices, from_device, get_version};
 use goxlr_usb::{PID_GOXLR_FULL, PID_GOXLR_MINI};
@@ -666,7 +666,7 @@ async fn check_firmware_versions(x: Sender<EnumMap<DeviceType, Option<VersionNum
 
     let mut map: EnumMap<DeviceType, Option<VersionNumber>> = EnumMap::default();
 
-    debug!("Checking For Firmware Update..");
+    debug!("Performing Firmware Version Check..");
     let url = "https://mediadl.musictribe.com/media/PLM/sftp/incoming/hybris/import/GOXLR/UpdateManifest_v3.xml";
     if let Ok(response) = reqwest::get(url).await {
         if let Ok(text) = response.text().await {
@@ -681,13 +681,13 @@ async fn check_firmware_versions(x: Sender<EnumMap<DeviceType, Option<VersionNum
                         Some(VersionNumber::from(root.attributes[full_key].clone()));
                 }
             } else {
-                debug!("Unable to Parse the XML Response");
+                warn!("Unable to Parse the XML Response from the TC-Helicon Update Server");
             }
         } else {
-            debug!("Unable to Fetch Response");
+            warn!("Failed to Fetch a Response from the TC-Helicon Update Server");
         }
     } else {
-        debug!("Unable to Connect..");
+        warn!("Unable to connect to the TC-Helicon Update Server");
     }
 
     let _ = x.send(map).await;
