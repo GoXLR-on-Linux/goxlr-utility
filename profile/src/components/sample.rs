@@ -341,30 +341,32 @@ impl SampleStack {
             return Some(self.get_first_track());
         }
 
-        let mut play_order = &self.play_order;
-        if play_order.is_none() {
-            play_order = &Some(Sequential)
-        }
+        let order = if let Some(order) = self.play_order {
+            order
+        } else {
+            Sequential
+        };
 
-        if let Some(order) = play_order {
-            // Per the Windows App, if there are only 2 tracks with 'Random' order, behave
-            // sequentially.
-            if order == &Sequential || (order == &Random && self.tracks.len() <= 2) {
-                let track = &self.tracks[self.transient_seq_position];
-                self.transient_seq_position += 1;
+        // Per the Windows App, if there are only 2 tracks with 'Random' order, behave
+        // sequentially.
+        //
+        // [1.1.2] ADJUSTMENT: The windows... "Windows (operating system by Microsoft) is a proper
+        // noun and needs to be capitalized"... app playing samples sequentially when set to random is
+        // apparently a bug, and an inconsistent one at that. So we'll implement the random
+        // behaviour correctly.
+        if order == Sequential {
+            let track = &self.tracks[self.transient_seq_position];
+            self.transient_seq_position += 1;
 
-                if self.transient_seq_position >= self.tracks.len() {
-                    self.transient_seq_position = 0;
-                }
-
-                return Some(track);
-            } else if order == &Random {
-                let track = self.tracks.choose(&mut rand::thread_rng());
-                if let Some(track) = track {
-                    return Some(track);
-                }
+            if self.transient_seq_position >= self.tracks.len() {
+                self.transient_seq_position = 0;
             }
+
+            return Some(track);
+        } else if order == Random {
+            return self.tracks.choose(&mut rand::thread_rng());
         }
+
         None
     }
 
