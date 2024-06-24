@@ -1,4 +1,4 @@
-use crate::audio::{AudioInput, AudioSpecification};
+use crate::audio::{AudioInput, AudioSpecification, OpenInputStream};
 use anyhow::{anyhow, Result};
 use libpulse_binding::def::BufferAttr;
 use libpulse_binding::sample::{Format, Spec};
@@ -12,8 +12,8 @@ pub struct PulseRecord {
     buffer: [u8; BUFFER_SIZE],
 }
 
-impl PulseRecord {
-    pub fn open(spec: AudioSpecification) -> Result<Box<dyn AudioInput>> {
+impl OpenInputStream for PulseRecord {
+    fn open(spec: AudioSpecification) -> Result<Box<dyn AudioInput>> {
         // We know the spec of the input stream..
         let pulse_spec = Spec {
             format: Format::F32le,
