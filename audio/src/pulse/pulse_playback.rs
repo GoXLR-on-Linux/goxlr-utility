@@ -1,4 +1,4 @@
-use crate::audio::{AudioInput, AudioOutput, AudioSpecification, OpenOutputStream};
+use crate::audio::{AudioOutput, AudioSpecification, OpenOutputStream};
 use anyhow::{anyhow, Result};
 use libpulse_binding::def::BufferAttr;
 use libpulse_binding::sample::{Format, Spec};
