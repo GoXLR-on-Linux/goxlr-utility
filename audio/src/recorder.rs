@@ -165,7 +165,7 @@ impl BufferedRecorder {
                 now = Instant::now();
 
                 if self.producers.lock().unwrap().len() > 0 {
-                    debug!("Not Checking, Something is attempting Recording..");
+                    // Something is actively recording, don't break the loop..
                     continue;
                 }
 
@@ -189,6 +189,7 @@ impl BufferedRecorder {
                 }
 
                 // If we get here, nothing has stopped us, tear down the audio handler, and sleep..
+                input.unwrap().flush();
                 input = None;
                 self.is_ready.store(false, Ordering::Relaxed);
                 self.buffer.lock().unwrap().clear();
