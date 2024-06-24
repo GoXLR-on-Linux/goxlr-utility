@@ -98,12 +98,12 @@ impl Scribble {
             }
 
             if attr.name.ends_with("string0") {
-                self.text_top_left = attr.value.clone();
+                self.text_top_left.clone_from(&attr.value);
                 continue;
             }
 
             if attr.name.ends_with("string1") {
-                self.text_bottom_middle = attr.value.clone();
+                self.text_bottom_middle.clone_from(&attr.value);
                 continue;
             }
 
@@ -127,7 +127,7 @@ impl Scribble {
             }
 
             if attr.name.ends_with("bitmap") {
-                self.bitmap_file = attr.value.clone();
+                self.bitmap_file.clone_from(&attr.value);
                 continue;
             }
 

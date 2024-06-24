@@ -66,7 +66,7 @@ impl BrowserPreviewTree {
             }
 
             if attr.name == "file" {
-                self.file = attr.value.clone();
+                self.file.clone_from(&attr.value);
                 continue;
             }
 

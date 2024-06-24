@@ -205,7 +205,7 @@ fn get_util_url(state: &DaemonState) -> String {
     if state.http_settings.bind_address != "localhost"
         && &state.http_settings.bind_address != "0.0.0.0"
     {
-        host = state.http_settings.bind_address.clone();
+        host.clone_from(&state.http_settings.bind_address);
     }
 
     format!("http://{}:{}/", host, state.http_settings.port)

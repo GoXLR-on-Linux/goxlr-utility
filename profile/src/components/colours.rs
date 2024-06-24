@@ -150,7 +150,7 @@ impl ColourMap {
     pub fn replace(&mut self, colour_map: &ColourMap) {
         self.off_style = colour_map.off_style;
         self.velocity = colour_map.velocity;
-        self.colour_list = colour_map.colour_list.clone();
+        self.colour_list.clone_from(&colour_map.colour_list);
         self.colour_display = colour_map.colour_display;
     }
 

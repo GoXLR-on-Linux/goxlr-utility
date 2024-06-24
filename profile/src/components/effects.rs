@@ -62,7 +62,7 @@ impl Effects {
     pub fn parse_effect(&mut self, attributes: &Vec<Attribute>) -> Result<(), ParseError> {
         for attr in attributes {
             if attr.name.ends_with("Name") {
-                self.name = attr.value.clone();
+                self.name.clone_from(&attr.value);
                 continue;
             }
 

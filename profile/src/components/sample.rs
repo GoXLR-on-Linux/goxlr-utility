@@ -76,7 +76,7 @@ impl SampleBase {
                 if attr.value != "Empty" && attr.value != "Stopped" {
                     println!("[Sampler] Unknown State: {}", &attr.value);
                 }
-                self.state = attr.value.clone();
+                self.state.clone_from(&attr.value);
                 continue;
             }
 
@@ -129,19 +129,8 @@ impl SampleBase {
                     let mut start: f32 = start.parse()?;
                     let mut end: f32 = end.parse()?;
 
-                    if start > 100. {
-                        start = 100.;
-                    }
-                    if start < 0. {
-                        start = 0.;
-                    }
-
-                    if end > 100. {
-                        end = 100.;
-                    }
-                    if end < 0. {
-                        end = 0.
-                    }
+                    start = start.clamp(0., 100.);
+                    end = end.clamp(0., 100.);
 
                     if start > end {
                         start = end;

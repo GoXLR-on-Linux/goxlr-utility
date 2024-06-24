@@ -471,7 +471,7 @@ impl SettingsHandle {
             .unwrap()
             .entry(device_serial.to_owned())
             .or_insert_with(DeviceSettings::default);
-        entry.profile = profile_name.to_owned();
+        profile_name.clone_into(&mut entry.profile);
     }
 
     pub async fn set_device_mic_profile_name(&self, device_serial: &str, mic_profile_name: &str) {
@@ -482,7 +482,7 @@ impl SettingsHandle {
             .unwrap()
             .entry(device_serial.to_owned())
             .or_insert_with(DeviceSettings::default);
-        entry.mic_profile = mic_profile_name.to_owned();
+        mic_profile_name.clone_into(&mut entry.mic_profile);
     }
 
     pub async fn set_device_shutdown_commands(
@@ -497,7 +497,7 @@ impl SettingsHandle {
             .unwrap()
             .entry(device_serial.to_owned())
             .or_insert_with(DeviceSettings::default);
-        entry.shutdown_commands = commands.to_owned();
+        commands.clone_into(&mut entry.shutdown_commands);
     }
 
     pub async fn set_device_sleep_commands(
@@ -512,7 +512,7 @@ impl SettingsHandle {
             .unwrap()
             .entry(device_serial.to_owned())
             .or_insert_with(DeviceSettings::default);
-        entry.sleep_commands = commands.to_owned();
+        commands.clone_into(&mut entry.sleep_commands);
     }
 
     pub async fn set_device_wake_commands(&self, device_serial: &str, commands: Vec<GoXLRCommand>) {
@@ -523,7 +523,7 @@ impl SettingsHandle {
             .unwrap()
             .entry(device_serial.to_owned())
             .or_insert_with(DeviceSettings::default);
-        entry.wake_commands = commands.to_owned();
+        commands.clone_into(&mut entry.wake_commands);
     }
 
     pub async fn set_device_sampler_pre_buffer(&self, device_serial: &str, duration: u16) {

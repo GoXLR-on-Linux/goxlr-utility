@@ -346,11 +346,7 @@ impl Player {
 
                         if self.restart_track.load(Ordering::Relaxed) {
                             // We've been prompted to restart the current track..
-                            let start_frame = if let Some(frame) = first_frame {
-                                frame
-                            } else {
-                                0
-                            };
+                            let start_frame = first_frame.unwrap_or_default();
 
                             let seek_time = SeekTo::TimeStamp {
                                 ts: start_frame,
