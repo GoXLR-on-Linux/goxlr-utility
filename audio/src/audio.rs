@@ -23,6 +23,8 @@ pub trait AudioInput {
 pub struct AudioSpecification {
     pub device: Option<String>,
     pub spec: SignalSpec,
+
+    #[allow(unused)]
     pub buffer: usize,
 }
 
