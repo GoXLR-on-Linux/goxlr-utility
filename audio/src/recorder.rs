@@ -1,6 +1,5 @@
 use std::cmp::max;
 use std::fmt::{Debug, Formatter};
-use std::fs;
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::Path;
@@ -8,14 +7,14 @@ use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread::sleep;
 use std::time::{Duration, Instant};
+use std::{fs, vec};
 
 use anyhow::{bail, Result};
-use bounded_vec_deque::BoundedVecDeque;
 use ebur128::{EbuR128, Mode};
 use fancy_regex::Regex;
 use hound::WavWriter;
 use log::{debug, error, info, trace, warn};
-use rb::{Producer, RbConsumer, RbProducer, SpscRb, RB};
+use rb::{Consumer, Producer, RbConsumer, RbInspector, RbProducer, SpscRb, RB};
 use symphonia::core::audio::{Layout, SignalSpec};
 
 use crate::audio::{get_input, AudioInput, AudioSpecification};
@@ -29,9 +28,28 @@ pub struct BufferedRecorder {
     devices: Vec<Regex>,
     producers: Mutex<Vec<RingProducer>>,
     buffer_size: usize,
-    buffer: Mutex<BoundedVecDeque<f32>>,
+    buffer: RingBuffer<f32>,
     stop: Arc<AtomicBool>,
     is_ready: Arc<AtomicBool>,
+}
+
+pub struct RingBuffer<T> {
+    buffer: SpscRb<T>,
+    consumer: Consumer<T>,
+    producer: Producer<T>,
+}
+
+impl<T: Clone + Copy + Default> RingBuffer<T> {
+    pub fn new(size: usize) -> Self {
+        let buffer = SpscRb::<T>::new(size);
+        let (producer, consumer) = (buffer.producer(), buffer.consumer());
+
+        Self {
+            buffer,
+            consumer,
+            producer,
+        }
+    }
 }
 
 pub struct RingProducer {
@@ -93,7 +111,8 @@ impl BufferedRecorder {
             producers: Mutex::new(vec![]),
 
             buffer_size,
-            buffer: Mutex::new(BoundedVecDeque::new(buffer_size)),
+            //buffer: Mutex::new(BoundedVecDeque::new(buffer_size)),
+            buffer: RingBuffer::new(buffer_size),
 
             stop: Arc::new(AtomicBool::new(false)),
             is_ready: Arc::new(AtomicBool::new(false)),
@@ -135,15 +154,53 @@ impl BufferedRecorder {
                 match input.as_mut().unwrap().read() {
                     Ok(samples) => {
                         if self.buffer_size > 0 {
-                            let mut buffer = self.buffer.lock().unwrap();
-                            for sample in &samples {
-                                buffer.push_back(*sample);
+                            // Grab some variables for calculating..
+                            let available = self.buffer.buffer.slots_free();
+                            let capacity = self.buffer.buffer.capacity();
+                            let length = samples.len();
+
+                            let consumer = &self.buffer.consumer;
+                            let producer = &self.buffer.producer;
+
+                            // Would we overflow dumping these into the buffer?
+                            if available < length {
+                                // First check, do we have more samples than the buffer size?
+                                if capacity < length {
+                                    // Skip existing samples, and append what we can
+                                    if let Err(e) = consumer.skip_pending() {
+                                        warn!("Unable to Skip Samples: {}", e);
+                                    } else {
+                                        // Calculate the difference, and start point..
+                                        let start = length - (length - capacity);
+                                        if let Err(e) = producer.write(&samples[start..length]) {
+                                            warn!("Error Writing Samples: {}", e);
+                                        }
+                                    }
+                                } else {
+                                    // We need 2 numbers here, the amount of available buffer space
+                                    // and how many samples need to be inserted, then skip the diff
+                                    let skip = length - available;
+
+                                    if let Err(e) = consumer.skip(skip) {
+                                        warn!("Failed to Skip Samples! {}", e);
+                                    } else {
+                                        // Write all available samples to the buffer
+                                        if let Err(e) = producer.write(&samples) {
+                                            warn!("Unable to Write Samples: {}", e);
+                                        }
+                                    }
+                                }
+                            } else if let Err(e) = producer.write(&samples) {
+                                warn!(
+                                    "Unable to Write Samples despite Space: {} - {} - {}",
+                                    available, length, e
+                                );
                             }
                         }
                         for producer in self.producers.lock().unwrap().iter() {
                             let result = producer.producer.write(&samples);
                             if result.is_err() {
-                                debug!("Error writing to producer: {:?}", result.err());
+                                warn!("Error writing to producer: {:?}", result.err());
                             }
                         }
                     }
@@ -154,7 +211,14 @@ impl BufferedRecorder {
                         debug!("Shutting down input, and clearing buffer.");
                         input = None;
                         self.is_ready.store(false, Ordering::Relaxed);
-                        self.buffer.lock().unwrap().clear();
+
+                        // We skip anything pending, to reset our pointer to the 'next' sample
+                        // that's delivered..
+                        if let Err(e) = self.buffer.consumer.skip_pending() {
+                            warn!("Error Skipping samples: {}", e);
+                        }
+
+                        //self.buffer.lock().unwrap().clear();
                     }
                 }
             }
@@ -192,7 +256,9 @@ impl BufferedRecorder {
                 input.unwrap().flush();
                 input = None;
                 self.is_ready.store(false, Ordering::Relaxed);
-                self.buffer.lock().unwrap().clear();
+                if let Err(e) = self.buffer.consumer.skip_pending() {
+                    warn!("Error Skipping samples: {}", e);
+                }
             }
         }
 
@@ -356,18 +422,19 @@ impl BufferedRecorder {
     }
 
     fn get_samples_from_buffer(&self) -> Vec<f32> {
-        let mut pre_samples = vec![];
         if self.buffer_size > 0 {
-            let buffer = self.buffer.lock().unwrap();
-            let (front, back) = buffer.as_slices();
-            for sample in front {
-                pre_samples.push(*sample);
-            }
-            for sample in back {
-                pre_samples.push(*sample);
+            // Create a buffer which can hold all available samples...
+            let mut buffer = vec![0_f32; self.buffer.buffer.count()];
+
+            if let Ok(read) = self.buffer.consumer.read(&mut buffer) {
+                debug!("Read: {} Samples..", read);
+                // We know how many samples were available, return them in their entirety.
+                return Vec::from(&buffer[0..read]);
+            } else {
+                warn!("Error Reading From Buffer..");
             }
         }
-        pre_samples
+        vec![]
     }
 
     fn handle_samples(

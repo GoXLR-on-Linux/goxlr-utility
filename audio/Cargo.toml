@@ -21,9 +21,6 @@ anyhow = "1.0.75"
 # Logging..
 log = "0.4.20"
 
-# A wrapper around VecDeque to enforce length.
-bounded-vec-deque = "0.1.1"
-
 # Ring Buffer is now needed on all platforms.
 rb = "0.4.1"
 
