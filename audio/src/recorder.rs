@@ -426,7 +426,7 @@ impl BufferedRecorder {
             // Create a buffer which can hold all available samples...
             let mut buffer = vec![0_f32; self.buffer.buffer.count()];
 
-            if let Ok(read) = self.buffer.consumer.read(&mut buffer) {
+            if let Ok(read) = self.buffer.consumer.get(&mut buffer) {
                 debug!("Read: {} Samples..", read);
                 // We know how many samples were available, return them in their entirety.
                 return Vec::from(&buffer[0..read]);
