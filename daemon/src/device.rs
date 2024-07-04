@@ -1651,11 +1651,12 @@ impl<'a> Device<'a> {
                 self.settings.save().await;
 
                 // Reload the Audio Handler...
-                self.stop_all_samples(true, true).await?;
+                self.stop_all_samples(false, true).await?;
 
                 // Drop the Audio Handler..
-                let new_handler = AudioHandler::new(duration)?;
-                self.audio_handler = Some(new_handler);
+                if let Some(handler) = &mut self.audio_handler {
+                    handler.update_record_buffer(duration)?;
+                }
             }
 
             GoXLRCommand::SetFader(fader, channel) => {

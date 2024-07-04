@@ -446,6 +446,8 @@ impl BufferedRecorder {
 
 impl Drop for BufferedRecorder {
     fn drop(&mut self) {
+        debug!("Recorder Dropped, stopping thread..");
+
         // We probably don't need to do this, as drop will only be called after the main
         // thread has terminated, but safety first :)
         self.stop.store(true, Ordering::Relaxed);
