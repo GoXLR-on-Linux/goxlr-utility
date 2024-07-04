@@ -767,12 +767,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bounded-vec-deque"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2225b558afc76c596898f5f1b3fc35cfce0eb1b13635cbd7d1b2a7177dc10ccd"
-
-[[package]]
 name = "brotli"
 version = "3.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1891,7 +1885,6 @@ name = "goxlr-audio"
 version = "1.1.1"
 dependencies = [
  "anyhow",
- "bounded-vec-deque",
  "cpal",
  "ebur128",
  "fancy-regex",

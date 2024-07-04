@@ -1,9 +1,9 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 
+mod audio;
 pub mod player;
 pub mod recorder;
-
-mod audio;
+mod ringbuffer;
 
 #[cfg(target_os = "linux")]
 mod pulse;

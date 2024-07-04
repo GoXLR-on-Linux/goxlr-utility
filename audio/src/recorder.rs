@@ -1,6 +1,5 @@
 use std::cmp::max;
 use std::fmt::{Debug, Formatter};
-use std::fs;
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::Path;
@@ -8,9 +7,9 @@ use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread::sleep;
 use std::time::{Duration, Instant};
+use std::{fs, vec};
 
 use anyhow::{bail, Result};
-use bounded_vec_deque::BoundedVecDeque;
 use ebur128::{EbuR128, Mode};
 use fancy_regex::Regex;
 use hound::WavWriter;
@@ -19,6 +18,7 @@ use rb::{Producer, RbConsumer, RbProducer, SpscRb, RB};
 use symphonia::core::audio::{Layout, SignalSpec};
 
 use crate::audio::{get_input, AudioInput, AudioSpecification};
+use crate::ringbuffer::RingBuffer;
 use crate::{get_audio_inputs, AtomicF64};
 
 static NEXT_ID: AtomicU32 = AtomicU32::new(0);
@@ -29,7 +29,7 @@ pub struct BufferedRecorder {
     devices: Vec<Regex>,
     producers: Mutex<Vec<RingProducer>>,
     buffer_size: usize,
-    buffer: Mutex<BoundedVecDeque<f32>>,
+    buffer: RingBuffer<f32>,
     stop: Arc<AtomicBool>,
     is_ready: Arc<AtomicBool>,
 }
@@ -93,7 +93,8 @@ impl BufferedRecorder {
             producers: Mutex::new(vec![]),
 
             buffer_size,
-            buffer: Mutex::new(BoundedVecDeque::new(buffer_size)),
+            //buffer: Mutex::new(BoundedVecDeque::new(buffer_size)),
+            buffer: RingBuffer::new(buffer_size),
 
             stop: Arc::new(AtomicBool::new(false)),
             is_ready: Arc::new(AtomicBool::new(false)),
@@ -131,19 +132,18 @@ impl BufferedRecorder {
                 sleep(Duration::from_millis(500));
                 continue;
             } else {
-                // Read the latest samples from the input..
+                // Read the latest samples from the input...
                 match input.as_mut().unwrap().read() {
                     Ok(samples) => {
                         if self.buffer_size > 0 {
-                            let mut buffer = self.buffer.lock().unwrap();
-                            for sample in &samples {
-                                buffer.push_back(*sample);
+                            if let Err(e) = self.buffer.write_into(&samples) {
+                                warn!("Error writing samples to buffer: {}", e);
                             }
                         }
                         for producer in self.producers.lock().unwrap().iter() {
                             let result = producer.producer.write(&samples);
                             if result.is_err() {
-                                debug!("Error writing to producer: {:?}", result.err());
+                                warn!("Error writing to producer: {:?}", result.err());
                             }
                         }
                     }
@@ -154,7 +154,9 @@ impl BufferedRecorder {
                         debug!("Shutting down input, and clearing buffer.");
                         input = None;
                         self.is_ready.store(false, Ordering::Relaxed);
-                        self.buffer.lock().unwrap().clear();
+
+                        // Clear the Buffer
+                        self.buffer.clear();
                     }
                 }
             }
@@ -192,7 +194,7 @@ impl BufferedRecorder {
                 input.unwrap().flush();
                 input = None;
                 self.is_ready.store(false, Ordering::Relaxed);
-                self.buffer.lock().unwrap().clear();
+                self.buffer.clear();
             }
         }
 
@@ -229,7 +231,7 @@ impl BufferedRecorder {
         // So this will likely be spawned in a different thread, to actually handle the record
         // process.. with path being the file path to handle!
 
-        // We create a 4 second buffer for audio input as we need to continue receiving
+        // We create a 4-second buffer for audio input as we need to continue receiving
         // audio while we're creating files, setting up the encoder, and handling the initial buffer.
         let ring_buf = SpscRb::<f32>::new(48000 * 4);
         let (ring_buf_producer, ring_buf_consumer) = (ring_buf.producer(), ring_buf.consumer());
@@ -356,18 +358,13 @@ impl BufferedRecorder {
     }
 
     fn get_samples_from_buffer(&self) -> Vec<f32> {
-        let mut pre_samples = vec![];
         if self.buffer_size > 0 {
-            let buffer = self.buffer.lock().unwrap();
-            let (front, back) = buffer.as_slices();
-            for sample in front {
-                pre_samples.push(*sample);
-            }
-            for sample in back {
-                pre_samples.push(*sample);
-            }
+            return self.buffer.read_buffer().unwrap_or_else(|e| {
+                warn!("Error Reading Samples from Buffer: {}", e);
+                vec![]
+            });
         }
-        pre_samples
+        vec![]
     }
 
     fn handle_samples(
