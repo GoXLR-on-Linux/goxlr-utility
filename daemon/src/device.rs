@@ -1110,20 +1110,21 @@ impl<'a> Device<'a> {
         };
     }
 
-    async fn stop_all_samples(&mut self) -> Result<()> {
+    async fn stop_all_samples(&mut self, playback: bool, recording: bool) -> Result<()> {
         if let Some(audio) = &mut self.audio_handler {
             for bank in SampleBank::iter() {
                 for button in SampleButtons::iter() {
-                    if audio.is_sample_playing(bank, button) {
+                    if playback && audio.is_sample_playing(bank, button) {
                         audio.stop_playback(bank, button, true).await?;
                         self.profile.set_sample_button_state(button, false);
                     }
-                    if audio.sample_recording(bank, button) {
+                    if recording && audio.sample_recording(bank, button) {
                         audio.stop_record(bank, button)?;
                         self.profile.set_sample_button_blink(button, false);
                     }
                 }
             }
+            self.update_button_states()?;
         }
         Ok(())
     }
@@ -1649,8 +1650,8 @@ impl<'a> Device<'a> {
                     .await;
                 self.settings.save().await;
 
-                // Reload the Audio Handler..
-                self.stop_all_samples().await?;
+                // Reload the Audio Handler...
+                self.stop_all_samples(true, true).await?;
 
                 // Drop the Audio Handler..
                 let new_handler = AudioHandler::new(duration)?;
@@ -2400,7 +2401,7 @@ impl<'a> Device<'a> {
 
             // Profiles
             GoXLRCommand::NewProfile(profile_name) => {
-                self.stop_all_samples().await?;
+                self.stop_all_samples(true, true).await?;
                 let profile_directory = self.settings.get_profile_directory().await;
                 let volumes = self.profile.get_current_state();
 
@@ -2422,7 +2423,7 @@ impl<'a> Device<'a> {
                 self.settings.save().await;
             }
             GoXLRCommand::LoadProfile(profile_name, save_change) => {
-                self.stop_all_samples().await?;
+                self.stop_all_samples(true, true).await?;
                 let volumes = self.profile.get_current_state();
 
                 let profile_directory = self.settings.get_profile_directory().await;
