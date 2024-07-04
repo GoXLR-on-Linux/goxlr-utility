@@ -1,16 +1,15 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 
+mod audio;
 pub mod player;
 pub mod recorder;
-
-mod audio;
+mod ringbuffer;
 
 #[cfg(target_os = "linux")]
 mod pulse;
 
 #[cfg(not(target_os = "linux"))]
 mod cpal;
-mod ringbuffer;
 
 pub fn get_audio_outputs() -> Vec<String> {
     #[cfg(target_os = "linux")]
