@@ -10,6 +10,7 @@ mod pulse;
 
 #[cfg(not(target_os = "linux"))]
 mod cpal;
+mod ringbuffer;
 
 pub fn get_audio_outputs() -> Vec<String> {
     #[cfg(target_os = "linux")]
