@@ -6,6 +6,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use anyhow::{bail, Result};
 
 use enum_map::{Enum, EnumMap};
+use log::warn;
 use quick_xml::events::{BytesEnd, BytesStart, Event};
 use quick_xml::Writer;
 use ritelinked::LinkedHashMap;
@@ -355,28 +356,39 @@ impl SampleStack {
         // apparently a bug, and an inconsistent one at that. So we'll implement the random
         // behaviour correctly.
         if order == Sequential {
-            let track = &self.tracks[self.transient_seq_position];
-            self.transient_seq_position += 1;
-
-            if self.transient_seq_position >= self.tracks.len() {
-                self.transient_seq_position = 0;
-            }
-
-            return Some(track);
+            return self.get_next_sequential_track();
         } else if order == Random {
-            // We really don't need a 'true' random calculation here, or a massive crate that includes
-            // many different random implementations (see `rand`), so just instead take the current
-            // time in millis, and modulo the number of tracks. Should be good enough!
-            let track = if let Ok(duration) = SystemTime::now().duration_since(UNIX_EPOCH) {
-                duration.as_millis() % self.tracks.len() as u128
-            } else {
-                0
-            } as usize;
-
-            return Some(&self.tracks[track]);
+            return self.get_next_random_track();
         }
 
         None
+    }
+
+    pub fn get_next_random_track(&mut self) -> Option<&Track> {
+        // We really don't need a 'true' random calculation here, or a massive crate that includes
+        // many different random implementations (see `rand`), so just instead take the current
+        // time in millis, and modulo the number of tracks. Should be good enough!
+
+        let track = if let Ok(duration) = SystemTime::now().duration_since(UNIX_EPOCH) {
+            duration.as_millis() % self.tracks.len() as u128
+        } else {
+            // Something's gone wrong getting the time, fallback to Sequential
+            warn!("Failure Calculating Random Track, falling back to Sequential");
+            return self.get_next_sequential_track();
+        } as usize;
+
+        Some(&self.tracks[track])
+    }
+
+    pub fn get_next_sequential_track(&mut self) -> Option<&Track> {
+        let track = &self.tracks[self.transient_seq_position];
+        self.transient_seq_position += 1;
+
+        if self.transient_seq_position >= self.tracks.len() {
+            self.transient_seq_position = 0;
+        }
+
+        Some(track)
     }
 
     pub fn set_playback_mode(&mut self, playback_mode: Option<PlaybackMode>) {
