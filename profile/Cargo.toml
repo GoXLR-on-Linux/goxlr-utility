@@ -14,7 +14,6 @@ strum = { version = "0.25.0", features = ["derive"] }
 ritelinked = "0.3.2"
 quick-xml = "0.31.0"
 byteorder = "1.5.0"
-rand = "0.8.5"
 
 tempfile = "3.8.1"
 

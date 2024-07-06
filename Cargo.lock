@@ -2082,7 +2082,6 @@ dependencies = [
  "enum-map-derive",
  "log",
  "quick-xml",
- "rand 0.8.5",
  "ritelinked",
  "strum 0.25.0",
  "tempfile",

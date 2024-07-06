@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 use std::io::Write;
 use std::str::FromStr;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::{bail, Result};
 
 use enum_map::{Enum, EnumMap};
 use quick_xml::events::{BytesEnd, BytesStart, Event};
 use quick_xml::Writer;
-use rand::seq::SliceRandom;
 use ritelinked::LinkedHashMap;
 use strum::{Display, EnumIter, EnumProperty, EnumString};
 
@@ -364,7 +364,16 @@ impl SampleStack {
 
             return Some(track);
         } else if order == Random {
-            return self.tracks.choose(&mut rand::thread_rng());
+            // We really don't need a 'true' random calculation here, or a massive crate that includes
+            // many different random implementations (see `rand`), so just instead take the current
+            // time in millis, and modulo the number of tracks. Should be good enough!
+            let track = if let Ok(duration) = SystemTime::now().duration_since(UNIX_EPOCH) {
+                duration.as_millis() % self.tracks.len() as u128
+            } else {
+                0
+            } as usize;
+
+            return Some(&self.tracks[track]);
         }
 
         None
