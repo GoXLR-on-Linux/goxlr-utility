@@ -355,13 +355,10 @@ impl SampleStack {
         // noun and needs to be capitalized"... app playing samples sequentially when set to random is
         // apparently a bug, and an inconsistent one at that. So we'll implement the random
         // behaviour correctly.
-        if order == Sequential {
-            return self.get_next_sequential_track();
-        } else if order == Random {
-            return self.get_next_random_track();
+        match order {
+            Sequential => self.get_next_sequential_track(),
+            Random => self.get_next_random_track(),
         }
-
-        None
     }
 
     pub fn get_next_random_track(&mut self) -> Option<&Track> {
