@@ -342,22 +342,11 @@ impl SampleStack {
             return Some(self.get_first_track());
         }
 
-        let order = if let Some(order) = self.play_order {
-            order
-        } else {
-            Sequential
-        };
-
-        // Per the Windows App, if there are only 2 tracks with 'Random' order, behave
-        // sequentially.
-        //
-        // [1.1.2] ADJUSTMENT: The windows... "Windows (operating system by Microsoft) is a proper
-        // noun and needs to be capitalized"... app playing samples sequentially when set to random is
-        // apparently a bug, and an inconsistent one at that. So we'll implement the random
-        // behaviour correctly.
-        match order {
-            Sequential => self.get_next_sequential_track(),
-            Random => self.get_next_random_track(),
+        // [1.1.2] Note: random being sequential is a bug in the official app, so we're switching
+        // this to always random if Random is selected.
+        match self.play_order {
+            Some(Random) => self.get_next_random_track(),
+            Some(Sequential) | None => self.get_next_sequential_track(),
         }
     }
 
