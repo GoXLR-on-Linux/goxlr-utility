@@ -36,6 +36,7 @@ pub struct FilePaths {
     pub presets: PathBuf,
     pub icons: PathBuf,
     pub samples: PathBuf,
+    pub backups: PathBuf,
 }
 
 #[derive(Debug)]
@@ -58,6 +59,7 @@ impl FileManager {
             presets: settings.get_presets_directory().await,
             icons: settings.get_icons_directory().await,
             samples: settings.get_samples_directory().await,
+            backups: settings.get_backup_directory().await,
         }
     }
 
@@ -102,6 +104,12 @@ impl FileManager {
         if !recorded_path.exists() {
             if let Err(e) = create_path(recorded_path) {
                 warn!("Unable to Create Path: {:?}, {}", recorded_path, e);
+            }
+        }
+
+        if !&paths.backups.exists() {
+            if let Err(e) = create_path(&paths.backups) {
+                warn!("Unable to Create Path: {:?}, {}", &paths.backups, e);
             }
         }
     }
