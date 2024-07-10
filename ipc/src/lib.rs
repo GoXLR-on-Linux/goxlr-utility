@@ -62,6 +62,7 @@ pub enum PathTypes {
     Samples,
     Icons,
     Logs,
+    Backups,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, Eq, PartialEq)]

@@ -620,21 +620,7 @@ async fn load_device(
         colour_way,
         usb_device,
     };
-    let profile_directory = settings.get_profile_directory().await;
-    let profile_name = settings.get_device_profile_name(&serial_number).await;
-    let mic_profile_name = settings.get_device_mic_profile_name(&serial_number).await;
-    let mic_profile_directory = settings.get_mic_profile_directory().await;
-    let device = Device::new(
-        handled_device,
-        hardware,
-        profile_name,
-        mic_profile_name,
-        &profile_directory,
-        &mic_profile_directory,
-        settings,
-        global_events,
-    )
-    .await?;
+    let device = Device::new(handled_device, hardware, settings, global_events).await?;
     settings
         .set_device_profile_name(&serial_number, device.profile().name())
         .await;

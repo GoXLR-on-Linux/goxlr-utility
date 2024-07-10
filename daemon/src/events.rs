@@ -108,6 +108,7 @@ pub async fn spawn_event_handler(
                             PathTypes::Samples => state.settings_handle.get_samples_directory().await,
                             PathTypes::Icons => state.settings_handle.get_icons_directory().await,
                             PathTypes::Logs => state.settings_handle.get_log_directory().await,
+                            PathTypes::Backups => state.settings_handle.get_backup_directory().await,
                         }) {
                             warn!("Error Opening Path: {:?}", error);
                         };

@@ -62,29 +62,16 @@ pub struct ProfileAdapter {
 }
 
 impl ProfileAdapter {
-    pub fn from_named_or_default(name: String, directory: &Path) -> Self {
-        match ProfileAdapter::from_named(name, directory) {
-            Ok(result) => result,
-            Err(e) => {
-                warn!("Error Loading Profile, falling back to default.. {}", e);
-                ProfileAdapter::default()
-            }
-        }
-    }
-
     pub fn from_named(name: String, directory: &Path) -> Result<Self> {
-        let path = directory.join(format!("{name}.goxlr"));
+        let path = directory.join(format!("{}.goxlr", name));
+
         if path.is_file() {
             debug!("Loading Profile From {}", path.to_string_lossy());
             let file = File::open(path).context("Couldn't open profile for reading")?;
             return ProfileAdapter::from_reader(name, file);
         }
 
-        bail!(
-            "Profile {} does not exist inside {:?}",
-            name,
-            directory.to_string_lossy()
-        );
+        bail!("Profile {} does not exist inside {:?}", name, directory);
     }
 
     pub fn default() -> Self {

@@ -27,6 +27,7 @@ enum Paths {
     Presets,
     Icons,
     Logs,
+    Backups,
 }
 
 impl AsRef<Path> for Paths {
@@ -38,6 +39,7 @@ impl AsRef<Path> for Paths {
             Paths::Presets => Path::new("presets"),
             Paths::Icons => Path::new("icons"),
             Paths::Logs => Path::new("logs"),
+            Paths::Backups => Path::new("backups"),
         }
     }
 }
@@ -60,6 +62,7 @@ impl SettingsHandle {
             presets_directory: None,
             icons_directory: None,
             logs_directory: None,
+            backup_directory: None,
             log_level: Some(LogLevel::Debug),
             open_ui_on_launch: None,
             activate: None,
@@ -259,6 +262,15 @@ impl SettingsHandle {
             directory
         } else {
             self.get_default_path(Paths::Logs)
+        }
+    }
+
+    pub async fn get_backup_directory(&self) -> PathBuf {
+        let settings = self.settings.read().await;
+        if let Some(directory) = settings.backup_directory.clone() {
+            directory
+        } else {
+            self.get_default_path(Paths::Backups)
         }
     }
 
@@ -615,6 +627,7 @@ pub struct Settings {
     presets_directory: Option<PathBuf>,
     icons_directory: Option<PathBuf>,
     logs_directory: Option<PathBuf>,
+    backup_directory: Option<PathBuf>,
     log_level: Option<LogLevel>,
     open_ui_on_launch: Option<bool>,
     activate: Option<String>,
