@@ -147,7 +147,7 @@ impl<'a> Device<'a> {
 
         let mic_profile = match mic_profile {
             Ok(mut profile) => {
-                debug!("Profile Successfully Loaded, Performing Backup..");
+                debug!("Mic Profile Successfully Loaded, Performing Backup..");
                 profile.save(&backup_path, true).unwrap_or_else(|e| {
                     warn!("Unable to Backup Mic Profile: {}", e);
                 });
@@ -2620,7 +2620,7 @@ impl<'a> Device<'a> {
                     Ok(mut profile) => {
                         if persist {
                             // We're persisting this change, so save the backup
-                            debug!("Profile Successfully Loaded, Performing Backup..");
+                            debug!("Mic Profile Successfully Loaded, Performing Backup..");
                             profile.save(&backup, true).unwrap_or_else(|e| {
                                 warn!("Unable to Save Backup: {}", e);
                             });
