@@ -150,7 +150,7 @@ impl MicProfileSettings {
         // Sync the write to disk..
         temp_file.sync_all()?;
 
-        debug!("Save Complete, renaming to {:?}", path.as_ref());
+        debug!("Save Complete and synced, renaming to {:?}", path.as_ref());
         if path.as_ref().exists() {
             debug!("Target mic profile exists, removing..");
             fs::remove_file(&path).unwrap_or_else(|e| {
