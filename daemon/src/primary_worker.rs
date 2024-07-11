@@ -323,7 +323,16 @@ pub async fn spawn_usb_handler(
 
                     DeviceCommand::RunDeviceCommand(serial, command, sender) => {
                         if let Some(device) = devices.get_mut(&serial) {
-                            let _ = sender.send(device.perform_command(command).await);
+                            let result = match device.perform_command(command.clone()).await {
+                                Ok(result) => {
+                                    Ok(result)
+                                }
+                                Err(error) => {
+                                    warn!("Error Executing: {:?}, {}", command, error);
+                                    Err(error)
+                                }
+                            };
+                            let _ = sender.send(result);
                             change_found = true;
                         } else {
                             let _ = sender.send(Err(anyhow!("Device {} is not connected", serial)));
