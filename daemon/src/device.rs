@@ -2476,8 +2476,7 @@ impl<'a> Device<'a> {
                 self.apply_profile(Some(volumes)).await?;
 
                 // Save the profile under a new name (although, don't overwrite if exists!)
-                let file = format!("{}.goxlr", profile_name);
-                let path = self.settings.get_profile_directory().await.join(&file);
+                let path = self.settings.get_profile_directory().await;
                 self.profile.save_as(profile_name.clone(), &path, false)?;
 
                 // Save the profile in the settings
