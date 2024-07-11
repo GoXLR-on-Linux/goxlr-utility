@@ -34,7 +34,7 @@ impl MicProfileSettings {
         let buf_reader = BufReader::new(read);
         let mut reader = Reader::from_reader(buf_reader);
 
-        //let parser = EventReader::new(read);
+        let mut valid_profile = false;
 
         let mut equalizer = Equalizer::new();
         let mut equalizer_mini = EqualizerMini::new();
@@ -107,11 +107,21 @@ impl MicProfileSettings {
 
                 // Event::Start/End only occurs for the top level micProfileTree, which has no
                 // attributes, so we don't need to worry about it :)
+                Ok(Event::Start(e)) => {
+                    if String::from_utf8_lossy(e.local_name().as_ref()) == "MicProfileTree" {
+                        valid_profile = true;
+                    }
+                }
+
                 Ok(_) => {}
                 Err(e) => {
                     bail!("Error Parsing Profile: {}", e);
                 }
             }
+        }
+
+        if !valid_profile {
+            bail!("Error: Missing MicProfileTree");
         }
 
         Ok(Self {

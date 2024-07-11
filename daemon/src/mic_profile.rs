@@ -33,17 +33,6 @@ pub struct MicProfileAdapter {
 }
 
 impl MicProfileAdapter {
-    pub fn from_named_or_default(name: String, directory: &Path) -> Self {
-        match MicProfileAdapter::from_named(name.clone(), directory) {
-            Ok(result) => result,
-            Err(error) => {
-                warn!("Couldn't load mic profile {}: {}", name, error);
-                warn!("Loading Embedded Default Profile");
-                MicProfileAdapter::default()
-            }
-        }
-    }
-
     pub fn from_named(name: String, directory: &Path) -> Result<Self> {
         let path = directory.join(format!("{name}.goxlrMicProfile"));
         if path.is_file() {
