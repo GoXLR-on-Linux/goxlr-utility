@@ -113,7 +113,7 @@ impl Profile {
         temp_file.sync_all()?;
 
         // Once complete, we simply move the file over the existing file..
-        debug!("Save Complete, and synced, renaming to {:?}", path.as_ref());
+        debug!("Save Complete and synced, renaming to {:?}", path.as_ref());
         if path.as_ref().exists() {
             debug!("Target profile exists, removing..");
             fs::remove_file(&path).unwrap_or_else(|e| {
