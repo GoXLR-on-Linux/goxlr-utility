@@ -1972,7 +1972,6 @@ dependencies = [
  "strum 0.25.0",
  "sys-locale",
  "tasklist",
- "tempfile",
  "tokio",
  "tokio-serde",
  "tts",
