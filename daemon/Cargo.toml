@@ -51,7 +51,7 @@ interprocess = { version = "1.2.1", features = ["tokio_support"] }
 notify = "6.1.1"
 json-patch = "1.2.0"
 
-tempfile = "3.8.1"
+#tempfile = "3.8.1"
 
 which = "6.0.0"
 
