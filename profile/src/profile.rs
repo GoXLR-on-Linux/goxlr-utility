@@ -1,7 +1,7 @@
 use std::fs;
 use std::fs::File;
 use std::io::{BufReader, Read, Write};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::str::FromStr;
 
 use anyhow::{anyhow, bail, Context as ErrorContext, Result};
@@ -11,7 +11,6 @@ use quick_xml::events::{BytesDecl, BytesStart, Event};
 use quick_xml::{Reader, Writer};
 use strum::EnumProperty;
 use strum::IntoEnumIterator;
-use tempfile::NamedTempFile;
 use zip::write::FileOptions;
 
 use crate::components::animation::AnimationTree;
