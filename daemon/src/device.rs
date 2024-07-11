@@ -2488,7 +2488,7 @@ impl<'a> Device<'a> {
 
                 // Grab the needed Paths..
                 let profile_path = self.settings.get_profile_directory().await;
-                let backup_path = self.settings.get_profile_directory().await;
+                let backup_path = self.settings.get_backup_directory().await;
 
                 // Attempt to load the profile from the main profile path..
                 let profile = ProfileAdapter::from_named(profile_name.clone(), &profile_path);
