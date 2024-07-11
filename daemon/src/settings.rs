@@ -3,7 +3,7 @@ use crate::profile::DEFAULT_PROFILE_NAME;
 use anyhow::{Context, Result};
 use directories::ProjectDirs;
 use goxlr_ipc::{GoXLRCommand, LogLevel};
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -678,20 +678,23 @@ impl Settings {
             }
         }
 
-        let temp_file = tempfile::NamedTempFile::new()?;
+        let mut tmp_file_name = path.to_path_buf();
+        tmp_file_name.set_extension("tmp");
+        let temp_file = File::create(&tmp_file_name)?;
 
-        debug!("Writing Config to Temporary File: {:?}", temp_file.path());
-        serde_json::to_writer_pretty(temp_file.as_file(), self)?;
+        debug!("Creating Temporary Save File: {:?}", tmp_file_name);
+        serde_json::to_writer_pretty(&temp_file, self)?;
+        temp_file.sync_all()?;
 
-        // Sync the file written to disk..
-        debug!("Syncing Disk..");
-        temp_file.as_file().sync_all()?;
-
-        debug!("Write Complete, saving to {:?}", path);
-        fs::copy(temp_file.path(), path)?;
-
-        debug!("Removing Temporary File..");
-        fs::remove_file(temp_file.path())?;
+        debug!("Save Complete and synced, renaming to {:?}", path);
+        if path.exists() {
+            debug!("Target exists, removing..");
+            fs::remove_file(path).unwrap_or_else(|e| {
+                warn!("Error Removing File: {}", e);
+            });
+        }
+        debug!("Renaming {:?} to {:?}", tmp_file_name, path);
+        fs::rename(tmp_file_name, path)?;
 
         debug!("Settings Saved.");
         Ok(())
