@@ -85,9 +85,13 @@ impl Profile {
     pub fn save(&mut self, path: impl AsRef<Path>) -> Result<()> {
         let mut tmp_file_name = path.as_ref().to_path_buf();
         tmp_file_name.set_extension("tmp");
-        let temp_file = File::create(&tmp_file_name)?;
+        if tmp_file_name.exists() {
+            debug!("Temporary file already exists? Removing.");
+            fs::remove_file(&tmp_file_name)?;
+        }
 
         debug!("Creating Temporary Save File: {:?}", &tmp_file_name);
+        let temp_file = File::create(&tmp_file_name)?;
 
         // Create a new ZipFile at the requested location
         let mut archive = zip::ZipWriter::new(&temp_file);
