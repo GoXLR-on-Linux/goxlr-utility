@@ -107,7 +107,7 @@ impl From<String> for VersionNumber {
     fn from(value: String) -> Self {
         let mut version = VersionNumber::default();
 
-        let mut parts = value.split(".");
+        let mut parts = value.split('.');
 
         // We can't iterate over a tuple, so we need to do this 4 times..
         if let Some(part) = parts.next() {
