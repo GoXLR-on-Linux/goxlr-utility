@@ -5,7 +5,6 @@ use goxlr_ipc::PathTypes::{Icons, Logs, MicProfiles, Presets, Profiles, Samples}
 use ksni::menu::{StandardItem, SubMenu};
 use ksni::{Category, MenuItem, Status, ToolTip, Tray};
 use log::{debug, warn};
-use rand::Rng;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::Ordering;
 use std::time::Duration;
@@ -21,19 +20,23 @@ pub fn handle_tray(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Resul
     // so that it can be immediately used. Depending on pixmaps seems to cause issues under
     // gnome, where occasionally the icon wont correctly spawn.
 
-    // Firstly, we use a random filename (it'll be removed on shutdown) to prevent potential
-    // weirdness in the event it gets locked somehow (different user / crash scenario)
-    let file_name = format!("goxlr-utility-{}.png", rand::thread_rng().gen::<u16>());
-
     // We'll dump the icon here :)
     let tmp_file_dir = PathBuf::from("/tmp/goxlr-utility/");
 
     // Extract the icon to a temporary directory, and pass its path..
-    let tmp_file_path = tmp_file_dir.join(file_name);
+    let tmp_file_path = tmp_file_dir.join("goxlr-utility-icon.png");
     if !tmp_file_dir.exists() {
         fs::create_dir_all(&tmp_file_dir)?;
     }
-    fs::write(&tmp_file_path, ICON)?;
+
+    // Rather than random shenanigans, we'll simply try to remove any existing files and
+    // recycle whatever is there if we can't. These should evaluate in order, so if the
+    // file is absent, or the file was successfully removed, we can write to it.
+    if !tmp_file_path.exists() || fs::remove_file(&tmp_file_path).is_ok() {
+        fs::write(&tmp_file_path, ICON)?;
+    } else {
+        warn!("Unable to remove existing icon, using whatever is already there..");
+    }
 
     // Attempt to immediately update the environment..
     let handle = ksni::spawn(GoXLRTray::new(tx, &tmp_file_path));

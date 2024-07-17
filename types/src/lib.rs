@@ -103,6 +103,41 @@ impl std::fmt::Debug for VersionNumber {
     }
 }
 
+impl From<String> for VersionNumber {
+    fn from(value: String) -> Self {
+        let mut version = VersionNumber::default();
+
+        let mut parts = value.split(".");
+
+        // We can't iterate over a tuple, so we need to do this 4 times..
+        if let Some(part) = parts.next() {
+            if let Ok(part) = part.parse() {
+                version.0 = part;
+            }
+        }
+
+        if let Some(part) = parts.next() {
+            if let Ok(part) = part.parse() {
+                version.1 = part;
+            }
+        }
+
+        if let Some(part) = parts.next() {
+            if let Ok(part) = part.parse() {
+                version.2 = Some(part);
+            }
+        }
+
+        if let Some(part) = parts.next() {
+            if let Ok(part) = part.parse() {
+                version.3 = Some(part);
+            }
+        }
+
+        version
+    }
+}
+
 // The ordering here might become important for submixes..
 // Under Windows, the Order is Headphones, Broadcast, Chat, Sample, Lineout
 #[derive(Debug, Copy, Clone, Display, Enum, EnumIter, EnumCount, PartialEq, Eq, Hash)]
@@ -774,7 +809,7 @@ pub enum WaterfallDirection {
     Off,
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Enum, PartialEq, Eq)]
 #[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum DeviceType {

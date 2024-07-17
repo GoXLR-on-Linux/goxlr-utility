@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 
 use anyhow::{anyhow, bail, Result};
 use chrono::Local;
@@ -10,6 +10,7 @@ use log::{debug, error, info};
 use ritelinked::LinkedHashSet;
 use strum::IntoEnumIterator;
 use tokio::sync::mpsc::Sender;
+use tokio::time::Instant;
 
 use goxlr_ipc::{
     Display, FaderStatus, GoXLRCommand, HardwareStatus, Levels, MicSettings, MixerStatus,
@@ -50,7 +51,7 @@ pub struct Device<'a> {
     profile: ProfileAdapter,
     mic_profile: MicProfileAdapter,
     audio_handler: Option<AudioHandler>,
-    hold_time: u16,
+    hold_time: Duration,
     vc_mute_also_mute_cm: bool,
     settings: &'a SettingsHandle,
     global_events: Sender<EventTriggers>,
@@ -66,7 +67,7 @@ struct PauseUntil {
 
 #[derive(Debug, Default, Copy, Clone)]
 struct ButtonState {
-    press_time: u128,
+    press_time: Option<Instant>,
     hold_handled: bool,
 }
 
@@ -149,7 +150,7 @@ impl<'a> Device<'a> {
             mic_profile,
             goxlr,
             hardware,
-            hold_time,
+            hold_time: Duration::from_millis(hold_time.into()),
             vc_mute_also_mute_cm,
             last_buttons: EnumSet::empty(),
             button_states: EnumMap::default(),
@@ -181,7 +182,7 @@ impl<'a> Device<'a> {
 
         let mut button_states: EnumMap<Button, bool> = Default::default();
         for (button, state) in self.button_states.iter() {
-            if state.press_time > 0 {
+            if state.press_time.is_some() {
                 button_states[usb_to_standard_button(button)] = true;
             }
         }
@@ -280,7 +281,7 @@ impl<'a> Device<'a> {
                     equaliser: self.mic_profile.get_eq_display_mode(),
                     equaliser_fine: self.mic_profile.get_eq_fine_display_mode(),
                 },
-                mute_hold_duration: self.hold_time,
+                mute_hold_duration: self.hold_time.as_millis() as u16,
                 vc_mute_also_mute_cm: self.vc_mute_also_mute_cm,
                 enable_monitor_with_fx: monitor_with_fx,
                 reset_sampler_on_clear: sampler_reset_on_clear,
@@ -395,12 +396,13 @@ impl<'a> Device<'a> {
         // Find any buttons that have been held, and action if needed.
         for button in self.last_buttons {
             if !self.button_states[button].hold_handled {
-                let now = self.get_epoch_ms();
-                if (now - self.button_states[button].press_time) > self.hold_time.into() {
-                    if let Err(error) = self.on_button_hold(button).await {
-                        error!("{}", error);
+                if let Some(time) = self.button_states[button].press_time {
+                    if time.elapsed() > self.hold_time {
+                        if let Err(error) = self.on_button_hold(button).await {
+                            error!("{}", error);
+                        }
+                        self.button_states[button].hold_handled = true;
                     }
-                    self.button_states[button].hold_handled = true;
                 }
             }
         }
@@ -421,7 +423,7 @@ impl<'a> Device<'a> {
         for button in pressed_buttons {
             // This is a new press, store it in the states..
             self.button_states[button] = ButtonState {
-                press_time: self.get_epoch_ms(),
+                press_time: Some(Instant::now()),
                 hold_handled: false,
             };
 
@@ -442,7 +444,7 @@ impl<'a> Device<'a> {
             }
 
             self.button_states[button] = ButtonState {
-                press_time: 0,
+                press_time: None,
                 hold_handled: false,
             };
 
@@ -2551,7 +2553,7 @@ impl<'a> Device<'a> {
             }
 
             GoXLRCommand::SetMuteHoldDuration(duration) => {
-                self.hold_time = duration;
+                self.hold_time = Duration::from_millis(duration.into());
                 self.settings
                     .set_device_mute_hold_duration(self.serial(), duration)
                     .await;
@@ -3628,14 +3630,6 @@ impl<'a> Device<'a> {
             DeviceType::Full => version_newer_or_equal_to(current, support_full),
             DeviceType::Mini => version_newer_or_equal_to(current, support_mini),
         }
-    }
-
-    // Get the current time in millis..
-    fn get_epoch_ms(&self) -> u128 {
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_millis()
     }
 }
 

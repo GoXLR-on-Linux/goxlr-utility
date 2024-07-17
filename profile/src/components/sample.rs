@@ -1,13 +1,14 @@
 use std::collections::HashMap;
 use std::io::Write;
 use std::str::FromStr;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::{bail, Result};
 
 use enum_map::{Enum, EnumMap};
+use log::warn;
 use quick_xml::events::{BytesEnd, BytesStart, Event};
 use quick_xml::Writer;
-use rand::seq::SliceRandom;
 use ritelinked::LinkedHashMap;
 use strum::{Display, EnumIter, EnumProperty, EnumString};
 
@@ -330,33 +331,39 @@ impl SampleStack {
             return Some(self.get_first_track());
         }
 
-        let order = if let Some(order) = self.play_order {
-            order
+        // [1.1.2] Note: random being sequential is a bug in the official app, so we're switching
+        // this to always random if Random is selected.
+        match self.play_order {
+            Some(Random) => self.get_next_random_track(),
+            Some(Sequential) | None => self.get_next_sequential_track(),
+        }
+    }
+
+    pub fn get_next_random_track(&mut self) -> Option<&Track> {
+        // We really don't need a 'true' random calculation here, or a massive crate that includes
+        // many different random implementations (see `rand`), so just instead take the current
+        // time in millis, and modulo the number of tracks. Should be good enough!
+
+        let track = if let Ok(duration) = SystemTime::now().duration_since(UNIX_EPOCH) {
+            duration.as_millis() % self.tracks.len() as u128
         } else {
-            Sequential
-        };
+            // Something's gone wrong getting the time, fallback to Sequential
+            warn!("Failure Calculating Random Track, falling back to Sequential");
+            return self.get_next_sequential_track();
+        } as usize;
 
-        // Per the Windows App, if there are only 2 tracks with 'Random' order, behave
-        // sequentially.
-        //
-        // [1.1.2] ADJUSTMENT: The windows... "Windows (operating system by Microsoft) is a proper
-        // noun and needs to be capitalized"... app playing samples sequentially when set to random is
-        // apparently a bug, and an inconsistent one at that. So we'll implement the random
-        // behaviour correctly.
-        if order == Sequential {
-            let track = &self.tracks[self.transient_seq_position];
-            self.transient_seq_position += 1;
+        Some(&self.tracks[track])
+    }
 
-            if self.transient_seq_position >= self.tracks.len() {
-                self.transient_seq_position = 0;
-            }
+    pub fn get_next_sequential_track(&mut self) -> Option<&Track> {
+        let track = &self.tracks[self.transient_seq_position];
+        self.transient_seq_position += 1;
 
-            return Some(track);
-        } else if order == Random {
-            return self.tracks.choose(&mut rand::thread_rng());
+        if self.transient_seq_position >= self.tracks.len() {
+            self.transient_seq_position = 0;
         }
 
-        None
+        Some(track)
     }
 
     pub fn set_playback_mode(&mut self, playback_mode: Option<PlaybackMode>) {
