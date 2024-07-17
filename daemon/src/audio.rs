@@ -130,6 +130,26 @@ impl AudioHandler {
         Ok(handler)
     }
 
+    pub fn update_record_buffer(&mut self, recorder_buffer: u16) -> Result<()> {
+        if let Some(recorder) = &self.buffered_input {
+            recorder.stop();
+        }
+
+        let recorder = BufferedRecorder::new(
+            self.get_input_device_string_patterns(),
+            recorder_buffer as usize,
+        )?;
+        let arc_recorder = Arc::new(recorder);
+        let inner_recorder = arc_recorder.clone();
+
+        // This should force a STOP of any pre-existing recorders...
+        self.buffered_input.replace(arc_recorder);
+
+        // Fire off the new thread to listen to audio..
+        thread::spawn(move || inner_recorder.listen());
+        Ok(())
+    }
+
     fn get_output_device_patterns(&self) -> Vec<Regex> {
         let override_output = OVERRIDE_SAMPLER_OUTPUT.lock().unwrap().deref().clone();
         if let Some(device) = override_output {
