@@ -685,11 +685,11 @@ impl Settings {
             fs::remove_file(&tmp_file_name)?;
         }
 
-        let temp_file = File::create(&tmp_file_name)?;
-
         debug!("Creating Temporary Save File: {:?}", tmp_file_name);
+        let temp_file = File::create(&tmp_file_name)?;
         serde_json::to_writer_pretty(&temp_file, self)?;
         temp_file.sync_all()?;
+        drop(temp_file);
 
         debug!("Save Complete and synced, renaming to {:?}", path);
         if path.exists() {
