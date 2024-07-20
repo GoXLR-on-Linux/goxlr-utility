@@ -51,23 +51,27 @@ impl SettingsHandle {
             .context("Couldn't find project directories")?;
         let data_dir = proj_dirs.data_dir();
 
-        let mut settings = Settings::read(&path)?.unwrap_or_else(|| Settings {
-            show_tray_icon: Some(true),
-            selected_locale: None,
-            tts_enabled: Some(false),
-            allow_network_access: Some(false),
-            profile_directory: None,
-            mic_profile_directory: None,
-            samples_directory: None,
-            presets_directory: None,
-            icons_directory: None,
-            logs_directory: None,
-            backup_directory: None,
-            log_level: Some(LogLevel::Debug),
-            open_ui_on_launch: None,
-            activate: None,
-            devices: Some(Default::default()),
-            sample_gain: Some(Default::default()),
+        let mut settings = Settings::read(&path)?.unwrap_or_else(|| {
+            error!("Unable to Load the Settings File, configuring default.");
+
+            Settings {
+                show_tray_icon: Some(true),
+                selected_locale: None,
+                tts_enabled: Some(false),
+                allow_network_access: Some(false),
+                profile_directory: None,
+                mic_profile_directory: None,
+                samples_directory: None,
+                presets_directory: None,
+                icons_directory: None,
+                logs_directory: None,
+                backup_directory: None,
+                log_level: Some(LogLevel::Debug),
+                open_ui_on_launch: None,
+                activate: None,
+                devices: Some(Default::default()),
+                sample_gain: Some(Default::default()),
+            }
         });
 
         // Forward compatibility, if the configured path is the same as the default path
