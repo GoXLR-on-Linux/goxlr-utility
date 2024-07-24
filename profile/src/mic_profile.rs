@@ -6,11 +6,12 @@ use crate::microphone::mic_setup::MicSetup;
 use crate::microphone::ui_setup::UiSetup;
 use crate::profile::wrap_start_event;
 use anyhow::{anyhow, bail, Result};
-use log::debug;
+use log::{debug, warn};
 use quick_xml::events::{BytesDecl, BytesEnd, BytesStart, Event};
 use quick_xml::{Reader, Writer};
 use std::collections::HashMap;
 use std::fs;
+use std::fs::File;
 use std::io::{BufReader, Read, Write};
 use std::os::raw::c_float;
 use std::path::Path;
@@ -34,7 +35,7 @@ impl MicProfileSettings {
         let buf_reader = BufReader::new(read);
         let mut reader = Reader::from_reader(buf_reader);
 
-        //let parser = EventReader::new(read);
+        let mut valid_profile = false;
 
         let mut equalizer = Equalizer::new();
         let mut equalizer_mini = EqualizerMini::new();
@@ -107,11 +108,21 @@ impl MicProfileSettings {
 
                 // Event::Start/End only occurs for the top level micProfileTree, which has no
                 // attributes, so we don't need to worry about it :)
+                Ok(Event::Start(e)) => {
+                    if String::from_utf8_lossy(e.local_name().as_ref()) == "MicProfileTree" {
+                        valid_profile = true;
+                    }
+                }
+
                 Ok(_) => {}
                 Err(e) => {
                     bail!("Error Parsing Profile: {}", e);
                 }
             }
+        }
+
+        if !valid_profile {
+            bail!("Error: Missing MicProfileTree");
         }
 
         Ok(Self {
@@ -129,19 +140,31 @@ impl MicProfileSettings {
     }
 
     pub fn save(&self, path: impl AsRef<Path>) -> Result<()> {
-        let temp_file = tempfile::NamedTempFile::new()?;
+        let mut tmp_file_name = path.as_ref().to_path_buf();
+        tmp_file_name.set_extension("tmp");
+        if tmp_file_name.exists() {
+            debug!("Temporary file already exists? Removing.");
+            fs::remove_file(&tmp_file_name)?;
+        }
 
-        debug!("Creating Temporary Save File: {:?}", temp_file.path());
+        debug!("Creating Temporary Save File: {:?}", tmp_file_name);
+        let temp_file = File::create(&tmp_file_name)?;
         self.write_to(&temp_file)?;
 
         // Sync the write to disk..
-        temp_file.as_file().sync_all()?;
+        temp_file.sync_all()?;
 
-        debug!("Save Complete, copying to {:?}", path.as_ref());
-        fs::copy(temp_file.as_ref(), path)?;
+        debug!("Save Complete and synced, renaming to {:?}", path.as_ref());
+        if path.as_ref().exists() {
+            debug!("Target mic profile exists, removing..");
+            fs::remove_file(&path).unwrap_or_else(|e| {
+                warn!("Error Removing File: {}", e);
+            });
+        }
+        debug!("Renaming {:?} to {:?}", tmp_file_name, path.as_ref());
+        fs::rename(tmp_file_name, path)?;
 
-        debug!("Removing Temporary File: {:?}", temp_file);
-        fs::remove_file(temp_file)?;
+        // Ok, we're done.
         Ok(())
     }
 

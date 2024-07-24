@@ -83,12 +83,18 @@ impl Profile {
 
     // Ok, this is better.
     pub fn save(&mut self, path: impl AsRef<Path>) -> Result<()> {
-        let temp_file = tempfile::NamedTempFile::new()?;
+        let mut tmp_file_name = path.as_ref().to_path_buf();
+        tmp_file_name.set_extension("tmp");
+        if tmp_file_name.exists() {
+            debug!("Temporary file already exists? Removing.");
+            fs::remove_file(&tmp_file_name)?;
+        }
 
-        debug!("Creating Temporary Save File: {:?}", temp_file.path());
+        debug!("Creating Temporary Save File: {:?}", &tmp_file_name);
+        let temp_file = File::create(&tmp_file_name)?;
 
         // Create a new ZipFile at the requested location
-        let mut archive = zip::ZipWriter::new(temp_file.as_file());
+        let mut archive = zip::ZipWriter::new(&temp_file);
 
         // Store the profile..
         archive.start_file("profile.xml", FileOptions::default())?;
@@ -108,16 +114,18 @@ impl Profile {
         // The archive has finished writing, we don't need it anymore (keeping it live prevents
         // us from removing the temporary file).
         drop(archive);
-
-        // Syncing Write..
-        temp_file.as_file().sync_all()?;
+        temp_file.sync_all()?;
 
         // Once complete, we simply move the file over the existing file..
-        debug!("Save Complete, copying to {:?}", path.as_ref());
-        fs::copy(temp_file.as_ref(), path)?;
-
-        debug!("Removing Temporary File: {:?}", temp_file);
-        fs::remove_file(temp_file)?;
+        debug!("Save Complete and synced, renaming to {:?}", path.as_ref());
+        if path.as_ref().exists() {
+            debug!("Target profile exists, removing..");
+            fs::remove_file(&path).unwrap_or_else(|e| {
+                warn!("Error Removing File: {}", e);
+            });
+        }
+        debug!("Renaming {:?} to {:?}", tmp_file_name, path.as_ref());
+        fs::rename(tmp_file_name, &path)?;
         Ok(())
     }
 

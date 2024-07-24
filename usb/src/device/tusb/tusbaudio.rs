@@ -29,7 +29,7 @@ type GetDriverInfo = unsafe extern "C" fn(*mut DriverInfo) -> u32;
 type GetAPIVersion = unsafe extern "C" fn() -> ApiVersion;
 type CheckAPIVersion = unsafe extern "C" fn(u32, u32) -> bool;
 type GetDeviceCount = unsafe extern "C" fn() -> u32;
-type OpenDeviceByIndex = unsafe extern "C" fn(u32, &u32) -> u32;
+type OpenDeviceByIndex = unsafe extern "C" fn(u32, *mut u32) -> u32;
 type GetDeviceInstanceIdString = unsafe extern "C" fn(u32, *const u16, u32) -> u32;
 type GetDeviceProperties = unsafe extern "C" fn(u32, *mut Properties) -> u32;
 type GetUsbConfigDescriptor = unsafe extern "C" fn(u32, *mut u8, u32, &u32) -> u32;
@@ -46,7 +46,7 @@ type CloseDevice = unsafe extern "C" fn(u32) -> u32;
 lazy_static! {
     // Initialise the Library..
     static ref LIBRARY: Library = unsafe {
-       libloading::Library::new(locate_library().as_str()).expect("Unable to Load GoXLR API Driver")
+       Library::new(locate_library().as_str()).expect("Unable to Load GoXLR API Driver")
     };
     pub static ref TUSB_INTERFACE: TUSBAudio<'static> = TUSBAudio::new().expect("Unable to Parse GoXLR API Driver");
 }
@@ -75,7 +75,6 @@ pub struct TUSBAudio<'lib> {
     driver_info: DriverInfo,
 
     // Need to enumerate..
-    initial_enumeration: Arc<Mutex<bool>>,
     pnp_thread_running: Arc<Mutex<bool>>,
     discovered_devices: Arc<Mutex<Vec<String>>>,
 
@@ -150,7 +149,6 @@ impl TUSBAudio<'_> {
 
         let tusb_audio = Self {
             driver_info,
-            initial_enumeration: Arc::new(Mutex::new(false)),
             pnp_thread_running: Arc::new(Mutex::new(false)),
             discovered_devices: Arc::new(Mutex::new(Vec::new())),
 
@@ -223,9 +221,19 @@ impl TUSBAudio<'_> {
 
         let device_count = self.get_device_count();
         for i in 0..device_count {
-            let handle = self.open_device_by_index(i)?;
-            result_vec.push(self.get_device_id_string(handle)?);
-            self.close_device(handle)?;
+            match self.open_device_by_index(i) {
+                Ok(handle) => {
+                    match self.get_device_id_string(handle) {
+                        Ok(handle) => result_vec.push(handle),
+                        Err(e) => warn!("Unable to Open Device Handle: {}", e),
+                    }
+                    // Try to close it, just in case..
+                    let _ = self.close_device(handle);
+                }
+                Err(e) => {
+                    error!("Unable to Open Device: {}", e);
+                }
+            }
         }
 
         // All devices handled, replace the stored vec..
@@ -236,15 +244,6 @@ impl TUSBAudio<'_> {
     }
 
     pub fn get_devices(&self) -> Vec<String> {
-        let mut initial_check = self.initial_enumeration.lock().unwrap();
-        if !*initial_check {
-            if let Err(error) = self.detect_devices() {
-                error!("Error Detecting Devices: {}", error);
-                return Vec::new();
-            }
-            *initial_check = true;
-        }
-
         self.discovered_devices.lock().unwrap().clone()
     }
 
@@ -270,16 +269,16 @@ impl TUSBAudio<'_> {
     }
 
     fn get_device_id_string(&self, handle: u32) -> Result<String> {
-        let buffer: Vec<u16> = Vec::with_capacity(100);
+        let buffer: Vec<u16> = Vec::with_capacity(256);
         let buffer_pointer = buffer.as_ptr();
-        let result = unsafe { (self.get_device_id_string)(handle, buffer_pointer, 100) };
+        let result = unsafe { (self.get_device_id_string)(handle, buffer_pointer, 256) };
 
         if result != 0 {
             let error = self.get_error(result);
             bail!("Error Getting Device Id: {}", error);
         }
 
-        let device_id = unsafe { U16CStr::from_ptr_truncate(buffer_pointer, 100)? };
+        let device_id = unsafe { U16CStr::from_ptr_truncate(buffer_pointer, 256)? };
         Ok(device_id.to_string_lossy())
     }
 
@@ -382,11 +381,13 @@ impl TUSBAudio<'_> {
     }
 
     fn open_device_by_index(&self, device_index: u32) -> Result<u32> {
-        let handle: u32 = 0;
-        let result = unsafe { (self.open_device_by_index)(device_index, &handle) };
+        let mut handle: u32 = 0;
+        let ptr: *mut u32 = &mut handle;
+        let result = unsafe { (self.open_device_by_index)(device_index, ptr) };
         if result == 0 {
             return Ok(handle);
         }
+
         bail!("Unable to Open Device: {}", result)
     }
 
@@ -645,7 +646,6 @@ impl TUSBAudio<'_> {
                 if let Some(sender) = ready_sender.take() {
                     let _ = sender.send(true);
                 }
-
                 sleep(Duration::from_secs(1));
             }
         });

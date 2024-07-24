@@ -323,7 +323,16 @@ pub async fn spawn_usb_handler(
 
                     DeviceCommand::RunDeviceCommand(serial, command, sender) => {
                         if let Some(device) = devices.get_mut(&serial) {
-                            let _ = sender.send(device.perform_command(command).await);
+                            let result = match device.perform_command(command.clone()).await {
+                                Ok(result) => {
+                                    Ok(result)
+                                }
+                                Err(error) => {
+                                    warn!("Error Executing: {:?}, {}", command, error);
+                                    Err(error)
+                                }
+                            };
+                            let _ = sender.send(result);
                             change_found = true;
                         } else {
                             let _ = sender.send(Err(anyhow!("Device {} is not connected", serial)));
@@ -635,21 +644,7 @@ async fn load_device(
         colour_way,
         usb_device,
     };
-    let profile_directory = settings.get_profile_directory().await;
-    let profile_name = settings.get_device_profile_name(&serial_number).await;
-    let mic_profile_name = settings.get_device_mic_profile_name(&serial_number).await;
-    let mic_profile_directory = settings.get_mic_profile_directory().await;
-    let device = Device::new(
-        handled_device,
-        hardware,
-        profile_name,
-        mic_profile_name,
-        &profile_directory,
-        &mic_profile_directory,
-        settings,
-        global_events,
-    )
-    .await?;
+    let device = Device::new(handled_device, hardware, settings, global_events).await?;
     settings
         .set_device_profile_name(&serial_number, device.profile().name())
         .await;

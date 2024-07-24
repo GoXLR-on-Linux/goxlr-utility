@@ -202,6 +202,8 @@ struct GoXLRWindowProc {
     state: DaemonState,
     global_tx: Sender<EventTriggers>,
     menu: HMENU,
+
+    shutdown_triggered: bool,
 }
 
 impl GoXLRWindowProc {
@@ -210,6 +212,7 @@ impl GoXLRWindowProc {
             state,
             global_tx: tx,
             menu,
+            shutdown_triggered: false,
         }
     }
 
@@ -281,7 +284,13 @@ impl GoXLRWindowProc {
 }
 
 impl WindowProc for GoXLRWindowProc {
-    fn window_proc(&self, hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> Option<LRESULT> {
+    fn window_proc(
+        &mut self,
+        hwnd: HWND,
+        msg: u32,
+        wparam: WPARAM,
+        lparam: LPARAM,
+    ) -> Option<LRESULT> {
         use windows::Win32::UI::WindowsAndMessaging::*;
         //debug!("{:?} - {:?} - {:?} - {:?}", hwnd, msg, wparam, lparam);
 
@@ -367,7 +376,25 @@ impl WindowProc for GoXLRWindowProc {
 
             // // Shutdown Handlers..
             WM_QUERYENDSESSION => {
-                debug!("Received WM_QUERYENDSESSION from Windows, Shutting Down..");
+                let end_session = lparam.0 as *const u32 as u32;
+                debug!("EndSession: {}", end_session);
+                let close_app = end_session & ENDSESSION_CLOSEAPP == ENDSESSION_CLOSEAPP;
+                let critical = end_session & ENDSESSION_CRITICAL == ENDSESSION_CRITICAL;
+                let logoff = end_session & ENDSESSION_LOGOFF == ENDSESSION_LOGOFF;
+
+                let mut method = String::from("WM_QUERYENDSESSION");
+                if close_app {
+                    method.push_str(" - ENDSESSION_CLOSEAPP");
+                }
+                if critical {
+                    method.push_str(" - ENDSESSION_CRITICAL");
+                }
+                if logoff {
+                    method.push_str("- ENDSESSION_LOGOFF");
+                }
+                method.push(')');
+
+                debug!("Received {} from Windows, Shutting Down..", method);
                 /*
                  Ref: https://learn.microsoft.com/en-us/windows/win32/shutdown/wm-queryendsession
 
@@ -390,8 +417,18 @@ impl WindowProc for GoXLRWindowProc {
                     let _ = ShutdownBlockReasonCreate(hwnd, w!("Running Shutdown.."));
                 }
 
-                debug!("Attempting Shutdown..");
-                let _ = self.global_tx.try_send(EventTriggers::Stop);
+                if !self.shutdown_triggered {
+                    if !critical {
+                        debug!("Attempting Shutdown..");
+                        let _ = self.global_tx.try_send(EventTriggers::Stop);
+                    } else {
+                        debug!("Critical Shutdown Received, skipping to Stage 2..");
+                        let _ = self.global_tx.try_send(EventTriggers::DevicesStopped);
+                    }
+                    self.shutdown_triggered = true;
+                } else {
+                    debug!("Shutdown Already Triggered, going straight to hell..");
+                }
 
                 // Now wait for the daemon to actually stop..
                 loop {
@@ -509,7 +546,7 @@ unsafe extern "system" fn raw_window_proc(
         SetWindowLongPtrW(hwnd, GWLP_USERDATA, window_pointer as isize);
     }
 
-    let window_pointer = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *const Box<dyn WindowProc>;
+    let window_pointer = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut Box<dyn WindowProc>;
     let result = {
         if window_pointer.is_null() {
             None
@@ -529,5 +566,11 @@ unsafe extern "system" fn raw_window_proc(
 
 // This is our trait, so we can build a struct and call into it..
 trait WindowProc {
-    fn window_proc(&self, hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> Option<LRESULT>;
+    fn window_proc(
+        &mut self,
+        hwnd: HWND,
+        msg: u32,
+        wparam: WPARAM,
+        lparam: LPARAM,
+    ) -> Option<LRESULT>;
 }

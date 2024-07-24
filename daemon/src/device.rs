@@ -1,12 +1,12 @@
 use std::collections::HashSet;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::Duration;
 
 use anyhow::{anyhow, bail, Result};
 use chrono::Local;
 use enum_map::EnumMap;
 use enumset::EnumSet;
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use ritelinked::LinkedHashSet;
 use strum::IntoEnumIterator;
 use tokio::sync::mpsc::Sender;
@@ -81,14 +81,9 @@ pub(crate) struct CurrentState {
 }
 
 impl<'a> Device<'a> {
-    #[allow(clippy::too_many_arguments)]
     pub async fn new(
         goxlr: Box<dyn FullGoXLRDevice>,
         hardware: HardwareStatus,
-        profile_name: Option<String>,
-        mic_profile_name: Option<String>,
-        profile_directory: &Path,
-        mic_profile_directory: &Path,
         settings_handle: &'a SettingsHandle,
         global_events: Sender<EventTriggers>,
     ) -> Result<Device<'a>> {
@@ -99,23 +94,89 @@ impl<'a> Device<'a> {
             device_type = " Mini";
         }
 
-        let profile = profile_name.unwrap_or_else(|| DEFAULT_PROFILE_NAME.to_string());
-        let mic_profile = mic_profile_name.unwrap_or_else(|| DEFAULT_MIC_PROFILE_NAME.to_string());
+        let serial = hardware.serial_number.clone();
+        let profile_name = settings_handle.get_device_profile_name(&serial).await;
+        let mic_profile = settings_handle.get_device_mic_profile_name(&serial).await;
+
+        let profile_name = profile_name.unwrap_or_else(|| DEFAULT_PROFILE_NAME.to_string());
+        let mic_name = mic_profile.unwrap_or_else(|| DEFAULT_MIC_PROFILE_NAME.to_string());
 
         info!(
             "Configuring GoXLR{}, Profile: {}, Mic Profile: {}",
-            device_type, profile, mic_profile
+            device_type, profile_name, mic_name
         );
 
-        let profile = ProfileAdapter::from_named_or_default(profile, profile_directory);
-        let mic_profile =
-            MicProfileAdapter::from_named_or_default(mic_profile, mic_profile_directory);
+        let profile_path = settings_handle.get_profile_directory().await;
+        let backup_path = settings_handle.get_backup_directory().await;
+        let profile = ProfileAdapter::from_named(profile_name.clone(), &profile_path);
+
+        // Check load situation..
+        let profile = match profile {
+            Ok(mut profile) => {
+                debug!("Profile Successfully Loaded, Performing Backup..");
+                profile.save(&backup_path, true).unwrap_or_else(|e| {
+                    warn!("Unable to Backup Profile: {}", e);
+                });
+                debug!("Main Profile Backup Complete");
+                profile
+            }
+            Err(e) => {
+                warn!("Failed to Load Profile: {}, checking for backup..", e);
+                match ProfileAdapter::from_named(profile_name, &backup_path) {
+                    Ok(mut profile) => {
+                        info!("Successfully Loaded backup profile");
+
+                        debug!("Overwriting existing corrupt / missing profile..");
+                        profile.save(&profile_path, true).unwrap_or_else(|e| {
+                            warn!("Unable to replace existing profile: {}", e);
+                        });
+
+                        // Return the new profile..
+                        profile
+                    }
+                    Err(e) => {
+                        warn!("Unable to Load Backup: {}, loading default", e);
+                        ProfileAdapter::default()
+                    }
+                }
+            }
+        };
+
+        let mic_path = settings_handle.get_mic_profile_directory().await;
+        let mic_profile = MicProfileAdapter::from_named(mic_name.clone(), &mic_path);
+
+        let mic_profile = match mic_profile {
+            Ok(mut profile) => {
+                debug!("Mic Profile Successfully Loaded, Performing Backup..");
+                profile.save(&backup_path, true).unwrap_or_else(|e| {
+                    warn!("Unable to Backup Mic Profile: {}", e);
+                });
+                debug!("Mic Profile Backup Complete");
+                profile
+            }
+            Err(e) => {
+                warn!("Failed to Load Mic Profile: {}, checking for backup..", e);
+                match MicProfileAdapter::from_named(mic_name, &backup_path) {
+                    Ok(mut profile) => {
+                        info!("Successfully Loaded Backup Profile");
+
+                        debug!("Overwriting existing corrupt / missing profile..");
+                        profile.save(&mic_path, true).unwrap_or_else(|e| {
+                            warn!("Unable to replace existing Mic Profile {}", e);
+                        });
+                        profile
+                    }
+                    Err(e) => {
+                        warn!("Unable to Load Backup: {} loading default", e);
+                        MicProfileAdapter::default()
+                    }
+                }
+            }
+        };
 
         let mut audio_handler = None;
         if hardware.device_type == DeviceType::Full {
-            let audio_buffer = settings_handle
-                .get_device_sampler_pre_buffer(&hardware.serial_number)
-                .await;
+            let audio_buffer = settings_handle.get_device_sampler_pre_buffer(&serial).await;
             let audio_loader = AudioHandler::new(audio_buffer);
             debug!("Created Audio Handler..");
             debug!("{:?}", audio_loader);
@@ -132,14 +193,13 @@ impl<'a> Device<'a> {
             debug!("Not Spawning Audio Handler, Device is Mini!");
         }
 
-        let hold_time = settings_handle
-            .get_device_hold_time(&hardware.serial_number)
-            .await;
+        let hold_time = settings_handle.get_device_hold_time(&serial).await;
         let vc_mute_also_mute_cm = settings_handle
-            .get_device_chat_mute_mutes_mic_to_chat(&hardware.serial_number)
+            .get_device_chat_mute_mutes_mic_to_chat(&serial)
             .await;
 
         debug!("--- DEVICE INFO ---");
+        debug!("Serial: {:?}", &serial);
         debug!("Firmware: {:?}", hardware.versions.firmware);
         debug!("DICE: {:?}", hardware.versions.dice);
         debug!("Type: {:?}", hardware.device_type);
@@ -2416,8 +2476,8 @@ impl<'a> Device<'a> {
                 self.apply_profile(Some(volumes)).await?;
 
                 // Save the profile under a new name (although, don't overwrite if exists!)
-                self.profile
-                    .save_as(profile_name.clone(), &profile_directory, false)?;
+                let path = self.settings.get_profile_directory().await;
+                self.profile.save_as(profile_name.clone(), &path, false)?;
 
                 // Save the profile in the settings
                 self.settings
@@ -2429,8 +2489,46 @@ impl<'a> Device<'a> {
                 self.stop_all_samples(true, true).await?;
                 let volumes = self.profile.get_current_state();
 
-                let profile_directory = self.settings.get_profile_directory().await;
-                self.profile = ProfileAdapter::from_named(profile_name, &profile_directory)?;
+                // Grab the needed Paths..
+                let profile_path = self.settings.get_profile_directory().await;
+                let backup_path = self.settings.get_backup_directory().await;
+
+                // Attempt to load the profile from the main profile path..
+                let profile = ProfileAdapter::from_named(profile_name.clone(), &profile_path);
+
+                match profile {
+                    Ok(mut profile) => {
+                        if save_change {
+                            // We're persisting this change, so save the backup
+                            debug!("Profile Successfully Loaded, Performing Backup..");
+                            profile.save(&backup_path, true).unwrap_or_else(|e| {
+                                warn!("Unable to Save Backup: {}", e);
+                            });
+                            debug!("Backup Complete");
+                        }
+                        self.profile = profile;
+                    }
+                    Err(e) => {
+                        if !save_change {
+                            // This isn't a persistent profile change, so we'll avoid checking the
+                            // backups as we're likely shutting down.
+                            return Err(e);
+                        }
+                        warn!("Failed to Load Profile: {}, checking for backup..", e);
+                        match ProfileAdapter::from_named(profile_name, &backup_path) {
+                            Ok(profile) => {
+                                info!("Backup Profile Loaded");
+                                self.profile = profile;
+
+                                debug!("Overwriting existing corrupt profile..");
+                                self.profile.save(&profile_path, true)?;
+                            }
+                            Err(e) => {
+                                bail!("Failed to Load backup profile: {}", e);
+                            }
+                        }
+                    }
+                };
 
                 self.apply_profile(Some(volumes)).await?;
                 if save_change {
@@ -2442,8 +2540,8 @@ impl<'a> Device<'a> {
             }
             GoXLRCommand::LoadProfileColours(profile_name) => {
                 debug!("Loading Colours For Profile: {}", profile_name);
-                let profile_directory = self.settings.get_profile_directory().await;
-                let profile = ProfileAdapter::from_named(profile_name, &profile_directory)?;
+                let profile_path = self.settings.get_profile_directory().await;
+                let profile = ProfileAdapter::from_named(profile_name, &profile_path)?;
                 debug!("Profile Loaded, Applying Colours..");
                 self.profile.load_colour_profile(profile);
 
@@ -2459,13 +2557,11 @@ impl<'a> Device<'a> {
                 self.profile.save(&profile_directory, true)?;
             }
             GoXLRCommand::SaveProfileAs(profile_name) => {
-                let profile_directory = self.settings.get_profile_directory().await;
+                let path = self.settings.get_profile_directory().await;
 
                 // Do a new file verification check..
-                ProfileAdapter::can_create_new_file(profile_name.clone(), &profile_directory)?;
-
-                self.profile
-                    .save_as(profile_name.clone(), &profile_directory, false)?;
+                ProfileAdapter::can_create_new_file(profile_name.clone(), &path)?;
+                self.profile.save_as(profile_name.clone(), &path, false)?;
 
                 // Save the new name in the settings
                 self.settings
@@ -2474,14 +2570,15 @@ impl<'a> Device<'a> {
 
                 self.settings.save().await;
             }
-            GoXLRCommand::DeleteProfile(profile_name) => {
-                if self.profile.name() == profile_name {
+            GoXLRCommand::DeleteProfile(name) => {
+                if self.profile.name() == name {
                     bail!("Unable to Remove Active Profile!");
                 }
 
-                let profile_directory = self.settings.get_profile_directory().await;
-                self.profile
-                    .delete_profile(profile_name.clone(), &profile_directory)?;
+                let profiles = self.settings.get_profile_directory().await;
+                let backups = self.settings.get_backup_directory().await;
+                self.profile.delete_profile(name.clone(), &profiles)?;
+                self.profile.delete_profile(name.clone(), &backups)?;
             }
             GoXLRCommand::ReloadSettings() => {
                 // This is a simple command that will reload the current profile settings
@@ -2511,13 +2608,50 @@ impl<'a> Device<'a> {
 
                 self.settings.save().await;
             }
-            GoXLRCommand::LoadMicProfile(mic_profile_name, save_change) => {
-                let mic_profile_directory = self.settings.get_mic_profile_directory().await;
-                self.mic_profile =
-                    MicProfileAdapter::from_named(mic_profile_name, &mic_profile_directory)?;
+            GoXLRCommand::LoadMicProfile(name, persist) => {
+                // Grab the needed Paths..
+                let path = self.settings.get_mic_profile_directory().await;
+                let backup = self.settings.get_backup_directory().await;
+
+                // Attempt to load the profile from the main profile path..
+                let profile = MicProfileAdapter::from_named(name.clone(), &path);
+
+                match profile {
+                    Ok(mut profile) => {
+                        if persist {
+                            // We're persisting this change, so save the backup
+                            debug!("Mic Profile Successfully Loaded, Performing Backup..");
+                            profile.save(&backup, true).unwrap_or_else(|e| {
+                                warn!("Unable to Save Backup: {}", e);
+                            });
+                            debug!("Backup Complete");
+                        }
+                        self.mic_profile = profile;
+                    }
+                    Err(e) => {
+                        if !persist {
+                            // This isn't a persistent profile change, so we'll avoid checking the
+                            // backups as we're likely shutting down.
+                            return Err(e);
+                        }
+                        warn!("Failed to Load Profile: {}, checking for backup..", e);
+                        match MicProfileAdapter::from_named(name, &backup) {
+                            Ok(profile) => {
+                                info!("Backup Mic Profile Loaded");
+                                self.mic_profile = profile;
+
+                                debug!("Overwriting existing corrupt profile..");
+                                self.profile.save(&path, true)?;
+                            }
+                            Err(e) => {
+                                bail!("Failed to Load backup profile: {}", e);
+                            }
+                        }
+                    }
+                };
                 self.apply_mic_profile().await?;
 
-                if save_change {
+                if persist {
                     self.settings
                         .set_device_mic_profile_name(self.serial(), self.mic_profile.name())
                         .await;
@@ -2528,16 +2662,15 @@ impl<'a> Device<'a> {
                 let mic_profile_directory = self.settings.get_mic_profile_directory().await;
                 self.mic_profile.save(&mic_profile_directory, true)?;
             }
-            GoXLRCommand::SaveMicProfileAs(profile_name) => {
-                let profile_directory = self.settings.get_mic_profile_directory().await;
-                MicProfileAdapter::can_create_new_file(profile_name.clone(), &profile_directory)?;
+            GoXLRCommand::SaveMicProfileAs(name) => {
+                let path = self.settings.get_mic_profile_directory().await;
+                MicProfileAdapter::can_create_new_file(name.clone(), &path)?;
 
-                self.mic_profile
-                    .save_as(profile_name.clone(), &profile_directory, false)?;
+                self.mic_profile.save_as(name.clone(), &path, false)?;
 
                 // Save the new name in the settings
                 self.settings
-                    .set_device_mic_profile_name(self.serial(), profile_name.as_str())
+                    .set_device_mic_profile_name(self.serial(), &name)
                     .await;
 
                 self.settings.save().await;

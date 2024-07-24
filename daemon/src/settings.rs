@@ -3,7 +3,7 @@ use crate::profile::DEFAULT_PROFILE_NAME;
 use anyhow::{Context, Result};
 use directories::ProjectDirs;
 use goxlr_ipc::{GoXLRCommand, LogLevel};
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -27,6 +27,7 @@ enum Paths {
     Presets,
     Icons,
     Logs,
+    Backups,
 }
 
 impl AsRef<Path> for Paths {
@@ -38,6 +39,7 @@ impl AsRef<Path> for Paths {
             Paths::Presets => Path::new("presets"),
             Paths::Icons => Path::new("icons"),
             Paths::Logs => Path::new("logs"),
+            Paths::Backups => Path::new("backups"),
         }
     }
 }
@@ -49,22 +51,27 @@ impl SettingsHandle {
             .context("Couldn't find project directories")?;
         let data_dir = proj_dirs.data_dir();
 
-        let mut settings = Settings::read(&path)?.unwrap_or_else(|| Settings {
-            show_tray_icon: Some(true),
-            selected_locale: None,
-            tts_enabled: Some(false),
-            allow_network_access: Some(false),
-            profile_directory: None,
-            mic_profile_directory: None,
-            samples_directory: None,
-            presets_directory: None,
-            icons_directory: None,
-            logs_directory: None,
-            log_level: Some(LogLevel::Debug),
-            open_ui_on_launch: None,
-            activate: None,
-            devices: Some(Default::default()),
-            sample_gain: Some(Default::default()),
+        let mut settings = Settings::read(&path)?.unwrap_or_else(|| {
+            error!("Unable to Load the Settings File, configuring default.");
+
+            Settings {
+                show_tray_icon: Some(true),
+                selected_locale: None,
+                tts_enabled: Some(false),
+                allow_network_access: Some(false),
+                profile_directory: None,
+                mic_profile_directory: None,
+                samples_directory: None,
+                presets_directory: None,
+                icons_directory: None,
+                logs_directory: None,
+                backup_directory: None,
+                log_level: Some(LogLevel::Debug),
+                open_ui_on_launch: None,
+                activate: None,
+                devices: Some(Default::default()),
+                sample_gain: Some(Default::default()),
+            }
         });
 
         // Forward compatibility, if the configured path is the same as the default path
@@ -259,6 +266,15 @@ impl SettingsHandle {
             directory
         } else {
             self.get_default_path(Paths::Logs)
+        }
+    }
+
+    pub async fn get_backup_directory(&self) -> PathBuf {
+        let settings = self.settings.read().await;
+        if let Some(directory) = settings.backup_directory.clone() {
+            directory
+        } else {
+            self.get_default_path(Paths::Backups)
         }
     }
 
@@ -615,6 +631,7 @@ pub struct Settings {
     presets_directory: Option<PathBuf>,
     icons_directory: Option<PathBuf>,
     logs_directory: Option<PathBuf>,
+    backup_directory: Option<PathBuf>,
     log_level: Option<LogLevel>,
     open_ui_on_launch: Option<bool>,
     activate: Option<String>,
@@ -665,20 +682,28 @@ impl Settings {
             }
         }
 
-        let temp_file = tempfile::NamedTempFile::new()?;
+        let mut tmp_file_name = path.to_path_buf();
+        tmp_file_name.set_extension("tmp");
+        if tmp_file_name.exists() {
+            debug!("Temporary file already exists? Removing.");
+            fs::remove_file(&tmp_file_name)?;
+        }
 
-        debug!("Writing Config to Temporary File: {:?}", temp_file.path());
-        serde_json::to_writer_pretty(temp_file.as_file(), self)?;
+        debug!("Creating Temporary Save File: {:?}", tmp_file_name);
+        let temp_file = File::create(&tmp_file_name)?;
+        serde_json::to_writer_pretty(&temp_file, self)?;
+        temp_file.sync_all()?;
+        drop(temp_file);
 
-        // Sync the file written to disk..
-        debug!("Syncing Disk..");
-        temp_file.as_file().sync_all()?;
-
-        debug!("Write Complete, saving to {:?}", path);
-        fs::copy(temp_file.path(), path)?;
-
-        debug!("Removing Temporary File..");
-        fs::remove_file(temp_file.path())?;
+        debug!("Save Complete and synced, renaming to {:?}", path);
+        if path.exists() {
+            debug!("Target exists, removing..");
+            fs::remove_file(path).unwrap_or_else(|e| {
+                warn!("Error Removing File: {}", e);
+            });
+        }
+        debug!("Renaming {:?} to {:?}", tmp_file_name, path);
+        fs::rename(tmp_file_name, path)?;
 
         debug!("Settings Saved.");
         Ok(())
