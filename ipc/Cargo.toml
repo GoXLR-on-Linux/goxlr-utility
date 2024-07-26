@@ -16,7 +16,7 @@ serde = { version = "1.0.204", features = ["derive"] }
 tokio = { version = "1.39.1", features = ["net"] }
 tokio-util = { version = "0.7.11", features = ["codec", "compat"] }
 tokio-serde = { version = "0.9.0", features = ["bincode", "json"] }
-interprocess = { version = "2.2.1", features = ["tokio_support"] }
+interprocess = { version = "2.2.1", features = ["tokio"] }
 serde_repr = "0.1.19"
 futures = "0.3.30"
 strum = { version = "0.26.3" }

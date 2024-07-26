@@ -31,7 +31,7 @@ clap = { version = "4.5.11", features = ["derive"] }
 strum = { version = "0.26.3" }
 serde_json = { version = "1.0.120" }
 tokio-serde = { version = "0.9.0", features = ["json"] }
-interprocess = { version = "2.2.1", features = ["tokio_support"] }
+interprocess = { version = "2.2.1", features = ["tokio"] }
 
 [build-dependencies]
 clap = { version = "4.5.11", features = ["derive"] }

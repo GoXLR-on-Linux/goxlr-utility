@@ -46,7 +46,7 @@ lazy_static = "1.5.0"
 jsonpath-rust = "0.7.0"
 
 tts = { version = "0.26.3", features = ["tolk"], optional = true }
-interprocess = { version = "2.2.1", features = ["tokio_support"] }
+interprocess = { version = "2.2.1", features = ["tokio"] }
 
 notify = "6.1.1"
 json-patch = "2.0.0"

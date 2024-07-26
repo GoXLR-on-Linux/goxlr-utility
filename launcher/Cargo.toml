@@ -10,7 +10,7 @@ anyhow = "1.0.75"
 goxlr-ipc = { path = "../ipc" }
 goxlr-types = { path = "../types" }
 
-interprocess = { version = "2.2.1", features = ["tokio_support"] }
+interprocess = { version = "2.2.1", features = ["tokio"] }
 tokio = { version = "1.39.1", features = ["full"] }
 which = "6.0.1"
 
