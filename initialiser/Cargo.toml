@@ -9,10 +9,10 @@ license = "MIT"
 categories = ["hardware-support", "command-line-utilities"]
 
 [dependencies]
-rusb = "0.9.3"
-anyhow = "1.0.75"
+rusb = "0.9.4"
+anyhow = "1.0.86"
 cfg-if = "1.0.0"
-tokio = { version = "1.0.0", features = ["rt", "rt-multi-thread", "macros", "sync"] }
+tokio = { version = "1.39.1", features = ["rt", "rt-multi-thread", "macros", "sync"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 block = "0.1.6"

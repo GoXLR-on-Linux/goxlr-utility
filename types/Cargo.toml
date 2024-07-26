@@ -14,10 +14,10 @@ categories = ["hardware-support", "api-bindings"]
 default = []
 
 [dependencies]
-strum = { version = "0.25.0", features = ["derive"] }
-serde = { version = "1.0.193", features = ["derive"], optional = true }
-clap = { version = "4.4.11", features = ["derive"], optional = true }
-serde_repr = "0.1.17"
+strum = { version = "0.26.3", features = ["derive"] }
+serde = { version = "1.0.204", features = ["derive"], optional = true }
+clap = { version = "4.5.11", features = ["derive"], optional = true }
+serde_repr = "0.1.19"
 enum-map = "2.7.3"
-enumset = "1.1.3"
+enumset = "1.1.5"
 derivative = "2.2.0"
