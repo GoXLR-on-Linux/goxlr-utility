@@ -353,7 +353,7 @@ impl<'a> Device<'a> {
         }
     }
 
-    pub async fn shutdown(&mut self) {
+    pub async fn shutdown(&mut self, avoid_save: bool) {
         debug!("Shutting Down Device: {}", self.hardware.serial_number);
 
         let commands = self
@@ -361,7 +361,7 @@ impl<'a> Device<'a> {
             .get_device_shutdown_commands(&self.hardware.serial_number)
             .await;
 
-        self.execute_command_list(commands).await;
+        self.execute_command_list(commands, avoid_save).await;
     }
 
     pub async fn sleep(&mut self) {
@@ -372,7 +372,7 @@ impl<'a> Device<'a> {
             .get_device_sleep_commands(&self.hardware.serial_number)
             .await;
 
-        self.execute_command_list(commands).await;
+        self.execute_command_list(commands, false).await;
     }
 
     pub async fn wake(&mut self) {
@@ -383,13 +383,50 @@ impl<'a> Device<'a> {
             .get_device_wake_commands(&self.hardware.serial_number)
             .await;
 
-        self.execute_command_list(commands).await;
+        self.execute_command_list(commands, false).await;
     }
 
-    async fn execute_command_list(&mut self, commands: Vec<GoXLRCommand>) {
+    async fn execute_command_list(&mut self, commands: Vec<GoXLRCommand>, avoid_write: bool) {
         for command in commands {
             debug!("{:?}", command);
-            let _ = self.perform_command(command).await;
+
+            // Below is a list of all commands which will write to a disk, if any of them are
+            // in our command list, we do nothing.
+            match command {
+                // Shutdown / Sleep / Wake Commandsets
+                GoXLRCommand::SetShutdownCommands(_)
+                | GoXLRCommand::SetSleepCommands(_)
+                | GoXLRCommand::SetWakeCommands(_)
+                // Presets
+                | GoXLRCommand::SaveActivePreset()
+                // Profile Related Commands
+                | GoXLRCommand::NewProfile(_)
+                | GoXLRCommand::LoadProfile(_, true)
+                | GoXLRCommand::SaveProfile()
+                | GoXLRCommand::SaveProfileAs(_)
+                // Mic Profile Related Commands
+                | GoXLRCommand::NewMicProfile(_)
+                | GoXLRCommand::LoadMicProfile(_, true)
+                | GoXLRCommand::SaveMicProfile()
+                | GoXLRCommand::SaveMicProfileAs(_)
+                // settings.json variables
+                | GoXLRCommand::SetSamplerPreBufferDuration(_)
+                | GoXLRCommand::SetVCMuteAlsoMuteCM(_)
+                | GoXLRCommand::SetMonitorWithFx(_)
+                | GoXLRCommand::SetSamplerResetOnClear(_)
+                | GoXLRCommand::SetLockFaders(_)
+                => {
+                    if !avoid_write {
+                        let _ = self.perform_command(command).await;
+                    } else {
+                        warn!("Unable to Execute, command writes to the disk.");
+                    }
+                }
+
+                _ => {
+                    let _ = self.perform_command(command).await;
+                }
+            }
         }
     }
 

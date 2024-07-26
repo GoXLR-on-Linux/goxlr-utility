@@ -36,7 +36,7 @@ pub enum DeviceCommand {
 
 #[allow(dead_code)]
 pub enum DeviceStateChange {
-    Shutdown,
+    Shutdown(bool),
     Sleep(oneshot::Sender<()>),
     Wake(oneshot::Sender<()>),
 }
@@ -176,7 +176,7 @@ pub async fn spawn_usb_handler(
             }
             Some(event) = device_state_rx.recv() => {
                 match event {
-                    DeviceStateChange::Shutdown => {
+                    DeviceStateChange::Shutdown(avoid_write) => {
                         // Make sure this only happens once..
                         if shutdown_triggered {
                             continue;
@@ -185,7 +185,7 @@ pub async fn spawn_usb_handler(
 
                         // Flip through all the devices, send a shutdown signal..
                         for device in devices.values_mut() {
-                            device.shutdown().await;
+                            device.shutdown(avoid_write).await;
                         }
 
                         // Send a notification that we're done here..
@@ -224,7 +224,7 @@ pub async fn spawn_usb_handler(
                             DaemonCommand::StopDaemon => {
                                 // These should probably be moved upstream somewhere, they're not
                                 // device specific!
-                                let _ = global_tx.send(EventTriggers::Stop).await;
+                                let _ = global_tx.send(EventTriggers::Stop(false)).await;
                                 let _ = sender.send(Ok(()));
                             }
                             DaemonCommand::OpenUi => {
