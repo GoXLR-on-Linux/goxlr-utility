@@ -147,7 +147,7 @@ impl AttachGoXLR for GoXLRUSB {
     ) -> Result<Box<(dyn FullGoXLRDevice)>> {
         // Firstly, we need to locate the USB device based on the location..
         let (device, descriptor) = GoXLRUSB::find_device(device)?;
-        let mut handle = device.open()?;
+        let handle = device.open()?;
 
         let timeout = Duration::from_secs(1);
 
