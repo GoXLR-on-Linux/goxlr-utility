@@ -8,7 +8,6 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use tokio_serde::formats::SymmetricalJson;
 use tokio_serde::SymmetricallyFramed;
 use tokio_util::codec::{FramedRead, FramedWrite, LengthDelimitedCodec};
-use tokio_util::compat::FuturesAsyncReadCompatExt;
 
 #[derive(Debug)]
 pub struct Socket<In, Out> {
