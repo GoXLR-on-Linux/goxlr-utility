@@ -1,16 +1,14 @@
 use futures::{SinkExt, StreamExt, TryStreamExt};
 use interprocess::local_socket::tokio::prelude::LocalSocketStream;
-//use interprocess::local_socket::tokio::{OwnedReadHalf, OwnedWriteHalf};
 use interprocess::local_socket::tokio::{RecvHalf, SendHalf};
 use interprocess::local_socket::traits::tokio::Stream;
 use serde::{Deserialize, Serialize};
 use std::io::Error;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio_serde::formats::SymmetricalJson;
 use tokio_serde::SymmetricallyFramed;
 use tokio_util::codec::{FramedRead, FramedWrite, LengthDelimitedCodec};
-use tokio_util::compat::{Compat, FuturesAsyncReadCompatExt, FuturesAsyncWriteCompatExt};
+use tokio_util::compat::FuturesAsyncReadCompatExt;
 
 #[derive(Debug)]
 pub struct Socket<In, Out> {

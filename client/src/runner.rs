@@ -19,10 +19,7 @@ use goxlr_types::{ChannelName, DeviceType, FaderName, InputDevice, MicrophoneTyp
 
 use interprocess::local_socket::tokio::prelude::LocalSocketStream;
 use interprocess::local_socket::traits::tokio::Stream;
-use interprocess::local_socket::{
-    GenericFilePath, GenericNamespaced, Name, NameType, ToFsName, ToNsName,
-};
-use log::error;
+use interprocess::local_socket::{GenericFilePath, GenericNamespaced, ToFsName, ToNsName};
 use strum::IntoEnumIterator;
 
 static SOCKET_PATH: &str = "/tmp/goxlr.socket";
@@ -47,7 +44,6 @@ pub async fn run_cli() -> Result<()> {
         let path = match path {
             Ok(path) => path,
             Err(e) => {
-                error!("Unable to Process Path: {}", e);
                 bail!("Unable to Process Path {}", e);
             }
         };
