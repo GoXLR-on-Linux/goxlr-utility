@@ -1,14 +1,14 @@
 use anyhow::{bail, Result};
-use interprocess::local_socket::tokio::{LocalSocketListener, LocalSocketStream};
-use interprocess::local_socket::NameTypeSupport;
+use goxlr_ipc::clients::ipc::ipc_socket::Socket;
+use goxlr_ipc::{DaemonRequest, DaemonResponse};
+use interprocess::local_socket::tokio::prelude::{LocalSocketListener, LocalSocketStream};
+use interprocess::local_socket::traits::tokio::{Listener, Stream};
+use interprocess::local_socket::{
+    GenericFilePath, GenericNamespaced, ListenerOptions, ToFsName, ToNsName,
+};
 use log::{debug, info, warn};
 use std::fs;
 use std::path::Path;
-
-use NameTypeSupport::*;
-
-use goxlr_ipc::clients::ipc::ipc_socket::Socket;
-use goxlr_ipc::{DaemonRequest, DaemonResponse};
 
 use crate::primary_worker::DeviceSender;
 use crate::servers::server_packet::handle_packet;
@@ -18,35 +18,26 @@ static SOCKET_PATH: &str = "/tmp/goxlr.socket";
 static NAMED_PIPE: &str = "@goxlr.socket";
 
 async fn ipc_tidy() -> Result<()> {
-    // We only need a possible cleanup if we're using file based sockets..
-    let socket_type = NameTypeSupport::query();
-
-    // Check to see if the socket exists,
-    if (socket_type == OnlyPaths || socket_type == Both) && !Path::new(SOCKET_PATH).exists() {
-        return Ok(());
-    }
-
-    let name = match socket_type {
-        OnlyPaths | Both => {
-            debug!("Unix Socket file present, performing connection test..");
-            SOCKET_PATH
+    // We only need a possible cleanup if we're using file based sockets, this has changed
+    // substantially with the latest interprocess crate, so we're OS based now..
+    let socket_type = if cfg!(windows) {
+        NAMED_PIPE.to_ns_name::<GenericNamespaced>()?
+    } else {
+        if !Path::new(SOCKET_PATH).exists() {
+            return Ok(());
         }
-        OnlyNamespaced => {
-            debug!("Checking for Presence of Windows Named Pipe..");
-            NAMED_PIPE
-        }
+        SOCKET_PATH.to_fs_name::<GenericFilePath>()?
     };
 
-    // Try connecting to the socket, see if we're accepted..
-    let connection = LocalSocketStream::connect(name).await;
+    let connection = LocalSocketStream::connect(socket_type).await;
     if connection.is_err() {
-        match socket_type {
-            OnlyPaths | Both => {
+        match cfg!(windows) {
+            true => {
+                debug!("Named Pipe not running, continuing..");
+            }
+            false => {
                 debug!("Connection Failed. Socket File is stale, removing..");
                 fs::remove_file(SOCKET_PATH)?;
-            }
-            OnlyNamespaced => {
-                debug!("Named Pipe not running, continuing..");
             }
         }
         return Ok(());
@@ -54,20 +45,17 @@ async fn ipc_tidy() -> Result<()> {
 
     debug!("Connected to socket, seeing if there's a Daemon on the other side..");
     let connection = connection.unwrap();
+
     let mut socket: Socket<DaemonResponse, DaemonRequest> = Socket::new(connection);
     if let Err(e) = socket.send(DaemonRequest::Ping).await {
-        match socket_type {
-            OnlyPaths | Both => {
-                // In some cases, a connection may be able to occur, even if there's nothing
-                // on the other end. So we'll simply nuke the socket.
-                debug!("Unable to send messages, removing socket..");
-                fs::remove_file(SOCKET_PATH)?;
-            }
-            OnlyNamespaced => {
-                // On Windows however, we don't have the luxury of nuking the named pipe externally,
-                // so if we can't send a message, it's GGs, we have to bail.
+        match cfg!(windows) {
+            true => {
                 debug!("Our named pipe is broken, something is horribly wrong..");
                 bail!("Named Pipe Error: {}", e);
+            }
+            false => {
+                debug!("Unable to send messages, removing socket..");
+                fs::remove_file(SOCKET_PATH)?;
             }
         }
         return Ok(());
@@ -80,15 +68,16 @@ async fn ipc_tidy() -> Result<()> {
 pub async fn bind_socket() -> Result<LocalSocketListener> {
     ipc_tidy().await?;
 
-    let name = {
-        match NameTypeSupport::query() {
-            OnlyPaths | Both => SOCKET_PATH,
-            OnlyNamespaced => NAMED_PIPE,
-        }
+    let name = if cfg!(windows) {
+        NAMED_PIPE.to_ns_name::<GenericNamespaced>()?
+    } else {
+        SOCKET_PATH.to_fs_name::<GenericFilePath>()?
     };
 
-    let listener = LocalSocketListener::bind(name)?;
-    info!("Bound IPC Socket @ {}", name);
+    let opts = ListenerOptions::new().name(name.clone());
+    let listener = opts.create_tokio()?;
+
+    info!("Bound IPC Socket @ {:?}", name);
     Ok(listener)
 }
 
@@ -108,12 +97,8 @@ pub async fn spawn_ipc_server(
                 });
             }
             () = shutdown_signal.recv() => {
-                // If we're using a unix domain socket, remove it.
-                match NameTypeSupport::query() {
-                    OnlyPaths | Both => {
-                        let _ = fs::remove_file(SOCKET_PATH);
-                    },
-                    OnlyNamespaced => {},
+                if !cfg!(windows) {
+                    let _ = fs::remove_file(SOCKET_PATH);
                 }
                 return;
             }
