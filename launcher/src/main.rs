@@ -10,6 +10,7 @@ use goxlr_ipc::{DaemonCommand, DaemonRequest, DaemonResponse};
 use interprocess::local_socket::tokio::prelude::LocalSocketStream;
 use interprocess::local_socket::traits::tokio::Stream;
 use interprocess::local_socket::{GenericFilePath, GenericNamespaced, ToFsName, ToNsName};
+use sysinfo::UpdateKind;
 use which::which;
 
 static SOCKET_PATH: &str = "/tmp/goxlr.socket";
@@ -74,8 +75,10 @@ fn launch_daemon() -> Result<()> {
 
 #[cfg(unix)]
 fn is_daemon_running() -> bool {
-    use sysinfo::{ProcessRefreshKind, RefreshKind, System, SystemExt};
-    let refresh_kind = RefreshKind::new().with_processes(ProcessRefreshKind::new().with_user());
+    use sysinfo::{ProcessRefreshKind, RefreshKind, System};
+    let refresh = ProcessRefreshKind::new();
+    let update = UpdateKind::Always;
+    let refresh_kind = RefreshKind::new().with_processes(refresh.with_user(update));
     let system = System::new_with_specifics(refresh_kind);
 
     let binding = get_daemon_binary_name();
