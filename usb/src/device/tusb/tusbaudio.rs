@@ -595,7 +595,6 @@ impl TUSBAudio<'_> {
         let (ready_tx, mut ready_rx) = tokio::sync::oneshot::channel::<bool>();
 
         thread::spawn(move || -> Result<()> {
-            let mut last_count = 0;
             let mut ready_sender = Some(ready_tx);
 
             loop {
@@ -627,30 +626,15 @@ impl TUSBAudio<'_> {
                 };
 
                 if result != CR_SUCCESS {
-                    // This theoretically should only occur if the size has changed since we polled
+                    // This theoretically should only occur if the size has changed since we fetched it
                     warn!("Error Fetching Interface List {:?}", result);
                     sleep(Duration::from_millis(200));
                     continue;
                 }
 
                 let count = output.split(|&v| v == 0).filter(|a| !a.is_empty()).count();
-                if count != last_count {
+                if count != TUSB_INTERFACE.get_devices().len() {
                     debug!("Device Change Detected.");
-                    let _ = TUSB_INTERFACE.detect_devices();
-
-                    last_count = count;
-                }
-
-                // If a driver takes a couple of hundred milliseconds to load, it's theoretically
-                // possible that we'll have detected the device and run detect_devices() too early
-                // leaving the detected device list empty and causing a desync in the lists.
-                //
-                // The following simply checks what's already been found, and if the list size
-                // isn't the same as we have detected here, attempts to force a resync of the
-                // devices from the API.
-                let len = TUSB_INTERFACE.get_devices().len();
-                if count != len {
-                    warn!("Device Desync Dectected: Count: {}, Found: {}", count, len);
                     let _ = TUSB_INTERFACE.detect_devices();
                 }
 
@@ -665,7 +649,7 @@ impl TUSBAudio<'_> {
         while ready_rx.try_recv().is_err() {
             sleep(Duration::from_millis(5));
         }
-        debug!("RUSB PnP Handler Started");
+        debug!("Win32 PnP Handler Started");
 
         *spawned = true;
         Ok(())
