@@ -1,11 +1,3 @@
-use crate::device::base::GoXLRDevice;
-use crate::{PID_GOXLR_FULL, PID_GOXLR_MINI, VID_GOXLR};
-use anyhow::{anyhow, bail, Result};
-use byteorder::{ByteOrder, LittleEndian};
-use goxlr_types::VersionNumber;
-use lazy_static::lazy_static;
-use libloading::{Library, Symbol};
-use log::{debug, error, info, warn};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::ffi::CStr;
@@ -16,12 +8,28 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::sleep;
 use std::time::Duration;
+
+use anyhow::{anyhow, bail, Result};
+use byteorder::{ByteOrder, LittleEndian};
+use lazy_static::lazy_static;
+use libloading::{Library, Symbol};
+use log::{debug, error, info, warn};
 use tokio::sync::mpsc::{Receiver, Sender};
 use widestring::U16CStr;
+use windows::core::GUID;
+use windows::Win32::Devices::DeviceAndDriverInstallation::{
+    CM_Get_Device_Interface_ListA, CM_Get_Device_Interface_List_SizeA,
+    CM_GET_DEVICE_INTERFACE_LIST_PRESENT, CR_SUCCESS,
+};
 use windows::Win32::Foundation::{HANDLE, WAIT_TIMEOUT};
 use windows::Win32::System::Threading::{CreateEventA, WaitForSingleObject};
 use winreg::enums::HKEY_CLASSES_ROOT;
 use winreg::RegKey;
+
+use goxlr_types::VersionNumber;
+
+use crate::device::base::GoXLRDevice;
+use crate::{PID_GOXLR_FULL, PID_GOXLR_MINI, VID_GOXLR};
 
 // Define the Types of the various methods..
 type EnumerateDevices = unsafe extern "C" fn() -> u32;
@@ -43,6 +51,7 @@ type ReadDeviceNotification = unsafe extern "C" fn(u32, &u32, *mut u8, u32, &u32
 type StatusCodeString = unsafe extern "C" fn(u32) -> *const i8;
 type CloseDevice = unsafe extern "C" fn(u32) -> u32;
 
+static GOXLR_GUID: GUID = GUID::from_u128(0x024D0372_641F_4B7B_8140_F4DFE458C982);
 lazy_static! {
     // Initialise the Library..
     static ref LIBRARY: Library = unsafe {
@@ -576,6 +585,93 @@ impl TUSBAudio<'_> {
         Ok(())
     }
 
+    pub fn spawn_pnp_handle_win32(&self) -> Result<()> {
+        let mut spawned = self.pnp_thread_running.lock().unwrap();
+        if *spawned {
+            bail!("Handler Thread already running...");
+        }
+        debug!("Spawning Win32 PnP Handler Thread");
+
+        let (ready_tx, mut ready_rx) = tokio::sync::oneshot::channel::<bool>();
+
+        thread::spawn(move || -> Result<()> {
+            let mut last_count = 0;
+            let mut ready_sender = Some(ready_tx);
+
+            loop {
+                let length = 0_u64;
+                let result = unsafe {
+                    CM_Get_Device_Interface_List_SizeA(
+                        &length as *const _ as *mut _,
+                        &GOXLR_GUID as *const _,
+                        None,
+                        CM_GET_DEVICE_INTERFACE_LIST_PRESENT,
+                    )
+                };
+
+                if result != CR_SUCCESS {
+                    // This should only occur if the system is Out of Memory!
+                    warn!("Error Fetching Interface List Size {:?}", result);
+                    sleep(Duration::from_millis(200));
+                    continue;
+                }
+
+                let mut output = vec![0_u8; length as usize];
+                let result = unsafe {
+                    CM_Get_Device_Interface_ListA(
+                        &GOXLR_GUID as *const _,
+                        None,
+                        &mut output,
+                        CM_GET_DEVICE_INTERFACE_LIST_PRESENT,
+                    )
+                };
+
+                if result != CR_SUCCESS {
+                    // This theoretically should only occur if the size has changed since we polled
+                    warn!("Error Fetching Interface List {:?}", result);
+                    sleep(Duration::from_millis(200));
+                    continue;
+                }
+
+                let count = output.split(|&v| v == 0).filter(|a| !a.is_empty()).count();
+                if count != last_count {
+                    debug!("Device Change Detected.");
+                    let _ = TUSB_INTERFACE.detect_devices();
+
+                    last_count = count;
+                }
+
+                // If a driver takes a couple of hundred milliseconds to load, it's theoretically
+                // possible that we'll have detected the device and run detect_devices() too early
+                // leaving the detected device list empty and causing a desync in the lists.
+                //
+                // The following simply checks what's already been found, and if the list size
+                // isn't the same as we have detected here, attempts to force a resync of the
+                // devices from the API.
+                let len = TUSB_INTERFACE.get_devices().len();
+                if count != len {
+                    warn!("Device Desync Dectected: Count: {}, Found: {}", count, len);
+                    let _ = TUSB_INTERFACE.detect_devices();
+                }
+
+                if let Some(sender) = ready_sender.take() {
+                    let _ = sender.send(true);
+                }
+                sleep(Duration::from_secs(1));
+            }
+        });
+
+        // Block until the 'ready' message has been sent..
+        while ready_rx.try_recv().is_err() {
+            sleep(Duration::from_millis(5));
+        }
+        debug!("RUSB PnP Handler Started");
+
+        *spawned = true;
+        Ok(())
+    }
+
+    #[allow(dead_code)]
     pub fn spawn_pnp_handle_rusb(&self) -> Result<()> {
         // Comment for future me: Use CM_Register_Notification instead of rusb
 
@@ -775,7 +871,7 @@ impl Default for Properties {
 }
 
 pub fn get_devices() -> Vec<GoXLRDevice> {
-    let _ = TUSB_INTERFACE.spawn_pnp_handle_rusb();
+    let _ = TUSB_INTERFACE.spawn_pnp_handle_win32();
     let mut list = Vec::new();
 
     // Ok, this is slightly different now..
@@ -804,6 +900,7 @@ pub struct EventChannelSender {
     pub(crate) input_changed: Sender<String>,
 }
 
+#[allow(dead_code)]
 fn iters_equal_anyorder<T: Eq + Hash>(
     i1: impl Iterator<Item = T>,
     i2: impl Iterator<Item = T>,
