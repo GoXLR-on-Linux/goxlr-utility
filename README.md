@@ -17,7 +17,7 @@ Windows. [Click Here](https://discord.gg/BRBjkkbvmZ) to join our discord!
 * Exit Actions, including saving profiles and loading other profiles / lighting
 * Multiple Device Support. Run more than one GoXLR on one PC
 * A CLI and API for basic or advanced scripting and automation
-* Streamdeck Integration (through https://github.com/FrostyCoolSlug/goxlr-utility-streamdeck)
+* Streamdeck Integration (through [The StreamDeck Repository](https://github.com/FrostyCoolSlug/goxlr-utility-streamdeck))
 
 ## Downloads
 
@@ -67,12 +67,18 @@ Gate Amount to 0, then reconfigure it once your mic is working. Once done, go ex
 
 ## The UI
 
-The Utility's UI is web based, and served directly from the utility to your web browser of choice (if configured, it
-can also be served to a web browser on another computer). The UI design was modelled around the official application
-in an attempt to provide a familiar interface for those moving from Windows to other platforms, rather than forcing
-people to learn a new configuration paradigm.
+The Utility's UI is web based and served directly from the utility to your web browser of choice (if configured, it
+can also be served to a web browser on another computer). The Utility also provides an 'Application' which wraps the
+web UI into a dedicated app. If you're using the Utility on Windows this option is presented to you during install.
+The UI design was modelled around the official application in an attempt to provide a familiar interface for those
+moving from Windows to other platforms, rather than forcing people to learn a new configuration paradigm.
 
 ![image](https://github.com/GoXLR-on-Linux/goxlr-utility/assets/574943/8f14bd2c-e67a-42e5-bd9f-b3cb367e171d)
+
+If you're running on Linux, the 'Application' isn't provided as part of the base utility installation. If you'd
+prefer to use it, check out the [GoXLR UI Repository](https://github.com/frostyCoolSlug/goxlr-utility-ui/), which
+provides various builds for distributions. Once installed, you should be able to go to System -> Utility Settings 
+and change the UI Handler there.
 
 
 ## Building
