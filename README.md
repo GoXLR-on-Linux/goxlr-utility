@@ -46,6 +46,7 @@ GoXLR-MacOS project as they attempt to do the same thing in certain situations.
 ## Integrations
 * [twitchat](https://twitchat.fr/) - Activate and change GoXLR settings based on twitch bits / donations (Thanks Durss!)
 * [OBS Fader Sync](https://github.com/parzival-space/obs-goxlr-fader-sync-plugin) - An OBS plugin to sync pre-mix volumes to fader volumes (Thanks parzival!)
+* [Home Assistant](https://github.com/timmo001/homeassistant-integration-goxlr-utility) - A plugin that lets you tie the GoXLR into your home automation
 
 ## Getting Started
 
