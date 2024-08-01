@@ -140,7 +140,9 @@ fn create_hwnd(proc: Rc<Box<dyn WindowProc>>) -> Result<HWND> {
 
     // Register it..
     if unsafe { RegisterClassW(&window_class) } == 0 {
-        bail!("{:?}", unsafe { GetLastError() });
+        bail!("Unable to Register Window Class: {:?}", unsafe {
+            GetLastError()
+        });
     }
 
     // Now attempt to create our HWND...
@@ -164,7 +166,7 @@ fn create_hwnd(proc: Rc<Box<dyn WindowProc>>) -> Result<HWND> {
 
     // Attempt to Create the Tray Icon..
     if hwnd == HWND(ptr::null_mut()) {
-        bail!("{:?}", unsafe { GetLastError() });
+        bail!("Unable to create the HWND: {:?}", unsafe { GetLastError() });
     }
 
     unsafe {
