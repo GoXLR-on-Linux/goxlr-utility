@@ -90,19 +90,19 @@ pub async fn spawn_platform_runtime(
                 }
             },
             Some(_) = ctrl_break.recv() => {
-                tx.send(EventTriggers::Stop).await?;
+                tx.send(EventTriggers::Stop(false)).await?;
             },
             Some(_) = ctrl_close.recv() => {
                 debug!("Hit Ctrl+Close");
-                tx.send(EventTriggers::Stop).await?;
+                tx.send(EventTriggers::Stop(false)).await?;
             }
             Some(_) = ctrl_shutdown.recv() => {
                 debug!("Hit Ctrl+Shutdown");
-                tx.send(EventTriggers::Stop).await?;
+                tx.send(EventTriggers::Stop(false)).await?;
             }
             Some(_) = ctrl_logoff.recv() => {
                 debug!("Hit Ctrl+Logoff");
-                tx.send(EventTriggers::Stop).await?;
+                tx.send(EventTriggers::Stop(false)).await?;
             }
             //Some(_) = ctrl_
             () = shutdown.recv() => {

@@ -83,7 +83,7 @@ pub async fn run(tx: mpsc::Sender<EventTriggers>, mut stop: Shutdown) -> Result<
             Some(_) = stream.recv() => {
                 // Trigger a Shutdown
                 debug!("TERM Signal Received, Triggering STOP");
-                let _ = tx.send(EventTriggers::Stop).await;
+                let _ = tx.send(EventTriggers::Stop(false)).await;
             },
 
             _ = stop.recv() => {
