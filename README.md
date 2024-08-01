@@ -45,7 +45,7 @@ GoXLR-MacOS project as they attempt to do the same thing in certain situations.
 
 ## Integrations
 * [twitchat](https://twitchat.fr/) - Activate and change GoXLR settings based on twitch bits / donations (Thanks Durss!)
-* [OBS Fader Sync](https://github.com/parzival-space/obs-goxlr-fader-sync-plugin) - Experimental, an OBS plugin to sync fader volumes to pre-mix OBS audio sources (Thanks parzival!)
+* [OBS Fader Sync](https://github.com/parzival-space/obs-goxlr-fader-sync-plugin) - An OBS plugin to sync pre-mix volumes to fader volumes (Thanks parzival!)
 
 ## Getting Started
 
