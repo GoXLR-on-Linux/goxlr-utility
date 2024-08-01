@@ -317,7 +317,7 @@ impl WindowProc for GoXLRWindowProc {
                 let _ = match menu_id {
                     // Main Menu
                     0 => self.global_tx.try_send(EventTriggers::Activate),
-                    4 => self.global_tx.try_send(EventTriggers::Stop),
+                    4 => self.global_tx.try_send(EventTriggers::Stop(true)),
 
                     // Open Paths Menu
                     10 => self.global_tx.try_send(Open(PathTypes::Profiles)),
@@ -380,7 +380,7 @@ impl WindowProc for GoXLRWindowProc {
             WM_CLOSE => {
                 // If something tries to close this hidden window, it's a good bet that it wants
                 // us to shutdown, start the shutdown, but don't close the Window.
-                let _ = self.global_tx.try_send(EventTriggers::Stop);
+                let _ = self.global_tx.try_send(EventTriggers::Stop(false));
                 return Some(LRESULT(1));
             }
 
@@ -430,10 +430,12 @@ impl WindowProc for GoXLRWindowProc {
                 if !self.shutdown_triggered {
                     if !critical {
                         debug!("Attempting Shutdown..");
-                        let _ = self.global_tx.try_send(EventTriggers::Stop);
+                        let _ = self.global_tx.try_send(EventTriggers::Stop(false));
                     } else {
-                        debug!("Critical Shutdown Received, skipping to Stage 2..");
-                        let _ = self.global_tx.try_send(EventTriggers::DevicesStopped);
+                        // If we receive an ENDSESSION_CRITICAL we should avoid writing to the
+                        // disk at all cost as we are no longer in control of when we exit.
+                        debug!("Critical Shutdown Received, safely shutting down..");
+                        let _ = self.global_tx.try_send(EventTriggers::Stop(true));
                     }
                     self.shutdown_triggered = true;
                 } else {

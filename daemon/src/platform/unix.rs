@@ -19,7 +19,7 @@ pub async fn spawn_platform_runtime(
         Some(_) = stream.recv() => {
             // Trigger a Shutdown
             debug!("TERM Signal Received, Triggering STOP");
-            let _ = tx.send(EventTriggers::Stop).await;
+            let _ = tx.send(EventTriggers::Stop(false)).await;
         },
         () = shutdown.recv() => {}
     }

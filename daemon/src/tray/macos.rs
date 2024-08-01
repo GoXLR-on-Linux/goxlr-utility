@@ -80,7 +80,7 @@ async fn run_tray(mut p: RunParams) {
                     OpenPathSamples => tx.try_send(Open(PathTypes::Samples)),
                     OpenPathIcons => tx.try_send(Open(PathTypes::Icons)),
                     OpenPathLogs => tx.try_send(Open(PathTypes::Logs)),
-                    Quit => tx.try_send(EventTriggers::Stop)
+                    Quit => tx.try_send(EventTriggers::Stop(false))
                 };
             },
             () = p.state.shutdown.recv() => {
@@ -392,7 +392,7 @@ impl App {
                 };
 
                 // This is pretty similar to Windows, we loop until we're ready to die..
-                let _ = sender.try_send(EventTriggers::Stop);
+                let _ = sender.try_send(EventTriggers::Stop(false));
 
                 // Now wait for the daemon to actually stop..
                 loop {

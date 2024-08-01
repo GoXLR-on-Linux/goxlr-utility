@@ -190,7 +190,7 @@ impl Tray for GoXLRTray {
             StandardItem {
                 label: String::from("Quit"),
                 activate: Box::new(|this: &mut GoXLRTray| {
-                    let _ = this.tx.try_send(EventTriggers::Stop);
+                    let _ = this.tx.try_send(EventTriggers::Stop(false));
                 }),
                 ..Default::default()
             }

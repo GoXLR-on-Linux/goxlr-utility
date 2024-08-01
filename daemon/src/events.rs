@@ -16,7 +16,7 @@ use tokio::{select, signal};
 #[allow(dead_code)]
 pub enum EventTriggers {
     TTSMessage(String),
-    Stop,
+    Stop(bool),
     Sleep(oneshot::Sender<()>),
     Wake(oneshot::Sender<()>),
     Lock,
@@ -58,7 +58,7 @@ pub async fn spawn_event_handler(
                 // Ctrl+C is a generic capture, although we should also check for SIGTERM under Linux..
                 if !triggered_device_stop {
                     triggered_device_stop = true;
-                    let _ = device_state_tx.send(DeviceStateChange::Shutdown).await;
+                    let _ = device_state_tx.send(DeviceStateChange::Shutdown(false)).await;
                 }
             },
             Some(event) = rx.recv() => {
@@ -66,11 +66,11 @@ pub async fn spawn_event_handler(
                     EventTriggers::TTSMessage(message) => {
                         let _ = state.tts_sender.send(message).await;
                     }
-                    EventTriggers::Stop => {
+                    EventTriggers::Stop(avoid_write) => {
                         if !triggered_device_stop {
                             debug!("Shutdown Phase 1 Triggered..");
                             triggered_device_stop = true;
-                            let _ = device_state_tx.send(DeviceStateChange::Shutdown).await;
+                            let _ = device_state_tx.send(DeviceStateChange::Shutdown(avoid_write)).await;
                         } else {
                             debug!("Shutdown Phase 1 already in Progress");
                         }
