@@ -7,8 +7,9 @@ use goxlr_ipc::client::Client;
 use goxlr_ipc::clients::ipc::ipc_client::IPCClient;
 use goxlr_ipc::clients::ipc::ipc_socket::Socket;
 use goxlr_ipc::{DaemonCommand, DaemonRequest, DaemonResponse};
-use interprocess::local_socket::tokio::LocalSocketStream;
-use interprocess::local_socket::NameTypeSupport;
+use interprocess::local_socket::tokio::prelude::LocalSocketStream;
+use interprocess::local_socket::traits::tokio::Stream;
+use interprocess::local_socket::{GenericFilePath, GenericNamespaced, ToFsName, ToNsName};
 use which::which;
 
 static SOCKET_PATH: &str = "/tmp/goxlr.socket";
@@ -26,12 +27,23 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn get_connection() -> std::io::Result<LocalSocketStream> {
-    LocalSocketStream::connect(match NameTypeSupport::query() {
-        NameTypeSupport::OnlyPaths | NameTypeSupport::Both => SOCKET_PATH,
-        NameTypeSupport::OnlyNamespaced => NAMED_PIPE,
-    })
-    .await
+async fn get_connection() -> Result<LocalSocketStream> {
+    let path = if cfg!(windows) {
+        NAMED_PIPE.to_ns_name::<GenericNamespaced>()
+    } else {
+        SOCKET_PATH.to_fs_name::<GenericFilePath>()
+    };
+
+    let path = match path {
+        Ok(path) => path,
+        Err(e) => {
+            bail!("Unable to Process Path {}", e);
+        }
+    };
+
+    LocalSocketStream::connect(path)
+        .await
+        .map_err(anyhow::Error::msg)
 }
 
 #[cfg(unix)]
@@ -62,8 +74,10 @@ fn launch_daemon() -> Result<()> {
 
 #[cfg(unix)]
 fn is_daemon_running() -> bool {
-    use sysinfo::{ProcessRefreshKind, RefreshKind, System, SystemExt};
-    let refresh_kind = RefreshKind::new().with_processes(ProcessRefreshKind::new().with_user());
+    use sysinfo::{ProcessRefreshKind, RefreshKind, System, UpdateKind};
+    let refresh = ProcessRefreshKind::new();
+    let update = UpdateKind::Always;
+    let refresh_kind = RefreshKind::new().with_processes(refresh.with_user(update));
     let system = System::new_with_specifics(refresh_kind);
 
     let binding = get_daemon_binary_name();

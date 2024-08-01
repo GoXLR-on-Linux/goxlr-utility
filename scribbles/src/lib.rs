@@ -1,10 +1,10 @@
+use ab_glyph::{FontRef, PxScale};
 use anyhow::{bail, Result};
 use image::imageops::{dither, overlay, BiLevel, FilterType};
-use image::ImageOutputFormat::Png;
+use image::ImageFormat::Png;
 use image::{ColorType, DynamicImage, GenericImage, GenericImageView, GrayImage, Luma, Rgba};
 use imageproc::drawing::{draw_text_mut, text_size};
 use log::warn;
-use rusttype::{Font, Scale};
 use std::borrow::BorrowMut;
 use std::io::Cursor;
 use std::path::PathBuf;
@@ -121,9 +121,9 @@ fn load_grayscale_image(path: PathBuf) -> Result<DynamicImage> {
 }
 
 fn create_text_image(text: &str) -> Result<DynamicImage> {
-    let draw_font = Font::try_from_bytes(FONT).ok_or(std::fmt::Error)?;
+    let draw_font = FontRef::try_from_slice(FONT)?;
 
-    let scale = Scale {
+    let scale = PxScale {
         x: 23_f32,
         y: 19_f32,
     };
@@ -132,7 +132,7 @@ fn create_text_image(text: &str) -> Result<DynamicImage> {
     let (width, _height) = text_size(scale, &draw_font, text);
     let draw_width = if width < 128 { width } else { 128 };
 
-    let mut image = DynamicImage::new_rgb8(draw_width as u32, 19);
+    let mut image = DynamicImage::new_rgb8(draw_width, 19);
     image
         .clone()
         .pixels()

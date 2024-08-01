@@ -7,7 +7,7 @@ use crate::cli::{
 };
 use crate::cli::{Cli, DeviceSettings};
 use crate::microphone::apply_microphone_controls;
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use clap::Parser;
 use goxlr_ipc::client::Client;
 use goxlr_ipc::clients::ipc::ipc_client::IPCClient;
@@ -16,8 +16,10 @@ use goxlr_ipc::clients::web::web_client::WebClient;
 use goxlr_ipc::GoXLRCommand;
 use goxlr_ipc::{DaemonRequest, DaemonResponse, MixerStatus, UsbProductInformation};
 use goxlr_types::{ChannelName, DeviceType, FaderName, InputDevice, MicrophoneType, OutputDevice};
-use interprocess::local_socket::tokio::LocalSocketStream;
-use interprocess::local_socket::NameTypeSupport;
+
+use interprocess::local_socket::tokio::prelude::LocalSocketStream;
+use interprocess::local_socket::traits::tokio::Stream;
+use interprocess::local_socket::{GenericFilePath, GenericNamespaced, ToFsName, ToNsName};
 use strum::IntoEnumIterator;
 
 static SOCKET_PATH: &str = "/tmp/goxlr.socket";
@@ -31,12 +33,24 @@ pub async fn run_cli() -> Result<()> {
     if let Some(url) = cli.use_http {
         client = Box::new(WebClient::new(format!("{}/api/command", url)));
     } else {
-        let connection = LocalSocketStream::connect(match NameTypeSupport::query() {
-            NameTypeSupport::OnlyPaths | NameTypeSupport::Both => SOCKET_PATH,
-            NameTypeSupport::OnlyNamespaced => NAMED_PIPE,
-        })
-        .await
-        .context("Unable to connect to the GoXLR daemon Process")?;
+        // Windows supports unix sockets now, but we want to maintain the historic behaviour
+        // so we'll force it to a NameSpace here..
+        let path = if cfg!(windows) {
+            NAMED_PIPE.to_ns_name::<GenericNamespaced>()
+        } else {
+            SOCKET_PATH.to_fs_name::<GenericFilePath>()
+        };
+
+        let path = match path {
+            Ok(path) => path,
+            Err(e) => {
+                bail!("Unable to Process Path {}", e);
+            }
+        };
+
+        let connection = LocalSocketStream::connect(path)
+            .await
+            .context("Unable to connect to the GoXLR daemon Process")?;
 
         let socket: Socket<DaemonResponse, DaemonRequest> = Socket::new(connection);
         client = Box::new(IPCClient::new(socket));

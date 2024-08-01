@@ -1,18 +1,19 @@
 use std::ffi::c_void;
-use std::mem;
 use std::rc::Rc;
 use std::sync::atomic::Ordering;
 use std::thread::sleep;
 use std::time::Duration;
+use std::{mem, ptr};
 
 use anyhow::{bail, Result};
 use lazy_static::lazy_static;
 use log::{debug, error, warn};
 use tokio::sync::mpsc::Sender;
 use tokio::sync::oneshot;
-use windows::core::imp::GetLastError;
 use windows::core::w;
-use windows::Win32::Foundation::{FALSE, HINSTANCE, HWND, LPARAM, LRESULT, POINT, WPARAM};
+use windows::Win32::Foundation::{
+    GetLastError, FALSE, HINSTANCE, HWND, LPARAM, LRESULT, POINT, WPARAM,
+};
 use windows::Win32::Graphics::Gdi::HBRUSH;
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::System::RemoteDesktop::{
@@ -103,7 +104,9 @@ fn run_loop(msg_window: HWND, state: DaemonState) {
             if GetMessageW(msg.as_mut_ptr(), msg_window, 0, 0) != FALSE {
                 let msg = msg.assume_init();
 
-                TranslateMessage(&msg);
+                if TranslateMessage(&msg) == FALSE {
+                    warn!("Unable to Translate Message, proceeding anyway");
+                }
                 DispatchMessageW(&msg);
             }
 
@@ -137,7 +140,9 @@ fn create_hwnd(proc: Rc<Box<dyn WindowProc>>) -> Result<HWND> {
 
     // Register it..
     if unsafe { RegisterClassW(&window_class) } == 0 {
-        bail!(unsafe { GetLastError() });
+        bail!("Unable to Register Window Class: {:?}", unsafe {
+            GetLastError()
+        });
     }
 
     // Now attempt to create our HWND...
@@ -157,11 +162,11 @@ fn create_hwnd(proc: Rc<Box<dyn WindowProc>>) -> Result<HWND> {
             window_class.hInstance,
             Some(window_pointer),
         )
-    };
+    }?;
 
     // Attempt to Create the Tray Icon..
-    if hwnd == HWND(0) {
-        bail!(unsafe { GetLastError() });
+    if hwnd == HWND(ptr::null_mut()) {
+        bail!("Unable to create the HWND: {:?}", unsafe { GetLastError() });
     }
 
     unsafe {
@@ -185,7 +190,7 @@ fn load_icon() -> Result<HICON> {
 
     let icon = unsafe {
         CreateIcon(
-            HINSTANCE(0),
+            HINSTANCE(ptr::null_mut()),
             width as i32,
             height as i32,
             1,
@@ -305,10 +310,10 @@ impl WindowProc for GoXLRWindowProc {
             // Menu Related Commands..
             WM_MENUCOMMAND => unsafe {
                 // We're going to grab the isize pointer to the menu, then pass that in.
-                let hmenu = lparam.0 as *const isize as isize;
+                //let hmenu = lparam.0 as *const isize as isize;
                 let npos = wparam.0 as *const i32 as i32;
 
-                let menu_id = GetMenuItemID(HMENU(hmenu), npos);
+                let menu_id = GetMenuItemID(HMENU(lparam.0 as *mut c_void), npos);
                 let _ = match menu_id {
                     // Main Menu
                     0 => self.global_tx.try_send(EventTriggers::Activate),
@@ -344,10 +349,12 @@ impl WindowProc for GoXLRWindowProc {
                         }
                         if button == WM_RBUTTONUP {
                             // The docs say if the window isn't foreground, the menu wont close!
-                            SetForegroundWindow(hwnd);
+                            if SetForegroundWindow(hwnd) == FALSE {
+                                warn!("Unable to Set window to Foreground");
+                            }
 
                             // Create the menu at the coordinates of the mouse.
-                            TrackPopupMenu(
+                            if TrackPopupMenu(
                                 self.menu,
                                 TPM_BOTTOMALIGN | TPM_LEFTALIGN,
                                 point.x,
@@ -355,7 +362,10 @@ impl WindowProc for GoXLRWindowProc {
                                 0,
                                 hwnd,
                                 None,
-                            );
+                            ) == FALSE
+                            {
+                                warn!("Unable to Set Menu Coordinates!");
+                            }
                         }
                     }
                 }

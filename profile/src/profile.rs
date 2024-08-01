@@ -11,7 +11,7 @@ use quick_xml::events::{BytesDecl, BytesStart, Event};
 use quick_xml::{Reader, Writer};
 use strum::EnumProperty;
 use strum::IntoEnumIterator;
-use zip::write::FileOptions;
+use zip::write::SimpleFileOptions;
 
 use crate::components::animation::AnimationTree;
 use crate::components::browser::BrowserPreviewTree;
@@ -97,7 +97,7 @@ impl Profile {
         let mut archive = zip::ZipWriter::new(&temp_file);
 
         // Store the profile..
-        archive.start_file("profile.xml", FileOptions::default())?;
+        archive.start_file("profile.xml", SimpleFileOptions::default())?;
         self.settings.write_to(&mut archive)?;
 
         // Write the scribbles..
@@ -105,7 +105,7 @@ impl Profile {
             // Only write if there's actually data stored..
             if !self.scribbles[i].is_empty() {
                 let filename = format!("scribble{}.png", i + 1);
-                archive.start_file(filename, FileOptions::default())?;
+                archive.start_file(filename, SimpleFileOptions::default())?;
                 archive.write_all(scribble)?;
             }
         }
@@ -113,7 +113,6 @@ impl Profile {
 
         // The archive has finished writing, we don't need it anymore (keeping it live prevents
         // us from removing the temporary file).
-        drop(archive);
         temp_file.sync_all()?;
 
         // Once complete, we simply move the file over the existing file..

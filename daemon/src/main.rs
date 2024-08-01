@@ -196,8 +196,8 @@ async fn run_utility() -> Result<()> {
             error!("please consult the 'Permissions' section of the README. Running as root");
             error!("*WILL* cause issues with the sampler, and may pose a security risk.");
             error!("");
-            #[cfg(target_family = "macos")]
-            {
+
+            if cfg!(target_os = "macos") {
                 error!("As a MacOS user, you may be attempting to run as root to solve the");
                 error!("issues of initialisation. The correct approach to this is to run the");
                 error!("goxlr-initialiser binary via sudo whenever a GoXLR device is attached.");

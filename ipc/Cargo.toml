@@ -12,21 +12,21 @@ categories = ["hardware-support", "api-bindings"]
 
 [dependencies]
 goxlr-types = { path = "../types", features = ["serde"] }
-serde = { version = "1.0.193", features = ["derive"] }
-tokio = { version = "1.35.0", features = ["net"] }
-tokio-util = { version = "0.7.10", features = ["codec", "compat"] }
-tokio-serde = { version = "0.8.0", features = ["bincode", "json"] }
-interprocess = { version = "1.2.1", features = ["tokio_support"] }
-serde_repr = "0.1.17"
-futures = "0.3.29"
-strum = { version = "0.25.0" }
-enumset = { version = "1.1.3", features = ["serde"] }
+serde = { version = "1.0.204", features = ["derive"] }
+tokio = { version = "1.39.1", features = ["net"] }
+tokio-util = { version = "0.7.11", features = ["codec", "compat"] }
+tokio-serde = { version = "0.9.0", features = ["bincode", "json"] }
+interprocess = { version = "2.2.1", features = ["tokio"] }
+serde_repr = "0.1.19"
+futures = "0.3.30"
+strum = { version = "0.26.3" }
+enumset = { version = "1.1.5", features = ["serde"] }
 enum-map = { version = "2.7.3", features = ["serde"] }
 anyhow = "1.0.75"
 async-trait = "0.1.74"
 
 # Used for Web Requests
-reqwest = { version = "0.11.22", default-features = false, features = ["json"] }
+reqwest = { version = "0.12.5", default-features = false, features = ["json"] }
 
 # Used to handle 'Patch' events..
-json-patch = "1.2.0"
+json-patch = "2.0.0"
