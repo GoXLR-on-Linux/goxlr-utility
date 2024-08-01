@@ -110,6 +110,20 @@ pub async fn spawn_usb_handler(
         let mut change_found = false;
         tokio::select! {
             Some(version) = firmware_receiver.recv() => {
+                // Uncomment this for testing purposes!
+                // use enum_map::enum_map;
+                // let version = enum_map! {
+                //     DeviceType::Mini => {
+                //         Some(VersionNumber::from(String::from("0.0.0.0")))
+                //     },
+                //     DeviceType::Full => {
+                //         Some(VersionNumber::from(String::from("0.0.0.0")))
+                //     },
+                //     DeviceType::Unknown => {
+                //         Some(VersionNumber::from(String::from("0.0.0.0")))
+                //     }
+                // };
+
                 firmware_version = Some(version);
                 change_found = true;
             },
