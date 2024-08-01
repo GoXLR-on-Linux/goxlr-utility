@@ -132,7 +132,7 @@ fn create_text_image(text: &str) -> Result<DynamicImage> {
     let (width, _height) = text_size(scale, &draw_font, text);
     let draw_width = if width < 128 { width } else { 128 };
 
-    let mut image = DynamicImage::new_rgb8(draw_width as u32, 19);
+    let mut image = DynamicImage::new_rgb8(draw_width, 19);
     image
         .clone()
         .pixels()
