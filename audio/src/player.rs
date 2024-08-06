@@ -258,7 +258,7 @@ impl Player {
 
                     if let Some(ref mut buf) = sample_buffer {
                         // Grab out the samples..
-                        buf.copy_interleaved_ref(decoded.clone());
+                        buf.copy_interleaved_ref(decoded);
                         let mut samples = buf.samples().to_vec();
 
                         if mono_playback {
