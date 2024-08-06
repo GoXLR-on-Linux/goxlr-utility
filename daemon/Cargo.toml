@@ -79,7 +79,7 @@ ksni = { git = "https://github.com/talonvoice/ksni.git", branch = "zbus" }
 rust-ini = "0.21.0"
 #rand = "0.8.5"
 shell-words = "1.1.0"
-zbus = "3.14.1"
+zbus = "4.4.0"
 
 # Under Windows and MacOS, we use tao's tray feature
 [target.'cfg(target_os = "windows")'.dependencies]

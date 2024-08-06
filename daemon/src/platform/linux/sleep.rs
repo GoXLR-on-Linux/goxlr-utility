@@ -3,11 +3,8 @@
    sleep, of if we've just woken up. From there, we can throw the relevant Sleep Event across
    and handle it.
 
-   We should also consider holding a delay inhibitor in order to keep the system awake form long
-   enough to actually perform actions on the GoXLR. So when we see PrepareForSleep(true), perform
-   sleep actions then drop the inhibitor, and when we see PrepareForSleep(false), perform wake
-   actions and grab a new inhibitor. NOTE: The inhibitors used *SHOULD* be delay ones, the util
-   should not completely block sleeps from happening.
+   We also implement Sleep inhibitors so we can prevent the sleep from occurring until we've
+   confirmed that our sleep actions have been performed.
 
    Refs:
    https://www.freedesktop.org/wiki/Software/systemd/logind/
@@ -23,12 +20,12 @@ use tokio::select;
 use tokio::sync::{mpsc, oneshot};
 use zbus::export::futures_util::StreamExt;
 use zbus::zvariant::{OwnedFd, OwnedObjectPath, OwnedValue};
-use zbus::{dbus_proxy, Connection};
+use zbus::{proxy, Connection};
 
 use crate::events::EventTriggers;
 use crate::shutdown::Shutdown;
 
-#[dbus_proxy(
+#[proxy(
     interface = "org.freedesktop.login1.Manager",
     default_service = "org.freedesktop.login1",
     default_path = "/org/freedesktop/login1"
@@ -41,16 +38,16 @@ trait Manager {
     fn get_session(&self, session_id: &str) -> zbus::Result<OwnedObjectPath>;
 
     /// The Sleep Signal Sent to us from DBus
-    #[dbus_proxy(signal)]
+    #[zbus(signal)]
     fn prepare_for_sleep(sleep: bool) -> Result<()>;
 }
 
-#[dbus_proxy(
+#[proxy(
     interface = "org.freedesktop.DBus.Properties",
     default_service = "org.freedesktop.login1"
 )]
 trait Session {
-    #[dbus_proxy(signal)]
+    #[zbus(signal)]
     fn properties_changed(
         interface: String,
         changed: HashMap<String, OwnedValue>,
