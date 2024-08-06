@@ -2,7 +2,6 @@ use crate::events::EventTriggers;
 use crate::DaemonState;
 use anyhow::Result;
 use cfg_if::cfg_if;
-use log::debug;
 use std::path::PathBuf;
 use tokio::sync::mpsc;
 use which::which;
