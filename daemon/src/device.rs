@@ -1590,6 +1590,8 @@ impl<'a> Device<'a> {
 
                 if linked_volume != mix_current_volume {
                     self.profile.set_submix_volume(mix, linked_volume)?;
+
+                    debug!("Setting Sub Mix volume for {} to {}", mix, linked_volume);
                     self.goxlr.set_sub_volume(mix, linked_volume)?;
                 }
             }
@@ -3676,7 +3678,7 @@ impl<'a> Device<'a> {
 
         if submix_enabled && apply_volumes {
             for channel in ChannelName::iter() {
-                self.sync_submix_volume(channel)?;
+                self.load_submix_volume(channel)?;
             }
         }
 
@@ -3692,16 +3694,19 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
-    fn sync_submix_volume(&mut self, channel: ChannelName) -> Result<()> {
+    fn load_submix_volume(&mut self, channel: ChannelName) -> Result<()> {
         if let Some(mix) = self.profile.get_submix_from_channel(channel) {
-            if self.profile.is_channel_linked(mix) {
-                // Get the channels volume..
+            let volume = if self.profile.is_channel_linked(mix) {
                 let volume = self.profile.get_channel_volume(channel);
-                self.update_submix_for(channel, volume)?;
+                let ratio = self.profile.get_submix_ratio(mix);
+
+                (volume as f64 * ratio) as u8
             } else {
-                let sub_volume = self.profile.get_submix_volume(mix);
-                self.goxlr.set_sub_volume(mix, sub_volume)?;
-            }
+                self.profile.get_submix_volume(mix)
+            };
+
+            debug!("Setting Sub Mix volume for {} to {}", mix, volume);
+            self.goxlr.set_sub_volume(mix, volume)?;
         }
         Ok(())
     }
@@ -3726,6 +3731,8 @@ impl<'a> Device<'a> {
 
             // Apply the submix volume..
             self.profile.set_submix_volume(mix, volume)?;
+
+            debug!("Setting Sub Mix volume for {} to {}", mix, volume);
             self.goxlr.set_sub_volume(mix, volume)?;
         }
         Ok(())
