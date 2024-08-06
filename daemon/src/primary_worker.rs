@@ -17,12 +17,15 @@ use goxlr_usb::{PID_GOXLR_FULL, PID_GOXLR_MINI};
 use json_patch::diff;
 use log::{debug, error, info, warn};
 use std::collections::{BTreeMap, HashMap};
-use std::time::{Duration, Instant, SystemTime};
+use std::time::{Duration, Instant};
 use tokio::sync::broadcast::Sender as BroadcastSender;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::sync::{mpsc, oneshot};
 use tokio::time::sleep;
 use xmltree::Element;
+
+const IGNORE_DEVICE_DURATION: Duration = Duration::from_secs(10);
+const APP_CHECK_INTERVAL: Duration = Duration::from_secs(30);
 
 // Adding a third entry has tripped enum_variant_names, I'll probably need to rename
 // RunDeviceCommand, but that'll need to be in a separate commit, for now, suppress.
@@ -41,12 +44,6 @@ pub enum DeviceStateChange {
     Wake(oneshot::Sender<()>),
 }
 
-#[derive(Default)]
-struct AppPathCheck {
-    path: Option<String>,
-    check: Option<SystemTime>,
-}
-
 pub type DeviceSender = Sender<DeviceCommand>;
 pub type DeviceReceiver = Receiver<DeviceCommand>;
 
@@ -63,7 +60,6 @@ pub async fn spawn_usb_handler(
     http_settings: HttpSettings,
     mut file_manager: FileManager,
 ) {
-    let mut app_check = AppPathCheck::default();
     let mut firmware_version = None;
 
     // We can probably either merge these, or struct them..
@@ -84,6 +80,14 @@ pub async fn spawn_usb_handler(
     let update_sleep = sleep(update_duration);
     tokio::pin!(update_sleep);
 
+    // Timer for checking whether the UI App has appeared
+    let mut app_check: Option<String> = None;
+    get_app_path(&mut app_check);
+
+    let app_duration = APP_CHECK_INTERVAL;
+    let app_sleep = sleep(app_duration);
+    tokio::pin!(app_sleep);
+
     // Get the Driver Type and Details..
     let (interface, version) = get_version();
     let driver_interface = DriverDetails { interface, version };
@@ -100,7 +104,7 @@ pub async fn spawn_usb_handler(
         &driver_interface,
         &firmware_version,
         files.clone(),
-        &mut app_check,
+        &app_check,
     )
     .await;
 
@@ -149,7 +153,7 @@ pub async fn spawn_usb_handler(
                                 bus_number, address, e
                             );
                             ignore_list
-                                .insert((bus_number, address, device_identifier), Instant::now() + Duration::from_secs(10));
+                                .insert((bus_number, address, device_identifier), Instant::now() + IGNORE_DEVICE_DURATION);
                         }
                     };
                 }
@@ -168,7 +172,13 @@ pub async fn spawn_usb_handler(
                     }
                 }
                 update_sleep.as_mut().reset(tokio::time::Instant::now() + update_duration);
-            }
+            },
+            () = &mut app_sleep => {
+                if get_app_path(&mut app_check) {
+                    change_found = true;
+                }
+                app_sleep.as_mut().reset(tokio::time::Instant::now() + APP_CHECK_INTERVAL);
+            },
             Some(serial) = disconnect_receiver.recv() => {
                 info!("[{}] Device Disconnected", serial);
                 devices.remove(&serial);
@@ -383,7 +393,7 @@ pub async fn spawn_usb_handler(
                 &driver_interface,
                 &firmware_version,
                 files.clone(),
-                &mut app_check,
+                &app_check,
             )
             .await;
 
@@ -411,22 +421,8 @@ async fn get_daemon_status(
     driver_details: &DriverDetails,
     firmware_versions: &Option<EnumMap<DeviceType, Option<VersionNumber>>>,
     files: Files,
-    app_check: &mut AppPathCheck,
+    app_check: &Option<String>,
 ) -> DaemonStatus {
-    // We need to limit this to every 30 seconds or so, simply because otherwise changing
-    // any setting will start a probe on the drive, which is undesirable.
-    if app_check.check.is_none() {
-        get_app_path(app_check);
-    }
-
-    if let Some(check) = app_check.check {
-        if let Ok(duration) = SystemTime::now().duration_since(check) {
-            if duration.as_secs() > 30 {
-                get_app_path(app_check);
-            }
-        }
-    }
-
     let mut status = DaemonStatus {
         config: DaemonConfig {
             http_settings: http_settings.clone(),
@@ -445,7 +441,7 @@ async fn get_daemon_status(
             open_ui_on_launch: settings.get_open_ui_on_launch().await,
             activation: Activation {
                 active_path: settings.get_activate().await,
-                app_path: app_check.path.clone(),
+                app_path: app_check.clone(),
             },
         },
         paths: Paths {
@@ -470,17 +466,33 @@ async fn get_daemon_status(
 }
 
 #[allow(const_item_mutation)]
-fn get_app_path(app_check: &mut AppPathCheck) {
-    debug!("Refreshing App Path..");
+fn get_app_path(app_check: &mut Option<String>) -> bool {
     if let Some(path) = get_ui_app_path() {
+        let mut changed = false;
+
         // We need to escape the value..
         let wrap = if cfg!(windows) { "\"" } else { "'" };
         let path = format!("{}{}{}", wrap, path.to_string_lossy(), wrap);
-        app_check.path.replace(path);
+
+        if let Some(old_path) = app_check {
+            if *old_path != path {
+                app_check.replace(path);
+                changed = true;
+            }
+        } else {
+            app_check.replace(path);
+            changed = true
+        }
+
+        changed
     } else {
-        app_check.path.take();
+        let mut changed = false;
+        if app_check.is_some() {
+            changed = true;
+        }
+        app_check.take();
+        changed
     }
-    app_check.check.replace(SystemTime::now());
 }
 
 async fn get_sample_files(

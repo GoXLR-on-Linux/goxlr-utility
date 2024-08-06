@@ -107,8 +107,6 @@ cfg_if! {
 }
 
 pub fn get_ui_app_path() -> Option<PathBuf> {
-    debug!("Refreshing App Path..");
-
     // This simply looks for the GoXLR UI App alongside the daemon binary and returns it..
     let mut path = None;
     let bin_name = get_ui_binary_name();
