@@ -211,11 +211,10 @@ impl Player {
             0
         };
 
-        let mut break_playback = false;
         let mut mono_playback = false;
 
         // Loop over the input file..
-        let result = loop {
+        let result = 'main: loop {
             let packet = match reader.next_packet() {
                 Ok(packet) => packet,
                 Err(err) => {
@@ -294,12 +293,7 @@ impl Player {
                             if self.force_stop.load(Ordering::Relaxed) {
                                 // Don't care about the buffer, just end it.
                                 debug!("Force Stop Requested, terminating.");
-
-                                if let Some(audio_output) = &mut audio_output {
-                                    audio_output.stop();
-                                }
-
-                                break Ok(());
+                                break 'main Ok(());
                             }
 
                             if let Some(fade_amount) = fade_amount {
@@ -307,21 +301,19 @@ impl Player {
                                 // so each channel will have a slightly different volume, for now it's small enough to not
                                 // actually notice :p
 
-                                for i in 0..=samples.len() - 1 {
-                                    samples[i] *= self.volume;
+                                for sample in samples.iter_mut() {
+                                    *sample *= self.volume;
+
+                                    // Has the fade amount dropped below 0?
                                     self.volume -= fade_amount;
                                     if self.volume < 0.0 {
-                                        // We've reached the end, ensure already processed samples  make it
-                                        samples = samples[0..i].to_vec();
-                                        break_playback = true;
-                                        break;
+                                        break 'main Ok(());
                                     }
                                 }
                             } else {
                                 // No fade duration, clear out sample buffer and end.
                                 debug!("Stop Requested, No Fade Out set, Stopping Playback.");
-                                samples = vec![];
-                                break_playback = true;
+                                break 'main Ok(());
                             }
                         }
 
@@ -365,21 +357,21 @@ impl Player {
                             // Set the back to FALSE
                             self.restart_track.store(false, Ordering::Relaxed);
                         }
-
-                        // If we've been instructed to break, end it here.
-                        if break_playback {
-                            break Ok(());
-                        }
                     }
                 }
                 Err(err) => break Err(err),
             }
         };
         if !self.force_stop.load(Ordering::Relaxed) {
-            if let Some(mut audio_output) = audio_output {
+            if let Some(ref mut audio_output) = audio_output {
                 // We should always flush the last samples, unless forced to stop
                 audio_output.flush();
             }
+        }
+
+        // Stop the playback handler..
+        if let Some(mut audio_output) = audio_output {
+            audio_output.stop();
         }
 
         if let Some(ebu_r128) = ebu_r128 {
