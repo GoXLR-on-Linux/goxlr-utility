@@ -71,13 +71,17 @@ impl TUSBAudioGoXLR {
         loop {
             if Instant::now() > timeout {
                 // We've hit a timeout, don't infinite loop, instead throw as error.
+                warn!("Timeout Awaiting Response..");
                 return false;
             }
 
             let result = self.event_receivers.data_read.try_recv();
             match result {
                 Ok(result) => break result,
-                Err(TryRecvError::Disconnected) => break false,
+                Err(TryRecvError::Disconnected) => {
+                    warn!("Channel has been Disconnected");
+                    break false;
+                }
                 Err(_) => continue,
             }
         }

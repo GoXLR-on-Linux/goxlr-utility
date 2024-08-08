@@ -424,6 +424,7 @@ impl TUSBAudio<'_> {
         // Register this event with the notifier..
         let result = unsafe { (self.register_device_notification)(handle, u32::MAX, event, 0) };
         if result != 0 {
+            warn!("Unable to Register Notifications");
             bail!("Unable to register notifications");
         }
 
