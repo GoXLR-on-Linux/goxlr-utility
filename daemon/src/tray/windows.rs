@@ -104,9 +104,7 @@ fn run_loop(msg_window: HWND, state: DaemonState) {
             if GetMessageW(msg.as_mut_ptr(), msg_window, 0, 0) != FALSE {
                 let msg = msg.assume_init();
 
-                if TranslateMessage(&msg) == FALSE {
-                    warn!("Unable to Translate Message, proceeding anyway");
-                }
+                let _ = TranslateMessage(&msg);
                 DispatchMessageW(&msg);
             }
 
