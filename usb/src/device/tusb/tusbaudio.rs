@@ -47,7 +47,7 @@ type VendorRequestIn =
     unsafe extern "C" fn(u32, u32, u32, u32, u32, u16, u16, *mut u8, *mut u8, u32) -> u32;
 type RegisterDeviceNotification = unsafe extern "C" fn(u32, u32, HANDLE, u32) -> u32;
 type RegisterPnpNotification = unsafe extern "C" fn(HANDLE, HANDLE, u32, u32, u32) -> u32;
-type ReadDeviceNotification = unsafe extern "C" fn(u32, &u32, *mut u8, u32, &u32) -> u32;
+type ReadDeviceNotification = unsafe extern "C" fn(u32, *const u32, *mut u8, u32, *mut u32) -> u32;
 type StatusCodeString = unsafe extern "C" fn(u32) -> *const i8;
 type CloseDevice = unsafe extern "C" fn(u32) -> u32;
 
@@ -429,10 +429,14 @@ impl TUSBAudio<'_> {
         }
 
         // Assign useful variables for later :p
-        let mut buffer: Vec<u8> = Vec::with_capacity(1024);
-        let buffer_ptr = buffer.as_mut_ptr();
-        let a: u32 = 0;
-        let response_len: u32 = 0;
+        let buffer = vec![0_u8; 1024];
+        let buffer_ptr = &buffer as *const _ as *mut u8;
+
+        let mut response_len: u32 = 0;
+        let len_ptr: *mut u32 = &mut response_len;
+
+        // Honestly don't know what this variable does, but 0 seems to work.
+        let a = 0;
 
         if callbacks.ready_notifier.send(true).is_err() {
             warn!("Error Sending Ready Notification..");
@@ -447,7 +451,7 @@ impl TUSBAudio<'_> {
                 // Check the Queued Events :)
                 loop {
                     let event_result = unsafe {
-                        (self.read_device_notification)(handle, &a, buffer_ptr, 1024, &response_len)
+                        (self.read_device_notification)(handle, &a, buffer_ptr, 1024, len_ptr)
                     };
                     if event_result != 0 {
                         // We've either hit the end of the list, or something's gone wrong, break
