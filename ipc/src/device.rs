@@ -1,4 +1,4 @@
-use crate::{ColourWay, GoXLRCommand, LogLevel};
+use crate::{ColourWay, GoXLRCommand, LogLevel, UpdateState};
 use enum_map::EnumMap;
 use goxlr_types::MuteState::Unmuted;
 use goxlr_types::{
@@ -18,6 +18,7 @@ use std::path::PathBuf;
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct DaemonStatus {
     pub config: DaemonConfig,
+    pub firmware: HashMap<String, Option<FirmwareStatus>>,
     pub mixers: HashMap<String, MixerStatus>,
     pub paths: Paths,
     pub files: Files,
@@ -85,6 +86,13 @@ pub struct MixerStatus {
     pub button_down: EnumMap<Button, bool>,
     pub profile_name: String,
     pub mic_profile_name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FirmwareStatus {
+    pub state: UpdateState,
+    pub progress: u8,
+    pub error: Option<String>,
 }
 
 impl MixerStatus {

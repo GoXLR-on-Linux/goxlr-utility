@@ -42,6 +42,7 @@ mod cli;
 mod device;
 mod events;
 mod files;
+mod firmware;
 mod mic_profile;
 mod platform;
 mod primary_worker;
