@@ -326,11 +326,22 @@ impl ExecutableGoXLR for GoXLRUSB {
         sleep(sleep_time);
 
         let mut response = vec![];
-        for i in 0..20 {
+
+        // Some firmware update messages take longer to process, give more time here and don't
+        // spam about them being delayed.
+        let (count, ignore_warn) = match command {
+            Command::ExecuteFirmwareUpdateAction(_) => (80, true),
+            Command::ExecuteFirmwareUpdateCommand(_) => (80, true),
+            _ => (20, false),
+        };
+
+        for i in 0..count {
             let response_value = self.read_control(3, 0, 0, 1040);
             if response_value == Err(Pipe) {
-                if i < 19 {
-                    debug!("Response not arrived yet for {:?}, sleeping and retrying (Attempt {} of 20)", command, i + 1);
+                if i < count - 1 {
+                    if !ignore_warn {
+                        debug!("Response not arrived yet for {:?}, sleeping and retrying (Attempt {} of 20)", command, i + 1);
+                    }
                     sleep(sleep_time);
                     continue;
                 } else {

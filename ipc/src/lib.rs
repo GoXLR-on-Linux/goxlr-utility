@@ -25,6 +25,8 @@ pub enum DaemonRequest {
     Daemon(DaemonCommand),
     GetMicLevel(String),
     Command(String, GoXLRCommand),
+    RunFirmwareUpdate(String, Option<String>),
+    ClearFirmwareState(String),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -63,6 +65,20 @@ pub enum PathTypes {
     Icons,
     Logs,
     Backups,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+pub enum UpdateState {
+    Failed,
+
+    Starting,
+    Download,
+    ClearNVR,
+    UploadFirmware,
+    ValidateUpload,
+    HardwareValidate,
+    HardwareWrite,
+    Complete,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, Eq, PartialEq)]

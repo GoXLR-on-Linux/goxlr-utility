@@ -1,4 +1,3 @@
-use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::default::Default;
 use std::fs::{remove_file, File};
@@ -3343,43 +3342,5 @@ pub fn usb_to_standard_button(source: Buttons) -> Button {
 }
 
 pub fn version_newer_or_equal_to(version: &VersionNumber, comparison: VersionNumber) -> bool {
-    match version.0.cmp(&comparison.0) {
-        Ordering::Greater => return true,
-        Ordering::Less => return false,
-        Ordering::Equal => {}
-    }
-
-    match version.1.cmp(&comparison.1) {
-        Ordering::Greater => return true,
-        Ordering::Less => return false,
-        Ordering::Equal => {}
-    }
-
-    if let Some(patch) = version.2 {
-        if let Some(comparison) = comparison.2 {
-            match patch.cmp(&comparison) {
-                Ordering::Greater => return true,
-                Ordering::Less => return false,
-                Ordering::Equal => {}
-            }
-        } else {
-            return true;
-        }
-    } else if comparison.2.is_some() {
-        return false;
-    }
-
-    if let Some(build) = version.3 {
-        if let Some(comparison) = comparison.3 {
-            if build >= comparison {
-                return true;
-            }
-        } else {
-            return true;
-        }
-    } else if comparison.3.is_some() {
-        return false;
-    }
-
-    true
+    version >= &comparison
 }

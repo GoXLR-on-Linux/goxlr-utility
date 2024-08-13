@@ -1,6 +1,7 @@
 use crate::primary_worker::{DeviceCommand, DeviceSender};
 use anyhow::{anyhow, Context, Result};
 use goxlr_ipc::{DaemonRequest, DaemonResponse};
+use std::path::PathBuf;
 use tokio::sync::oneshot;
 
 pub async fn handle_packet(
@@ -56,6 +57,29 @@ pub async fn handle_packet(
                 .await
                 .map_err(|e| anyhow!(e.to_string()))
                 .context("Could not communicate with the GoXLR device")?;
+            rx.await
+                .context("Could not execute the command on the GoXLR device")??;
+            Ok(DaemonResponse::Ok)
+        }
+
+        DaemonRequest::RunFirmwareUpdate(serial, path) => {
+            let (tx, rx) = oneshot::channel();
+            let path = path.map(PathBuf::from);
+            usb_tx
+                .send(DeviceCommand::RunFirmwareUpdate(serial, path, tx))
+                .await
+                .map_err(anyhow::Error::msg)?;
+            rx.await
+                .context("Could not execute the command on the GoXLR device")??;
+            Ok(DaemonResponse::Ok)
+        }
+
+        DaemonRequest::ClearFirmwareState(serial) => {
+            let (tx, rx) = oneshot::channel();
+            usb_tx
+                .send(DeviceCommand::ClearFirmwareState(serial, tx))
+                .await
+                .map_err(anyhow::Error::msg)?;
             rx.await
                 .context("Could not execute the command on the GoXLR device")??;
             Ok(DaemonResponse::Ok)
