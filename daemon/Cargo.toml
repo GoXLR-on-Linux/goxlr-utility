@@ -177,8 +177,8 @@ assets = [
 
 # Tiny scriptlet, should reload udev if possible.
 post_install_script = """
-udevadm control --reload-rules || true
-udevadm trigger || true
+udevadm control --reload-rules || echo -e "\033[0;31mReloading udev failed. You might need to reboot after installation.\033[0m" 1>&2
+udevadm trigger || echo -e "\033[0;31mReloading udev failed. You might need to reboot after installation.\033[0m" 1>&2
 """
 
 #release = "1"
