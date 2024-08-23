@@ -666,16 +666,19 @@ impl ProfileSettings {
 
         self.mute_chat.write_mute_chat(&mut writer)?;
 
-        for fader in self.faders.values() {
-            fader.write_fader(&mut writer)?;
+        // The following three iters need the FaderName to be defined and passed
+        // forward, the tag names need to be dynamically generated to prevent breakage
+        // when .swap() is used to move them around.
+        for (faders, fader) in &self.faders {
+            fader.write_fader(&mut writer, faders)?;
         }
 
-        for button in self.mute_buttons.values() {
-            button.write_button(&mut writer)?;
+        for (fader, button) in &self.mute_buttons {
+            button.write_button(&mut writer, fader)?;
         }
 
-        for scribble in self.scribbles.values() {
-            scribble.write_scribble(&mut writer)?;
+        for (fader, scribble) in &self.scribbles {
+            scribble.write_scribble(&mut writer, fader)?;
         }
 
         for effect in self.effects.values() {
