@@ -228,6 +228,10 @@ pub async fn spawn_usb_handler(
                             device.wake().await;
                         }
                         let _ = sender.send(());
+
+                        // We'll set this regardless and refresh the Status object, this
+                        // allows the UI to update when waking up.
+                        change_found = true;
                     }
                 }
 
