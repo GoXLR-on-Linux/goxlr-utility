@@ -1770,8 +1770,17 @@ impl<'a> Device<'a> {
                 }
 
                 // Unmute the channel to prevent weirdness, then set new behaviour
-                self.unmute_fader(fader).await?;
+                //self.unmute_fader(fader).await?;
                 self.profile.set_mute_button_behaviour(fader, behaviour);
+
+                // We'll pass 'None' into this as there's a guaranteed change..
+                self.apply_mute_from_profile(fader, None)?;
+
+                let channel = self.profile.get_fader_assignment(fader);
+                if BasicInputDevice::can_from(channel) {
+                    let input = BasicInputDevice::from(channel);
+                    self.apply_routing(input).await?;
+                }
             }
 
             GoXLRCommand::SetVolume(channel, volume) => {
