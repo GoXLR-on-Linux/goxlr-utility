@@ -2756,6 +2756,9 @@ impl<'a> Device<'a> {
                     .set_device_vc_mute_also_mute_cm(self.serial(), value)
                     .await;
                 self.settings.save().await;
+
+                // Re-run the Microphone Routing to update if needed..
+                self.apply_routing(BasicInputDevice::Microphone).await?;
             }
 
             GoXLRCommand::SetMonitorWithFx(value) => {
