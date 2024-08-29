@@ -165,6 +165,31 @@ pub enum InputDevice {
     Samples,
 }
 
+impl InputDevice {
+    pub fn can_from(channel: ChannelName) -> bool {
+        !matches!(
+            channel,
+            ChannelName::Headphones | ChannelName::MicMonitor | ChannelName::LineOut
+        )
+    }
+}
+
+impl From<ChannelName> for InputDevice {
+    fn from(value: ChannelName) -> Self {
+        match value {
+            ChannelName::Mic => InputDevice::Microphone,
+            ChannelName::LineIn => InputDevice::LineIn,
+            ChannelName::Console => InputDevice::Console,
+            ChannelName::System => InputDevice::System,
+            ChannelName::Game => InputDevice::Game,
+            ChannelName::Chat => InputDevice::Chat,
+            ChannelName::Sample => InputDevice::Samples,
+            ChannelName::Music => InputDevice::Music,
+            _ => panic!("Attempted to cast output to InputChannel!"),
+        }
+    }
+}
+
 #[derive(Debug, Eq, Copy, Clone, Display, EnumIter, EnumCount, Derivative)]
 #[derivative(PartialEq, Hash)]
 #[cfg_attr(feature = "clap", derive(ValueEnum))]
