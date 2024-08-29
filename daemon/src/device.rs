@@ -1799,6 +1799,7 @@ impl<'a> Device<'a> {
 
                 // Reapply the Cough settings from the profile
                 self.apply_cough_from_profile()?;
+                self.apply_routing(BasicInputDevice::Microphone).await?;
             }
             GoXLRCommand::SetCoughIsHold(is_hold) => {
                 self.unmute_chat_if_muted().await?;
