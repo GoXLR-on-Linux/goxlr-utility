@@ -1796,6 +1796,9 @@ impl<'a> Device<'a> {
                 // Unmute the channel to prevent weirdness, then set new behaviour
                 self.unmute_chat_if_muted().await?;
                 self.profile.set_chat_mute_button_behaviour(mute_function);
+
+                // Reapply the Cough settings from the profile
+                self.apply_cough_from_profile()?;
             }
             GoXLRCommand::SetCoughIsHold(is_hold) => {
                 self.unmute_chat_if_muted().await?;
