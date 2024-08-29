@@ -1,9 +1,10 @@
 use crate::mic_profile::DEFAULT_MIC_PROFILE_NAME;
 use crate::profile::DEFAULT_PROFILE_NAME;
-use crate::settings::VodMode::Routable;
 use anyhow::{Context, Result};
 use directories::ProjectDirs;
 use goxlr_ipc::{GoXLRCommand, LogLevel};
+use goxlr_types::VodMode;
+use goxlr_types::VodMode::Routable;
 use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -787,11 +788,4 @@ impl Default for DeviceSettings {
             wake_commands: vec![],
         }
     }
-}
-
-#[derive(Debug, Copy, Clone, Serialize, Deserialize, Default)]
-enum VodMode {
-    #[default]
-    Routable,
-    StreamNoMusic,
 }
