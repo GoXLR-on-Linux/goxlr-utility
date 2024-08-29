@@ -1780,6 +1780,11 @@ impl<'a> Device<'a> {
                 if BasicInputDevice::can_from(channel) {
                     let input = BasicInputDevice::from(channel);
                     self.apply_routing(input).await?;
+
+                    if input == BasicInputDevice::Chat && self.vc_mute_also_mute_cm {
+                        // Reapply the Mic routing in case we need to mute / unmute to Voice Chat
+                        self.apply_routing(BasicInputDevice::Microphone).await?;
+                    }
                 }
             }
 
