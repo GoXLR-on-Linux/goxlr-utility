@@ -17,6 +17,7 @@ use goxlr_usb::{PID_GOXLR_FULL, PID_GOXLR_MINI};
 use json_patch::diff;
 use log::{debug, error, info, warn};
 use std::collections::{BTreeMap, HashMap};
+use std::env;
 use std::time::{Duration, Instant};
 use tokio::sync::broadcast::Sender as BroadcastSender;
 use tokio::sync::mpsc::{Receiver, Sender};
@@ -447,6 +448,7 @@ async fn get_daemon_status(
                 active_path: settings.get_activate().await,
                 app_path: app_check.clone(),
             },
+            platform: env::consts::OS.to_string(),
         },
         paths: Paths {
             profile_directory: settings.get_profile_directory().await,

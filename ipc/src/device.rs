@@ -37,6 +37,7 @@ pub struct DaemonConfig {
     pub allow_network_access: bool,
     pub log_level: LogLevel,
     pub open_ui_on_launch: bool,
+    pub platform: String,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
