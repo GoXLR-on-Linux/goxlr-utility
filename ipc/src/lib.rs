@@ -94,6 +94,8 @@ pub enum DaemonCommand {
 
     SetSampleGainPct(String, u8),
     ApplySampleChange,
+
+    DisableMacOSAggregates(bool),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
