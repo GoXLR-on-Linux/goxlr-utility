@@ -2773,6 +2773,22 @@ impl<'a> Device<'a> {
                     self.load_colour_map().await?;
                 }
             }
+
+            GoXLRCommand::SetVodMode(value) => {
+                let serial = self.serial();
+
+                // Get the current mode..
+                let current = self.settings.get_device_vod_mode(serial).await;
+                if current != value {
+                    self.settings.set_device_vod_mode(serial, value).await;
+
+                    // We need to reapply all routing to reconfigure as needed
+                    for input in BasicInputDevice::iter() {
+                        self.apply_routing(input).await?;
+                    }
+                }
+            }
+
             GoXLRCommand::SetActiveEffectPreset(preset) => {
                 self.load_effect_bank(preset).await?;
                 self.update_button_states()?;
