@@ -38,6 +38,7 @@ pub struct DaemonConfig {
     pub log_level: LogLevel,
     pub open_ui_on_launch: bool,
     pub platform: String,
+    pub handle_macos_aggregates: bool,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

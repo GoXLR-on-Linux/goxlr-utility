@@ -449,6 +449,7 @@ async fn get_daemon_status(
                 app_path: app_check.clone(),
             },
             platform: env::consts::OS.to_string(),
+            handle_macos_aggregates: settings.get_macos_handle_aggregates().await,
         },
         paths: Paths {
             profile_directory: settings.get_profile_directory().await,
