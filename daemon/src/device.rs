@@ -922,7 +922,7 @@ impl<'a> Device<'a> {
             let volume = self.profile.get_channel_volume(channel);
 
             // Per the latest official release, the mini no longer sets the volume to 0 on mute
-            if self.hardware.device_type != DeviceType::Mini {
+            if !self.is_device_mini() {
                 // We need to set the previous volume regardless, because if the below setting
                 // changes, we need to correctly reset the position.
                 self.profile.set_mute_previous_volume(fader, volume)?;
@@ -944,7 +944,7 @@ impl<'a> Device<'a> {
             self.profile.set_mute_button_blink(fader, true);
         }
 
-        if self.hardware.device_type != DeviceType::Mini && !lock_faders {
+        if !self.is_device_mini() && !lock_faders {
             // Again, only apply this if we're a full device
             self.profile.set_channel_volume(channel, 0)?;
         } else {
@@ -991,7 +991,7 @@ impl<'a> Device<'a> {
             }
 
             // As with mute, the mini doesn't modify volumes on mute / unmute
-            if self.hardware.device_type != DeviceType::Mini && !lock_faders {
+            if !self.is_device_mini() && !lock_faders {
                 self.goxlr.set_volume(channel, previous_volume)?;
                 self.profile.set_channel_volume(channel, previous_volume)?;
             } else {
@@ -1032,7 +1032,7 @@ impl<'a> Device<'a> {
     }
 
     fn lock_faders(&mut self) -> Result<()> {
-        if self.hardware.device_type == DeviceType::Mini {
+        if self.is_device_mini() {
             return Ok(());
         }
 
@@ -1050,7 +1050,7 @@ impl<'a> Device<'a> {
     }
 
     fn unlock_faders(&mut self) -> Result<()> {
-        if self.hardware.device_type == DeviceType::Mini {
+        if self.is_device_mini() {
             return Ok(());
         }
 
@@ -1530,7 +1530,7 @@ impl<'a> Device<'a> {
 
         for fader in FaderName::iter() {
             let new_volume = volumes[fader as usize];
-            if self.hardware.device_type == DeviceType::Mini {
+            if self.is_device_mini() {
                 if new_volume == self.fader_last_seen[fader] {
                     continue;
                 }
@@ -1632,7 +1632,7 @@ impl<'a> Device<'a> {
                 .mic_profile
                 .get_effect_value(EffectKey::PitchAmount, self.profile());
 
-            if self.hardware.device_type != DeviceType::Mini {
+            if !self.is_device_mini() {
                 let message = format!("Pitch {}", user_value);
                 let _ = self.global_events.send(TTSMessage(message)).await;
             }
@@ -1659,7 +1659,7 @@ impl<'a> Device<'a> {
             if new_value != current_value {
                 self.apply_effects(LinkedHashSet::from_iter([EffectKey::GenderAmount]))?;
 
-                if self.hardware.device_type != DeviceType::Mini {
+                if !self.is_device_mini() {
                     let message = format!("Gender {}", new_value);
                     let _ = self.global_events.send(TTSMessage(message)).await;
                 }
@@ -1684,7 +1684,7 @@ impl<'a> Device<'a> {
 
             let percent = 100 - ((new_value as f32 / -36.) * 100.) as i32;
 
-            if self.hardware.device_type != DeviceType::Mini {
+            if !self.is_device_mini() {
                 let message = format!("Reverb {} percent", percent);
                 let _ = self.global_events.send(TTSMessage(message)).await;
             }
@@ -1705,7 +1705,7 @@ impl<'a> Device<'a> {
                 .get_effect_value(EffectKey::EchoAmount, self.profile());
             user_value = 100 - ((user_value as f32 / -36.) * 100.) as i32;
 
-            if self.hardware.device_type != DeviceType::Mini {
+            if !self.is_device_mini() {
                 let message = format!("Echo {} percent", user_value);
                 let _ = self.global_events.send(TTSMessage(message)).await;
             }
@@ -1941,9 +1941,7 @@ impl<'a> Device<'a> {
                     bail!("Animations not supported on this firmware.");
                 }
 
-                if mode == goxlr_types::AnimationMode::Ripple
-                    && self.hardware.device_type == DeviceType::Mini
-                {
+                if mode == goxlr_types::AnimationMode::Ripple && self.is_device_mini() {
                     bail!("Ripple Mode not supported on the GoXLR Mini");
                 }
 
@@ -3290,7 +3288,7 @@ impl<'a> Device<'a> {
             mute_type: self.profile().get_mute_button_behaviour(fader),
             scribble: self
                 .profile()
-                .get_scribble_ipc(fader, self.hardware.device_type == DeviceType::Mini),
+                .get_scribble_ipc(fader, self.is_device_mini()),
             mute_state: self.profile.get_ipc_mute_state(fader),
         }
     }
@@ -3314,11 +3312,9 @@ impl<'a> Device<'a> {
     async fn load_colour_map(&mut self) -> Result<()> {
         // The new colour format occurred on different firmware versions depending on device,
         // so do the check here.
-
-        let device_mini = self.hardware.device_type == DeviceType::Mini;
         let lock_faders = self.settings.get_device_lock_faders(self.serial()).await;
 
-        let blank_mute = device_mini || lock_faders;
+        let blank_mute = self.is_device_mini() || lock_faders;
 
         let use_1_3_40_format = self.device_supports_animations();
         let colour_map = self.profile.get_colour_map(use_1_3_40_format, blank_mute);
@@ -3456,7 +3452,7 @@ impl<'a> Device<'a> {
             self.set_fader_display_from_profile(fader)?;
         }
 
-        if self.hardware.device_type == DeviceType::Full {
+        if !self.is_device_mini() {
             for fader in FaderName::iter() {
                 self.apply_scribble(fader).await?;
             }
@@ -3559,7 +3555,7 @@ impl<'a> Device<'a> {
     }
 
     fn apply_voice_fx(&mut self) -> Result<()> {
-        if self.hardware.device_type == DeviceType::Mini {
+        if self.is_device_mini() {
             // Voice FX aren't present on the mini.
             return Ok(());
         }
@@ -3640,7 +3636,7 @@ impl<'a> Device<'a> {
     }
 
     fn set_pitch_mode(&mut self) -> Result<()> {
-        if self.hardware.device_type != DeviceType::Full {
+        if self.is_device_mini() {
             // Not a Full GoXLR, nothing to do.
             return Ok(());
         }
@@ -3777,6 +3773,10 @@ impl<'a> Device<'a> {
             }
         }
         Ok(())
+    }
+
+    fn is_device_mini(&self) -> bool {
+        self.hardware.device_type == DeviceType::Mini
     }
 
     fn needs_submix_correction(&self, channel: ChannelName) -> bool {
