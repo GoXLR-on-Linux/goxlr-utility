@@ -35,7 +35,7 @@ pub async fn run(tx: mpsc::Sender<EventTriggers>, mut stop: Shutdown) -> Result<
         }
     }
 
-    if HANDLE_MACOS_AGGREGATES.lock().unwrao().unwrap() == false {
+    if HANDLE_MACOS_AGGREGATES.lock().unwrap().unwrap() == false {
         return Ok(());
     }
 
