@@ -197,6 +197,12 @@ async fn run_utility() -> Result<()> {
         warn!("Unable to calculate timezone, using UTC for log timestamps");
     }
 
+    if cfg!(target_os = "macos") {
+        debug!(
+            "Configure MacOS Aggregates: {:?}",
+            HANDLE_MACOS_AGGREGATES.lock().unwrap().unwrap()
+        );
+    }
     if is_root() {
         if args.force_root {
             error!("GoXLR Utility running as root, this is generally considered bad.");
