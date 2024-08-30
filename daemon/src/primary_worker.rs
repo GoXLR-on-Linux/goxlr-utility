@@ -347,9 +347,11 @@ pub async fn spawn_usb_handler(
                                 change_found = true;
                                 let _ = sender.send(Ok(()));
                             }
-                            DaemonCommand::DisableMacOSAggregates(value) => {
+                            DaemonCommand::HandleMacOSAggregates(value) => {
                                 settings.set_macos_handle_aggregates(value).await;
                                 settings.save().await;
+
+                                change_found = true;
                                 let _ = sender.send(Ok(()));
                             }
                         }
