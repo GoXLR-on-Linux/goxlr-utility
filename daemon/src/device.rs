@@ -3273,8 +3273,10 @@ impl<'a> Device<'a> {
             self.goxlr.set_volume(existing_channel, volume)?;
         }
 
-        self.apply_scribble(fader).await?;
-        self.apply_scribble(fader_to_switch).await?;
+        if !self.is_device_mini() {
+            self.apply_scribble(fader).await?;
+            self.apply_scribble(fader_to_switch).await?;
+        }
 
         // Finally update the button colours..
         self.update_button_states()?;
