@@ -63,6 +63,12 @@ rather than through additional parameters. When that comes, this will be removed
 static OVERRIDE_SAMPLER_INPUT: Mutex<Option<String>> = Mutex::new(None);
 static OVERRIDE_SAMPLER_OUTPUT: Mutex<Option<String>> = Mutex::new(None);
 
+/**
+    This is also ugly, but for now it's important to allow users to simply disable aggregate
+    management, and have the utility obey.
+*/
+pub static HANDLE_MACOS_AGGREGATES: Mutex<Option<bool>> = Mutex::new(Some(true));
+
 lazy_static! {
     /**
         This is a fetcher of the system locale, used for language and translations of the UI.
@@ -108,6 +114,10 @@ async fn run_utility() -> Result<()> {
     // they get moved into the settings loader, which just causes headaches :D
     let args: Cli = Cli::parse();
     let settings = SettingsHandle::load(args.config).await?;
+
+    // Set the MacOS Aggregate management..
+    let aggregates = settings.get_macos_handle_aggregates().await;
+    HANDLE_MACOS_AGGREGATES.lock().unwrap().replace(aggregates);
 
     // Configure and / or create the log path, and file name.
     let log_path = settings.get_log_directory().await;
@@ -187,6 +197,12 @@ async fn run_utility() -> Result<()> {
         warn!("Unable to calculate timezone, using UTC for log timestamps");
     }
 
+    if cfg!(target_os = "macos") {
+        debug!(
+            "Configure MacOS Aggregates: {:?}",
+            HANDLE_MACOS_AGGREGATES.lock().unwrap().unwrap()
+        );
+    }
     if is_root() {
         if args.force_root {
             error!("GoXLR Utility running as root, this is generally considered bad.");
