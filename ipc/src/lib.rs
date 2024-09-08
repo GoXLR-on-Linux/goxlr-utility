@@ -14,7 +14,7 @@ use goxlr_types::{
     FaderDisplayStyle, FaderName, GateTimes, GenderStyle, HardTuneSource, HardTuneStyle,
     InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies, Mix, MuteFunction, MuteState,
     OutputDevice, PitchStyle, ReverbStyle, RobotRange, RobotStyle, SampleBank, SampleButtons,
-    SamplePlayOrder, SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets,
+    SamplePlayOrder, SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets, VodMode,
     WaterfallDirection,
 };
 
@@ -268,6 +268,7 @@ pub enum GoXLRCommand {
     SetMonitorWithFx(bool),
     SetSamplerResetOnClear(bool),
     SetLockFaders(bool),
+    SetVodMode(VodMode),
 
     // These control the current GoXLR 'State'..
     SetActiveEffectPreset(EffectBankPresets),

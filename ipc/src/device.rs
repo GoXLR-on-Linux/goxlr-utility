@@ -9,7 +9,7 @@ use goxlr_types::{
     MegaphoneStyle, MicrophoneType, MiniEqFrequencies, Mix, MuteFunction, MuteState, OutputDevice,
     PitchStyle, ReverbStyle, RobotStyle, SampleBank, SampleButtons, SamplePlayOrder,
     SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets, SubMixChannelName,
-    VersionNumber, WaterfallDirection,
+    VersionNumber, VodMode, WaterfallDirection,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
@@ -396,6 +396,7 @@ pub struct Settings {
     pub enable_monitor_with_fx: bool,
     pub reset_sampler_on_clear: bool,
     pub lock_faders: bool,
+    pub vod_mode: VodMode,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

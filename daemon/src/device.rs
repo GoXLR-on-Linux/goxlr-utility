@@ -21,7 +21,7 @@ use goxlr_types::{
     Button, ChannelName, DeviceType, DisplayModeComponents, EffectBankPresets, EffectKey,
     EncoderName, FaderName, HardTuneSource, InputDevice as BasicInputDevice, MicrophoneParamKey,
     Mix, MuteState, OutputDevice as BasicOutputDevice, RobotRange, SampleBank, SampleButtons,
-    SamplePlaybackMode, VersionNumber, WaterfallDirection,
+    SamplePlaybackMode, VersionNumber, VodMode, WaterfallDirection,
 };
 use goxlr_usb::animation::{AnimationMode, WaterFallDir};
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
@@ -277,6 +277,7 @@ impl<'a> Device<'a> {
             .await;
 
         let locked_faders = self.settings.get_device_lock_faders(self.serial()).await;
+        let vod_mode = self.settings.get_device_vod_mode(self.serial()).await;
 
         let submix_supported = self.device_supports_submixes();
 
@@ -346,6 +347,7 @@ impl<'a> Device<'a> {
                 enable_monitor_with_fx: monitor_with_fx,
                 reset_sampler_on_clear: sampler_reset_on_clear,
                 lock_faders: locked_faders,
+                vod_mode,
             },
             button_down: button_states,
             profile_name: self.profile.name().to_owned(),
@@ -2792,6 +2794,22 @@ impl<'a> Device<'a> {
                     self.load_colour_map().await?;
                 }
             }
+
+            GoXLRCommand::SetVodMode(value) => {
+                let serial = self.serial();
+
+                // Get the current mode..
+                let current = self.settings.get_device_vod_mode(serial).await;
+                if current != value {
+                    self.settings.set_device_vod_mode(serial, value).await;
+
+                    // We need to reapply all routing to reconfigure as needed
+                    for input in BasicInputDevice::iter() {
+                        self.apply_routing(input).await?;
+                    }
+                }
+            }
+
             GoXLRCommand::SetActiveEffectPreset(preset) => {
                 self.load_effect_bank(preset).await?;
                 self.update_button_states()?;
@@ -2953,7 +2971,7 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
-    fn apply_transient_routing(
+    async fn apply_transient_routing(
         &self,
         input: BasicInputDevice,
         router: &mut EnumMap<BasicOutputDevice, bool>,
@@ -2972,7 +2990,8 @@ impl<'a> Device<'a> {
 
         for fader in FaderName::iter() {
             if self.profile.get_fader_assignment(fader) == channel_name {
-                self.apply_transient_fader_routing(channel_name, fader, router)?;
+                self.apply_transient_fader_routing(channel_name, fader, router)
+                    .await?;
             }
         }
 
@@ -2980,13 +2999,13 @@ impl<'a> Device<'a> {
         // to ensure that if we're handling the mic, we handle it here.
         if channel_name == ChannelName::Mic {
             self.apply_transient_chat_mic_mute(router)?;
-            self.apply_transient_cough_routing(router)?;
+            self.apply_transient_cough_routing(router).await?;
         }
 
         Ok(())
     }
 
-    fn apply_transient_fader_routing(
+    async fn apply_transient_fader_routing(
         &self,
         channel_name: ChannelName,
         fader: FaderName,
@@ -3000,9 +3019,10 @@ impl<'a> Device<'a> {
             mute_function,
             router,
         )
+        .await
     }
 
-    fn apply_transient_cough_routing(
+    async fn apply_transient_cough_routing(
         &self,
         router: &mut EnumMap<BasicOutputDevice, bool>,
     ) -> Result<()> {
@@ -3017,6 +3037,7 @@ impl<'a> Device<'a> {
             mute_function,
             router,
         )
+        .await
     }
 
     fn apply_transient_chat_mic_mute(
@@ -3041,7 +3062,7 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
-    fn apply_transient_channel_routing(
+    async fn apply_transient_channel_routing(
         &self,
         channel_name: ChannelName,
         muted_to_x: bool,
@@ -3063,7 +3084,15 @@ impl<'a> Device<'a> {
 
         match mute_function {
             MuteFunction::All => {}
-            MuteFunction::ToStream => router[BasicOutputDevice::BroadcastMix] = false,
+            MuteFunction::ToStream => {
+                // Disable routing to the Stream Mix
+                router[BasicOutputDevice::BroadcastMix] = false;
+
+                // If we're a mini, with VOD Mode 'Stream No Music', disable this route to VOD.
+                if self.is_steam_no_music().await {
+                    router[BasicOutputDevice::Sampler] = false;
+                }
+            }
             MuteFunction::ToVoiceChat => router[BasicOutputDevice::ChatMic] = false,
             MuteFunction::ToPhones => router[BasicOutputDevice::Headphones] = false,
             MuteFunction::ToLineOut => router[BasicOutputDevice::LineOut] = false,
@@ -3090,7 +3119,18 @@ impl<'a> Device<'a> {
             }
         }
 
-        self.apply_transient_routing(input, &mut router)?;
+        if self.is_steam_no_music().await {
+            // Ok, so we need to sync the Mix channel to the Sample (VOD) Channel, unless Music
+            if input == BasicInputDevice::Music {
+                // Force Music -> Sample to Off
+                router[BasicOutputDevice::Sampler] = false;
+            } else {
+                // Sync the Mix and Sampler (VOD) channels
+                router[BasicOutputDevice::Sampler] = router[BasicOutputDevice::BroadcastMix];
+            }
+        }
+
+        self.apply_transient_routing(input, &mut router).await?;
         debug!("Applying Routing to {:?}:", input);
         debug!("{:?}", router);
 
@@ -3830,6 +3870,11 @@ impl<'a> Device<'a> {
             DeviceType::Full => version_newer_or_equal_to(current, support_full),
             DeviceType::Mini => version_newer_or_equal_to(current, support_mini),
         }
+    }
+
+    async fn is_steam_no_music(&self) -> bool {
+        self.hardware.device_type == DeviceType::Mini
+            && self.settings.get_device_vod_mode(self.serial()).await == VodMode::StreamNoMusic
     }
 }
 

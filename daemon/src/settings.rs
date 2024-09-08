@@ -3,6 +3,8 @@ use crate::profile::DEFAULT_PROFILE_NAME;
 use anyhow::{Context, Result};
 use directories::ProjectDirs;
 use goxlr_ipc::{GoXLRCommand, LogLevel};
+use goxlr_types::VodMode;
+use goxlr_types::VodMode::Routable;
 use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -447,6 +449,21 @@ impl SettingsHandle {
         false
     }
 
+    pub async fn get_device_vod_mode(&self, device_serial: &str) -> VodMode {
+        let settings = self.settings.read().await;
+        let value = settings
+            .devices
+            .as_ref()
+            .unwrap()
+            .get(device_serial)
+            .map(|d| d.vod_mode.unwrap_or(Routable));
+
+        if let Some(value) = value {
+            return value;
+        }
+        Routable
+    }
+
     pub async fn get_sampler_reset_on_clear(&self, device_serial: &str) -> bool {
         let settings = self.settings.read().await;
         settings
@@ -597,6 +614,17 @@ impl SettingsHandle {
         entry.enable_monitor_with_fx = Some(setting);
     }
 
+    pub async fn set_device_vod_mode(&self, device_serial: &str, setting: VodMode) {
+        let mut settings = self.settings.write().await;
+        let entry = settings
+            .devices
+            .as_mut()
+            .unwrap()
+            .entry(device_serial.to_owned())
+            .or_insert_with(DeviceSettings::default);
+        entry.vod_mode = Some(setting);
+    }
+
     pub async fn set_sampler_reset_on_clear(&self, device_serial: &str, setting: bool) {
         let mut settings = self.settings.write().await;
         let entry = settings
@@ -731,6 +759,9 @@ struct DeviceSettings {
     // Clear Sample Settings when Clearing Button
     sampler_reset_on_clear: Option<bool>,
 
+    // VoD 'Mode'
+    vod_mode: Option<VodMode>,
+
     // 'Shutdown' commands..
     shutdown_commands: Vec<GoXLRCommand>,
     sleep_commands: Vec<GoXLRCommand>,
@@ -749,6 +780,8 @@ impl Default for DeviceSettings {
             lock_faders: Some(false),
             enable_monitor_with_fx: Some(false),
             sampler_reset_on_clear: Some(true),
+
+            vod_mode: Some(Routable),
 
             shutdown_commands: vec![],
             sleep_commands: vec![],
