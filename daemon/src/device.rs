@@ -1791,6 +1791,7 @@ impl<'a> Device<'a> {
             }
 
             GoXLRCommand::SetVolume(channel, volume) => {
+                debug!("Setting Mix volume for {} to {}", channel, volume);
                 self.goxlr.set_volume(channel, volume)?;
                 self.profile.set_channel_volume(channel, volume)?;
 
