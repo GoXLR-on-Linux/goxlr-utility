@@ -19,11 +19,7 @@ pub fn get_scribble(
 ) -> [u8; 1024] {
     let image = get_scribble_base(path, bottom, top);
 
-    if let Ok(image) = to_goxlr(image, invert) {
-        image
-    } else {
-        [0; 1024]
-    }
+    to_goxlr(image, invert).unwrap_or([0; 1024])
 }
 
 pub fn get_scribble_png(
