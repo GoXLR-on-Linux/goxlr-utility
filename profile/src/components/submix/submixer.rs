@@ -135,9 +135,8 @@ impl SubMixer {
     pub fn get_volume(&self, channel: InputChannels) -> u8 {
         self.volume_table[channel]
     }
-    pub fn set_volume(&mut self, channel: InputChannels, volume: u8) -> Result<()> {
+    pub fn set_volume(&mut self, channel: InputChannels, volume: u8) {
         self.volume_table[channel] = volume;
-        Ok(())
     }
 
     pub fn is_linked(&self, channel: InputChannels) -> bool {

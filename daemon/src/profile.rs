@@ -2155,11 +2155,11 @@ impl ProfileAdapter {
             .get_ratio(submix_standard_to_profile_input(channel))
     }
 
-    pub fn set_submix_volume(&mut self, channel: SubMixChannelName, volume: u8) -> Result<()> {
+    pub fn set_submix_volume(&mut self, channel: SubMixChannelName, volume: u8) {
         self.profile
             .settings_mut()
             .submixes_mut()
-            .set_volume(submix_standard_to_profile_input(channel), volume)
+            .set_volume(submix_standard_to_profile_input(channel), volume);
     }
 
     pub fn set_submix_enabled(&mut self, enabled: bool) -> Result<()> {

@@ -1591,7 +1591,7 @@ impl<'a> Device<'a> {
                 let linked_volume = (volume as f64 * ratio) as u8;
 
                 if linked_volume != mix_current_volume {
-                    self.profile.set_submix_volume(mix, linked_volume)?;
+                    self.profile.set_submix_volume(mix, linked_volume);
 
                     debug!("Setting Sub Mix volume for {} to {}", mix, linked_volume);
                     self.goxlr.set_sub_volume(mix, linked_volume)?;
@@ -3759,7 +3759,14 @@ impl<'a> Device<'a> {
                 let volume = self.profile.get_channel_volume(channel);
                 let ratio = self.profile.get_submix_ratio(mix);
 
-                (volume as f64 * ratio) as u8
+                let calced = (volume as f64 * ratio) as u8;
+
+                if self.profile.get_submix_volume(mix) != calced {
+                    warn!("Channel Sub Volume not synced, fixing..");
+                    self.profile.set_submix_volume(mix, calced);
+                }
+
+                calced
             } else {
                 self.profile.get_submix_volume(mix)
             };
@@ -3789,7 +3796,7 @@ impl<'a> Device<'a> {
             }
 
             // Apply the submix volume..
-            self.profile.set_submix_volume(mix, volume)?;
+            self.profile.set_submix_volume(mix, volume);
 
             debug!("Setting Sub Mix volume for {} to {}", mix, volume);
             self.goxlr.set_sub_volume(mix, volume)?;
