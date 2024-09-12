@@ -1,6 +1,6 @@
 use crate::components::mixer::InputChannels;
 use crate::profile::Attribute;
-use anyhow::Result;
+use anyhow::{bail, Result};
 use enum_map::EnumMap;
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Writer;
@@ -130,7 +130,15 @@ impl LinkingTree {
         self.linked_list[channel]
     }
     pub fn get_ratio(&self, channel: InputChannels) -> f64 {
-        self.linked_ratio[channel]
+        if self.linked_ratio[channel] == f64::INFINITY {
+            // Caused by a divide by 0, return 255 / 1
+            255.
+        } else if self.linked_ratio[channel] == 0. {
+            // Caused by a 0 / value..
+            1. / 255.
+        } else {
+            self.linked_ratio[channel]
+        }
     }
 
     pub fn set_link_enabled(&mut self, channel: InputChannels, linked: bool) -> Result<()> {
@@ -139,6 +147,9 @@ impl LinkingTree {
     }
 
     pub fn set_link_ratio(&mut self, channel: InputChannels, ratio: f64) -> Result<()> {
+        if ratio == 0. || ratio == f64::INFINITY {
+            bail!("Invalid Ratio");
+        }
         self.linked_ratio[channel] = ratio;
         Ok(())
     }
