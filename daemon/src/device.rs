@@ -3762,7 +3762,7 @@ impl<'a> Device<'a> {
                 let calced = (volume as f64 * ratio) as u8;
 
                 if self.profile.get_submix_volume(mix) != calced {
-                    warn!("Channel Sub Volume not synced, fixing..");
+                    warn!("Channel {} Sub Volume not synced, fixing..", mix);
                     self.profile.set_submix_volume(mix, calced);
                 }
 
