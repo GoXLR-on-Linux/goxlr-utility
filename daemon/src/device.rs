@@ -3812,13 +3812,12 @@ impl<'a> Device<'a> {
                 return Ok(());
             } else {
                 // We need to work out the current ratio between the channel, and it's mix..
-                let profile_volume = self.profile.get_channel_volume(channel);
-                let channel_volume = if profile_volume == 0 {
-                    1
-                } else {
-                    profile_volume
-                };
-                let mix_volume = self.profile.get_submix_volume(mix);
+                let volume = self.profile.get_channel_volume(channel);
+                let channel_volume = if volume == 0 { 1 } else { volume };
+
+                let profile_mix = self.profile.get_submix_volume(mix);
+                let mix_volume = if profile_mix == 0 { 1 } else { profile_mix };
+
                 let ratio = mix_volume as f64 / channel_volume as f64;
 
                 // Enable the link, and set the ratio..
