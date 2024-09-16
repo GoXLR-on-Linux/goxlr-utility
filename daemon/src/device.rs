@@ -3412,20 +3412,6 @@ impl<'a> Device<'a> {
         // Set volumes first, applying mute may modify stuff..
         debug!("Applying Profile..");
 
-        debug!("Setting Channel Volumes..");
-        let volumes = if let Some(current) = &current {
-            self.get_load_volume_order(Some(current.volumes))
-        } else {
-            self.get_load_volume_order(None)
-        };
-
-        for channel in volumes {
-            let channel_volume = self.profile.get_channel_volume(channel);
-
-            debug!("Setting volume for {} to {}", channel, channel_volume);
-            self.goxlr.set_volume(channel, channel_volume)?;
-        }
-
         debug!("Setting Faders..");
         let mut mic_assigned_to_fader = false;
         //
@@ -3476,6 +3462,20 @@ impl<'a> Device<'a> {
                 debug!("Unknown Channel state for {}, Unmuting.", channel);
                 self.goxlr.set_channel_state(channel, Unmuted)?;
             }
+        }
+
+        debug!("Setting Channel Volumes..");
+        let volumes = if let Some(current) = &current {
+            self.get_load_volume_order(Some(current.volumes))
+        } else {
+            self.get_load_volume_order(None)
+        };
+
+        for channel in volumes {
+            let channel_volume = self.profile.get_channel_volume(channel);
+
+            debug!("Setting volume for {} to {}", channel, channel_volume);
+            self.goxlr.set_volume(channel, channel_volume)?;
         }
 
         debug!("Applying Submixing Settings..");
