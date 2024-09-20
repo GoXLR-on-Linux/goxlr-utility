@@ -13,6 +13,7 @@ use crate::platform::macos::core_audio::{
 };
 use crate::platform::macos::device::{Inputs, Outputs};
 use crate::shutdown::Shutdown;
+use crate::HANDLE_MACOS_AGGREGATES;
 use tokio::signal::unix::{signal, SignalKind};
 use tokio::sync::mpsc;
 use tokio::time::sleep;
@@ -32,6 +33,10 @@ pub async fn run(tx: mpsc::Sender<EventTriggers>, mut stop: Shutdown) -> Result<
                 warn!("Unable to Destroy Aggregate Device {}", device);
             }
         }
+    }
+
+    if !HANDLE_MACOS_AGGREGATES.lock().unwrap().unwrap() {
+        return Ok(());
     }
 
     // Ticker to monitor for device changes..

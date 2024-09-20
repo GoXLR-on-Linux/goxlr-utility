@@ -1,6 +1,6 @@
 [package]
 name = "goxlr-profile-loader"
-version = "1.1.2"
+version = "1.1.4"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -14,6 +14,7 @@ strum = { version = "0.26.3", features = ["derive"] }
 ritelinked = "0.3.2"
 quick-xml = "0.36.1"
 byteorder = "1.5.0"
+fastrand = "2.1.1"
 
 tempfile = "3.10.1"
 

@@ -21,7 +21,7 @@ use goxlr_types::{
     Button, ChannelName, DeviceType, DisplayModeComponents, EffectBankPresets, EffectKey,
     EncoderName, FaderName, HardTuneSource, InputDevice as BasicInputDevice, MicrophoneParamKey,
     Mix, MuteState, OutputDevice as BasicOutputDevice, RobotRange, SampleBank, SampleButtons,
-    SamplePlaybackMode, VersionNumber, WaterfallDirection,
+    SamplePlaybackMode, VersionNumber, VodMode, WaterfallDirection,
 };
 use goxlr_usb::animation::{AnimationMode, WaterFallDir};
 use goxlr_usb::buttonstate::{ButtonStates, Buttons};
@@ -277,6 +277,7 @@ impl<'a> Device<'a> {
             .await;
 
         let locked_faders = self.settings.get_device_lock_faders(self.serial()).await;
+        let vod_mode = self.settings.get_device_vod_mode(self.serial()).await;
 
         let submix_supported = self.device_supports_submixes();
 
@@ -346,6 +347,7 @@ impl<'a> Device<'a> {
                 enable_monitor_with_fx: monitor_with_fx,
                 reset_sampler_on_clear: sampler_reset_on_clear,
                 lock_faders: locked_faders,
+                vod_mode,
             },
             button_down: button_states,
             profile_name: self.profile.name().to_owned(),
@@ -922,7 +924,7 @@ impl<'a> Device<'a> {
             let volume = self.profile.get_channel_volume(channel);
 
             // Per the latest official release, the mini no longer sets the volume to 0 on mute
-            if self.hardware.device_type != DeviceType::Mini {
+            if !self.is_device_mini() {
                 // We need to set the previous volume regardless, because if the below setting
                 // changes, we need to correctly reset the position.
                 self.profile.set_mute_previous_volume(fader, volume)?;
@@ -944,7 +946,7 @@ impl<'a> Device<'a> {
             self.profile.set_mute_button_blink(fader, true);
         }
 
-        if self.hardware.device_type != DeviceType::Mini && !lock_faders {
+        if !self.is_device_mini() && !lock_faders {
             // Again, only apply this if we're a full device
             self.profile.set_channel_volume(channel, 0)?;
         } else {
@@ -991,7 +993,7 @@ impl<'a> Device<'a> {
             }
 
             // As with mute, the mini doesn't modify volumes on mute / unmute
-            if self.hardware.device_type != DeviceType::Mini && !lock_faders {
+            if !self.is_device_mini() && !lock_faders {
                 self.goxlr.set_volume(channel, previous_volume)?;
                 self.profile.set_channel_volume(channel, previous_volume)?;
             } else {
@@ -1032,7 +1034,7 @@ impl<'a> Device<'a> {
     }
 
     fn lock_faders(&mut self) -> Result<()> {
-        if self.hardware.device_type == DeviceType::Mini {
+        if self.is_device_mini() {
             return Ok(());
         }
 
@@ -1050,7 +1052,7 @@ impl<'a> Device<'a> {
     }
 
     fn unlock_faders(&mut self) -> Result<()> {
-        if self.hardware.device_type == DeviceType::Mini {
+        if self.is_device_mini() {
             return Ok(());
         }
 
@@ -1530,7 +1532,7 @@ impl<'a> Device<'a> {
 
         for fader in FaderName::iter() {
             let new_volume = volumes[fader as usize];
-            if self.hardware.device_type == DeviceType::Mini {
+            if self.is_device_mini() {
                 if new_volume == self.fader_last_seen[fader] {
                     continue;
                 }
@@ -1589,7 +1591,7 @@ impl<'a> Device<'a> {
                 let linked_volume = (volume as f64 * ratio) as u8;
 
                 if linked_volume != mix_current_volume {
-                    self.profile.set_submix_volume(mix, linked_volume)?;
+                    self.profile.set_submix_volume(mix, linked_volume);
 
                     debug!("Setting Sub Mix volume for {} to {}", mix, linked_volume);
                     self.goxlr.set_sub_volume(mix, linked_volume)?;
@@ -1632,7 +1634,7 @@ impl<'a> Device<'a> {
                 .mic_profile
                 .get_effect_value(EffectKey::PitchAmount, self.profile());
 
-            if self.hardware.device_type != DeviceType::Mini {
+            if !self.is_device_mini() {
                 let message = format!("Pitch {}", user_value);
                 let _ = self.global_events.send(TTSMessage(message)).await;
             }
@@ -1659,7 +1661,7 @@ impl<'a> Device<'a> {
             if new_value != current_value {
                 self.apply_effects(LinkedHashSet::from_iter([EffectKey::GenderAmount]))?;
 
-                if self.hardware.device_type != DeviceType::Mini {
+                if !self.is_device_mini() {
                     let message = format!("Gender {}", new_value);
                     let _ = self.global_events.send(TTSMessage(message)).await;
                 }
@@ -1684,7 +1686,7 @@ impl<'a> Device<'a> {
 
             let percent = 100 - ((new_value as f32 / -36.) * 100.) as i32;
 
-            if self.hardware.device_type != DeviceType::Mini {
+            if !self.is_device_mini() {
                 let message = format!("Reverb {} percent", percent);
                 let _ = self.global_events.send(TTSMessage(message)).await;
             }
@@ -1705,7 +1707,7 @@ impl<'a> Device<'a> {
                 .get_effect_value(EffectKey::EchoAmount, self.profile());
             user_value = 100 - ((user_value as f32 / -36.) * 100.) as i32;
 
-            if self.hardware.device_type != DeviceType::Mini {
+            if !self.is_device_mini() {
                 let message = format!("Echo {} percent", user_value);
                 let _ = self.global_events.send(TTSMessage(message)).await;
             }
@@ -1770,11 +1772,26 @@ impl<'a> Device<'a> {
                 }
 
                 // Unmute the channel to prevent weirdness, then set new behaviour
-                self.unmute_fader(fader).await?;
+                //self.unmute_fader(fader).await?;
                 self.profile.set_mute_button_behaviour(fader, behaviour);
+
+                // We'll pass 'None' into this as there's a guaranteed change..
+                self.apply_mute_from_profile(fader, None)?;
+
+                let channel = self.profile.get_fader_assignment(fader);
+                if BasicInputDevice::can_from(channel) {
+                    let input = BasicInputDevice::from(channel);
+                    self.apply_routing(input).await?;
+
+                    if input == BasicInputDevice::Chat && self.vc_mute_also_mute_cm {
+                        // Reapply the Mic routing in case we need to mute / unmute to Voice Chat
+                        self.apply_routing(BasicInputDevice::Microphone).await?;
+                    }
+                }
             }
 
             GoXLRCommand::SetVolume(channel, volume) => {
+                debug!("Setting Mix volume for {} to {}", channel, volume);
                 self.goxlr.set_volume(channel, volume)?;
                 self.profile.set_channel_volume(channel, volume)?;
 
@@ -1796,6 +1813,10 @@ impl<'a> Device<'a> {
                 // Unmute the channel to prevent weirdness, then set new behaviour
                 self.unmute_chat_if_muted().await?;
                 self.profile.set_chat_mute_button_behaviour(mute_function);
+
+                // Reapply the Cough settings from the profile
+                self.apply_cough_from_profile()?;
+                self.apply_routing(BasicInputDevice::Microphone).await?;
             }
             GoXLRCommand::SetCoughIsHold(is_hold) => {
                 self.unmute_chat_if_muted().await?;
@@ -1923,9 +1944,7 @@ impl<'a> Device<'a> {
                     bail!("Animations not supported on this firmware.");
                 }
 
-                if mode == goxlr_types::AnimationMode::Ripple
-                    && self.hardware.device_type == DeviceType::Mini
-                {
+                if mode == goxlr_types::AnimationMode::Ripple && self.is_device_mini() {
                     bail!("Ripple Mode not supported on the GoXLR Mini");
                 }
 
@@ -2738,6 +2757,9 @@ impl<'a> Device<'a> {
                     .set_device_vc_mute_also_mute_cm(self.serial(), value)
                     .await;
                 self.settings.save().await;
+
+                // Re-run the Microphone Routing to update if needed..
+                self.apply_routing(BasicInputDevice::Microphone).await?;
             }
 
             GoXLRCommand::SetMonitorWithFx(value) => {
@@ -2773,6 +2795,22 @@ impl<'a> Device<'a> {
                     self.load_colour_map().await?;
                 }
             }
+
+            GoXLRCommand::SetVodMode(value) => {
+                let serial = self.serial();
+
+                // Get the current mode..
+                let current = self.settings.get_device_vod_mode(serial).await;
+                if current != value {
+                    self.settings.set_device_vod_mode(serial, value).await;
+
+                    // We need to reapply all routing to reconfigure as needed
+                    for input in BasicInputDevice::iter() {
+                        self.apply_routing(input).await?;
+                    }
+                }
+            }
+
             GoXLRCommand::SetActiveEffectPreset(preset) => {
                 self.load_effect_bank(preset).await?;
                 self.update_button_states()?;
@@ -2934,7 +2972,7 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
-    fn apply_transient_routing(
+    async fn apply_transient_routing(
         &self,
         input: BasicInputDevice,
         router: &mut EnumMap<BasicOutputDevice, bool>,
@@ -2953,7 +2991,8 @@ impl<'a> Device<'a> {
 
         for fader in FaderName::iter() {
             if self.profile.get_fader_assignment(fader) == channel_name {
-                self.apply_transient_fader_routing(channel_name, fader, router)?;
+                self.apply_transient_fader_routing(channel_name, fader, router)
+                    .await?;
             }
         }
 
@@ -2961,13 +3000,13 @@ impl<'a> Device<'a> {
         // to ensure that if we're handling the mic, we handle it here.
         if channel_name == ChannelName::Mic {
             self.apply_transient_chat_mic_mute(router)?;
-            self.apply_transient_cough_routing(router)?;
+            self.apply_transient_cough_routing(router).await?;
         }
 
         Ok(())
     }
 
-    fn apply_transient_fader_routing(
+    async fn apply_transient_fader_routing(
         &self,
         channel_name: ChannelName,
         fader: FaderName,
@@ -2981,9 +3020,10 @@ impl<'a> Device<'a> {
             mute_function,
             router,
         )
+        .await
     }
 
-    fn apply_transient_cough_routing(
+    async fn apply_transient_cough_routing(
         &self,
         router: &mut EnumMap<BasicOutputDevice, bool>,
     ) -> Result<()> {
@@ -2998,6 +3038,7 @@ impl<'a> Device<'a> {
             mute_function,
             router,
         )
+        .await
     }
 
     fn apply_transient_chat_mic_mute(
@@ -3022,7 +3063,7 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
-    fn apply_transient_channel_routing(
+    async fn apply_transient_channel_routing(
         &self,
         channel_name: ChannelName,
         muted_to_x: bool,
@@ -3044,7 +3085,15 @@ impl<'a> Device<'a> {
 
         match mute_function {
             MuteFunction::All => {}
-            MuteFunction::ToStream => router[BasicOutputDevice::BroadcastMix] = false,
+            MuteFunction::ToStream => {
+                // Disable routing to the Stream Mix
+                router[BasicOutputDevice::BroadcastMix] = false;
+
+                // If we're a mini, with VOD Mode 'Stream No Music', disable this route to VOD.
+                if self.is_steam_no_music().await {
+                    router[BasicOutputDevice::Sampler] = false;
+                }
+            }
             MuteFunction::ToVoiceChat => router[BasicOutputDevice::ChatMic] = false,
             MuteFunction::ToPhones => router[BasicOutputDevice::Headphones] = false,
             MuteFunction::ToLineOut => router[BasicOutputDevice::LineOut] = false,
@@ -3071,7 +3120,18 @@ impl<'a> Device<'a> {
             }
         }
 
-        self.apply_transient_routing(input, &mut router)?;
+        if self.is_steam_no_music().await {
+            // Ok, so we need to sync the Mix channel to the Sample (VOD) Channel, unless Music
+            if input == BasicInputDevice::Music {
+                // Force Music -> Sample to Off
+                router[BasicOutputDevice::Sampler] = false;
+            } else {
+                // Sync the Mix and Sampler (VOD) channels
+                router[BasicOutputDevice::Sampler] = router[BasicOutputDevice::BroadcastMix];
+            }
+        }
+
+        self.apply_transient_routing(input, &mut router).await?;
         debug!("Applying Routing to {:?}:", input);
         debug!("{:?}", router);
 
@@ -3254,8 +3314,10 @@ impl<'a> Device<'a> {
             self.goxlr.set_volume(existing_channel, volume)?;
         }
 
-        self.apply_scribble(fader).await?;
-        self.apply_scribble(fader_to_switch).await?;
+        if !self.is_device_mini() {
+            self.apply_scribble(fader).await?;
+            self.apply_scribble(fader_to_switch).await?;
+        }
 
         // Finally update the button colours..
         self.update_button_states()?;
@@ -3269,7 +3331,7 @@ impl<'a> Device<'a> {
             mute_type: self.profile().get_mute_button_behaviour(fader),
             scribble: self
                 .profile()
-                .get_scribble_ipc(fader, self.hardware.device_type == DeviceType::Mini),
+                .get_scribble_ipc(fader, self.is_device_mini()),
             mute_state: self.profile.get_ipc_mute_state(fader),
         }
     }
@@ -3293,11 +3355,9 @@ impl<'a> Device<'a> {
     async fn load_colour_map(&mut self) -> Result<()> {
         // The new colour format occurred on different firmware versions depending on device,
         // so do the check here.
-
-        let device_mini = self.hardware.device_type == DeviceType::Mini;
         let lock_faders = self.settings.get_device_lock_faders(self.serial()).await;
 
-        let blank_mute = device_mini || lock_faders;
+        let blank_mute = self.is_device_mini() || lock_faders;
 
         let use_1_3_40_format = self.device_supports_animations();
         let colour_map = self.profile.get_colour_map(use_1_3_40_format, blank_mute);
@@ -3435,7 +3495,7 @@ impl<'a> Device<'a> {
             self.set_fader_display_from_profile(fader)?;
         }
 
-        if self.hardware.device_type == DeviceType::Full {
+        if !self.is_device_mini() {
             for fader in FaderName::iter() {
                 self.apply_scribble(fader).await?;
             }
@@ -3538,7 +3598,7 @@ impl<'a> Device<'a> {
     }
 
     fn apply_voice_fx(&mut self) -> Result<()> {
-        if self.hardware.device_type == DeviceType::Mini {
+        if self.is_device_mini() {
             // Voice FX aren't present on the mini.
             return Ok(());
         }
@@ -3619,7 +3679,7 @@ impl<'a> Device<'a> {
     }
 
     fn set_pitch_mode(&mut self) -> Result<()> {
-        if self.hardware.device_type != DeviceType::Full {
+        if self.is_device_mini() {
             // Not a Full GoXLR, nothing to do.
             return Ok(());
         }
@@ -3700,7 +3760,14 @@ impl<'a> Device<'a> {
                 let volume = self.profile.get_channel_volume(channel);
                 let ratio = self.profile.get_submix_ratio(mix);
 
-                (volume as f64 * ratio) as u8
+                let calced = (volume as f64 * ratio) as u8;
+
+                if self.profile.get_submix_volume(mix) != calced {
+                    warn!("Channel {} Sub Volume not synced, fixing..", mix);
+                    self.profile.set_submix_volume(mix, calced);
+                }
+
+                calced
             } else {
                 self.profile.get_submix_volume(mix)
             };
@@ -3730,7 +3797,7 @@ impl<'a> Device<'a> {
             }
 
             // Apply the submix volume..
-            self.profile.set_submix_volume(mix, volume)?;
+            self.profile.set_submix_volume(mix, volume);
 
             debug!("Setting Sub Mix volume for {} to {}", mix, volume);
             self.goxlr.set_sub_volume(mix, volume)?;
@@ -3746,8 +3813,12 @@ impl<'a> Device<'a> {
                 return Ok(());
             } else {
                 // We need to work out the current ratio between the channel, and it's mix..
-                let channel_volume = self.profile.get_channel_volume(channel);
-                let mix_volume = self.profile.get_submix_volume(mix);
+                let volume = self.profile.get_channel_volume(channel);
+                let channel_volume = if volume == 0 { 1 } else { volume };
+
+                let profile_mix = self.profile.get_submix_volume(mix);
+                let mix_volume = if profile_mix == 0 { 1 } else { profile_mix };
+
                 let ratio = mix_volume as f64 / channel_volume as f64;
 
                 // Enable the link, and set the ratio..
@@ -3756,6 +3827,10 @@ impl<'a> Device<'a> {
             }
         }
         Ok(())
+    }
+
+    fn is_device_mini(&self) -> bool {
+        self.hardware.device_type == DeviceType::Mini
     }
 
     fn needs_submix_correction(&self, channel: ChannelName) -> bool {
@@ -3807,6 +3882,11 @@ impl<'a> Device<'a> {
             DeviceType::Full => version_newer_or_equal_to(current, support_full),
             DeviceType::Mini => version_newer_or_equal_to(current, support_mini),
         }
+    }
+
+    async fn is_steam_no_music(&self) -> bool {
+        self.hardware.device_type == DeviceType::Mini
+            && self.settings.get_device_vod_mode(self.serial()).await == VodMode::StreamNoMusic
     }
 }
 

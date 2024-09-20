@@ -30,7 +30,6 @@ pub enum ParseError {
 
 #[derive(Debug)]
 pub struct Scribble {
-    element_name: String,
     colour_map: ColourMap,
 
     // File provided to the GoXLR to handle (no path, just the filename)
@@ -74,7 +73,6 @@ impl Scribble {
         };
 
         Self {
-            element_name: element_name.to_string(),
             colour_map,
             icon_file: None,
             text_top_left: "".to_string(),
@@ -140,12 +138,13 @@ impl Scribble {
         Ok(())
     }
 
-    pub fn write_scribble<W: Write>(&self, writer: &mut Writer<W>) -> Result<()> {
-        let mut elem = BytesStart::new(self.element_name.as_str());
+    pub fn write_scribble<W: Write>(&self, writer: &mut Writer<W>, fader: Faders) -> Result<()> {
+        let element_name = fader.get_str("scribbleContext").unwrap();
+        let mut elem = BytesStart::new(element_name);
 
         let mut attributes: HashMap<String, String> = HashMap::default();
         attributes.insert(
-            format!("{}iconFile", self.element_name),
+            format!("{}iconFile", element_name),
             if self.icon_file.is_none() {
                 "".to_string()
             } else {
@@ -153,33 +152,28 @@ impl Scribble {
             },
         );
         attributes.insert(
-            format!("{}string0", self.element_name),
+            format!("{}string0", element_name),
             self.text_top_left.clone(),
         );
         attributes.insert(
-            format!("{}string1", self.element_name),
+            format!("{}string1", element_name),
             self.text_bottom_middle.clone(),
         );
+        attributes.insert(format!("{}alpha", element_name), format!("{}", self.alpha));
         attributes.insert(
-            format!("{}alpha", self.element_name),
-            format!("{}", self.alpha),
-        );
-        attributes.insert(
-            format!("{}inverted", self.element_name),
+            format!("{}inverted", element_name),
             if self.style == Normal { "0" } else { "1" }
                 .parse()
                 .unwrap(),
         );
         attributes.insert(
-            format!("{}textSize", self.element_name),
+            format!("{}textSize", element_name),
             format!("{}", self.text_size),
         );
-        attributes.insert(
-            format!("{}bitmap", self.element_name),
-            self.bitmap_file.clone(),
-        );
+        attributes.insert(format!("{}bitmap", element_name), self.bitmap_file.clone());
 
-        self.colour_map.write_colours(&mut attributes);
+        self.colour_map
+            .write_colours_with_prefix(element_name.into(), &mut attributes);
 
         for (key, value) in &attributes {
             elem.push_attribute((key.as_str(), value.as_str()));

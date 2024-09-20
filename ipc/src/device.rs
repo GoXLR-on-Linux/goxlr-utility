@@ -9,7 +9,7 @@ use goxlr_types::{
     MegaphoneStyle, MicrophoneType, MiniEqFrequencies, Mix, MuteFunction, MuteState, OutputDevice,
     PitchStyle, ReverbStyle, RobotStyle, SampleBank, SampleButtons, SamplePlayOrder,
     SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets, SubMixChannelName,
-    VersionNumber, WaterfallDirection,
+    VersionNumber, VodMode, WaterfallDirection,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
@@ -37,6 +37,8 @@ pub struct DaemonConfig {
     pub allow_network_access: bool,
     pub log_level: LogLevel,
     pub open_ui_on_launch: bool,
+    pub platform: String,
+    pub handle_macos_aggregates: bool,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -396,6 +398,7 @@ pub struct Settings {
     pub enable_monitor_with_fx: bool,
     pub reset_sampler_on_clear: bool,
     pub lock_faders: bool,
+    pub vod_mode: VodMode,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

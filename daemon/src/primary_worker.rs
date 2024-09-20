@@ -17,6 +17,7 @@ use goxlr_usb::{PID_GOXLR_FULL, PID_GOXLR_MINI};
 use json_patch::diff;
 use log::{debug, error, info, warn};
 use std::collections::{BTreeMap, HashMap};
+use std::env;
 use std::time::{Duration, Instant};
 use tokio::sync::broadcast::Sender as BroadcastSender;
 use tokio::sync::mpsc::{Receiver, Sender};
@@ -228,6 +229,10 @@ pub async fn spawn_usb_handler(
                             device.wake().await;
                         }
                         let _ = sender.send(());
+
+                        // We'll set this regardless and refresh the Status object, this
+                        // allows the UI to update when waking up.
+                        change_found = true;
                     }
                 }
 
@@ -342,6 +347,13 @@ pub async fn spawn_usb_handler(
                                 change_found = true;
                                 let _ = sender.send(Ok(()));
                             }
+                            DaemonCommand::HandleMacOSAggregates(value) => {
+                                settings.set_macos_handle_aggregates(value).await;
+                                settings.save().await;
+
+                                change_found = true;
+                                let _ = sender.send(Ok(()));
+                            }
                         }
                     },
 
@@ -443,6 +455,8 @@ async fn get_daemon_status(
                 active_path: settings.get_activate().await,
                 app_path: app_check.clone(),
             },
+            platform: env::consts::OS.to_string(),
+            handle_macos_aggregates: settings.get_macos_handle_aggregates().await,
         },
         paths: Paths {
             profile_directory: settings.get_profile_directory().await,

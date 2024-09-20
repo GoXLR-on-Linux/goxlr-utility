@@ -30,11 +30,10 @@ the
 * `.deb` files, usable on Debian based systems (Ubuntu, Mint, Pop!_OS, etc)
 * `.rpm` files, usable on Redhat based systems (CentOS, Fedora, etc)
 
-If you're an Arch user, updated versions of the utility are available
-via [AUR](https://aur.archlinux.org/packages/goxlr-utility)
-using the `goxlr-utility` package.
-
-The GoXLR Utility is also available via `winget` on Windows, and will automatically update when new releases occur.
+### OS / Distro Specific Notes
+* Arch users can install the `goxlr-utility` package from [AUR](https://aur.archlinux.org/packages/goxlr-utility)
+* Fedora Atomic or Bazzite users please check the instructions [here](https://github.com/GoXLR-on-Linux/goxlr-utility/wiki/Fedora-Atomic-&-Bazzite)
+* Windows users can also aquire the GoXLR Utility via `winget`
 
 <sup>1</sup> Windows requires the official device drivers provided by TC-Helicon. If you have the official app
 installed you don't need to do anything, otherwise download the latest drivers from TC-Helicon's

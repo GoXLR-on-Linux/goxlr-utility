@@ -31,8 +31,6 @@ pub enum ParseError {
 
 #[derive(Debug)]
 pub struct MuteButton {
-    element_name: String,
-
     colour_map: ColourMap,
     mute_function: MuteFunction,
     previous_volume: u8,
@@ -55,7 +53,6 @@ impl MuteButton {
         colour_map.set_colour_group("muteGroup".to_string());
 
         Self {
-            element_name: context.to_string(),
             colour_map,
             mute_function: MuteFunction::All,
             previous_volume: 0,
@@ -118,10 +115,9 @@ impl MuteButton {
         Ok(())
     }
 
-    pub fn write_button<W: Write>(&self, writer: &mut Writer<W>) -> Result<()> {
-        let name = &self.element_name;
-
-        let mut elem = BytesStart::new(name.as_str());
+    pub fn write_button<W: Write>(&self, writer: &mut Writer<W>, fader: Faders) -> Result<()> {
+        let element_name = fader.get_str("muteContext").unwrap();
+        let mut elem = BytesStart::new(element_name);
 
         let mut attributes: HashMap<String, String> = HashMap::default();
         let mute_value = if self.mute_function == MuteFunction::ToVoiceChat {
@@ -129,9 +125,9 @@ impl MuteButton {
         } else {
             self.mute_function.get_str("Value").unwrap().to_string()
         };
-        attributes.insert(format!("{name}Function"), mute_value);
+        attributes.insert(format!("{element_name}Function"), mute_value);
         attributes.insert(
-            format!("{name}prevLevel"),
+            format!("{element_name}prevLevel"),
             format!("{}", self.previous_volume),
         );
 
@@ -143,7 +139,7 @@ impl MuteButton {
         }
 
         self.colour_map
-            .write_colours_with_prefix(name.clone(), &mut attributes);
+            .write_colours_with_prefix(element_name.into(), &mut attributes);
 
         for (key, value) in &attributes {
             elem.push_attribute((key.as_str(), value.as_str()));

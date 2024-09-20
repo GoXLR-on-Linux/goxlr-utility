@@ -1,12 +1,10 @@
 use std::collections::HashMap;
 use std::io::Write;
 use std::str::FromStr;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::{bail, Result};
 
 use enum_map::{Enum, EnumMap};
-use log::warn;
 use quick_xml::events::{BytesEnd, BytesStart, Event};
 use quick_xml::Writer;
 use ritelinked::LinkedHashMap;
@@ -340,19 +338,8 @@ impl SampleStack {
     }
 
     pub fn get_next_random_track(&mut self) -> Option<&Track> {
-        // We really don't need a 'true' random calculation here, or a massive crate that includes
-        // many different random implementations (see `rand`), so just instead take the current
-        // time in millis, and modulo the number of tracks. Should be good enough!
-
-        let track = if let Ok(duration) = SystemTime::now().duration_since(UNIX_EPOCH) {
-            duration.as_millis() % self.tracks.len() as u128
-        } else {
-            // Something's gone wrong getting the time, fallback to Sequential
-            warn!("Failure Calculating Random Track, falling back to Sequential");
-            return self.get_next_sequential_track();
-        } as usize;
-
-        Some(&self.tracks[track])
+        // Windows sucks at clock precision.. BACK TO ACTUAL RANDOM
+        Some(&self.tracks[fastrand::usize(0..self.tracks.len())])
     }
 
     pub fn get_next_sequential_track(&mut self) -> Option<&Track> {
