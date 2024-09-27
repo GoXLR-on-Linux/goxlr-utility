@@ -253,6 +253,9 @@ pub enum OutputChannels {
 
     #[strum(props(Name = "Sampler"))]
     Sampler,
+
+    #[strum(props(Name = "VOD"))]
+    StreamMix2,
 }
 
 /**

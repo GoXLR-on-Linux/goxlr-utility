@@ -2930,21 +2930,29 @@ impl<'a> Device<'a> {
         input: BasicInputDevice,
         router: EnumMap<BasicOutputDevice, bool>,
     ) -> Result<()> {
+        let mix2_enabled = self.device_supports_mix2();
         let (left_input, right_input) = InputDevice::from_basic(&input);
-        let mut left = [0; 22];
-        let mut right = [0; 22];
+
+        // Annoyingly, this needs to be a vec now as the size is dependant on the firmware.
+        let mut left = if !mix2_enabled { vec![0; 22] } else { vec![0; 26] };
+        let mut right = if !mix2_enabled { vec![0; 22] } else { vec![0; 26] };
 
         for output in BasicOutputDevice::iter() {
+            // Only add Mix2 if it's supported in the firmware
+            if !mix2_enabled && output == BasicOutputDevice::StreamMix2 {
+                continue;
+            }
+
             if router[output] {
                 let (left_output, right_output) = OutputDevice::from_basic(&output);
 
-                left[left_output.position()] = 0x20;
-                right[right_output.position()] = 0x20;
+                left[left_output.position(mix2_enabled)] = 0x20;
+                right[right_output.position(mix2_enabled)] = 0x20;
             }
         }
 
         // We need to handle hardtune configuration here as well..
-        let hardtune_position = OutputDevice::HardTune.position();
+        let hardtune_position = OutputDevice::HardTune.position(mix2_enabled);
         if self.profile.is_active_hardtune_source_all() {
             match input {
                 BasicInputDevice::Music
@@ -3091,12 +3099,18 @@ impl<'a> Device<'a> {
 
                 // If we're a mini, with VOD Mode 'Stream No Music', disable this route to VOD.
                 if self.is_steam_no_music().await {
-                    router[BasicOutputDevice::Sampler] = false;
+                    let channel = if self.device_supports_mix2() { BasicOutputDevice::StreamMix2 } else { BasicOutputDevice::Sampler };
+                    router[channel] = false;
                 }
             }
             MuteFunction::ToVoiceChat => router[BasicOutputDevice::ChatMic] = false,
             MuteFunction::ToPhones => router[BasicOutputDevice::Headphones] = false,
             MuteFunction::ToLineOut => router[BasicOutputDevice::LineOut] = false,
+            MuteFunction::ToStream2 => router[BasicOutputDevice::StreamMix2] = false,
+            MuteFunction::ToStreams => {
+                router[BasicOutputDevice::BroadcastMix] = false;
+                router[BasicOutputDevice::StreamMix2] = false;
+            }
         };
 
         Ok(())
@@ -3122,12 +3136,14 @@ impl<'a> Device<'a> {
 
         if self.is_steam_no_music().await {
             // Ok, so we need to sync the Mix channel to the Sample (VOD) Channel, unless Music
+            let channel = if self.device_supports_mix2() { BasicOutputDevice::StreamMix2 } else { BasicOutputDevice::Sampler };
+            
             if input == BasicInputDevice::Music {
                 // Force Music -> Sample to Off
-                router[BasicOutputDevice::Sampler] = false;
+                router[channel] = false;
             } else {
                 // Sync the Mix and Sampler (VOD) channels
-                router[BasicOutputDevice::Sampler] = router[BasicOutputDevice::BroadcastMix];
+                router[channel] = router[BasicOutputDevice::BroadcastMix];
             }
         }
 
@@ -3698,8 +3714,9 @@ impl<'a> Device<'a> {
             return Ok(());
         }
 
-        let mut mix_a: [u8; 4] = [0x0c; 4];
-        let mut mix_b: [u8; 4] = [0x0c; 4];
+        let mix2_enabled = self.device_supports_mix2();
+        let mut mix_a = if !mix2_enabled { vec![0x0c; 4] } else { vec![0x0c; 5] }; 
+        let mut mix_b = if !mix2_enabled { vec![0x0c; 4] } else { vec![0x0c; 5] }; 
 
         let mut index = 0;
         let submix_enabled = self.profile.is_submix_enabled();
@@ -3718,6 +3735,11 @@ impl<'a> Device<'a> {
                 // Monitor Mix handled, move to the next channel
                 continue;
             }
+            if device == BasicOutputDevice::StreamMix2 && !mix2_enabled {
+                // Not supported on this firmware
+                continue;
+            }
+
             if submix_enabled {
                 // We need to place this on the correct mix..
                 match self.profile.get_submix_channel(device) {
@@ -3734,7 +3756,7 @@ impl<'a> Device<'a> {
         let submix = [mix_a, mix_b].concat();
 
         // This should always be successful, in theory :D
-        self.goxlr.set_channel_mixes(submix.try_into().unwrap())?;
+        self.goxlr.set_channel_mixes(submix)?;
 
         if submix_enabled && apply_volumes {
             for channel in ChannelName::iter() {
@@ -3871,6 +3893,18 @@ impl<'a> Device<'a> {
         }
     }
 
+    fn device_supports_mix2(&self) -> bool {
+        let support_full = VersionNumber(1, 5, Some(0), Some(0));
+        let support_mini = VersionNumber(1, 3, Some(0), Some(0));
+
+        let current = &self.hardware.versions.firmware;
+        match self.hardware.device_type {
+            DeviceType::Unknown => true,
+            DeviceType::Full => version_newer_or_equal_to(current, support_full),
+            DeviceType::Mini => version_newer_or_equal_to(current, support_mini),
+        }
+    }
+
     fn device_supports_animations(&self) -> bool {
         let support_full = VersionNumber(1, 3, Some(40), Some(0));
         let support_mini = VersionNumber(1, 1, Some(8), Some(0));
@@ -3900,9 +3934,11 @@ fn tts_bool_to_state(bool: bool) -> String {
 fn tts_target(target: MuteFunction) -> String {
     match target {
         MuteFunction::All => "".to_string(),
-        MuteFunction::ToStream => " to Stream".to_string(),
+        MuteFunction::ToStream => " to Stream Mix 1".to_string(),
         MuteFunction::ToVoiceChat => " to Voice Chat".to_string(),
         MuteFunction::ToPhones => " to Headphones".to_string(),
         MuteFunction::ToLineOut => " to Line Out".to_string(),
+        MuteFunction::ToStream2 => " to Stream Mix 2".to_string(),
+        MuteFunction::ToStreams => " to Stream Mix 1 and 2".to_string(),
     }
 }

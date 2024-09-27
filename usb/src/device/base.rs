@@ -183,7 +183,8 @@ pub trait GoXLRCommands: ExecutableGoXLR {
         Ok(())
     }
 
-    fn set_routing(&mut self, input_device: InputDevice, data: [u8; 22]) -> Result<()> {
+    // This is kinda ugly now, we have to assume the caller knows what they're doing..
+    fn set_routing(&mut self, input_device: InputDevice, data: Vec<u8>) -> Result<()> {
         self.request_data(Command::SetRouting(input_device), &data)?;
         Ok(())
     }
@@ -195,7 +196,7 @@ pub trait GoXLRCommands: ExecutableGoXLR {
     }
 
     // TODO: Potentially for later, abstract out the 'data' section into a couple of Vec<>s
-    fn set_channel_mixes(&mut self, data: [u8; 8]) -> Result<()> {
+    fn set_channel_mixes(&mut self, data: Vec<u8>) -> Result<()> {
         self.request_data(Command::SetChannelMixes, &data)?;
         Ok(())
     }
