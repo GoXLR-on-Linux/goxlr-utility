@@ -32,7 +32,13 @@ impl OutputDevice {
             OutputDevice::LineOutRight => 19,
             OutputDevice::Mix2Left => 21,
             OutputDevice::Mix2Right => 23,
-            OutputDevice::HardTune => if !mix2_enabled { 21 } else { 25 },
+            OutputDevice::HardTune => {
+                if !mix2_enabled {
+                    21
+                } else {
+                    25
+                }
+            }
         }
     }
 

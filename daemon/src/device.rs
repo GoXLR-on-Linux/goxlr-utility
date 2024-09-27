@@ -2934,8 +2934,16 @@ impl<'a> Device<'a> {
         let (left_input, right_input) = InputDevice::from_basic(&input);
 
         // Annoyingly, this needs to be a vec now as the size is dependant on the firmware.
-        let mut left = if !mix2_enabled { vec![0; 22] } else { vec![0; 26] };
-        let mut right = if !mix2_enabled { vec![0; 22] } else { vec![0; 26] };
+        let mut left = if !mix2_enabled {
+            vec![0; 22]
+        } else {
+            vec![0; 26]
+        };
+        let mut right = if !mix2_enabled {
+            vec![0; 22]
+        } else {
+            vec![0; 26]
+        };
 
         for output in BasicOutputDevice::iter() {
             // Only add Mix2 if it's supported in the firmware
@@ -3099,7 +3107,11 @@ impl<'a> Device<'a> {
 
                 // If we're a mini, with VOD Mode 'Stream No Music', disable this route to VOD.
                 if self.is_steam_no_music().await {
-                    let channel = if self.device_supports_mix2() { BasicOutputDevice::StreamMix2 } else { BasicOutputDevice::Sampler };
+                    let channel = if self.device_supports_mix2() {
+                        BasicOutputDevice::StreamMix2
+                    } else {
+                        BasicOutputDevice::Sampler
+                    };
                     router[channel] = false;
                 }
             }
@@ -3136,8 +3148,12 @@ impl<'a> Device<'a> {
 
         if self.is_steam_no_music().await {
             // Ok, so we need to sync the Mix channel to the Sample (VOD) Channel, unless Music
-            let channel = if self.device_supports_mix2() { BasicOutputDevice::StreamMix2 } else { BasicOutputDevice::Sampler };
-            
+            let channel = if self.device_supports_mix2() {
+                BasicOutputDevice::StreamMix2
+            } else {
+                BasicOutputDevice::Sampler
+            };
+
             if input == BasicInputDevice::Music {
                 // Force Music -> Sample to Off
                 router[channel] = false;
@@ -3715,8 +3731,16 @@ impl<'a> Device<'a> {
         }
 
         let mix2_enabled = self.device_supports_mix2();
-        let mut mix_a = if !mix2_enabled { vec![0x0c; 4] } else { vec![0x0c; 5] }; 
-        let mut mix_b = if !mix2_enabled { vec![0x0c; 4] } else { vec![0x0c; 5] }; 
+        let mut mix_a = if !mix2_enabled {
+            vec![0x0c; 4]
+        } else {
+            vec![0x0c; 5]
+        };
+        let mut mix_b = if !mix2_enabled {
+            vec![0x0c; 4]
+        } else {
+            vec![0x0c; 5]
+        };
 
         let mut index = 0;
         let submix_enabled = self.profile.is_submix_enabled();
