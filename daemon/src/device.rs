@@ -3731,15 +3731,17 @@ impl<'a> Device<'a> {
         }
 
         let mix2_enabled = self.device_supports_mix2();
+
+        // The default value on the array needs be something that's not a valid channel number
         let mut mix_a = if !mix2_enabled {
-            vec![0x0c; 4]
+            vec![0xFF; 4]
         } else {
-            vec![0x0c; 5]
+            vec![0xFF; 5]
         };
         let mut mix_b = if !mix2_enabled {
-            vec![0x0c; 4]
+            vec![0xFF; 4]
         } else {
-            vec![0x0c; 5]
+            vec![0xFF; 5]
         };
 
         let mut index = 0;
