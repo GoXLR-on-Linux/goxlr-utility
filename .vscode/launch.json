@@ -1,0 +1,363 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'goxlr-daemon'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=goxlr-daemon",
+                    "--package=goxlr-daemon"
+                ],
+                "filter": {
+                    "name": "goxlr-daemon",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'goxlr-daemon'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=goxlr-daemon",
+                    "--package=goxlr-daemon"
+                ],
+                "filter": {
+                    "name": "goxlr-daemon",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'goxlr-launcher'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=goxlr-launcher",
+                    "--package=goxlr-launcher"
+                ],
+                "filter": {
+                    "name": "goxlr-launcher",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'goxlr-launcher'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=goxlr-launcher",
+                    "--package=goxlr-launcher"
+                ],
+                "filter": {
+                    "name": "goxlr-launcher",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'goxlr_ipc'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=goxlr-ipc"
+                ],
+                "filter": {
+                    "name": "goxlr_ipc",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'goxlr_types'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=goxlr-types"
+                ],
+                "filter": {
+                    "name": "goxlr_types",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'goxlr_usb'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=goxlr-usb"
+                ],
+                "filter": {
+                    "name": "goxlr_usb",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'goxlr_audio'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=goxlr-audio"
+                ],
+                "filter": {
+                    "name": "goxlr_audio",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'goxlr_profile_loader'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=goxlr-profile-loader"
+                ],
+                "filter": {
+                    "name": "goxlr_profile_loader",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'goxlr_scribbles'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=goxlr-scribbles"
+                ],
+                "filter": {
+                    "name": "goxlr_scribbles",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'client'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=goxlr-client"
+                ],
+                "filter": {
+                    "name": "client",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'goxlr-client'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=goxlr-client",
+                    "--package=goxlr-client"
+                ],
+                "filter": {
+                    "name": "goxlr-client",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'goxlr-client'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=goxlr-client",
+                    "--package=goxlr-client"
+                ],
+                "filter": {
+                    "name": "goxlr-client",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'goxlr-client-quiet'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=goxlr-client-quiet",
+                    "--package=goxlr-client"
+                ],
+                "filter": {
+                    "name": "goxlr-client-quiet",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'goxlr-client-quiet'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=goxlr-client-quiet",
+                    "--package=goxlr-client"
+                ],
+                "filter": {
+                    "name": "goxlr-client-quiet",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'goxlr-initialiser'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=goxlr-initialiser",
+                    "--package=goxlr-initialiser"
+                ],
+                "filter": {
+                    "name": "goxlr-initialiser",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'goxlr-initialiser'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=goxlr-initialiser",
+                    "--package=goxlr-initialiser"
+                ],
+                "filter": {
+                    "name": "goxlr-initialiser",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'goxlr-defaults'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=goxlr-defaults",
+                    "--package=goxlr-defaults"
+                ],
+                "filter": {
+                    "name": "goxlr-defaults",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'goxlr-defaults'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=goxlr-defaults",
+                    "--package=goxlr-defaults"
+                ],
+                "filter": {
+                    "name": "goxlr-defaults",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
