@@ -2878,7 +2878,7 @@ impl<'a> Device<'a> {
                     }
 
                     self.profile.set_submix_enabled(enabled)?;
-                    self.load_submix_settings(true)?;
+                    self.load_submix_settings(true).await?;
                 }
             }
             GoXLRCommand::SetSubMixVolume(channel, volume) => {
@@ -2889,9 +2889,21 @@ impl<'a> Device<'a> {
             }
             GoXLRCommand::SetSubMixOutputMix(device, mix) => {
                 self.profile.set_mix_output(device, mix)?;
-                self.load_submix_settings(false)?;
+                self.load_submix_settings(false).await?;
             }
             GoXLRCommand::SetMonitorMix(device) => {
+                if self.is_stream_no_music().await {
+                    if !self.device_supports_mix2() && self.is_device_mini() {
+                        // In this case, we're bound to the Sampler channel, make sure we're not trying to monitor it..
+                        if device == BasicOutputDevice::Sampler {
+                            bail!("Channel is controlled by Stream Mix 1");
+                        }
+                    }
+                    if self.device_supports_mix2() && device == BasicOutputDevice::StreamMix2 {
+                        bail!("Channel is controled by Stream Mix 1");
+                    }
+                }
+
                 self.profile.set_monitor_mix(device)?;
 
                 // Might be a cleaner way to do this, we only need to handle 1 output..
@@ -2900,7 +2912,7 @@ impl<'a> Device<'a> {
                 }
 
                 // Make sure to switch Headphones from A to B if needed.
-                self.load_submix_settings(false)?;
+                self.load_submix_settings(false).await?;
             }
         }
         Ok(())
@@ -3106,7 +3118,7 @@ impl<'a> Device<'a> {
                 router[BasicOutputDevice::BroadcastMix] = false;
 
                 // If we're a mini, with VOD Mode 'Stream No Music', disable this route to VOD.
-                if self.is_steam_no_music().await {
+                if self.is_stream_no_music().await {
                     let channel = if self.device_supports_mix2() {
                         BasicOutputDevice::StreamMix2
                     } else {
@@ -3146,7 +3158,7 @@ impl<'a> Device<'a> {
             }
         }
 
-        if self.is_steam_no_music().await {
+        if self.is_stream_no_music().await {
             // Ok, so we need to sync the Mix channel to the Sample (VOD) Channel, unless Music
             let channel = if self.device_supports_mix2() {
                 BasicOutputDevice::StreamMix2
@@ -3511,7 +3523,7 @@ impl<'a> Device<'a> {
         }
 
         debug!("Applying Submixing Settings..");
-        self.load_submix_settings(true)?;
+        self.load_submix_settings(true).await?;
 
         debug!("Loading Colour Map..");
         self.load_colour_map().await?;
@@ -3724,7 +3736,7 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
-    fn load_submix_settings(&mut self, apply_volumes: bool) -> Result<()> {
+    async fn load_submix_settings(&mut self, apply_volumes: bool) -> Result<()> {
         if !self.device_supports_submixes() {
             // Submixes not supported, do nothing.
             return Ok(());
@@ -3767,8 +3779,22 @@ impl<'a> Device<'a> {
             }
 
             if submix_enabled {
-                // We need to place this on the correct mix..
-                match self.profile.get_submix_channel(device) {
+                // We need to sync the 'no music' function to the main mix track..
+                let channel = if self.is_stream_no_music().await {
+                    debug!("Attempting to Sync {} with Stream Mix..", device);
+                    let broadcast = self
+                        .profile
+                        .get_submix_channel(BasicOutputDevice::BroadcastMix);
+
+                    match device {
+                        BasicOutputDevice::Sampler | BasicOutputDevice::StreamMix2 => broadcast,
+                        _ => self.profile.get_submix_channel(device),
+                    }
+                } else {
+                    self.profile.get_submix_channel(device)
+                };
+
+                match channel {
                     Mix::A => mix_a[index] = (device as u8) * 2,
                     Mix::B => mix_b[index] = (device as u8) * 2,
                 }
@@ -3944,7 +3970,7 @@ impl<'a> Device<'a> {
         }
     }
 
-    async fn is_steam_no_music(&self) -> bool {
+    async fn is_stream_no_music(&self) -> bool {
         self.hardware.device_type == DeviceType::Mini
             && self.settings.get_device_vod_mode(self.serial()).await == VodMode::StreamNoMusic
     }
