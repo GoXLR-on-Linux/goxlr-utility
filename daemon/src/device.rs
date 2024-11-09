@@ -2803,6 +2803,7 @@ impl<'a> Device<'a> {
                 let current = self.settings.get_device_vod_mode(serial).await;
                 if current != value {
                     self.settings.set_device_vod_mode(serial, value).await;
+                    self.load_submix_settings(false).await?;
 
                     // We need to reapply all routing to reconfigure as needed
                     for input in BasicInputDevice::iter() {
