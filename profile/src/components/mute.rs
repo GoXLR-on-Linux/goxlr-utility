@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::io::Write;
 
 use enum_map_derive::Enum;
-use strum::{EnumIter, EnumProperty, IntoEnumIterator};
+use strum::{Display, EnumIter, EnumProperty, IntoEnumIterator};
 
 use anyhow::Result;
 use log::warn;
@@ -177,7 +177,7 @@ impl MuteButton {
 }
 
 // MuteChat
-#[derive(Debug, Copy, Clone, Enum, EnumProperty, EnumIter, PartialEq, Eq)]
+#[derive(Debug, Display, Copy, Clone, Enum, EnumProperty, EnumIter, PartialEq, Eq)]
 pub enum MuteFunction {
     #[strum(props(Value = "Mute All", uiIndex = "0"))]
     All,
