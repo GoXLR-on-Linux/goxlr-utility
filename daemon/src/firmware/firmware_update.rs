@@ -141,11 +141,28 @@ pub async fn do_firmware_update(settings: FirmwareUpdateSettings) {
     reboot_goxlr(&device.serial, sender.clone()).await;
 }
 
-async fn get_firmware_file(device: &FirmwareUpdateDevice, sender: Sender) -> Result<String> {
+async fn get_firmware_file(
+    device: &FirmwareUpdateDevice,
+    sender: Sender,
+) -> Result<(String, VersionNumber)> {
     set_update_state(&device.serial, sender.clone(), UpdateState::Manifest).await?;
 
-    let full_key = "fwFullFileName";
-    let mini_key = "fwMiniFileName";
+    // Firstly, grab some variables depending on device..
+    let file_key = match device.device_type {
+        DeviceType::Unknown => bail!("Unknown Device Type"),
+        DeviceType::Full => "fwFullFileName",
+        DeviceType::Mini => "fwMiniFileName",
+    };
+    let version_key = match device.device_type {
+        DeviceType::Unknown => bail!("Unknown Device Type"),
+        DeviceType::Full => "version",
+        DeviceType::Mini => "miniVersion",
+    };
+    let fail_back_path = match device.device_type {
+        DeviceType::Unknown => bail!("Unknown Device Type"),
+        DeviceType::Full => FAIL_BACK_FULL_FIRMWARE,
+        DeviceType::Mini => FAIL_BACK_MINI_FIRMWARE,
+    };
 
     // We need to find out if the manifest has a path to the firmware file, otherwise we'll fall
     // back to 'Legacy' behaviour. Note that we're not going to track the percentage on this
@@ -155,16 +172,16 @@ async fn get_firmware_file(device: &FirmwareUpdateDevice, sender: Sender) -> Res
         if let Ok(text) = response.text().await {
             // Parse this into an XML tree...
             if let Ok(root) = Element::parse(text.as_bytes()) {
-                return if device.device_type == DeviceType::Mini {
-                    if root.attributes.contains_key(mini_key) {
-                        Ok(root.attributes[mini_key].clone())
-                    } else {
-                        Ok(String::from(FAIL_BACK_MINI_FIRMWARE))
-                    }
-                } else if root.attributes.contains_key(full_key) {
-                    Ok(root.attributes[full_key].clone())
+                let version = if root.attributes.contains_key(version_key) {
+                    VersionNumber::from(root.attributes[version_key].clone())
                 } else {
-                    Ok(String::from(FAIL_BACK_FULL_FIRMWARE))
+                    bail!("Unable to obtain Firmware Version");
+                };
+
+                return if root.attributes.contains_key(file_key) {
+                    Ok((root.attributes[file_key].clone(), version))
+                } else {
+                    Ok((String::from(fail_back_path), version))
                 };
             }
         }
@@ -178,8 +195,8 @@ async fn download_firmware(device: &FirmwareUpdateDevice, sender: Sender) -> Res
 
     // Now we'll grab and process that file
     set_update_state(&device.serial, sender.clone(), UpdateState::Download).await?;
-    let url = format!("{}{}", FIRMWARE_BASE, file_name);
-    let output_path = std::env::temp_dir().join(file_name);
+    let url = format!("{}{}", FIRMWARE_BASE, file_name.0);
+    let output_path = std::env::temp_dir().join(file_name.0);
 
     if output_path.exists() && fs::remove_file(&output_path).is_err() {
         bail!("Error Cleaning old firmware");
@@ -208,7 +225,11 @@ async fn download_firmware(device: &FirmwareUpdateDevice, sender: Sender) -> Res
             }
         }
 
-        return check_firmware(&output_path);
+        let firmware_info = check_firmware(&output_path)?;
+        if firmware_info.version != file_name.1 {
+            bail!("Downloaded Firmware version does not match expected firmware");
+        }
+        return Ok(firmware_info);
     }
     bail!("Error Downloading content from TC-Helicon Servers");
 }
