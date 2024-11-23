@@ -3131,28 +3131,14 @@ impl<'a> Device<'a> {
             MuteFunction::ToVoiceChat => router[BasicOutputDevice::ChatMic] = false,
             MuteFunction::ToPhones => router[BasicOutputDevice::Headphones] = false,
             MuteFunction::ToLineOut => router[BasicOutputDevice::LineOut] = false,
-            MuteFunction::ToStream2 => {
-                // If the device doesn't directly support Mix2, we'll mute the Sampler
-                // instead, just some value add for older firmwares.
-                if self.device_supports_mix2() {
-                    router[BasicOutputDevice::StreamMix2] = false;
-                } else {
-                    router[BasicOutputDevice::Sampler] = false;
-                }
-            }
-            MuteFunction::ToStreams => {
-                // This is a littly clunky, but need extra checks:
-                // 1 - If we're 'Stream Mix, no Music', this mute function should follow that behaviour
-                // 2 - If we aren't, and the firmware supports Mix2, mute Mix2
-                // 3 - Otherwise, do nothing. This shouldn't occur, but can technically be set.
-                router[BasicOutputDevice::BroadcastMix] = false;
 
-                // If we're stream_no_music
-                if self.device_supports_mix2() {
-                    router[BasicOutputDevice::StreamMix2] = false;
-                } else {
-                    router[BasicOutputDevice::Sampler] = false;
-                }
+            // If the firmware doesn't support Mix2, this will do nothing.
+            MuteFunction::ToStream2 => router[BasicOutputDevice::StreamMix2] = false,
+
+            // If the firmware doesn't support Mix2, this will just mute Mix1
+            MuteFunction::ToStreams => {
+                router[BasicOutputDevice::BroadcastMix] = false;
+                router[BasicOutputDevice::StreamMix2] = false;
             }
         };
 
@@ -3196,7 +3182,6 @@ impl<'a> Device<'a> {
 
         self.apply_transient_routing(input, &mut router).await?;
         debug!("Applying Routing to {:?}:", input);
-        debug!("{:?}", router);
 
         let monitor = self.profile.get_monitoring_mix();
         if monitor != BasicOutputDevice::Headphones {
