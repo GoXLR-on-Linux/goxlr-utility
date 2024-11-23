@@ -56,6 +56,9 @@ mod tts;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const ICON: &[u8] = include_bytes!("../resources/goxlr-utility-large.png");
 
+const FIRMWARE_BASE: &str =
+    "https://mediadl.musictribe.com/media/PLM/sftp/incoming/hybris/import/GOXLR/";
+
 /**
 This is ugly, and I know it's ugly. I need to rework how the Primary Worker is constructed
 so that various variables can be easily passed through it down to the device level via a struct

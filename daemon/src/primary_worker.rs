@@ -6,7 +6,9 @@ use crate::firmware::firmware_update::{
     FirmwareUpdateSettings,
 };
 use crate::platform::{get_ui_app_path, has_autostart, set_autostart};
-use crate::{FileManager, PatchEvent, SettingsHandle, Shutdown, SYSTEM_LOCALE, VERSION};
+use crate::{
+    FileManager, PatchEvent, SettingsHandle, Shutdown, FIRMWARE_BASE, SYSTEM_LOCALE, VERSION,
+};
 use anyhow::{anyhow, Result};
 use enum_map::EnumMap;
 use goxlr_ipc::{
@@ -842,10 +844,10 @@ async fn check_firmware_versions(x: Sender<EnumMap<DeviceType, Option<VersionNum
     let mut map: EnumMap<DeviceType, Option<VersionNumber>> = EnumMap::default();
 
     debug!("Performing Firmware Version Check..");
-    let url = "https://mediadl.musictribe.com/media/PLM/sftp/incoming/hybris/import/GOXLR/UpdateManifest_v3.xml";
+    let url = format!("{}{}", FIRMWARE_BASE, "UpdateManifest_v3.xml");
     if let Ok(response) = reqwest::get(url).await {
         if let Ok(text) = response.text().await {
-            // Parse this into an XML tree..
+            // Parse this into an XML tree...
             if let Ok(root) = Element::parse(text.as_bytes()) {
                 if root.attributes.contains_key(mini_key) {
                     map[DeviceType::Mini] =
