@@ -72,6 +72,7 @@ pub enum UpdateState {
     Failed,
 
     Starting,
+    Manifest,
     Download,
     ClearNVR,
     UploadFirmware,

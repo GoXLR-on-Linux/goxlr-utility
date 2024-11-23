@@ -1,4 +1,5 @@
 use crate::firmware::firmware_file::{check_firmware, FirmwareInfo};
+use crate::FIRMWARE_BASE;
 use anyhow::{bail, Result};
 use futures_util::StreamExt;
 use goxlr_ipc::UpdateState;
@@ -13,9 +14,13 @@ use std::path::PathBuf;
 use std::time::Duration;
 use tokio::sync::oneshot;
 use tokio::time::sleep;
+use xmltree::Element;
 
 type Sender = tokio::sync::mpsc::Sender<FirmwareRequest>;
 type OneShot<T> = oneshot::Sender<T>;
+
+const FAIL_BACK_FULL_FIRMWARE: &str = "GoXLR_Firmware.bin";
+const FAIL_BACK_MINI_FIRMWARE: &str = "GoXLR_MINI_Firmware.bin";
 
 pub struct FirmwareUpdateSettings {
     pub sender: Sender,
@@ -136,24 +141,45 @@ pub async fn do_firmware_update(settings: FirmwareUpdateSettings) {
     reboot_goxlr(&device.serial, sender.clone()).await;
 }
 
+async fn get_firmware_file(device: &FirmwareUpdateDevice, sender: Sender) -> Result<String> {
+    set_update_state(&device.serial, sender.clone(), UpdateState::Manifest).await?;
+
+    let full_key = "fwFullFileName";
+    let mini_key = "fwMiniFileName";
+
+    // We need to find out if the manifest has a path to the firmware file, otherwise we'll fall
+    // back to 'Legacy' behaviour. Note that we're not going to track the percentage on this
+    // download, as the manifest file is generally tiny.
+    let url = format!("{}{}", FIRMWARE_BASE, "UpdateManifest_v3.xml");
+    if let Ok(response) = reqwest::get(url).await {
+        if let Ok(text) = response.text().await {
+            // Parse this into an XML tree...
+            if let Ok(root) = Element::parse(text.as_bytes()) {
+                return if device.device_type == DeviceType::Mini {
+                    if root.attributes.contains_key(mini_key) {
+                        Ok(root.attributes[mini_key].clone())
+                    } else {
+                        Ok(String::from(FAIL_BACK_MINI_FIRMWARE))
+                    }
+                } else if root.attributes.contains_key(full_key) {
+                    Ok(root.attributes[full_key].clone())
+                } else {
+                    Ok(String::from(FAIL_BACK_FULL_FIRMWARE))
+                };
+            }
+        }
+    }
+    bail!("Error Downloading Manifest from TC-Helicon Servers");
+}
+
 async fn download_firmware(device: &FirmwareUpdateDevice, sender: Sender) -> Result<FirmwareInfo> {
+    // First thing we're going to do, is determine which file to download
+    let file_name = get_firmware_file(device, sender.clone()).await?;
+
+    // Now we'll grab and process that file
     set_update_state(&device.serial, sender.clone(), UpdateState::Download).await?;
-
-    let full_name = "GoXLR_Firmware.bin";
-    let mini_name = "GoXLR_MINI_Firmware.bin";
-
-    let base_url = "https://mediadl.musictribe.com/media/PLM/sftp/incoming/hybris/import/GOXLR/";
-    let url = match device.device_type {
-        DeviceType::Full => format!("{}{}", base_url, full_name),
-        DeviceType::Mini => format!("{}{}", base_url, mini_name),
-        DeviceType::Unknown => bail!("Unknown Device Type"),
-    };
-
-    let output_path = std::env::temp_dir().join(match device.device_type {
-        DeviceType::Full => full_name,
-        DeviceType::Mini => mini_name,
-        DeviceType::Unknown => "wont_happen",
-    });
+    let url = format!("{}{}", FIRMWARE_BASE, file_name);
+    let output_path = std::env::temp_dir().join(file_name);
 
     if output_path.exists() && fs::remove_file(&output_path).is_err() {
         bail!("Error Cleaning old firmware");
