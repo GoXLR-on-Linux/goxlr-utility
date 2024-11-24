@@ -480,6 +480,18 @@ pub async fn spawn_usb_handler(
 
                     DeviceCommand::RunFirmwareUpdate(serial, file, force, sender) => {
                         if let Some(device) = devices.get_mut(&serial) {
+                            if let Some(state) = devices_firmware.get(&serial) {
+                                match state.status.state {
+                                    UpdateState::Failed | UpdateState::Complete | UpdateState::Pause(_) => {
+                                        warn!("Update attempted before previous update was cleared, continuing because safe.");
+                                    }
+                                    _ => {
+                                        let _ = sender.send(Err(anyhow!("Update Already in progress!")));
+                                        return;
+                                    }
+                                }
+                            }
+
                             let device_type = device.get_hardware_type();
                             let current_firmware = device.get_firmware_version();
 
