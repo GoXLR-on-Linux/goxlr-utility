@@ -4,7 +4,7 @@ use anyhow::{bail, Result};
 use futures_util::StreamExt;
 use goxlr_ipc::{FirmwareInfo, UpdateState};
 use goxlr_types::{DeviceType, VersionNumber};
-use log::{error, info};
+use log::{error, info, warn};
 use reqwest::Client;
 use std::cmp::min;
 use std::fs;
@@ -77,8 +77,10 @@ pub async fn start_firmware_update(settings: FirmwareUpdateSettings) {
     // the file_info, and the UI can then send a 'Continue' if the user is happy with the info, otherwise
     // we just go with the update.
     if !settings.force && (file_info.version <= device.current_firmware) {
+        warn!("Pausing, File: {}, Current: {}", file_info.version, device.current_firmware);
         let _ = set_update_state(&device.serial, sender, UpdateState::Pause(file_info)).await;
     } else {
+        info!("Downloaded firmware is newer than current, proceeding without prompt..");
         do_firmware_update(settings, file_info).await;
     }
 }
@@ -168,11 +170,13 @@ async fn get_firmware_file(
         DeviceType::Mini => FAIL_BACK_MINI_FIRMWARE,
     };
 
+    let manifest_url = format!("{}{}", FIRMWARE_BASE, "UpdateManifest_v3.xml");
+
     // We need to find out if the manifest has a path to the firmware file, otherwise we'll fall
     // back to 'Legacy' behaviour. Note that we're not going to track the percentage on this
     // download, as the manifest file is generally tiny.
-    let url = format!("{}{}", FIRMWARE_BASE, "UpdateManifest_v3.xml");
-    if let Ok(response) = reqwest::get(url).await {
+    info!("Downloading Firmware Metadata from {}", manifest_url);
+    if let Ok(response) = reqwest::get(manifest_url).await {
         if let Ok(text) = response.text().await {
             // Parse this into an XML tree...
             if let Ok(root) = Element::parse(text.as_bytes()) {
@@ -201,6 +205,8 @@ async fn download_firmware(device: &FirmwareUpdateDevice, sender: Sender) -> Res
     set_update_state(&device.serial, sender.clone(), UpdateState::Download).await?;
     let url = format!("{}{}", FIRMWARE_BASE, file_name.0);
     let output_path = std::env::temp_dir().join(file_name.0);
+
+    info!("Downloading Firmware, URL: {}, Expected Version: {}", url, file_name.1);
 
     if output_path.exists() && fs::remove_file(&output_path).is_err() {
         bail!("Error Cleaning old firmware");
@@ -232,6 +238,12 @@ async fn download_firmware(device: &FirmwareUpdateDevice, sender: Sender) -> Res
         let firmware_info = check_firmware(&output_path)?;
         if firmware_info.version != file_name.1 {
             bail!("Downloaded Firmware version does not match expected firmware");
+        }
+
+        if let Ok(data) = firmware_info.path.metadata() {
+            info!("Download complete, file: {}, size: {}", firmware_info.path.to_string_lossy(), data.len());
+        } else {
+            info!("Download complete, file: {}, size: unknown", firmware_info.path.to_string_lossy());
         }
         return Ok(firmware_info);
     }
@@ -451,6 +463,8 @@ async fn reboot_goxlr(serial: &str, sender: Sender) {
 
 async fn send_error(serial: &str, sender: Sender, error: String) {
     let message = FirmwareRequest::SetUpdateState(serial.to_owned(), UpdateState::Failed);
+    error!("Error Received: {}", error);
+
     if let Err(e) = sender.send(message).await {
         error!("Error Updating State: {}", e);
     }
