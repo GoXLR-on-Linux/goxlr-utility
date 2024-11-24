@@ -1,4 +1,4 @@
-use crate::{DaemonCommand, DaemonRequest, DaemonStatus, GoXLRCommand, HttpSettings};
+use crate::{DaemonRequest, DaemonStatus, GoXLRCommand, HttpSettings};
 use anyhow::Result;
 use async_trait::async_trait;
 

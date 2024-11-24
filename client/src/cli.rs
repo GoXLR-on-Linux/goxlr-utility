@@ -10,6 +10,7 @@ use goxlr_types::{
     WaterfallDirection,
 };
 use std::str::FromStr;
+use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
 #[command(about, version, author)]
@@ -63,6 +64,11 @@ pub struct MicrophoneControls {
 #[derive(Subcommand, Debug)]
 #[command(arg_required_else_help = true)]
 pub enum SubCommands {
+    Firmware {
+        #[command(subcommand)]
+        command: FirmwareCommands,
+    },
+
     /// Profile Settings
     Profiles {
         #[command(subcommand)]
@@ -174,6 +180,18 @@ fn percent_value_float(s: &str) -> Result<f32, String> {
     }
 
     Ok(value)
+}
+
+#[derive(Subcommand, Debug)]
+#[command(arg_required_else_help = true)]
+#[allow(clippy::enum_variant_names)]
+pub enum FirmwareCommands {
+    FirmwareUpdate {
+        path: Option<PathBuf>,
+    },
+
+    ContinueFirmwareUpdate,
+    ClearFirmwareUpdate,
 }
 
 #[derive(Subcommand, Debug)]
