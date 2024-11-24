@@ -526,6 +526,7 @@ pub async fn spawn_usb_handler(
                         if let Some(state) = devices_firmware.get(&serial) {
                             match &state.status.state {
                                 UpdateState::Pause(file_info) => {
+                                    info!("Continuing Firmware Update..");
                                     tokio::spawn(do_firmware_update(state.settings.clone(), file_info.to_owned()));
                                     let _ = sender.send(Ok(()));
                                 }
