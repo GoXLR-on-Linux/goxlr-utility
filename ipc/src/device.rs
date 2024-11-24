@@ -18,7 +18,7 @@ use std::path::PathBuf;
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct DaemonStatus {
     pub config: DaemonConfig,
-    pub firmware: HashMap<String, Option<FirmwareStatus>>,
+    pub firmware: HashMap<String, FirmwareStatus>,
     pub mixers: HashMap<String, MixerStatus>,
     pub paths: Paths,
     pub files: Files,

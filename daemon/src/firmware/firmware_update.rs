@@ -1,8 +1,8 @@
-use crate::firmware::firmware_file::{check_firmware, FirmwareInfo};
+use crate::firmware::firmware_file::check_firmware;
 use crate::FIRMWARE_BASE;
 use anyhow::{bail, Result};
 use futures_util::StreamExt;
-use goxlr_ipc::UpdateState;
+use goxlr_ipc::{FirmwareInfo, UpdateState};
 use goxlr_types::{DeviceType, VersionNumber};
 use log::{error, info};
 use reqwest::Client;
@@ -22,21 +22,25 @@ type OneShot<T> = oneshot::Sender<T>;
 const FAIL_BACK_FULL_FIRMWARE: &str = "GoXLR_Firmware.bin";
 const FAIL_BACK_MINI_FIRMWARE: &str = "GoXLR_MINI_Firmware.bin";
 
+#[derive(Clone)]
 pub struct FirmwareUpdateSettings {
     pub sender: Sender,
     pub device: FirmwareUpdateDevice,
     pub file: Option<PathBuf>,
+    pub force: bool,
 }
 
+#[derive(Clone)]
 pub struct FirmwareUpdateDevice {
     pub serial: String,
     pub device_type: DeviceType,
     pub current_firmware: VersionNumber,
 }
-pub async fn do_firmware_update(settings: FirmwareUpdateSettings) {
+
+pub async fn start_firmware_update(settings: FirmwareUpdateSettings) {
     info!("Beginning Firmware Update...");
     let sender = settings.sender.clone();
-    let device = settings.device;
+    let device = settings.device.clone();
 
     if let Err(e) = set_update_state(&device.serial, sender.clone(), UpdateState::Starting).await {
         error!("Something's gone horribly wrong: {}", e);
@@ -69,19 +73,24 @@ pub async fn do_firmware_update(settings: FirmwareUpdateSettings) {
         return;
     }
 
-    if file_info.version <= device.current_firmware && settings.file.is_none() {
-        // We're apparently downloaded this file, and it would cause a downgrade / reinstall
-        // which is unexpected. Bail out instead of proceeding.
-        let which = if file_info.version < device.current_firmware {
-            "older"
-        } else {
-            "the same"
-        };
-
-        let error = format!("Downloaded file is {} as current firmware.", which);
-        send_error(&device.serial, sender, error).await;
-        return;
+    // So we go either one of two ways here, if there's a problem, we set the update as 'Paused' with
+    // the file_info, and the UI can then send a 'Continue' if the user is happy with the info, otherwise
+    // we just go with the update.
+    if file_info.version <= device.current_firmware {
+        set_update_state(
+            &device.serial,
+            sender.clone(),
+            UpdateState::Pause(file_info),
+        )
+        .await;
+    } else {
+        do_firmware_update(settings, file_info).await;
     }
+}
+
+pub async fn do_firmware_update(settings: FirmwareUpdateSettings, file_info: FirmwareInfo) {
+    let sender = settings.sender.clone();
+    let device = settings.device;
 
     // Ok, when we get here we should be good to go, grab the firmware bytes from disk..
     let firmware = match fs::read(file_info.path) {
