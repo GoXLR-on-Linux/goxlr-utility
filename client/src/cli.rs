@@ -9,8 +9,8 @@ use goxlr_types::{
     SampleBank, SampleButtons, SamplePlayOrder, SamplePlaybackMode, SimpleColourTargets,
     WaterfallDirection,
 };
-use std::str::FromStr;
 use std::path::PathBuf;
+use std::str::FromStr;
 
 #[derive(Parser, Debug)]
 #[command(about, version, author)]
@@ -186,9 +186,7 @@ fn percent_value_float(s: &str) -> Result<f32, String> {
 #[command(arg_required_else_help = true)]
 #[allow(clippy::enum_variant_names)]
 pub enum FirmwareCommands {
-    FirmwareUpdate {
-        path: Option<PathBuf>,
-    },
+    FirmwareUpdate { path: Option<PathBuf> },
 
     ContinueFirmwareUpdate,
     ClearFirmwareUpdate,

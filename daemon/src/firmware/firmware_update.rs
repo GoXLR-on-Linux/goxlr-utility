@@ -77,7 +77,10 @@ pub async fn start_firmware_update(settings: FirmwareUpdateSettings) {
     // the file_info, and the UI can then send a 'Continue' if the user is happy with the info, otherwise
     // we just go with the update.
     if !settings.force && (file_info.version <= device.current_firmware) {
-        warn!("Pausing, File: {}, Current: {}", file_info.version, device.current_firmware);
+        warn!(
+            "Pausing, File: {}, Current: {}",
+            file_info.version, device.current_firmware
+        );
         let _ = set_update_state(&device.serial, sender, UpdateState::Pause(file_info)).await;
     } else {
         info!("Downloaded firmware is newer than current, proceeding without prompt..");
@@ -206,7 +209,10 @@ async fn download_firmware(device: &FirmwareUpdateDevice, sender: Sender) -> Res
     let url = format!("{}{}", FIRMWARE_BASE, file_name.0);
     let output_path = std::env::temp_dir().join(file_name.0);
 
-    info!("Downloading Firmware, URL: {}, Expected Version: {}", url, file_name.1);
+    info!(
+        "Downloading Firmware, URL: {}, Expected Version: {}",
+        url, file_name.1
+    );
 
     if output_path.exists() && fs::remove_file(&output_path).is_err() {
         bail!("Error Cleaning old firmware");
@@ -241,9 +247,16 @@ async fn download_firmware(device: &FirmwareUpdateDevice, sender: Sender) -> Res
         }
 
         if let Ok(data) = firmware_info.path.metadata() {
-            info!("Download complete, file: {}, size: {}", firmware_info.path.to_string_lossy(), data.len());
+            info!(
+                "Download complete, file: {}, size: {}",
+                firmware_info.path.to_string_lossy(),
+                data.len()
+            );
         } else {
-            info!("Download complete, file: {}, size: unknown", firmware_info.path.to_string_lossy());
+            info!(
+                "Download complete, file: {}, size: unknown",
+                firmware_info.path.to_string_lossy()
+            );
         }
         return Ok(firmware_info);
     }
