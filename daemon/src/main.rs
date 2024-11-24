@@ -134,6 +134,8 @@ async fn run_utility() -> Result<()> {
     config.add_filter_ignore_str("actix_server::server");
     config.add_filter_ignore_str("actix_server::builder");
     config.add_filter_ignore_str("zbus");
+    config.add_filter_ignore_str("hyper_util");
+    config.add_filter_ignore_str("reqwest");
 
     // I'm generally not interested in the Symphonia header announcements which go to INFO,
     // it's only useful in a development setting!
