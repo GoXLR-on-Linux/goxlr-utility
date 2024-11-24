@@ -499,13 +499,23 @@ pub async fn spawn_usb_handler(
                             let update_settings = FirmwareUpdateSettings {
                                 sender: firmware_update_sender.clone(),
                                 device: FirmwareUpdateDevice {
-                                    serial,
+                                    serial: serial.clone(),
                                     device_type,
                                     current_firmware,
                                 },
                                 file,
                                 force,
                             };
+                            let update_state = FirmwareUpdateState { 
+                                settings: update_settings.clone(),
+                                status: FirmwareStatus { 
+                                    state: UpdateState::Starting,
+                                    progress: 0,
+                                    error: None 
+                                },
+                            };
+
+                            devices_firmware.insert(serial, update_state);
                             tokio::spawn(start_firmware_update(update_settings));
                             let _ = sender.send(Ok(()));
                         } else {
