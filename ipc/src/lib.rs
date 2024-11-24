@@ -25,7 +25,7 @@ pub enum DaemonRequest {
     Daemon(DaemonCommand),
     GetMicLevel(String),
     Command(String, GoXLRCommand),
-    RunFirmwareUpdate(String, Option<String>, bool),
+    RunFirmwareUpdate(String, Option<PathBuf>, bool),
     ContinueFirmwareUpdate(String),
     ClearFirmwareState(String),
 }
