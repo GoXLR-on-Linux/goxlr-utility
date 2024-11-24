@@ -76,13 +76,8 @@ pub async fn start_firmware_update(settings: FirmwareUpdateSettings) {
     // So we go either one of two ways here, if there's a problem, we set the update as 'Paused' with
     // the file_info, and the UI can then send a 'Continue' if the user is happy with the info, otherwise
     // we just go with the update.
-    if file_info.version <= device.current_firmware {
-        set_update_state(
-            &device.serial,
-            sender.clone(),
-            UpdateState::Pause(file_info),
-        )
-        .await;
+    if !settings.force && (file_info.version <= device.current_firmware) {
+        let _ = set_update_state(&device.serial, sender, UpdateState::Pause(file_info)).await;
     } else {
         do_firmware_update(settings, file_info).await;
     }
