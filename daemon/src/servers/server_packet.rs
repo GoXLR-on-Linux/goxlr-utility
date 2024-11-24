@@ -74,6 +74,18 @@ pub async fn handle_packet(
             Ok(DaemonResponse::Ok)
         }
 
+        DaemonRequest::ContinueFirmwareUpdate(serial) => {
+            let (tx, rx) = oneshot::channel();
+            usb_tx
+                .send(DeviceCommand::ContinueFirmwareUpdate(serial, tx))
+                .await
+                .map_err(|e| anyhow!(e.to_string()))
+                .context("Could not communicate with the GoXLR device")?;
+            rx.await
+                .context("Could not execute the command on the GoXLR device")??;
+            Ok(DaemonResponse::Ok)
+        }
+
         DaemonRequest::ClearFirmwareState(serial) => {
             let (tx, rx) = oneshot::channel();
             usb_tx
