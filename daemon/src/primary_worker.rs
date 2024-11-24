@@ -491,6 +491,7 @@ pub async fn spawn_usb_handler(
                     },
 
                     DeviceCommand::RunFirmwareUpdate(serial, file, force, sender) => {
+                        let mut start_update = true;
                         if let Some(device) = devices.get_mut(&serial) {
                             if let Some(state) = devices_firmware.get(&serial) {
                                 match state.status.state {
@@ -498,38 +499,43 @@ pub async fn spawn_usb_handler(
                                         warn!("Update attempted before previous update was cleared, continuing because safe.");
                                     }
                                     _ => {
-                                        let _ = sender.send(Err(anyhow!("Update Already in progress!")));
-                                        return;
+                                        start_update = false;
                                     }
                                 }
                             }
 
-                            let device_type = device.get_hardware_type();
-                            let current_firmware = device.get_firmware_version();
+                            if start_update {
+                                let device_type = device.get_hardware_type();
+                                let current_firmware = device.get_firmware_version();
 
-                            // Create and run a firmware updater for this device
-                            let update_settings = FirmwareUpdateSettings {
-                                sender: firmware_update_sender.clone(),
-                                device: FirmwareUpdateDevice {
-                                    serial: serial.clone(),
-                                    device_type,
-                                    current_firmware,
-                                },
-                                file,
-                                force,
-                            };
-                            let update_state = FirmwareUpdateState {
-                                settings: update_settings.clone(),
-                                status: FirmwareStatus {
-                                    state: UpdateState::Starting,
-                                    progress: 0,
-                                    error: None
-                                },
-                            };
+                                // Create and run a firmware updater for this device
+                                let update_settings = FirmwareUpdateSettings {
+                                    sender: firmware_update_sender.clone(),
+                                    device: FirmwareUpdateDevice {
+                                        serial: serial.clone(),
+                                        device_type,
+                                        current_firmware,
+                                    },
+                                    file,
+                                    force,
+                                };
+                                let update_state = FirmwareUpdateState {
+                                    settings: update_settings.clone(),
+                                    status: FirmwareStatus {
+                                        state: UpdateState::Starting,
+                                        progress: 0,
+                                        error: None
+                                    },
+                                };
 
-                            devices_firmware.insert(serial, update_state);
-                            tokio::spawn(start_firmware_update(update_settings));
-                            let _ = sender.send(Ok(()));
+                                devices_firmware.insert(serial, update_state);
+                                tokio::spawn(start_firmware_update(update_settings));
+
+                                let _ = sender.send(Ok(()));
+                                change_found = true;
+                            } else {
+                                let _ = sender.send(Err(anyhow!("Update Already in progress!")));
+                            }
                         } else {
                             let _ = sender.send(Err(anyhow!("Device {} is not connected", serial)));
                         }
@@ -547,7 +553,7 @@ pub async fn spawn_usb_handler(
                                 }
                             }
                         } else {
-                            let _ = sender.send(Err(anyhow!("Devite not performing firmware update.")));
+                            let _ = sender.send(Err(anyhow!("Device not performing firmware update.")));
                         }
                     },
 
@@ -557,6 +563,9 @@ pub async fn spawn_usb_handler(
                                 UpdateState::Complete | UpdateState::Failed | UpdateState::Pause(_) => {
                                     // We're at a point where this update can be stopped, nuke it from the firmware list..
                                     devices_firmware.remove(&serial);
+                                    change_found = true;
+
+                                    let _ = sender.send(Ok(()));
                                 },
                                 _ => {
                                     // Can't stop it just yet.. :D
