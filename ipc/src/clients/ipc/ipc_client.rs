@@ -61,6 +61,10 @@ impl Client for IPCClient {
             .await
     }
 
+    async fn daemon_command(&mut self, command: DaemonRequest) -> Result<()> {
+        self.send(command).await
+    }
+
     fn status(&self) -> &DaemonStatus {
         &self.status
     }

@@ -1,6 +1,6 @@
 use crate::client::Client;
 use crate::{DaemonRequest, DaemonResponse, DaemonStatus, GoXLRCommand, HttpSettings};
-use anyhow::bail;
+use anyhow::{bail, Result};
 use async_trait::async_trait;
 
 #[derive(Debug)]
@@ -56,6 +56,10 @@ impl Client for WebClient {
     async fn command(&mut self, serial: &str, command: GoXLRCommand) -> anyhow::Result<()> {
         self.send(DaemonRequest::Command(serial.to_string(), command))
             .await
+    }
+
+    async fn daemon_command(&mut self, command: DaemonRequest) -> Result<()> {
+        self.send(command).await
     }
 
     fn status(&self) -> &DaemonStatus {
