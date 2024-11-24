@@ -9,13 +9,13 @@ mod device;
 pub use device::*;
 use goxlr_types::{
     AnimationMode, Button, ButtonColourGroups, ButtonColourOffStyle, ChannelName,
-    CompressorAttackTime, CompressorRatio, CompressorReleaseTime, DisplayMode,
+    CompressorAttackTime, CompressorRatio, CompressorReleaseTime, DeviceType, DisplayMode,
     DisplayModeComponents, EchoStyle, EffectBankPresets, EncoderColourTargets, EqFrequencies,
     FaderDisplayStyle, FaderName, GateTimes, GenderStyle, HardTuneSource, HardTuneStyle,
     InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies, Mix, MuteFunction, MuteState,
     OutputDevice, PitchStyle, ReverbStyle, RobotRange, RobotStyle, SampleBank, SampleButtons,
-    SamplePlayOrder, SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets, VodMode,
-    WaterfallDirection,
+    SamplePlayOrder, SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets, VersionNumber,
+    VodMode, WaterfallDirection,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -25,7 +25,7 @@ pub enum DaemonRequest {
     Daemon(DaemonCommand),
     GetMicLevel(String),
     Command(String, GoXLRCommand),
-    RunFirmwareUpdate(String, Option<String>),
+    RunFirmwareUpdate(String, Option<String>, bool),
     ClearFirmwareState(String),
 }
 
@@ -74,12 +74,20 @@ pub enum UpdateState {
     Starting,
     Manifest,
     Download,
+    Pause(FirmwareInfo),
     ClearNVR,
     UploadFirmware,
     ValidateUpload,
     HardwareValidate,
     HardwareWrite,
     Complete,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+pub struct FirmwareInfo {
+    pub path: PathBuf,
+    pub device_type: DeviceType,
+    pub version: VersionNumber,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, Eq, PartialEq)]

@@ -1,15 +1,10 @@
 use anyhow::{bail, Result};
 use byteorder::{LittleEndian, ReadBytesExt};
+use goxlr_ipc::FirmwareInfo;
 use goxlr_types::{DeviceType, VersionNumber};
 use std::io;
 use std::io::Cursor;
 use std::path::PathBuf;
-
-pub struct FirmwareInfo {
-    pub path: PathBuf,
-    pub device_type: DeviceType,
-    pub version: VersionNumber,
-}
 
 pub fn check_firmware(path: &PathBuf) -> Result<FirmwareInfo> {
     load_firmware_file(path)
