@@ -506,12 +506,12 @@ pub async fn spawn_usb_handler(
                                 file,
                                 force,
                             };
-                            let update_state = FirmwareUpdateState { 
+                            let update_state = FirmwareUpdateState {
                                 settings: update_settings.clone(),
-                                status: FirmwareStatus { 
+                                status: FirmwareStatus {
                                     state: UpdateState::Starting,
                                     progress: 0,
-                                    error: None 
+                                    error: None
                                 },
                             };
 
