@@ -16,15 +16,15 @@ use goxlr_ipc::{
     FirmwareSource, FirmwareStatus, GoXLRCommand, HardwareStatus, HttpSettings, Locale, PathTypes,
     Paths, SampleFile, UpdateState, UsbProductInformation,
 };
-use goxlr_types::{DeviceType, VersionNumber};
+use goxlr_types::{DeviceType, FirmwareDetails, VersionNumber};
 use goxlr_usb::device::base::GoXLRDevice;
 use goxlr_usb::device::{find_devices, from_device, get_version};
 use goxlr_usb::{PID_GOXLR_FULL, PID_GOXLR_MINI};
 use json_patch::diff;
 use log::{debug, error, info, warn};
 use std::collections::{BTreeMap, HashMap};
-use std::path::PathBuf;
 use std::env;
+use std::path::PathBuf;
 use std::time::{Duration, Instant};
 use tokio::sync::broadcast::Sender as BroadcastSender;
 use tokio::sync::mpsc::{Receiver, Sender};
@@ -642,7 +642,7 @@ async fn get_daemon_status(
     settings: &SettingsHandle,
     http_settings: &HttpSettings,
     driver_details: &DriverDetails,
-    firmware_versions: &Option<EnumMap<DeviceType, Option<VersionNumber>>>,
+    firmware_versions: &Option<EnumMap<DeviceType, Option<FirmwareDetails>>>,
     firmware_state: &HashMap<String, FirmwareUpdateState>,
     files: Files,
     app_check: &Option<String>,
@@ -914,12 +914,15 @@ async fn load_device(
     Ok(device)
 }
 
-type FwSender = Sender<EnumMap<DeviceType, Option<VersionNumber>>>;
+type FwSender = Sender<EnumMap<DeviceType, Option<FirmwareDetails>>>;
 async fn check_firmware_versions(x: FwSender, source: FirmwareSource) {
     let full_key = "version";
     let mini_key = "miniVersion";
 
-    let mut map: EnumMap<DeviceType, Option<VersionNumber>> = EnumMap::default();
+    let full_changelog = "GoXLRFirmwareUpdateInfo";
+    let mini_changelog = "MiniFirmwareUpdateInfo";
+
+    let mut map: EnumMap<DeviceType, Option<FirmwareDetails>> = EnumMap::default();
 
     debug!("Performing Firmware Version Check..");
     let url = format!("{}{}", FIRMWARE_PATHS[source], "UpdateManifest_v3.xml");
@@ -928,12 +931,28 @@ async fn check_firmware_versions(x: FwSender, source: FirmwareSource) {
             // Parse this into an XML tree...
             if let Ok(root) = Element::parse(text.as_bytes()) {
                 if root.attributes.contains_key(mini_key) {
-                    map[DeviceType::Mini] =
-                        Some(VersionNumber::from(root.attributes[mini_key].clone()));
+                    let change_log = if root.attributes.contains_key(mini_changelog) {
+                        Some(root.attributes[mini_changelog].clone())
+                    } else {
+                        None
+                    };
+                    map[DeviceType::Mini] = Some(FirmwareDetails {
+                        version: VersionNumber::from(root.attributes[mini_key].clone()),
+                        change_log,
+                    });
                 }
+
+                // We can probably abstract this slightly, the mini and full behaviours are the same.
                 if root.attributes.contains_key(full_key) {
-                    map[DeviceType::Full] =
-                        Some(VersionNumber::from(root.attributes[full_key].clone()));
+                    let change_log = if root.attributes.contains_key(full_changelog) {
+                        Some(root.attributes[full_changelog].clone())
+                    } else {
+                        None
+                    };
+                    map[DeviceType::Full] = Some(FirmwareDetails {
+                        version: VersionNumber::from(root.attributes[full_key].clone()),
+                        change_log,
+                    });
                 }
             } else {
                 warn!("Unable to Parse the XML Response from the TC-Helicon Update Server");

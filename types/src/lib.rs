@@ -81,6 +81,13 @@ pub struct FirmwareVersions {
     pub dice: VersionNumber,
 }
 
+#[derive(Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct FirmwareDetails {
+    pub version: VersionNumber,
+    pub change_log: Option<String>,
+}
+
 #[derive(Clone, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct VersionNumber(pub u32, pub u32, pub Option<u32>, pub Option<u32>);
