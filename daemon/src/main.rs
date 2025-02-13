@@ -57,13 +57,6 @@ mod tts;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const ICON: &[u8] = include_bytes!("../resources/goxlr-utility-large.png");
 
-// lazy_static! {
-//     static ref FIRMWARE_PATHS: EnumMap<FirmwareSource, &str> = enum_map! {
-//         FirmwareSource::LIVE => "https://mediadl.musictribe.com/media/PLM/sftp/incoming/hybris/import/GOXLR/",
-//         FirmwareSource::BETA => "",
-//     };
-// }
-
 const FIRMWARE_PATHS: EnumMap<FirmwareSource, &str> = EnumMap::from_array([
     "https://mediadl.musictribe.com/media/PLM/sftp/incoming/hybris/import/GOXLR/",
     "https://mediadl.musictribe.com/media/PLM/sftp/incoming/hybris/import/FirmwareAssets/GOXLR/LiveTestArea/",
