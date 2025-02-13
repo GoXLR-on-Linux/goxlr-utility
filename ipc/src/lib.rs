@@ -1,3 +1,4 @@
+use enum_map::Enum;
 use json_patch::Patch;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -91,6 +92,13 @@ pub struct FirmwareInfo {
     pub version: VersionNumber,
 }
 
+#[derive(Debug, Copy, Clone, Default, Enum, Serialize, Deserialize, Eq, PartialEq)]
+pub enum FirmwareSource {
+    #[default]
+    Live,
+    Beta,
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize, Eq, PartialEq)]
 pub enum LogLevel {
     Off,
@@ -109,6 +117,7 @@ pub enum DaemonCommand {
     StopDaemon,
     OpenPath(PathTypes),
     SetLogLevel(LogLevel),
+    SetFirmwareSource(FirmwareSource),
     SetShowTrayIcon(bool),
     SetLocale(Option<String>),
     SetTTSEnabled(bool),

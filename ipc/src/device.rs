@@ -1,4 +1,4 @@
-use crate::{ColourWay, GoXLRCommand, LogLevel, UpdateState};
+use crate::{ColourWay, FirmwareSource, GoXLRCommand, LogLevel, UpdateState};
 use enum_map::EnumMap;
 use goxlr_types::MuteState::Unmuted;
 use goxlr_types::{
@@ -37,6 +37,7 @@ pub struct DaemonConfig {
     pub tts_enabled: Option<bool>,
     pub allow_network_access: bool,
     pub log_level: LogLevel,
+    pub firmware_source: FirmwareSource,
     pub open_ui_on_launch: bool,
 }
 

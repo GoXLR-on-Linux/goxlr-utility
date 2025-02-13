@@ -1,8 +1,8 @@
 use crate::firmware::firmware_file::check_firmware;
-use crate::FIRMWARE_BASE;
+use crate::FIRMWARE_PATHS;
 use anyhow::{bail, Result};
 use futures_util::StreamExt;
-use goxlr_ipc::{FirmwareInfo, UpdateState};
+use goxlr_ipc::{FirmwareInfo, FirmwareSource, UpdateState};
 use goxlr_types::{DeviceType, VersionNumber};
 use log::{error, info, warn};
 use reqwest::Client;
@@ -35,6 +35,7 @@ pub struct FirmwareUpdateDevice {
     pub serial: String,
     pub device_type: DeviceType,
     pub current_firmware: VersionNumber,
+    pub source: FirmwareSource,
 }
 
 pub async fn start_firmware_update(settings: FirmwareUpdateSettings) {
@@ -173,7 +174,10 @@ async fn get_firmware_file(
         DeviceType::Mini => FAIL_BACK_MINI_FIRMWARE,
     };
 
-    let manifest_url = format!("{}{}", FIRMWARE_BASE, "UpdateManifest_v3.xml");
+    let manifest_url = format!(
+        "{}{}",
+        FIRMWARE_PATHS[device.source], "UpdateManifest_v3.xml"
+    );
 
     // We need to find out if the manifest has a path to the firmware file, otherwise we'll fall
     // back to 'Legacy' behaviour. Note that we're not going to track the percentage on this
@@ -206,7 +210,7 @@ async fn download_firmware(device: &FirmwareUpdateDevice, sender: Sender) -> Res
 
     // Now we'll grab and process that file
     set_update_state(&device.serial, sender.clone(), UpdateState::Download).await?;
-    let url = format!("{}{}", FIRMWARE_BASE, file_name.0);
+    let url = format!("{}{}", FIRMWARE_PATHS[device.source], file_name.0);
     let output_path = std::env::temp_dir().join(file_name.0);
 
     info!(

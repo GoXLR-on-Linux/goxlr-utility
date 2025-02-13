@@ -7,14 +7,14 @@ use crate::firmware::firmware_update::{
 };
 use crate::platform::{get_ui_app_path, has_autostart, set_autostart};
 use crate::{
-    FileManager, PatchEvent, SettingsHandle, Shutdown, FIRMWARE_BASE, SYSTEM_LOCALE, VERSION,
+    FileManager, PatchEvent, SettingsHandle, Shutdown, FIRMWARE_PATHS, SYSTEM_LOCALE, VERSION,
 };
 use anyhow::{anyhow, Result};
 use enum_map::EnumMap;
 use goxlr_ipc::{
     Activation, ColourWay, DaemonCommand, DaemonConfig, DaemonStatus, DriverDetails, Files,
-    FirmwareStatus, GoXLRCommand, HardwareStatus, HttpSettings, Locale, PathTypes, Paths,
-    SampleFile, UpdateState, UsbProductInformation,
+    FirmwareSource, FirmwareStatus, GoXLRCommand, HardwareStatus, HttpSettings, Locale, PathTypes,
+    Paths, SampleFile, UpdateState, UsbProductInformation,
 };
 use goxlr_types::{DeviceType, VersionNumber};
 use goxlr_usb::device::base::GoXLRDevice;
@@ -88,7 +88,10 @@ pub async fn spawn_usb_handler(
     let (firmware_update_sender, mut firmware_update_receiver) = mpsc::channel(6);
 
     // Spawn a task in the background to check for the latest firmware versions.
-    tokio::spawn(check_firmware_versions(firmware_sender));
+    tokio::spawn(check_firmware_versions(
+        firmware_sender.clone(),
+        settings.get_firmware_source().await,
+    ));
 
     // Create the device detection Sleep Timer..
     let detection_duration = Duration::from_millis(1000);
@@ -389,6 +392,16 @@ pub async fn spawn_usb_handler(
                                 change_found = true;
                                 let _ = sender.send(Ok(()));
                             }
+                            DaemonCommand::SetFirmwareSource(source) => {
+                                settings.set_firmware_source(source).await;
+                                settings.save().await;
+
+                                // Respawn the firmware checker with the new data
+                                tokio::spawn(check_firmware_versions(
+                                    firmware_sender.clone(),
+                                    source,
+                                ));
+                            }
                             DaemonCommand::SetLocale(language) => {
                                 settings.set_selected_locale(language).await;
                                 settings.save().await;
@@ -500,6 +513,7 @@ pub async fn spawn_usb_handler(
                                 let update_settings = FirmwareUpdateSettings {
                                     sender: firmware_update_sender.clone(),
                                     device: FirmwareUpdateDevice {
+                                        source: settings.get_firmware_source().await,
                                         serial: serial.clone(),
                                         device_type,
                                         current_firmware,
@@ -636,6 +650,7 @@ async fn get_daemon_status(
             tts_enabled: settings.get_tts_enabled().await,
             allow_network_access: settings.get_allow_network_access().await,
             log_level: settings.get_log_level().await,
+            firmware_source: settings.get_firmware_source().await,
             open_ui_on_launch: settings.get_open_ui_on_launch().await,
             activation: Activation {
                 active_path: settings.get_activate().await,
@@ -885,14 +900,15 @@ async fn load_device(
     Ok(device)
 }
 
-async fn check_firmware_versions(x: Sender<EnumMap<DeviceType, Option<VersionNumber>>>) {
+type FwSender = Sender<EnumMap<DeviceType, Option<VersionNumber>>>;
+async fn check_firmware_versions(x: FwSender, source: FirmwareSource) {
     let full_key = "version";
     let mini_key = "miniVersion";
 
     let mut map: EnumMap<DeviceType, Option<VersionNumber>> = EnumMap::default();
 
     debug!("Performing Firmware Version Check..");
-    let url = format!("{}{}", FIRMWARE_BASE, "UpdateManifest_v3.xml");
+    let url = format!("{}{}", FIRMWARE_PATHS[source], "UpdateManifest_v3.xml");
     if let Ok(response) = reqwest::get(url).await {
         if let Ok(text) = response.text().await {
             // Parse this into an XML tree...
