@@ -578,9 +578,9 @@ impl ProfileAdapter {
 
         // For buttons without samples, we simply use colour1 (this gets configured when
         // loading the bank)..
-        return get_profile_colour_map(self.profile.settings(), target)
+        get_profile_colour_map(self.profile.settings(), target)
             .colour_or_default(new_index)
-            .to_reverse_bytes();
+            .to_reverse_bytes()
     }
 
     fn get_button_colour_map(&self, button: Buttons) -> &ColourMap {
@@ -969,7 +969,7 @@ impl ProfileAdapter {
 
     pub fn get_mute_button_behaviour(&self, fader: FaderName) -> BasicMuteFunction {
         let mute_config = self.get_mute_button(fader);
-        return profile_to_standard_mute_function(*mute_config.mute_function());
+        profile_to_standard_mute_function(*mute_config.mute_function())
     }
 
     pub fn get_ipc_mute_state(&self, fader: FaderName) -> MuteState {
@@ -1032,7 +1032,7 @@ impl ProfileAdapter {
 
     pub fn get_chat_mute_button_behaviour(&self) -> BasicMuteFunction {
         let mute_config = self.get_chat_mute_button();
-        return profile_to_standard_mute_function(*mute_config.cough_mute_source());
+        profile_to_standard_mute_function(*mute_config.cough_mute_source())
     }
 
     pub fn set_chat_mute_button_behaviour(&mut self, behaviour: BasicMuteFunction) {
@@ -1094,7 +1094,7 @@ impl ProfileAdapter {
             return ButtonStates::Colour1;
         }
 
-        return match self
+        match self
             .profile
             .settings()
             .mute_chat()
@@ -1104,7 +1104,7 @@ impl ProfileAdapter {
             ColourOffStyle::Dimmed => ButtonStates::DimmedColour1,
             ColourOffStyle::Colour2 => ButtonStates::Colour2,
             ColourOffStyle::DimmedColour2 => ButtonStates::DimmedColour2,
-        };
+        }
     }
 
     pub fn get_cough_status(&self) -> CoughButton {
@@ -1836,14 +1836,14 @@ impl ProfileAdapter {
             stop_pct = Some(track.end_position() as f64);
         }
 
-        return AudioFile {
+        AudioFile {
             file: PathBuf::from(track.track()),
             name: track.track.clone(),
             gain,
             start_pct,
             stop_pct,
             fade_on_stop: false,
-        };
+        }
     }
 
     pub fn is_sample_active(&self, button: goxlr_types::SampleButtons) -> bool {
@@ -2533,11 +2533,11 @@ impl ProfileAdapter {
         }
 
         // Button is turned off, so go return the 'Off Style'
-        return match colour_map.get_off_style() {
+        match colour_map.get_off_style() {
             ColourOffStyle::Dimmed => ButtonStates::DimmedColour1,
             ColourOffStyle::Colour2 => ButtonStates::Colour2,
             ColourOffStyle::DimmedColour2 => ButtonStates::DimmedColour2,
-        };
+        }
     }
 
     pub fn profile(&self) -> &Profile {

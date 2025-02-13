@@ -1169,7 +1169,7 @@ impl<'a> Device<'a> {
 
         // Execute behaviour depending on mode, note that the 'fade' options aren't directly
         // supported, so we'll just map their equivalent 'Stop' action
-        return match mode {
+        match mode {
             SamplePlaybackMode::PlayNext
             | SamplePlaybackMode::StopOnRelease
             | SamplePlaybackMode::FadeOnRelease => {
@@ -1211,7 +1211,7 @@ impl<'a> Device<'a> {
                     Ok(())
                 }
             }
-        };
+        }
     }
 
     async fn stop_all_samples(&mut self, playback: bool, recording: bool) -> Result<()> {

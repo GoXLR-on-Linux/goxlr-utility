@@ -190,7 +190,7 @@ impl SettingsHandle {
 
     pub async fn get_firmware_source(&self) -> FirmwareSource {
         let settings = self.settings.read().await;
-        settings.firmware_source.clone().unwrap()
+        settings.firmware_source.unwrap()
     }
 
     pub async fn set_firmware_source(&self, source: FirmwareSource) {

@@ -212,7 +212,7 @@ impl FileManager {
                         })
                         // Get the File Name..
                         .and_then(|e| {
-                            return if with_extension {
+                            if with_extension {
                                 e.path()
                                     .file_name()
                                     .and_then(|n| n.to_str().map(String::from))
@@ -221,7 +221,7 @@ impl FileManager {
                                     // Convert it to a String..
                                     |n| n.to_str().map(String::from),
                                 )
-                            };
+                            }
                         })
                     // Collect the result.
                 })
