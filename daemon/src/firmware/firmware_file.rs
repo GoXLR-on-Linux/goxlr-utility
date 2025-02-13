@@ -53,7 +53,7 @@ fn get_firmware_name(src: &[u8]) -> String {
         }
         end_index += 1;
     }
-    return String::from_utf8_lossy(&src[0..end_index]).to_string();
+    String::from_utf8_lossy(&src[0..end_index]).to_string()
 }
 
 fn get_firmware_version(src: &[u8]) -> Result<VersionNumber, io::Error> {
