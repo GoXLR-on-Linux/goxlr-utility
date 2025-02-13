@@ -3,7 +3,6 @@ use crate::profile::DEFAULT_PROFILE_NAME;
 use anyhow::{Context, Result};
 use directories::ProjectDirs;
 use goxlr_ipc::{FirmwareSource, GoXLRCommand, LogLevel};
-use goxlr_ipc::{GoXLRCommand, LogLevel};
 use goxlr_types::VodMode;
 use goxlr_types::VodMode::Routable;
 use log::{debug, error, info, warn};
