@@ -87,12 +87,6 @@ pub async fn run_cli() -> Result<()> {
         .await
         .context("Could not apply microphone controls")?;
 
-    // These will be moved around later :)
-    match &cli.subcommands {
-        None => {}
-        Some(_) => {}
-    }
-
     match &cli.subcommands {
         None => {}
         Some(command) => {

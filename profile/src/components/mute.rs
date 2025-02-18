@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::io::Write;
 
 use enum_map_derive::Enum;
-use strum::{EnumIter, EnumProperty, IntoEnumIterator};
+use strum::{Display, EnumIter, EnumProperty, IntoEnumIterator};
 
 use anyhow::Result;
 use log::warn;
@@ -72,11 +72,15 @@ impl MuteButton {
                     continue;
                 }
 
+                // Legacy values from GoXLR App 1.3 and Pre-Mix 2
                 let value = if attr.value == "Mute to Chat Mic" {
                     String::from("Mute to Voice Chat")
+                } else if attr.value == "Mute to Stream" {
+                    String::from("Mute to Stream 1")
                 } else {
                     attr.value.clone()
                 };
+
                 for function in MuteFunction::iter() {
                     if function.get_str("Value").unwrap() == value {
                         self.mute_function = function;
@@ -173,12 +177,12 @@ impl MuteButton {
 }
 
 // MuteChat
-#[derive(Debug, Copy, Clone, Enum, EnumProperty, EnumIter, PartialEq, Eq)]
+#[derive(Debug, Display, Copy, Clone, Enum, EnumProperty, EnumIter, PartialEq, Eq)]
 pub enum MuteFunction {
     #[strum(props(Value = "Mute All", uiIndex = "0"))]
     All,
 
-    #[strum(props(Value = "Mute to Stream", uiIndex = "1"))]
+    #[strum(props(Value = "Mute to Stream 1", uiIndex = "1"))]
     ToStream,
 
     #[strum(props(Value = "Mute to Voice Chat", uiIndex = "2"))]
@@ -189,4 +193,10 @@ pub enum MuteFunction {
 
     #[strum(props(Value = "Mute to Line Out", uiIndex = "4"))]
     ToLineOut,
+
+    #[strum(props(Value = "Mute to Stream 2", uiIndex = "5"))]
+    ToStream2,
+
+    #[strum(props(Value = "Mute to Streams 1 + 2", uiIndex = "6"))]
+    ToStreams,
 }

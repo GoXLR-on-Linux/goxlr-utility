@@ -58,6 +58,10 @@ impl MixRoutingTree {
                     self.mix[OutputChannels::Broadcast] = value;
                     continue;
                 }
+
+                if attr.name == "VOD" {
+                    self.mix[OutputChannels::StreamMix2] = value;
+                }
             }
         }
         Ok(())
@@ -92,6 +96,11 @@ impl MixRoutingTree {
         attributes.insert(
             String::from("stream"),
             (self.mix[OutputChannels::Broadcast] as u8 + 1).to_string(),
+        );
+
+        attributes.insert(
+            String::from("VOD"),
+            (self.mix[OutputChannels::StreamMix2] as u8 + 1).to_string(),
         );
 
         // Set the attributes into the XML object..

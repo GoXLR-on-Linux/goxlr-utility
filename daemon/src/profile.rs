@@ -2583,6 +2583,7 @@ fn profile_to_standard_output(value: OutputChannels) -> OutputDevice {
         OutputChannels::LineOut => OutputDevice::LineOut,
         OutputChannels::ChatMic => OutputDevice::ChatMic,
         OutputChannels::Sampler => OutputDevice::Sampler,
+        OutputChannels::StreamMix2 => OutputDevice::StreamMix2,
     }
 }
 
@@ -2593,6 +2594,7 @@ fn standard_output_to_profile(value: OutputDevice) -> OutputChannels {
         OutputDevice::LineOut => OutputChannels::LineOut,
         OutputDevice::ChatMic => OutputChannels::ChatMic,
         OutputDevice::Sampler => OutputChannels::Sampler,
+        OutputDevice::StreamMix2 => OutputChannels::StreamMix2,
     }
 }
 
@@ -2603,6 +2605,8 @@ fn profile_to_standard_mute_function(value: MuteFunction) -> BasicMuteFunction {
         MuteFunction::ToVoiceChat => BasicMuteFunction::ToVoiceChat,
         MuteFunction::ToPhones => BasicMuteFunction::ToPhones,
         MuteFunction::ToLineOut => BasicMuteFunction::ToLineOut,
+        MuteFunction::ToStream2 => BasicMuteFunction::ToStream2,
+        MuteFunction::ToStreams => BasicMuteFunction::ToStreams,
     }
 }
 
@@ -2613,6 +2617,8 @@ fn standard_to_profile_mute_function(value: BasicMuteFunction) -> MuteFunction {
         BasicMuteFunction::ToVoiceChat => MuteFunction::ToVoiceChat,
         BasicMuteFunction::ToPhones => MuteFunction::ToPhones,
         BasicMuteFunction::ToLineOut => MuteFunction::ToLineOut,
+        BasicMuteFunction::ToStream2 => MuteFunction::ToStream2,
+        BasicMuteFunction::ToStreams => MuteFunction::ToStreams,
     }
 }
 

@@ -149,6 +149,7 @@ pub enum OutputDevice {
     ChatMic,
     Sampler,
     LineOut,
+    StreamMix2,
 }
 
 #[derive(Debug, Copy, Clone, Display, Enum, EnumIter, EnumCount, PartialEq, Eq, Hash)]
@@ -450,6 +451,8 @@ pub enum MuteFunction {
     ToVoiceChat,
     ToPhones,
     ToLineOut,
+    ToStream2,
+    ToStreams,
 }
 
 #[derive(Debug, Copy, Clone, Display, Enum, EnumIter, EnumCount, PartialEq, Eq, Hash)]
