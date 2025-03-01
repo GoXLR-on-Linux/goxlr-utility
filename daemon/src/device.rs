@@ -2814,6 +2814,7 @@ impl<'a> Device<'a> {
                 let current = self.settings.get_device_vod_mode(serial).await;
                 if current != value {
                     self.settings.set_device_vod_mode(serial, value).await;
+                    self.load_submix_settings(false).await?;
 
                     // We need to reapply all routing to reconfigure as needed
                     for input in BasicInputDevice::iter() {
@@ -2889,7 +2890,7 @@ impl<'a> Device<'a> {
                     }
 
                     self.profile.set_submix_enabled(enabled)?;
-                    self.load_submix_settings(true)?;
+                    self.load_submix_settings(true).await?;
                 }
             }
             GoXLRCommand::SetSubMixVolume(channel, volume) => {
@@ -2900,9 +2901,21 @@ impl<'a> Device<'a> {
             }
             GoXLRCommand::SetSubMixOutputMix(device, mix) => {
                 self.profile.set_mix_output(device, mix)?;
-                self.load_submix_settings(false)?;
+                self.load_submix_settings(false).await?;
             }
             GoXLRCommand::SetMonitorMix(device) => {
+                if self.is_stream_no_music().await {
+                    if !self.device_supports_mix2() && self.is_device_mini() {
+                        // In this case, we're bound to the Sampler channel, make sure we're not trying to monitor it..
+                        if device == BasicOutputDevice::Sampler {
+                            bail!("Channel is controlled by Stream Mix 1");
+                        }
+                    }
+                    if self.device_supports_mix2() && device == BasicOutputDevice::StreamMix2 {
+                        bail!("Channel is controled by Stream Mix 1");
+                    }
+                }
+
                 self.profile.set_monitor_mix(device)?;
 
                 // Might be a cleaner way to do this, we only need to handle 1 output..
@@ -2911,7 +2924,7 @@ impl<'a> Device<'a> {
                 }
 
                 // Make sure to switch Headphones from A to B if needed.
-                self.load_submix_settings(false)?;
+                self.load_submix_settings(false).await?;
             }
         }
         Ok(())
@@ -3021,21 +3034,37 @@ impl<'a> Device<'a> {
         input: BasicInputDevice,
         router: EnumMap<BasicOutputDevice, bool>,
     ) -> Result<()> {
+        let mix2_enabled = self.device_supports_mix2();
         let (left_input, right_input) = InputDevice::from_basic(&input);
-        let mut left = [0; 22];
-        let mut right = [0; 22];
+
+        // Annoyingly, this needs to be a vec now as the size is dependant on the firmware.
+        let mut left = if !mix2_enabled {
+            vec![0; 22]
+        } else {
+            vec![0; 26]
+        };
+        let mut right = if !mix2_enabled {
+            vec![0; 22]
+        } else {
+            vec![0; 26]
+        };
 
         for output in BasicOutputDevice::iter() {
+            // Only add Mix2 if it's supported in the firmware
+            if !mix2_enabled && output == BasicOutputDevice::StreamMix2 {
+                continue;
+            }
+
             if router[output] {
                 let (left_output, right_output) = OutputDevice::from_basic(&output);
 
-                left[left_output.position()] = 0x20;
-                right[right_output.position()] = 0x20;
+                left[left_output.position(mix2_enabled)] = 0x20;
+                right[right_output.position(mix2_enabled)] = 0x20;
             }
         }
 
         // We need to handle hardtune configuration here as well..
-        let hardtune_position = OutputDevice::HardTune.position();
+        let hardtune_position = OutputDevice::HardTune.position(mix2_enabled);
         if self.profile.is_active_hardtune_source_all() {
             match input {
                 BasicInputDevice::Music
@@ -3181,13 +3210,27 @@ impl<'a> Device<'a> {
                 router[BasicOutputDevice::BroadcastMix] = false;
 
                 // If we're a mini, with VOD Mode 'Stream No Music', disable this route to VOD.
-                if self.is_steam_no_music().await {
-                    router[BasicOutputDevice::Sampler] = false;
+                if self.is_stream_no_music().await {
+                    let channel = if self.device_supports_mix2() {
+                        BasicOutputDevice::StreamMix2
+                    } else {
+                        BasicOutputDevice::Sampler
+                    };
+                    router[channel] = false;
                 }
             }
             MuteFunction::ToVoiceChat => router[BasicOutputDevice::ChatMic] = false,
             MuteFunction::ToPhones => router[BasicOutputDevice::Headphones] = false,
             MuteFunction::ToLineOut => router[BasicOutputDevice::LineOut] = false,
+
+            // If the firmware doesn't support Mix2, this will do nothing.
+            MuteFunction::ToStream2 => router[BasicOutputDevice::StreamMix2] = false,
+
+            // If the firmware doesn't support Mix2, this will just mute Mix1
+            MuteFunction::ToStreams => {
+                router[BasicOutputDevice::BroadcastMix] = false;
+                router[BasicOutputDevice::StreamMix2] = false;
+            }
         };
 
         Ok(())
@@ -3211,20 +3254,25 @@ impl<'a> Device<'a> {
             }
         }
 
-        if self.is_steam_no_music().await {
+        if self.is_stream_no_music().await {
             // Ok, so we need to sync the Mix channel to the Sample (VOD) Channel, unless Music
+            let channel = if self.device_supports_mix2() {
+                BasicOutputDevice::StreamMix2
+            } else {
+                BasicOutputDevice::Sampler
+            };
+
             if input == BasicInputDevice::Music {
                 // Force Music -> Sample to Off
-                router[BasicOutputDevice::Sampler] = false;
+                router[channel] = false;
             } else {
                 // Sync the Mix and Sampler (VOD) channels
-                router[BasicOutputDevice::Sampler] = router[BasicOutputDevice::BroadcastMix];
+                router[channel] = router[BasicOutputDevice::BroadcastMix];
             }
         }
 
         self.apply_transient_routing(input, &mut router).await?;
         debug!("Applying Routing to {:?}:", input);
-        debug!("{:?}", router);
 
         let monitor = self.profile.get_monitoring_mix();
         if monitor != BasicOutputDevice::Headphones {
@@ -3570,7 +3618,7 @@ impl<'a> Device<'a> {
         }
 
         debug!("Applying Submixing Settings..");
-        self.load_submix_settings(true)?;
+        self.load_submix_settings(true).await?;
 
         debug!("Loading Colour Map..");
         self.load_colour_map().await?;
@@ -3783,14 +3831,25 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
-    fn load_submix_settings(&mut self, apply_volumes: bool) -> Result<()> {
+    async fn load_submix_settings(&mut self, apply_volumes: bool) -> Result<()> {
         if !self.device_supports_submixes() {
             // Submixes not supported, do nothing.
             return Ok(());
         }
 
-        let mut mix_a: [u8; 4] = [0x0c; 4];
-        let mut mix_b: [u8; 4] = [0x0c; 4];
+        let mix2_enabled = self.device_supports_mix2();
+
+        // The default value on the array needs be something that's not a valid channel number
+        let mut mix_a = if !mix2_enabled {
+            vec![0xFF; 4]
+        } else {
+            vec![0xFF; 5]
+        };
+        let mut mix_b = if !mix2_enabled {
+            vec![0xFF; 4]
+        } else {
+            vec![0xFF; 5]
+        };
 
         let mut index = 0;
         let submix_enabled = self.profile.is_submix_enabled();
@@ -3809,9 +3868,28 @@ impl<'a> Device<'a> {
                 // Monitor Mix handled, move to the next channel
                 continue;
             }
+            if device == BasicOutputDevice::StreamMix2 && !mix2_enabled {
+                // Not supported on this firmware
+                continue;
+            }
+
             if submix_enabled {
-                // We need to place this on the correct mix..
-                match self.profile.get_submix_channel(device) {
+                // We need to sync the 'no music' function to the main mix track..
+                let channel = if self.is_stream_no_music().await {
+                    debug!("Attempting to Sync {} with Stream Mix..", device);
+                    let broadcast = self
+                        .profile
+                        .get_submix_channel(BasicOutputDevice::BroadcastMix);
+
+                    match device {
+                        BasicOutputDevice::Sampler | BasicOutputDevice::StreamMix2 => broadcast,
+                        _ => self.profile.get_submix_channel(device),
+                    }
+                } else {
+                    self.profile.get_submix_channel(device)
+                };
+
+                match channel {
                     Mix::A => mix_a[index] = (device as u8) * 2,
                     Mix::B => mix_b[index] = (device as u8) * 2,
                 }
@@ -3825,7 +3903,7 @@ impl<'a> Device<'a> {
         let submix = [mix_a, mix_b].concat();
 
         // This should always be successful, in theory :D
-        self.goxlr.set_channel_mixes(submix.try_into().unwrap())?;
+        self.goxlr.set_channel_mixes(submix)?;
 
         if submix_enabled && apply_volumes {
             for channel in ChannelName::iter() {
@@ -3962,6 +4040,18 @@ impl<'a> Device<'a> {
         }
     }
 
+    fn device_supports_mix2(&self) -> bool {
+        let support_full = VersionNumber(1, 5, Some(0), Some(0));
+        let support_mini = VersionNumber(1, 3, Some(0), Some(0));
+
+        let current = &self.hardware.versions.firmware;
+        match self.hardware.device_type {
+            DeviceType::Unknown => true,
+            DeviceType::Full => version_newer_or_equal_to(current, support_full),
+            DeviceType::Mini => version_newer_or_equal_to(current, support_mini),
+        }
+    }
+
     fn device_supports_animations(&self) -> bool {
         let support_full = VersionNumber(1, 3, Some(40), Some(0));
         let support_mini = VersionNumber(1, 1, Some(8), Some(0));
@@ -3975,7 +4065,7 @@ impl<'a> Device<'a> {
         }
     }
 
-    async fn is_steam_no_music(&self) -> bool {
+    async fn is_stream_no_music(&self) -> bool {
         self.hardware.device_type == DeviceType::Mini
             && self.settings.get_device_vod_mode(self.serial()).await == VodMode::StreamNoMusic
     }
@@ -3991,9 +4081,11 @@ fn tts_bool_to_state(bool: bool) -> String {
 fn tts_target(target: MuteFunction) -> String {
     match target {
         MuteFunction::All => "".to_string(),
-        MuteFunction::ToStream => " to Stream".to_string(),
+        MuteFunction::ToStream => " to Stream Mix 1".to_string(),
         MuteFunction::ToVoiceChat => " to Voice Chat".to_string(),
         MuteFunction::ToPhones => " to Headphones".to_string(),
         MuteFunction::ToLineOut => " to Line Out".to_string(),
+        MuteFunction::ToStream2 => " to Stream Mix 2".to_string(),
+        MuteFunction::ToStreams => " to Stream Mix 1 and 2".to_string(),
     }
 }

@@ -40,7 +40,7 @@ jobs:
 
   check_macos:
     name: Checking for MacOS
-    runs-on: macos-12
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable

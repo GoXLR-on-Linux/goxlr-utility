@@ -12,11 +12,13 @@ pub enum OutputDevice {
     SamplerLeft,
     LineOutRight,
     LineOutLeft,
+    Mix2Right,
+    Mix2Left,
     HardTune,
 }
 
 impl OutputDevice {
-    pub fn position(&self) -> usize {
+    pub fn position(&self, mix2_enabled: bool) -> usize {
         match self {
             OutputDevice::HeadphonesLeft => 1,
             OutputDevice::HeadphonesRight => 3,
@@ -28,7 +30,15 @@ impl OutputDevice {
             OutputDevice::SamplerRight => 15,
             OutputDevice::LineOutLeft => 17,
             OutputDevice::LineOutRight => 19,
-            OutputDevice::HardTune => 21,
+            OutputDevice::Mix2Left => 21,
+            OutputDevice::Mix2Right => 23,
+            OutputDevice::HardTune => {
+                if !mix2_enabled {
+                    21
+                } else {
+                    25
+                }
+            }
         }
     }
 
@@ -44,6 +54,7 @@ impl OutputDevice {
             BasicOutputDevice::ChatMic => (OutputDevice::ChatMicLeft, OutputDevice::ChatMicRight),
             BasicOutputDevice::Sampler => (OutputDevice::SamplerLeft, OutputDevice::SamplerRight),
             BasicOutputDevice::LineOut => (OutputDevice::LineOutLeft, OutputDevice::LineOutRight),
+            BasicOutputDevice::StreamMix2 => (OutputDevice::Mix2Left, OutputDevice::Mix2Right),
         }
     }
 }

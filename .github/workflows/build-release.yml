@@ -143,7 +143,7 @@ jobs:
     strategy:
       matrix:
         targets: [ x86_64-apple-darwin, aarch64-apple-darwin ]
-    runs-on: macos-12
+    runs-on: macos-latest
     needs: [ get_version ]
     steps:
       - name: "Checkout Repository"
@@ -189,7 +189,7 @@ jobs:
 
   package_macos:
     name: "Package MacOS Binaries"
-    runs-on: macos-12
+    runs-on: macos-latest
     needs: [ get_version, build_macos ]
 
     steps:
