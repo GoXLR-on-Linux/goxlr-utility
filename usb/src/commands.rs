@@ -62,8 +62,8 @@ impl Command {
             Command::SetMonitoredMix => 0x818 << 12,
 
             // Again, don't use these :)
-            Command::ExecuteFirmwareUpdateCommand(sub) => 0x810 << 12 | *sub as u32,
-            Command::ExecuteFirmwareUpdateAction(sub) => 0x004 << 12 | sub.id(),
+            Command::ExecuteFirmwareUpdateCommand(sub) => (0x810 << 12) | *sub as u32,
+            Command::ExecuteFirmwareUpdateAction(sub) => (0x004 << 12) | sub.id(),
         }
     }
 }
