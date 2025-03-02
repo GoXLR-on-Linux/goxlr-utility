@@ -64,7 +64,6 @@ pub async fn handle_packet(
 
         DaemonRequest::RunFirmwareUpdate(serial, path, force) => {
             let (tx, rx) = oneshot::channel();
-            let path = path.map(PathBuf::from);
             usb_tx
                 .send(DeviceCommand::RunFirmwareUpdate(serial, path, force, tx))
                 .await
