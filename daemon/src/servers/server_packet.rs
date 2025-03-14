@@ -1,7 +1,6 @@
 use crate::primary_worker::{DeviceCommand, DeviceSender};
 use anyhow::{anyhow, Context, Result};
 use goxlr_ipc::{DaemonRequest, DaemonResponse};
-use std::path::PathBuf;
 use tokio::sync::oneshot;
 
 pub async fn handle_packet(
