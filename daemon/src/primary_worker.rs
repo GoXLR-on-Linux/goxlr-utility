@@ -289,7 +289,7 @@ pub async fn spawn_usb_handler(
                 if devices_firmware.contains_key(&serial) {
                     let state = devices_firmware.get(&serial).unwrap();
                     match state.status.state {
-                        UpdateState::Failed | UpdateState::Pause(_) | UpdateState::Complete => todo!(),
+                        UpdateState::Failed | UpdateState::Pause(_) | UpdateState::Complete => info!("Restarting device after firmware update"),
                         _ => warn!("DEVICE REMOVED BEFORE UPDATE COMPLETE")
                     }
                 }
