@@ -406,6 +406,9 @@ pub async fn spawn_usb_handler(
                                     firmware_sender.clone(),
                                     source,
                                 ));
+
+                                let _ = sender.send(Ok(()));
+                                change_found = true;
                             }
                             DaemonCommand::SetLocale(language) => {
                                 settings.set_selected_locale(language).await;
