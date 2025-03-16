@@ -234,6 +234,7 @@ pub async fn spawn_http_server(
             .service(get_scribble)
             .service(get_path)
             .service(websocket)
+            .service(upload_firmware)
             .default_service(web::to(default))
     })
     .bind((settings.bind_address.clone(), settings.port));
@@ -439,7 +440,7 @@ async fn get_sample(sample: web::Path<String>, app_data: Data<Mutex<AppData>>) -
 }
 
 #[post("/firmware-upload/{serial}")]
-async fn upload_file(
+async fn upload_firmware(
     path: web::Path<String>,
     mut payload: Multipart,
     app_data: Data<Mutex<AppData>>,
