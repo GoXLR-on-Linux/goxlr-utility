@@ -496,7 +496,7 @@ async fn upload_firmware(
         .await;
     let result = rx.await;
     match result {
-        Ok(_) => HttpResponse::from(HttpResponse::Ok()),
+        Ok(_) => HttpResponse::Ok().body(serde_json::to_string(&DaemonResponse::Ok).unwrap()),
         Err(e) => HttpResponse::InternalServerError().body(format!("Error Occurred: {}", e)),
     }
 }
