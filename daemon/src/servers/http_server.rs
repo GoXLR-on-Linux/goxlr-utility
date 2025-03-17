@@ -1,13 +1,9 @@
-use std::collections::HashMap;
-use std::fs;
-use std::ops::DerefMut;
-use std::path::{Component, PathBuf};
-
 use actix::{
     Actor, ActorContext, AsyncContext, ContextFutureSpawner, Handler, Message, StreamHandler,
     WrapFuture,
 };
 use actix_cors::Cors;
+use actix_multipart::Multipart;
 use actix_web::dev::ServerHandle;
 use actix_web::http::header::ContentType;
 use actix_web::middleware::Condition;
@@ -16,15 +12,22 @@ use actix_web::{get, post, web, App, HttpRequest, HttpResponse, HttpServer};
 use actix_web_actors::ws;
 use actix_web_actors::ws::{CloseCode, CloseReason};
 use anyhow::{anyhow, Result};
+use futures_util::StreamExt;
 use include_dir::{include_dir, Dir};
 use jsonpath_rust::JsonPathQuery;
 use log::{debug, error, info, warn};
 use mime_guess::mime::IMAGE_PNG;
 use mime_guess::MimeGuess;
 use serde_json::Value;
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::Write;
+use std::ops::DerefMut;
+use std::path::{Component, PathBuf};
+use std::{env, fs};
 use tokio::sync::broadcast::Sender as BroadcastSender;
 use tokio::sync::oneshot::Sender;
-use tokio::sync::Mutex;
+use tokio::sync::{oneshot, Mutex};
 
 use crate::files::{find_file_in_path, FilePaths};
 use crate::PatchEvent;
@@ -34,7 +37,7 @@ use goxlr_ipc::{
 use goxlr_scribbles::get_scribble_png;
 use goxlr_types::FaderName;
 
-use crate::primary_worker::DeviceSender;
+use crate::primary_worker::{DeviceCommand, DeviceSender};
 use crate::servers::server_packet::handle_packet;
 
 const WEB_CONTENT: Dir = include_dir!("./daemon/web-content/");
@@ -231,6 +234,7 @@ pub async fn spawn_http_server(
             .service(get_scribble)
             .service(get_path)
             .service(websocket)
+            .service(upload_firmware)
             .default_service(web::to(default))
     })
     .bind((settings.bind_address.clone(), settings.port));
@@ -433,6 +437,68 @@ async fn get_sample(sample: web::Path<String>, app_data: Data<Mutex<AppData>>) -
     }
 
     HttpResponse::NotFound().finish()
+}
+
+#[post("/firmware-upload/{serial}")]
+async fn upload_firmware(
+    path: web::Path<String>,
+    mut payload: Multipart,
+    app_data: Data<Mutex<AppData>>,
+) -> HttpResponse {
+    let serial = path.into_inner();
+    let file_path = env::temp_dir().join(format!("{}.bin", serial));
+
+    let mut field = match payload.next().await {
+        Some(Ok(field)) => field,
+        Some(Err(e)) => {
+            return HttpResponse::InternalServerError()
+                .body(format!("Error processing multipart: {}", e))
+        }
+        None => return HttpResponse::BadRequest().body("No file found in request"),
+    };
+
+    let mut file = match File::create(&file_path) {
+        Ok(f) => f,
+        Err(e) => {
+            return HttpResponse::InternalServerError()
+                .body(format!("Failed to create file: {}", e))
+        }
+    };
+
+    while let Some(chunk) = field.next().await {
+        match chunk {
+            Ok(data) => {
+                if let Err(e) = file.write_all(&data) {
+                    return HttpResponse::InternalServerError()
+                        .body(format!("Failed to write file: {}", e));
+                }
+            }
+            Err(e) => {
+                return HttpResponse::InternalServerError()
+                    .body(format!("Error reading file chunk: {}", e))
+            }
+        }
+    }
+
+    // When we get here, the file has been uploaded successfully...
+    let mut guard = app_data.lock().await;
+    let sender = guard.deref_mut();
+    let (tx, rx) = oneshot::channel();
+
+    let _ = sender
+        .usb_tx
+        .send(DeviceCommand::RunFirmwareUpdate(
+            serial,
+            Some(file_path),
+            false,
+            tx,
+        ))
+        .await;
+    let result = rx.await;
+    match result {
+        Ok(_) => HttpResponse::Ok().body(serde_json::to_string(&DaemonResponse::Ok).unwrap()),
+        Err(e) => HttpResponse::InternalServerError().body(format!("Error Occurred: {}", e)),
+    }
 }
 
 async fn default(req: HttpRequest) -> HttpResponse {

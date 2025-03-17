@@ -33,7 +33,7 @@ pub trait AttachGoXLR {
 
     fn set_unique_identifier(&mut self, identifier: String);
     fn is_connected(&mut self) -> bool;
-    fn stop_polling(&mut self);
+    fn set_is_polling(&mut self, polling: bool);
 }
 
 pub trait ExecutableGoXLR {

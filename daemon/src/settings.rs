@@ -2,7 +2,7 @@ use crate::mic_profile::DEFAULT_MIC_PROFILE_NAME;
 use crate::profile::DEFAULT_PROFILE_NAME;
 use anyhow::{Context, Result};
 use directories::ProjectDirs;
-use goxlr_ipc::{GoXLRCommand, LogLevel};
+use goxlr_ipc::{FirmwareSource, GoXLRCommand, LogLevel};
 use goxlr_types::VodMode;
 use goxlr_types::VodMode::Routable;
 use log::{debug, error, info, warn};
@@ -72,6 +72,7 @@ impl SettingsHandle {
                 log_level: Some(LogLevel::Debug),
                 open_ui_on_launch: None,
                 activate: None,
+                firmware_source: None,
                 devices: Some(Default::default()),
                 sample_gain: Some(Default::default()),
             }
@@ -129,6 +130,10 @@ impl SettingsHandle {
             settings.open_ui_on_launch = Some(false);
         }
 
+        if settings.firmware_source.is_none() {
+            settings.firmware_source = Some(Default::default());
+        }
+
         if settings.show_tray_icon.is_none() {
             settings.show_tray_icon = Some(true);
         }
@@ -181,6 +186,16 @@ impl SettingsHandle {
     pub async fn set_show_tray_icon(&self, enabled: bool) {
         let mut settings = self.settings.write().await;
         settings.show_tray_icon = Some(enabled);
+    }
+
+    pub async fn get_firmware_source(&self) -> FirmwareSource {
+        let settings = self.settings.read().await;
+        settings.firmware_source.unwrap()
+    }
+
+    pub async fn set_firmware_source(&self, source: FirmwareSource) {
+        let mut settings = self.settings.write().await;
+        settings.firmware_source = Some(source);
     }
 
     pub async fn get_selected_locale(&self) -> Option<String> {
@@ -679,6 +694,7 @@ pub struct Settings {
     log_level: Option<LogLevel>,
     open_ui_on_launch: Option<bool>,
     activate: Option<String>,
+    firmware_source: Option<FirmwareSource>,
     devices: Option<HashMap<String, DeviceSettings>>,
     sample_gain: Option<HashMap<String, u8>>,
 }

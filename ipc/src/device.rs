@@ -1,13 +1,13 @@
-use crate::{ColourWay, GoXLRCommand, LogLevel};
+use crate::{ColourWay, FirmwareSource, GoXLRCommand, LogLevel, UpdateState};
 use enum_map::EnumMap;
 use goxlr_types::MuteState::Unmuted;
 use goxlr_types::{
     AnimationMode, Button, ButtonColourOffStyle, ChannelName, CompressorAttackTime,
     CompressorRatio, CompressorReleaseTime, DeviceType, DisplayMode, DriverInterface, EchoStyle,
     EffectBankPresets, EncoderColourTargets, EqFrequencies, FaderDisplayStyle, FaderName,
-    FirmwareVersions, GateTimes, GenderStyle, HardTuneSource, HardTuneStyle, InputDevice,
-    MegaphoneStyle, MicrophoneType, MiniEqFrequencies, Mix, MuteFunction, MuteState, OutputDevice,
-    PitchStyle, ReverbStyle, RobotStyle, SampleBank, SampleButtons, SamplePlayOrder,
+    FirmwareDetails, FirmwareVersions, GateTimes, GenderStyle, HardTuneSource, HardTuneStyle,
+    InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies, Mix, MuteFunction, MuteState,
+    OutputDevice, PitchStyle, ReverbStyle, RobotStyle, SampleBank, SampleButtons, SamplePlayOrder,
     SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets, SubMixChannelName,
     VersionNumber, VodMode, WaterfallDirection,
 };
@@ -18,6 +18,7 @@ use std::path::PathBuf;
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct DaemonStatus {
     pub config: DaemonConfig,
+    pub firmware: HashMap<String, FirmwareStatus>,
     pub mixers: HashMap<String, MixerStatus>,
     pub paths: Paths,
     pub files: Files,
@@ -28,7 +29,7 @@ pub struct DaemonConfig {
     pub http_settings: HttpSettings,
     pub daemon_version: String,
     pub driver_interface: DriverDetails,
-    pub latest_firmware: Option<EnumMap<DeviceType, Option<VersionNumber>>>,
+    pub latest_firmware: Option<EnumMap<DeviceType, Option<FirmwareDetails>>>,
     pub locale: Locale,
     pub activation: Activation,
     pub autostart_enabled: bool,
@@ -36,6 +37,7 @@ pub struct DaemonConfig {
     pub tts_enabled: Option<bool>,
     pub allow_network_access: bool,
     pub log_level: LogLevel,
+    pub firmware_source: FirmwareSource,
     pub open_ui_on_launch: bool,
     pub platform: String,
     pub handle_macos_aggregates: bool,
@@ -85,6 +87,13 @@ pub struct MixerStatus {
     pub button_down: EnumMap<Button, bool>,
     pub profile_name: String,
     pub mic_profile_name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FirmwareStatus {
+    pub state: UpdateState,
+    pub progress: u8,
+    pub error: Option<String>,
 }
 
 impl MixerStatus {

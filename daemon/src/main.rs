@@ -9,6 +9,7 @@ use std::sync::{Arc, Mutex};
 use actix_web::dev::ServerHandle;
 use anyhow::{bail, Context, Result};
 use clap::Parser;
+use enum_map::EnumMap;
 use file_rotate::compression::Compression;
 use file_rotate::suffix::AppendCount;
 use file_rotate::{ContentLimit, FileRotate};
@@ -23,7 +24,7 @@ use sys_locale::get_locale;
 use tokio::join;
 use tokio::sync::{broadcast, mpsc};
 
-use goxlr_ipc::{HttpSettings, LogLevel};
+use goxlr_ipc::{FirmwareSource, HttpSettings, LogLevel};
 
 use crate::cli::{Cli, LevelFilter};
 use crate::events::{spawn_event_handler, DaemonState, EventTriggers};
@@ -42,6 +43,7 @@ mod cli;
 mod device;
 mod events;
 mod files;
+mod firmware;
 mod mic_profile;
 mod platform;
 mod primary_worker;
@@ -54,6 +56,11 @@ mod tts;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const ICON: &[u8] = include_bytes!("../resources/goxlr-utility-large.png");
+
+const FIRMWARE_PATHS: EnumMap<FirmwareSource, &str> = EnumMap::from_array([
+    "https://mediadl.musictribe.com/media/PLM/sftp/incoming/hybris/import/GOXLR/",
+    "https://mediadl.musictribe.com/media/PLM/sftp/incoming/hybris/import/FirmwareAssets/GOXLR/LiveTestArea/",
+]);
 
 /**
 This is ugly, and I know it's ugly. I need to rework how the Primary Worker is constructed
@@ -140,6 +147,8 @@ async fn run_utility() -> Result<()> {
     config.add_filter_ignore_str("actix_server::server");
     config.add_filter_ignore_str("actix_server::builder");
     config.add_filter_ignore_str("zbus");
+    config.add_filter_ignore_str("hyper_util");
+    config.add_filter_ignore_str("reqwest");
 
     // I'm generally not interested in the Symphonia header announcements which go to INFO,
     // it's only useful in a development setting!

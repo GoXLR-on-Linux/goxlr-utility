@@ -1,16 +1,22 @@
 use crate::device::Device;
 use crate::events::EventTriggers;
 use crate::files::extract_defaults;
+use crate::firmware::firmware_update::{
+    do_firmware_update, start_firmware_update, FirmwareMessages, FirmwareRequest,
+    FirmwareUpdateDevice, FirmwareUpdateSettings,
+};
 use crate::platform::{get_ui_app_path, has_autostart, set_autostart};
-use crate::{FileManager, PatchEvent, SettingsHandle, Shutdown, SYSTEM_LOCALE, VERSION};
+use crate::{
+    FileManager, PatchEvent, SettingsHandle, Shutdown, FIRMWARE_PATHS, SYSTEM_LOCALE, VERSION,
+};
 use anyhow::{anyhow, Result};
 use enum_map::EnumMap;
 use goxlr_ipc::{
     Activation, ColourWay, DaemonCommand, DaemonConfig, DaemonStatus, DriverDetails, Files,
-    GoXLRCommand, HardwareStatus, HttpSettings, Locale, PathTypes, Paths, SampleFile,
-    UsbProductInformation,
+    FirmwareSource, FirmwareStatus, GoXLRCommand, HardwareStatus, HttpSettings, Locale, PathTypes,
+    Paths, SampleFile, UpdateState, UsbProductInformation,
 };
-use goxlr_types::{DeviceType, VersionNumber};
+use goxlr_types::{DeviceType, FirmwareDetails, VersionNumber};
 use goxlr_usb::device::base::GoXLRDevice;
 use goxlr_usb::device::{find_devices, from_device, get_version};
 use goxlr_usb::{PID_GOXLR_FULL, PID_GOXLR_MINI};
@@ -18,6 +24,7 @@ use json_patch::diff;
 use log::{debug, error, info, warn};
 use std::collections::{BTreeMap, HashMap};
 use std::env;
+use std::path::PathBuf;
 use std::time::{Duration, Instant};
 use tokio::sync::broadcast::Sender as BroadcastSender;
 use tokio::sync::mpsc::{Receiver, Sender};
@@ -36,6 +43,9 @@ pub enum DeviceCommand {
     RunDaemonCommand(DaemonCommand, oneshot::Sender<Result<()>>),
     RunDeviceCommand(String, GoXLRCommand, oneshot::Sender<Result<()>>),
     GetDeviceMicLevel(String, oneshot::Sender<Result<f64>>),
+    RunFirmwareUpdate(String, Option<PathBuf>, bool, oneshot::Sender<Result<()>>),
+    ContinueFirmwareUpdate(String, oneshot::Sender<Result<()>>),
+    ClearFirmwareState(String, oneshot::Sender<Result<()>>),
 }
 
 #[allow(dead_code)]
@@ -43,6 +53,12 @@ pub enum DeviceStateChange {
     Shutdown(bool),
     Sleep(oneshot::Sender<()>),
     Wake(oneshot::Sender<()>),
+}
+
+#[derive(Clone)]
+struct FirmwareUpdateState {
+    settings: FirmwareUpdateSettings,
+    status: FirmwareStatus,
 }
 
 pub type DeviceSender = Sender<DeviceCommand>;
@@ -68,8 +84,15 @@ pub async fn spawn_usb_handler(
     let (event_sender, mut event_receiver) = mpsc::channel(16);
     let (firmware_sender, mut firmware_receiver) = mpsc::channel(1);
 
+    // The channel size depends on how many GoXLRs are simultaneously connected and performing
+    // firmware updates.. Let's say.. 6?
+    let (firmware_update_sender, mut firmware_update_receiver) = mpsc::channel(6);
+
     // Spawn a task in the background to check for the latest firmware versions.
-    tokio::spawn(check_firmware_versions(firmware_sender));
+    tokio::spawn(check_firmware_versions(
+        firmware_sender.clone(),
+        settings.get_firmware_source().await,
+    ));
 
     // Create the device detection Sleep Timer..
     let detection_duration = Duration::from_millis(1000);
@@ -95,6 +118,7 @@ pub async fn spawn_usb_handler(
 
     // Create the Primary Device List, and 'Ignore' list..
     let mut devices: HashMap<String, Device> = HashMap::new();
+    let mut devices_firmware: HashMap<String, FirmwareUpdateState> = HashMap::new();
     let mut ignore_list = HashMap::new();
 
     let mut files = get_files(&mut file_manager, &settings).await;
@@ -104,6 +128,7 @@ pub async fn spawn_usb_handler(
         &http_settings,
         &driver_interface,
         &firmware_version,
+        &devices_firmware,
         files.clone(),
         &app_check,
     )
@@ -115,23 +140,95 @@ pub async fn spawn_usb_handler(
         let mut change_found = false;
         tokio::select! {
             Some(version) = firmware_receiver.recv() => {
-                // Uncomment this for testing purposes!
-                // use enum_map::enum_map;
-                // let version = enum_map! {
-                //     DeviceType::Mini => {
-                //         Some(VersionNumber::from(String::from("0.0.0.0")))
-                //     },
-                //     DeviceType::Full => {
-                //         Some(VersionNumber::from(String::from("0.0.0.0")))
-                //     },
-                //     DeviceType::Unknown => {
-                //         Some(VersionNumber::from(String::from("0.0.0.0")))
-                //     }
-                // };
-
                 firmware_version = Some(version);
                 change_found = true;
             },
+            Some(received) = firmware_update_receiver.recv() => {
+                match received {
+                    FirmwareRequest::SetUpdateState(serial,status) => {
+                        if let Some(state) = devices_firmware.get_mut(&serial) {
+                            state.status.state = status;
+                            state.status.progress = 0;
+                            change_found = true;
+                        } else {
+                            // We don't have a state for this device, set one.
+                            let status = FirmwareStatus {
+                                state: status,
+                                progress: 0,
+                                error: None
+                            };
+
+                            // Only create this if the serial is present..
+                            if devices.contains_key(&serial) {
+                                // Get the current status..
+                                let state = devices_firmware.get_mut(&serial).unwrap();
+                                state.status = status;
+
+                                change_found = true;
+                            }
+                        }
+                    }
+                    FirmwareRequest::SetStateProgress(serial, progress) => {
+                        if let Some(state) = devices_firmware.get_mut(&serial) {
+                            state.status.progress = progress;
+                            change_found = true;
+                        } else {
+                            error!("Update State does not exist! Ignoring.");
+                        }
+                    }
+                    FirmwareRequest::SetError(serial, error) => {
+                        debug!("Setting Error: {}", error);
+                        if let Some(state) = devices_firmware.get_mut(&serial) {
+                            state.status.error = Some(error);
+                            change_found = true;
+                        } else {
+                            error!("Update State does not exist! Ignoring..");
+                        }
+                    }
+                    FirmwareRequest::FirmwareMessage(serial,message) => {
+                        if let Some(device) = devices.get_mut(&serial) {
+                            // Pass this to the device to manage
+                            device.handle_firmware_message(message).await;
+                            change_found = true;
+                        } else {
+                            // We need to locate the sender, and inform it that the device is gone, these
+                            // will pop back a SetError.
+                            match message {
+                                FirmwareMessages::EnterDFUMode(sender) => {
+                                    let _ = sender.send(Err(anyhow!("Device Not Found!")));
+                                }
+                                FirmwareMessages::BeginEraseNVR(sender) => {
+                                    let _ = sender.send(Err(anyhow!("Device Not Found!")));
+                                }
+                                FirmwareMessages::PollEraseNVR(sender) => {
+                                    let _ = sender.send(Err(anyhow!("Device Not Found!")));
+                                }
+                                FirmwareMessages::UploadFirmwareChunk(_,sender) => {
+                                    let _ = sender.send(Err(anyhow!("Device Not Found!")));
+                                }
+                                FirmwareMessages::ValidateUploadChunk(_,sender) => {
+                                    let _ = sender.send(Err(anyhow!("Device Not Found!")));
+                                }
+                                FirmwareMessages::BeginHardwareVerify(sender) => {
+                                    let _ = sender.send(Err(anyhow!("Device Not Found!")));
+                                }
+                                FirmwareMessages::PollHardwareVerify(sender) => {
+                                    let _ = sender.send(Err(anyhow!("Device Not Found!")));
+                                }
+                                FirmwareMessages::BeginHardwareWrite(sender) => {
+                                    let _ = sender.send(Err(anyhow!("Device Not Found!")));
+                                }
+                                FirmwareMessages::PollHardwareWrite(sender) => {
+                                    let _ = sender.send(Err(anyhow!("Device Not Found!")));
+                                }
+                                FirmwareMessages::RebootGoXLR(sender) => {
+                                    let _ = sender.send(Err(anyhow!("Device Not Found!")));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             () = &mut detection_sleep => {
                 if let Some(device) = find_new_device(&daemon_status, &ignore_list) {
                     let existing_serials: Vec<String> = get_all_serials(&devices);
@@ -145,7 +242,9 @@ pub async fn spawn_usb_handler(
 
                     match load_device(device, existing_serials, disconnect_sender.clone(), event_sender.clone(), global_tx.clone(), &settings).await {
                         Ok(device) => {
-                            devices.insert(device.serial().to_owned(), device);
+                            let serial = String::from(device.serial());
+
+                            devices.insert(serial.clone(), device);
                             change_found = true;
                         }
                         Err(e) => {
@@ -183,6 +282,17 @@ pub async fn spawn_usb_handler(
             Some(serial) = disconnect_receiver.recv() => {
                 info!("[{}] Device Disconnected", serial);
                 devices.remove(&serial);
+
+                // If this device was actively doing a firmware update that's not complete, we should scream
+                // INCREDIBLY loudly (in the logs).. We will keep this device around though, the error will
+                // be handled by the firmware updater, and presented accordingly.
+                if devices_firmware.contains_key(&serial) {
+                    let state = devices_firmware.get(&serial).unwrap();
+                    match state.status.state {
+                        UpdateState::Failed | UpdateState::Pause(_) | UpdateState::Complete => info!("Restarting device after firmware update"),
+                        _ => warn!("DEVICE REMOVED BEFORE UPDATE COMPLETE")
+                    }
+                }
                 change_found = true;
             },
             Some(serial) = event_receiver.recv() => {
@@ -287,6 +397,19 @@ pub async fn spawn_usb_handler(
                                 change_found = true;
                                 let _ = sender.send(Ok(()));
                             }
+                            DaemonCommand::SetFirmwareSource(source) => {
+                                settings.set_firmware_source(source).await;
+                                settings.save().await;
+
+                                // Respawn the firmware checker with the new data
+                                tokio::spawn(check_firmware_versions(
+                                    firmware_sender.clone(),
+                                    source,
+                                ));
+
+                                let _ = sender.send(Ok(()));
+                                change_found = true;
+                            }
                             DaemonCommand::SetLocale(language) => {
                                 settings.set_selected_locale(language).await;
                                 settings.save().await;
@@ -381,6 +504,94 @@ pub async fn spawn_usb_handler(
                         } else {
                             let _ = sender.send(Err(anyhow!("Device {} is not connected", serial)));
                         }
+                    },
+
+                    DeviceCommand::RunFirmwareUpdate(serial, file, force, sender) => {
+                        let mut start_update = true;
+                        if let Some(device) = devices.get_mut(&serial) {
+                            if let Some(state) = devices_firmware.get(&serial) {
+                                match state.status.state {
+                                    UpdateState::Failed | UpdateState::Complete | UpdateState::Pause(_) => {
+                                        warn!("Update attempted before previous update was cleared, continuing because safe.");
+                                    }
+                                    _ => {
+                                        start_update = false;
+                                    }
+                                }
+                            }
+
+                            if start_update {
+                                let device_type = device.get_hardware_type();
+                                let current_firmware = device.get_firmware_version();
+
+                                // Create and run a firmware updater for this device
+                                let update_settings = FirmwareUpdateSettings {
+                                    sender: firmware_update_sender.clone(),
+                                    device: FirmwareUpdateDevice {
+                                        source: settings.get_firmware_source().await,
+                                        serial: serial.clone(),
+                                        device_type,
+                                        current_firmware,
+                                    },
+                                    file,
+                                    force,
+                                };
+                                let update_state = FirmwareUpdateState {
+                                    settings: update_settings.clone(),
+                                    status: FirmwareStatus {
+                                        state: UpdateState::Starting,
+                                        progress: 0,
+                                        error: None
+                                    },
+                                };
+
+                                devices_firmware.insert(serial, update_state);
+                                tokio::spawn(start_firmware_update(update_settings));
+
+                                let _ = sender.send(Ok(()));
+                                change_found = true;
+                            } else {
+                                let _ = sender.send(Err(anyhow!("Update Already in progress!")));
+                            }
+                        } else {
+                            let _ = sender.send(Err(anyhow!("Device {} is not connected", serial)));
+                        }
+                    },
+                    DeviceCommand::ContinueFirmwareUpdate(serial, sender) => {
+                        if let Some(state) = devices_firmware.get(&serial) {
+                            match &state.status.state {
+                                UpdateState::Pause(file_info) => {
+                                    info!("Continuing Firmware Update..");
+                                    tokio::spawn(do_firmware_update(state.settings.clone(), file_info.to_owned()));
+                                    let _ = sender.send(Ok(()));
+                                }
+                                _ => {
+                                    let _ = sender.send(Err(anyhow!("Update not in Paused State!")));
+                                }
+                            }
+                        } else {
+                            let _ = sender.send(Err(anyhow!("Device not performing firmware update.")));
+                        }
+                    },
+
+                    DeviceCommand::ClearFirmwareState(serial, sender) => {
+                        if let Some(device) = devices_firmware.get(&serial) {
+                            match device.status.state {
+                                UpdateState::Complete | UpdateState::Failed | UpdateState::Pause(_) => {
+                                    // We're at a point where this update can be stopped, nuke it from the firmware list..
+                                    devices_firmware.remove(&serial);
+                                    change_found = true;
+
+                                    let _ = sender.send(Ok(()));
+                                },
+                                _ => {
+                                    // Can't stop it just yet.. :D
+                                    let _ = sender.send(Err(anyhow!("Cannot Clear, update in progress..")));
+                                }
+                            };
+                        } else {
+                            let _ = sender.send(Err(anyhow!("Device not performing firmware update.")));
+                        }
                     }
                 }
             },
@@ -404,6 +615,7 @@ pub async fn spawn_usb_handler(
                 &http_settings,
                 &driver_interface,
                 &firmware_version,
+                &devices_firmware,
                 files.clone(),
                 &app_check,
             )
@@ -426,12 +638,15 @@ pub async fn spawn_usb_handler(
     }
 }
 
+// Dis getting big..
+#[allow(clippy::too_many_arguments)]
 async fn get_daemon_status(
     devices: &HashMap<String, Device<'_>>,
     settings: &SettingsHandle,
     http_settings: &HttpSettings,
     driver_details: &DriverDetails,
-    firmware_versions: &Option<EnumMap<DeviceType, Option<VersionNumber>>>,
+    firmware_versions: &Option<EnumMap<DeviceType, Option<FirmwareDetails>>>,
+    firmware_state: &HashMap<String, FirmwareUpdateState>,
     files: Files,
     app_check: &Option<String>,
 ) -> DaemonStatus {
@@ -450,6 +665,7 @@ async fn get_daemon_status(
             tts_enabled: settings.get_tts_enabled().await,
             allow_network_access: settings.get_allow_network_access().await,
             log_level: settings.get_log_level().await,
+            firmware_source: settings.get_firmware_source().await,
             open_ui_on_launch: settings.get_open_ui_on_launch().await,
             activation: Activation {
                 active_path: settings.get_activate().await,
@@ -469,6 +685,12 @@ async fn get_daemon_status(
         files,
         ..Default::default()
     };
+
+    for (serial, state) in firmware_state {
+        status
+            .firmware
+            .insert(serial.to_owned(), state.status.clone());
+    }
 
     for (serial, device) in devices {
         status
@@ -695,25 +917,45 @@ async fn load_device(
     Ok(device)
 }
 
-async fn check_firmware_versions(x: Sender<EnumMap<DeviceType, Option<VersionNumber>>>) {
+type FwSender = Sender<EnumMap<DeviceType, Option<FirmwareDetails>>>;
+async fn check_firmware_versions(x: FwSender, source: FirmwareSource) {
     let full_key = "version";
     let mini_key = "miniVersion";
 
-    let mut map: EnumMap<DeviceType, Option<VersionNumber>> = EnumMap::default();
+    let full_changelog = "GoXLRFirmwareUpdateInfo";
+    let mini_changelog = "MiniFirmwareUpdateInfo";
+
+    let mut map: EnumMap<DeviceType, Option<FirmwareDetails>> = EnumMap::default();
 
     debug!("Performing Firmware Version Check..");
-    let url = "https://mediadl.musictribe.com/media/PLM/sftp/incoming/hybris/import/GOXLR/UpdateManifest_v3.xml";
+    let url = format!("{}{}", FIRMWARE_PATHS[source], "UpdateManifest_v3.xml");
     if let Ok(response) = reqwest::get(url).await {
         if let Ok(text) = response.text().await {
-            // Parse this into an XML tree..
+            // Parse this into an XML tree...
             if let Ok(root) = Element::parse(text.as_bytes()) {
                 if root.attributes.contains_key(mini_key) {
-                    map[DeviceType::Mini] =
-                        Some(VersionNumber::from(root.attributes[mini_key].clone()));
+                    let change_log = if root.attributes.contains_key(mini_changelog) {
+                        Some(root.attributes[mini_changelog].clone())
+                    } else {
+                        None
+                    };
+                    map[DeviceType::Mini] = Some(FirmwareDetails {
+                        version: VersionNumber::from(root.attributes[mini_key].clone()),
+                        change_log,
+                    });
                 }
+
+                // We can probably abstract this slightly, the mini and full behaviours are the same.
                 if root.attributes.contains_key(full_key) {
-                    map[DeviceType::Full] =
-                        Some(VersionNumber::from(root.attributes[full_key].clone()));
+                    let change_log = if root.attributes.contains_key(full_changelog) {
+                        Some(root.attributes[full_changelog].clone())
+                    } else {
+                        None
+                    };
+                    map[DeviceType::Full] = Some(FirmwareDetails {
+                        version: VersionNumber::from(root.attributes[full_key].clone()),
+                        change_log,
+                    });
                 }
             } else {
                 warn!("Unable to Parse the XML Response from the TC-Helicon Update Server");

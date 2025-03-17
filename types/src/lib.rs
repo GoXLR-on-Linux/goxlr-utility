@@ -4,6 +4,7 @@ use derivative::Derivative;
 use enum_map::Enum;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+use std::cmp::Ordering;
 
 #[cfg(feature = "serde")]
 use serde_repr::{Deserialize_repr, Serialize_repr};
@@ -80,9 +81,69 @@ pub struct FirmwareVersions {
     pub dice: VersionNumber,
 }
 
-#[derive(Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct FirmwareDetails {
+    pub version: VersionNumber,
+    pub change_log: Option<String>,
+}
+
+#[derive(Clone, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct VersionNumber(pub u32, pub u32, pub Option<u32>, pub Option<u32>);
+
+impl PartialOrd for VersionNumber {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for VersionNumber {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.0.cmp(&other.0) {
+            Ordering::Greater => return Ordering::Greater,
+            Ordering::Less => return Ordering::Less,
+            Ordering::Equal => {}
+        }
+
+        match self.1.cmp(&other.1) {
+            Ordering::Greater => return Ordering::Greater,
+            Ordering::Less => return Ordering::Less,
+            Ordering::Equal => {}
+        }
+
+        if let Some(patch) = self.2 {
+            if let Some(comparison) = other.2 {
+                match patch.cmp(&comparison) {
+                    Ordering::Greater => return Ordering::Greater,
+                    Ordering::Less => return Ordering::Less,
+                    Ordering::Equal => {}
+                }
+            } else {
+                // We have a patch number, but our comparator doesn't, assume we're greater
+                return Ordering::Greater;
+            }
+        } else if other.2.is_some() {
+            // Our comparator has a patch number, but we don't, assume we're smaller
+            return Ordering::Less;
+        }
+
+        if let Some(build) = self.3 {
+            if let Some(comparison) = other.3 {
+                match build.cmp(&comparison) {
+                    Ordering::Greater => return Ordering::Greater,
+                    Ordering::Less => return Ordering::Less,
+                    Ordering::Equal => {}
+                }
+            } else {
+                return Ordering::Greater;
+            }
+        } else if other.3.is_some() {
+            return Ordering::Less;
+        }
+        Ordering::Equal
+    }
+}
 
 impl std::fmt::Display for VersionNumber {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -846,7 +907,7 @@ pub enum VodMode {
     StreamNoMusic,
 }
 
-#[derive(Default, Debug, Clone, Enum, PartialEq, Eq)]
+#[derive(Default, Debug, Copy, Clone, Enum, PartialEq, Eq)]
 #[cfg_attr(feature = "clap", derive(ValueEnum))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum DeviceType {
