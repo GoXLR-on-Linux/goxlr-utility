@@ -280,9 +280,9 @@ impl AttachGoXLR for GoXLRUSB {
         false
     }
 
-    fn stop_polling(&mut self) {
-        warn!("Disabling GoXLR Value Polling");
-        self.stop_polling.store(true, Ordering::Relaxed);
+    fn set_is_polling(&mut self, polling: bool) {
+        warn!("GoXLR Interaction Polling: {}", polling);
+        self.stop_polling.store(!polling, Ordering::Relaxed);
     }
 }
 
@@ -334,6 +334,12 @@ impl ExecutableGoXLR for GoXLRUSB {
             Command::ExecuteFirmwareUpdateCommand(_) => (80, true),
             _ => (20, false),
         };
+        //
+        // if command == Command::ExecuteFirmwareUpdateCommand(REBOOT) {
+        //     warn!("Reboot Command triggered, intentionally failing command");
+        //     self.pause_polling.store(false, Ordering::Relaxed);
+        //     return Ok(vec![]);
+        // }
 
         for i in 0..count {
             let response_value = self.read_control(3, 0, 0, 1040);

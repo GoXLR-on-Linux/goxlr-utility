@@ -2934,7 +2934,7 @@ impl<'a> Device<'a> {
         match message {
             FirmwareMessages::EnterDFUMode(sender) => {
                 // We're entering DFU mode, stop polling for updates
-                self.goxlr.stop_polling();
+                self.goxlr.set_is_polling(false);
                 let _ = sender.send(self.goxlr.begin_firmware_upload());
             }
             FirmwareMessages::BeginEraseNVR(sender) => {
@@ -3006,6 +3006,7 @@ impl<'a> Device<'a> {
             }
             FirmwareMessages::RebootGoXLR(sender) => {
                 let _ = sender.send(self.goxlr.reboot_after_firmware_upload());
+                self.goxlr.set_is_polling(true);
             }
         }
     }
