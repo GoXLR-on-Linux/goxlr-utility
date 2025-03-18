@@ -2213,8 +2213,8 @@ dependencies = [
  "mslnk",
  "nix 0.29.0",
  "notify",
- "objc",
  "objc-foundation",
+ "objc-rs",
  "opener",
  "reqwest",
  "ritelinked",
@@ -3590,6 +3590,15 @@ dependencies = [
  "block",
  "objc",
  "objc_id",
+]
+
+[[package]]
+name = "objc-rs"
+version = "0.2.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "64a1e7069a2525126bf12a9f1f7916835fafade384fb27cabf698e745e2a1eb8"
+dependencies = [
+ "malloc_buf",
 ]
 
 [[package]]

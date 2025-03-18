@@ -114,7 +114,7 @@ shell-words = "1.1.0"
 cocoa-foundation = "0.2.0"
 cocoa = "0.26.0"
 objc-foundation = "0.1.1"
-objc = "0.2.7"
+objc-rs = "0.2.8"
 
 # Used for Aggregate Device Management
 coreaudio-sys = "0.2.15"
