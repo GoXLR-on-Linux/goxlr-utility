@@ -38,36 +38,36 @@ jobs:
       - name: Performing Clippy Test
         run: cargo clippy --all-targets --all-features -- -D warnings
 
-  #  check_macos:
-  #    name: Checking for MacOS
-  #    runs-on: macos-latest
-  #    steps:
-  #      - uses: actions/checkout@v4
-  #      - uses: dtolnay/rust-toolchain@stable
-  #        with:
-  #          components: clippy
-  #
-  #      - name: Preparing Cache..
-  #        uses: actions/cache@v4
-  #        continue-on-error: false
-  #        with:
-  #          path: |
-  #            ~/.cargo/bin/
-  #            ~/.cargo/registry/index/
-  #            ~/.cargo/registry/cache/
-  #            ~/.cargo/git/db/
-  #            target/
-  #          key: ${{ runner.os }}-cargo-debug-${{ hashFiles('**/Cargo.lock') }}
-  #          restore-keys: ${{ runner.os }}-cargo-debug-
-  #
-  #      - name: Running Tests
-  #        run: cargo check --all-features
-  #
-  #      - name: Checking Formatting
-  #        run: cargo fmt --all -- --check
-  #
-  #      - name: Performing Clippy Test
-  #        run: cargo clippy --all-targets --all-features -- -D warnings
+  check_macos:
+    name: Checking for MacOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Preparing Cache..
+        uses: actions/cache@v4
+        continue-on-error: false
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-debug-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-debug-
+
+      - name: Running Tests
+        run: cargo check --all-features
+
+      - name: Checking Formatting
+        run: cargo fmt --all -- --check
+
+      - name: Performing Clippy Test
+        run: cargo clippy --all-targets --all-features -- -D warnings
 
   check_windows:
     name: Checking for Windows

@@ -138,95 +138,95 @@ jobs:
           name: rpm-artifact
           path: ./target/generate-rpm/*.rpm
 
-#  build_macos:
-#    name: "Create MacOS Builds"
-#    strategy:
-#      matrix:
-#        targets: [ x86_64-apple-darwin, aarch64-apple-darwin ]
-#    runs-on: macos-latest
-#    needs: [ get_version ]
-#    steps:
-#      - name: "Checkout Repository"
-#        uses: actions/checkout@v4
-#        with:
-#          path: goxlr-utility
-#
-#      # Now Checkout the App Wrappers repository..
-#      - name: "Check out GoXLR Utility UI"
-#        uses: actions/checkout@v4
-#        with:
-#          repository: frostycoolslug/goxlr-utility-ui
-#          path: goxlr-utility-ui
-#
-#      - name: "Install Rust"
-#        uses: dtolnay/rust-toolchain@stable
-#
-#      - name: "Loading Cache"
-#        uses: actions/cache@v4
-#        continue-on-error: false
-#        with:
-#          path: |
-#            ~/.cargo/bin/
-#            ~/.cargo/registry/index/
-#            ~/.cargo/registry/cache/
-#            ~/.cargo/git/db/
-#            goxlr-utility/target
-#          key: ${{ runner.os }}-${{ matrix.targets }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
-#          restore-keys: ${{ runner.os }}-${{ matrix.targets }}-cargo-release-
-#
-#      - name: "Add rust target support"
-#        run: rustup target add ${{ matrix.targets }}
-#
-#      - name: "Build Package"
-#        run: ./goxlr-utility/ci/build-macos '${{ matrix.targets }}' '${{ needs.get_version.outputs.version }}'
-#        shell: bash
-#
-#      - name: "Upload MacOS zip Artifact"
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: macos-artifact-${{ matrix.targets }}
-#          path: ./macos_binaries_*.tgz
-#
-#  package_macos:
-#    name: "Package MacOS Binaries"
-#    runs-on: macos-latest
-#    needs: [ get_version, build_macos ]
-#
-#    steps:
-#      - name: "Checkout Repository"
-#        uses: actions/checkout@v4
-#
-#      - name: "Download x86_64 Artifact"
-#        uses: actions/download-artifact@v4
-#        with:
-#          name: "macos-artifact-x86_64-apple-darwin"
-#
-#      - name: "Download aarch64 Artifact"
-#        uses: actions/download-artifact@v4
-#        with:
-#          name: "macos-artifact-aarch64-apple-darwin"
-#
-#      - name: "Install Packages App.."
-#        run: |
-#          wget http://s.sudre.free.fr/Software/files/Packages.dmg
-#          hdiutil attach Packages.dmg
-#          sudo installer -pkg /Volumes/Packages\ 1.2.10/Install\ Packages.pkg -target /
-#      - name: "Build LIPO Binaries"
-#        run: ./ci/build-macos-package '${{ needs.get_version.outputs.version }}'
-#        shell: bash
-#
-#      - name: "Upload MacOS final Artifact"
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: macos-artifact
-#          path: ./goxlr-utility-macos-*.pkg
-#
-#      - name: "Remove x64 artifact"
-#        uses: geekyeggo/delete-artifact@v4
-#        with:
-#          name: macos-artifact-x86_64-apple-darwin
-#
-#      - name: "Remove aarch artifact"
-#        uses: geekyeggo/delete-artifact@v4
-#        with:
-#          name: macos-artifact-aarch64-apple-darwin
+  build_macos:
+    name: "Create MacOS Builds"
+    strategy:
+      matrix:
+        targets: [ x86_64-apple-darwin, aarch64-apple-darwin ]
+    runs-on: macos-latest
+    needs: [ get_version ]
+    steps:
+      - name: "Checkout Repository"
+        uses: actions/checkout@v4
+        with:
+          path: goxlr-utility
+
+      # Now Checkout the App Wrappers repository..
+      - name: "Check out GoXLR Utility UI"
+        uses: actions/checkout@v4
+        with:
+          repository: frostycoolslug/goxlr-utility-ui
+          path: goxlr-utility-ui
+
+      - name: "Install Rust"
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: "Loading Cache"
+        uses: actions/cache@v4
+        continue-on-error: false
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            goxlr-utility/target
+          key: ${{ runner.os }}-${{ matrix.targets }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-${{ matrix.targets }}-cargo-release-
+
+      - name: "Add rust target support"
+        run: rustup target add ${{ matrix.targets }}
+
+      - name: "Build Package"
+        run: ./goxlr-utility/ci/build-macos '${{ matrix.targets }}' '${{ needs.get_version.outputs.version }}'
+        shell: bash
+
+      - name: "Upload MacOS zip Artifact"
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-artifact-${{ matrix.targets }}
+          path: ./macos_binaries_*.tgz
+
+  package_macos:
+    name: "Package MacOS Binaries"
+    runs-on: macos-latest
+    needs: [ get_version, build_macos ]
+
+    steps:
+      - name: "Checkout Repository"
+        uses: actions/checkout@v4
+
+      - name: "Download x86_64 Artifact"
+        uses: actions/download-artifact@v4
+        with:
+          name: "macos-artifact-x86_64-apple-darwin"
+
+      - name: "Download aarch64 Artifact"
+        uses: actions/download-artifact@v4
+        with:
+          name: "macos-artifact-aarch64-apple-darwin"
+
+      - name: "Install Packages App.."
+        run: |
+          wget http://s.sudre.free.fr/Software/files/Packages.dmg
+          hdiutil attach Packages.dmg
+          sudo installer -pkg /Volumes/Packages\ 1.2.10/Install\ Packages.pkg -target /
+      - name: "Build LIPO Binaries"
+        run: ./ci/build-macos-package '${{ needs.get_version.outputs.version }}'
+        shell: bash
+
+      - name: "Upload MacOS final Artifact"
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-artifact
+          path: ./goxlr-utility-macos-*.pkg
+
+      - name: "Remove x64 artifact"
+        uses: geekyeggo/delete-artifact@v5.1.0
+        with:
+          name: macos-artifact-x86_64-apple-darwin
+
+      - name: "Remove aarch artifact"
+        uses: geekyeggo/delete-artifact@v5.1.0
+        with:
+          name: macos-artifact-aarch64-apple-darwin
