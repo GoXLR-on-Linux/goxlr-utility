@@ -216,7 +216,7 @@ impl TUSBAudio<'_> {
         let res = unsafe { (self.status_code_string)(error) };
         let text = unsafe { CStr::from_ptr(res) };
 
-        return text.to_string_lossy().to_string();
+        text.to_string_lossy().to_string()
     }
 
     // We need to mildly abuse inner mutability here, due to the nature of lazy_static..
