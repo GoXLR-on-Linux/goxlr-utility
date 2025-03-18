@@ -222,11 +222,11 @@ jobs:
           path: ./goxlr-utility-macos-*.pkg
 
       - name: "Remove x64 artifact"
-        uses: geekyeggo/delete-artifact@v4
+        uses: geekyeggo/delete-artifact@v5.1.0
         with:
           name: macos-artifact-x86_64-apple-darwin
 
       - name: "Remove aarch artifact"
-        uses: geekyeggo/delete-artifact@v4
+        uses: geekyeggo/delete-artifact@v5.1.0
         with:
           name: macos-artifact-aarch64-apple-darwin
