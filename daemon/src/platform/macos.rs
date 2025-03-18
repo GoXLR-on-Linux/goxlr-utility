@@ -7,7 +7,7 @@ use anyhow::{bail, Result};
 use cocoa::appkit::NSImage;
 use cocoa_foundation::base::{id, nil};
 use cocoa_foundation::foundation::{NSData, NSString};
-use objc_rs::{class, msg_send, sel, sel_impl};
+use objc::{class, msg_send, sel, sel_impl};
 use std::path::Path;
 use std::{env, fs};
 
