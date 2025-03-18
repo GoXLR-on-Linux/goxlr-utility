@@ -111,14 +111,14 @@ image = "0.25.2"
 shell-words = "1.1.0"
 
 # Used for Tray Handling
-cocoa-foundation = "0.1.2"
-cocoa = "0.25.0"
+cocoa-foundation = "0.2.0"
+cocoa = "0.26.0"
 objc-foundation = "0.1.1"
 objc = "0.2.7"
 
 # Used for Aggregate Device Management
 coreaudio-sys = "0.2.15"
-core-foundation = "0.9.4"
+core-foundation = "0.10.0"
 io-kit-sys = "0.4.1"
 
 [build-dependencies]
