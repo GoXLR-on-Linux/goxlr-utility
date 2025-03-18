@@ -363,7 +363,7 @@ pub fn get_goxlr_devices() -> Result<Vec<CoreAudioDevice>> {
     let mut devices: Vec<CoreAudioDevice> = Vec::new();
 
     let mut iterator = mem::MaybeUninit::<io_iterator_t>::uninit();
-    let matcher = unsafe { IOServiceMatching(b"IOAudioEngine\0".as_ptr() as *const c_char) };
+    let matcher = unsafe { IOServiceMatching(c"IOAudioEngine".as_ptr() as *const c_char) };
     let status = unsafe {
         IOServiceGetMatchingServices(kIOMasterPortDefault, matcher, iterator.as_mut_ptr())
     };

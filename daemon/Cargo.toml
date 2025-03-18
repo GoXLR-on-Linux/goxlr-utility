@@ -111,10 +111,10 @@ image = "0.25.2"
 shell-words = "1.1.0"
 
 # Used for Tray Handling
-cocoa-foundation = "0.2.0"
-cocoa = "0.26.0"
-objc-foundation = "0.1.1"
-objc = { package = "objc-rs", version = "0.2.8" }
+objc2-app-kit = "0.3.0"
+objc2-foundation = "0.3.0"
+dispatch2 = "0.2.0"
+objc2 = "0.6.0"
 
 # Used for Aggregate Device Management
 coreaudio-sys = "0.2.15"

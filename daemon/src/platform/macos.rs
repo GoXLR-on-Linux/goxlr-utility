@@ -4,10 +4,10 @@ pub mod runtime;
 
 use crate::ICON;
 use anyhow::{bail, Result};
-use cocoa::appkit::NSImage;
-use cocoa_foundation::base::{id, nil};
-use cocoa_foundation::foundation::{NSData, NSString};
-use objc::{class, msg_send, sel, sel_impl};
+use objc2::__framework_prelude::Retained;
+use objc2::{AllocAnyThread, MainThreadMarker};
+use objc2_app_kit::{NSAlert, NSCriticalAlertStyle, NSImage, NSWindowLevel};
+use objc2_foundation::{NSData, NSString};
 use std::path::Path;
 use std::{env, fs};
 
@@ -15,38 +15,32 @@ const PLIST: &[u8] = include_bytes!("../../resources/goxlr-utility.plist.xml");
 const PLIST_FILENAME: &str = "com.github.goxlr-on-linux.goxlr-utility.plist";
 
 pub fn display_error(message: String) {
+    let mtm = MainThreadMarker::new().unwrap();
+
     unsafe {
-        let alert: id = msg_send![class!(NSAlert), alloc];
-        let () = msg_send![alert, init];
-        let () = msg_send![alert, autorelease];
-        let () = msg_send![alert, setIcon: get_icon()];
-        let () = msg_send![alert, setMessageText: NSString::alloc(nil).init_str("GoXLR Utility")];
-        let () = msg_send![alert, setInformativeText: NSString::alloc(nil).init_str(&message)];
-        let () = msg_send![alert, setAlertStyle: 2];
+        let alert = NSAlert::new(mtm);
+        alert.setIcon(get_icon().as_deref());
+        alert.setMessageText(&NSString::from_str("GoXLR Utility"));
+        alert.setInformativeText(&NSString::from_str(&message));
+        alert.setAlertStyle(NSCriticalAlertStyle);
 
         // Get the Window..
-        let window: id = msg_send![alert, window];
-        let () = msg_send![window, setLevel: 10];
+        let window = alert.window();
+        window.setLevel(NSWindowLevel::from(10u8));
 
         // Send the Alert..
-        let () = msg_send![alert, runModal];
+        alert.runModal();
     }
 }
 
-fn get_icon() -> id {
-    unsafe {
-        let data = NSData::dataWithBytes_length_(
-            nil,
-            ICON.as_ptr() as *const std::os::raw::c_void,
-            ICON.len() as u64,
-        );
-        NSImage::initWithData_(NSImage::alloc(nil), data)
-    }
+fn get_icon() -> Option<Retained<NSImage>> {
+    let data = NSData::with_bytes(ICON);
+    NSImage::initWithData(NSImage::alloc(), &data)
 }
 
 pub fn has_autostart() -> bool {
     // Check for the Presence of the PLIST file in the Users home..
-    return if let Ok(path) = env::var("HOME") {
+    if let Ok(path) = env::var("HOME") {
         let path = Path::new(&path)
             .join("Library")
             .join("LaunchAgents")
@@ -55,7 +49,7 @@ pub fn has_autostart() -> bool {
         path.exists()
     } else {
         false
-    };
+    }
 }
 
 pub fn set_autostart(enabled: bool) -> Result<()> {
