@@ -39,7 +39,7 @@ cp macos/512.png macos_final/icon_512x512.png
 cp macos/1024.png macos_final/icon_512x512@2x.png
 
 # Bundle all this shit together..
-icnsutil c icon.icns macos_final/*.png --toc
+icnsutil c icons.icns macos_final/*.png --toc
 rm -r macos/ macos_final/
 
 # On Linux, we need to add a 100px margin..

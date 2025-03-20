@@ -36,7 +36,7 @@ mkdir -p 'GoXLR Utility.app/Contents/Resources'
 
 echo "Using x64 binaries..";
 cp x86_64/* 'GoXLR Utility.app/Contents/MacOS'
-#cp ../ci/macos/icon.icns 'GoXLR Utility.app/Contents/Resources'
+#cp ../ci/macos/icons.icns 'GoXLR Utility.app/Contents/Resources'
 cp ../daemon/resources/icons.icns 'GoXLR Utility.app/Contents/Resources'
 
 # Generate the plist for the App..
