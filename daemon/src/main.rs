@@ -59,7 +59,7 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[cfg(not(target_os = "macos"))]
 const ICON: &[u8] = include_bytes!("../resources/goxlr-utility-large.png");
 #[cfg(target_os = "macos")]
-const ICON: &[u8] = include_bytes!("../../ci/macos/icon.icns");
+const ICON: &[u8] = include_bytes!("../resources/icons.icns");
 
 const FIRMWARE_PATHS: EnumMap<FirmwareSource, &str> = EnumMap::from_array([
     "https://mediadl.musictribe.com/media/PLM/sftp/incoming/hybris/import/GOXLR/",
