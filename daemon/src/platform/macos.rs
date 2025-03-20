@@ -2,7 +2,7 @@ mod core_audio;
 mod device;
 pub mod runtime;
 
-use crate::ICON;
+use crate::ICON_MAC;
 use anyhow::{bail, Result};
 use objc2::__framework_prelude::Retained;
 use objc2::{AllocAnyThread, MainThreadMarker};
@@ -34,7 +34,7 @@ pub fn display_error(message: String) {
 }
 
 fn get_icon() -> Option<Retained<NSImage>> {
-    let data = NSData::with_bytes(ICON);
+    let data = NSData::with_bytes(ICON_MAC);
     NSImage::initWithData(NSImage::alloc(), &data)
 }
 

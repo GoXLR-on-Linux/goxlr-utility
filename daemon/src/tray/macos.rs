@@ -35,7 +35,7 @@ use crate::tray::macos::TrayOption::{
     Configure, OpenPathIcons, OpenPathLogs, OpenPathMicProfiles, OpenPathPresets, OpenPathProfiles,
     OpenPathSamples, Quit,
 };
-use crate::ICON;
+use crate::ICON_MAC;
 
 // MacOS is similar to Windows, except it expects the App loop to exist on the main thread..
 pub fn handle_tray(state: DaemonState, tx: Sender<EventTriggers>) -> anyhow::Result<()> {
@@ -179,7 +179,7 @@ impl App {
                 let status = NSStatusBar::systemStatusBar().statusItemWithLength(-1.);
 
                 let button = status.button(mtm);
-                let data = NSData::with_bytes(ICON);
+                let data = NSData::with_bytes(ICON_MAC);
                 if let Some(icon) = NSImage::initWithData(NSImage::alloc(), &data) {
                     icon.setSize(NSSize::new(18., 18.));
                     icon.setTemplate(false);
