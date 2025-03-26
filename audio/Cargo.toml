@@ -25,7 +25,7 @@ log = "0.4.22"
 rb = "0.4.1"
 
 # Regular Expressions to help with device finding..
-fancy-regex = "0.13.0"
+fancy-regex = "0.14.0"
 
 # Under Linux, we'll use PulseAudio to output to the GoXLR..
 # We can't find the specific audio channels using CPAL, so will ask Pulse instead.
@@ -35,5 +35,5 @@ libpulse-simple-binding = "2.28.1"
 
 # Under Other Operating Systems, we'll use CPAL
 [target.'cfg(not(target_os = "linux"))'.dependencies]
-cpal = "0.15.3"
-rubato = "0.15.0"
+cpal = { git = "https://github.com/RustAudio/cpal" }
+rubato = "0.16.1"
