@@ -152,6 +152,8 @@ impl CpalConfiguration {
         list
     }
 
+    // These two functions are only used on MacOS, so we'll limit them
+    #[cfg(not(target_os = "windows"))]
     fn device_is_input(device: &Device) -> bool {
         device
             .supported_input_configs()
@@ -159,6 +161,7 @@ impl CpalConfiguration {
             .unwrap_or(false)
     }
 
+    #[cfg(not(target_os = "windows"))]
     fn device_is_output(device: &Device) -> bool {
         device
             .supported_output_configs()
