@@ -17,7 +17,8 @@ Windows. [Click Here](https://discord.gg/BRBjkkbvmZ) to join our discord!
 * Exit Actions, including saving profiles and loading other profiles / lighting
 * Multiple Device Support. Run more than one GoXLR on one PC
 * A CLI and API for basic or advanced scripting and automation
-* Streamdeck Integration (through [The StreamDeck Repository](https://github.com/FrostyCoolSlug/goxlr-utility-streamdeck))
+* Streamdeck Integration (
+  through [The StreamDeck Repository](https://github.com/FrostyCoolSlug/goxlr-utility-streamdeck))
 
 ## Downloads
 
@@ -31,8 +32,10 @@ the
 * `.rpm` files, usable on Redhat based systems (CentOS, Fedora, etc)
 
 ### OS / Distro Specific Notes
+
 * Arch users can install the `goxlr-utility` package from [AUR](https://aur.archlinux.org/packages/goxlr-utility)
-* Fedora Atomic or Bazzite users please check the instructions [here](https://github.com/GoXLR-on-Linux/goxlr-utility/wiki/Fedora-Atomic-&-Bazzite)
+* Fedora Atomic or Bazzite users please check the
+  instructions [here](https://github.com/GoXLR-on-Linux/goxlr-utility/wiki/Fedora-Atomic-&-Bazzite)
 * Windows users can also aquire the GoXLR Utility via `winget`
 
 <sup>1</sup> Windows requires the official device drivers provided by TC-Helicon. If you have the official app
@@ -43,9 +46,13 @@ website [here](https://mediadl.musictribe.com/download/software/tchelicon/GoXLR/
 GoXLR-MacOS project as they attempt to do the same thing in certain situations.
 
 ## Integrations
+
 * [twitchat](https://twitchat.fr/) - Activate and change GoXLR settings based on twitch bits / donations (Thanks Durss!)
-* [OBS Fader Sync](https://github.com/parzival-space/obs-goxlr-fader-sync-plugin) - An OBS plugin to sync pre-mix volumes to fader volumes (Thanks parzival!)
-* [Home Assistant](https://github.com/timmo001/homeassistant-integration-goxlr-utility) - A plugin that lets you tie the GoXLR into your home automation (Thanks timmmo!)
+* [MacroGraph](https://www.macrograph.app/) - A visual programmer for Streamers. (Thanks JDUDE!)
+* [OBS Fader Sync](https://github.com/parzival-space/obs-goxlr-fader-sync-plugin) - An OBS plugin to sync pre-mix
+  volumes to fader volumes (Thanks parzival!)
+* [Home Assistant](https://github.com/timmo001/homeassistant-integration-goxlr-utility) - A plugin that lets you tie the
+  GoXLR into your home automation (Thanks timmmo!)
 
 ## Getting Started
 
@@ -77,9 +84,8 @@ moving from Windows to other platforms, rather than forcing people to learn a ne
 
 If you're running on Linux, the 'Application' isn't provided as part of the base utility installation. If you'd
 prefer to use it, check out the [GoXLR UI Repository](https://github.com/frostyCoolSlug/goxlr-utility-ui/), which
-provides various builds for distributions. Once installed, you should be able to go to System -> Utility Settings 
+provides various builds for distributions. Once installed, you should be able to go to System -> Utility Settings
 and change the UI Handler there.
-
 
 ## Building
 
