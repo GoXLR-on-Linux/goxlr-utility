@@ -127,6 +127,9 @@ impl AudioHandler {
         // Fire off the new thread to listen to audio..
         thread::spawn(move || inner_recorder.listen());
 
+        // Attempt to do an early-find on the output device, if this fails we'll try again
+        // when a sample is played back.
+        handler.find_device(true);
         Ok(handler)
     }
 
