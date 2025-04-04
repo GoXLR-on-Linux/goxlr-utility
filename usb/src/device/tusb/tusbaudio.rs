@@ -80,9 +80,6 @@ fn locate_library() -> String {
 
 #[allow(dead_code)]
 pub struct TUSBAudio<'lib> {
-    // DriverInfo
-    driver_info: DriverInfo,
-
     // Need to enumerate..
     pnp_thread_running: Arc<Mutex<bool>>,
     discovered_devices: Arc<Mutex<Vec<String>>>,
@@ -90,9 +87,6 @@ pub struct TUSBAudio<'lib> {
     // API Related Commands
     get_api_version: Symbol<'lib, GetAPIVersion>,
     check_api_version: Symbol<'lib, CheckAPIVersion>,
-
-    // Driver Version
-    get_driver_info: Symbol<'lib, GetDriverInfo>,
 
     // Enumeration / Opening..
     enumerate_devices: Symbol<'lib, EnumerateDevices>,
@@ -122,8 +116,6 @@ impl TUSBAudio<'_> {
         let get_api_version: Symbol<_> = unsafe { LIBRARY.get(b"TUSBAUDIO_GetApiVersion")? };
         let check_api_version = unsafe { LIBRARY.get(b"TUSBAUDIO_CheckApiVersion")? };
 
-        let get_driver_info = unsafe { LIBRARY.get::<GetDriverInfo>(b"TUSBAUDIO_GetDriverInfo")? };
-
         let enumerate_devices =
             unsafe { LIBRARY.get::<EnumerateDevices>(b"TUSBAUDIO_EnumerateDevices")? };
         let open_device_by_index = unsafe { LIBRARY.get(b"TUSBAUDIO_OpenDeviceByIndex")? };
@@ -148,22 +140,12 @@ impl TUSBAudio<'_> {
         debug!("Performing initial Enumeration..");
         unsafe { (enumerate_devices)() };
 
-        debug!("Fetching Versioning Information..");
-        let mut driver_info = DriverInfo::default();
-        let driver_info_ptr: *mut DriverInfo = &mut driver_info;
-        let result = unsafe { (get_driver_info)(driver_info_ptr) };
-        if result != 0 {
-            warn!("Unable to Obtain Driver Info: {}", result);
-        }
-
         let tusb_audio = Self {
-            driver_info,
             pnp_thread_running: Arc::new(Mutex::new(false)),
             discovered_devices: Arc::new(Mutex::new(Vec::new())),
 
             get_api_version,
             check_api_version,
-            get_driver_info,
             enumerate_devices,
             open_device_by_index,
             get_device_count,
@@ -204,12 +186,28 @@ impl TUSBAudio<'_> {
     }
 
     pub fn get_driver_version(&self) -> VersionNumber {
-        VersionNumber(
-            self.driver_info.driver_major,
-            self.driver_info.driver_minor,
-            Some(self.driver_info.driver_patch),
-            None,
-        )
+        match unsafe { LIBRARY.get::<GetDriverInfo>(b"TUSBAUDIO_GetDriverInfo") } {
+            Ok(get_driver_info) => {
+                debug!("Fetching Versioning Information..");
+                let mut driver_info = DriverInfo::default();
+                let driver_info_ptr: *mut DriverInfo = &mut driver_info;
+                let result = unsafe { (get_driver_info)(driver_info_ptr) };
+                if result != 0 {
+                    warn!("Unable to Get Driver Info: {}", self.get_error(result));
+                }
+
+                VersionNumber(
+                    driver_info.driver_major,
+                    driver_info.driver_minor,
+                    Some(driver_info.driver_patch),
+                    None,
+                )
+            }
+            Err(e) => {
+                warn!("Unable to Get Driver Info: {}", e);
+                VersionNumber(0, 0, Some(0), None)
+            }
+        }
     }
 
     fn get_error(&self, error: u32) -> String {
