@@ -194,6 +194,7 @@ impl TUSBAudio<'_> {
                 let result = unsafe { (get_driver_info)(driver_info_ptr) };
                 if result != 0 {
                     warn!("Unable to Get Driver Info: {}", self.get_error(result));
+                    return VersionNumber::default();
                 }
 
                 VersionNumber(
@@ -205,7 +206,7 @@ impl TUSBAudio<'_> {
             }
             Err(e) => {
                 warn!("Unable to Get Driver Info: {}", e);
-                VersionNumber(0, 0, Some(0), None)
+                VersionNumber::default()
             }
         }
     }

@@ -234,9 +234,9 @@ pub async fn spawn_usb_handler(
                     if cfg!(target_os = "windows") {
                         // Get the Driver Type and Details again as Theysecon does not show the driver
                         // version when no device is connected..
-                        if driver_interface.version == VersionNumber(0, 0, Some(0), None) {
+                        if driver_interface.version == VersionNumber::default() {
                             let (_, version) = get_version();
-                            if version != VersionNumber(0, 0, Some(0), None) {
+                            if version != VersionNumber::default() {
                                 debug!("Driver Version found, updating.. {}", version);
                                 driver_interface.version = version;
                             }
