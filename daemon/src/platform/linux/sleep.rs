@@ -65,11 +65,7 @@ pub async fn run(tx: mpsc::Sender<EventTriggers>, mut stop: Shutdown) -> Result<
     let session_proxy = if let Ok(value) = env::var("XDG_SESSION_ID") {
         if let Ok(session) = manager.get_session(&value).await {
             if let Ok(builder) = SessionProxy::builder(&conn).path(session) {
-                if let Ok(proxy) = builder.build().await {
-                    Some(proxy)
-                } else {
-                    None
-                }
+                builder.build().await.ok()
             } else {
                 None
             }

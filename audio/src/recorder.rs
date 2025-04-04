@@ -166,7 +166,7 @@ impl BufferedRecorder {
                 // Update the timer for next poll regardless..
                 now = Instant::now();
 
-                if self.producers.lock().unwrap().len() > 0 {
+                if !self.producers.lock().unwrap().is_empty() {
                     // Something is actively recording, don't break the loop..
                     continue;
                 }
