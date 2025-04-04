@@ -480,7 +480,7 @@ pub async fn run_cli() -> Result<()> {
                                 .await
                                 .context("Unable to load Profile Colours")?;
                         }
-                        ProfileAction::Save {} => {
+                        ProfileAction::Save => {
                             client
                                 .command(&serial, GoXLRCommand::SaveProfile())
                                 .await
@@ -524,7 +524,7 @@ pub async fn run_cli() -> Result<()> {
                         ProfileAction::LoadColours { .. } => {
                             return Err(anyhow!("Not supported for Microphone"));
                         }
-                        ProfileAction::Save {} => {
+                        ProfileAction::Save => {
                             client
                                 .command(&serial, GoXLRCommand::SaveMicProfile())
                                 .await
