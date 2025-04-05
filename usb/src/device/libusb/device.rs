@@ -477,15 +477,15 @@ pub fn find_devices() -> Vec<GoXLRDevice> {
     found_devices
 }
 
-pub fn get_interface_version() -> (DriverInterface, VersionNumber) {
+pub fn get_interface_version() -> (DriverInterface, Option<VersionNumber>) {
     let version = rusb::version();
     (
         DriverInterface::LIBUSB,
-        VersionNumber(
+        Some(VersionNumber(
             version.major() as u32,
             version.minor() as u32,
             Some(version.micro() as u32),
             None,
-        ),
+        )),
     )
 }

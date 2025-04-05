@@ -231,18 +231,6 @@ pub async fn spawn_usb_handler(
             }
             () = &mut detection_sleep => {
                 if let Some(device) = find_new_device(&daemon_status, &ignore_list) {
-                    if cfg!(target_os = "windows") {
-                        // Get the Driver Type and Details again as Theysecon does not show the driver
-                        // version when no device is connected..
-                        if driver_interface.version == VersionNumber::default() {
-                            let (_, version) = get_version();
-                            if version != VersionNumber::default() {
-                                debug!("Driver Version found, updating.. {}", version);
-                                driver_interface.version = version;
-                            }
-                        }
-                    }
-
                     let existing_serials: Vec<String> = get_all_serials(&devices);
                     let bus_number = device.bus_number();
                     let address = device.address();
@@ -258,6 +246,18 @@ pub async fn spawn_usb_handler(
 
                             devices.insert(serial.clone(), device);
                             change_found = true;
+
+                            if cfg!(target_os = "windows") {
+                                // Get the Driver Type and Details again as Theysecon does not show the driver
+                                // version when no device is connected..
+                                if driver_interface.version.is_none() {
+                                    let (_, version) = get_version();
+                                    if let Some(version) = version {
+                                        debug!("Driver Version found, updating.. {}", version);
+                                        driver_interface.version = Some(version);
+                                    }
+                                }
+                            }
                         }
                         Err(e) => {
                             error!(

@@ -185,7 +185,7 @@ impl TUSBAudio<'_> {
         Ok(tusb_audio)
     }
 
-    pub fn get_driver_version(&self) -> VersionNumber {
+    pub fn get_driver_version(&self) -> Option<VersionNumber> {
         match unsafe { LIBRARY.get::<GetDriverInfo>(b"TUSBAUDIO_GetDriverInfo") } {
             Ok(get_driver_info) => {
                 debug!("Fetching Versioning Information..");
@@ -194,19 +194,19 @@ impl TUSBAudio<'_> {
                 let result = unsafe { (get_driver_info)(driver_info_ptr) };
                 if result != 0 {
                     warn!("Unable to Get Driver Info: {}", self.get_error(result));
-                    return VersionNumber::default();
+                    return None;
                 }
 
-                VersionNumber(
+                Some(VersionNumber(
                     driver_info.driver_major,
                     driver_info.driver_minor,
                     Some(driver_info.driver_patch),
                     None,
-                )
+                ))
             }
             Err(e) => {
                 warn!("Unable to Get Driver Info: {}", e);
-                VersionNumber::default()
+                None
             }
         }
     }
@@ -874,7 +874,7 @@ pub fn get_devices() -> Vec<GoXLRDevice> {
     list
 }
 
-pub fn get_version() -> VersionNumber {
+pub fn get_version() -> Option<VersionNumber> {
     TUSB_INTERFACE.get_driver_version()
 }
 
