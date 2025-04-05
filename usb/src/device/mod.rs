@@ -13,7 +13,7 @@ cfg_if::cfg_if! {
         mod tusb;
         use crate::device::tusb::device;
 
-        pub fn get_version() -> (DriverInterface, VersionNumber) {
+        pub fn get_version() -> (DriverInterface, Option<VersionNumber>) {
             device::get_interface_version()
         }
 
@@ -34,7 +34,7 @@ cfg_if::cfg_if! {
         mod libusb;
         use crate::device::libusb::device;
 
-        pub fn get_version() -> (DriverInterface, VersionNumber) {
+        pub fn get_version() -> (DriverInterface, Option<VersionNumber>) {
             device::get_interface_version()
         }
 

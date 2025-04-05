@@ -46,7 +46,7 @@ pub struct DaemonConfig {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct DriverDetails {
     pub interface: DriverInterface,
-    pub version: VersionNumber,
+    pub version: Option<VersionNumber>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
