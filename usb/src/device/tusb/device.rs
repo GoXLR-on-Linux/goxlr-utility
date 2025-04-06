@@ -373,6 +373,6 @@ pub fn find_devices() -> Vec<GoXLRDevice> {
     get_devices()
 }
 
-pub fn get_interface_version() -> (DriverInterface, VersionNumber) {
+pub fn get_interface_version() -> (DriverInterface, Option<VersionNumber>) {
     (DriverInterface::TUSB, get_version())
 }

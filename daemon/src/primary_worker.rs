@@ -114,7 +114,7 @@ pub async fn spawn_usb_handler(
 
     // Get the Driver Type and Details..
     let (interface, version) = get_version();
-    let driver_interface = DriverDetails { interface, version };
+    let mut driver_interface = DriverDetails { interface, version };
 
     // Create the Primary Device List, and 'Ignore' list..
     let mut devices: HashMap<String, Device> = HashMap::new();
@@ -246,6 +246,16 @@ pub async fn spawn_usb_handler(
 
                             devices.insert(serial.clone(), device);
                             change_found = true;
+
+                            // Get the Driver Type and Details again as Theysecon does not show the driver
+                            // version when no device is connected..
+                            if driver_interface.version.is_none() {
+                                let (_, version) = get_version();
+                                if let Some(version) = version {
+                                    debug!("Driver Version found, updating.. {}", version);
+                                    driver_interface.version = Some(version);
+                                }
+                            }
                         }
                         Err(e) => {
                             error!(
