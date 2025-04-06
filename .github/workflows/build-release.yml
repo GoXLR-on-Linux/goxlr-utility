@@ -20,7 +20,7 @@ jobs:
       - name: "Check out GoXLR Utility UI"
         uses: actions/checkout@v4
         with:
-          repository: frostycoolslug/goxlr-utility-ui
+          repository: goxlr-on-linux/goxlr-utility-wrapper-app
           path: goxlr-utility-ui
 
       - name: "Install Rust"
@@ -45,13 +45,6 @@ jobs:
       # Build the UI into the same target directory..
       - name: "Build UI"
         run: "cargo build --manifest-path=goxlr-utility-ui/src-tauri/Cargo.toml --target-dir=goxlr-utility/target --release"
-
-      #      - name: "Downloading UI 0.0.4"
-      #        uses: suisei-cn/actions-download-file@v1.6.0
-      #        with:
-      #          url: https://github.com/FrostyCoolSlug/goxlr-utility-ui/releases/download/v0.0.4/goxlr-utility-ui-0.0.4.exe
-      #          target: goxlr-utility/target/release/
-      #          filename: goxlr-utility-ui.exe
 
       # Prepare NSIS
       - name: "Preparing NSIS"
@@ -155,7 +148,7 @@ jobs:
       - name: "Check out GoXLR Utility UI"
         uses: actions/checkout@v4
         with:
-          repository: frostycoolslug/goxlr-utility-ui
+          repository: goxlr-on-linux/goxlr-utility-wrapper-app
           path: goxlr-utility-ui
 
       - name: "Install Rust"
