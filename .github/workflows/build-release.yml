@@ -20,7 +20,7 @@ jobs:
       - name: "Check out GoXLR Utility UI"
         uses: actions/checkout@v4
         with:
-          repository: goxlr-on-linux/goxlr-utility-wrapper-app
+          repository: goxlr-on-linux/goxlr-utility-ui-wrapper-app
           path: goxlr-utility-ui
 
       - name: "Install Rust"
@@ -148,7 +148,7 @@ jobs:
       - name: "Check out GoXLR Utility UI"
         uses: actions/checkout@v4
         with:
-          repository: goxlr-on-linux/goxlr-utility-wrapper-app
+          repository: goxlr-on-linux/goxlr-utility-ui-wrapper-app
           path: goxlr-utility-ui
 
       - name: "Install Rust"
