@@ -935,6 +935,17 @@ impl<'a> Device<'a> {
                 if !lock_faders {
                     // User has asked us not to move the volume,
                     self.goxlr.set_volume(channel, 0)?;
+
+                    // With the Mix2 firmware, when setting the volume to 0 the fader no longer goes
+                    // in steps, so MixB doesn't follow along to 0 anymore, so we'll do this manually
+                    if self.device_supports_mix2() && self.profile.is_submix_enabled() {
+                        if let Some(sub) = self.profile.get_submix_from_channel(channel) {
+                            if self.profile.is_channel_linked(sub) {
+                                self.goxlr.set_sub_volume(sub, 0)?;
+                                self.profile.set_submix_volume(sub, 0);
+                            }
+                        }
+                    }
                 }
             }
             self.goxlr.set_channel_state(channel, Muted)?;
@@ -999,6 +1010,18 @@ impl<'a> Device<'a> {
             if !self.is_device_mini() && !lock_faders {
                 self.goxlr.set_volume(channel, previous_volume)?;
                 self.profile.set_channel_volume(channel, previous_volume)?;
+
+                // Same as setting, but we also need to restore it on the ratio
+                if self.device_supports_mix2() && self.profile.is_submix_enabled() {
+                    if let Some(sub) = self.profile.get_submix_from_channel(channel) {
+                        if self.profile.is_channel_linked(sub) {
+                            let ratio = self.profile.get_submix_ratio(sub);
+                            let linked_volume = (previous_volume as f64 * ratio) as u8;
+                            self.goxlr.set_sub_volume(sub, linked_volume)?;
+                            self.profile.set_submix_volume(sub, linked_volume);
+                        }
+                    }
+                }
             } else {
                 if self.needs_submix_correction(channel) {
                     // This is a special case, when calling unmute on submix firmware, the LineOut
