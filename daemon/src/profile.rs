@@ -2416,6 +2416,11 @@ impl ProfileAdapter {
             return Ok(());
         }
 
+        // Before we start, we need to grab the current router. While this is only used in
+        // Headphones -> Other, create_router() itself checks the monitored output and returns the
+        // updated headphone routing accordingly, so we *MUST* do this before we set the monitor.
+        let router = self.create_router();
+
         // Store the change in monitoring state, we do that here so that when we call
         // set_routing, it knows everything it needs to!
         self.profile
@@ -2427,13 +2432,12 @@ impl ProfileAdapter {
         if device != OutputDevice::Headphones && output == OutputChannels::Headphones {
             // We're moving from Headphones to a different output for monitoring.
             // We need to store the existing routing for the headphones into the monitor tree.
-            let mut new_map: EnumMap<InputChannels, u16> = Default::default();
-            let router = self.create_router();
+            let mut original_headphones: EnumMap<InputChannels, u16> = Default::default();
 
             for input in InputDevice::iter() {
                 if router[input][OutputDevice::Headphones] {
                     let channel = standard_input_to_profile(input);
-                    new_map[channel] = 8192;
+                    original_headphones[channel] = 8192;
                 }
             }
 
@@ -2442,7 +2446,7 @@ impl ProfileAdapter {
                 .settings_mut()
                 .submixes_mut()
                 .monitor_tree_mut()
-                .set_routing(new_map);
+                .set_routing(original_headphones);
 
             // Get the currently assigned headphone mix, and store that..
             let mix = self
