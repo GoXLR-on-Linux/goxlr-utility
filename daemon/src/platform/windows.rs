@@ -67,7 +67,7 @@ fn get_official_app_count() -> usize {
 }
 
 fn get_utility_count() -> usize {
-    if let Some(exe) = env::current_exe() {
+    if let Ok(exe) = env::current_exe() {
         if let Some(file_name) = exe.file_name() {
             unsafe {
                 let tasks = tasklist();
