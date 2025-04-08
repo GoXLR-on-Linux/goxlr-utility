@@ -22,6 +22,7 @@ use goxlr_usb::device::{find_devices, from_device, get_version};
 use goxlr_usb::{PID_GOXLR_FULL, PID_GOXLR_MINI};
 use json_patch::diff;
 use log::{debug, error, info, warn};
+use reqwest::ClientBuilder;
 use std::collections::{BTreeMap, HashMap};
 use std::env;
 use std::path::PathBuf;
@@ -937,9 +938,17 @@ async fn check_firmware_versions(x: FwSender, source: FirmwareSource) {
 
     let mut map: EnumMap<DeviceType, Option<FirmwareDetails>> = EnumMap::default();
 
+    let client = if let Ok(client) = ClientBuilder::new().timeout(Duration::from_secs(2)).build() {
+        client
+    } else {
+        // This shouldn't happen, but just in case
+        warn!("Unable to Build HTTP Client");
+        return;
+    };
+
     debug!("Performing Firmware Version Check..");
     let url = format!("{}{}", FIRMWARE_PATHS[source], "UpdateManifest_v3.xml");
-    if let Ok(response) = reqwest::get(url).await {
+    if let Ok(response) = client.get(url).send().await {
         if let Ok(text) = response.text().await {
             // Parse this into an XML tree...
             if let Ok(root) = Element::parse(text.as_bytes()) {
