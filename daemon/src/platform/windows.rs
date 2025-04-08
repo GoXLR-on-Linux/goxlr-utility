@@ -31,11 +31,14 @@ pub fn perform_platform_preflight() -> Result<()> {
         bail!("The GoXLR Driver was not found, please install it and try again.");
     }
 
-    let count = get_official_app_count();
-
-    if count > 0 {
+    if get_official_app_count() > 0 {
         error!("Detected Official GoXLR Application Running, Failing Preflight.");
         bail!("The official GoXLR Application is currently running, Please close it before running the Utility");
+    }
+
+    if get_utility_count() > 0 {
+        error!("Daemon Process already running, Failing Preflight");
+        bail!("The GoXLR Utility is already running, please stop it and try again.");
     }
 
     Ok(())
@@ -61,6 +64,25 @@ fn get_official_app_count() -> usize {
             })
             .count()
     }
+}
+
+fn get_utility_count() -> usize {
+    if let Some(exe) = env::current_exe() {
+        if let Some(file_name) = exe.file_name() {
+            unsafe {
+                let tasks = tasklist();
+                return tasks
+                    .keys()
+                    .filter(|task| {
+                        let task = task.to_owned().to_owned();
+                        let task = String::from(task.split('\0').collect::<Vec<_>>()[0]);
+                        task == file_name
+                    })
+                    .count();
+            }
+        }
+    }
+    0
 }
 
 pub async fn spawn_platform_runtime(
