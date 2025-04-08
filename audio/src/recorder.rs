@@ -14,7 +14,7 @@ use ebur128::{EbuR128, Mode};
 use fancy_regex::Regex;
 use hound::WavWriter;
 use log::{debug, error, info, trace, warn};
-use rb::{Producer, RbConsumer, RbProducer, SpscRb, RB};
+use rb::{Producer, RbConsumer, RbError, RbProducer, SpscRb, RB};
 use symphonia::core::audio::{Layout, SignalSpec};
 
 use crate::audio::{get_input, AudioInput, AudioSpecification};
@@ -142,8 +142,16 @@ impl BufferedRecorder {
                         }
                         for producer in self.producers.lock().unwrap().iter() {
                             let result = producer.producer.write(&samples);
-                            if result.is_err() {
-                                warn!("Error writing to producer: {:?}", result.err());
+                            if let Err(e) = result {
+                                match e {
+                                    RbError::Full => {
+                                        // This can happen when buffers are full prior to general
+                                        // setup being complete, so we'll just ignore it for now.
+                                    }
+                                    e => {
+                                        warn!("Error writing to producer: {:?}", e);
+                                    }
+                                }
                             }
                         }
                     }
