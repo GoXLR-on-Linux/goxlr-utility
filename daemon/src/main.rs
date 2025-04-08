@@ -3,6 +3,7 @@
 extern crate core;
 
 use std::fs::create_dir_all;
+use std::process;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
@@ -114,7 +115,8 @@ async fn main() -> Result<()> {
         let message = format!("Error Starting the GoXLR Utility:\r\n\r\n{}", e);
         platform::display_error(message);
 
-        bail!("{}", e);
+        // Kill the process with an error to ensure the entire runtime is stopped
+        process::exit(1);
     }
 
     Ok(())
@@ -357,6 +359,10 @@ async fn run_utility() -> Result<()> {
         ));
         http_server = httpd_rx.await?;
         if let Err(e) = http_server {
+            // Force a shutdown, if we bail! here, the entire async runtime will keep on going
+            // despite the server being pretty much dead, and threads may still be active causing
+            // us to go zombie.
+            shutdown.trigger();
             bail!("Unable to Start HTTP Server: {}", e);
         }
     } else {
