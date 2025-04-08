@@ -5,7 +5,7 @@ use futures_util::StreamExt;
 use goxlr_ipc::{FirmwareInfo, FirmwareSource, UpdateState};
 use goxlr_types::{DeviceType, VersionNumber};
 use log::{error, info, warn};
-use reqwest::Client;
+use reqwest::ClientBuilder;
 use std::cmp::min;
 use std::fs;
 use std::fs::File;
@@ -183,7 +183,11 @@ async fn get_firmware_file(
     // back to 'Legacy' behaviour. Note that we're not going to track the percentage on this
     // download, as the manifest file is generally tiny.
     info!("Downloading Firmware Metadata from {}", manifest_url);
-    if let Ok(response) = reqwest::get(manifest_url).await {
+    let client = ClientBuilder::new()
+        .timeout(Duration::from_secs(5))
+        .build()?;
+
+    if let Ok(response) = client.get(manifest_url).send().await {
         if let Ok(text) = response.text().await {
             // Parse this into an XML tree...
             if let Ok(root) = Element::parse(text.as_bytes()) {
@@ -246,7 +250,9 @@ async fn download_firmware(device: &FirmwareUpdateDevice, sender: Sender) -> Res
     let mut file = File::create(&output_path)?;
     let mut last_percent = 0;
 
-    let client = Client::new();
+    let client = ClientBuilder::new()
+        .connect_timeout(Duration::from_secs(2))
+        .build()?;
     let res = client.get(url).send().await?;
     if let Some(size) = res.content_length() {
         let mut downloaded: u64 = 0;

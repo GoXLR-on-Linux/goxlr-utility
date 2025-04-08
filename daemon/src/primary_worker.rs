@@ -938,7 +938,11 @@ async fn check_firmware_versions(x: FwSender, source: FirmwareSource) {
 
     let mut map: EnumMap<DeviceType, Option<FirmwareDetails>> = EnumMap::default();
 
-    let client = if let Ok(client) = ClientBuilder::new().timeout(Duration::from_secs(2)).build() {
+    let client = if let Ok(client) = ClientBuilder::new()
+        .connect_timeout(Duration::from_secs(2))
+        .timeout(Duration::from_secs(5))
+        .build()
+    {
         client
     } else {
         // This shouldn't happen, but just in case
