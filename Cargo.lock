@@ -2099,7 +2099,7 @@ checksum = "d2fabcfbdc87f4758337ca535fb41a6d701b65693ce38287d856d1674551ec9b"
 
 [[package]]
 name = "goxlr-audio"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "anyhow",
  "cpal",
@@ -2116,7 +2116,7 @@ dependencies = [
 
 [[package]]
 name = "goxlr-client"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "anyhow",
  "clap 4.5.11",
@@ -2133,7 +2133,7 @@ dependencies = [
 
 [[package]]
 name = "goxlr-daemon"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "actix",
  "actix-cors",
@@ -2207,7 +2207,7 @@ dependencies = [
 
 [[package]]
 name = "goxlr-defaults"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "clap 4.5.11",
  "include_dir",
@@ -2215,7 +2215,7 @@ dependencies = [
 
 [[package]]
 name = "goxlr-initialiser"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "anyhow",
  "block",
@@ -2227,7 +2227,7 @@ dependencies = [
 
 [[package]]
 name = "goxlr-ipc"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2248,7 +2248,7 @@ dependencies = [
 
 [[package]]
 name = "goxlr-launcher"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "anyhow",
  "goxlr-ipc",
@@ -2264,7 +2264,7 @@ dependencies = [
 
 [[package]]
 name = "goxlr-profile-loader"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -2282,7 +2282,7 @@ dependencies = [
 
 [[package]]
 name = "goxlr-scribbles"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "ab_glyph",
  "anyhow",
@@ -2293,7 +2293,7 @@ dependencies = [
 
 [[package]]
 name = "goxlr-types"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "clap 4.5.11",
  "derivative",
@@ -2306,7 +2306,7 @@ dependencies = [
 
 [[package]]
 name = "goxlr-usb"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "anyhow",
  "byteorder",
