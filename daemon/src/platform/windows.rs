@@ -76,7 +76,7 @@ fn get_utility_count() -> usize {
                     .filter(|task| {
                         let task = task.to_owned().to_owned();
                         let task = String::from(task.split('\0').collect::<Vec<_>>()[0]);
-                        task == file_name
+                        *task == *file_name
                     })
                     .count();
             }
