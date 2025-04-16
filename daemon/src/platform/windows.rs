@@ -36,7 +36,7 @@ pub fn perform_platform_preflight() -> Result<()> {
         bail!("The official GoXLR Application is currently running, Please close it before running the Utility");
     }
 
-    if get_utility_count() > 0 {
+    if get_utility_count() > 1 {
         error!("Daemon Process already running, Failing Preflight");
         bail!("The GoXLR Utility is already running, please stop it and try again.");
     }
