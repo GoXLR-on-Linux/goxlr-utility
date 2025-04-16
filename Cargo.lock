@@ -2099,7 +2099,7 @@ checksum = "d2fabcfbdc87f4758337ca535fb41a6d701b65693ce38287d856d1674551ec9b"
 
 [[package]]
 name = "goxlr-audio"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "anyhow",
  "cpal",
@@ -2133,7 +2133,7 @@ dependencies = [
 
 [[package]]
 name = "goxlr-daemon"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "actix",
  "actix-cors",
@@ -2264,7 +2264,7 @@ dependencies = [
 
 [[package]]
 name = "goxlr-profile-loader"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "anyhow",
  "byteorder",
