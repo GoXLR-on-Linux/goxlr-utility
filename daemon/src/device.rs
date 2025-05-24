@@ -2843,6 +2843,7 @@ impl<'a> Device<'a> {
                     for input in BasicInputDevice::iter() {
                         self.apply_routing(input).await?;
                     }
+                    self.settings.save().await;
                 }
             }
 
