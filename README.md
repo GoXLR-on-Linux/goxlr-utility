@@ -32,7 +32,8 @@ the
 * `.rpm` files, usable on Redhat based systems (CentOS, Fedora, etc)
 
 ### OS / Distro Specific Notes
-
+* If you are running Ubuntu 24.04 or a derivitive (such as Linux Mint 22.X), please review
+[this issue](https://github.com/GoXLR-on-Linux/goxlr-utility/issues/221) before proceeding.
 * Arch users can install the `goxlr-utility` package from [AUR](https://aur.archlinux.org/packages/goxlr-utility)
 * Fedora Atomic or Bazzite users please check the
   instructions [here](https://github.com/GoXLR-on-Linux/goxlr-utility/wiki/Fedora-Atomic-&-Bazzite)
