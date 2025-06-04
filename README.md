@@ -33,8 +33,8 @@ the
 
 ### OS / Distro Specific Notes
 * If you are running Ubuntu 24.04 or a derivitive (such as Linux Mint), please review
-[this issue](https://github.com/GoXLR-on-Linux/goxlr-utility/issues/221).
-* If you're running the Mix 2 firmware, and seeing UCM errors, please [review this](https://github.com/GoXLR-on-Linux/goxlr-utility/issues/223)
+[this issue](https://github.com/GoXLR-on-Linux/goxlr-utility/issues/221)
+* If you're running the Mix 2 firmware, and seeing UCM errors, please review [this issue](https://github.com/GoXLR-on-Linux/goxlr-utility/issues/223)
 * Arch users can install the `goxlr-utility` package from [AUR](https://aur.archlinux.org/packages/goxlr-utility)
 * Fedora Atomic or Bazzite users please check the
   instructions [here](https://github.com/GoXLR-on-Linux/goxlr-utility/wiki/Fedora-Atomic-&-Bazzite)
