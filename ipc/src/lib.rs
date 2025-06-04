@@ -32,6 +32,7 @@ pub enum DaemonRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(clippy::large_enum_variant)]
 pub enum DaemonResponse {
     Ok,
     Error(String),
