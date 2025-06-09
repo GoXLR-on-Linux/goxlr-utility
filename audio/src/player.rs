@@ -160,8 +160,8 @@ impl Player {
                 ebu_r128 = Some(EbuR128::new(channels as u32, rate, Mode::I)?);
             } else {
                 if let Some(fade_duration) = self.fade_duration {
-                    // Calculate the Change in Volume per sample..
-                    fade_amount = Some(1.0 / (rate as f32 * fade_duration) / channels as f32);
+                    // Calculate the Change in Volume per sample
+                    fade_amount = Some(1.0 / (rate as f32 * fade_duration) * channels as f32);
                 }
 
                 if let Some(frames) = frames {
