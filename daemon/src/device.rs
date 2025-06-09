@@ -1200,7 +1200,8 @@ impl<'a> Device<'a> {
                 //let file = self.profile.get_sample_file(button);
                 let mut audio = self.profile.get_next_track(button)?;
                 if mode == SamplePlaybackMode::FadeOnRelease {
-                    audio.fade_on_stop = true;
+                    audio.fade_on_stop =
+                        Some(self.settings.get_sampler_fade_duration(self.serial()).await);
                 }
                 self.play_audio_file(sample_bank, button, audio, false)
                     .await?;
@@ -1224,7 +1225,8 @@ impl<'a> Device<'a> {
                     let mut audio = self.profile.get_next_track(button)?;
 
                     if mode == SamplePlaybackMode::PlayFade {
-                        audio.fade_on_stop = true;
+                        let fade_duration = self.settings.get_sampler_fade_duration(self.serial());
+                        audio.fade_on_stop = Some(fade_duration.await);
                     }
 
                     let loop_track = mode == SamplePlaybackMode::Loop;

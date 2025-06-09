@@ -1842,7 +1842,7 @@ impl ProfileAdapter {
             gain,
             start_pct,
             stop_pct,
-            fade_on_stop: false,
+            fade_on_stop: None,
         }
     }
 

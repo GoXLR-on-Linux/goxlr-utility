@@ -36,7 +36,7 @@ pub struct AudioFile {
     pub(crate) gain: Option<f64>,
     pub(crate) start_pct: Option<f64>,
     pub(crate) stop_pct: Option<f64>,
-    pub(crate) fade_on_stop: bool,
+    pub(crate) fade_on_stop: Option<f64>,
 }
 
 #[derive(Debug)]
@@ -348,16 +348,11 @@ impl AudioHandler {
         }
 
         if let Some(output_device) = &self.output_device {
-            let fade_duration = match audio.fade_on_stop {
-                true => Some(0.5),
-                false => None,
-            };
-
             // Ok, we need to grab and configure the player..
             let mut player = Player::new(
                 &audio.file,
                 Some(output_device.clone()),
-                fade_duration,
+                audio.fade_on_stop,
                 audio.start_pct,
                 audio.stop_pct,
                 audio.gain,

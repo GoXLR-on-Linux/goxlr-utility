@@ -505,6 +505,17 @@ impl SettingsHandle {
             .unwrap_or(true)
     }
 
+    pub async fn get_sampler_fade_duration(&self, device_serial: &str) -> f64 {
+        let settings = self.settings.read().await;
+        settings
+            .devices
+            .as_ref()
+            .unwrap()
+            .get(device_serial)
+            .map(|d| d.sampler_fade_duration.unwrap_or(0.5))
+            .unwrap_or(0.5)
+    }
+
     pub async fn get_sample_gain_percent(&self, name: String) -> u8 {
         let settings = self.settings.read().await;
         if let Some(gain) = &settings.sample_gain {
@@ -666,6 +677,18 @@ impl SettingsHandle {
         entry.sampler_reset_on_clear = Some(setting);
     }
 
+    #[allow(dead_code)]
+    pub async fn set_sampler_fade_duration(&self, device_serial: &str, duration: f64) {
+        let mut settings = self.settings.write().await;
+        let entry = settings
+            .devices
+            .as_mut()
+            .unwrap()
+            .entry(device_serial.to_owned())
+            .or_insert_with(DeviceSettings::default);
+        entry.sampler_fade_duration = Some(duration);
+    }
+
     pub async fn set_sample_gain_percent(&self, name: String, value: u8) {
         let mut settings = self.settings.write().await;
         if settings.sample_gain.is_none() {
@@ -791,6 +814,9 @@ struct DeviceSettings {
     // Clear Sample Settings when Clearing Button
     sampler_reset_on_clear: Option<bool>,
 
+    // The time it takes for a sample to fade out
+    sampler_fade_duration: Option<f64>,
+
     // VoD 'Mode'
     vod_mode: Option<VodMode>,
 
@@ -812,6 +838,7 @@ impl Default for DeviceSettings {
             lock_faders: Some(false),
             enable_monitor_with_fx: Some(false),
             sampler_reset_on_clear: Some(true),
+            sampler_fade_duration: Some(0.5),
 
             vod_mode: Some(Routable),
 
