@@ -36,7 +36,7 @@ pub struct AudioFile {
     pub(crate) gain: Option<f64>,
     pub(crate) start_pct: Option<f64>,
     pub(crate) stop_pct: Option<f64>,
-    pub(crate) fade_on_stop: Option<f64>,
+    pub(crate) fade_on_stop: Option<u32>,
 }
 
 #[derive(Debug)]

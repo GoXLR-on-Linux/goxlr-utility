@@ -30,7 +30,7 @@ pub struct Player {
     restart_track: Arc<AtomicBool>,
 
     device: Option<String>,
-    fade_duration: Option<f64>,
+    fade_duration: Option<u32>,
     start_pct: Option<f64>,
     stop_pct: Option<f64>,
     gain: Option<f64>,
@@ -48,7 +48,7 @@ impl Player {
     pub fn new(
         file: &PathBuf,
         device: Option<String>,
-        fade_duration: Option<f64>,
+        fade_duration: Option<u32>,
         start_pct: Option<f64>,
         stop_pct: Option<f64>,
         gain: Option<f64>,
@@ -135,7 +135,7 @@ impl Player {
         let track_id = track.id;
 
         // The per-sample volume change when fading.
-        let mut fade_amount: Option<f64> = None;
+        let mut fade_amount: Option<f32> = None;
 
         // Sample Start and Stop positions..
         let mut first_frame: Option<u64> = None;
@@ -171,7 +171,9 @@ impl Player {
                     //
                     // This should have the volume at 0 after 48,000 iterations, at which point
                     // we terminate.
-                    fade_amount = Some(1.0 / ((rate as f64 * fade_duration) * channels as f64));
+                    fade_amount = Some(
+                        1.0 / ((rate as f32 * (fade_duration as f32 / 1000f32)) * channels as f32),
+                    );
                 }
 
                 if let Some(frames) = frames {
@@ -315,7 +317,7 @@ impl Player {
                                     *sample *= self.volume;
 
                                     // Has the fade amount dropped below 0?
-                                    self.volume -= fade_amount as f32;
+                                    self.volume -= fade_amount;
                                     if self.volume < 0.0 {
                                         break 'main Ok(());
                                     }
