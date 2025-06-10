@@ -2812,6 +2812,13 @@ impl<'a> Device<'a> {
                     .await;
                 self.settings.save().await;
             }
+            
+            GoXLRCommand::SetSamplerFadeDuration(value) => {
+                self.settings
+                    .set_sampler_fade_duration(self.serial(), value)
+                    .await;
+                self.settings.save().await;
+            }
 
             GoXLRCommand::SetLockFaders(value) => {
                 let current = self.settings.get_device_lock_faders(self.serial()).await;
