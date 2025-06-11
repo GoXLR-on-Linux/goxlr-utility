@@ -281,6 +281,8 @@ impl<'a> Device<'a> {
 
         let locked_faders = self.settings.get_device_lock_faders(self.serial()).await;
         let vod_mode = self.settings.get_device_vod_mode(self.serial()).await;
+        
+        let sampler_fade_duration = self.settings.get_sampler_fade_duration(self.serial()).await;
 
         let submix_supported = self.device_supports_submixes();
 
@@ -350,6 +352,7 @@ impl<'a> Device<'a> {
                 enable_monitor_with_fx: monitor_with_fx,
                 reset_sampler_on_clear: sampler_reset_on_clear,
                 lock_faders: locked_faders,
+                fade_duration: sampler_fade_duration,
                 vod_mode,
             },
             button_down: button_states,
