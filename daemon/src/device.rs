@@ -2817,6 +2817,10 @@ impl<'a> Device<'a> {
             }
 
             GoXLRCommand::SetSamplerFadeDuration(value) => {
+                if !(0..=20000).contains(&value) {
+                    bail!("Sampler Fade duration should be less than 20 seconds");
+                }
+
                 self.settings
                     .set_sampler_fade_duration(self.serial(), value)
                     .await;
