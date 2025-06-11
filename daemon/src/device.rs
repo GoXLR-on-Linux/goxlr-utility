@@ -281,7 +281,7 @@ impl<'a> Device<'a> {
 
         let locked_faders = self.settings.get_device_lock_faders(self.serial()).await;
         let vod_mode = self.settings.get_device_vod_mode(self.serial()).await;
-        
+
         let sampler_fade_duration = self.settings.get_sampler_fade_duration(self.serial()).await;
 
         let submix_supported = self.device_supports_submixes();
