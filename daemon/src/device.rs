@@ -282,6 +282,8 @@ impl<'a> Device<'a> {
         let locked_faders = self.settings.get_device_lock_faders(self.serial()).await;
         let vod_mode = self.settings.get_device_vod_mode(self.serial()).await;
 
+        let sampler_fade_duration = self.settings.get_sampler_fade_duration(self.serial()).await;
+
         let submix_supported = self.device_supports_submixes();
 
         let mut sample_progress = None;
@@ -350,6 +352,7 @@ impl<'a> Device<'a> {
                 enable_monitor_with_fx: monitor_with_fx,
                 reset_sampler_on_clear: sampler_reset_on_clear,
                 lock_faders: locked_faders,
+                fade_duration: sampler_fade_duration,
                 vod_mode,
             },
             button_down: button_states,
@@ -2809,6 +2812,17 @@ impl<'a> Device<'a> {
             GoXLRCommand::SetSamplerResetOnClear(value) => {
                 self.settings
                     .set_sampler_reset_on_clear(self.serial(), value)
+                    .await;
+                self.settings.save().await;
+            }
+
+            GoXLRCommand::SetSamplerFadeDuration(value) => {
+                if value > 20000 {
+                    bail!("Sampler Fade Duration cannot be greater than 20 seconds");
+                }
+
+                self.settings
+                    .set_sampler_fade_duration(self.serial(), value)
                     .await;
                 self.settings.save().await;
             }

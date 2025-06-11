@@ -305,6 +305,7 @@ pub enum GoXLRCommand {
     SetVCMuteAlsoMuteCM(bool),
     SetMonitorWithFx(bool),
     SetSamplerResetOnClear(bool),
+    SetSamplerFadeDuration(u32),
     SetLockFaders(bool),
     SetVodMode(VodMode),
 
