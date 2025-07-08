@@ -46,13 +46,13 @@ fn main() -> Result<(), Errors> {
             if !args.overwrite {
                 continue;
             } else if let Err(e) = fs::remove_file(&file_path) {
-                eprintln!("Error Removing File: {}", e);
+                eprintln!("Error Removing File: {e}");
                 return Err(Errors::ErrorRemovingFile);
             }
         }
 
         if let Err(e) = fs::write(&file_path, file.contents()) {
-            eprintln!("Error Writing File: {}", e);
+            eprintln!("Error Writing File: {e}");
             return Err(Errors::ErrorWritingFile);
         }
     }

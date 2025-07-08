@@ -470,13 +470,13 @@ async fn upload_firmware(
     app_data: Data<Mutex<AppData>>,
 ) -> HttpResponse {
     let serial = path.into_inner();
-    let file_path = env::temp_dir().join(format!("{}.bin", serial));
+    let file_path = env::temp_dir().join(format!("{serial}.bin"));
 
     let mut field = match payload.next().await {
         Some(Ok(field)) => field,
         Some(Err(e)) => {
             return HttpResponse::InternalServerError()
-                .body(format!("Error processing multipart: {}", e))
+                .body(format!("Error processing multipart: {e}"))
         }
         None => return HttpResponse::BadRequest().body("No file found in request"),
     };
@@ -484,8 +484,7 @@ async fn upload_firmware(
     let mut file = match File::create(&file_path) {
         Ok(f) => f,
         Err(e) => {
-            return HttpResponse::InternalServerError()
-                .body(format!("Failed to create file: {}", e))
+            return HttpResponse::InternalServerError().body(format!("Failed to create file: {e}"))
         }
     };
 
@@ -494,12 +493,12 @@ async fn upload_firmware(
             Ok(data) => {
                 if let Err(e) = file.write_all(&data) {
                     return HttpResponse::InternalServerError()
-                        .body(format!("Failed to write file: {}", e));
+                        .body(format!("Failed to write file: {e}"));
                 }
             }
             Err(e) => {
                 return HttpResponse::InternalServerError()
-                    .body(format!("Error reading file chunk: {}", e))
+                    .body(format!("Error reading file chunk: {e}"))
             }
         }
     }
@@ -521,7 +520,7 @@ async fn upload_firmware(
     let result = rx.await;
     match result {
         Ok(_) => HttpResponse::Ok().body(serde_json::to_string(&DaemonResponse::Ok).unwrap()),
-        Err(e) => HttpResponse::InternalServerError().body(format!("Error Occurred: {}", e)),
+        Err(e) => HttpResponse::InternalServerError().body(format!("Error Occurred: {e}")),
     }
 }
 

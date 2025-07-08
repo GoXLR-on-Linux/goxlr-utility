@@ -737,7 +737,7 @@ impl Settings {
                         backup.set_extension(".failed");
 
                         let copy_result = fs::copy(path, backup);
-                        println!("{:?}", copy_result);
+                        println!("{copy_result:?}");
 
                         println!("Error Loading configuration, loading defaults.");
                         Ok(None)

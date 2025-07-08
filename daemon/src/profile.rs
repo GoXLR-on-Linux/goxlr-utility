@@ -62,7 +62,7 @@ pub struct ProfileAdapter {
 
 impl ProfileAdapter {
     pub fn from_named(name: String, directory: &Path) -> Result<Self> {
-        let path = directory.join(format!("{}.goxlr", name));
+        let path = directory.join(format!("{name}.goxlr"));
 
         if path.is_file() {
             debug!("Loading Profile From {}", path.to_string_lossy());

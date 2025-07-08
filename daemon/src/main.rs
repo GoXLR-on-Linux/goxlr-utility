@@ -112,7 +112,7 @@ async fn main() -> Result<()> {
         }
 
         // Message is Cross-Platform now :)
-        let message = format!("Error Starting the GoXLR Utility:\r\n\r\n{}", e);
+        let message = format!("Error Starting the GoXLR Utility:\r\n\r\n{e}");
         platform::display_error(message);
 
         // Kill the process with an error to ensure the entire runtime is stopped

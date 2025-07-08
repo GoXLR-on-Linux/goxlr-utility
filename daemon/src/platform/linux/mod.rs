@@ -11,7 +11,7 @@ pub fn display_error(message: String) {
         .arg(message.clone())
         .output()
     {
-        println!("Error Running kdialog: {}, falling back to zenity..", e);
+        println!("Error Running kdialog: {e}, falling back to zenity..");
         let _ = Command::new("zenity")
             .arg("--title")
             .arg("GoXLR Utility")

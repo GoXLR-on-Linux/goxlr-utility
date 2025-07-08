@@ -97,7 +97,7 @@ pub async fn do_firmware_update(settings: FirmwareUpdateSettings, file_info: Fir
     let firmware = match fs::read(file_info.path) {
         Ok(bytes) => bytes,
         Err(e) => {
-            let error = format!("Unable to load firmware from disk: {}", e);
+            let error = format!("Unable to load firmware from disk: {e}");
             send_error(&device.serial, sender, error).await;
             return;
         }

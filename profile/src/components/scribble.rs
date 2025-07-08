@@ -144,33 +144,28 @@ impl Scribble {
 
         let mut attributes: HashMap<String, String> = HashMap::default();
         attributes.insert(
-            format!("{}iconFile", element_name),
+            format!("{element_name}iconFile"),
             if self.icon_file.is_none() {
                 "".to_string()
             } else {
                 self.icon_file.clone().unwrap()
             },
         );
+        attributes.insert(format!("{element_name}string0"), self.text_top_left.clone());
         attributes.insert(
-            format!("{}string0", element_name),
-            self.text_top_left.clone(),
-        );
-        attributes.insert(
-            format!("{}string1", element_name),
+            format!("{element_name}string1"),
             self.text_bottom_middle.clone(),
         );
-        attributes.insert(format!("{}alpha", element_name), format!("{}", self.alpha));
+        attributes.insert(format!("{element_name}alpha"), format!("{}", self.alpha));
         attributes.insert(
-            format!("{}inverted", element_name),
-            if self.style == Normal { "0" } else { "1" }
-                .parse()
-                .unwrap(),
+            format!("{element_name}inverted"),
+            if self.style == Normal { "0" } else { "1" }.parse()?,
         );
         attributes.insert(
-            format!("{}textSize", element_name),
+            format!("{element_name}textSize"),
             format!("{}", self.text_size),
         );
-        attributes.insert(format!("{}bitmap", element_name), self.bitmap_file.clone());
+        attributes.insert(format!("{element_name}bitmap"), self.bitmap_file.clone());
 
         self.colour_map
             .write_colours_with_prefix(element_name.into(), &mut attributes);

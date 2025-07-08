@@ -799,7 +799,7 @@ impl<'a> Device<'a> {
                 self.apply_effects(LinkedHashSet::from_iter([EffectKey::MicInputMute]))?;
             }
 
-            let message = format!("Mic Muted{}", target);
+            let message = format!("Mic Muted{target}");
             let _ = self.global_events.send(TTSMessage(message)).await;
 
             self.apply_routing(BasicInputDevice::Microphone).await?;
@@ -858,7 +858,7 @@ impl<'a> Device<'a> {
                     self.apply_effects(LinkedHashSet::from_iter([EffectKey::MicInputMute]))?;
                 }
 
-                let message = format!("Mic Muted{}", target);
+                let message = format!("Mic Muted{target}");
                 let _ = self.global_events.send(TTSMessage(message)).await;
 
                 // Update the transient routing..
@@ -903,7 +903,7 @@ impl<'a> Device<'a> {
 
         // Ok, we need to announce where we're muted to..
         let name = self.profile.get_fader_assignment(fader);
-        let message = format!("{} Muted{}", name, target);
+        let message = format!("{name} Muted{target}");
         let _ = self.global_events.send(TTSMessage(message)).await;
 
         let input = self.get_basic_input_from_channel(channel);
@@ -956,7 +956,7 @@ impl<'a> Device<'a> {
         }
 
         let name = self.profile.get_fader_assignment(fader);
-        let message = format!("{} Muted", name);
+        let message = format!("{name} Muted");
         let _ = self.global_events.send(TTSMessage(message)).await;
 
         if blink {
@@ -1055,7 +1055,7 @@ impl<'a> Device<'a> {
         }
 
         let name = self.profile.get_fader_assignment(fader);
-        let message = format!("{} unmuted", name);
+        let message = format!("{name} unmuted");
         let _ = self.global_events.send(TTSMessage(message)).await;
 
         self.update_button_states()?;
@@ -1125,7 +1125,7 @@ impl<'a> Device<'a> {
 
     async fn load_sample_bank(&mut self, bank: SampleBank) -> Result<()> {
         // Send the TTS Message..
-        let tts_message = format!("Sample {}", bank);
+        let tts_message = format!("Sample {bank}");
         let _ = self.global_events.send(TTSMessage(tts_message)).await;
 
         self.profile.load_sample_bank(bank)?;
@@ -1666,7 +1666,7 @@ impl<'a> Device<'a> {
                 .get_effect_value(EffectKey::PitchAmount, self.profile());
 
             if !self.is_device_mini() {
-                let message = format!("Pitch {}", user_value);
+                let message = format!("Pitch {user_value}");
                 let _ = self.global_events.send(TTSMessage(message)).await;
             }
         }
@@ -1693,7 +1693,7 @@ impl<'a> Device<'a> {
                 self.apply_effects(LinkedHashSet::from_iter([EffectKey::GenderAmount]))?;
 
                 if !self.is_device_mini() {
-                    let message = format!("Gender {}", new_value);
+                    let message = format!("Gender {new_value}");
                     let _ = self.global_events.send(TTSMessage(message)).await;
                 }
             }
@@ -1718,7 +1718,7 @@ impl<'a> Device<'a> {
             let percent = 100 - ((new_value as f32 / -36.) * 100.) as i32;
 
             if !self.is_device_mini() {
-                let message = format!("Reverb {} percent", percent);
+                let message = format!("Reverb {percent} percent");
                 let _ = self.global_events.send(TTSMessage(message)).await;
             }
         }
@@ -1739,7 +1739,7 @@ impl<'a> Device<'a> {
             user_value = 100 - ((user_value as f32 / -36.) * 100.) as i32;
 
             if !self.is_device_mini() {
-                let message = format!("Echo {} percent", user_value);
+                let message = format!("Echo {user_value} percent");
                 let _ = self.global_events.send(TTSMessage(message)).await;
             }
         }

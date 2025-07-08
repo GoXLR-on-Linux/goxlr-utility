@@ -32,7 +32,7 @@ pub async fn run_cli() -> Result<()> {
     let mut client: Box<dyn Client>;
 
     if let Some(url) = cli.use_http {
-        client = Box::new(WebClient::new(format!("{}/api/command", url)));
+        client = Box::new(WebClient::new(format!("{url}/api/command")));
     } else {
         // Windows supports unix sockets now, but we want to maintain the historic behaviour
         // so we'll force it to a NameSpace here..
