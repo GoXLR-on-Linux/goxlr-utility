@@ -50,7 +50,7 @@ async fn main() -> Result<(), String> {
 
         let target = match CString::new("com.apple.iokit.matching") {
             Ok(target) => target,
-            Err(e) => return Err(format!("Error Parsing String: {:?}", e)),
+            Err(e) => return Err(format!("Error Parsing String: {e:?}")),
         };
 
         println!("Attempting to pull the event from XPC..");
