@@ -101,6 +101,22 @@ fn load_grayscale_image(path: PathBuf) -> Result<DynamicImage> {
     }
 
     let img = image::open(path)?;
+
+    let (width, height) = img.dimensions();
+    let max_dimension = 512;
+    let img = if width > max_dimension || height > max_dimension {
+        let ratio = width as f32 / height as f32;
+        let (new_width, new_height) = if width > height {
+            (max_dimension, (max_dimension as f32 / ratio) as u32)
+        } else {
+            ((max_dimension as f32 * ratio) as u32, max_dimension)
+        };
+
+        img.resize(new_width, new_height, FilterType::CatmullRom)
+    } else {
+        img
+    };
+
     let mut img = img.grayscale();
 
     if img.color() == ColorType::La8 || img.color() == ColorType::L16 {

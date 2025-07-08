@@ -444,7 +444,7 @@ pub struct SampleFile {
     pub gain_pct: u8,
 }
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Scribble {
     pub file_name: Option<String>,
     pub bottom_text: Option<String>,

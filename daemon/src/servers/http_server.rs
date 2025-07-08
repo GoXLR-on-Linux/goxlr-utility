@@ -12,6 +12,7 @@ use actix_web::{get, post, web, App, HttpRequest, HttpResponse, HttpServer};
 use actix_web_actors::ws;
 use actix_web_actors::ws::{CloseCode, CloseReason};
 use anyhow::{anyhow, Result};
+use enum_map::EnumMap;
 use futures_util::StreamExt;
 use include_dir::{include_dir, Dir};
 use jsonpath_rust::JsonPathQuery;
@@ -32,7 +33,8 @@ use tokio::sync::{oneshot, Mutex};
 use crate::files::{find_file_in_path, FilePaths};
 use crate::PatchEvent;
 use goxlr_ipc::{
-    DaemonRequest, DaemonResponse, DaemonStatus, HttpSettings, WebsocketRequest, WebsocketResponse,
+    DaemonRequest, DaemonResponse, DaemonStatus, HttpSettings, Scribble, WebsocketRequest,
+    WebsocketResponse,
 };
 use goxlr_scribbles::get_scribble_png;
 use goxlr_types::FaderName;
@@ -203,6 +205,14 @@ struct AppData {
     usb_tx: DeviceSender,
     broadcast_tx: BroadcastSender<PatchEvent>,
     file_paths: FilePaths,
+
+    scribble_state: EnumMap<FaderName, ScribbleState>,
+}
+
+#[derive(Debug, Default)]
+struct ScribbleState {
+    scribble_config: Option<Scribble>,
+    png_data: Option<Vec<u8>>,
 }
 
 pub async fn spawn_http_server(
@@ -227,6 +237,7 @@ pub async fn spawn_http_server(
                 broadcast_tx: broadcast_tx.clone(),
                 usb_tx: usb_tx.clone(),
                 file_paths: file_paths.clone(),
+                scribble_state: EnumMap::default(),
             })))
             .service(execute_command)
             .service(get_devices)
@@ -346,61 +357,74 @@ async fn get_path(app_data: Data<Mutex<AppData>>, req: HttpRequest) -> HttpRespo
 async fn get_scribble(
     path: web::Path<(String, FaderName)>,
     app_data: Data<Mutex<AppData>>,
-    req: HttpRequest,
 ) -> HttpResponse {
     let serial = &path.0;
     let fader = path.1;
 
-    let params = web::Query::<HashMap<String, String>>::from_query(req.query_string());
-    let mut final_width = 128;
-    let mut final_height = 64;
+    let final_width = 128;
+    let final_height = 64;
 
-    // Try and Parse the width and height out the request (?width=X&height=Y)
-    if let Ok(params) = params {
-        if let Some(width) = params.get("width") {
-            if let Ok(width_numeric) = width.parse() {
-                final_width = width_numeric;
-            }
-        }
-        if let Some(height) = params.get("height") {
-            if let Ok(height_numeric) = height.parse() {
-                final_height = height_numeric;
-            }
-        }
-    }
-
-    // Now we need to grab the DaemonResponse to get the layout of the scribble..
+    // Now we need to grab the DaemonResponse to get the layout of the scribble
     let mut guard = app_data.lock().await;
-    let sender = guard.deref_mut();
+    let data = guard.deref_mut();
     let request = DaemonRequest::GetStatus;
 
-    if let Ok(DaemonResponse::Status(status)) = handle_packet(request, &mut sender.usb_tx).await {
-        let scribble_path = status.paths.icons_directory;
+    // Pull out the scribble configuration from the Daemon Status
+    let scribble = handle_packet(request, &mut data.usb_tx)
+        .await
+        .ok()
+        .and_then(|response| match response {
+            DaemonResponse::Status(status) => status
+                .mixers
+                .get(serial)
+                .and_then(|mixer| mixer.fader_status[fader].scribble.clone()),
+            _ => None,
+        });
 
-        if let Some(mixer) = status.mixers.get(serial) {
-            // Locate the Scribble..
-            if let Some(scribble) = &mixer.fader_status[fader].scribble {
-                let mut icon_path = None;
-                if let Some(file) = &scribble.file_name {
-                    icon_path = Some(scribble_path.join(file));
-                }
+    if scribble.is_none() {
+        return HttpResponse::NotFound().finish();
+    }
 
-                // We have access to the Scribble package, so generate and throw out..
-                let png = get_scribble_png(
-                    icon_path,
-                    scribble.bottom_text.clone(),
-                    scribble.left_text.clone(),
-                    scribble.inverted,
-                    final_width,
-                    final_height,
-                );
-                debug!("Creating Image {}x{}", final_width, final_height);
+    let state = &data.scribble_state[fader];
+    if state.scribble_config == scribble && state.png_data.is_some() {
+        // If we already have the PNG data, return it.
+        if let Some(png_data) = &data.scribble_state[fader].png_data {
+            debug!("Returning Cached Scribble Image for {} - {}", serial, fader);
+            let mime_type = ContentType(IMAGE_PNG);
+            let mut builder = HttpResponse::Ok();
+            builder.insert_header(mime_type);
+            return builder.body(png_data.clone());
+        }
+    } else if let Some(scribble) = scribble {
+        debug!("Building Scribble Image for {} - {}", serial, fader);
+        let scribble_path = data.file_paths.icons.clone();
 
-                let mime_type = ContentType(IMAGE_PNG);
-                let mut builder = HttpResponse::Ok();
-                builder.insert_header(mime_type);
-                return builder.body(png.unwrap());
-            }
+        let mut icon_path = None;
+        if let Some(file) = &scribble.file_name {
+            icon_path = Some(scribble_path.join(file));
+        }
+
+        let png = get_scribble_png(
+            icon_path,
+            scribble.bottom_text.clone(),
+            scribble.left_text.clone(),
+            scribble.inverted,
+            final_width,
+            final_height,
+        );
+
+        if let Ok(png) = png {
+            data.scribble_state[fader] = ScribbleState {
+                scribble_config: Some(scribble.clone()),
+                png_data: Some(png.clone()),
+            };
+
+            debug!("Creating Image {}x{}", final_width, final_height);
+
+            let mime_type = ContentType(IMAGE_PNG);
+            let mut builder = HttpResponse::Ok();
+            builder.insert_header(mime_type);
+            return builder.body(png);
         }
     }
 
