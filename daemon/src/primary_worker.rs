@@ -22,7 +22,7 @@ use goxlr_usb::device::{find_devices, from_device, get_version};
 use goxlr_usb::{PID_GOXLR_FULL, PID_GOXLR_MINI};
 use json_patch::diff;
 use log::{debug, error, info, warn};
-use reqwest::ClientBuilder;
+use reqwest::{ClientBuilder, StatusCode};
 use std::collections::{BTreeMap, HashMap};
 use std::env;
 use std::path::PathBuf;
@@ -941,6 +941,10 @@ async fn check_firmware_versions(x: FwSender, source: FirmwareSource) {
     let client = if let Ok(client) = ClientBuilder::new()
         .connect_timeout(Duration::from_secs(2))
         .timeout(Duration::from_secs(5))
+        .tcp_keepalive(Duration::from_secs(30))
+        .tcp_nodelay(true)
+        .pool_idle_timeout(Duration::from_secs(30))
+        .pool_max_idle_per_host(1)
         .build()
     {
         client
@@ -953,6 +957,15 @@ async fn check_firmware_versions(x: FwSender, source: FirmwareSource) {
     debug!("Performing Firmware Version Check..");
     let url = format!("{}{}", FIRMWARE_PATHS[source], "UpdateManifest_v3.xml");
     if let Ok(response) = client.get(url).send().await {
+        if response.status() != StatusCode::OK {
+            warn!(
+                "Firmware Version Check Failed, Invalid Response Code: {}",
+                response.status()
+            );
+            let _ = x.send(map).await;
+            return;
+        }
+
         if let Ok(text) = response.text().await {
             // Parse this into an XML tree...
             if let Ok(root) = Element::parse(text.as_bytes()) {
@@ -966,6 +979,8 @@ async fn check_firmware_versions(x: FwSender, source: FirmwareSource) {
                         version: VersionNumber::from(root.attributes[mini_key].clone()),
                         change_log,
                     });
+                } else {
+                    warn!("{mini_key} node not found in result");
                 }
 
                 // We can probably abstract this slightly, the mini and full behaviours are the same.
@@ -979,6 +994,8 @@ async fn check_firmware_versions(x: FwSender, source: FirmwareSource) {
                         version: VersionNumber::from(root.attributes[full_key].clone()),
                         change_log,
                     });
+                } else {
+                    warn!("{full_key} node not found in result");
                 }
             } else {
                 warn!("Unable to Parse the XML Response from the TC-Helicon Update Server");
@@ -990,5 +1007,6 @@ async fn check_firmware_versions(x: FwSender, source: FirmwareSource) {
         warn!("Unable to connect to the TC-Helicon Update Server");
     }
 
+    debug!("Firmware Update Process Finished");
     let _ = x.send(map).await;
 }
