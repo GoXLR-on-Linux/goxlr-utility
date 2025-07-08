@@ -222,6 +222,14 @@ pub async fn spawn_http_server(
     settings: HttpSettings,
     file_paths: FilePaths,
 ) {
+    // Create the AppData ONCE, outside the closure
+    let app_data = Data::new(Mutex::new(AppData {
+        broadcast_tx: broadcast_tx.clone(),
+        usb_tx: usb_tx.clone(),
+        file_paths: file_paths.clone(),
+        scribble_state: EnumMap::default(),
+    }));
+
     let server = HttpServer::new(move || {
         let cors = Cors::default()
             .allowed_origin_fn(|origin, _req_head| {
@@ -233,12 +241,7 @@ pub async fn spawn_http_server(
             .max_age(300);
         App::new()
             .wrap(Condition::new(settings.cors_enabled, cors))
-            .app_data(Data::new(Mutex::new(AppData {
-                broadcast_tx: broadcast_tx.clone(),
-                usb_tx: usb_tx.clone(),
-                file_paths: file_paths.clone(),
-                scribble_state: EnumMap::default(),
-            })))
+            .app_data(app_data.clone())
             .service(execute_command)
             .service(get_devices)
             .service(get_sample)
