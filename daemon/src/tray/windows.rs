@@ -315,7 +315,7 @@ impl WindowProc for GoXLRWindowProc {
                 let _ = match menu_id {
                     // Main Menu
                     0 => self.global_tx.try_send(EventTriggers::Activate),
-                    4 => self.global_tx.try_send(EventTriggers::Stop(true)),
+                    4 => self.global_tx.try_send(EventTriggers::Stop(false)),
 
                     // Open Paths Menu
                     10 => self.global_tx.try_send(Open(PathTypes::Profiles)),
