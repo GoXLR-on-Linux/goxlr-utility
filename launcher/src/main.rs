@@ -130,7 +130,7 @@ async fn open_ui() -> Result<()> {
 #[cfg(windows)]
 fn is_daemon_running() -> bool {
     let binary = get_daemon_binary_name();
-    println!("Locating Daemon.. {}", binary);
+    println!("Locating Daemon.. {binary}");
 
     let count = unsafe {
         let tasks = tasklist::Tasklist::new();
@@ -144,7 +144,7 @@ fn is_daemon_running() -> bool {
             .count()
     };
 
-    println!("Found: {}", count);
+    println!("Found: {count}");
     count > 0
 }
 
