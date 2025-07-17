@@ -63,7 +63,7 @@ const ICON: &[u8] = include_bytes!("../resources/goxlr-utility-large.png");
 const ICON_MAC: &[u8] = include_bytes!("../resources/icon.icns");
 
 const FIRMWARE_PATHS: EnumMap<FirmwareSource, &str> = EnumMap::from_array([
-    "https://mediadl.musictribe.com/media/PLM/sftp/incoming/hybris/import/GOXLR/",
+    "https://mediadl.musictribe.com/media/PLM/sftp/incoming/hybris/import/goxlr/",
     "https://mediadl.musictribe.com/media/PLM/sftp/incoming/hybris/import/FirmwareAssets/GOXLR/LiveTestArea/",
 ]);
 
