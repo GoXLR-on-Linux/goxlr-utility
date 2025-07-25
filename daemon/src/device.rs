@@ -78,6 +78,7 @@ struct ButtonState {
 // profile's settings for comparison.
 #[derive(Default)]
 pub(crate) struct CurrentState {
+    #[allow(unused)]
     pub(crate) faders: EnumMap<FaderName, ChannelName>,
     pub(crate) mute_state: EnumMap<ChannelName, ChannelState>,
     pub(crate) volumes: EnumMap<ChannelName, u8>,
