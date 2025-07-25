@@ -3599,17 +3599,8 @@ impl<'a> Device<'a> {
         for fader in FaderName::iter() {
             let assignment = self.profile.get_fader_assignment(fader);
 
-            if let Some(current) = &current {
-                if current.faders[fader] != assignment {
-                    debug!("Setting Fader {} to {:?}", fader, assignment);
-                    self.goxlr.set_fader(fader, assignment)?;
-                } else {
-                    debug!("Fader Already Assigned, ignoring");
-                }
-            } else {
-                debug!("Setting Fader {} to {:?}", fader, assignment);
-                self.goxlr.set_fader(fader, assignment)?;
-            }
+            debug!("Setting Fader {} to {:?}", fader, assignment);
+            self.goxlr.set_fader(fader, assignment)?;
 
             // Force Mic Fader Assignment
             if assignment == ChannelName::Mic {
