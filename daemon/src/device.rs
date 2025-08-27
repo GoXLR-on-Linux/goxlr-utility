@@ -847,12 +847,7 @@ impl<'a> Device<'a> {
             let secs = avg.as_secs_f64();
             if secs > 0.0 {
                 let mut bpm = (60.0 / secs).round() as u16;
-                if bpm < 45 {
-                    bpm = 45;
-                }
-                if bpm > 300 {
-                    bpm = 300;
-                }
+                bpm = bpm.clamp(45, 300);
 
                 // Apply tempo to the active echo profile (current preset after load)
                 if self.profile.use_echo_tempo() {
