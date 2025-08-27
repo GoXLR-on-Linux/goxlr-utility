@@ -1191,9 +1191,12 @@ pub enum DeviceSettings {
 }
 
 fn ms_window_value(s: &str) -> Result<u16, String> {
-    let value = u16::from_str(s).map_err(|_| String::from("Value must be a number in milliseconds"))?;
+    let value =
+        u16::from_str(s).map_err(|_| String::from("Value must be a number in milliseconds"))?;
     if !(1000..=2000).contains(&value) {
-        return Err(String::from("Tap-tempo window must be between 1000 and 2000 ms"));
+        return Err(String::from(
+            "Tap-tempo window must be between 1000 and 2000 ms",
+        ));
     }
     Ok(value)
 }
