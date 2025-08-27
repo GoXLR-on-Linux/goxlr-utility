@@ -78,61 +78,52 @@ struct ButtonState {
     hold_handled: bool,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Default)]
 struct TapTempoState {
-    t1: Option<Instant>,
-    t2: Option<Instant>,
-    t3: Option<Instant>,
-    t4: Option<Instant>,
-    active: bool,
-}
-
-impl Default for TapTempoState {
-    fn default() -> Self {
-        Self { t1: None, t2: None, t3: None, t4: None, active: false }
-    }
+    taps: Vec<Instant>,
 }
 
 impl TapTempoState {
     fn reset_start(&mut self, now: Instant) {
-        self.t1 = None;
-        self.t2 = None;
-        self.t3 = None;
-        self.t4 = Some(now);
-        self.active = true;
+        self.taps.clear();
+        self.taps.push(now);
     }
 
-    fn register(&mut self, now: Instant, window: Duration) -> Option<[Duration; 3]> {
-        // If this is the first tap of a new sequence, always reset and start fresh
-        if !self.active {
+    fn last(&self) -> Option<Instant> {
+        self.taps.last().copied()
+    }
+
+    fn register(&mut self, now: Instant, window: Duration) -> Option<Vec<Duration>> {
+        // If this is the first tap or we've exceeded the window, start fresh
+        if self.taps.is_empty() {
             self.reset_start(now);
             return None;
         }
 
-        // If too much time passed since last tap, start a fresh sequence
-        if let Some(last) = self.t4 {
+        if let Some(last) = self.last() {
             if now.duration_since(last) > window {
                 self.reset_start(now);
                 return None;
             }
-        } else {
-            // No last tap recorded, treat as new sequence
-            self.reset_start(now);
-            return None;
         }
 
-        // Shift and push current tap
-        self.t1 = self.t2;
-        self.t2 = self.t3;
-        self.t3 = self.t4;
-        self.t4 = Some(now);
+        // Add the new tap
+        self.taps.push(now);
 
-        // Only compute after the 4th tap in the current sequence
-        if let (Some(a), Some(b), Some(c), Some(d)) = (self.t1, self.t2, self.t3, self.t4) {
-            let i1 = b.duration_since(a);
-            let i2 = c.duration_since(b);
-            let i3 = d.duration_since(c);
-            return Some([i1, i2, i3]);
+        // Keep the vector small (we only need a few recent taps)
+        const TAP_TEMPO_MAX_TAPS: usize = 10;
+        if self.taps.len() > TAP_TEMPO_MAX_TAPS {
+            let overflow = self.taps.len() - TAP_TEMPO_MAX_TAPS;
+            self.taps.drain(0..overflow);
+        }
+
+        // Compute durations using all recent intervals once we have at least 4 taps
+        if self.taps.len() >= 4 {
+            let mut intervals = Vec::with_capacity(self.taps.len().saturating_sub(1));
+            for w in self.taps.windows(2) {
+                intervals.push(w[1].duration_since(w[0]));
+            }
+            return Some(intervals);
         }
         None
     }
@@ -731,40 +722,58 @@ impl<'a> Device<'a> {
                 self.handle_swear_button(false).await?;
             }
             Buttons::EffectSelect1 => {
-                let now = Instant::now();
-                let suppress = self.is_subsequent_tap(EffectBankPresets::Preset1, now);
-                self.load_effect_bank(EffectBankPresets::Preset1, !suppress).await?;
-                self.try_tap_tempo(EffectBankPresets::Preset1).await?;
+                let selected = EffectBankPresets::Preset1;
+                let active = self.profile.get_active_effect_bank();
+                if active != selected {
+                    self.load_effect_bank(selected, true).await?;
+                } else {
+                    self.try_tap_tempo(selected).await?;
+                }
             }
             Buttons::EffectSelect2 => {
-                let now = Instant::now();
-                let suppress = self.is_subsequent_tap(EffectBankPresets::Preset2, now);
-                self.load_effect_bank(EffectBankPresets::Preset2, !suppress).await?;
-                self.try_tap_tempo(EffectBankPresets::Preset2).await?;
+                let selected = EffectBankPresets::Preset2;
+                let active = self.profile.get_active_effect_bank();
+                if active != selected {
+                    self.load_effect_bank(selected, true).await?;
+                } else {
+                    self.try_tap_tempo(selected).await?;
+                }
             }
             Buttons::EffectSelect3 => {
-                let now = Instant::now();
-                let suppress = self.is_subsequent_tap(EffectBankPresets::Preset3, now);
-                self.load_effect_bank(EffectBankPresets::Preset3, !suppress).await?;
-                self.try_tap_tempo(EffectBankPresets::Preset3).await?;
+                let selected = EffectBankPresets::Preset3;
+                let active = self.profile.get_active_effect_bank();
+                if active != selected {
+                    self.load_effect_bank(selected, true).await?;
+                } else {
+                    self.try_tap_tempo(selected).await?;
+                }
             }
             Buttons::EffectSelect4 => {
-                let now = Instant::now();
-                let suppress = self.is_subsequent_tap(EffectBankPresets::Preset4, now);
-                self.load_effect_bank(EffectBankPresets::Preset4, !suppress).await?;
-                self.try_tap_tempo(EffectBankPresets::Preset4).await?;
+                let selected = EffectBankPresets::Preset4;
+                let active = self.profile.get_active_effect_bank();
+                if active != selected {
+                    self.load_effect_bank(selected, true).await?;
+                } else {
+                    self.try_tap_tempo(selected).await?;
+                }
             }
             Buttons::EffectSelect5 => {
-                let now = Instant::now();
-                let suppress = self.is_subsequent_tap(EffectBankPresets::Preset5, now);
-                self.load_effect_bank(EffectBankPresets::Preset5, !suppress).await?;
-                self.try_tap_tempo(EffectBankPresets::Preset5).await?;
+                let selected = EffectBankPresets::Preset5;
+                let active = self.profile.get_active_effect_bank();
+                if active != selected {
+                    self.load_effect_bank(selected, true).await?;
+                } else {
+                    self.try_tap_tempo(selected).await?;
+                }
             }
             Buttons::EffectSelect6 => {
-                let now = Instant::now();
-                let suppress = self.is_subsequent_tap(EffectBankPresets::Preset6, now);
-                self.load_effect_bank(EffectBankPresets::Preset6, !suppress).await?;
-                self.try_tap_tempo(EffectBankPresets::Preset6).await?;
+                let selected = EffectBankPresets::Preset6;
+                let active = self.profile.get_active_effect_bank();
+                if active != selected {
+                    self.load_effect_bank(selected, true).await?;
+                } else {
+                    self.try_tap_tempo(selected).await?;
+                }
             }
 
             // The following 3 are simple, but will need more work once effects are
@@ -829,9 +838,12 @@ impl<'a> Device<'a> {
             entry.register(now, self.tap_tempo_window)
         };
         if let Some(durations) = maybe_durations {
-            // Compute average interval over 3 durations
-            let total = durations[0] + durations[1] + durations[2];
-            let avg = total / 3;
+            // Compute average interval over all recent durations
+            let mut total = Duration::from_millis(0);
+            for d in &durations {
+                total += *d;
+            }
+            let avg = total / (durations.len() as u32);
             let secs = avg.as_secs_f64();
             if secs > 0.0 {
                 let mut bpm = (60.0 / secs).round() as u16;
@@ -856,23 +868,14 @@ impl<'a> Device<'a> {
                     let _ = self.global_events.send(TTSMessage(message)).await;
                 }
 
-                // Reset state after successful set
-                self.tap_states.insert(preset, TapTempoState::default());
+                // Do not reset here; keep accumulating taps to refine continuously
             }
         }
         Ok(())
     }
 
-    fn is_subsequent_tap(&self, preset: EffectBankPresets, now: Instant) -> bool {
-        if let Some(state) = self.tap_states.get(&preset) {
-            if state.active {
-                if let Some(last) = state.t4 {
-                    return now.duration_since(last) <= self.tap_tempo_window;
-                }
-            }
-        }
-        false
-    }
+    // Removed old suppress-logic helper; selection vs. tap is now
+    // handled directly in the effect button handlers above.
 
     async fn handle_fader_mute(&mut self, fader: FaderName, held: bool) -> Result<()> {
         // OK, so a fader button has been pressed, we need to determine behaviour, based on the colour map..
