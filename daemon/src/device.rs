@@ -851,9 +851,8 @@ impl<'a> Device<'a> {
                     }
                     self.apply_effects(LinkedHashSet::from_iter([EffectKey::EchoTempo]))?;
 
-                    // TTS: BPM Delay for {preset} set to {bpm}
-                    let preset_name = self.profile.get_effect_name(preset);
-                    let message = format!("BPM Delay for {} set to {}", preset_name, bpm);
+                    // TTS: Tempo {tempo}
+                    let message = format!("Tempo {}", bpm);
                     let _ = self.global_events.send(TTSMessage(message)).await;
                 }
 
