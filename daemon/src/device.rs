@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -60,6 +60,10 @@ pub struct Device<'a> {
     global_events: Sender<EventTriggers>,
 
     last_sample_error: Option<String>,
+
+    // Tap-tempo configuration and state
+    tap_tempo_window: Duration,
+    tap_states: HashMap<EffectBankPresets, TapTempoState>,
 }
 
 #[derive(Debug, Default, Copy, Clone)]
@@ -72,6 +76,66 @@ struct PauseUntil {
 struct ButtonState {
     press_time: Option<Instant>,
     hold_handled: bool,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct TapTempoState {
+    t1: Option<Instant>,
+    t2: Option<Instant>,
+    t3: Option<Instant>,
+    t4: Option<Instant>,
+    active: bool,
+}
+
+impl Default for TapTempoState {
+    fn default() -> Self {
+        Self { t1: None, t2: None, t3: None, t4: None, active: false }
+    }
+}
+
+impl TapTempoState {
+    fn reset_start(&mut self, now: Instant) {
+        self.t1 = None;
+        self.t2 = None;
+        self.t3 = None;
+        self.t4 = Some(now);
+        self.active = true;
+    }
+
+    fn register(&mut self, now: Instant, window: Duration) -> Option<[Duration; 3]> {
+        // If this is the first tap of a new sequence, always reset and start fresh
+        if !self.active {
+            self.reset_start(now);
+            return None;
+        }
+
+        // If too much time passed since last tap, start a fresh sequence
+        if let Some(last) = self.t4 {
+            if now.duration_since(last) > window {
+                self.reset_start(now);
+                return None;
+            }
+        } else {
+            // No last tap recorded, treat as new sequence
+            self.reset_start(now);
+            return None;
+        }
+
+        // Shift and push current tap
+        self.t1 = self.t2;
+        self.t2 = self.t3;
+        self.t3 = self.t4;
+        self.t4 = Some(now);
+
+        // Only compute after the 4th tap in the current sequence
+        if let (Some(a), Some(b), Some(c), Some(d)) = (self.t1, self.t2, self.t3, self.t4) {
+            let i1 = b.duration_since(a);
+            let i2 = c.duration_since(b);
+            let i3 = d.duration_since(c);
+            return Some([i1, i2, i3]);
+        }
+        None
+    }
 }
 
 // Used when loading profiles to provide the previous
@@ -226,6 +290,11 @@ impl<'a> Device<'a> {
             global_events,
 
             last_sample_error: None,
+
+            tap_tempo_window: Duration::from_millis(
+                settings_handle.get_tap_tempo_window(&serial).await.into(),
+            ),
+            tap_states: HashMap::new(),
         };
 
         device.apply_profile(None).await?;
@@ -355,6 +424,7 @@ impl<'a> Device<'a> {
                 lock_faders: locked_faders,
                 fade_duration: sampler_fade_duration,
                 vod_mode,
+                tap_tempo_window_ms: self.tap_tempo_window.as_millis() as u16,
             },
             button_down: button_states,
             profile_name: self.profile.name().to_owned(),
@@ -661,22 +731,40 @@ impl<'a> Device<'a> {
                 self.handle_swear_button(false).await?;
             }
             Buttons::EffectSelect1 => {
-                self.load_effect_bank(EffectBankPresets::Preset1).await?;
+                let now = Instant::now();
+                let suppress = self.is_subsequent_tap(EffectBankPresets::Preset1, now);
+                self.load_effect_bank(EffectBankPresets::Preset1, !suppress).await?;
+                self.try_tap_tempo(EffectBankPresets::Preset1).await?;
             }
             Buttons::EffectSelect2 => {
-                self.load_effect_bank(EffectBankPresets::Preset2).await?;
+                let now = Instant::now();
+                let suppress = self.is_subsequent_tap(EffectBankPresets::Preset2, now);
+                self.load_effect_bank(EffectBankPresets::Preset2, !suppress).await?;
+                self.try_tap_tempo(EffectBankPresets::Preset2).await?;
             }
             Buttons::EffectSelect3 => {
-                self.load_effect_bank(EffectBankPresets::Preset3).await?;
+                let now = Instant::now();
+                let suppress = self.is_subsequent_tap(EffectBankPresets::Preset3, now);
+                self.load_effect_bank(EffectBankPresets::Preset3, !suppress).await?;
+                self.try_tap_tempo(EffectBankPresets::Preset3).await?;
             }
             Buttons::EffectSelect4 => {
-                self.load_effect_bank(EffectBankPresets::Preset4).await?;
+                let now = Instant::now();
+                let suppress = self.is_subsequent_tap(EffectBankPresets::Preset4, now);
+                self.load_effect_bank(EffectBankPresets::Preset4, !suppress).await?;
+                self.try_tap_tempo(EffectBankPresets::Preset4).await?;
             }
             Buttons::EffectSelect5 => {
-                self.load_effect_bank(EffectBankPresets::Preset5).await?;
+                let now = Instant::now();
+                let suppress = self.is_subsequent_tap(EffectBankPresets::Preset5, now);
+                self.load_effect_bank(EffectBankPresets::Preset5, !suppress).await?;
+                self.try_tap_tempo(EffectBankPresets::Preset5).await?;
             }
             Buttons::EffectSelect6 => {
-                self.load_effect_bank(EffectBankPresets::Preset6).await?;
+                let now = Instant::now();
+                let suppress = self.is_subsequent_tap(EffectBankPresets::Preset6, now);
+                self.load_effect_bank(EffectBankPresets::Preset6, !suppress).await?;
+                self.try_tap_tempo(EffectBankPresets::Preset6).await?;
             }
 
             // The following 3 are simple, but will need more work once effects are
@@ -731,6 +819,60 @@ impl<'a> Device<'a> {
         }
         self.update_button_states()?;
         Ok(())
+    }
+
+    async fn try_tap_tempo(&mut self, preset: EffectBankPresets) -> Result<()> {
+        let now = Instant::now();
+        // Limit the mutable borrow scope to just the register call
+        let maybe_durations = {
+            let entry = self.tap_states.entry(preset).or_default();
+            entry.register(now, self.tap_tempo_window)
+        };
+        if let Some(durations) = maybe_durations {
+            // Compute average interval over 3 durations
+            let total = durations[0] + durations[1] + durations[2];
+            let avg = total / 3;
+            let secs = avg.as_secs_f64();
+            if secs > 0.0 {
+                let mut bpm = (60.0 / secs).round() as u16;
+                if bpm < 45 {
+                    bpm = 45;
+                }
+                if bpm > 300 {
+                    bpm = 300;
+                }
+
+                // Apply tempo to the active echo profile (current preset after load)
+                if self.profile.use_echo_tempo() {
+                    if let Err(e) = self.profile.get_active_echo_profile_mut().set_tempo(bpm) {
+                        // Style may not support tempo (e.g., ClassicSlap); log and return
+                        debug!("Tap-tempo ignored: {}", e);
+                        return Ok(());
+                    }
+                    self.apply_effects(LinkedHashSet::from_iter([EffectKey::EchoTempo]))?;
+
+                    // TTS: BPM Delay for {preset} set to {bpm}
+                    let preset_name = self.profile.get_effect_name(preset);
+                    let message = format!("BPM Delay for {} set to {}", preset_name, bpm);
+                    let _ = self.global_events.send(TTSMessage(message)).await;
+                }
+
+                // Reset state after successful set
+                self.tap_states.insert(preset, TapTempoState::default());
+            }
+        }
+        Ok(())
+    }
+
+    fn is_subsequent_tap(&self, preset: EffectBankPresets, now: Instant) -> bool {
+        if let Some(state) = self.tap_states.get(&preset) {
+            if state.active {
+                if let Some(last) = state.t4 {
+                    return now.duration_since(last) <= self.tap_tempo_window;
+                }
+            }
+        }
+        false
     }
 
     async fn handle_fader_mute(&mut self, fader: FaderName, held: bool) -> Result<()> {
@@ -1472,11 +1614,13 @@ impl<'a> Device<'a> {
         Ok(changed)
     }
 
-    async fn load_effect_bank(&mut self, preset: EffectBankPresets) -> Result<()> {
-        // Send the TTS Message..
-        let preset_name = self.profile.get_effect_name(preset);
-        let tts_message = format!("Effects {}, {}", preset as u8 + 1, preset_name);
-        let _ = self.global_events.send(TTSMessage(tts_message)).await;
+    async fn load_effect_bank(&mut self, preset: EffectBankPresets, speak_tts: bool) -> Result<()> {
+        // Optional TTS message on effect load
+        if speak_tts {
+            let preset_name = self.profile.get_effect_name(preset);
+            let tts_message = format!("Effects {}, {}", preset as u8 + 1, preset_name);
+            let _ = self.global_events.send(TTSMessage(tts_message)).await;
+        }
 
         self.profile.load_effect_bank(preset)?;
         self.set_pitch_mode()?;
@@ -2105,7 +2249,7 @@ impl<'a> Device<'a> {
                 // Force a reload of this effect bank..
                 // TODO: This is slightly sloppy, as it will make unneeded changes.
                 // TODO: Loading a profile should be separate from an 'event'.
-                self.load_effect_bank(current_effect_bank).await?;
+                self.load_effect_bank(current_effect_bank, true).await?;
                 self.update_button_states()?;
             }
 
@@ -2790,6 +2934,15 @@ impl<'a> Device<'a> {
                     .await;
                 self.settings.save().await;
             }
+            GoXLRCommand::SetTapTempoWindow(duration_ms) => {
+                // Clamp to a sensible range (1000ms..=2000ms)
+                let clamped: u16 = duration_ms.clamp(1000, 2000);
+                self.tap_tempo_window = Duration::from_millis(clamped.into());
+                self.settings
+                    .set_device_tap_tempo_window(self.serial(), clamped)
+                    .await;
+                self.settings.save().await;
+            }
 
             GoXLRCommand::SetVCMuteAlsoMuteCM(value) => {
                 self.vc_mute_also_mute_cm = value;
@@ -2865,7 +3018,7 @@ impl<'a> Device<'a> {
             }
 
             GoXLRCommand::SetActiveEffectPreset(preset) => {
-                self.load_effect_bank(preset).await?;
+                self.load_effect_bank(preset, true).await?;
                 self.update_button_states()?;
             }
             GoXLRCommand::SetActiveSamplerBank(bank) => {

@@ -527,6 +527,28 @@ impl SettingsHandle {
         100
     }
 
+    pub async fn get_tap_tempo_window(&self, device_serial: &str) -> u16 {
+        let settings = self.settings.read().await;
+        settings
+            .devices
+            .as_ref()
+            .unwrap()
+            .get(device_serial)
+            .map(|d| d.tap_tempo_window_ms.unwrap_or(1500))
+            .unwrap_or(1500)
+    }
+
+    pub async fn set_device_tap_tempo_window(&self, device_serial: &str, duration_ms: u16) {
+        let mut settings = self.settings.write().await;
+        let entry = settings
+            .devices
+            .as_mut()
+            .unwrap()
+            .entry(device_serial.to_owned())
+            .or_insert_with(DeviceSettings::default);
+        entry.tap_tempo_window_ms = Some(duration_ms);
+    }
+
     /// This exists so we don't have to repeatedly lock / unlock the struct to get individual
     /// gain values. We can simply clone off the list, and let it be handled elsewhere.
     pub async fn get_sample_gain_list(&self) -> HashMap<String, u8> {
@@ -817,6 +839,9 @@ struct DeviceSettings {
     // The time it takes for a sample to fade out
     sampler_fade_duration: Option<u32>,
 
+    // Tap-tempo window for effect preset tapping (ms)
+    tap_tempo_window_ms: Option<u16>,
+
     // VoD 'Mode'
     vod_mode: Option<VodMode>,
 
@@ -839,6 +864,7 @@ impl Default for DeviceSettings {
             enable_monitor_with_fx: Some(false),
             sampler_reset_on_clear: Some(true),
             sampler_fade_duration: Some(500),
+            tap_tempo_window_ms: Some(1500),
 
             vod_mode: Some(Routable),
 

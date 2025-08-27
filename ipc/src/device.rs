@@ -409,6 +409,7 @@ pub struct Settings {
     pub lock_faders: bool,
     pub fade_duration: u32,
     pub vod_mode: VodMode,
+    pub tap_tempo_window_ms: u16,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

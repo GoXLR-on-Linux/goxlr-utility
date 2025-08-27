@@ -308,6 +308,8 @@ pub enum GoXLRCommand {
     SetSamplerFadeDuration(u32),
     SetLockFaders(bool),
     SetVodMode(VodMode),
+    // Tap Tempo window (ms) for effect preset tap-tempo
+    SetTapTempoWindow(u16),
 
     // These control the current GoXLR 'State'..
     SetActiveEffectPreset(EffectBankPresets),

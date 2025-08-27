@@ -1022,6 +1022,11 @@ pub async fn run_cli() -> Result<()> {
                             .command(&serial, GoXLRCommand::SetLockFaders(*enabled))
                             .await?;
                     }
+                    DeviceSettings::TapTempoWindow { duration_ms } => {
+                        client
+                            .command(&serial, GoXLRCommand::SetTapTempoWindow(*duration_ms))
+                            .await?;
+                    }
                 },
                 SubCommands::Firmware { command } => match command {
                     FirmwareCommands::FirmwareUpdate { path } => {
