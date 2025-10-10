@@ -99,7 +99,7 @@ jobs:
       - name: "Upload amd64 Installer"
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ martrix.artifact }}
+          name: ${{ matrix.artifact }}
           path: ./goxlr-utility/ci/Output/*.exe
 
   build_linux:
