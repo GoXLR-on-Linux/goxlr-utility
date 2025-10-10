@@ -32,8 +32,8 @@ rusb = { workspace = true }
 lazy_static = { workspace = true }
 winreg = { workspace = true }
 
-libloading = "0.8.5"
-widestring = "1.1.0"
+libloading = "0.8.9"
+widestring = "1.2.1"
 windows = { workspace = true, features = [
     "Win32_Foundation",
     "Win32_Security",
