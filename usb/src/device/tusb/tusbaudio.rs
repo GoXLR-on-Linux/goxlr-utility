@@ -29,7 +29,6 @@ use winreg::RegKey;
 use goxlr_types::VersionNumber;
 
 use crate::device::base::GoXLRDevice;
-use crate::{PID_GOXLR_FULL, PID_GOXLR_MINI, VID_GOXLR};
 
 // Define the Types of the various methods..
 type EnumerateDevices = unsafe extern "C" fn() -> u32;
@@ -659,97 +658,97 @@ impl TUSBAudio<'_> {
         Ok(())
     }
 
-    #[allow(dead_code)]
-    pub fn spawn_pnp_handle_rusb(&self) -> Result<()> {
-        // Comment for future me: Use CM_Register_Notification instead of rusb
-
-        let mut spawned = self.pnp_thread_running.lock().unwrap();
-        if *spawned {
-            bail!("Handler Thread already running..");
-        }
-
-        debug!("Spawning RUSB PnP Thread");
-
-        // We should not return from this method until at least one run has been done by the
-        // thread, this is primarily to prevent conflicts on startup when everything changes.
-
-        let (ready_tx, mut ready_rx) = tokio::sync::oneshot::channel::<bool>();
-
-        thread::spawn(move || -> Result<()> {
-            let mut devices = vec![];
-            let mut ready_sender = Some(ready_tx);
-
-            debug!("PnP Thread Spawned");
-            loop {
-                let mut found_devices = vec![];
-
-                if let Ok(devices) = rusb::devices() {
-                    for device in devices.iter() {
-                        if let Ok(descriptor) = device.device_descriptor() {
-                            let bus_number = device.bus_number();
-                            let address = device.address();
-
-                            if descriptor.vendor_id() == VID_GOXLR
-                                && (descriptor.product_id() == PID_GOXLR_FULL
-                                    || descriptor.product_id() == PID_GOXLR_MINI)
-                            {
-                                found_devices.push(USBDevice {
-                                    bus_number,
-                                    address,
-                                });
-                            }
-                        }
-                    }
-                } else {
-                    debug!("Unable to Poll Devices");
-                }
-
-                // Make sure our two vecs are the same..
-                if !iters_equal_anyorder(
-                    devices.clone().into_iter(),
-                    found_devices.clone().into_iter(),
-                ) {
-                    debug!("Device Change Detected");
-                    let _ = TUSB_INTERFACE.detect_devices();
-                    devices.clear();
-                    devices.append(&mut found_devices);
-                }
-
-                // If a driver takes a couple of hundred milliseconds to load, it's theoretically
-                // possible that we'll have detected the device and run detect_devices() too early
-                // leaving the detected device list empty and causing a desync in the lists.
-                //
-                // The following simply checks what's already been found, and if the list size
-                // isn't the same as we have detected here, attempts to force a resync of the
-                // devices from the API.
-                if devices.len() != TUSB_INTERFACE.get_devices().len() {
-                    debug!("Device Desync Detected, attempting to resync..");
-                    let _ = TUSB_INTERFACE.detect_devices();
-                }
-
-                if let Some(sender) = ready_sender.take() {
-                    let _ = sender.send(true);
-                }
-                sleep(Duration::from_secs(1));
-            }
-        });
-
-        // Block until the 'ready' message has been sent..
-        while ready_rx.try_recv().is_err() {
-            sleep(Duration::from_millis(5));
-        }
-        debug!("RUSB PnP Handler Started");
-
-        *spawned = true;
-        Ok(())
-    }
+    //#[allow(dead_code)]
+    // pub fn spawn_pnp_handle_rusb(&self) -> Result<()> {
+    //     // Comment for future me: Use CM_Register_Notification instead of rusb
+    //
+    //     let mut spawned = self.pnp_thread_running.lock().unwrap();
+    //     if *spawned {
+    //         bail!("Handler Thread already running..");
+    //     }
+    //
+    //     debug!("Spawning RUSB PnP Thread");
+    //
+    //     // We should not return from this method until at least one run has been done by the
+    //     // thread, this is primarily to prevent conflicts on startup when everything changes.
+    //
+    //     let (ready_tx, mut ready_rx) = tokio::sync::oneshot::channel::<bool>();
+    //
+    //     thread::spawn(move || -> Result<()> {
+    //         let mut devices = vec![];
+    //         let mut ready_sender = Some(ready_tx);
+    //
+    //         debug!("PnP Thread Spawned");
+    //         loop {
+    //             let mut found_devices = vec![];
+    //
+    //             if let Ok(devices) = rusb::devices() {
+    //                 for device in devices.iter() {
+    //                     if let Ok(descriptor) = device.device_descriptor() {
+    //                         let bus_number = device.bus_number();
+    //                         let address = device.address();
+    //
+    //                         if descriptor.vendor_id() == VID_GOXLR
+    //                             && (descriptor.product_id() == PID_GOXLR_FULL
+    //                                 || descriptor.product_id() == PID_GOXLR_MINI)
+    //                         {
+    //                             found_devices.push(USBDevice {
+    //                                 bus_number,
+    //                                 address,
+    //                             });
+    //                         }
+    //                     }
+    //                 }
+    //             } else {
+    //                 debug!("Unable to Poll Devices");
+    //             }
+    //
+    //             // Make sure our two vecs are the same..
+    //             if !iters_equal_anyorder(
+    //                 devices.clone().into_iter(),
+    //                 found_devices.clone().into_iter(),
+    //             ) {
+    //                 debug!("Device Change Detected");
+    //                 let _ = TUSB_INTERFACE.detect_devices();
+    //                 devices.clear();
+    //                 devices.append(&mut found_devices);
+    //             }
+    //
+    //             // If a driver takes a couple of hundred milliseconds to load, it's theoretically
+    //             // possible that we'll have detected the device and run detect_devices() too early
+    //             // leaving the detected device list empty and causing a desync in the lists.
+    //             //
+    //             // The following simply checks what's already been found, and if the list size
+    //             // isn't the same as we have detected here, attempts to force a resync of the
+    //             // devices from the API.
+    //             if devices.len() != TUSB_INTERFACE.get_devices().len() {
+    //                 debug!("Device Desync Detected, attempting to resync..");
+    //                 let _ = TUSB_INTERFACE.detect_devices();
+    //             }
+    //
+    //             if let Some(sender) = ready_sender.take() {
+    //                 let _ = sender.send(true);
+    //             }
+    //             sleep(Duration::from_secs(1));
+    //         }
+    //     });
+    //
+    //     // Block until the 'ready' message has been sent..
+    //     while ready_rx.try_recv().is_err() {
+    //         sleep(Duration::from_millis(5));
+    //     }
+    //     debug!("RUSB PnP Handler Started");
+    //
+    //     *spawned = true;
+    //     Ok(())
+    // }
 }
 
-#[derive(Debug, Copy, Clone, Hash, Eq, PartialEq)]
-struct USBDevice {
-    pub(crate) bus_number: u8,
-    pub(crate) address: u8,
-}
+// #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq)]
+// struct USBDevice {
+//     pub(crate) bus_number: u8,
+//     pub(crate) address: u8,
+// }
 
 pub struct DeviceHandle {
     handle: u32,

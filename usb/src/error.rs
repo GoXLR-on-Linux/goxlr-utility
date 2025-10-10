@@ -3,6 +3,7 @@ pub enum ConnectError {
     #[error("No GoXLR device was found")]
     DeviceNotFound,
 
+    #[cfg(not(target_os = "windows"))]
     #[error("USB error: {0}")]
     UsbError(#[from] rusb::Error),
 
@@ -15,6 +16,7 @@ pub enum ConnectError {
 
 #[derive(thiserror::Error, Debug)]
 pub enum CommandError {
+    #[cfg(not(target_os = "windows"))]
     #[error("USB error: {0}")]
     UsbError(#[from] rusb::Error),
 

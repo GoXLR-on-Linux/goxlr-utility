@@ -10,7 +10,6 @@ categories = ["hardware-support", "api-bindings"]
 
 [dependencies]
 goxlr-types = { path = "../types" }
-rusb = "0.9.4"
 thiserror = "1.0.63"
 byteorder = "1.5.0"
 log = "0.4.22"
@@ -22,6 +21,10 @@ cfg-if = "1.0.0"
 
 # New, some fun async stuff..
 tokio = { version = "1.39.1", features = ["sync", "rt", "time"] }
+
+# Mac an Linux need libusb
+[target.'cfg(not(windows))'.dependencies]
+rusb = "0.9.4"
 
 # Dependencies specifically for building under Windows..
 [target.'cfg(windows)'.dependencies]
