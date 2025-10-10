@@ -1,24 +1,19 @@
 use crate::events::EventTriggers;
-use crate::{DaemonState, ICON};
+use crate::shutdown::Shutdown;
+use crate::ICON;
 use anyhow::Result;
 use goxlr_ipc::PathTypes::{Icons, Logs, MicProfiles, Presets, Profiles, Samples};
 use ksni::menu::{StandardItem, SubMenu};
-use ksni::{Category, MenuItem, Status, ToolTip, Tray};
+use ksni::{Category, MenuItem, Status, ToolTip, Tray, TrayMethods};
 use log::{debug, warn};
+use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::Ordering;
-use std::time::Duration;
-use std::{fs, thread};
 use tokio::sync::mpsc;
 
-pub fn handle_tray(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Result<()> {
-    if !state.show_tray.load(Ordering::Relaxed) {
-        return Ok(());
-    }
-
+pub async fn handle_tray(mut stop: Shutdown, tx: mpsc::Sender<EventTriggers>) -> Result<()> {
     // Before we spawn the tray, we're going to extract our icon to a temporary location
     // so that it can be immediately used. Depending on pixmaps seems to cause issues under
-    // gnome, where occasionally the icon wont correctly spawn.
+    // gnome, where occasionally the icon will not correctly spawn.
 
     // We'll dump the icon here :)
     let tmp_file_dir = PathBuf::from("/tmp/goxlr-utility/");
@@ -39,7 +34,9 @@ pub fn handle_tray(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Resul
     }
 
     // Attempt to immediately update the environment..
-    let handle = ksni::spawn(GoXLRTray::new(tx, &tmp_file_path));
+    let icon = GoXLRTray::new(tx, &tmp_file_path);
+    let handle = icon.spawn_without_dbus_name().await;
+
     let handle = match handle {
         Ok(handle) => handle,
         Err(e) => {
@@ -52,12 +49,10 @@ pub fn handle_tray(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Resul
         }
     };
 
-    while !state.shutdown_blocking.load(Ordering::Relaxed) {
-        thread::sleep(Duration::from_millis(100));
-    }
+    stop.recv().await;
 
     debug!("Shutting Down Tray Handler..");
-    let _ = handle.shutdown();
+    let _ = handle.shutdown().await;
     fs::remove_file(&tmp_file_path)?;
     Ok(())
 }
@@ -75,16 +70,16 @@ impl GoXLRTray {
 }
 
 impl Tray for GoXLRTray {
+    fn id(&self) -> String {
+        "goxlr-utility".to_string()
+    }
+
     fn activate(&mut self, _x: i32, _y: i32) {
         let _ = self.tx.try_send(EventTriggers::Activate);
     }
 
     fn category(&self) -> Category {
         Category::Hardware
-    }
-
-    fn id(&self) -> String {
-        "goxlr-utility".to_string()
     }
 
     fn title(&self) -> String {

@@ -78,7 +78,7 @@ nix = { version = "0.29.0", features = ["user"] }
 
 # Under Linux, we use ksni for our tray icon..
 [target.'cfg(target_os = "linux")'.dependencies]
-ksni = { git = "https://github.com/talonvoice/ksni.git", branch = "zbus" }
+ksni = "0.3.1"
 rust-ini = "0.21.0"
 #rand = "0.8.5"
 shell-words = "1.1.0"
