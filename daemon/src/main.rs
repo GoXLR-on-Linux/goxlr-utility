@@ -23,7 +23,7 @@ use simplelog::{
 use sys_locale::get_locale;
 
 use tokio::join;
-use tokio::sync::{broadcast, mpsc};
+use tokio::sync::{broadcast, mpsc, oneshot};
 
 use goxlr_ipc::{FirmwareSource, HttpSettings, LogLevel};
 
@@ -321,6 +321,8 @@ async fn run_utility() -> Result<()> {
         bail!("{}", e);
     }
 
+    let (ready_tx, ready_rx) = oneshot::channel();
+
     // Start the USB Device Handler
     let usb_handle = tokio::spawn(spawn_usb_handler(
         usb_rx,
@@ -328,11 +330,15 @@ async fn run_utility() -> Result<()> {
         device_state_rx,
         broadcast_tx.clone(),
         global_tx.clone(),
+        ready_tx,
         shutdown.clone(),
         settings.clone(),
         http_settings.clone(),
         file_manager,
     ));
+
+    // Wait until the handler is setup
+    let _ = ready_rx.await;
 
     // Launch the IPC Server..
     let ipc_socket = ipc_socket?;

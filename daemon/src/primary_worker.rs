@@ -73,6 +73,7 @@ pub async fn spawn_usb_handler(
     mut device_state_rx: Receiver<DeviceStateChange>,
     broadcast_tx: BroadcastSender<PatchEvent>,
     global_tx: Sender<EventTriggers>,
+    ready_tx: oneshot::Sender<()>,
     mut shutdown: Shutdown,
     settings: SettingsHandle,
     http_settings: HttpSettings,
@@ -136,6 +137,7 @@ pub async fn spawn_usb_handler(
     .await;
 
     let mut shutdown_triggered = false;
+    let _ = ready_tx.send(());
 
     loop {
         let mut change_found = false;
