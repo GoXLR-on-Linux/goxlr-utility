@@ -2,7 +2,6 @@ use crate::events::EventTriggers;
 use crate::DaemonState;
 use anyhow::Result;
 use tokio::sync::mpsc;
-use tokio::task;
 
 #[cfg(target_os = "linux")]
 mod linux;
@@ -17,6 +16,7 @@ pub fn handle_tray(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Resul
     #[cfg(target_os = "linux")]
     {
         use std::sync::atomic::Ordering;
+        use tokio::task;
         if state.show_tray.load(Ordering::Relaxed) {
             // We'll just spawn the tray and return.
             task::spawn(linux::handle_tray(state.shutdown, tx));
