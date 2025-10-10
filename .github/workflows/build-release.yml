@@ -68,6 +68,11 @@ jobs:
         run: "cargo build --manifest-path=goxlr-utility-ui/src-tauri/Cargo.toml --target-dir=goxlr-utility/target --release"
 
       # Prepare NSIS
+      - name: Install NSIS
+        uses: repolevedavaj/install-nsis@v1.0.3
+        with:
+          nsis-version: '3.11'
+
       - name: "Preparing NSIS"
         run: mkdir -p ${{ github.workspace }}/NSIS_Plugins/x86-unicode/
 
