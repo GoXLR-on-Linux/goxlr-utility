@@ -37,5 +37,5 @@ clap = { workspace = true }
 goxlr-types = { path = "../types", features = ["clap"] }
 
 clap = { workspace = true }
-clap_complete = "4.5.4"
+clap_complete = "4.5.58"
 
