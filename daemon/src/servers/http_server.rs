@@ -23,12 +23,11 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
-use std::ops::DerefMut;
 use std::path::{Component, PathBuf};
 use std::{env, fs};
 use tokio::sync::broadcast::Sender as BroadcastSender;
 use tokio::sync::oneshot::Sender;
-use tokio::sync::{oneshot, Mutex};
+use tokio::sync::{oneshot, RwLock};
 
 use crate::files::{find_file_in_path, FilePaths};
 use crate::PatchEvent;
@@ -223,7 +222,7 @@ pub async fn spawn_http_server(
     file_paths: FilePaths,
 ) {
     // Create the AppData ONCE, outside the closure
-    let app_data = Data::new(Mutex::new(AppData {
+    let app_data = Data::new(RwLock::new(AppData {
         broadcast_tx: broadcast_tx.clone(),
         usb_tx: usb_tx.clone(),
         file_paths: file_paths.clone(),
@@ -287,11 +286,11 @@ pub async fn spawn_http_server(
 
 #[get("/api/websocket")]
 async fn websocket(
-    usb_mutex: Data<Mutex<AppData>>,
+    app_data: Data<RwLock<AppData>>,
     req: HttpRequest,
     stream: web::Payload,
 ) -> Result<HttpResponse, actix_web::Error> {
-    let data = usb_mutex.lock().await;
+    let data = app_data.read().await;
 
     ws::start(
         Websocket {
@@ -308,20 +307,19 @@ async fn websocket(
 #[post("/api/command")]
 async fn execute_command(
     request: web::Json<DaemonRequest>,
-    app_data: Data<Mutex<AppData>>,
+    app_data: Data<RwLock<AppData>>,
 ) -> HttpResponse {
-    let mut guard = app_data.lock().await;
-    let sender = guard.deref_mut();
+    let mut data = app_data.write().await;
 
     // Errors propagate weirdly in the javascript world, so send all as OK, and handle there.
-    match handle_packet(request.0, &mut sender.usb_tx).await {
+    match handle_packet(request.0, &mut data.usb_tx).await {
         Ok(result) => HttpResponse::Ok().json(result),
         Err(error) => HttpResponse::Ok().json(DaemonResponse::Error(error.to_string())),
     }
 }
 
 #[get("/api/get-devices")]
-async fn get_devices(app_data: Data<Mutex<AppData>>) -> HttpResponse {
+async fn get_devices(app_data: Data<RwLock<AppData>>) -> HttpResponse {
     if let Ok(response) = get_status(app_data).await {
         return HttpResponse::Ok().json(&response);
     }
@@ -329,7 +327,7 @@ async fn get_devices(app_data: Data<Mutex<AppData>>) -> HttpResponse {
 }
 
 #[get("/api/path")]
-async fn get_path(app_data: Data<Mutex<AppData>>, req: HttpRequest) -> HttpResponse {
+async fn get_path(app_data: Data<RwLock<AppData>>, req: HttpRequest) -> HttpResponse {
     let params = web::Query::<HashMap<String, String>>::from_query(req.query_string());
     if let Ok(params) = params {
         if let Some(path) = params.get("path") {
@@ -359,7 +357,7 @@ async fn get_path(app_data: Data<Mutex<AppData>>, req: HttpRequest) -> HttpRespo
 #[get("/files/scribble/{serial}/{fader}.png")]
 async fn get_scribble(
     path: web::Path<(String, FaderName)>,
-    app_data: Data<Mutex<AppData>>,
+    app_data: Data<RwLock<AppData>>,
 ) -> HttpResponse {
     let serial = &path.0;
     let fader = path.1;
@@ -368,8 +366,7 @@ async fn get_scribble(
     let final_height = 64;
 
     // Now we need to grab the DaemonResponse to get the layout of the scribble
-    let mut guard = app_data.lock().await;
-    let data = guard.deref_mut();
+    let mut data = app_data.write().await;
     let request = DaemonRequest::GetStatus;
 
     // Pull out the scribble configuration from the Daemon Status
@@ -436,18 +433,16 @@ async fn get_scribble(
 }
 
 #[get("/files/samples/{sample}")]
-async fn get_sample(sample: web::Path<String>, app_data: Data<Mutex<AppData>>) -> HttpResponse {
-    debug!("Err?");
-
+async fn get_sample(sample: web::Path<String>, app_data: Data<RwLock<AppData>>) -> HttpResponse {
     // Get the Base Samples Path..
-    let mut guard = app_data.lock().await;
-    let sender = guard.deref_mut();
-    let sample_path = sender.file_paths.samples.clone();
-    drop(guard);
+    let sample_path = {
+        let data = app_data.read().await;
+        data.file_paths.samples.clone()
+    };
 
     let sample = sample.into_inner();
-
     let path = PathBuf::from(sample);
+
     if path.components().any(|part| part == Component::ParentDir) {
         // The path provided attempts to leave the samples dir, reject it.
         return HttpResponse::Forbidden().finish();
@@ -470,7 +465,7 @@ async fn get_sample(sample: web::Path<String>, app_data: Data<Mutex<AppData>>) -
 async fn upload_firmware(
     path: web::Path<String>,
     mut payload: Multipart,
-    app_data: Data<Mutex<AppData>>,
+    app_data: Data<RwLock<AppData>>,
 ) -> HttpResponse {
     let serial = path.into_inner();
     let file_path = env::temp_dir().join(format!("{serial}.bin"));
@@ -507,11 +502,10 @@ async fn upload_firmware(
     }
 
     // When we get here, the file has been uploaded successfully...
-    let mut guard = app_data.lock().await;
-    let sender = guard.deref_mut();
+    let data = app_data.read().await;
     let (tx, rx) = oneshot::channel();
 
-    let _ = sender
+    let _ = data
         .usb_tx
         .send(DeviceCommand::RunFirmwareUpdate(
             serial,
@@ -545,14 +539,11 @@ async fn default(req: HttpRequest) -> HttpResponse {
     }
 }
 
-async fn get_status(app_data: Data<Mutex<AppData>>) -> Result<DaemonStatus> {
-    // Unwrap the Mutex Guard..
-    let mut guard = app_data.lock().await;
-    let sender = guard.deref_mut();
-
+async fn get_status(app_data: Data<RwLock<AppData>>) -> Result<DaemonStatus> {
+    let mut data = app_data.write().await;
     let request = DaemonRequest::GetStatus;
 
-    let result = handle_packet(request, &mut sender.usb_tx).await?;
+    let result = handle_packet(request, &mut data.usb_tx).await?;
     match result {
         DaemonResponse::Status(status) => Ok(status),
         _ => Err(anyhow!("Unexpected Daemon Status Result: {:?}", result)),
