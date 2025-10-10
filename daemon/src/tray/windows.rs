@@ -98,10 +98,10 @@ fn run_loop(msg_window: HWND, state: DaemonState) {
     // Turns out, WaitForSingleObject doesn't work for window HWNDs..
     unsafe {
         // Send a message to the window to be be processed 20ms after we hit here..
-        SetTimer(msg_window, 120, 20, None);
+        SetTimer(Some(msg_window), 120, 20, None);
         loop {
             let mut msg = mem::MaybeUninit::uninit();
-            if GetMessageW(msg.as_mut_ptr(), msg_window, 0, 0) != FALSE {
+            if GetMessageW(msg.as_mut_ptr(), Some(msg_window), 0, 0) != FALSE {
                 let msg = msg.assume_init();
 
                 let _ = TranslateMessage(&msg);
@@ -116,7 +116,7 @@ fn run_loop(msg_window: HWND, state: DaemonState) {
             }
 
             // This will trigger a return of GetMessageW in theory..
-            SetTimer(msg_window, 120, 20, None);
+            SetTimer(Some(msg_window), 120, 20, None);
         }
     }
     debug!("Primary Loop Ended");
@@ -157,7 +157,7 @@ fn create_hwnd(proc: Rc<Box<dyn WindowProc>>) -> Result<HWND> {
             CW_USEDEFAULT,
             None,
             None,
-            window_class.hInstance,
+            Some(window_class.hInstance),
             Some(window_pointer),
         )
     }?;
@@ -188,7 +188,7 @@ fn load_icon() -> Result<HICON> {
 
     let icon = unsafe {
         CreateIcon(
-            HINSTANCE(ptr::null_mut()),
+            None,
             width as i32,
             height as i32,
             1,
@@ -357,7 +357,7 @@ impl WindowProc for GoXLRWindowProc {
                                 TPM_BOTTOMALIGN | TPM_LEFTALIGN,
                                 point.x,
                                 point.y,
-                                0,
+                                Some(0), // TODO: Should this be 'None'?
                                 hwnd,
                                 None,
                             ) == FALSE
