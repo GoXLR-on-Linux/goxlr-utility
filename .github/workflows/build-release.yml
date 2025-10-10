@@ -10,11 +10,12 @@ jobs:
     strategy:
       matrix:
         include:
-          - targets: aarch64-pc-windows-msvc
-            runner: windows-11-arm
           - targets: x86_64-pc-windows-msvc
             runner: windows-latest
-
+            artifact: windows-artifact
+          - targets: aarch64-pc-windows-msvc
+            runner: windows-11-arm
+            artifact: windows-artifact-arm
     runs-on: ${{ matrix.runner }}
     needs: [ get_version ]
     steps:
@@ -93,18 +94,12 @@ jobs:
         with:
           additional-plugin-paths: ${{ github.workspace }}/NSIS_Plugins
           script-file: goxlr-utility/ci/nsis/goxlr-utility.nsi
-          arguments: "/DPRODUCT_VERSION=${{ needs.get_version.outputs.version }}-${{ env.SUFFIX }}"
+          arguments: "/DPRODUCT_VERSION=${{ needs.get_version.outputs.version }}${{ env.SUFFIX }}"
 
       - name: "Upload amd64 Installer"
         uses: actions/upload-artifact@v4
         with:
-          name: windows-artifact
-          path: ./goxlr-utility/ci/Output/*.exe
-
-      - name: "Upload aarch64 Installer"
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-artifact-arm
+          name: ${{ martrix.artifact }}
           path: ./goxlr-utility/ci/Output/*.exe
 
   build_linux:
