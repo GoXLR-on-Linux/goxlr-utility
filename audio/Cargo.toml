@@ -6,26 +6,22 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-# Symphonia for Audio Decoding..
+# Common Workspace
+log = { workspace = true }
+anyhow = { workspace = true }
+fancy-regex = { workspace = true }  # Used for Finding Devices
+
+# Symphonia for Audio Decoding.
 symphonia = { version = "0.5.4", features = ["wav", "mp3", "ogg", "flac"] }
 
-# Hound for WAV Encoding..
+# Hound for WAV Encoding.
 hound = "3.5.1"
 
 # Audio Normalisation
 ebur128 = "0.1.9"
 
-# Exceptions
-anyhow = "1.0.86"
-
-# Logging..
-log = "0.4.22"
-
 # Ring Buffer is now needed on all platforms.
 rb = "0.4.1"
-
-# Regular Expressions to help with device finding..
-fancy-regex = "0.14.0"
 
 # Under Linux, we'll use PulseAudio to output to the GoXLR..
 # We can't find the specific audio channels using CPAL, so will ask Pulse instead.

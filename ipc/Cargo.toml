@@ -12,21 +12,18 @@ categories = ["hardware-support", "api-bindings"]
 
 [dependencies]
 goxlr-types = { path = "../types", features = ["serde"] }
-serde = { version = "1.0.204", features = ["derive"] }
-tokio = { version = "1.39.1", features = ["net"] }
+
+# Common Workspace
+anyhow = { workspace = true }
+serde = { workspace = true }
+json-patch = { workspace = true }
+futures = { workspace = true }
+enum-map = { workspace = true }
+interprocess = { workspace = true }
+
 tokio-util = { version = "0.7.11", features = ["codec", "compat"] }
 tokio-serde = { version = "0.9.0", features = ["bincode", "json"] }
-interprocess = { version = "2.2.1", features = ["tokio"] }
-serde_repr = "0.1.19"
-futures = "0.3.30"
-strum = { version = "0.26.3" }
-enumset = { version = "1.1.5", features = ["serde"] }
-enum-map = { version = "2.7.3", features = ["serde"] }
-anyhow = "1.0.75"
 async-trait = "0.1.74"
 
 # Used for Web Requests
 reqwest = { version = "0.12.5", default-features = false, features = ["json"] }
-
-# Used to handle 'Patch' events..
-json-patch = "2.0.0"

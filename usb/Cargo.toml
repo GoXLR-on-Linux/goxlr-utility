@@ -10,29 +10,31 @@ categories = ["hardware-support", "api-bindings"]
 
 [dependencies]
 goxlr-types = { path = "../types" }
-thiserror = "1.0.63"
-byteorder = "1.5.0"
-log = "0.4.22"
-enumset = "1.1.5"
-strum = "0.26.3"
-enum-map = "2.7.3"
-anyhow = "1.0.86"
-cfg-if = "1.0.0"
 
-# New, some fun async stuff..
-tokio = { version = "1.39.1", features = ["sync", "rt", "time"] }
+# Common Workspace
+log = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+strum = { workspace = true }
+tokio = { workspace = true }
+enumset = { workspace = true }
+enum-map = { workspace = true }
+byteorder = { workspace = true }
+cfg-if = { workspace = true }
+
 
 # Mac an Linux need libusb
 [target.'cfg(not(windows))'.dependencies]
-rusb = "0.9.4"
+rusb = { workspace = true }
 
-# Dependencies specifically for building under Windows..
+# Dependencies specifically for building under Windows
 [target.'cfg(windows)'.dependencies]
-winreg = "0.52.0"
+lazy_static = { workspace = true }
+winreg = { workspace = true }
+
 libloading = "0.8.5"
 widestring = "1.1.0"
-lazy_static = "1.5.0"
-windows = { version = "0.58.0", features = [
+windows = { workspace = true, features = [
     "Win32_Foundation",
     "Win32_Security",
     "Win32_System_Threading",

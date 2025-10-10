@@ -774,27 +774,12 @@ dependencies = [
 
 [[package]]
 name = "bit-set"
-version = "0.5.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0700ddab506f33b20a03b13996eccd309a48e5ff77d0d95926aa0210fb4e95f1"
-dependencies = [
- "bit-vec 0.6.3",
-]
-
-[[package]]
-name = "bit-set"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08807e080ed7f9d5433fa9b275196cfc35414f66a0c79d864dc51a0d825231a3"
 dependencies = [
- "bit-vec 0.8.0",
+ "bit-vec",
 ]
-
-[[package]]
-name = "bit-vec"
-version = "0.6.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "349f9b6a179ed607305526ca489b34ad0a41aed5f7980fa90eb03160b69598fb"
 
 [[package]]
 name = "bit-vec"
@@ -1639,7 +1624,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d07a4b049558765cef5f0c1a273c3fc57084d768b44d2f98127aef4cceb17293"
 dependencies = [
  "enumset_derive",
- "serde",
 ]
 
 [[package]]
@@ -1728,22 +1712,11 @@ checksum = "af9673d8203fcb076b19dfd17e38b3d4ae9f44959416ea532ce72415a6020365"
 
 [[package]]
 name = "fancy-regex"
-version = "0.13.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "531e46835a22af56d1e3b66f04844bed63158bc094a628bec1d321d9b4c44bf2"
-dependencies = [
- "bit-set 0.5.3",
- "regex-automata",
- "regex-syntax",
-]
-
-[[package]]
-name = "fancy-regex"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e24cb5a94bcae1e5408b0effca5cd7172ea3c5755049c5f3af4cd283a165298"
 dependencies = [
- "bit-set 0.8.0",
+ "bit-set",
  "regex-automata",
  "regex-syntax",
 ]
@@ -2017,7 +1990,7 @@ dependencies = [
  "anyhow",
  "cpal",
  "ebur128",
- "fancy-regex 0.14.0",
+ "fancy-regex",
  "hound",
  "libpulse-binding",
  "libpulse-simple-binding",
@@ -2038,10 +2011,8 @@ dependencies = [
  "goxlr-types",
  "interprocess",
  "serde_json",
- "simplelog",
  "strum",
  "tokio",
- "tokio-serde",
 ]
 
 [[package]]
@@ -2066,9 +2037,8 @@ dependencies = [
  "dunce",
  "enum-map",
  "enumset",
- "fancy-regex 0.13.0",
+ "fancy-regex",
  "file-rotate",
- "futures",
  "futures-util",
  "glob",
  "goxlr-audio",
@@ -2106,7 +2076,6 @@ dependencies = [
  "sys-locale",
  "tasklist",
  "tokio",
- "tokio-serde",
  "tts",
  "which 6.0.1",
  "windows 0.58.0",
@@ -2145,16 +2114,12 @@ dependencies = [
  "anyhow",
  "async-trait",
  "enum-map",
- "enumset",
  "futures",
  "goxlr-types",
  "interprocess",
  "json-patch",
  "reqwest",
  "serde",
- "serde_repr",
- "strum",
- "tokio",
  "tokio-serde",
  "tokio-util",
 ]
@@ -2165,7 +2130,6 @@ version = "1.2.2"
 dependencies = [
  "anyhow",
  "goxlr-ipc",
- "goxlr-types",
  "interprocess",
  "nix",
  "sysinfo",
@@ -2180,7 +2144,6 @@ name = "goxlr-profile-loader"
 version = "1.2.2"
 dependencies = [
  "anyhow",
- "byteorder",
  "enum-map",
  "enum-map-derive",
  "fastrand",
@@ -2188,7 +2151,6 @@ dependencies = [
  "quick-xml",
  "ritelinked",
  "strum",
- "tempfile",
  "thiserror 1.0.63",
  "zip",
 ]
@@ -2211,7 +2173,6 @@ dependencies = [
  "clap 4.5.11",
  "derivative",
  "enum-map",
- "enumset",
  "serde",
  "serde_repr",
  "strum",
@@ -2978,9 +2939,9 @@ checksum = "9374ef4228402d4b7e403e5838cb880d9ee663314b0a900d5a6aabf0c213552e"
 
 [[package]]
 name = "log"
-version = "0.4.22"
+version = "0.4.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7a70ba024b9dc04c27ea2f0c0548feb474ec5c54bba33a7f72f873a39d07b24"
+checksum = "34080505efa8e45a4b816c349525ebe327ceaa8559756f0356cba97ef3bf7432"
 
 [[package]]
 name = "log-panics"

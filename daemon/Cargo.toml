@@ -19,41 +19,52 @@ goxlr-audio = { path = "../audio" }
 goxlr-profile-loader = { path = "../profile" }
 goxlr-scribbles = { path = "../scribbles" }
 
-log = "0.4.22"
+# Common Workspace
+log = { workspace = true }
+anyhow = { workspace = true }
+strum = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+json-patch = { workspace = true }
+tokio = { workspace = true }
+enumset = { workspace = true }
+enum-map = { workspace = true }
+interprocess = { workspace = true }
+byteorder = { workspace = true }
+clap = { workspace = true }
+include_dir = { workspace = true }
+cfg-if = { workspace = true }
+lazy_static = { workspace = true }
+fancy-regex = { workspace = true }
+which = { workspace = true }
+
+# Log File Handline
 simplelog = "0.12.2"
 file-rotate = "0.7.6"
 log-panics = { version = "2.1.0", features = ["with-backtrace"] }
 
-tokio = { version = "1.39.1", features = ["full"] }
-tokio-serde = "0.9.0"
-
-anyhow = "1.0.86"
-strum = { version = "0.26.3" }
-enumset = "1.1.5"
-serde = { version = "1.0.204", features = ["derive"] }
-serde_json = { version = "1.0.120" }
+# Project Directories
 directories = "5.0.1"
-byteorder = "1.5.0"
-enum-map = "2.7.3"
+
+# Linked Hashsets
 ritelinked = "0.3.2"
-clap = { version = "4.5.11", features = ["derive"] }
+
+# Opens a Browser or App
 opener = "0.7.1"
-fancy-regex = "0.13.0"
+
+# Sampler Date Stamps
 chrono = { version = "0.4.38", default-features = false, features = ["clock"] }
+
+# File Matching
 glob = "0.3.1"
-cfg-if = "1.0.0"
-lazy_static = "1.5.0"
-jsonpath-rust = "0.7.0"
 
+# Text to Speech
 tts = { version = "0.26.3", features = ["tolk"], optional = true }
-interprocess = { version = "2.2.1", features = ["tokio"] }
 
+# File Change Notification
 notify = "6.1.1"
-json-patch = "2.0.0"
 
-which = "6.0.1"
-
-# Language Determination..
+# Language Guessing
 sys-locale = "0.3.1"
 
 ## HTTPd Server
@@ -63,39 +74,37 @@ actix-web-actors = "4.3.0"
 # All we really need from actix-web are macros and compression, TLS and cookies aren't required
 actix-web = { version = "4.8.0", default-features = false, features = ["macros", "compress-brotli", "compress-gzip"] }
 actix-cors = "0.7.0"
-mime_guess = "2.0.5"
-include_dir = "0.7.4"
 actix-multipart = "0.7.2"
+
+mime_guess = "2.0.5"
+jsonpath-rust = "0.7.0"
 
 # Used for Firmware Update Checks
 reqwest = { version = "0.12.5", features = ["stream"] }
 xmltree = "0.10.3"
-futures = "0.3.30"
 futures-util = "0.3.30"
 
 [target.'cfg(target_family = "unix")'.dependencies]
-nix = { version = "0.29.0", features = ["user"] }
+nix = { workspace = true, features = ["user"] }
 
 # Under Linux, we use ksni for our tray icon..
 [target.'cfg(target_os = "linux")'.dependencies]
 ksni = "0.3.1"
 rust-ini = "0.21.0"
-#rand = "0.8.5"
 shell-words = "1.1.0"
 zbus = "4.4.0"
 
 # Under Windows and MacOS, we use tao's tray feature
 [target.'cfg(target_os = "windows")'.dependencies]
-image = "0.25.2"
+image = { workspace = true }
 tasklist = { git = "https://github.com/yalishandar/tasklist-rs.git" }
 winrt-toast-reborn = "0.3.8"
-winreg = "0.52.0"
 mslnk = "0.1.8"
 dunce = "1.0.4"
 windows-args = "0.2.0"
 
-# Experimental Package..
-windows = { version = "0.58.0", features = [
+winreg = { workspace = true }
+windows = { workspace = true, features = [
     "Win32_Foundation",
     "Win32_UI_Shell",
     "Win32_UI_Shell_Common",
@@ -107,7 +116,7 @@ windows = { version = "0.58.0", features = [
 ] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-image = "0.25.2"
+image = { workspace = true }
 shell-words = "1.1.0"
 
 # Used for Tray Handling
@@ -127,7 +136,7 @@ clap_complete = "4.5.11"
 directories = "5.0.1"
 
 [target.'cfg(target_os = "windows")'.build-dependencies]
-windres = "0.2.2"
+windres = { workspace = true }
 
 [package.metadata.deb]
 name = "goxlr-utility"

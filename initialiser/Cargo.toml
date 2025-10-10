@@ -9,12 +9,14 @@ license = "MIT"
 categories = ["hardware-support", "command-line-utilities"]
 
 [dependencies]
-cfg-if = "1.0.0"
-tokio = { version = "1.39.1", features = ["rt", "rt-multi-thread", "macros", "sync"] }
+# Common Workspace
+tokio = { workspace = true }
+cfg-if = { workspace = true }
+
 
 [target.'cfg(not(windows))'.dependencies]
-anyhow = "1.0.86"
-rusb = "0.9.4"
+anyhow = { workspace = true }
+rusb = { workspace = true }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 block = "0.1.6"

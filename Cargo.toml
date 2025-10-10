@@ -14,3 +14,62 @@ members = [
     "scribbles",
     "defaults",
 ]
+
+[workspace.dependencies]
+log = "0.4.28"
+
+### Error Handling
+anyhow = "1.0.86"
+thiserror = "1.0.50"
+
+### Serialing / Deserialising
+strum = { version = "0.26.3", features = ["derive"] }
+serde = { version = "1.0.204", features = ["derive"] }
+
+### JSON Handling
+serde_json = { version = "1.0.120" }
+json-patch = "2.0.0"
+
+### Async Handling
+tokio = { version = "1.39.1", features = ["full"] }
+futures = "0.3.30"
+
+### Enums
+enumset = "1.1.5"
+enum-map = { version = "2.7.3", features = ["serde"] }
+
+### Messaging
+interprocess = { version = "2.2.1", features = ["tokio"] }
+byteorder = "1.5.0"
+
+### CLI Parameter Handling
+clap = { version = "4.5.11", features = ["derive"] }
+
+### Directory Inclusion
+include_dir = "0.7.4"
+
+### Image Manipulation
+image = "0.25.6"
+
+### CFG handler
+cfg-if = "1.0.0"
+
+### USB Handler
+rusb = "0.9.4"
+
+### Lazy Statics
+lazy_static = "1.5.0"
+
+### Regular Expressions
+fancy-regex = "0.14.0"
+
+### Which? - LINUX / MAC SPECIFIC?
+which = "6.0.1"
+
+### Windows Specific
+windows = "0.58.0"
+winreg = "0.52.0"
+windres = "0.2.2"
+
+### Linux Specific
+nix = "0.29.0"

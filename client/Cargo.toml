@@ -24,16 +24,18 @@ path = "src/bin/quiet.rs"
 [dependencies]
 goxlr-ipc = { path = "../ipc" }
 goxlr-types = { path = "../types", features = ["clap"] }
-tokio = { version = "1.39.1", features = ["full"] }
-simplelog = "0.12.2"
-anyhow = "1.0.86"
-clap = { version = "4.5.11", features = ["derive"] }
-strum = { version = "0.26.3" }
-serde_json = { version = "1.0.120" }
-tokio-serde = { version = "0.9.0", features = ["json"] }
-interprocess = { version = "2.2.1", features = ["tokio"] }
+
+# Common Workspace
+anyhow = { workspace = true }
+strum = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+interprocess = { workspace = true }
+clap = { workspace = true }
 
 [build-dependencies]
-clap = { version = "4.5.11", features = ["derive"] }
-clap_complete = "4.5.4"
 goxlr-types = { path = "../types", features = ["clap"] }
+
+clap = { workspace = true }
+clap_complete = "4.5.4"
+
