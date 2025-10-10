@@ -26,4 +26,4 @@ tokio-serde = { version = "0.9.0", features = ["bincode", "json"] }
 async-trait = "0.1.89"
 
 # Used for Web Requests
-reqwest = { version = "0.12.23", default-features = false, features = ["json"] }
+reqwest = { workspace = true, features = ["json"] }

@@ -3,8 +3,6 @@ name = "goxlr-launcher"
 version = "1.2.2"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 goxlr-ipc = { path = "../ipc" }
 

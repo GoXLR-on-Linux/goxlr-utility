@@ -66,6 +66,9 @@ fancy-regex = "0.16.2"
 ### Locate a binary on $PATH
 which = "8.0.0"
 
+### Web Requests
+reqwest = { version = "0.12.23", default-features = false }
+
 ### Windows Specific
 windows = "0.62.2"
 winreg = "0.55.0"
