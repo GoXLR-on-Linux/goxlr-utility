@@ -14,7 +14,7 @@ strum = { workspace = true }
 enum-map = { workspace = true }
 
 enum-map-derive = "0.17.0"
-zip = { version = "2.1.5", default-features = false, features = ["deflate"] }
+zip = { version = "6.0.0", default-features = false, features = ["deflate"] }
 ritelinked = "0.3.2"
-quick-xml = "0.36.1"
-fastrand = "2.1.1"
+quick-xml = "0.38.3"
+fastrand = "2.3.0"
