@@ -40,7 +40,7 @@ which = { workspace = true }
 
 # Log File Handline
 simplelog = "0.12.2"
-file-rotate = "0.7.6"
+file-rotate = "0.8.0"
 log-panics = { version = "2.1.0", features = ["with-backtrace"] }
 
 # Project Directories

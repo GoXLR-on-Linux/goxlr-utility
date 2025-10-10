@@ -168,7 +168,6 @@ async fn run_utility() -> Result<()> {
         AppendCount::new(5),
         ContentLimit::Bytes(1024 * 1024 * 2),
         Compression::OnRotate(1),
-        #[cfg(unix)]
         None,
     );
 
