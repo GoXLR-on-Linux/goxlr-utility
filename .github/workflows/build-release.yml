@@ -13,9 +13,11 @@ jobs:
           - targets: x86_64-pc-windows-msvc
             runner: windows-latest
             artifact: windows-artifact
+            visual_c: https://aka.ms/vs/17/release/vc_redist.x64.exe
           - targets: aarch64-pc-windows-msvc
             runner: windows-11-arm
             artifact: windows-artifact-arm
+            visual_c: https://aka.ms/vs/17/release/vc_redist.arm64.exe
     runs-on: ${{ matrix.runner }}
     needs: [ get_version ]
     steps:
@@ -85,8 +87,8 @@ jobs:
       - name: "Downloading VC Runtime"
         uses: suisei-cn/actions-download-file@v1.6.0
         with:
-          url: https://aka.ms/vs/17/release/vc_redist.x64.exe
-          filename: vc_redist.x64.exe
+          url: ${{ matrix.visual_c }}
+          filename: vc_redist.exe
           target: goxlr-utility/ci/nsis/
 
       - name: "Build NSIS Packages"

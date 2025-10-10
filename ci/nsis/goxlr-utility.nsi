@@ -327,15 +327,15 @@ Function InstallVCRuntime
     DetailPrint "Installing VC Runtime.."
     SetOutPath "$TEMP"
 
-	Delete "$TEMP\vc_redist.x64.exe"
-	File "vc_redist.x64.exe"
+	Delete "$TEMP\vc_redist.exe"
+	File "vc_redist.exe"
 
-	ExecWait "$TEMP\vc_redist.x64.exe /silent /install /norestart" $1
+	ExecWait "$TEMP\vc_redist.exe /silent /install /norestart" $1
 	${IfNot} $1 == 0
 		DetailPrint "Failed to install VC Runtime, continuing without."
 	${EndIf}
 
-	Delete "$TEMP\vc_redist.x64.exe"
+	Delete "$TEMP\vc_redist.exe"
 	ClearErrors
 FunctionEnd
 

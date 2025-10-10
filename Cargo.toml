@@ -63,7 +63,7 @@ lazy_static = "1.5.0"
 ### Regular Expressions
 fancy-regex = "0.14.0"
 
-### Which? - LINUX / MAC SPECIFIC?
+### Locate a binary on $PATH
 which = "6.0.1"
 
 ### Windows Specific
