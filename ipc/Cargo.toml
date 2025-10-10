@@ -21,9 +21,9 @@ futures = { workspace = true }
 enum-map = { workspace = true }
 interprocess = { workspace = true }
 
-tokio-util = { version = "0.7.11", features = ["codec", "compat"] }
+tokio-util = { version = "0.7.16", features = ["codec", "compat"] }
 tokio-serde = { version = "0.9.0", features = ["bincode", "json"] }
-async-trait = "0.1.74"
+async-trait = "0.1.89"
 
 # Used for Web Requests
-reqwest = { version = "0.12.5", default-features = false, features = ["json"] }
+reqwest = { version = "0.12.23", default-features = false, features = ["json"] }
