@@ -7,9 +7,23 @@ jobs:
 
   build_windows:
     name: "Create Windows Build"
+    strategy:
+      matrix:
+        targets: [ aarch64-pc-windows-msvc, x86_64-pc-windows-msvc ]
+
     runs-on: windows-latest
     needs: [ get_version ]
     steps:
+      - name: Set architecture suffix
+        id: arch_suffix
+        shell: pwsh
+        run: |
+          if ("${{ matrix.targets }}" -eq "aarch64-pc-windows-msvc") {
+            echo "SUFFIX=-arm64" >> $env:GITHUB_ENV
+          } else {
+            echo "SUFFIX=" >> $env:GITHUB_ENV
+          }
+
       # Firstly Checkout our Repository..
       - name: "Check out GoXLR Utility"
         uses: actions/checkout@v4
@@ -36,15 +50,18 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             goxlr-utility/target
-          key: ${{ runner.os }}-cargo-release-${{ hashFiles('goxlr-utility/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-release-
+          key: ${{ runner.os }}-${{ matrix.targets }}-cargo-release-${{ hashFiles('goxlr-utility/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-${{ matrix.targets }}-cargo-release-
+
+      - name: "Add rust target support"
+        run: rustup target add ${{ matrix.targets }}
 
       - name: "Build Utility"
-        run: "cargo build --manifest-path=goxlr-utility/Cargo.toml --release --all-features"
+        run: "cargo build --target=${{ matrix.targets }} --manifest-path=goxlr-utility/Cargo.toml --release --all-features"
 
       # Build the UI into the same target directory..
       - name: "Build UI"
-        run: "cargo build --manifest-path=goxlr-utility-ui/src-tauri/Cargo.toml --target-dir=goxlr-utility/target --release"
+        run: "cargo build --target=${{ matrix.targets }} --manifest-path=goxlr-utility-ui/src-tauri/Cargo.toml --target-dir=goxlr-utility/target --release"
 
       # Prepare NSIS
       - name: "Preparing NSIS"
@@ -75,12 +92,18 @@ jobs:
         with:
           additional-plugin-paths: ${{ github.workspace }}/NSIS_Plugins
           script-file: goxlr-utility/ci/nsis/goxlr-utility.nsi
-          arguments: "/DPRODUCT_VERSION=${{ needs.get_version.outputs.version }}"
+          arguments: "/DPRODUCT_VERSION=${{ needs.get_version.outputs.version }}-${{ env.SUFFIX }}"
 
-      - name: "Upload Installer"
+      - name: "Upload amd64 Installer"
         uses: actions/upload-artifact@v4
         with:
           name: windows-artifact
+          path: ./goxlr-utility/ci/Output/*.exe
+
+      - name: "Upload aarch64 Installer"
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-artifact-arm
           path: ./goxlr-utility/ci/Output/*.exe
 
   build_linux:
