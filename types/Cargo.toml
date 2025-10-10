@@ -21,5 +21,5 @@ enum-map = { workspace = true }
 clap = { workspace = true, optional = true }
 
 
-serde_repr = "0.1.19"
+serde_repr = "0.1.20"
 derivative = "2.2.0"
