@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use anyhow::{bail, Result};
+use std::ffi::OsStr;
 use std::path::PathBuf;
 
 use goxlr_ipc::client::Client;
@@ -72,16 +73,16 @@ fn launch_daemon() -> Result<()> {
     bail!("Unable to Locate GoXLR Daemon Binary");
 }
 
-#[cfg(unix)]
 fn is_daemon_running() -> bool {
-    use sysinfo::{ProcessRefreshKind, RefreshKind, System, UpdateKind};
-    let refresh = ProcessRefreshKind::new();
-    let update = UpdateKind::Always;
-    let refresh_kind = RefreshKind::new().with_processes(refresh.with_user(update));
+    use sysinfo::{ProcessRefreshKind, RefreshKind, System};
+
+    let process_refresh_kind = ProcessRefreshKind::everything().without_tasks();
+    let refresh_kind = RefreshKind::nothing().with_processes(process_refresh_kind);
     let system = System::new_with_specifics(refresh_kind);
 
     let binding = get_daemon_binary_name();
-    let processes = system.processes_by_exact_name(&binding);
+    let processes = system.processes_by_exact_name(OsStr::new(&binding));
+
     processes.count() > 0
 }
 
@@ -125,27 +126,6 @@ async fn open_ui() -> Result<()> {
         return Ok(());
     }
     bail!("Unable to make a connection with the Daemon");
-}
-
-#[cfg(windows)]
-fn is_daemon_running() -> bool {
-    let binary = get_daemon_binary_name();
-    println!("Locating Daemon.. {binary}");
-
-    let count = unsafe {
-        let tasks = tasklist::Tasklist::new();
-
-        tasks
-            .filter(|task| {
-                let task_name = task.get_pname();
-                let name = task_name.split('\0').collect::<Vec<_>>()[0];
-                name == binary
-            })
-            .count()
-    };
-
-    println!("Found: {count}");
-    count > 0
 }
 
 fn locate_daemon_binary() -> Option<PathBuf> {
