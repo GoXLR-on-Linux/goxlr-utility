@@ -9,9 +9,13 @@ jobs:
     name: "Create Windows Build"
     strategy:
       matrix:
-        targets: [ aarch64-pc-windows-msvc, x86_64-pc-windows-msvc ]
+        include:
+          - targets: aarch64-pc-windows-msvc
+            runner: windows-11-arm
+          - targets: x86_64-pc-windows-msvc
+            runner: windows-latest
 
-    runs-on: windows-latest
+    runs-on: ${{ matrix.runner }}
     needs: [ get_version ]
     steps:
       - name: Set architecture suffix
@@ -53,15 +57,12 @@ jobs:
           key: ${{ runner.os }}-${{ matrix.targets }}-cargo-release-${{ hashFiles('goxlr-utility/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-${{ matrix.targets }}-cargo-release-
 
-      - name: "Add rust target support"
-        run: rustup target add ${{ matrix.targets }}
-
       - name: "Build Utility"
-        run: "cargo build --target=${{ matrix.targets }} --manifest-path=goxlr-utility/Cargo.toml --release --all-features"
+        run: "cargo build --manifest-path=goxlr-utility/Cargo.toml --release --all-features"
 
       # Build the UI into the same target directory..
       - name: "Build UI"
-        run: "cargo build --target=${{ matrix.targets }} --manifest-path=goxlr-utility-ui/src-tauri/Cargo.toml --target-dir=goxlr-utility/target --release"
+        run: "cargo build --manifest-path=goxlr-utility-ui/src-tauri/Cargo.toml --target-dir=goxlr-utility/target --release"
 
       # Prepare NSIS
       - name: "Preparing NSIS"
