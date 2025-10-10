@@ -15,7 +15,8 @@ use windows::core::{w, HSTRING};
 use windows::Win32::UI::WindowsAndMessaging::{MessageBoxW, MB_ICONERROR, MB_OK};
 use winreg::enums::{HKEY_CLASSES_ROOT, HKEY_CURRENT_USER};
 use winreg::RegKey;
-use winrt_notification::{Sound, Toast};
+use winrt_toast_reborn::content::audio::Sound;
+use winrt_toast_reborn::{Audio, Toast, ToastDuration, ToastManager};
 
 const GOXLR_APP_NAME: &str = "GoXLR App.exe";
 const GOXLR_BETA_APP_NAME: &str = "GoXLR Beta App.exe";
@@ -138,13 +139,15 @@ pub async fn spawn_platform_runtime(
 }
 
 fn throw_notification() {
-    Toast::new(Toast::POWERSHELL_APP_ID)
-        .title("GoXLR Utility Daemon Terminated")
-        .text1("Please stop the official app before using the utility")
-        .sound(Some(Sound::SMS))
-        .duration(winrt_notification::Duration::Short)
-        .show()
-        .expect("Unable to Launch Toast");
+    let manager = ToastManager::new(ToastManager::POWERSHELL_AUM_ID);
+
+    let mut toast = Toast::new();
+    toast.text1("GoXLR Utility Daemon Terminated");
+    toast.text2("Please stop the official app before using the Utility");
+    toast.audio(Audio::new(Sound::SMS));
+    toast.duration(ToastDuration::Short);
+
+    let _ = manager.show(&toast);
 }
 
 pub fn has_autostart() -> bool {
