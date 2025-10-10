@@ -77,7 +77,7 @@ actix-cors = "0.7.1"
 actix-multipart = "0.7.2"
 
 mime_guess = "2.0.5"
-jsonpath-rust = "0.7.0"
+jsonpath-rust = "1.0.4"
 
 # Used for Firmware Update Checks
 reqwest = { workspace = true, features = ["stream", "rustls-tls"] }

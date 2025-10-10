@@ -15,7 +15,7 @@ use anyhow::{anyhow, Result};
 use enum_map::EnumMap;
 use futures_util::StreamExt;
 use include_dir::{include_dir, Dir};
-use jsonpath_rust::JsonPathQuery;
+use jsonpath_rust::JsonPath;
 use log::{debug, error, info, warn};
 use mime_guess::mime::IMAGE_PNG;
 use mime_guess::MimeGuess;
@@ -333,7 +333,7 @@ async fn get_path(app_data: Data<RwLock<AppData>>, req: HttpRequest) -> HttpResp
         if let Some(path) = params.get("path") {
             if let Ok(status) = get_status(app_data).await {
                 if let Ok(value) = serde_json::to_value(status) {
-                    if let Ok(result) = value.path(path) {
+                    if let Ok(result) = value.query(path) {
                         return HttpResponse::Ok().json(result);
                     } else {
                         warn!("Invalid Path Provided..");
