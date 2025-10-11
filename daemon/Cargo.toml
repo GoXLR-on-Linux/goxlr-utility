@@ -68,11 +68,8 @@ notify = "8.2.0"
 sys-locale = "0.3.2"
 
 ## HTTPd Server
-actix = "0.13.5"
-actix-ws = "0.3.0"
-
-# All we really need from actix-web are macros and compression, TLS and cookies aren't required
 actix-web = { version = "4.11.0", default-features = false, features = ["macros", "compress-brotli", "compress-gzip"] }
+actix-ws = "0.3.0"
 actix-cors = "0.7.1"
 actix-multipart = "0.7.2"
 
