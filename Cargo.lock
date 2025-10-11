@@ -2063,7 +2063,7 @@ dependencies = [
  "simplelog",
  "strum",
  "sys-locale",
- "tasklist",
+ "sysinfo",
  "tokio",
  "tts",
  "which 8.0.0",
@@ -5025,15 +5025,6 @@ name = "target-lexicon"
 version = "0.12.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "61c41af27dd6d1e27b1b16b489db798443478cef1f06a660c96db617ba5de3b1"
-
-[[package]]
-name = "tasklist"
-version = "0.3.1"
-source = "git+https://github.com/yalishandar/tasklist-rs.git#0483a6edc1bf0d450e84f6d90127e6feabf7b666"
-dependencies = [
- "windows 0.61.3",
- "windows-core 0.61.2",
-]
 
 [[package]]
 name = "tempfile"

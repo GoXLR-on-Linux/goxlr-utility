@@ -357,7 +357,7 @@ impl WindowProc for GoXLRWindowProc {
                                 TPM_BOTTOMALIGN | TPM_LEFTALIGN,
                                 point.x,
                                 point.y,
-                                Some(0), // TODO: Should this be 'None'?
+                                None,
                                 hwnd,
                                 None,
                             ) == FALSE

@@ -70,6 +70,9 @@ which = "8.0.0"
 ### Web Requests
 reqwest = { version = "0.12.23", default-features = false }
 
+### System Info
+sysinfo = "0.37.2"
+
 ### Windows Specific
 windows = "0.62.2"
 winreg = "0.55.0"

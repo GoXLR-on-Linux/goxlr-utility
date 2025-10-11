@@ -11,7 +11,7 @@ anyhow = { workspace = true }
 tokio = { workspace = true }
 interprocess = { workspace = true }
 which = { workspace = true }
-sysinfo = "0.37.2"
+sysinfo = { workspace = true }
 
 [target.'cfg(target_family = "unix")'.dependencies]
 nix = { workspace = true, features = ["process"] }

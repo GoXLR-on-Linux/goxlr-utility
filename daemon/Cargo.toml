@@ -94,7 +94,7 @@ zbus = "5.11.0"
 # Under Windows and MacOS, we use tao's tray feature
 [target.'cfg(target_os = "windows")'.dependencies]
 image = { workspace = true }
-tasklist = { git = "https://github.com/yalishandar/tasklist-rs.git" }
+sysinfo = { workspace = true }
 winrt-toast-reborn = "0.3.8"
 mslnk = "0.1.8"
 dunce = "1.0.5"

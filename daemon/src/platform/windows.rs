@@ -4,9 +4,10 @@ use anyhow::{bail, Result};
 use lazy_static::lazy_static;
 use log::{debug, error};
 use mslnk::ShellLink;
+use std::ffi::OsStr;
 use std::path::PathBuf;
 use std::{env, fs};
-use tasklist::tasklist;
+use sysinfo::{ProcessRefreshKind, RefreshKind, System};
 use tokio::signal::windows::{ctrl_break, ctrl_close, ctrl_logoff, ctrl_shutdown};
 use tokio::sync::mpsc;
 use tokio::time::Duration;
@@ -54,33 +55,26 @@ pub fn display_error(message: String) {
 }
 
 fn get_official_app_count() -> usize {
-    unsafe {
-        let tasks = tasklist();
-        tasks
-            .keys()
-            .filter(|task| {
-                let task = task.to_owned().to_owned();
-                let task = String::from(task.split('\0').collect::<Vec<_>>()[0]);
-                task == *GOXLR_APP_NAME || task == *GOXLR_BETA_APP_NAME
-            })
-            .count()
-    }
+    let process_refresh_kind = ProcessRefreshKind::everything().without_tasks();
+    let refresh_kind = RefreshKind::nothing().with_processes(process_refresh_kind);
+    let system = System::new_with_specifics(refresh_kind);
+
+    let stable = OsStr::new(GOXLR_APP_NAME);
+    let beta = OsStr::new(GOXLR_BETA_APP_NAME);
+    let count = system.processes_by_exact_name(stable).count()
+        + system.processes_by_exact_name(beta).count();
+
+    count
 }
 
 fn get_utility_count() -> usize {
     if let Ok(exe) = env::current_exe() {
         if let Some(file_name) = exe.file_name() {
-            unsafe {
-                let tasks = tasklist();
-                return tasks
-                    .keys()
-                    .filter(|task| {
-                        let task = task.to_owned().to_owned();
-                        let task = String::from(task.split('\0').collect::<Vec<_>>()[0]);
-                        *task == *file_name
-                    })
-                    .count();
-            }
+            let process_refresh_kind = ProcessRefreshKind::everything().without_tasks();
+            let refresh_kind = RefreshKind::nothing().with_processes(process_refresh_kind);
+            let system = System::new_with_specifics(refresh_kind);
+
+            return system.processes_by_exact_name(file_name).count();
         }
     }
     0
