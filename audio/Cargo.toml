@@ -31,5 +31,5 @@ libpulse-simple-binding = "2.28.1"
 
 # Under Other Operating Systems, we'll use CPAL
 [target.'cfg(not(target_os = "linux"))'.dependencies]
-cpal = { git = "https://github.com/RustAudio/cpal", rev = "c5a163e1" }
+cpal = "0.16.0"
 rubato = "0.16.1"
