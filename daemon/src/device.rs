@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -16,6 +16,7 @@ use goxlr_ipc::{
     Display, FaderStatus, GoXLRCommand, HardwareStatus, Levels, MicSettings, MixerStatus,
     SampleProcessState, Settings,
 };
+use goxlr_profile_loader::components::echo::EchoStyle;
 use goxlr_profile_loader::components::mute::MuteFunction;
 use goxlr_types::{
     Button, ChannelName, DeviceType, DisplayModeComponents, EffectBankPresets, EffectKey,
@@ -60,6 +61,7 @@ pub struct Device<'a> {
     global_events: Sender<EventTriggers>,
 
     last_sample_error: Option<String>,
+    tap_tempo: VecDeque<Instant>,
 }
 
 #[derive(Debug, Default, Copy, Clone)]
@@ -226,6 +228,7 @@ impl<'a> Device<'a> {
             global_events,
 
             last_sample_error: None,
+            tap_tempo: VecDeque::with_capacity(4),
         };
 
         device.apply_profile(None).await?;
@@ -661,22 +664,52 @@ impl<'a> Device<'a> {
                 self.handle_swear_button(false).await?;
             }
             Buttons::EffectSelect1 => {
-                self.load_effect_bank(EffectBankPresets::Preset1).await?;
+                if self.profile.get_active_effect_bank() != EffectBankPresets::Preset1 {
+                    self.load_effect_bank(EffectBankPresets::Preset1).await?;
+                    self.tap_tempo.clear();
+                } else {
+                    self.handle_tempo_tap().await?;
+                }
             }
             Buttons::EffectSelect2 => {
-                self.load_effect_bank(EffectBankPresets::Preset2).await?;
+                if self.profile.get_active_effect_bank() != EffectBankPresets::Preset1 {
+                    self.load_effect_bank(EffectBankPresets::Preset2).await?;
+                    self.tap_tempo.clear();
+                } else {
+                    self.handle_tempo_tap().await?;
+                }
             }
             Buttons::EffectSelect3 => {
-                self.load_effect_bank(EffectBankPresets::Preset3).await?;
+                if self.profile.get_active_effect_bank() != EffectBankPresets::Preset1 {
+                    self.load_effect_bank(EffectBankPresets::Preset3).await?;
+                    self.tap_tempo.clear();
+                } else {
+                    self.handle_tempo_tap().await?;
+                }
             }
             Buttons::EffectSelect4 => {
-                self.load_effect_bank(EffectBankPresets::Preset4).await?;
+                if self.profile.get_active_effect_bank() != EffectBankPresets::Preset1 {
+                    self.load_effect_bank(EffectBankPresets::Preset4).await?;
+                    self.tap_tempo.clear();
+                } else {
+                    self.handle_tempo_tap().await?;
+                }
             }
             Buttons::EffectSelect5 => {
-                self.load_effect_bank(EffectBankPresets::Preset5).await?;
+                if self.profile.get_active_effect_bank() != EffectBankPresets::Preset1 {
+                    self.load_effect_bank(EffectBankPresets::Preset5).await?;
+                    self.tap_tempo.clear();
+                } else {
+                    self.handle_tempo_tap().await?;
+                }
             }
             Buttons::EffectSelect6 => {
-                self.load_effect_bank(EffectBankPresets::Preset6).await?;
+                if self.profile.get_active_effect_bank() != EffectBankPresets::Preset1 {
+                    self.load_effect_bank(EffectBankPresets::Preset6).await?;
+                    self.tap_tempo.clear();
+                } else {
+                    self.handle_tempo_tap().await?;
+                }
             }
 
             // The following 3 are simple, but will need more work once effects are
@@ -730,6 +763,56 @@ impl<'a> Device<'a> {
             }
         }
         self.update_button_states()?;
+        Ok(())
+    }
+
+    async fn handle_tempo_tap(&mut self) -> Result<()> {
+        // This is the max tap duration for the Echo BPM calculation. Technically the highest value
+        // is 1333ms (45bpm), but we give a small margin for error so we can catch the top end.
+        const MAX_TAP_INTERVAL: Duration = Duration::from_millis(1500);
+
+        // We can't apply a tempo to ClassicSlap, so do nothing
+        if self.profile.get_active_echo_profile_mut().style() == &EchoStyle::ClassicSlap {
+            return Ok(());
+        }
+
+        let now = Instant::now();
+        if let Some(latest) = self.tap_tempo.back() {
+            if now - *latest > MAX_TAP_INTERVAL {
+                self.tap_tempo.clear();
+            }
+        }
+
+        // Make sure we're not already full, if so, remove the oldest entry
+        if self.tap_tempo.len() == self.tap_tempo.capacity() {
+            self.tap_tempo.pop_front();
+        }
+
+        // Push this Instant to the end of the list
+        self.tap_tempo.push_back(now);
+
+        // We can only really do anything if there's more than one entry
+        if self.tap_tempo.len() <= 1 {
+            return Ok(());
+        }
+
+        let total: Duration = self
+            .tap_tempo
+            .iter()
+            .zip(self.tap_tempo.iter().skip(1))
+            .map(|(a, b)| b.duration_since(*a))
+            .sum();
+
+        let total_ms = total.as_millis() as f64;
+        let avg_ms = total_ms / (self.tap_tempo.len() - 1) as f64;
+        let bpm = (60_000.0 / avg_ms).clamp(45., 300.) as u16;
+
+        debug!("BPM Calculated at: {}", bpm);
+
+        // Send it off to the profile, and refresh
+        self.profile.get_active_echo_profile_mut().set_tempo(bpm)?;
+        self.apply_effects(LinkedHashSet::from_iter([EffectKey::EchoTempo]))?;
+
         Ok(())
     }
 
@@ -1583,7 +1666,7 @@ impl<'a> Device<'a> {
                 };
 
                 // Are we in this range?
-                if !((min)..=(max)).contains(&new_volume) {
+                if !(min..=max).contains(&new_volume) {
                     continue;
                 } else {
                     self.fader_pause_until[fader].paused = false;
