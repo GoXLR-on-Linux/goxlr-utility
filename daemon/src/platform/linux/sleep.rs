@@ -15,10 +15,10 @@ use std::collections::HashMap;
 use std::env;
 
 use anyhow::Result;
+use futures_util::StreamExt;
 use log::{debug, warn};
 use tokio::select;
 use tokio::sync::{mpsc, oneshot};
-use zbus::export::futures_util::StreamExt;
 use zbus::zvariant::{OwnedFd, OwnedObjectPath, OwnedValue};
 use zbus::{proxy, Connection};
 
@@ -174,7 +174,7 @@ pub async fn run(tx: mpsc::Sender<EventTriggers>, mut stop: Shutdown) -> Result<
 }
 
 // This is a simple method to handle whether the conditional properties haven't been set..
-async fn conditional(t: &mut Option<PropertiesChangedStream<'_>>) -> Option<PropertiesChanged> {
+async fn conditional(t: &mut Option<PropertiesChangedStream>) -> Option<PropertiesChanged> {
     match t {
         Some(ref mut change) => change.next().await,
         None => None,

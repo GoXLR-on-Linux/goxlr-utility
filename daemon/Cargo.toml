@@ -92,7 +92,7 @@ nix = { workspace = true, features = ["user"] }
 ksni = "0.3.1"
 rust-ini = "0.21.0"
 shell-words = "1.1.0"
-zbus = "4.4.0"
+zbus = "5.11.0"
 
 # Under Windows and MacOS, we use tao's tray feature
 [target.'cfg(target_os = "windows")'.dependencies]
