@@ -18,7 +18,7 @@ symphonia = { version = "0.5.4", features = ["wav", "mp3", "ogg", "flac"] }
 hound = "3.5.1"
 
 # Audio Normalisation
-ebur128 = "0.1.9"
+ebur128 = "0.1.10"
 
 # Ring Buffer is now needed on all platforms.
 rb = "0.4.1"
