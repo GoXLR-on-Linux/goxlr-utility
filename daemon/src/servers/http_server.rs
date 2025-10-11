@@ -1,7 +1,3 @@
-use actix::{
-    Actor, ActorContext, AsyncContext, ContextFutureSpawner, Handler, Message, StreamHandler,
-    WrapFuture,
-};
 use actix_cors::Cors;
 use actix_multipart::Multipart;
 use actix_web::dev::ServerHandle;
@@ -9,8 +5,7 @@ use actix_web::http::header::ContentType;
 use actix_web::middleware::Condition;
 use actix_web::web::Data;
 use actix_web::{get, post, web, App, HttpRequest, HttpResponse, HttpServer};
-use actix_web_actors::ws;
-use actix_web_actors::ws::{CloseCode, CloseReason};
+use actix_ws::{AggregatedMessage, CloseCode, CloseReason, Session};
 use anyhow::{anyhow, Result};
 use enum_map::EnumMap;
 use futures_util::StreamExt;
@@ -19,6 +14,7 @@ use jsonpath_rust::JsonPath;
 use log::{debug, error, info, warn};
 use mime_guess::mime::IMAGE_PNG;
 use mime_guess::MimeGuess;
+use serde::Serialize;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::fs::File;
@@ -42,163 +38,6 @@ use crate::primary_worker::{DeviceCommand, DeviceSender};
 use crate::servers::server_packet::handle_packet;
 
 const WEB_CONTENT: Dir = include_dir!("./daemon/web-content/");
-
-struct Websocket {
-    usb_tx: DeviceSender,
-    broadcast_tx: BroadcastSender<PatchEvent>,
-}
-
-impl Actor for Websocket {
-    type Context = ws::WebsocketContext<Self>;
-
-    fn started(&mut self, ctx: &mut Self::Context) {
-        let address = ctx.address();
-        let mut broadcast_rx = self.broadcast_tx.subscribe();
-
-        // Create a future that simply monitors the global broadcast bus, and pushes any changes
-        // out to the WebSocket.
-        let future = Box::pin(async move {
-            loop {
-                if let Ok(event) = broadcast_rx.recv().await {
-                    // We've received a message, attempt to trigger the WsMessage Handle..
-                    if let Err(error) = address.clone().try_send(WsResponse(WebsocketResponse {
-                        id: u64::MAX,
-                        data: DaemonResponse::Patch(event.data),
-                    })) {
-                        error!(
-                            "Error Occurred when sending message to websocket: {:?}",
-                            error
-                        );
-                        warn!("Aborting Websocket pushes for this client.");
-                        break;
-                    }
-                }
-            }
-        });
-
-        let future = future.into_actor(self);
-        ctx.spawn(future);
-    }
-}
-
-#[derive(Message)]
-#[rtype(result = "()")]
-struct WsResponse(WebsocketResponse);
-
-impl Handler<WsResponse> for Websocket {
-    type Result = ();
-
-    fn handle(&mut self, msg: WsResponse, ctx: &mut Self::Context) -> Self::Result {
-        if let Ok(result) = serde_json::to_string(&msg.0) {
-            ctx.text(result);
-        }
-    }
-}
-
-impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for Websocket {
-    fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
-        match msg {
-            Ok(ws::Message::Ping(msg)) => ctx.pong(&msg),
-            Ok(ws::Message::Text(text)) => {
-                match serde_json::from_slice::<WebsocketRequest>(text.as_ref()) {
-                    Ok(request) => {
-                        let recipient = ctx.address().recipient();
-                        let mut usb_tx = self.usb_tx.clone();
-                        let future = async move {
-                            let request_id = request.id;
-                            let result = handle_packet(request.data, &mut usb_tx).await;
-                            match result {
-                                Ok(resp) => match resp {
-                                    DaemonResponse::Ok => {
-                                        recipient.do_send(WsResponse(WebsocketResponse {
-                                            id: request_id,
-                                            data: DaemonResponse::Ok,
-                                        }));
-                                    }
-                                    DaemonResponse::Error(error) => {
-                                        recipient.do_send(WsResponse(WebsocketResponse {
-                                            id: request_id,
-                                            data: DaemonResponse::Error(error),
-                                        }));
-                                    }
-                                    DaemonResponse::Status(status) => {
-                                        recipient.do_send(WsResponse(WebsocketResponse {
-                                            id: request_id,
-                                            data: DaemonResponse::Status(status),
-                                        }));
-                                    }
-                                    DaemonResponse::MicLevel(level) => {
-                                        recipient.do_send(WsResponse(WebsocketResponse {
-                                            id: request_id,
-                                            data: DaemonResponse::MicLevel(level),
-                                        }))
-                                    }
-                                    _ => {}
-                                },
-                                Err(error) => {
-                                    recipient.do_send(WsResponse(WebsocketResponse {
-                                        id: request_id,
-                                        data: DaemonResponse::Error(error.to_string()),
-                                    }));
-                                }
-                            }
-                        };
-                        future.into_actor(self).spawn(ctx);
-                    }
-                    Err(error) => {
-                        // Ok, we weren't able to deserialise the request into a proper object, we
-                        // now need to confirm whether it was at least valid JSON with a request id
-                        warn!("Error Deserialising Request to Object: {}", error);
-                        warn!("Original Request: {}", text);
-
-                        debug!("Attempting Low Level request Id Extraction..");
-                        let request: serde_json::Result<Value> =
-                            serde_json::from_str(text.as_ref());
-                        match request {
-                            Ok(value) => {
-                                if let Some(request_id) = value["id"].as_u64() {
-                                    let recipient = ctx.address().recipient();
-                                    recipient.do_send(WsResponse(WebsocketResponse {
-                                        id: request_id,
-                                        data: DaemonResponse::Error(error.to_string()),
-                                    }));
-                                } else {
-                                    warn!("id missing, Cannot continue. Closing connection");
-                                    let error = CloseReason {
-                                        code: CloseCode::Invalid,
-                                        description: Some(String::from(
-                                            "Missing or invalid Request ID",
-                                        )),
-                                    };
-                                    ctx.close(Some(error));
-                                    ctx.stop();
-                                }
-                            }
-                            Err(error) => {
-                                warn!("JSON structure is invalid, closing connection.");
-                                let error = CloseReason {
-                                    code: CloseCode::Invalid,
-                                    description: Some(error.to_string()),
-                                };
-                                ctx.close(Some(error));
-                                ctx.stop();
-                            }
-                        }
-                    }
-                }
-            }
-            Ok(ws::Message::Binary(_bin)) => {
-                ctx.close(Some(CloseCode::Unsupported.into()));
-                ctx.stop();
-            }
-            Ok(ws::Message::Close(reason)) => {
-                ctx.close(reason);
-                ctx.stop();
-            }
-            _ => (),
-        }
-    }
-}
 
 struct AppData {
     usb_tx: DeviceSender,
@@ -241,12 +80,12 @@ pub async fn spawn_http_server(
         App::new()
             .wrap(Condition::new(settings.cors_enabled, cors))
             .app_data(app_data.clone())
+            .service(websocket)
             .service(execute_command)
             .service(get_devices)
             .service(get_sample)
             .service(get_scribble)
             .service(get_path)
-            .service(websocket)
             .service(upload_firmware)
             .default_service(web::to(default))
     })
@@ -271,7 +110,7 @@ pub async fn spawn_http_server(
         settings.port,
     );
 
-    // Let upstream know we're running..
+    // Let upstream know we're running...
     let _ = handle_tx.send(Ok(Some(server.handle())));
 
     // Wait for the server to exit with its reason
@@ -284,22 +123,186 @@ pub async fn spawn_http_server(
     info!("HTTP Server Stopped.");
 }
 
+#[derive(Serialize)]
+struct WsResponse(WebsocketResponse);
+
 #[get("/api/websocket")]
 async fn websocket(
     app_data: Data<RwLock<AppData>>,
     req: HttpRequest,
-    stream: web::Payload,
+    body: web::Payload,
 ) -> Result<HttpResponse, actix_web::Error> {
-    let data = app_data.read().await;
+    let (response, mut session, msg_stream) = actix_ws::handle(&req, body)?;
 
-    ws::start(
-        Websocket {
-            usb_tx: data.usb_tx.clone(),
-            broadcast_tx: data.broadcast_tx.clone(),
-        },
-        &req,
-        stream,
-    )
+    let data = app_data.read().await;
+    let mut usb_tx = data.usb_tx.clone();
+    let mut broadcast_rx = data.broadcast_tx.subscribe();
+
+    // Spawn the handler (this is now where we do stuff)
+    actix_web::rt::spawn(async move {
+        let mut msg_stream = msg_stream.aggregate_continuations();
+
+        let close_reason = loop {
+            tokio::select! {
+                Ok(patch) = broadcast_rx.recv() => {
+                    let message = WsResponse(WebsocketResponse {
+                        id: u64::MAX,
+                        data: DaemonResponse::Patch(patch.data),
+                    });
+                    if let Err(e) = send_response(message, &mut session).await {
+                        break e;
+                    }
+                }
+                Some(Ok(msg)) = msg_stream.next() => {
+                    match msg {
+                        AggregatedMessage::Ping(msg) => {
+                            if let Err(e) = session.pong(&msg).await {
+                                error!("Failed to send Pong: {}", e);
+                                break Some(CloseReason {
+                                    code: CloseCode::Error,
+                                    description: Some(format!("Failed to Send Pong: {}", e)),
+                                });
+                            };
+                        }
+                        AggregatedMessage::Text(msg) => {
+                            match serde_json::from_slice::<WebsocketRequest>(msg.as_ref()) {
+                                Ok(request) => {
+                                    let request_id = request.id;
+                                    let result = handle_packet(request.data, &mut usb_tx).await;
+                                    let response = match result {
+                                        Ok(resp) => {
+                                            match resp {
+                                                DaemonResponse::Ok => {
+                                                    WsResponse(WebsocketResponse {
+                                                        id: request_id,
+                                                        data: DaemonResponse::Ok,
+                                                    })
+                                                }
+                                                DaemonResponse::Error(error) => {
+                                                    WsResponse(WebsocketResponse {
+                                                        id: request_id,
+                                                        data: DaemonResponse::Error(error),
+                                                    })
+                                                }
+                                                DaemonResponse::Status(status) => {
+                                                    WsResponse(WebsocketResponse {
+                                                        id: request_id,
+                                                        data: DaemonResponse::Status(status),
+                                                    })
+                                                }
+                                                DaemonResponse::MicLevel(level) => {
+                                                    WsResponse(WebsocketResponse {
+                                                        id: request_id,
+                                                        data: DaemonResponse::MicLevel(level),
+                                                    })
+                                                }
+                                                _ => {
+                                                    // This should never fucking happen
+                                                    break Some(CloseReason {
+                                                        code: CloseCode::Abnormal,
+                                                        description: Some("Unexpected Message Type".to_string()),
+                                                    });
+                                                }
+                                            }
+                                        },
+                                        Err(error) => {
+                                            WsResponse(WebsocketResponse {
+                                                id: request_id,
+                                                data: DaemonResponse::Error(error.to_string()),
+                                            })
+                                        }
+                                    };
+                                    if let Err(e) = send_response(response, &mut session).await {
+                                        break e;
+                                    }
+                                }
+                                Err(error) => {
+                                    // Ok, we weren't able to deserialise the request into a proper object, we
+                                    // now need to confirm whether it was at least valid JSON with a request id
+                                    warn!("Error Deserialising Request to Object: {}", error);
+                                    warn!("Original Request: {}", msg);
+
+                                    debug!("Attempting Low Level request Id Extraction..");
+                                    let request: serde_json::Result<Value> = serde_json::from_str(msg.as_ref());
+                                    match request {
+                                        Ok(value) => {
+                                            if let Some(request_id) = value["id"].as_u64() {
+                                                let response = WsResponse(WebsocketResponse {
+                                                    id: request_id,
+                                                    data: DaemonResponse::Error(error.to_string()),
+                                                });
+                                                if let Err(e) = send_response(response, &mut session).await {
+                                                    break e;
+                                                }
+                                            } else {
+                                                warn!("id missing, Cannot continue. Closing connection");
+                                                let error = CloseReason {
+                                                    code: CloseCode::Invalid,
+                                                    description: Some(String::from(
+                                                        "Missing or invalid Request ID",
+                                                    )),
+                                                };
+                                                break Some(error);
+                                            }
+                                        }
+                                        Err(error) => {
+                                            warn!("JSON structure is invalid, closing connection.");
+                                            let error = CloseReason {
+                                                code: CloseCode::Invalid,
+                                                description: Some(error.to_string()),
+                                            };
+                                            break Some(error);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        AggregatedMessage::Binary(_) => {
+                            error!("Received Binary Message, aborting!");
+                            break Some(CloseReason {
+                                code: CloseCode::Unsupported,
+                                description: Some("Binary is not Supported".to_string()),
+                            });
+                        }
+                        AggregatedMessage::Pong(_) => {}
+                        AggregatedMessage::Close(reason) => {
+                            break reason;
+                        }
+                    }
+                }
+                else => {
+                    break None;
+                }
+            }
+        };
+
+        let _ = session.close(close_reason).await;
+    });
+
+    Ok(response)
+}
+
+/// Serialises and sends a WsResponse to a Session
+async fn send_response(res: WsResponse, session: &mut Session) -> Result<(), Option<CloseReason>> {
+    match serde_json::to_string(&res) {
+        Ok(text) => {
+            if let Err(e) = session.text(text).await {
+                error!("Failed to send response: {}", e);
+                return Err(Some(CloseReason {
+                    code: CloseCode::Error,
+                    description: Some(e.to_string()),
+                }));
+            }
+        }
+        Err(e) => {
+            error!("Failed to serialize response: {}", e);
+            return Err(Some(CloseReason {
+                code: CloseCode::Error,
+                description: Some(format!("Serialization Error: {}", e)),
+            }));
+        }
+    }
+    Ok(())
 }
 
 // So, fun note, according to the actix manual, web::Json uses serde_json to deserialise, good

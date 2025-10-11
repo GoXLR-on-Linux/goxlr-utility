@@ -69,7 +69,7 @@ sys-locale = "0.3.2"
 
 ## HTTPd Server
 actix = "0.13.5"
-actix-web-actors = "4.3.0"  # Crate has been deprecated... FUCK.
+actix-ws = "0.3.0"
 
 # All we really need from actix-web are macros and compression, TLS and cookies aren't required
 actix-web = { version = "4.11.0", default-features = false, features = ["macros", "compress-brotli", "compress-gzip"] }
