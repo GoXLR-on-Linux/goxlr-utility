@@ -772,7 +772,7 @@ impl<'a> Device<'a> {
         const MAX_TAP_INTERVAL: Duration = Duration::from_millis(1500);
 
         // We can't apply a tempo to ClassicSlap, so do nothing
-        if self.profile.get_active_echo_profile_mut().style() == &EchoStyle::ClassicSlap {
+        if !self.profile.has_echo_tempo() {
             return Ok(());
         }
 
@@ -1565,7 +1565,7 @@ impl<'a> Device<'a> {
         self.set_pitch_mode()?;
         self.load_encoder_effects()?;
 
-        self.apply_effects(self.mic_profile.get_fx_keys(self.profile.use_echo_tempo()))?;
+        self.apply_effects(self.mic_profile.get_fx_keys(self.profile.has_echo_tempo()))?;
 
         Ok(())
     }
@@ -2302,7 +2302,7 @@ impl<'a> Device<'a> {
                 self.profile.set_echo_style(value)?;
                 self.apply_effects(
                     self.mic_profile
-                        .get_echo_keyset(self.profile.use_echo_tempo()),
+                        .get_echo_keyset(self.profile.has_echo_tempo()),
                 )?;
             }
             GoXLRCommand::SetEchoAmount(value) => {
@@ -3859,7 +3859,7 @@ impl<'a> Device<'a> {
         }
 
         // Grab all keys that aren't common between devices
-        let fx_keys = self.mic_profile.get_fx_keys(self.profile.use_echo_tempo());
+        let fx_keys = self.mic_profile.get_fx_keys(self.profile.has_echo_tempo());
 
         // Setup to send these keys..
         let mut send_keys = LinkedHashSet::new();

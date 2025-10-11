@@ -1491,7 +1491,7 @@ impl ProfileAdapter {
             .get_preset_mut(current)
     }
 
-    pub fn use_echo_tempo(&self) -> bool {
+    pub fn has_echo_tempo(&self) -> bool {
         self.get_active_echo_profile().style() != &EchoStyle::ClassicSlap
     }
 
