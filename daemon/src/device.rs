@@ -16,7 +16,6 @@ use goxlr_ipc::{
     Display, FaderStatus, GoXLRCommand, HardwareStatus, Levels, MicSettings, MixerStatus,
     SampleProcessState, Settings,
 };
-use goxlr_profile_loader::components::echo::EchoStyle;
 use goxlr_profile_loader::components::mute::MuteFunction;
 use goxlr_types::{
     Button, ChannelName, DeviceType, DisplayModeComponents, EffectBankPresets, EffectKey,
@@ -796,16 +795,12 @@ impl<'a> Device<'a> {
             return Ok(());
         }
 
-        let total: Duration = self
-            .tap_tempo
-            .iter()
-            .zip(self.tap_tempo.iter().skip(1))
-            .map(|(a, b)| b.duration_since(*a))
-            .sum();
+        // We know these both exist, so the unwrap is safe
+        let first = self.tap_tempo.front().unwrap();
+        let last = self.tap_tempo.back().unwrap();
 
-        let total_ms = total.as_millis() as f64;
-        let avg_ms = total_ms / (self.tap_tempo.len() - 1) as f64;
-        let bpm = (60_000.0 / avg_ms).clamp(45., 300.) as u16;
+        let avg_ms = (*last - *first) / ((self.tap_tempo.len() - 1) as u32);
+        let bpm = (60_000.0 / avg_ms.as_millis() as f64).clamp(45., 300.) as u16;
 
         debug!("BPM Calculated at: {}", bpm);
 
