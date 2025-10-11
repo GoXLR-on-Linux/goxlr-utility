@@ -122,7 +122,7 @@ shell-words = "1.1.0"
 # Used for Tray Handling
 objc2-app-kit = "0.3.0"
 objc2-foundation = "0.3.0"
-dispatch2 = "0.2.0"
+dispatch2 = "0.3.0"
 objc2 = "0.6.0"
 
 # Used for Aggregate Device Management
