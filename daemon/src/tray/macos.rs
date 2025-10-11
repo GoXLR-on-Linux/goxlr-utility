@@ -154,10 +154,8 @@ impl App {
         unsafe { NSAutoreleasePool::new() };
 
         // Configure the Application..
-        unsafe {
-            let current = NSRunningApplication::currentApplication();
-            current.activateWithOptions(NSApplicationActivationOptions::ActivateIgnoringOtherApps);
-        };
+        let current = NSRunningApplication::currentApplication();
+        current.activateWithOptions(NSApplicationActivationOptions::ActivateIgnoringOtherApps);
 
         let app = NSApplication::sharedApplication(mtm);
         app.setActivationPolicy(NSApplicationActivationPolicy::Accessory);
@@ -175,23 +173,21 @@ impl App {
 
         let status = if p.show_tray.load(Ordering::Relaxed) {
             debug!("Spawning Tray..");
-            unsafe {
-                let status = NSStatusBar::systemStatusBar().statusItemWithLength(-1.);
+            let status = NSStatusBar::systemStatusBar().statusItemWithLength(-1.);
 
-                let button = status.button(mtm);
-                let data = NSData::with_bytes(ICON_MAC);
-                if let Some(icon) = NSImage::initWithData(NSImage::alloc(), &data) {
-                    icon.setSize(NSSize::new(18., 18.));
-                    icon.setTemplate(false);
+            let button = status.button(mtm);
+            let data = NSData::with_bytes(ICON_MAC);
+            if let Some(icon) = NSImage::initWithData(NSImage::alloc(), &data) {
+                icon.setSize(NSSize::new(18., 18.));
+                icon.setTemplate(false);
 
-                    if let Some(button) = button {
-                        button.setImage(Some(&*icon));
-                        button.setImagePosition(NSCellImagePosition::ImageLeft)
-                    }
+                if let Some(button) = button {
+                    button.setImage(Some(&*icon));
+                    button.setImagePosition(NSCellImagePosition::ImageLeft)
                 }
-
-                Some(status)
             }
+
+            Some(status)
         } else {
             None
         };
@@ -216,7 +212,7 @@ impl App {
             let logs = App::get_label(mtm, "Logs", OpenPathLogs);
 
             debug!("Generating Sub Menu...");
-            let sub_menu = unsafe {
+            let sub_menu = {
                 let menu_item = NSMenuItem::new(mtm);
                 let menu = NSMenu::new(mtm);
 
@@ -236,7 +232,7 @@ impl App {
                 menu_item
             };
 
-            // Create the Tray Labels..
+            // Create the Tray Labels
             debug!("Generating Main Menu..");
             menu.addItem(&configure);
             menu.addItem(&App::get_separator(mtm));
@@ -249,67 +245,60 @@ impl App {
             }
         }
 
-        unsafe {
-            // Before we run, register with the observer to see if shutdown is going to happen..
-            let workspace = NSWorkspace::sharedWorkspace();
-            let notification_center = workspace.notificationCenter();
+        // Before we run, register with the observer to see if shutdown is going to happen..
+        let workspace = NSWorkspace::sharedWorkspace();
+        let notification_center = workspace.notificationCenter();
 
-            // Get the Distributed Notification Center (for Lock / Unlock Notifications)
-            let dnc = NSDistributedNotificationCenter::defaultCenter();
+        // Get the Distributed Notification Center (for Lock / Unlock Notifications)
+        let dnc = NSDistributedNotificationCenter::defaultCenter();
 
-            debug!("Registering Event..");
-            let event = "NSWorkspaceWillPowerOffNotification";
-            let event = NSNotificationName::from_str(event);
+        debug!("Registering Event..");
+        let event = "NSWorkspaceWillPowerOffNotification";
+        let event = NSNotificationName::from_str(event);
 
-            debug!("Registering Class..");
-            notification_center.addObserver_selector_name_object(
-                &delegate,
-                sel!(computerWillShutDownNotification:),
-                Some(&event),
-                None,
-            );
+        debug!("Registering Class..");
+        notification_center.addObserver_selector_name_object(
+            &delegate,
+            sel!(computerWillShutDownNotification:),
+            Some(&event),
+            None,
+        );
 
-            // We probably shouldn't share pointers to the senders, but seeing as MacOS locks
-            // the entire NS runtime into a single thread, we should be safe here.
-            let event = "NSWorkspaceWillSleepNotification";
-            let event = NSNotificationName::from_str(event);
-            notification_center.addObserver_selector_name_object(
-                &delegate,
-                sel!(computerWillSleepNotification:),
-                Some(&event),
-                None,
-            );
+        // We probably shouldn't share pointers to the senders, but seeing as MacOS locks
+        // the entire NS runtime into a single thread, we should be safe here.
+        let event = "NSWorkspaceWillSleepNotification";
+        let event = NSNotificationName::from_str(event);
+        notification_center.addObserver_selector_name_object(
+            &delegate,
+            sel!(computerWillSleepNotification:),
+            Some(&event),
+            None,
+        );
 
-            let event = "NSWorkspaceDidWakeNotification";
-            let event = NSNotificationName::from_str(event);
-            notification_center.addObserver_selector_name_object(
-                &delegate,
-                sel!(computerWillWakeNotification:),
-                Some(&event),
-                None,
-            );
+        let event = "NSWorkspaceDidWakeNotification";
+        let event = NSNotificationName::from_str(event);
+        notification_center.addObserver_selector_name_object(
+            &delegate,
+            sel!(computerWillWakeNotification:),
+            Some(&event),
+            None,
+        );
 
-            let event = "com.apple.screenIsLocked";
-            let event = NSNotificationName::from_str(event);
-            dnc.addObserver_selector_name_object(
-                &delegate,
-                sel!(screenIsLocked:),
-                Some(&event),
-                None,
-            );
+        let event = "com.apple.screenIsLocked";
+        let event = NSNotificationName::from_str(event);
+        dnc.addObserver_selector_name_object(&delegate, sel!(screenIsLocked:), Some(&event), None);
 
-            let event = "com.apple.screenIsUnlocked";
-            let event = NSNotificationName::from_str(event);
-            dnc.addObserver_selector_name_object(
-                &delegate,
-                sel!(screenIsUnlocked:),
-                Some(&event),
-                None,
-            );
+        let event = "com.apple.screenIsUnlocked";
+        let event = NSNotificationName::from_str(event);
+        dnc.addObserver_selector_name_object(
+            &delegate,
+            sel!(screenIsUnlocked:),
+            Some(&event),
+            None,
+        );
 
-            debug!("Running..");
-            app.run();
-        }
+        debug!("Running..");
+        app.run();
     }
 
     fn get_label(mtm: MainThreadMarker, label: &str, option: TrayOption) -> Retained<NSMenuItem> {

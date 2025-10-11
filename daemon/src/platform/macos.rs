@@ -6,7 +6,7 @@ use crate::ICON_MAC;
 use anyhow::{bail, Result};
 use objc2::__framework_prelude::Retained;
 use objc2::{AllocAnyThread, MainThreadMarker};
-use objc2_app_kit::{NSAlert, NSCriticalAlertStyle, NSImage, NSWindowLevel};
+use objc2_app_kit::{NSAlert, NSAlertStyleCritical, NSImage, NSWindowLevel};
 use objc2_foundation::{NSData, NSString};
 use std::path::Path;
 use std::{env, fs};
@@ -22,13 +22,13 @@ pub fn display_error(message: String) {
         alert.setIcon(get_icon().as_deref());
         alert.setMessageText(&NSString::from_str("GoXLR Utility"));
         alert.setInformativeText(&NSString::from_str(&message));
-        alert.setAlertStyle(NSCriticalAlertStyle);
+        alert.setAlertStyle(NSAlertStyleCritical);
 
-        // Get the Window..
+        // Get the Window
         let window = alert.window();
         window.setLevel(NSWindowLevel::from(10u8));
 
-        // Send the Alert..
+        // Send the Alert
         alert.runModal();
     }
 }
