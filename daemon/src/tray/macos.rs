@@ -240,9 +240,7 @@ impl App {
             menu.addItem(&App::get_separator(mtm));
             menu.addItem(&quit);
 
-            unsafe {
-                status.setMenu(Some(&*menu));
-            }
+            status.setMenu(Some(&*menu));
         }
 
         // Before we run, register with the observer to see if shutdown is going to happen..
@@ -257,45 +255,62 @@ impl App {
         let event = NSNotificationName::from_str(event);
 
         debug!("Registering Class..");
-        notification_center.addObserver_selector_name_object(
-            &delegate,
-            sel!(computerWillShutDownNotification:),
-            Some(&event),
-            None,
-        );
+        unsafe {
+            notification_center.addObserver_selector_name_object(
+                &delegate,
+                sel!(computerWillShutDownNotification:),
+                Some(&event),
+                None,
+            );
+        }
 
         // We probably shouldn't share pointers to the senders, but seeing as MacOS locks
         // the entire NS runtime into a single thread, we should be safe here.
         let event = "NSWorkspaceWillSleepNotification";
         let event = NSNotificationName::from_str(event);
-        notification_center.addObserver_selector_name_object(
-            &delegate,
-            sel!(computerWillSleepNotification:),
-            Some(&event),
-            None,
-        );
+
+        unsafe {
+            notification_center.addObserver_selector_name_object(
+                &delegate,
+                sel!(computerWillSleepNotification:),
+                Some(&event),
+                None,
+            );
+        }
 
         let event = "NSWorkspaceDidWakeNotification";
         let event = NSNotificationName::from_str(event);
-        notification_center.addObserver_selector_name_object(
-            &delegate,
-            sel!(computerWillWakeNotification:),
-            Some(&event),
-            None,
-        );
+        unsafe {
+            notification_center.addObserver_selector_name_object(
+                &delegate,
+                sel!(computerWillWakeNotification:),
+                Some(&event),
+                None,
+            );
+        }
 
         let event = "com.apple.screenIsLocked";
         let event = NSNotificationName::from_str(event);
-        dnc.addObserver_selector_name_object(&delegate, sel!(screenIsLocked:), Some(&event), None);
+
+        unsafe {
+            dnc.addObserver_selector_name_object(
+                &delegate,
+                sel!(screenIsLocked:),
+                Some(&event),
+                None,
+            );
+        }
 
         let event = "com.apple.screenIsUnlocked";
         let event = NSNotificationName::from_str(event);
-        dnc.addObserver_selector_name_object(
-            &delegate,
-            sel!(screenIsUnlocked:),
-            Some(&event),
-            None,
-        );
+        unsafe {
+            dnc.addObserver_selector_name_object(
+                &delegate,
+                sel!(screenIsUnlocked:),
+                Some(&event),
+                None,
+            );
+        }
 
         debug!("Running..");
         app.run();
