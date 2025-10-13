@@ -136,7 +136,7 @@ impl FileManager {
 
     pub fn get_samples(&mut self) -> BTreeMap<String, String> {
         let base_path = self.paths.samples.clone();
-        let extensions = ["wav", "mp3"].to_vec();
+        let extensions = ["wav", "mp3", "ogg", "flac"].to_vec();
 
         self.get_recursive_file_list(base_path, extensions)
     }
