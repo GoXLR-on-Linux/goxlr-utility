@@ -4004,12 +4004,10 @@ impl<'a> Device<'a> {
                             BasicOutputDevice::Sampler | BasicOutputDevice::StreamMix2 => broadcast,
                             _ => self.profile.get_submix_channel(device),
                         }
+                    } else if device == BasicOutputDevice::StreamMix2 {
+                        broadcast
                     } else {
-                        if device == BasicOutputDevice::StreamMix2 {
-                            broadcast
-                        } else {
-                            self.profile.get_submix_channel(device)
-                        }
+                        self.profile.get_submix_channel(device)
                     }
                 } else {
                     self.profile.get_submix_channel(device)
