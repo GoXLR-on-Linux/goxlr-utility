@@ -50,7 +50,7 @@ directories = "6.0.0"
 ritelinked = "0.3.2"
 
 # Opens a Browser or App
-opener = "0.8.3"
+open = "5.3.2"
 
 # Sampler Date Stamps
 chrono = { version = "0.4.42", default-features = false, features = ["clock"] }

@@ -101,7 +101,7 @@ pub async fn spawn_event_handler(
                     }
 
                     EventTriggers::Open(path_type) => {
-                        if let Err(error) = opener::open(match path_type {
+                        if let Err(error) = open::that(match path_type {
                             PathTypes::Profiles => state.settings_handle.get_profile_directory().await,
                             PathTypes::MicProfiles => state.settings_handle.get_mic_profile_directory().await,
                             PathTypes::Presets => state.settings_handle.get_presets_directory().await,
@@ -114,7 +114,7 @@ pub async fn spawn_event_handler(
                         };
                     },
                     EventTriggers::OpenUi => {
-                        if let Err(error) = opener::open(get_util_url(&state)) {
+                        if let Err(error) = open::that(get_util_url(&state)) {
                             warn!("Error Opening URL: {:?}", error);
                         }
                     },
@@ -177,17 +177,17 @@ pub async fn spawn_event_handler(
 
                                         if let Err(error) = result {
                                             warn!("Error Executing command: {:?}, falling back", error);
-                                            if let Err(error) = opener::open(url) {
+                                            if let Err(error) = open::that(url) {
                                                 warn!("Error Opening URL: {:?}", error);
                                             }
                                         }
 
-                                    } else if let Err(error) = opener::open(url) {
+                                    } else if let Err(error) = open::that(url) {
                                         warn!("Error Opening URL: {:?}", error);
                                     }
                                 },
                                 None => {
-                                    if let Err(error) = opener::open(url) {
+                                    if let Err(error) = open::that(url) {
                                         warn!("Error Opening URL: {:?}", error);
                                     }
                                 }
