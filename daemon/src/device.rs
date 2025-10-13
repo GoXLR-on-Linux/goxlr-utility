@@ -671,7 +671,7 @@ impl<'a> Device<'a> {
                 }
             }
             Buttons::EffectSelect2 => {
-                if self.profile.get_active_effect_bank() != EffectBankPresets::Preset1 {
+                if self.profile.get_active_effect_bank() != EffectBankPresets::Preset2 {
                     self.load_effect_bank(EffectBankPresets::Preset2).await?;
                     self.tap_tempo.clear();
                 } else {
@@ -679,7 +679,7 @@ impl<'a> Device<'a> {
                 }
             }
             Buttons::EffectSelect3 => {
-                if self.profile.get_active_effect_bank() != EffectBankPresets::Preset1 {
+                if self.profile.get_active_effect_bank() != EffectBankPresets::Preset3 {
                     self.load_effect_bank(EffectBankPresets::Preset3).await?;
                     self.tap_tempo.clear();
                 } else {
@@ -687,7 +687,7 @@ impl<'a> Device<'a> {
                 }
             }
             Buttons::EffectSelect4 => {
-                if self.profile.get_active_effect_bank() != EffectBankPresets::Preset1 {
+                if self.profile.get_active_effect_bank() != EffectBankPresets::Preset4 {
                     self.load_effect_bank(EffectBankPresets::Preset4).await?;
                     self.tap_tempo.clear();
                 } else {
@@ -695,7 +695,7 @@ impl<'a> Device<'a> {
                 }
             }
             Buttons::EffectSelect5 => {
-                if self.profile.get_active_effect_bank() != EffectBankPresets::Preset1 {
+                if self.profile.get_active_effect_bank() != EffectBankPresets::Preset5 {
                     self.load_effect_bank(EffectBankPresets::Preset5).await?;
                     self.tap_tempo.clear();
                 } else {
@@ -703,7 +703,7 @@ impl<'a> Device<'a> {
                 }
             }
             Buttons::EffectSelect6 => {
-                if self.profile.get_active_effect_bank() != EffectBankPresets::Preset1 {
+                if self.profile.get_active_effect_bank() != EffectBankPresets::Preset6 {
                     self.load_effect_bank(EffectBankPresets::Preset6).await?;
                     self.tap_tempo.clear();
                 } else {
