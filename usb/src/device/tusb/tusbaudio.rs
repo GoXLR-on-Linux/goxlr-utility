@@ -165,8 +165,10 @@ impl TUSBAudio<'_> {
 
         let api_version = unsafe { (tusb_audio.get_api_version)() };
 
-        // API Version Checking (7.5 and 11.5 are valid)
-        if (api_version.major == 11 || api_version.major == 7) && api_version.minor == 5 {
+        // API Version Checking (7.5, 11.5, 12.5 are valid)
+        if (api_version.major == 12 || api_version.major == 11 || api_version.major == 7)
+            && api_version.minor == 5
+        {
             info!(
                 "Using GoXLR API Version {}.{}",
                 api_version.major, api_version.minor
@@ -176,8 +178,8 @@ impl TUSBAudio<'_> {
                 "API VERSION DETECTED: {}.{}",
                 api_version.major, api_version.minor
             );
-            warn!("API VERSION MISMATCH: This code was made with Versions 7.5 / 11.5 of the API");
-            warn!("Please install version 5.12.0 or 5.57.0 of the GoXLR Drivers");
+            warn!("API VERSION MISMATCH: This code was made with Versions 7.5 / 11.5 / 12.5 of the API");
+            warn!("Please install version 5.12, 5.57 or 5.68 of the GoXLR Drivers");
             warn!("We'll try to keep going, but you may experience instability");
         }
 
