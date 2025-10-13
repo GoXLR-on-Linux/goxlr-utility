@@ -146,14 +146,14 @@ pub async fn spawn_event_handler(
 
                                         if let Err(error) = result {
                                             warn!("Error Executing command: {:?}, falling back", error);
-                                            if let Err(error) = opener::open(url) {
+                                            if let Err(error) = open::that(url) {
                                                 warn!("Error Opening URL: {:?}", error);
                                             }
                                         }
                                     }
                                 },
                                 None => {
-                                    if let Err(error) = opener::open(url) {
+                                    if let Err(error) = open::that(url) {
                                         warn!("Error Opening URL: {:?}", error);
                                     }
                                 }
