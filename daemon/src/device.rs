@@ -2926,10 +2926,17 @@ impl<'a> Device<'a> {
             }
 
             GoXLRCommand::SetVodMode(value) => {
+                if !self.device_supports_vod_mode().await {
+                    warn!("Not Supported?");
+                    bail!("Device doesn't support VOD Mode");
+                }
+
                 let serial = self.serial();
 
                 // Get the current mode..
                 let current = self.settings.get_device_vod_mode(serial).await;
+                debug!("Current: {}, New: {}", current, value);
+
                 if current != value {
                     self.settings.set_device_vod_mode(serial, value).await;
                     self.load_submix_settings(false).await?;
@@ -3992,9 +3999,17 @@ impl<'a> Device<'a> {
                         .profile
                         .get_submix_channel(BasicOutputDevice::BroadcastMix);
 
-                    match device {
-                        BasicOutputDevice::Sampler | BasicOutputDevice::StreamMix2 => broadcast,
-                        _ => self.profile.get_submix_channel(device),
+                    if self.is_device_mini() {
+                        match device {
+                            BasicOutputDevice::Sampler | BasicOutputDevice::StreamMix2 => broadcast,
+                            _ => self.profile.get_submix_channel(device),
+                        }
+                    } else {
+                        if device == BasicOutputDevice::StreamMix2 {
+                            broadcast
+                        } else {
+                            self.profile.get_submix_channel(device)
+                        }
                     }
                 } else {
                     self.profile.get_submix_channel(device)
@@ -4177,8 +4192,16 @@ impl<'a> Device<'a> {
     }
 
     async fn is_stream_no_music(&self) -> bool {
+        let mode = self.settings.get_device_vod_mode(self.serial()).await;
+        let enabled = mode == VodMode::StreamNoMusic;
+        let result = enabled && self.device_supports_vod_mode().await;
+        debug!("IsStreamNoMusic: {}", result);
+        result
+    }
+
+    async fn device_supports_vod_mode(&self) -> bool {
         self.hardware.device_type == DeviceType::Mini
-            && self.settings.get_device_vod_mode(self.serial()).await == VodMode::StreamNoMusic
+            || (self.hardware.device_type == DeviceType::Full && self.device_supports_mix2())
     }
 }
 
