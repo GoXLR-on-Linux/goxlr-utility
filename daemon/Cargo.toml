@@ -86,7 +86,7 @@ nix = { workspace = true, features = ["user"] }
 
 # Under Linux, we use ksni for our tray icon..
 [target.'cfg(target_os = "linux")'.dependencies]
-ksni = "0.3.1"
+ksni = { git = "https://github.com/FrostyCoolSlug/ksni.git" }
 rust-ini = "0.21.0"
 shell-words = "1.1.0"
 zbus = "5.11.0"
