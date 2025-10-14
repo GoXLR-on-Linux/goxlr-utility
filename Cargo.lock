@@ -2828,7 +2828,7 @@ dependencies = [
 [[package]]
 name = "ksni"
 version = "0.3.1"
-source = "git+https://github.com/FrostyCoolSlug/ksni.git#bfb2d7f56ae67ad36d2fcb33c3260683a911843d"
+source = "git+https://github.com/FrostyCoolSlug/ksni.git#e8f24c35262b0541b13388642467a220e2f34376"
 dependencies = [
  "futures-util",
  "paste",
