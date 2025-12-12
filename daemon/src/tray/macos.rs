@@ -373,7 +373,9 @@ define_class! {
     unsafe impl NSObjectProtocol for UtilityDelegate {}
 
     unsafe impl NSApplicationDelegate for UtilityDelegate {
-        //Showcase function for now
+    }
+
+    impl UtilityDelegate {
         #[unsafe(method(menu_item:))]
         unsafe fn menu_item(&self, item: &NSMenuItem) {
             if let Some(option) = TrayOption::iter().nth(item.tag() as usize) {
@@ -382,9 +384,7 @@ define_class! {
                 }
             }
         }
-    }
 
-    impl UtilityDelegate {
         #[unsafe(method(computerWillShutDownNotification:))]
         unsafe fn computer_will_shutdown(&self, notification: &NSNotification) {
             debug!("Received Shutdown Notification! {:?}", notification);
