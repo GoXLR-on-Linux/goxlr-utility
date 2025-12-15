@@ -14,13 +14,13 @@ use core_foundation::dictionary::CFDictionary;
 use core_foundation::string::{CFString, CFStringRef};
 use coreaudio_sys::{
     kAudioAggregateDevicePropertyFullSubDeviceList, kAudioDevicePropertyDeviceUID,
-    kAudioDevicePropertyPreferredChannelsForStereo, kAudioHardwareNoError,
-    kAudioHardwarePropertyDevices, kAudioHardwarePropertyPlugInForBundleID,
-    kAudioObjectPropertyElementMain, kAudioObjectPropertyElementMaster, kAudioObjectPropertyName,
-    kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyScopeInput,
-    kAudioObjectPropertyScopeOutput, kAudioObjectSystemObject, kAudioObjectUnknown,
-    kAudioPlugInCreateAggregateDevice, kAudioPlugInDestroyAggregateDevice, AudioDeviceID,
-    AudioObjectGetPropertyData, AudioObjectGetPropertyDataSize, AudioObjectID,
+    kAudioDevicePropertyPreferredChannelsForStereo, kAudioDevicePropertyTransportType,
+    kAudioDeviceTransportTypeUSB, kAudioHardwareNoError, kAudioHardwarePropertyDevices,
+    kAudioHardwarePropertyPlugInForBundleID, kAudioObjectPropertyElementMain,
+    kAudioObjectPropertyElementMaster, kAudioObjectPropertyName, kAudioObjectPropertyScopeGlobal,
+    kAudioObjectPropertyScopeInput, kAudioObjectPropertyScopeOutput, kAudioObjectSystemObject,
+    kAudioObjectUnknown, kAudioPlugInCreateAggregateDevice, kAudioPlugInDestroyAggregateDevice,
+    AudioDeviceID, AudioObjectGetPropertyData, AudioObjectGetPropertyDataSize, AudioObjectID,
     AudioObjectPropertyAddress, AudioObjectSetPropertyData, AudioValueTranslation, OSStatus,
 };
 use log::debug;
@@ -348,25 +348,38 @@ pub fn find_all_existing_aggregates() -> Result<Vec<AudioDeviceID>> {
     Ok(device_list)
 }
 
-/*
-    This function iterates over all the present CoreAudio devices, and attempts to match
-    their VID/PID to a physical GoXLR device. If found, returns the device's UID and it's
-    display name according to MacOS.
-*/
-pub fn get_goxlr_devices() -> Result<Vec<CoreAudioDevice>> {
-    let props = AudioObjectPropertyAddress {
-        mSelector: kAudioHardwarePropertyDevices,
-        mScope: kAudioObjectPropertyScopeGlobal,
-        mElement: kAudioObjectPropertyElementMain, // <- update
-    };
+/// Enumerates CoreAudio devices on macOS and returns only physical TC‑Helicon GoXLR devices.
+///
+/// Behavior:
+/// - Queries the HAL for all `AudioDeviceID`s, reads each device's display name and UID,
+///   then filters via `is_physical_goxlr_usb`.
+/// - Filtering requires USB transport, excludes aggregates (UID containing `::`), and
+///   matches the Apple UID scheme (`AppleUSBAudioEngine:` with vendor `TC‑Helicon` and product `GoXLR`).
+/// - For each match, returns a `CoreAudioDevice` with `display_name` and `uid`.
+///
+/// Returns:
+/// - `Ok(Vec<CoreAudioDevice>)` containing all matching physical GoXLR devices.
+///
+/// Errors:
+/// - Fails only if the global device enumeration (`AudioObjectGetPropertyDataSize`/`AudioObjectGetPropertyData`)
+///   for the device list fails. Per‑device property read failures are ignored and those devices are skipped.
+///
+/// Notes:
+/// - Emits debug logs for each detected GoXLR UID.
+/// - Does not create or interact with aggregate devices; it merely discovers physical devices.
 
+pub fn get_goxlr_devices() -> Result<Vec<CoreAudioDevice>> {
+    let props = addr(
+        kAudioHardwarePropertyDevices,
+        kAudioObjectPropertyScopeGlobal,
+        kAudioObjectPropertyElementMain,
+    );
     let mut size: u32 = 0;
     let status = unsafe {
         AudioObjectGetPropertyDataSize(kAudioObjectSystemObject, &props, 0, null(), &mut size)
     };
-    if status != kAudioHardwareNoError as i32 {
-        bail!("HAL size err: {}", status);
-    }
+    hal_check(status, "HAL size")?;
+
     let count = (size as usize) / std::mem::size_of::<AudioDeviceID>();
     let mut ids: Vec<AudioDeviceID> = vec![kAudioObjectUnknown; count];
     let status = unsafe {
@@ -379,72 +392,84 @@ pub fn get_goxlr_devices() -> Result<Vec<CoreAudioDevice>> {
             ids.as_mut_ptr() as *mut _,
         )
     };
-    if status != kAudioHardwareNoError as i32 {
-        bail!("HAL data err: {}", status);
-    }
+    hal_check(status, "HAL data")?;
+    let devices = ids
+        .into_iter()
+        .filter(|&id| id != kAudioObjectUnknown)
+        .filter_map(|id| {
+            let name = get_audio_property_data(
+                addr(
+                    kAudioObjectPropertyName,
+                    kAudioObjectPropertyScopeGlobal,
+                    kAudioObjectPropertyElementMain,
+                ),
+                id,
+            )
+            .ok()?;
+            let uid = get_audio_property_data(
+                addr(
+                    kAudioDevicePropertyDeviceUID,
+                    kAudioObjectPropertyScopeGlobal,
+                    kAudioObjectPropertyElementMain,
+                ),
+                id,
+            )
+            .ok()?;
 
-    let mut devices = Vec::new();
-    for id in ids {
-        if id == kAudioObjectUnknown {
-            continue;
-        }
+            let uid_str = uid.to_string();
+            if !is_physical_goxlr_usb(id, &uid_str) {
+                return None;
+            }
 
-        let name = get_audio_property_data(
-            AudioObjectPropertyAddress {
-                mSelector: kAudioObjectPropertyName,
-                mScope: kAudioObjectPropertyScopeGlobal,
-                mElement: kAudioObjectPropertyElementMain,
-            },
-            id,
-        )?;
+            debug!("Found GoXLR Device UID: {}", uid_str);
 
-        let uid = get_audio_property_data(
-            AudioObjectPropertyAddress {
-                mSelector: kAudioDevicePropertyDeviceUID,
-                mScope: kAudioObjectPropertyScopeGlobal,
-                mElement: kAudioObjectPropertyElementMain,
-            },
-            id,
-        )?;
+            Some(CoreAudioDevice {
+                display_name: name.to_string(),
+                uid: uid_str,
+            })
+        })
+        .collect();
 
-        let name_ref = name.to_string();
-        let uid_name = uid.to_string();
-
-        debug!("Found CoreAudio Device: {} (UID: {})", name_ref, uid_name);
-
-        if name_ref.contains("GoXLR")
-        /* && transport == kAudioDeviceTransportTypeUSB as u32 */
-        {
-            devices.push(CoreAudioDevice {
-                display_name: name_ref,
-                uid: uid_name,
-            });
-        }
-    }
     Ok(devices)
 }
 
+fn addr(selector: u32, scope: u32, element: u32) -> AudioObjectPropertyAddress {
+    AudioObjectPropertyAddress {
+        mSelector: selector,
+        mScope: scope,
+        mElement: element,
+    }
+}
+
+unsafe fn get_audio_property_into<T>(
+    id: AudioObjectID,
+    addr: &AudioObjectPropertyAddress,
+    out: &mut T,
+) -> Result<()> {
+    let mut size = std::mem::size_of::<T>() as u32;
+    let status =
+        AudioObjectGetPropertyData(id, addr, 0, null(), &mut size, out as *mut _ as *mut _);
+    hal_check(status, "AudioObjectGetPropertyData")?;
+    Ok(())
+}
+
 fn get_audio_property_data(
-    audio_object_property_address: AudioObjectPropertyAddress,
+    addr: AudioObjectPropertyAddress,
     id: AudioObjectID,
 ) -> Result<CFString> {
     let mut ref_str: CFStringRef = null();
-    let mut size = size_of::<CFStringRef>() as u32;
-
-    let status = unsafe {
-        AudioObjectGetPropertyData(
-            id,
-            &audio_object_property_address,
-            0,
-            null(),
-            &mut size,
-            &mut ref_str as *mut _ as *mut _,
-        )
-    };
-
-    hal_check(status, "AudioObjectGetPropertyData")?;
-
+    unsafe {
+        get_audio_property_into(id, &addr, &mut ref_str)?;
+    }
     Ok(unsafe { CFString::wrap_under_create_rule(ref_str) })
+}
+
+fn get_audio_property_u32(addr: AudioObjectPropertyAddress, id: AudioObjectID) -> Result<u32> {
+    let mut v: u32 = 0;
+    unsafe {
+        get_audio_property_into(id, &addr, &mut v)?;
+    }
+    Ok(v)
 }
 
 fn hal_check(status: OSStatus, ctx: &str) -> Result<()> {
@@ -452,4 +477,27 @@ fn hal_check(status: OSStatus, ctx: &str) -> Result<()> {
         bail!("CoreAudio Error: ({}): {}", ctx, status);
     }
     Ok(())
+}
+
+fn is_physical_goxlr_usb(id: AudioObjectID, uid: &str) -> bool {
+    let transport = get_audio_property_u32(
+        addr(
+            kAudioDevicePropertyTransportType,
+            kAudioObjectPropertyScopeGlobal,
+            kAudioObjectPropertyElementMain,
+        ),
+        id,
+    )
+    .ok();
+    if transport != Some(kAudioDeviceTransportTypeUSB as u32) {
+        return false;
+    }
+    if uid.contains("::") {
+        return false;
+    }
+    if !uid.starts_with("AppleUSBAudioEngine:") {
+        return false;
+    }
+    let parts: Vec<&str> = uid.split(':').collect();
+    parts.len() >= 4 && parts[1] == "TC-Helicon" && parts[2] == "GoXLR"
 }
