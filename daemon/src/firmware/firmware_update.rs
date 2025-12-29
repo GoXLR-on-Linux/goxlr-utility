@@ -19,8 +19,8 @@ use xmltree::Element;
 type Sender = tokio::sync::mpsc::Sender<FirmwareRequest>;
 type OneShot<T> = oneshot::Sender<T>;
 
-const FAIL_BACK_FULL_FIRMWARE: &str = "GoXLR_Firmware.bin";
-const FAIL_BACK_MINI_FIRMWARE: &str = "GoXLR_MINI_Firmware.bin";
+const FAIL_BACK_FULL_FIRMWARE: &str = "GoXLR_firmware.bin";
+const FAIL_BACK_MINI_FIRMWARE: &str = "GoXLR_MINI_firmware.bin";
 
 #[derive(Clone)]
 pub struct FirmwareUpdateSettings {
