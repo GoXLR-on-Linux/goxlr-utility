@@ -192,28 +192,7 @@ async fn get_firmware_file(
             // Parse this into an XML tree...
             if let Ok(root) = Element::parse(text.as_bytes()) {
                 let version = if root.attributes.contains_key(version_key) {
-                    if device.device_type == DeviceType::Mini {
-                        // This is a bug fix, the Mix2 beta version number for the mini is incorrect in the
-                        // official manifest (my bad), so we correct it here.
-                        let reported = VersionNumber::from(root.attributes[version_key].clone());
-                        let incorrect_version = VersionNumber(1, 3, Some(0), Some(50));
-                        let correct_version = VersionNumber(1, 3, Some(1), Some(50));
-
-                        if reported == incorrect_version {
-                            correct_version
-                        } else {
-                            reported
-                        }
-                    } else {
-                        VersionNumber::from(root.attributes[version_key].clone())
-                    }
-
-                    // let version = ;
-                    // if device.device_type == DeviceType::Mini && version == VersionNumber(1, 3, Some(0), Some(50)) {
-                    //     VersionNumber
-                    // } else {
-                    //     return version;
-                    // }
+                    VersionNumber::from(root.attributes[version_key].clone())
                 } else {
                     bail!("Unable to obtain Firmware Version");
                 };
