@@ -35,7 +35,11 @@ pub async fn handle_tray(mut stop: Shutdown, tx: mpsc::Sender<EventTriggers>) ->
 
     // Attempt to immediately update the environment..
     let icon = GoXLRTray::new(tx, &tmp_file_path);
-    let handle = icon.spawn().await;
+    let handle = icon
+        .disable_dbus_name(true)
+        .assume_sni_available(true)
+        .spawn()
+        .await;
 
     let handle = match handle {
         Ok(handle) => handle,
