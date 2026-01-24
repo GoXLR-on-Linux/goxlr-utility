@@ -344,10 +344,10 @@ pub fn find_all_existing_aggregates() -> Result<Vec<AudioDeviceID>> {
 
     let mut device_list = Vec::new();
     for device in device_ids {
-        if let Ok(uid) = get_uid_for_id(device) {
-            if uid.starts_with(AGGREGATE_PREFIX) || uid.starts_with(LEGACY_PREFIX) {
-                device_list.push(device);
-            }
+        if let Ok(uid) = get_uid_for_id(device)
+            && (uid.starts_with(AGGREGATE_PREFIX) || uid.starts_with(LEGACY_PREFIX))
+        {
+            device_list.push(device);
         }
     }
 

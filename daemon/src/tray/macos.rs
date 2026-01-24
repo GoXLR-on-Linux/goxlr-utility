@@ -376,11 +376,10 @@ define_class! {
         //Showcase function for now
         #[unsafe(method(menu_item:))]
         unsafe fn menu_item(&self, item: &NSMenuItem) {
-            if let Some(option) = TrayOption::iter().nth(item.tag() as usize) {
-                if self.ivars().sender.try_send(option).is_err() {
+            if let Some(option) = TrayOption::iter().nth(item.tag() as usize)
+                && self.ivars().sender.try_send(option).is_err() {
                     warn!("Failed to send Tray Signal");
                 }
-            }
         }
     }
 
