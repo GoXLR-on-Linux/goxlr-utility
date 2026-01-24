@@ -1,5 +1,5 @@
 use crate::primary_worker::{DeviceCommand, DeviceSender};
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use goxlr_ipc::{DaemonRequest, DaemonResponse};
 use tokio::sync::oneshot;
 

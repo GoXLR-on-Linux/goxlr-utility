@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use byteorder::{LittleEndian, ReadBytesExt};
 use goxlr_ipc::FirmwareInfo;
 use goxlr_types::{DeviceType, VersionNumber};

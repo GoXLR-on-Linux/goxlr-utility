@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use goxlr_ipc::clients::ipc::ipc_socket::Socket;
 use goxlr_ipc::{DaemonRequest, DaemonResponse};
 use interprocess::local_socket::tokio::prelude::{LocalSocketListener, LocalSocketStream};
@@ -10,9 +10,9 @@ use log::{debug, info, warn};
 use std::fs;
 use std::path::Path;
 
+use crate::Shutdown;
 use crate::primary_worker::DeviceSender;
 use crate::servers::server_packet::handle_packet;
-use crate::Shutdown;
 
 static SOCKET_PATH: &str = "/tmp/goxlr.socket";
 static NAMED_PIPE: &str = "@goxlr.socket";

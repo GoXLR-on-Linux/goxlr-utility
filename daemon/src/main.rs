@@ -8,7 +8,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use actix_web::dev::ServerHandle;
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use clap::Parser;
 use enum_map::EnumMap;
 use file_rotate::compression::Compression;
@@ -28,8 +28,8 @@ use tokio::sync::{broadcast, mpsc, oneshot};
 use goxlr_ipc::{FirmwareSource, HttpSettings, LogLevel};
 
 use crate::cli::{Cli, LevelFilter};
-use crate::events::{spawn_event_handler, DaemonState, EventTriggers};
-use crate::files::{spawn_file_notification_service, FileManager};
+use crate::events::{DaemonState, EventTriggers, spawn_event_handler};
+use crate::files::{FileManager, spawn_file_notification_service};
 use crate::platform::perform_preflight;
 use crate::platform::spawn_runtime;
 use crate::primary_worker::spawn_usb_handler;
@@ -76,15 +76,15 @@ static OVERRIDE_SAMPLER_INPUT: Mutex<Option<String>> = Mutex::new(None);
 static OVERRIDE_SAMPLER_OUTPUT: Mutex<Option<String>> = Mutex::new(None);
 
 /**
-    This is also ugly, but for now it's important to allow users to simply disable aggregate
-    management, and have the utility obey.
+This is also ugly, but for now it's important to allow users to simply disable aggregate
+management, and have the utility obey.
 */
 pub static HANDLE_MACOS_AGGREGATES: Mutex<Option<bool>> = Mutex::new(Some(true));
 
 lazy_static! {
     /**
-        This is a fetcher of the system locale, used for language and translations of the UI.
-        the sys-locale package should give us valid readings on Linux, MacOS and Windows
+    This is a fetcher of the system locale, used for language and translations of the UI.
+    the sys-locale package should give us valid readings on Linux, MacOS and Windows
      */
     static ref SYSTEM_LOCALE: String = get_locale()
         .unwrap_or_else(|| String::from("en_GB"))
@@ -134,10 +134,10 @@ async fn run_utility() -> Result<()> {
 
     // Configure and / or create the log path, and file name.
     let log_path = settings.get_log_directory().await;
-    if !log_path.clone().exists() {
-        if let Err(e) = create_dir_all(log_path.clone()) {
-            bail!("Unable to create log directory: {}", e);
-        }
+    if !log_path.clone().exists()
+        && let Err(e) = create_dir_all(log_path.clone())
+    {
+        bail!("Unable to create log directory: {}", e);
     }
     let log_file = log_path.join("goxlr-daemon.log");
 

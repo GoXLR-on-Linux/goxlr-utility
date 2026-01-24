@@ -1,6 +1,6 @@
-use crate::events::EventTriggers;
 use crate::DaemonState;
-use anyhow::{bail, Result};
+use crate::events::EventTriggers;
+use anyhow::{Result, bail};
 use lazy_static::lazy_static;
 use log::{debug, error};
 use mslnk::ShellLink;
@@ -12,10 +12,10 @@ use tokio::signal::windows::{ctrl_break, ctrl_close, ctrl_logoff, ctrl_shutdown}
 use tokio::sync::mpsc;
 use tokio::time::Duration;
 use tokio::{select, time};
-use windows::core::{w, HSTRING};
-use windows::Win32::UI::WindowsAndMessaging::{MessageBoxW, MB_ICONERROR, MB_OK};
-use winreg::enums::{HKEY_CLASSES_ROOT, HKEY_CURRENT_USER};
+use windows::Win32::UI::WindowsAndMessaging::{MB_ICONERROR, MB_OK, MessageBoxW};
+use windows::core::{HSTRING, w};
 use winreg::RegKey;
+use winreg::enums::{HKEY_CLASSES_ROOT, HKEY_CURRENT_USER};
 use winrt_toast_reborn::content::audio::Sound;
 use winrt_toast_reborn::{Audio, Toast, ToastDuration, ToastManager};
 
@@ -35,7 +35,9 @@ pub fn perform_platform_preflight() -> Result<()> {
 
     if get_official_app_count() > 0 {
         error!("Detected Official GoXLR Application Running, Failing Preflight.");
-        bail!("The official GoXLR Application is currently running, Please close it before running the Utility");
+        bail!(
+            "The official GoXLR Application is currently running, Please close it before running the Utility"
+        );
     }
 
     if get_utility_count() > 1 {

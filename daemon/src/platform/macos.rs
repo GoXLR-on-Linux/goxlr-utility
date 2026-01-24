@@ -3,7 +3,7 @@ mod device;
 pub mod runtime;
 
 use crate::ICON_MAC;
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use objc2::__framework_prelude::Retained;
 use objc2::{AllocAnyThread, MainThreadMarker};
 use objc2_app_kit::{NSAlert, NSAlertStyle, NSImage, NSWindowLevel};

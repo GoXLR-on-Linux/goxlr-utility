@@ -1,5 +1,5 @@
 use clap::CommandFactory;
-use clap_complete::{generate_to, Shell};
+use clap_complete::{Shell, generate_to};
 use std::env;
 use std::fs::File;
 use std::io::Error;

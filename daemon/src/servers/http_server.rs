@@ -4,16 +4,16 @@ use actix_web::dev::ServerHandle;
 use actix_web::http::header::ContentType;
 use actix_web::middleware::Condition;
 use actix_web::web::Data;
-use actix_web::{get, post, web, App, HttpRequest, HttpResponse, HttpServer};
+use actix_web::{App, HttpRequest, HttpResponse, HttpServer, get, post, web};
 use actix_ws::{AggregatedMessage, CloseCode, CloseReason, Session};
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use enum_map::EnumMap;
 use futures_util::StreamExt;
-use include_dir::{include_dir, Dir};
+use include_dir::{Dir, include_dir};
 use jsonpath_rust::JsonPath;
 use log::{debug, error, info, warn};
-use mime_guess::mime::IMAGE_PNG;
 use mime_guess::MimeGuess;
+use mime_guess::mime::IMAGE_PNG;
 use serde::Serialize;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -23,10 +23,10 @@ use std::path::{Component, PathBuf};
 use std::{env, fs};
 use tokio::sync::broadcast::Sender as BroadcastSender;
 use tokio::sync::oneshot::Sender;
-use tokio::sync::{oneshot, RwLock};
+use tokio::sync::{RwLock, oneshot};
 
-use crate::files::{find_file_in_path, FilePaths};
 use crate::PatchEvent;
+use crate::files::{FilePaths, find_file_in_path};
 use goxlr_ipc::{
     DaemonRequest, DaemonResponse, DaemonStatus, HttpSettings, Scribble, WebsocketRequest,
     WebsocketResponse,
@@ -477,7 +477,7 @@ async fn upload_firmware(
         Some(Ok(field)) => field,
         Some(Err(e)) => {
             return HttpResponse::InternalServerError()
-                .body(format!("Error processing multipart: {e}"))
+                .body(format!("Error processing multipart: {e}"));
         }
         None => return HttpResponse::BadRequest().body("No file found in request"),
     };
@@ -485,7 +485,7 @@ async fn upload_firmware(
     let mut file = match File::create(&file_path) {
         Ok(f) => f,
         Err(e) => {
-            return HttpResponse::InternalServerError().body(format!("Failed to create file: {e}"))
+            return HttpResponse::InternalServerError().body(format!("Failed to create file: {e}"));
         }
     };
 
@@ -499,7 +499,7 @@ async fn upload_firmware(
             }
             Err(e) => {
                 return HttpResponse::InternalServerError()
-                    .body(format!("Error reading file chunk: {e}"))
+                    .body(format!("Error reading file chunk: {e}"));
             }
         }
     }

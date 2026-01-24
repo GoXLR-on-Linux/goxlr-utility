@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 use std::default::Default;
-use std::fs::{remove_file, File};
+use std::fs::{File, remove_file};
 use std::io::{Cursor, Read, Seek};
 use std::path::{Path, PathBuf};
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use enum_map::EnumMap;
 use log::{debug, warn};
 use strum::IntoEnumIterator;
@@ -15,6 +15,7 @@ use goxlr_ipc::{
     SampleProcessState, Sampler, SamplerButton, SamplerLighting, Scribble, Submix, Submixes,
     ThreeColours, TwoColours,
 };
+use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
 use goxlr_profile_loader::components::animation::{AnimationMode, WaterfallDirection};
 use goxlr_profile_loader::components::colours::{
     Colour, ColourDisplay, ColourMap, ColourOffStyle, ColourState,
@@ -33,7 +34,6 @@ use goxlr_profile_loader::components::sample::{PlayOrder, PlaybackMode, SampleBa
 use goxlr_profile_loader::components::simple::SimpleElements;
 use goxlr_profile_loader::components::submix::mix_routing_tree::Mix;
 use goxlr_profile_loader::profile::{Profile, ProfileSettings};
-use goxlr_profile_loader::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
 use goxlr_profile_loader::{Faders, Preset, SampleButtons};
 use goxlr_scribbles::get_scribble;
 use goxlr_types::{
@@ -2524,16 +2524,16 @@ impl ProfileAdapter {
     pub fn get_button_colour_state(&self, button: Buttons) -> ButtonStates {
         let colour_map = self.get_button_colour_map(button);
 
-        if let Some(blink) = colour_map.blink() {
-            if blink == &ColourState::On {
-                return ButtonStates::Flashing;
-            }
+        if let Some(blink) = colour_map.blink()
+            && blink == &ColourState::On
+        {
+            return ButtonStates::Flashing;
         }
 
-        if let Some(state) = colour_map.state() {
-            if state == &ColourState::On {
-                return ButtonStates::Colour1;
-            }
+        if let Some(state) = colour_map.state()
+            && state == &ColourState::On
+        {
+            return ButtonStates::Colour1;
         }
 
         // Button is turned off, so go return the 'Off Style'

@@ -5,33 +5,33 @@ use std::thread::sleep;
 use std::time::Duration;
 use std::{mem, ptr};
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use lazy_static::lazy_static;
 use log::{debug, error, warn};
 use tokio::sync::mpsc::Sender;
 use tokio::sync::oneshot;
-use windows::core::w;
 use windows::Win32::Foundation::{
-    GetLastError, FALSE, HINSTANCE, HWND, LPARAM, LRESULT, POINT, WPARAM,
+    FALSE, GetLastError, HINSTANCE, HWND, LPARAM, LRESULT, POINT, WPARAM,
 };
 use windows::Win32::Graphics::Gdi::HBRUSH;
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::System::RemoteDesktop::{
-    WTSRegisterSessionNotification, NOTIFY_FOR_THIS_SESSION,
+    NOTIFY_FOR_THIS_SESSION, WTSRegisterSessionNotification,
 };
 use windows::Win32::System::Shutdown::{ShutdownBlockReasonCreate, ShutdownBlockReasonDestroy};
 use windows::Win32::UI::Shell::{
-    Shell_NotifyIconW, NIF_ICON, NIF_MESSAGE, NIF_TIP, NIM_ADD, NIM_DELETE, NOTIFYICONDATAW,
-    NOTIFY_ICON_DATA_FLAGS, NOTIFY_ICON_MESSAGE,
+    NIF_ICON, NIF_MESSAGE, NIF_TIP, NIM_ADD, NIM_DELETE, NOTIFY_ICON_DATA_FLAGS,
+    NOTIFY_ICON_MESSAGE, NOTIFYICONDATAW, Shell_NotifyIconW,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    AppendMenuW, CreateIcon, CreatePopupMenu, CreateWindowExW, DefWindowProcW, DestroyWindow,
-    DispatchMessageW, GetMessageW, GetWindowLongPtrW, RegisterClassW, RegisterWindowMessageW,
-    SetMenuInfo, SetTimer, SetWindowLongPtrW, TranslateMessage, CREATESTRUCTW, CS_HREDRAW,
-    CS_VREDRAW, CW_USEDEFAULT, GWLP_USERDATA, HICON, HMENU, MENUINFO, MF_POPUP, MF_SEPARATOR,
-    MF_STRING, MIM_APPLYTOSUBMENUS, MIM_STYLE, MNS_NOTIFYBYPOS, WINDOW_EX_STYLE, WINDOW_STYLE,
+    AppendMenuW, CREATESTRUCTW, CS_HREDRAW, CS_VREDRAW, CW_USEDEFAULT, CreateIcon, CreatePopupMenu,
+    CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GWLP_USERDATA, GetMessageW,
+    GetWindowLongPtrW, HICON, HMENU, MENUINFO, MF_POPUP, MF_SEPARATOR, MF_STRING,
+    MIM_APPLYTOSUBMENUS, MIM_STYLE, MNS_NOTIFYBYPOS, RegisterClassW, RegisterWindowMessageW,
+    SetMenuInfo, SetTimer, SetWindowLongPtrW, TranslateMessage, WINDOW_EX_STYLE, WINDOW_STYLE,
     WM_CREATE, WM_NCDESTROY, WM_USER, WNDCLASSW,
 };
+use windows::core::w;
 
 use goxlr_ipc::PathTypes;
 

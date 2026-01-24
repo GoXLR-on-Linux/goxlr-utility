@@ -1,20 +1,20 @@
 use anyhow::Result;
 use coreaudio_sys::AudioDeviceID;
 use log::{debug, error, warn};
-use std::collections::hash_map::Entry::Vacant;
 use std::collections::HashMap;
+use std::collections::hash_map::Entry::Vacant;
 use std::time::Duration;
 use strum::IntoEnumIterator;
 
+use crate::HANDLE_MACOS_AGGREGATES;
 use crate::events::EventTriggers;
 use crate::platform::macos::core_audio::{
-    add_sub_device, create_aggregate_device, destroy_aggregate_device,
-    find_all_existing_aggregates, get_goxlr_devices, set_active_channels, CoreAudioDevice,
+    CoreAudioDevice, add_sub_device, create_aggregate_device, destroy_aggregate_device,
+    find_all_existing_aggregates, get_goxlr_devices, set_active_channels,
 };
 use crate::platform::macos::device::{Inputs, Outputs};
 use crate::shutdown::Shutdown;
-use crate::HANDLE_MACOS_AGGREGATES;
-use tokio::signal::unix::{signal, SignalKind};
+use tokio::signal::unix::{SignalKind, signal};
 use tokio::sync::mpsc;
 use tokio::time::sleep;
 use tokio::{select, time};

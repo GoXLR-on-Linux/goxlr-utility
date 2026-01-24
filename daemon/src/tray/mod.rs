@@ -1,5 +1,5 @@
-use crate::events::EventTriggers;
 use crate::DaemonState;
+use crate::events::EventTriggers;
 use anyhow::Result;
 use tokio::sync::mpsc;
 

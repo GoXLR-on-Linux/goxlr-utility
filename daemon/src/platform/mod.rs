@@ -1,5 +1,5 @@
-use crate::events::EventTriggers;
 use crate::DaemonState;
+use crate::events::EventTriggers;
 use anyhow::Result;
 use cfg_if::cfg_if;
 use std::path::PathBuf;
@@ -118,12 +118,12 @@ pub fn get_ui_app_path() -> Option<PathBuf> {
 
     // IntelliJ complains about duplicate code here, and while yes, it's technically duplicated
     // from goxlr-launcher, the launcher and daemon don't have dependencies on each other.
-    if path.is_none() {
-        if let Some(parent) = std::env::current_exe().unwrap().parent() {
-            let bin = parent.join(bin_name.clone());
-            if bin.exists() {
-                path.replace(bin);
-            }
+    if path.is_none()
+        && let Some(parent) = std::env::current_exe().unwrap().parent()
+    {
+        let bin = parent.join(bin_name.clone());
+        if bin.exists() {
+            path.replace(bin);
         }
     }
 

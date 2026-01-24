@@ -20,7 +20,7 @@ use log::{debug, warn};
 use tokio::select;
 use tokio::sync::{mpsc, oneshot};
 use zbus::zvariant::{OwnedFd, OwnedObjectPath, OwnedValue};
-use zbus::{proxy, Connection};
+use zbus::{Connection, proxy};
 
 use crate::events::EventTriggers;
 use crate::shutdown::Shutdown;
@@ -176,7 +176,7 @@ pub async fn run(tx: mpsc::Sender<EventTriggers>, mut stop: Shutdown) -> Result<
 // This is a simple method to handle whether the conditional properties haven't been set..
 async fn conditional(t: &mut Option<PropertiesChangedStream>) -> Option<PropertiesChanged> {
     match t {
-        Some(ref mut change) => change.next().await,
+        Some(change) => change.next().await,
         None => None,
     }
 }

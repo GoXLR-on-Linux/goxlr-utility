@@ -2,14 +2,14 @@ use crate::device::Device;
 use crate::events::EventTriggers;
 use crate::files::extract_defaults;
 use crate::firmware::firmware_update::{
-    do_firmware_update, start_firmware_update, FirmwareMessages, FirmwareRequest,
-    FirmwareUpdateDevice, FirmwareUpdateSettings,
+    FirmwareMessages, FirmwareRequest, FirmwareUpdateDevice, FirmwareUpdateSettings,
+    do_firmware_update, start_firmware_update,
 };
 use crate::platform::{get_ui_app_path, has_autostart, set_autostart};
 use crate::{
-    FileManager, PatchEvent, SettingsHandle, Shutdown, FIRMWARE_PATHS, SYSTEM_LOCALE, VERSION,
+    FIRMWARE_PATHS, FileManager, PatchEvent, SYSTEM_LOCALE, SettingsHandle, Shutdown, VERSION,
 };
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use enum_map::EnumMap;
 use goxlr_ipc::{
     Activation, ColourWay, DaemonCommand, DaemonConfig, DaemonStatus, DriverDetails, Files,
@@ -831,21 +831,23 @@ fn find_new_device(
     goxlr_devices.into_iter().find(|device| {
         // Check the Mixers on the existing DaemonStatus..
         !current_status.mixers.values().any(|d| {
-            if let Some(identifier) = device.identifier() {
-                if let Some(device_identifier) = &d.hardware.usb_device.identifier {
-                    return identifier.clone() == device_identifier.clone();
-                }
+            if let Some(identifier) = device.identifier()
+                && let Some(device_identifier) = &d.hardware.usb_device.identifier
+            {
+                return identifier.clone() == device_identifier.clone();
             }
+
             d.hardware.usb_device.bus_number == device.bus_number()
                 && d.hardware.usb_device.address == device.address()
         }) && !devices_to_ignore
             .iter()
             .any(|((bus_number, address, identifier), expires)| {
-                if let Some(identifier) = identifier {
-                    if let Some(device_identifier) = device.identifier() {
-                        return identifier == device_identifier && expires > &now;
-                    }
+                if let Some(identifier) = identifier
+                    && let Some(device_identifier) = device.identifier()
+                {
+                    return identifier == device_identifier && expires > &now;
                 }
+
                 *bus_number == device.bus_number() && *address == device.address() && expires > &now
             })
     })
@@ -899,7 +901,9 @@ async fn load_device(
             }
         }
 
-        warn!("This GoXLR isn't reporting a serial number, this may cause issues if you're running with multiple devices.");
+        warn!(
+            "This GoXLR isn't reporting a serial number, this may cause issues if you're running with multiple devices."
+        );
         serial_number = serial;
         warn!("Generated Internal Serial Number: {}", serial_number);
     }

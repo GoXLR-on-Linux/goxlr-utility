@@ -1,9 +1,9 @@
-use crate::events::EventTriggers;
 use crate::DaemonState;
+use crate::events::EventTriggers;
 use anyhow::Result;
 use log::debug;
 use tokio::select;
-use tokio::signal::unix::{signal, SignalKind};
+use tokio::signal::unix::{SignalKind, signal};
 use tokio::sync::mpsc;
 
 pub async fn spawn_platform_runtime(

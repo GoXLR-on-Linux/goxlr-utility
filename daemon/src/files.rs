@@ -10,11 +10,11 @@ secondly because it's managing different types of files
 use std::collections::BTreeMap;
 use std::ffi::OsString;
 use std::fs;
-use std::fs::{create_dir_all, File};
+use std::fs::{File, create_dir_all};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 // use futures::channel::mpsc::{channel, Receiver};
 // use futures::{SinkExt, StreamExt};
 use log::{debug, info, warn};
@@ -101,16 +101,16 @@ impl FileManager {
 
         // This will create the Samples and Samples/Recorded directories
         let recorded_path = &paths.samples.join("Recorded");
-        if !recorded_path.exists() {
-            if let Err(e) = create_path(recorded_path) {
-                warn!("Unable to Create Path: {:?}, {}", recorded_path, e);
-            }
+        if !recorded_path.exists()
+            && let Err(e) = create_path(recorded_path)
+        {
+            warn!("Unable to Create Path: {:?}, {}", recorded_path, e);
         }
 
-        if !&paths.backups.exists() {
-            if let Err(e) = create_path(&paths.backups) {
-                warn!("Unable to Create Path: {:?}, {}", &paths.backups, e);
-            }
+        if !&paths.backups.exists()
+            && let Err(e) = create_path(&paths.backups)
+        {
+            warn!("Unable to Create Path: {:?}, {}", &paths.backups, e);
         }
     }
 
@@ -352,10 +352,10 @@ fn create_watcher() -> notify::Result<(RecommendedWatcher, Receiver<notify::Resu
 pub fn find_file_in_path(path: PathBuf, file: PathBuf) -> Option<PathBuf> {
     let format = format!("{}/**/{}", path.to_string_lossy(), file.to_string_lossy());
     let files = glob(format.as_str());
-    if let Ok(files) = files {
-        if let Some(file) = files.into_iter().next() {
-            return Some(file.unwrap());
-        }
+    if let Ok(files) = files
+        && let Some(file) = files.into_iter().next()
+    {
+        return Some(file.unwrap());
     }
 
     None
@@ -374,10 +374,10 @@ pub fn create_path(path: &Path) -> Result<()> {
 }
 
 pub fn can_create_new_file(path: PathBuf) -> Result<()> {
-    if let Some(parent) = path.parent() {
-        if !parent.exists() {
-            bail!("Parent Directory doesn't exist");
-        }
+    if let Some(parent) = path.parent()
+        && !parent.exists()
+    {
+        bail!("Parent Directory doesn't exist");
     }
 
     if path.exists() {
@@ -409,12 +409,12 @@ pub fn extract_defaults(file_type: PathTypes, path: &Path) -> Result<()> {
         binary_path.replace(cwd);
     }
 
-    if binary_path.is_none() {
-        if let Some(parent) = std::env::current_exe()?.parent() {
-            let bin = parent.join(binary_name.clone());
-            if bin.exists() {
-                binary_path.replace(bin);
-            }
+    if binary_path.is_none()
+        && let Some(parent) = std::env::current_exe()?.parent()
+    {
+        let bin = parent.join(binary_name.clone());
+        if bin.exists() {
+            binary_path.replace(bin);
         }
     }
 
@@ -441,10 +441,10 @@ pub fn extract_defaults(file_type: PathTypes, path: &Path) -> Result<()> {
 
     match command {
         Ok(output) => {
-            if !output.status.success() {
-                if let Some(code) = output.status.code() {
-                    bail!("Unable to extract defaults, Error Code: {}", code);
-                }
+            if !output.status.success()
+                && let Some(code) = output.status.code()
+            {
+                bail!("Unable to extract defaults, Error Code: {}", code);
             }
         }
         Err(error) => {

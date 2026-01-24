@@ -6,8 +6,8 @@ use log::{debug, warn};
 use objc2::rc::Retained;
 use objc2::runtime::{NSObject, NSObjectProtocol, ProtocolObject};
 use objc2::{
-    define_class, msg_send, sel, AllocAnyThread, DefinedClass, MainThreadMarker, MainThreadOnly,
-    Message,
+    AllocAnyThread, DefinedClass, MainThreadMarker, MainThreadOnly, Message, define_class,
+    msg_send, sel,
 };
 use objc2_app_kit::{
     NSApplication, NSApplicationActivationOptions, NSApplicationActivationPolicy,
@@ -18,24 +18,24 @@ use objc2_foundation::{
     NSAutoreleasePool, NSData, NSDistributedNotificationCenter, NSNotification, NSNotificationName,
     NSPoint, NSSize, NSString, NSTimeInterval,
 };
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::sleep;
 use std::time::Duration;
 use strum::{Display, EnumIter, IntoEnumIterator};
 use tokio::select;
-use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio::sync::mpsc::{Receiver, Sender, channel};
 use tokio::sync::oneshot;
 
 use goxlr_ipc::PathTypes;
 
+use crate::ICON_MAC;
 use crate::events::EventTriggers::Open;
 use crate::events::{DaemonState, EventTriggers};
 use crate::tray::macos::TrayOption::{
     Configure, OpenPathIcons, OpenPathLogs, OpenPathMicProfiles, OpenPathPresets, OpenPathProfiles,
     OpenPathSamples, Quit,
 };
-use crate::ICON_MAC;
 
 // MacOS is similar to Windows, except it expects the App loop to exist on the main thread..
 pub fn handle_tray(state: DaemonState, tx: Sender<EventTriggers>) -> anyhow::Result<()> {

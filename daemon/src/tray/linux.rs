@@ -1,6 +1,6 @@
+use crate::ICON;
 use crate::events::EventTriggers;
 use crate::shutdown::Shutdown;
-use crate::ICON;
 use anyhow::Result;
 use goxlr_ipc::PathTypes::{Icons, Logs, MicProfiles, Presets, Profiles, Samples};
 use ksni::menu::{StandardItem, SubMenu};

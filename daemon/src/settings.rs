@@ -9,7 +9,7 @@ use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
-use std::fs::{create_dir_all, File};
+use std::fs::{File, create_dir_all};
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -80,46 +80,46 @@ impl SettingsHandle {
 
         // Forward compatibility, if the configured path is the same as the default path
         // remove the configured path (all path lookups will return the default if not set)
-        if let Some(profiles) = &settings.profile_directory {
-            if profiles == &data_dir.join(Paths::Profiles) {
-                info!("Clearing 'Default' Profiles Directory configuration..");
-                settings.profile_directory = None;
-            }
+        if let Some(profiles) = &settings.profile_directory
+            && profiles == &data_dir.join(Paths::Profiles)
+        {
+            info!("Clearing 'Default' Profiles Directory configuration..");
+            settings.profile_directory = None;
         }
 
-        if let Some(ref mic_profiles) = settings.mic_profile_directory {
-            if mic_profiles == &data_dir.join(Paths::MicProfiles) {
-                info!("Clearing 'Default' Mic Profiles Directory configuration..");
-                settings.mic_profile_directory = None;
-            }
+        if let Some(ref mic_profiles) = settings.mic_profile_directory
+            && mic_profiles == &data_dir.join(Paths::MicProfiles)
+        {
+            info!("Clearing 'Default' Mic Profiles Directory configuration..");
+            settings.mic_profile_directory = None;
         }
 
-        if let Some(ref samples) = settings.samples_directory {
-            if samples == &data_dir.join(Paths::Samples) {
-                info!("Clearing 'Default' Samples Directory configuration..");
-                settings.samples_directory = None;
-            }
+        if let Some(ref samples) = settings.samples_directory
+            && samples == &data_dir.join(Paths::Samples)
+        {
+            info!("Clearing 'Default' Samples Directory configuration..");
+            settings.samples_directory = None;
         }
 
-        if let Some(ref presets) = settings.presets_directory {
-            if presets == &data_dir.join(Paths::Presets) {
-                info!("Clearing 'Default' Presets Directory configuration..");
-                settings.presets_directory = None;
-            }
+        if let Some(ref presets) = settings.presets_directory
+            && presets == &data_dir.join(Paths::Presets)
+        {
+            info!("Clearing 'Default' Presets Directory configuration..");
+            settings.presets_directory = None;
         }
 
-        if let Some(ref icons) = settings.icons_directory {
-            if icons == &data_dir.join(Paths::Icons) {
-                info!("Clearing 'Default' Icon Directory configuration..");
-                settings.icons_directory = None;
-            }
+        if let Some(ref icons) = settings.icons_directory
+            && icons == &data_dir.join(Paths::Icons)
+        {
+            info!("Clearing 'Default' Icon Directory configuration..");
+            settings.icons_directory = None;
         }
 
-        if let Some(ref logs) = settings.logs_directory {
-            if logs == &data_dir.join(Paths::Logs) {
-                info!("Clearing 'Default' Logs Directory configuration..");
-                settings.logs_directory = None;
-            }
+        if let Some(ref logs) = settings.logs_directory
+            && logs == &data_dir.join(Paths::Logs)
+        {
+            info!("Clearing 'Default' Logs Directory configuration..");
+            settings.logs_directory = None;
         }
 
         if settings.log_level.is_none() {
@@ -754,15 +754,14 @@ impl Settings {
 
     pub fn write(&self, path: &Path) -> Result<()> {
         debug!("Saving Settings");
-        if let Some(parent) = path.parent() {
-            if let Err(e) = create_dir_all(parent) {
-                if e.kind() != ErrorKind::AlreadyExists {
-                    return Err(e).context(format!(
-                        "Could not create settings directory at {}",
-                        parent.to_string_lossy()
-                    ))?;
-                }
-            }
+        if let Some(parent) = path.parent()
+            && let Err(e) = create_dir_all(parent)
+            && e.kind() != ErrorKind::AlreadyExists
+        {
+            return Err(e).context(format!(
+                "Could not create settings directory at {}",
+                parent.to_string_lossy()
+            ))?;
         }
 
         let mut tmp_file_name = path.to_path_buf();

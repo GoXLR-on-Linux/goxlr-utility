@@ -2,7 +2,7 @@ use std::collections::{HashSet, VecDeque};
 use std::path::PathBuf;
 use std::time::Duration;
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 use chrono::Local;
 use enum_map::EnumMap;
 use enumset::EnumSet;
@@ -30,6 +30,7 @@ use goxlr_usb::channelstate::ChannelState::{Muted, Unmuted};
 use goxlr_usb::device::base::FullGoXLRDevice;
 use goxlr_usb::routing::{InputDevice, OutputDevice};
 
+use crate::SettingsHandle;
 use crate::audio::{AudioFile, AudioHandler};
 use crate::events::EventTriggers;
 use crate::events::EventTriggers::TTSMessage;
@@ -37,11 +38,10 @@ use crate::files::find_file_in_path;
 use crate::firmware::firmware_update::{
     FirmwareMessages, HardwareProgressResponse, ProgressResponse, ValidateUploadChunkResponse,
 };
-use crate::mic_profile::{MicProfileAdapter, DEFAULT_MIC_PROFILE_NAME};
+use crate::mic_profile::{DEFAULT_MIC_PROFILE_NAME, MicProfileAdapter};
 use crate::profile::{
-    usb_to_standard_button, version_newer_or_equal_to, ProfileAdapter, DEFAULT_PROFILE_NAME,
+    DEFAULT_PROFILE_NAME, ProfileAdapter, usb_to_standard_button, version_newer_or_equal_to,
 };
-use crate::SettingsHandle;
 
 pub struct Device<'a> {
     goxlr: Box<dyn FullGoXLRDevice>,
@@ -292,12 +292,11 @@ impl<'a> Device<'a> {
         let mut sample_progress = None;
         let mut sample_error = None;
 
-        if let Some(audio_handler) = &self.audio_handler {
-            if audio_handler.is_calculating() {
-                if let Ok(value) = audio_handler.get_calculating_progress() {
-                    sample_progress.replace(value);
-                }
-            }
+        if let Some(audio_handler) = &self.audio_handler
+            && audio_handler.is_calculating()
+            && let Ok(value) = audio_handler.get_calculating_progress()
+        {
+            sample_progress.replace(value);
         }
 
         if let Some(error) = &self.last_sample_error {
@@ -503,15 +502,14 @@ impl<'a> Device<'a> {
 
         // Find any buttons that have been held, and action if needed.
         for button in self.last_buttons {
-            if !self.button_states[button].hold_handled {
-                if let Some(time) = self.button_states[button].press_time {
-                    if time.elapsed() > self.hold_time {
-                        if let Err(error) = self.on_button_hold(button).await {
-                            error!("{}", error);
-                        }
-                        self.button_states[button].hold_handled = true;
-                    }
+            if !self.button_states[button].hold_handled
+                && let Some(time) = self.button_states[button].press_time
+                && time.elapsed() > self.hold_time
+            {
+                if let Err(error) = self.on_button_hold(button).await {
+                    error!("{}", error);
                 }
+                self.button_states[button].hold_handled = true;
             }
         }
 
@@ -776,10 +774,10 @@ impl<'a> Device<'a> {
         }
 
         let now = Instant::now();
-        if let Some(latest) = self.tap_tempo.back() {
-            if now - *latest > MAX_TAP_INTERVAL {
-                self.tap_tempo.clear();
-            }
+        if let Some(latest) = self.tap_tempo.back()
+            && now - *latest > MAX_TAP_INTERVAL
+        {
+            self.tap_tempo.clear();
         }
 
         // Make sure we're not already full, if so, remove the oldest entry
@@ -987,8 +985,8 @@ impl<'a> Device<'a> {
 
         let input = self.get_basic_input_from_channel(channel);
         self.profile.set_mute_button_on(fader, true);
-        if input.is_some() {
-            self.apply_routing(input.unwrap()).await?;
+        if let Some(input) = input {
+            self.apply_routing(input).await?;
         }
         self.update_button_states()?;
         Ok(())
@@ -1020,13 +1018,13 @@ impl<'a> Device<'a> {
 
                     // With the Mix2 firmware, when setting the volume to 0 the fader no longer goes
                     // in steps, so MixB doesn't follow along to 0 anymore, so we'll do this manually
-                    if self.device_supports_mix2() && self.profile.is_submix_enabled() {
-                        if let Some(sub) = self.profile.get_submix_from_channel(channel) {
-                            if self.profile.is_channel_linked(sub) {
-                                self.goxlr.set_sub_volume(sub, 0)?;
-                                self.profile.set_submix_volume(sub, 0);
-                            }
-                        }
+                    if self.device_supports_mix2()
+                        && self.profile.is_submix_enabled()
+                        && let Some(sub) = self.profile.get_submix_from_channel(channel)
+                        && self.profile.is_channel_linked(sub)
+                    {
+                        self.goxlr.set_sub_volume(sub, 0)?;
+                        self.profile.set_submix_volume(sub, 0);
                     }
                 }
             }
@@ -1094,15 +1092,15 @@ impl<'a> Device<'a> {
                 self.profile.set_channel_volume(channel, previous_volume)?;
 
                 // Same as setting, but we also need to restore it on the ratio
-                if self.device_supports_mix2() && self.profile.is_submix_enabled() {
-                    if let Some(sub) = self.profile.get_submix_from_channel(channel) {
-                        if self.profile.is_channel_linked(sub) {
-                            let ratio = self.profile.get_submix_ratio(sub);
-                            let linked_volume = (previous_volume as f64 * ratio) as u8;
-                            self.goxlr.set_sub_volume(sub, linked_volume)?;
-                            self.profile.set_submix_volume(sub, linked_volume);
-                        }
-                    }
+                if self.device_supports_mix2()
+                    && self.profile.is_submix_enabled()
+                    && let Some(sub) = self.profile.get_submix_from_channel(channel)
+                    && self.profile.is_channel_linked(sub)
+                {
+                    let ratio = self.profile.get_submix_ratio(sub);
+                    let linked_volume = (previous_volume as f64 * ratio) as u8;
+                    self.goxlr.set_sub_volume(sub, linked_volume)?;
+                    self.profile.set_submix_volume(sub, linked_volume);
                 }
             } else {
                 if self.needs_submix_correction(channel) {
@@ -1129,8 +1127,10 @@ impl<'a> Device<'a> {
 
         // Always do a Transient Routing update, just in case we went from Mute to X -> Mute to All
         let input = self.get_basic_input_from_channel(channel);
-        if mute_function != MuteFunction::All && input.is_some() {
-            self.apply_routing(input.unwrap()).await?;
+        if mute_function != MuteFunction::All
+            && let Some(input) = input
+        {
+            self.apply_routing(input).await?;
         }
 
         let name = self.profile.get_fader_assignment(fader);
@@ -1689,23 +1689,24 @@ impl<'a> Device<'a> {
     }
 
     fn update_submix_for(&mut self, channel: ChannelName, volume: u8) -> Result<()> {
-        if self.device_supports_submixes() && self.profile.is_submix_enabled() {
-            if let Some(mix) = self.profile.get_submix_from_channel(channel) {
-                if !self.profile.submix_linked(mix) {
-                    return Ok(());
-                }
+        if self.device_supports_submixes()
+            && self.profile.is_submix_enabled()
+            && let Some(mix) = self.profile.get_submix_from_channel(channel)
+        {
+            if !self.profile.submix_linked(mix) {
+                return Ok(());
+            }
 
-                let mix_current_volume = self.profile.get_submix_volume(mix);
-                let ratio = self.profile.get_submix_ratio(mix);
+            let mix_current_volume = self.profile.get_submix_volume(mix);
+            let ratio = self.profile.get_submix_ratio(mix);
 
-                let linked_volume = (volume as f64 * ratio) as u8;
+            let linked_volume = (volume as f64 * ratio) as u8;
 
-                if linked_volume != mix_current_volume {
-                    self.profile.set_submix_volume(mix, linked_volume);
+            if linked_volume != mix_current_volume {
+                self.profile.set_submix_volume(mix, linked_volume);
 
-                    debug!("Setting Sub Mix volume for {} to {}", mix, linked_volume);
-                    self.goxlr.set_sub_volume(mix, linked_volume)?;
-                }
+                debug!("Setting Sub Mix volume for {} to {}", mix, linked_volume);
+                self.goxlr.set_sub_volume(mix, linked_volume)?;
             }
         }
         Ok(())

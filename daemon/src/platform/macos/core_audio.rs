@@ -4,31 +4,31 @@ use std::ptr::null;
 use std::{mem, ptr};
 
 use crate::platform::macos::device::StereoChannels;
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use core_foundation::array::{
-    kCFTypeArrayCallBacks, CFArrayAppendValue, CFArrayCreateMutable, CFMutableArrayRef,
+    CFArrayAppendValue, CFArrayCreateMutable, CFMutableArrayRef, kCFTypeArrayCallBacks,
 };
-use core_foundation::base::{kCFAllocatorDefault, CFType, TCFType, ToVoid, UInt32};
+use core_foundation::base::{CFType, TCFType, ToVoid, UInt32, kCFAllocatorDefault};
 use core_foundation::boolean::CFBoolean;
 use core_foundation::dictionary::{CFDictionary, CFMutableDictionary, CFMutableDictionaryRef};
 use core_foundation::number::CFNumber;
 use core_foundation::string::{CFString, CFStringRef};
 use coreaudio_sys::{
+    AudioDeviceID, AudioObjectGetPropertyData, AudioObjectGetPropertyDataSize, AudioObjectID,
+    AudioObjectPropertyAddress, AudioObjectSetPropertyData, AudioValueTranslation, KERN_SUCCESS,
     kAudioAggregateDevicePropertyFullSubDeviceList, kAudioDevicePropertyDeviceUID,
     kAudioDevicePropertyPreferredChannelsForStereo, kAudioHardwareNoError,
     kAudioHardwarePropertyDevices, kAudioHardwarePropertyPlugInForBundleID,
     kAudioObjectPropertyElementMaster, kAudioObjectPropertyScopeGlobal,
     kAudioObjectPropertyScopeInput, kAudioObjectPropertyScopeOutput, kAudioObjectSystemObject,
     kAudioObjectUnknown, kAudioPlugInCreateAggregateDevice, kAudioPlugInDestroyAggregateDevice,
-    AudioDeviceID, AudioObjectGetPropertyData, AudioObjectGetPropertyDataSize, AudioObjectID,
-    AudioObjectPropertyAddress, AudioObjectSetPropertyData, AudioValueTranslation, KERN_SUCCESS,
 };
 use goxlr_usb::{PID_GOXLR_FULL, PID_GOXLR_MINI, VID_GOXLR};
 use io_kit_sys::types::io_iterator_t;
 use io_kit_sys::{
-    kIOMasterPortDefault, IOIteratorNext, IORegistryEntryCreateCFProperties,
-    IOServiceGetMatchingServices, IOServiceMatching,
+    IOIteratorNext, IORegistryEntryCreateCFProperties, IOServiceGetMatchingServices,
+    IOServiceMatching, kIOMasterPortDefault,
 };
 
 const CORE_AUDIO_UID: &str = "com.apple.audio.CoreAudio";

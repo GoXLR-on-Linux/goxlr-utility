@@ -1,6 +1,6 @@
 use crate::files::can_create_new_file;
 use crate::profile::ProfileAdapter;
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use byteorder::{ByteOrder, LittleEndian};
 use enum_map::EnumMap;
 use goxlr_ipc::{Compressor, Equaliser, EqualiserMini, NoiseGate};
@@ -13,7 +13,7 @@ use goxlr_types::{
 use log::warn;
 use ritelinked::LinkedHashSet;
 use std::collections::{HashMap, HashSet};
-use std::fs::{remove_file, File};
+use std::fs::{File, remove_file};
 use std::io::{Cursor, Read, Seek};
 use std::path::Path;
 use strum::IntoEnumIterator;

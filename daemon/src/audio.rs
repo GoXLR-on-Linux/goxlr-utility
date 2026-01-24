@@ -1,18 +1,18 @@
 use crate::{OVERRIDE_SAMPLER_INPUT, OVERRIDE_SAMPLER_OUTPUT};
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 use enum_map::EnumMap;
 use fancy_regex::Regex;
 use goxlr_audio::player::{Player, PlayerState};
 use goxlr_audio::recorder::BufferedRecorder;
 use goxlr_audio::recorder::RecorderState;
-use goxlr_audio::{get_audio_inputs, AtomicF64};
+use goxlr_audio::{AtomicF64, get_audio_inputs};
 use goxlr_types::SampleBank;
 use goxlr_types::SampleButtons;
 use log::{debug, error, info, warn};
 use std::ops::Deref;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
@@ -213,10 +213,10 @@ impl AudioHandler {
 
     fn find_device(&mut self, is_output: bool) {
         debug!("Attempting to Find Device..");
-        if let Some(last_check) = self.last_device_check {
-            if last_check + Duration::from_secs(5) > Instant::now() {
-                return;
-            }
+        if let Some(last_check) = self.last_device_check
+            && last_check + Duration::from_secs(5) > Instant::now()
+        {
+            return;
         }
 
         let device_list = match is_output {
@@ -262,17 +262,17 @@ impl AudioHandler {
             for button in SampleButtons::iter() {
                 if let Some(state) = &self.active_streams[bank][button] {
                     if state.stream_type == StreamType::Recording {
-                        if let Some(recording) = &state.recording {
-                            if recording.is_finished() {
-                                self.active_streams[bank][button] = None;
-                                state_changed = true;
-                            }
-                        }
-                    } else if let Some(playback) = &state.playback {
-                        if playback.is_finished() {
+                        if let Some(recording) = &state.recording
+                            && recording.is_finished()
+                        {
                             self.active_streams[bank][button] = None;
                             state_changed = true;
                         }
+                    } else if let Some(playback) = &state.playback
+                        && playback.is_finished()
+                    {
+                        self.active_streams[bank][button] = None;
+                        state_changed = true;
                     }
                 }
             }
@@ -282,28 +282,28 @@ impl AudioHandler {
     }
 
     pub fn is_sample_playing(&self, bank: SampleBank, button: SampleButtons) -> bool {
-        if let Some(stream) = &self.active_streams[bank][button] {
-            if stream.playback.is_some() {
-                return true;
-            }
+        if let Some(stream) = &self.active_streams[bank][button]
+            && stream.playback.is_some()
+        {
+            return true;
         }
         false
     }
 
     pub fn get_playing_file(&self, bank: SampleBank, button: SampleButtons) -> Option<PathBuf> {
-        if let Some(stream) = &self.active_streams[bank][button] {
-            if let Some(manager) = &stream.playback {
-                return Some(manager.state.playing_file.clone());
-            }
+        if let Some(stream) = &self.active_streams[bank][button]
+            && let Some(manager) = &stream.playback
+        {
+            return Some(manager.state.playing_file.clone());
         }
         None
     }
 
     pub fn sample_recording(&self, bank: SampleBank, button: SampleButtons) -> bool {
-        if let Some(stream) = &self.active_streams[bank][button] {
-            if stream.recording.is_some() {
-                return true;
-            }
+        if let Some(stream) = &self.active_streams[bank][button]
+            && stream.recording.is_some()
+        {
+            return true;
         }
         false
     }
@@ -311,10 +311,10 @@ impl AudioHandler {
     pub fn is_sample_recording(&self) -> bool {
         for bank in SampleBank::iter() {
             for button in SampleButtons::iter() {
-                if let Some(manager) = &self.active_streams[bank][button] {
-                    if manager.recording.is_some() {
-                        return true;
-                    }
+                if let Some(manager) = &self.active_streams[bank][button]
+                    && manager.recording.is_some()
+                {
+                    return true;
                 }
             }
         }

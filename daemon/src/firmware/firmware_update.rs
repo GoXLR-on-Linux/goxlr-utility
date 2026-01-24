@@ -1,6 +1,6 @@
-use crate::firmware::firmware_file::check_firmware;
 use crate::FIRMWARE_PATHS;
-use anyhow::{bail, Result};
+use crate::firmware::firmware_file::check_firmware;
+use anyhow::{Result, bail};
 use futures_util::StreamExt;
 use goxlr_ipc::{FirmwareInfo, FirmwareSource, UpdateState};
 use goxlr_types::{DeviceType, VersionNumber};
@@ -187,23 +187,21 @@ async fn get_firmware_file(
         .timeout(Duration::from_secs(5))
         .build()?;
 
-    if let Ok(response) = client.get(manifest_url).send().await {
-        if let Ok(text) = response.text().await {
-            // Parse this into an XML tree...
-            if let Ok(root) = Element::parse(text.as_bytes()) {
-                let version = if root.attributes.contains_key(version_key) {
-                    VersionNumber::from(root.attributes[version_key].clone())
-                } else {
-                    bail!("Unable to obtain Firmware Version");
-                };
+    if let Ok(response) = client.get(manifest_url).send().await
+        && let Ok(text) = response.text().await
+        && let Ok(root) = Element::parse(text.as_bytes())
+    {
+        let version = if root.attributes.contains_key(version_key) {
+            VersionNumber::from(root.attributes[version_key].clone())
+        } else {
+            bail!("Unable to obtain Firmware Version");
+        };
 
-                return if root.attributes.contains_key(file_key) {
-                    Ok((root.attributes[file_key].clone(), version))
-                } else {
-                    Ok((String::from(fail_back_path), version))
-                };
-            }
-        }
+        return if root.attributes.contains_key(file_key) {
+            Ok((root.attributes[file_key].clone(), version))
+        } else {
+            Ok((String::from(fail_back_path), version))
+        };
     }
     bail!("Error Downloading Manifest from TC-Helicon Servers");
 }
@@ -253,7 +251,11 @@ async fn download_firmware(device: &FirmwareUpdateDevice, sender: Sender) -> Res
 
         let firmware_info = check_firmware(&output_path)?;
         if firmware_info.version != file_name.1 {
-            bail!("Downloaded Firmware version does not match expected firmware (Received: {}, Expected: {})", firmware_info.version, file_name.1);
+            bail!(
+                "Downloaded Firmware version does not match expected firmware (Received: {}, Expected: {})",
+                firmware_info.version,
+                file_name.1
+            );
         }
 
         if let Ok(data) = firmware_info.path.metadata() {

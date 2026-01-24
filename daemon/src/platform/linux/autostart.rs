@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use ini::Ini;
 use lazy_static::lazy_static;
 use log::debug;
