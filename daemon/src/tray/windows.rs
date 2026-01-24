@@ -551,27 +551,28 @@ unsafe extern "system" fn raw_window_proc(
     lparam: LPARAM,
 ) -> LRESULT {
     if msg == WM_CREATE {
-        let create_struct = &*(lparam.0 as *const CREATESTRUCTW);
+        let create_struct = unsafe { &*(lparam.0 as *const CREATESTRUCTW) };
         let window_pointer = create_struct.lpCreateParams;
-        SetWindowLongPtrW(hwnd, GWLP_USERDATA, window_pointer as isize);
+        unsafe { SetWindowLongPtrW(hwnd, GWLP_USERDATA, window_pointer as isize) };
     }
 
-    let window_pointer = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut Box<dyn WindowProc>;
+    let window_pointer =
+        unsafe { GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut Box<dyn WindowProc> };
     let result = {
         if window_pointer.is_null() {
             None
         } else {
-            let reference = Rc::from_raw(window_pointer);
+            let reference = unsafe { Rc::from_raw(window_pointer) };
             mem::forget(reference.clone());
-            (*window_pointer).window_proc(hwnd, msg, wparam, lparam)
+            unsafe { (*window_pointer).window_proc(hwnd, msg, wparam, lparam) }
         }
     };
 
     if msg == WM_NCDESTROY && !window_pointer.is_null() {
         SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
-        drop(Rc::from_raw(window_pointer));
+        unsafe { drop(Rc::from_raw(window_pointer)) };
     }
-    result.unwrap_or_else(|| DefWindowProcW(hwnd, msg, wparam, lparam))
+    result.unwrap_or_else(|| unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) })
 }
 
 // This is our trait, so we can build a struct and call into it..
