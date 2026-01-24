@@ -569,8 +569,10 @@ unsafe extern "system" fn raw_window_proc(
     };
 
     if msg == WM_NCDESTROY && !window_pointer.is_null() {
-        SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
-        unsafe { drop(Rc::from_raw(window_pointer)) };
+        unsafe {
+            SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
+            drop(Rc::from_raw(window_pointer))
+        };
     }
     result.unwrap_or_else(|| unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) })
 }

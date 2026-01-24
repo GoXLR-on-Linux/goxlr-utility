@@ -63,22 +63,20 @@ fn get_official_app_count() -> usize {
 
     let stable = OsStr::new(GOXLR_APP_NAME);
     let beta = OsStr::new(GOXLR_BETA_APP_NAME);
-    let count = system.processes_by_exact_name(stable).count()
-        + system.processes_by_exact_name(beta).count();
-
-    count
+    system.processes_by_exact_name(stable).count() + system.processes_by_exact_name(beta).count()
 }
 
 fn get_utility_count() -> usize {
-    if let Ok(exe) = env::current_exe() {
-        if let Some(file_name) = exe.file_name() {
-            let process_refresh_kind = ProcessRefreshKind::everything().without_tasks();
-            let refresh_kind = RefreshKind::nothing().with_processes(process_refresh_kind);
-            let system = System::new_with_specifics(refresh_kind);
+    if let Ok(exe) = env::current_exe()
+        && let Some(file_name) = exe.file_name()
+    {
+        let process_refresh_kind = ProcessRefreshKind::everything().without_tasks();
+        let refresh_kind = RefreshKind::nothing().with_processes(process_refresh_kind);
+        let system = System::new_with_specifics(refresh_kind);
 
-            return system.processes_by_exact_name(file_name).count();
-        }
+        return system.processes_by_exact_name(file_name).count();
     }
+
     0
 }
 
@@ -196,18 +194,19 @@ fn get_startup_dir() -> Option<PathBuf> {
     // Get %USERPROFILE% from the ENV..
     if let Ok(profile) = env::var("USERPROFILE") {
         let local_user = RegKey::predef(HKEY_CURRENT_USER);
-        if let Ok(folders) = local_user.open_subkey(reg_path) {
-            if let Ok(startup) = folders.get_value::<String, &str>("Startup") {
-                let full_path = startup.replace("%USERPROFILE%", &profile);
-                let path_buf = PathBuf::from(&full_path);
+        if let Ok(folders) = local_user.open_subkey(reg_path)
+            && let Ok(startup) = folders.get_value::<String, &str>("Startup")
+        {
+            let full_path = startup.replace("%USERPROFILE%", &profile);
+            let path_buf = PathBuf::from(&full_path);
 
-                if path_buf.exists() {
-                    debug!("Setting Startup Path: {:?}", path_buf);
-                    return Some(path_buf);
-                }
+            if path_buf.exists() {
+                debug!("Setting Startup Path: {:?}", path_buf);
+                return Some(path_buf);
             }
         }
     }
+
     None
 }
 
