@@ -12,36 +12,35 @@ impl CpalConfiguration {
         let mut cpal_device = None;
 
         // The Goal here is to find a device by host, and name, Nothing else.
-        if let Some(device_name) = device {
-            if let Some(position) = device_name.find('*') {
-                let str_host = &device_name[0..position];
-                let str_device = &device_name[position + 1..device_name.len()];
+        if let Some(device_name) = device
+            && let Some(position) = device_name.find('*')
+        {
+            let str_host = &device_name[0..position];
+            let str_device = &device_name[position + 1..device_name.len()];
 
-                // Grab the Correct host...
-                let cpal_host_list = cpal::available_hosts();
-                let host_id = cpal_host_list.iter().find(|x| x.name() == str_host);
+            // Grab the Correct host...
+            let cpal_host_list = cpal::available_hosts();
+            let host_id = cpal_host_list.iter().find(|x| x.name() == str_host);
 
-                if let Some(host_id) = host_id {
-                    if let Ok(host) = cpal::host_from_id(*host_id) {
-                        // Check the relevant input and output group for the device
-                        cpal_device = if input {
-                            if let Ok(mut devices) = host.input_devices() {
-                                devices.find(|x| {
-                                    x.name().unwrap_or_else(|_| "UNKNOWN".to_string()) == str_device
-                                })
-                            } else {
-                                None
-                            }
-                        } else if let Ok(mut devices) = host.output_devices() {
-                            devices.find(|x| {
-                                x.name().unwrap_or_else(|_| "UNKNOWN".to_string()) == str_device
-                            })
-                        } else {
-                            None
-                        }
-                    };
+            if let Some(host_id) = host_id
+                && let Ok(host) = cpal::host_from_id(*host_id)
+            {
+                // Check the relevant input and output group for the device
+                cpal_device = if input {
+                    if let Ok(mut devices) = host.input_devices() {
+                        devices.find(|x| {
+                            x.name().unwrap_or_else(|_| "UNKNOWN".to_string()) == str_device
+                        })
+                    } else {
+                        None
+                    }
+                } else if let Ok(mut devices) = host.output_devices() {
+                    devices
+                        .find(|x| x.name().unwrap_or_else(|_| "UNKNOWN".to_string()) == str_device)
+                } else {
+                    None
                 }
-            }
+            };
         }
 
         if let Some(device) = cpal_device {
