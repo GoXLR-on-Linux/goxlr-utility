@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 use std::io::Write;
 
-use anyhow::{anyhow, Result};
-use quick_xml::events::{BytesStart, Event};
+use anyhow::{Result, anyhow};
 use quick_xml::Writer;
+use quick_xml::events::{BytesStart, Event};
 use strum::EnumProperty;
 
+use crate::Preset;
 use crate::components::colours::{Colour, ColourMap, ColourOffStyle};
 use crate::profile::Attribute;
-use crate::Preset;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]

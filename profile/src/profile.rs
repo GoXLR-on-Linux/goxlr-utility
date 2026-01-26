@@ -4,8 +4,8 @@ use std::io::{BufReader, Read, Write};
 use std::path::Path;
 use std::str::FromStr;
 
-use anyhow::{anyhow, bail, Context as ErrorContext, Result};
-use enum_map::{enum_map, EnumMap};
+use anyhow::{Context as ErrorContext, Result, anyhow, bail};
+use enum_map::{EnumMap, enum_map};
 use log::{debug, warn};
 use quick_xml::events::{BytesDecl, BytesStart, Event};
 use quick_xml::{Reader, Writer};
@@ -13,6 +13,7 @@ use strum::EnumProperty;
 use strum::IntoEnumIterator;
 use zip::write::SimpleFileOptions;
 
+use crate::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
 use crate::components::animation::AnimationTree;
 use crate::components::browser::BrowserPreviewTree;
 use crate::components::context::Context;
@@ -35,7 +36,6 @@ use crate::components::scribble::Scribble;
 use crate::components::simple::{SimpleElement, SimpleElements};
 use crate::components::submix::mix_routing_tree::{Mix, MixRoutingTree};
 use crate::components::submix::submixer::SubMixer;
-use crate::SampleButtons::{BottomLeft, BottomRight, Clear, TopLeft, TopRight};
 use crate::{Faders, Preset, SampleButtons};
 
 #[derive(Debug)]

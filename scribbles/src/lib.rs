@@ -1,7 +1,7 @@
 use ab_glyph::{FontRef, PxScale};
-use anyhow::{bail, Result};
-use image::imageops::{dither, overlay, BiLevel, FilterType};
+use anyhow::{Result, bail};
 use image::ImageFormat::Png;
+use image::imageops::{BiLevel, FilterType, dither, overlay};
 use image::{ColorType, DynamicImage, GenericImage, GenericImageView, GrayImage, Luma, Rgba};
 use imageproc::drawing::{draw_text_mut, text_size};
 use log::warn;
@@ -73,22 +73,22 @@ pub fn get_scribble_base(
     let mut bottom_image = None;
     let mut top_right_image = None;
 
-    if let Some(path) = path {
-        if let Ok(image) = load_grayscale_image(path) {
-            processed_image = Some(image);
-        }
+    if let Some(path) = path
+        && let Ok(image) = load_grayscale_image(path)
+    {
+        processed_image = Some(image);
     }
 
-    if let Some(text) = bottom {
-        if let Ok(image) = create_text_image(&text) {
-            bottom_image = Some(image);
-        }
+    if let Some(text) = bottom
+        && let Ok(image) = create_text_image(&text)
+    {
+        bottom_image = Some(image);
     }
 
-    if let Some(text) = top {
-        if let Ok(image) = create_text_image(&text) {
-            top_right_image = Some(image);
-        }
+    if let Some(text) = top
+        && let Ok(image) = create_text_image(&text)
+    {
+        top_right_image = Some(image);
     }
 
     create_final_image(processed_image, bottom_image, top_right_image)

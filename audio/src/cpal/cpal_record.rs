@@ -1,13 +1,13 @@
 use std::panic::catch_unwind;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
-use anyhow::{bail, Result};
-use cpal::traits::{DeviceTrait, StreamTrait};
+use anyhow::{Result, bail};
 use cpal::ChannelCount;
+use cpal::traits::{DeviceTrait, StreamTrait};
 use log::warn;
-use rb::{Consumer, RbConsumer, RbProducer, SpscRb, RB};
+use rb::{Consumer, RB, RbConsumer, RbProducer, SpscRb};
 
 use crate::audio::{AudioInput, AudioSpecification, OpenInputStream};
 use crate::cpal::cpal_config::CpalConfiguration;

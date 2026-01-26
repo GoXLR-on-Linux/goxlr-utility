@@ -1,4 +1,4 @@
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 
 use core::default::Default;
 use ebur128::{EbuR128, Mode};
@@ -9,8 +9,8 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::sync::{Arc, Mutex};
 
-use crate::audio::{get_output, AudioSpecification};
 use crate::AtomicF64;
+use crate::audio::{AudioSpecification, get_output};
 use symphonia::core::audio::{Layout, SampleBuffer, SignalSpec};
 use symphonia::core::errors::Error;
 use symphonia::core::formats::{SeekMode, SeekTo};
@@ -84,10 +84,10 @@ impl Player {
     fn load_file(file: &PathBuf) -> symphonia::core::errors::Result<ProbeResult> {
         // Use the file extension to get a type hint..
         let mut hint = Hint::new();
-        if let Some(extension) = file.extension() {
-            if let Some(extension_str) = extension.to_str() {
-                hint.with_extension(extension_str);
-            }
+        if let Some(extension) = file.extension()
+            && let Some(extension_str) = extension.to_str()
+        {
+            hint.with_extension(extension_str);
         }
 
         let media_source = Box::new(File::open(file).unwrap());
@@ -342,10 +342,10 @@ impl Player {
                             self.progress.store(progress, Ordering::Relaxed);
                         }
 
-                        if let Some(stop_sample) = stop_sample {
-                            if samples_processed >= stop_sample {
-                                break Ok(());
-                            }
+                        if let Some(stop_sample) = stop_sample
+                            && samples_processed >= stop_sample
+                        {
+                            break Ok(());
                         }
 
                         if self.restart_track.load(Ordering::Relaxed) {
@@ -374,11 +374,11 @@ impl Player {
                 Err(err) => break Err(err),
             }
         };
-        if !self.force_stop.load(Ordering::Relaxed) {
-            if let Some(ref mut audio_output) = audio_output {
-                // We should always flush the last samples, unless forced to stop
-                audio_output.flush();
-            }
+        if !self.force_stop.load(Ordering::Relaxed)
+            && let Some(ref mut audio_output) = audio_output
+        {
+            // We should always flush the last samples, unless forced to stop
+            audio_output.flush();
         }
 
         // Stop the playback handler..
@@ -413,10 +413,10 @@ impl Player {
         // We're going to suppress that error here, with the assumption that if it's reached, the
         // file has ended, and playback is complete. It's not ideal, but we'll work with it.
         if let Err(error) = result {
-            if let Error::IoError(ref error) = error {
-                if error.kind() == UnexpectedEof {
-                    return Ok(());
-                }
+            if let Error::IoError(ref error) = error
+                && error.kind() == UnexpectedEof
+            {
+                return Ok(());
             }
 
             // Otherwise, throw this error up.

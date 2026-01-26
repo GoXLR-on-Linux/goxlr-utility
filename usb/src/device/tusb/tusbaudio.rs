@@ -1,5 +1,5 @@
-use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 use std::ffi::CStr;
 use std::hash::Hash;
 use std::path::PathBuf;
@@ -9,22 +9,22 @@ use std::thread;
 use std::thread::sleep;
 use std::time::Duration;
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 use byteorder::{ByteOrder, LittleEndian};
 use lazy_static::lazy_static;
 use libloading::{Library, Symbol};
 use log::{debug, error, info, warn};
 use tokio::sync::mpsc::{Receiver, Sender};
 use widestring::U16CStr;
-use windows::core::GUID;
 use windows::Win32::Devices::DeviceAndDriverInstallation::{
-    CM_Get_Device_Interface_ListA, CM_Get_Device_Interface_List_SizeA,
-    CM_GET_DEVICE_INTERFACE_LIST_PRESENT, CR_SUCCESS,
+    CM_GET_DEVICE_INTERFACE_LIST_PRESENT, CM_Get_Device_Interface_List_SizeA,
+    CM_Get_Device_Interface_ListA, CR_SUCCESS,
 };
 use windows::Win32::Foundation::{HANDLE, WAIT_TIMEOUT};
 use windows::Win32::System::Threading::{CreateEventA, WaitForSingleObject};
-use winreg::enums::HKEY_CLASSES_ROOT;
+use windows::core::GUID;
 use winreg::RegKey;
+use winreg::enums::HKEY_CLASSES_ROOT;
 
 use goxlr_types::VersionNumber;
 
@@ -178,7 +178,9 @@ impl TUSBAudio<'_> {
                 "API VERSION DETECTED: {}.{}",
                 api_version.major, api_version.minor
             );
-            warn!("API VERSION MISMATCH: This code was made with Versions 7.5 / 11.5 / 12.5 of the API");
+            warn!(
+                "API VERSION MISMATCH: This code was made with Versions 7.5 / 11.5 / 12.5 of the API"
+            );
             warn!("Please install version 5.12, 5.57 or 5.68 of the GoXLR Drivers");
             warn!("We'll try to keep going, but you may experience instability");
         }

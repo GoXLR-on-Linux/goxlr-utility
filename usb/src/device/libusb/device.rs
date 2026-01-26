@@ -3,7 +3,7 @@ use crate::device::base::{
     AttachGoXLR, ExecutableGoXLR, FullGoXLRDevice, GoXLRCommands, GoXLRDevice, UsbData,
 };
 use crate::{PID_GOXLR_FULL, PID_GOXLR_MINI, VID_GOXLR};
-use anyhow::{anyhow, bail, Error, Result};
+use anyhow::{Error, Result, anyhow, bail};
 use byteorder::{ByteOrder, LittleEndian};
 use goxlr_types::{DriverInterface, VersionNumber};
 use log::{debug, error, info, warn};
@@ -12,8 +12,8 @@ use rusb::{
     Device, DeviceDescriptor, DeviceHandle, Direction, GlobalContext, Language, Recipient,
     RequestType,
 };
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::sleep;
 use std::time::Duration;
 use tokio::sync::mpsc::Sender;
@@ -45,10 +45,9 @@ impl GoXLRUSB {
             for usb_device in devices.iter() {
                 if usb_device.bus_number() == device.bus_number
                     && usb_device.address() == device.address
+                    && let Ok(descriptor) = usb_device.device_descriptor()
                 {
-                    if let Ok(descriptor) = usb_device.device_descriptor() {
-                        return Ok((usb_device, descriptor));
-                    }
+                    return Ok((usb_device, descriptor));
                 }
             }
         }
@@ -346,7 +345,11 @@ impl ExecutableGoXLR for GoXLRUSB {
             if response_value == Err(Pipe) {
                 if i < count - 1 {
                     if !ignore_warn {
-                        debug!("Response not arrived yet for {:?}, sleeping and retrying (Attempt {} of 20)", command, i + 1);
+                        debug!(
+                            "Response not arrived yet for {:?}, sleeping and retrying (Attempt {} of 20)",
+                            command,
+                            i + 1
+                        );
                     }
                     sleep(sleep_time);
                     continue;

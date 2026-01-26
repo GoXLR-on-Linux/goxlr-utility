@@ -4,13 +4,13 @@ use std::io::Write;
 use strum::{EnumProperty, IntoEnumIterator};
 
 use anyhow::Result;
-use quick_xml::events::{BytesStart, Event};
 use quick_xml::Writer;
+use quick_xml::events::{BytesStart, Event};
 
+use crate::Faders;
 use crate::components::colours::{Colour, ColourDisplay, ColourMap, ColourOffStyle};
 use crate::components::mixer::FullChannelList;
 use crate::profile::Attribute;
-use crate::Faders;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]

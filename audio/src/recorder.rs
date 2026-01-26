@@ -9,17 +9,17 @@ use std::thread::sleep;
 use std::time::{Duration, Instant};
 use std::{fs, vec};
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use ebur128::{EbuR128, Mode};
 use fancy_regex::Regex;
 use hound::WavWriter;
 use log::{debug, error, info, trace, warn};
-use rb::{Producer, RbConsumer, RbError, RbProducer, SpscRb, RB};
+use rb::{Producer, RB, RbConsumer, RbError, RbProducer, SpscRb};
 use symphonia::core::audio::{Layout, SignalSpec};
 
-use crate::audio::{get_input, AudioInput, AudioSpecification};
+use crate::audio::{AudioInput, AudioSpecification, get_input};
 use crate::ringbuffer::RingBuffer;
-use crate::{get_audio_inputs, AtomicF64};
+use crate::{AtomicF64, get_audio_inputs};
 
 static NEXT_ID: AtomicU32 = AtomicU32::new(0);
 static READ_TIMEOUT: Duration = Duration::from_millis(100);
@@ -135,10 +135,10 @@ impl BufferedRecorder {
                 // Read the latest samples from the input...
                 match input.as_mut().unwrap().read() {
                     Ok(samples) => {
-                        if self.buffer_size > 0 {
-                            if let Err(e) = self.buffer.write_into(&samples) {
-                                warn!("Error writing samples to buffer: {}", e);
-                            }
+                        if self.buffer_size > 0
+                            && let Err(e) = self.buffer.write_into(&samples)
+                        {
+                            warn!("Error writing samples to buffer: {}", e);
                         }
                         for producer in self.producers.lock().unwrap().iter() {
                             let result = producer.producer.write(&samples);

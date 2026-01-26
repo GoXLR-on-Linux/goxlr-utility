@@ -1,7 +1,7 @@
 use crate::client::Client;
 use crate::clients::ipc::ipc_socket::Socket;
 use crate::{DaemonRequest, DaemonResponse, DaemonStatus, GoXLRCommand, HttpSettings};
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use async_trait::async_trait;
 
 #[derive(Debug)]

@@ -1,9 +1,9 @@
 use crate::components::animation::AnimationMode::{RainbowBright, RainbowDark, RetroRainbow};
 use crate::profile::Attribute;
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use log::warn;
-use quick_xml::events::{BytesStart, Event};
 use quick_xml::Writer;
+use quick_xml::events::{BytesStart, Event};
 use std::collections::HashMap;
 use std::io::Write;
 use std::os::raw::c_float;

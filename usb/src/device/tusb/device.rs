@@ -3,10 +3,10 @@ use crate::device::base::{
     AttachGoXLR, ExecutableGoXLR, FullGoXLRDevice, GoXLRCommands, GoXLRDevice, UsbData,
 };
 use crate::device::tusb::tusbaudio::{
-    get_devices, get_version, DeviceHandle, EventChannelReceiver, EventChannelSender,
-    TUSB_INTERFACE,
+    DeviceHandle, EventChannelReceiver, EventChannelSender, TUSB_INTERFACE, get_devices,
+    get_version,
 };
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use byteorder::{ByteOrder, LittleEndian};
 use goxlr_types::{DriverInterface, VersionNumber};
 use log::{debug, error, warn};
@@ -16,8 +16,8 @@ use std::thread;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
-use tokio::sync::mpsc::error::TryRecvError;
 use tokio::sync::mpsc::Sender;
+use tokio::sync::mpsc::error::TryRecvError;
 
 pub struct TUSBAudioGoXLR {
     // Basic Device Information..

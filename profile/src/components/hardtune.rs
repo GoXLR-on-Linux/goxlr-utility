@@ -6,15 +6,15 @@ use std::str::FromStr;
 use enum_map::EnumMap;
 use strum::{Display, EnumIter, EnumProperty, EnumString, IntoEnumIterator};
 
-use anyhow::{anyhow, Result};
-use quick_xml::events::{BytesEnd, BytesStart, Event};
+use anyhow::{Result, anyhow};
 use quick_xml::Writer;
+use quick_xml::events::{BytesEnd, BytesStart, Event};
 
+use crate::Preset;
 use crate::components::colours::{Colour, ColourMap, ColourOffStyle};
 use crate::components::hardtune::HardTuneSource::All;
 use crate::components::hardtune::HardTuneStyle::Natural;
 use crate::profile::Attribute;
-use crate::Preset;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]

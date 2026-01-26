@@ -6,13 +6,13 @@ use strum::IntoEnumIterator;
 
 use anyhow::Result;
 use log::warn;
-use quick_xml::events::{BytesStart, Event};
 use quick_xml::Writer;
+use quick_xml::events::{BytesStart, Event};
 
+use crate::Preset;
 use crate::components::colours::ColourMap;
 use crate::components::sample::SampleBank;
 use crate::profile::Attribute;
-use crate::Preset;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]

@@ -3,7 +3,7 @@ use std::os::raw::c_float;
 use std::str::FromStr;
 
 use crate::profile::Attribute;
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]

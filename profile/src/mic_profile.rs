@@ -5,7 +5,7 @@ use crate::microphone::gate::Gate;
 use crate::microphone::mic_setup::MicSetup;
 use crate::microphone::ui_setup::UiSetup;
 use crate::profile::wrap_start_event;
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 use log::{debug, warn};
 use quick_xml::events::{BytesDecl, BytesEnd, BytesStart, Event};
 use quick_xml::{Reader, Writer};

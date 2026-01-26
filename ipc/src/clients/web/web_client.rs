@@ -1,6 +1,6 @@
 use crate::client::Client;
 use crate::{DaemonRequest, DaemonResponse, DaemonStatus, GoXLRCommand, HttpSettings};
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use async_trait::async_trait;
 
 #[derive(Debug)]

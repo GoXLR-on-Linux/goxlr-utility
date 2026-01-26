@@ -3,8 +3,8 @@ use std::ffi::c_float;
 use std::io::Write;
 
 use anyhow::Result;
-use quick_xml::events::{BytesEnd, BytesStart, Event};
 use quick_xml::Writer;
+use quick_xml::events::{BytesEnd, BytesStart, Event};
 
 use crate::profile::Attribute;
 

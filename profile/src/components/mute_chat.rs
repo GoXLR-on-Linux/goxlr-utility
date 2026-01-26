@@ -4,7 +4,7 @@ use std::io::Write;
 use enum_map::Enum;
 use strum::EnumProperty;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 
 use crate::components::colours::{Colour, ColourMap, ColourOffStyle, ColourState};
 use crate::components::mute::MuteFunction;
@@ -26,8 +26,8 @@ pub enum ParseError {
     InvalidColours(#[from] crate::components::colours::ParseError),
 }
 use crate::profile::Attribute;
-use quick_xml::events::{BytesStart, Event};
 use quick_xml::Writer;
+use quick_xml::events::{BytesStart, Event};
 use std::str::FromStr;
 
 /**

@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::io::Write;
 
 use anyhow::Result;
-use quick_xml::events::{BytesStart, Event};
 use quick_xml::Writer;
+use quick_xml::events::{BytesStart, Event};
 
 use crate::components::colours::ColourMap;
 use crate::profile::Attribute;

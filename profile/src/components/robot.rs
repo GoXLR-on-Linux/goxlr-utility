@@ -5,14 +5,14 @@ use std::os::raw::c_float;
 use enum_map::EnumMap;
 use strum::{EnumIter, EnumProperty, IntoEnumIterator};
 
-use anyhow::{anyhow, Result};
-use quick_xml::events::{BytesEnd, BytesStart, Event};
+use anyhow::{Result, anyhow};
 use quick_xml::Writer;
+use quick_xml::events::{BytesEnd, BytesStart, Event};
 
+use crate::Preset;
 use crate::components::colours::{Colour, ColourMap, ColourOffStyle};
 use crate::components::robot::RobotStyle::Robot1;
 use crate::profile::Attribute;
-use crate::Preset;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]

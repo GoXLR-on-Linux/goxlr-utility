@@ -1,9 +1,9 @@
 use crate::components::mixer::InputChannels;
 use crate::profile::Attribute;
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use enum_map::EnumMap;
-use quick_xml::events::{BytesStart, Event};
 use quick_xml::Writer;
+use quick_xml::events::{BytesStart, Event};
 use std::collections::HashMap;
 use std::io::Write;
 use strum::{EnumProperty, IntoEnumIterator};

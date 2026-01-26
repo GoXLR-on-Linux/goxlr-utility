@@ -5,8 +5,8 @@ use std::io::Write;
 use crate::components::mixer::OutputChannels;
 use crate::profile::Attribute;
 use enum_map::{Enum, EnumMap};
-use quick_xml::events::{BytesStart, Event};
 use quick_xml::Writer;
+use quick_xml::events::{BytesStart, Event};
 use strum::{EnumIter, EnumProperty, IntoEnumIterator};
 
 #[derive(Debug)]

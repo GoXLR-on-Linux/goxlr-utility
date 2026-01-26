@@ -4,8 +4,8 @@ use std::io::Write;
 use anyhow::Result;
 
 use enum_map::Enum;
-use quick_xml::events::{BytesStart, Event};
 use quick_xml::Writer;
+use quick_xml::events::{BytesStart, Event};
 use strum::{Display, EnumIter, EnumString};
 
 use crate::components::colours::{Colour, ColourMap, ColourOffStyle};

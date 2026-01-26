@@ -8,7 +8,7 @@ use crate::commands::{
 };
 use crate::dcp::DCPCategory;
 use crate::routing::InputDevice;
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
 use enumset::EnumSet;
 use goxlr_types::{

@@ -4,7 +4,7 @@ use clap::Parser;
 use std::fs;
 
 use crate::Errors::{PathNotDir, PathNotExist};
-use include_dir::{include_dir, Dir};
+use include_dir::{Dir, include_dir};
 use std::path::PathBuf;
 
 const PROFILES: Dir = include_dir!("./defaults/resources/profiles");

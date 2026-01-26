@@ -1,6 +1,6 @@
-use anyhow::{bail, Result};
-use cpal::traits::{DeviceTrait, HostTrait};
+use anyhow::{Result, bail};
 use cpal::Device;
+use cpal::traits::{DeviceTrait, HostTrait};
 
 pub struct CpalConfiguration {}
 

@@ -5,8 +5,8 @@ use enum_map::{Enum, EnumMap};
 use strum::{EnumIter, EnumProperty, IntoEnumIterator};
 
 use anyhow::Result;
-use quick_xml::events::{BytesStart, Event};
 use quick_xml::Writer;
+use quick_xml::events::{BytesStart, Event};
 
 use crate::components::colours::ColourMap;
 use crate::components::mixer::FullChannelList::LineOut;

@@ -87,10 +87,10 @@ impl PulseAudioConfiguration {
         let op = {
             pulse.context.borrow_mut().introspect().get_sink_info_list(
                 move |sink_list: ListResult<&SinkInfo>| {
-                    if let ListResult::Item(item) = sink_list {
-                        if let Some(name) = &item.name {
-                            insider.borrow_mut().push(name.parse().unwrap());
-                        }
+                    if let ListResult::Item(item) = sink_list
+                        && let Some(name) = &item.name
+                    {
+                        insider.borrow_mut().push(name.parse().unwrap());
                     }
                 },
             )
@@ -102,8 +102,8 @@ impl PulseAudioConfiguration {
         }
 
         pulse.disconnect();
-        let unwrapped = wrapped.deref().borrow().clone();
-        unwrapped
+
+        wrapped.deref().borrow().clone()
     }
 
     pub(crate) fn get_inputs() -> Vec<String> {
@@ -138,7 +138,7 @@ impl PulseAudioConfiguration {
         }
 
         pulse.disconnect();
-        let unwrapped = wrapped.deref().borrow().clone();
-        unwrapped
+
+        wrapped.deref().borrow().clone()
     }
 }

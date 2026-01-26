@@ -8,13 +8,13 @@ use crate::cli::{
 };
 use crate::cli::{Cli, DeviceSettings};
 use crate::microphone::apply_microphone_controls;
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use clap::Parser;
+use goxlr_ipc::GoXLRCommand;
 use goxlr_ipc::client::Client;
 use goxlr_ipc::clients::ipc::ipc_client::IPCClient;
 use goxlr_ipc::clients::ipc::ipc_socket::Socket;
 use goxlr_ipc::clients::web::web_client::WebClient;
-use goxlr_ipc::GoXLRCommand;
 use goxlr_ipc::{DaemonRequest, DaemonResponse, MixerStatus, UsbProductInformation};
 use goxlr_types::{ChannelName, DeviceType, FaderName, InputDevice, MicrophoneType, OutputDevice};
 

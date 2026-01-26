@@ -2,18 +2,18 @@ use std::collections::HashMap;
 use std::io::Write;
 use std::str::FromStr;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 
 use enum_map::{Enum, EnumMap};
-use quick_xml::events::{BytesEnd, BytesStart, Event};
 use quick_xml::Writer;
+use quick_xml::events::{BytesEnd, BytesStart, Event};
 use ritelinked::LinkedHashMap;
 use strum::{Display, EnumIter, EnumProperty, EnumString};
 
+use crate::SampleButtons;
 use crate::components::colours::{Colour, ColourMap, ColourOffStyle};
 use crate::components::sample::PlayOrder::{Random, Sequential};
 use crate::profile::Attribute;
-use crate::SampleButtons;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]

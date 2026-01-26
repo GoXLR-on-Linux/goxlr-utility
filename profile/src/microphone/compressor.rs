@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::os::raw::c_float;
 
 use crate::profile::Attribute;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]

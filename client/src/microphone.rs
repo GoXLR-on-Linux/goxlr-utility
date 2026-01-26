@@ -1,7 +1,7 @@
 use crate::cli::MicrophoneControls;
 use anyhow::Result;
-use goxlr_ipc::client::Client;
 use goxlr_ipc::GoXLRCommand;
+use goxlr_ipc::client::Client;
 use goxlr_types::MicrophoneType;
 
 pub async fn apply_microphone_controls(

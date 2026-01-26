@@ -1,6 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use std::ffi::OsStr;
 use std::path::PathBuf;
 
@@ -88,7 +88,7 @@ fn is_daemon_running() -> bool {
 
 #[cfg(windows)]
 fn launch_daemon() -> Result<()> {
-    use std::process::{exit, Command, Stdio};
+    use std::process::{Command, Stdio, exit};
 
     // Ok, try a simple spawn and exit..
     if let Some(path) = locate_daemon_binary() {

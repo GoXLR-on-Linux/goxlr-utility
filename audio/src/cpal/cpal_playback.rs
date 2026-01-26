@@ -1,14 +1,14 @@
 use crate::audio::{AudioOutput, AudioSpecification, OpenOutputStream};
 use crate::cpal::cpal_config::CpalConfiguration;
-use anyhow::{bail, Result};
-use cpal::traits::{DeviceTrait, StreamTrait};
+use anyhow::{Result, bail};
 use cpal::Stream;
+use cpal::traits::{DeviceTrait, StreamTrait};
 use log::{debug, warn};
-use rb::{Producer, RbConsumer, RbInspector, RbProducer, SpscRb, RB};
+use rb::{Producer, RB, RbConsumer, RbInspector, RbProducer, SpscRb};
 use rubato::{FftFixedIn, Resampler};
 use std::panic::catch_unwind;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 // Create a 50ms Buffer Size for playback, this should be short enough to ensure there aren't

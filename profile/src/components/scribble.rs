@@ -3,14 +3,14 @@ use std::io::Write;
 use std::str::FromStr;
 
 use anyhow::Result;
-use quick_xml::events::{BytesStart, Event};
 use quick_xml::Writer;
+use quick_xml::events::{BytesStart, Event};
 use strum::EnumProperty;
 
+use crate::Faders;
 use crate::components::colours::{Colour, ColourMap};
 use crate::components::scribble::ScribbleStyle::{Inverted, Normal};
 use crate::profile::Attribute;
-use crate::Faders;
 
 #[derive(thiserror::Error, Debug)]
 #[allow(clippy::enum_variant_names)]

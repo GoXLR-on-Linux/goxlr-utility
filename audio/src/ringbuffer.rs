@@ -1,5 +1,5 @@
 use log::warn;
-use rb::{Consumer, Producer, RbConsumer, RbInspector, RbProducer, SpscRb, RB};
+use rb::{Consumer, Producer, RB, RbConsumer, RbInspector, RbProducer, SpscRb};
 
 /// This is a simple fixed-sized RingBuffer that permits overflowing
 ///

@@ -1,7 +1,7 @@
 use crate::profile::Attribute;
 use anyhow::Result;
-use quick_xml::events::{BytesStart, Event};
 use quick_xml::Writer;
+use quick_xml::events::{BytesStart, Event};
 use std::collections::HashMap;
 use std::io::Write;
 

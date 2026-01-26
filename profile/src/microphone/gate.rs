@@ -1,5 +1,5 @@
 use crate::profile::Attribute;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use std::collections::HashMap;
 use std::os::raw::c_float;
 
