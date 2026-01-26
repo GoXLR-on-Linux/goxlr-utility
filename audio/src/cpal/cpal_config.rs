@@ -66,43 +66,40 @@ impl CpalConfiguration {
         let mut cpal_device = None;
 
         // Basically, if *ANYTHING* goes wrong here, we'll fall through to default.
-        if let Some(device_name) = device {
-            if let Some(position) = device_name.find('*') {
-                let str_host = &device_name[0..position];
-                let str_device = &device_name[position + 1..device_name.len()];
+        if let Some(device_name) = device
+            && let Some(position) = device_name.find('*')
+        {
+            let str_host = &device_name[0..position];
+            let str_device = &device_name[position + 1..device_name.len()];
 
-                // Ok, now for cpal, find the correct host..
-                let cpal_host_list = cpal::available_hosts();
-                let host_id = cpal_host_list.iter().find(|x| x.name() == str_host);
+            // Ok, now for cpal, find the correct host..
+            let cpal_host_list = cpal::available_hosts();
+            let host_id = cpal_host_list.iter().find(|x| x.name() == str_host);
 
-                if let Some(host_id) = host_id {
-                    if let Ok(host) = cpal::host_from_id(*host_id) {
-                        if let Ok(mut devices) = host.devices() {
-                            if let Some(device) = devices.find(|x| {
-                                let is_input = CpalConfiguration::device_is_input(x);
-                                let is_output = CpalConfiguration::device_is_output(x);
+            if let Some(host_id) = host_id
+                && let Ok(host) = cpal::host_from_id(*host_id)
+                && let Ok(mut devices) = host.devices()
+                && let Some(device) = devices.find(|x| {
+                    let is_input = CpalConfiguration::device_is_input(x);
+                    let is_output = CpalConfiguration::device_is_output(x);
 
-                                // Only do checks if this device isn't an input AND output
-                                if !is_input || !is_output {
-                                    if is_input && !input {
-                                        return false;
-                                    }
-                                    if is_output && input {
-                                        return false;
-                                    }
-                                }
-
-                                if x.name().unwrap_or_else(|_| "UNKNOWN".to_string()) == str_device
-                                {
-                                    return true;
-                                }
-                                false
-                            }) {
-                                cpal_device = Some(device)
-                            }
+                    // Only do checks if this device isn't an input AND output
+                    if !is_input || !is_output {
+                        if is_input && !input {
+                            return false;
+                        }
+                        if is_output && input {
+                            return false;
                         }
                     }
-                }
+
+                    if x.name().unwrap_or_else(|_| "UNKNOWN".to_string()) == str_device {
+                        return true;
+                    }
+                    false
+                })
+            {
+                cpal_device = Some(device)
             }
         }
 
