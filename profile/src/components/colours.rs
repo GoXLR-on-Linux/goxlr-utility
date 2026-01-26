@@ -218,10 +218,10 @@ impl ColourMap {
     }
 
     pub fn colour_or_default(&self, index: u8) -> &Colour {
-        if let Some(colour_list) = &self.colour_list {
-            if let Some(colour) = &colour_list[index as usize] {
-                return colour;
-            }
+        if let Some(colour_list) = &self.colour_list
+            && let Some(colour) = &colour_list[index as usize]
+        {
+            return colour;
         }
 
         &DEFAULT_COLOUR

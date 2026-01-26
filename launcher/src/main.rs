@@ -138,12 +138,12 @@ fn locate_daemon_binary() -> Option<PathBuf> {
         binary_path.replace(cwd);
     }
 
-    if binary_path.is_none() {
-        if let Some(parent) = std::env::current_exe().unwrap().parent() {
-            let bin = parent.join(bin_name.clone());
-            if bin.exists() {
-                binary_path.replace(bin);
-            }
+    if binary_path.is_none()
+        && let Some(parent) = std::env::current_exe().unwrap().parent()
+    {
+        let bin = parent.join(bin_name.clone());
+        if bin.exists() {
+            binary_path.replace(bin);
         }
     }
 

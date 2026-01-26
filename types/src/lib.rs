@@ -171,28 +171,28 @@ impl From<String> for VersionNumber {
         let mut parts = value.split('.');
 
         // We can't iterate over a tuple, so we need to do this 4 times..
-        if let Some(part) = parts.next() {
-            if let Ok(part) = part.parse() {
-                version.0 = part;
-            }
+        if let Some(part) = parts.next()
+            && let Ok(part) = part.parse()
+        {
+            version.0 = part;
         }
 
-        if let Some(part) = parts.next() {
-            if let Ok(part) = part.parse() {
-                version.1 = part;
-            }
+        if let Some(part) = parts.next()
+            && let Ok(part) = part.parse()
+        {
+            version.1 = part;
         }
 
-        if let Some(part) = parts.next() {
-            if let Ok(part) = part.parse() {
-                version.2 = Some(part);
-            }
+        if let Some(part) = parts.next()
+            && let Ok(part) = part.parse()
+        {
+            version.2 = Some(part);
         }
 
-        if let Some(part) = parts.next() {
-            if let Ok(part) = part.parse() {
-                version.3 = Some(part);
-            }
+        if let Some(part) = parts.next()
+            && let Ok(part) = part.parse()
+        {
+            version.3 = Some(part);
         }
 
         version
