@@ -493,18 +493,20 @@ impl TUSBAudio<'_> {
                         continue;
                     }
 
-                    if event_response[0] == 1 && event_response[1] == 1 && event_response[2] == 0 {
-                        if let Some(identifier) = &*identifier.lock().unwrap() {
-                            // A button or fader interrupt has been received.
-                            if callbacks.input_changed.capacity() > 0 {
-                                let se = callbacks.input_changed.blocking_send(identifier.clone());
-                                if se.is_err() {
-                                    warn!("Error sending Callback! {:?}", se.err());
+                    if event_response[0] == 1
+                        && event_response[1] == 1
+                        && event_response[2] == 0
+                        && let Some(identifier) = &*identifier.lock().unwrap()
+                    {
+                        // A button or fader interrupt has been received.
+                        if callbacks.input_changed.capacity() > 0 {
+                            let se = callbacks.input_changed.blocking_send(identifier.clone());
+                            if se.is_err() {
+                                warn!("Error sending Callback! {:?}", se.err());
 
-                                    // Something's gone horribly wrong!
-                                    terminator.store(true, Ordering::Relaxed);
-                                    break;
-                                }
+                                // Something's gone horribly wrong!
+                                terminator.store(true, Ordering::Relaxed);
+                                break;
                             }
                         }
                     }
