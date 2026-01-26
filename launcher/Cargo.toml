@@ -1,7 +1,11 @@
 [package]
 name = "goxlr-launcher"
-version = "1.2.3"
-edition = "2021"
+
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [dependencies]
 goxlr-ipc = { path = "../ipc" }

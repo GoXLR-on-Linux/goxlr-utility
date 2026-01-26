@@ -1,9 +1,11 @@
 [package]
 name = "goxlr-profile-loader"
-version = "1.2.3"
-edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [dependencies]
 # Common Workspace

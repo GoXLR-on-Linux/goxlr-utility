@@ -1,13 +1,14 @@
 [package]
 name = "goxlr-client"
-version = "1.2.3"
-edition = "2021"
 build = "build.rs"
-authors = ["Nathan Adams <dinnerbone@dinnerbone.com>", "Craig McLure <craig@mclure.net>", "Lars Mühlbauer <lm41@dismail.de>"]
 description = "Allows control of a TC-Helicon GoXLR or GoXLR Mini, by interacting with a running daemon."
-repository = "https://github.com/GoXLR-on-Linux/GoXLR-Utility"
-license = "MIT"
 categories = ["hardware-support", "command-line-utilities"]
+
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [lib]
 name = "client"

@@ -1,12 +1,13 @@
 [package]
 name = "goxlr-daemon"
-version = "1.2.3"
-edition = "2024"
-authors = ["Nathan Adams <dinnerbone@dinnerbone.com>", "Craig McLure <craig@mclure.net>", "Lars Mühlbauer <lm41@dismail.de>"]
 description = "Allows control of a TC-Helicon GoXLR or GoXLR Mini, by maintaining an interaction with it over USB in the background."
-repository = "https://github.com/GoXLR-on-Linux/GoXLR-Utility"
-license = "MIT"
 categories = ["hardware-support", "command-line-utilities"]
+
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [features]
 tts = ["dep:tts"]
