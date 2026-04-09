@@ -3,19 +3,21 @@
 use anyhow::{Result, bail};
 use std::ffi::OsStr;
 use std::path::PathBuf;
+use std::time::Duration;
 
 use goxlr_ipc::client::Client;
 use goxlr_ipc::clients::ipc::ipc_client::IPCClient;
 use goxlr_ipc::clients::ipc::ipc_socket::Socket;
-use goxlr_ipc::{DaemonCommand, DaemonRequest, DaemonResponse};
+use goxlr_ipc::{DaemonCommand, DaemonRequest, DaemonResponse, ipc_socket_path};
 use interprocess::local_socket::tokio::prelude::LocalSocketStream;
 use interprocess::local_socket::traits::tokio::Stream;
 use interprocess::local_socket::{GenericFilePath, GenericNamespaced, ToFsName, ToNsName};
+use tokio::time::sleep;
 use which::which;
 
-static SOCKET_PATH: &str = "/tmp/goxlr.socket";
-static NAMED_PIPE: &str = "@goxlr.socket";
 static DAEMON_NAME: &str = "goxlr-daemon";
+const UI_CONNECT_RETRY_ATTEMPTS: u8 = 20;
+const UI_CONNECT_RETRY_DELAY_MS: u64 = 250;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -29,10 +31,11 @@ async fn main() -> Result<()> {
 }
 
 async fn get_connection() -> Result<LocalSocketStream> {
+    let socket_path = ipc_socket_path();
     let path = if cfg!(windows) {
-        NAMED_PIPE.to_ns_name::<GenericNamespaced>()
+        socket_path.as_str().to_ns_name::<GenericNamespaced>()
     } else {
-        SOCKET_PATH.to_fs_name::<GenericFilePath>()
+        socket_path.as_str().to_fs_name::<GenericFilePath>()
     };
 
     let path = match path {
@@ -110,22 +113,44 @@ fn launch_daemon() -> Result<()> {
 }
 
 async fn open_ui() -> Result<()> {
-    // We kinda have to hope for the best here..
-    let mut usable_connection = None;
+    let mut last_error = None;
 
-    if let Ok(connection) = get_connection().await {
-        usable_connection.replace(connection);
+    for attempt in 0..UI_CONNECT_RETRY_ATTEMPTS {
+        match get_connection().await {
+            Ok(connection) => {
+                let socket: Socket<DaemonResponse, DaemonRequest> = Socket::new(connection);
+                let mut client = IPCClient::new(socket);
+                match client
+                    .send(DaemonRequest::Daemon(DaemonCommand::Activate))
+                    .await
+                {
+                    Ok(()) => return Ok(()),
+                    Err(error) => last_error = Some(error.to_string()),
+                }
+            }
+            Err(error) => {
+                last_error = Some(error.to_string());
+            }
+        }
+
+        // Don't delay after the final attempt.
+        if attempt + 1 < UI_CONNECT_RETRY_ATTEMPTS {
+            sleep(Duration::from_millis(UI_CONNECT_RETRY_DELAY_MS)).await;
+        }
     }
 
-    if let Some(connection) = usable_connection {
-        let socket: Socket<DaemonResponse, DaemonRequest> = Socket::new(connection);
-        let mut client = IPCClient::new(socket);
-        client
-            .send(DaemonRequest::Daemon(DaemonCommand::Activate))
-            .await?;
-        return Ok(());
+    if let Some(error) = last_error {
+        bail!(
+            "Unable to make a connection with the Daemon after {} attempts: {}",
+            UI_CONNECT_RETRY_ATTEMPTS,
+            error
+        );
     }
-    bail!("Unable to make a connection with the Daemon");
+
+    bail!(
+        "Unable to make a connection with the Daemon after {} attempts",
+        UI_CONNECT_RETRY_ATTEMPTS
+    );
 }
 
 fn locate_daemon_binary() -> Option<PathBuf> {
@@ -133,13 +158,16 @@ fn locate_daemon_binary() -> Option<PathBuf> {
     let bin_name = get_daemon_binary_name();
 
     // There are three possible places to check for this, the CWD, the binary WD, and $PATH
-    let cwd = std::env::current_dir().unwrap().join(bin_name.clone());
-    if cwd.exists() {
-        binary_path.replace(cwd);
+    if let Ok(cwd) = std::env::current_dir() {
+        let cwd = cwd.join(bin_name.clone());
+        if cwd.exists() {
+            binary_path.replace(cwd);
+        }
     }
 
     if binary_path.is_none()
-        && let Some(parent) = std::env::current_exe().unwrap().parent()
+        && let Ok(executable) = std::env::current_exe()
+        && let Some(parent) = executable.parent()
     {
         let bin = parent.join(bin_name.clone());
         if bin.exists() {

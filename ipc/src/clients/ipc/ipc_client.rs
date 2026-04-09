@@ -56,6 +56,33 @@ impl Client for IPCClient {
         self.send(DaemonRequest::GetStatus).await
     }
 
+    async fn get_mic_level(&mut self, serial: &str) -> Result<f64> {
+        self.socket
+            .send(DaemonRequest::GetMicLevel(serial.to_string()))
+            .await
+            .context("Failed to send mic level request to the GoXLR daemon process")?;
+        let result = self
+            .socket
+            .read()
+            .await
+            .context("Failed to retrieve mic level response from the GoXLR daemon process")?
+            .context("Failed to parse mic level response from the GoXLR daemon process")?;
+
+        match result {
+            DaemonResponse::MicLevel(level) => Ok(level),
+            DaemonResponse::Error(error) => Err(anyhow!("{}", error)),
+            DaemonResponse::Status(status) => {
+                self.status = status.clone();
+                self.http_settings = status.config.http_settings;
+                bail!("Received status while waiting for mic level response");
+            }
+            DaemonResponse::Ok => bail!("Received OK while waiting for mic level response"),
+            DaemonResponse::Patch(_) => {
+                bail!("Received patch while waiting for mic level response")
+            }
+        }
+    }
+
     async fn command(&mut self, serial: &str, command: GoXLRCommand) -> Result<()> {
         self.send(DaemonRequest::Command(serial.to_string(), command))
             .await

@@ -1,5 +1,6 @@
 use crate::DaemonState;
 use crate::events::EventTriggers;
+use crate::settings::HeadphoneEqProfile;
 use anyhow::Result;
 use cfg_if::cfg_if;
 use std::path::PathBuf;
@@ -32,13 +33,25 @@ cfg_if! {
         pub fn display_error(message: String) {
             windows::display_error(message);
         }
+
+        pub fn headphone_eq_backend_name() -> String {
+            "Not Supported".to_string()
+        }
+
+        pub fn headphone_eq_backend_ready() -> bool {
+            false
+        }
+
+        pub fn apply_headphone_eq(_serial: &str, _enabled: bool, _profile: &HeadphoneEqProfile) -> Result<()> {
+            Ok(())
+        }
     } else if #[cfg(target_os = "linux")] {
         mod linux;
         mod unix;
 
 
         pub fn perform_preflight() -> Result<()> {
-            Ok(())
+            linux::perform_platform_preflight()
         }
 
         pub async fn spawn_runtime(state: DaemonState, tx: mpsc::Sender<EventTriggers>) -> Result<()> {
@@ -59,6 +72,18 @@ cfg_if! {
 
         pub fn display_error(message: String) {
             linux::display_error(message);
+        }
+
+        pub fn headphone_eq_backend_name() -> String {
+            linux::headphone_eq::backend_name().to_string()
+        }
+
+        pub fn headphone_eq_backend_ready() -> bool {
+            linux::headphone_eq::is_backend_available()
+        }
+
+        pub fn apply_headphone_eq(serial: &str, enabled: bool, profile: &HeadphoneEqProfile) -> Result<()> {
+            linux::headphone_eq::apply_headphone_eq(serial, enabled, profile)
         }
     } else if #[cfg(target_os = "macos")] {
         mod macos;
@@ -82,6 +107,18 @@ cfg_if! {
          pub fn display_error(message: String) {
             macos::display_error(message);
          }
+
+        pub fn headphone_eq_backend_name() -> String {
+            "Not Supported".to_string()
+        }
+
+        pub fn headphone_eq_backend_ready() -> bool {
+            false
+        }
+
+        pub fn apply_headphone_eq(_serial: &str, _enabled: bool, _profile: &HeadphoneEqProfile) -> Result<()> {
+            Ok(())
+        }
     } else {
         use anyhow::bail;
 
@@ -102,6 +139,18 @@ cfg_if! {
         }
 
         pub fn display_error(message: String) {}
+
+        pub fn headphone_eq_backend_name() -> String {
+            "Not Supported".to_string()
+        }
+
+        pub fn headphone_eq_backend_ready() -> bool {
+            false
+        }
+
+        pub fn apply_headphone_eq(_serial: &str, _enabled: bool, _profile: &HeadphoneEqProfile) -> Result<()> {
+            Ok(())
+        }
     }
 }
 
@@ -111,15 +160,18 @@ pub fn get_ui_app_path() -> Option<PathBuf> {
     let bin_name = get_ui_binary_name();
 
     // There are three possible places to check for this, the CWD, the binary WD, and $PATH
-    let cwd = std::env::current_dir().unwrap().join(bin_name.clone());
-    if cwd.exists() {
-        path.replace(cwd);
+    if let Ok(cwd) = std::env::current_dir() {
+        let cwd = cwd.join(bin_name.clone());
+        if cwd.exists() {
+            path.replace(cwd);
+        }
     }
 
     // IntelliJ complains about duplicate code here, and while yes, it's technically duplicated
     // from goxlr-launcher, the launcher and daemon don't have dependencies on each other.
     if path.is_none()
-        && let Some(parent) = std::env::current_exe().unwrap().parent()
+        && let Ok(executable) = std::env::current_exe()
+        && let Some(parent) = executable.parent()
     {
         let bin = parent.join(bin_name.clone());
         if bin.exists() {

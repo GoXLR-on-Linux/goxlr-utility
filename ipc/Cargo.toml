@@ -26,3 +26,6 @@ async-trait = "0.1.89"
 
 # Used for Web Requests
 reqwest = { workspace = true, features = ["json"] }
+
+[target.'cfg(target_family = "unix")'.dependencies]
+nix = { workspace = true, features = ["user"] }

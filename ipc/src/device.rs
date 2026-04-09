@@ -67,6 +67,7 @@ pub struct HttpSettings {
     pub bind_address: String,
     pub cors_enabled: bool,
     pub port: u16,
+    pub auth_token: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -400,6 +401,19 @@ pub struct Sample {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HeadphoneEqBand {
+    pub frequency_hz: f32,
+    pub gain_db: f32,
+    pub q: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HeadphoneEqProfile {
+    pub preamp_db: f32,
+    pub bands: Vec<HeadphoneEqBand>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
     pub display: Display,
     pub mute_hold_duration: u16,
@@ -409,6 +423,16 @@ pub struct Settings {
     pub lock_faders: bool,
     pub fade_duration: u32,
     pub vod_mode: VodMode,
+    pub clip_guard_enabled: bool,
+    pub clip_guard_threshold: u8,
+    pub headphone_limiter_enabled: bool,
+    pub headphone_limiter_threshold: u8,
+    pub headphone_eq_enabled: bool,
+    pub headphone_eq_backend_ready: bool,
+    pub headphone_eq_backend_name: String,
+    pub headphone_eq_active_profile: Option<String>,
+    pub headphone_eq_current: HeadphoneEqProfile,
+    pub headphone_eq_profiles: HashMap<String, HeadphoneEqProfile>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

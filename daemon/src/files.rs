@@ -159,16 +159,23 @@ impl FileManager {
             let format = format!("{}/**/*.{}", path.to_string_lossy(), extension);
             let files = glob(format.as_str());
             if let Ok(files) = files {
-                files.for_each(|f| paths.push(f.unwrap()));
+                files.for_each(|f| match f {
+                    Ok(file_path) => paths.push(file_path),
+                    Err(error) => warn!("Error while scanning sample files: {}", error),
+                });
             }
         }
 
         let mut map: BTreeMap<String, String> = BTreeMap::new();
         // Ok, we need to split stuff up..
         for file_path in paths {
+            let Some(file_name) = file_path.file_name() else {
+                warn!("Unable to extract filename from path {:?}", file_path);
+                continue;
+            };
             map.insert(
                 file_path.to_string_lossy()[path.to_string_lossy().len() + 1..].to_string(),
-                file_path.file_name().unwrap().to_string_lossy().to_string(),
+                file_name.to_string_lossy().to_string(),
             );
         }
         map
@@ -293,7 +300,10 @@ pub async fn spawn_file_notification_service(
                                 EventKind::Modify(ModifyKind::Name(RenameMode::To)) |
                                 EventKind::Modify(ModifyKind::Name(RenameMode::Both)) => {
 
-                                    let path = &event.paths[0];
+                                    let Some(path) = event.paths.first() else {
+                                        warn!("Received file event without path payload: {:?}", event);
+                                        continue;
+                                    };
                                     if path.starts_with(&paths.profiles) {
                                         let _ = sender.send(PathTypes::Profiles).await;
                                         continue;
@@ -352,10 +362,13 @@ fn create_watcher() -> notify::Result<(RecommendedWatcher, Receiver<notify::Resu
 pub fn find_file_in_path(path: PathBuf, file: PathBuf) -> Option<PathBuf> {
     let format = format!("{}/**/{}", path.to_string_lossy(), file.to_string_lossy());
     let files = glob(format.as_str());
-    if let Ok(files) = files
-        && let Some(file) = files.into_iter().next()
-    {
-        return Some(file.unwrap());
+    if let Ok(files) = files {
+        for entry in files {
+            match entry {
+                Ok(path) => return Some(path),
+                Err(error) => warn!("Error while searching for file {:?}: {}", file, error),
+            }
+        }
     }
 
     None

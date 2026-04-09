@@ -2096,6 +2096,7 @@ dependencies = [
  "goxlr-types",
  "interprocess",
  "json-patch",
+ "nix",
  "reqwest",
  "serde",
  "tokio-serde",

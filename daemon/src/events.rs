@@ -2,9 +2,11 @@
 // variety of sources, which affect other parts of the daemon.
 
 use crate::primary_worker::DeviceStateChange;
+use crate::platform::{display_error, perform_preflight};
 use crate::{SettingsHandle, Shutdown};
-use goxlr_ipc::{HttpSettings, PathTypes};
+use goxlr_ipc::PathTypes;
 use log::{debug, warn};
+use std::path::Path;
 use std::process::{Command, Stdio};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -23,14 +25,13 @@ pub enum EventTriggers {
     Unlock,
     Open(PathTypes),
     Activate,
-    OpenUi,
+    RunPreflight,
     DevicesStopped,
 }
 
 #[derive(Clone)]
 pub struct DaemonState {
     pub show_tray: Arc<AtomicBool>,
-    pub http_settings: HttpSettings,
 
     // TTS Output
     pub tts_sender: Sender<String>,
@@ -113,87 +114,21 @@ pub async fn spawn_event_handler(
                             warn!("Error Opening Path: {:?}", error);
                         };
                     },
-                    EventTriggers::OpenUi => {
-                        if let Err(error) = open::that(get_util_url(&state)) {
-                            warn!("Error Opening URL: {:?}", error);
-                        }
-                    },
                     EventTriggers::Activate => {
-                        let activate = state.settings_handle.get_activate().await;
-                        let url = get_util_url(&state);
-
                         // Use the temp directory as the runtime for any launched apps..
                         let tmp_dir = std::env::temp_dir();
-
-                        #[cfg(not(unix))]
-                        {
-                            use windows_args;
-                            match activate {
-                                Some(exec) => {
-                                    // Ok, we're going to force the app runtime into %TMP%, to
-                                    // prevent situations where it may need to write files.
-
-
-                                    let exec = exec.replace("%URL%", &url);
-                                    let mut args = windows_args::Args::parse_cmd(&exec);
-                                    if let Some(command) = args.next() {
-                                        let result = Command::new(command)
-                                            .current_dir(tmp_dir)
-                                            .args(args)
-                                            .stdout(Stdio::null())
-                                            .stderr(Stdio::null())
-                                            .spawn();
-
-                                        if let Err(error) = result {
-                                            warn!("Error Executing command: {:?}, falling back", error);
-                                            if let Err(error) = open::that(url) {
-                                                warn!("Error Opening URL: {:?}", error);
-                                            }
-                                        }
-                                    }
-                                },
-                                None => {
-                                    if let Err(error) = open::that(url) {
-                                        warn!("Error Opening URL: {:?}", error);
-                                    }
-                                }
-                            }
+                        if !launch_detected_ui_app(tmp_dir.as_path()) {
+                            warn!(
+                                "No GoXLR UI application available to open. Install `goxlr-utility-ui`."
+                            );
                         }
-
-                        #[cfg(unix)]
-                        {
-                            use shell_words;
-                            match activate {
-                                Some(exec) => {
-                                    let exec = exec.replace("%URL%", &url);
-                                    if let Ok(params) = shell_words::split(&exec) {
-                                        debug!("Attempting to Execute: {:?}", params);
-                                        let result = Command::new(&params[0])
-                                            .current_dir(tmp_dir)
-                                            .args(&params[1..])
-                                            .stdout(Stdio::null())
-                                            .stderr(Stdio::null())
-                                            .spawn();
-
-                                        if let Err(error) = result {
-                                            warn!("Error Executing command: {:?}, falling back", error);
-                                            if let Err(error) = open::that(url) {
-                                                warn!("Error Opening URL: {:?}", error);
-                                            }
-                                        }
-
-                                    } else if let Err(error) = open::that(url) {
-                                        warn!("Error Opening URL: {:?}", error);
-                                    }
-                                },
-                                None => {
-                                    if let Err(error) = open::that(url) {
-                                        warn!("Error Opening URL: {:?}", error);
-                                    }
-                                }
-                            }
+                    }
+                    EventTriggers::RunPreflight => {
+                        debug!("Manual preflight requested from tray.");
+                        if let Err(error) = perform_preflight() {
+                            warn!("Manual preflight failed: {}", error);
+                            display_error(format!("GoXLR preflight failed: {error}"));
                         }
-
                     }
                 }
             },
@@ -201,13 +136,23 @@ pub async fn spawn_event_handler(
     }
 }
 
-fn get_util_url(state: &DaemonState) -> String {
-    let mut host = String::from("localhost");
-    if state.http_settings.bind_address != "localhost"
-        && &state.http_settings.bind_address != "0.0.0.0"
-    {
-        host.clone_from(&state.http_settings.bind_address);
+fn launch_detected_ui_app(tmp_dir: &Path) -> bool {
+    if let Some(app) = crate::platform::get_ui_app_path() {
+        let result = Command::new(app)
+            .current_dir(tmp_dir)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn();
+
+        if let Err(error) = result {
+            warn!(
+                "Error launching detected UI application: {:?}",
+                error
+            );
+            return false;
+        }
+        return true;
     }
 
-    format!("http://{}:{}/", host, state.http_settings.port)
+    false
 }

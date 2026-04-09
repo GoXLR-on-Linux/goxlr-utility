@@ -5,7 +5,7 @@ use directories::ProjectDirs;
 use goxlr_ipc::{FirmwareSource, GoXLRCommand, LogLevel};
 use goxlr_types::VodMode;
 use goxlr_types::VodMode::Routable;
-use log::{debug, error, info, warn};
+use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -44,6 +44,80 @@ impl AsRef<Path> for Paths {
             Paths::Backups => Path::new("backups"),
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HeadphoneEqBand {
+    pub frequency_hz: f32,
+    pub gain_db: f32,
+    pub q: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HeadphoneEqProfile {
+    pub preamp_db: f32,
+    pub bands: Vec<HeadphoneEqBand>,
+}
+
+fn default_headphone_eq_profile() -> HeadphoneEqProfile {
+    let centers = [
+        32.0_f32, 64.0, 125.0, 250.0, 500.0, 1000.0, 2000.0, 4000.0, 8000.0, 16000.0,
+    ];
+    let bands = centers
+        .iter()
+        .map(|frequency_hz| HeadphoneEqBand {
+            frequency_hz: *frequency_hz,
+            gain_db: 0.0,
+            q: 1.6,
+        })
+        .collect();
+
+    HeadphoneEqProfile {
+        preamp_db: 0.0,
+        bands,
+    }
+}
+
+fn default_headphone_eq_profiles() -> HashMap<String, HeadphoneEqProfile> {
+    let mut profiles = HashMap::new();
+    let flat = default_headphone_eq_profile();
+    profiles.insert("Flat".to_string(), flat.clone());
+
+    let mut music = flat.clone();
+    if let Some(band) = music.bands.get_mut(1) {
+        band.gain_db = 2.5;
+    }
+    if let Some(band) = music.bands.get_mut(5) {
+        band.gain_db = -0.8;
+    }
+    if let Some(band) = music.bands.get_mut(8) {
+        band.gain_db = 1.8;
+    }
+    profiles.insert("Music".to_string(), music);
+
+    let mut vocal = flat.clone();
+    if let Some(band) = vocal.bands.get_mut(1) {
+        band.gain_db = -1.0;
+    }
+    if let Some(band) = vocal.bands.get_mut(5) {
+        band.gain_db = 2.5;
+    }
+    if let Some(band) = vocal.bands.get_mut(8) {
+        band.gain_db = 0.8;
+    }
+    profiles.insert("Voice".to_string(), vocal);
+
+    let mut night = flat;
+    night.preamp_db = -2.5;
+    if let Some(band) = night.bands.get_mut(1) {
+        band.gain_db = 1.2;
+    }
+    if let Some(band) = night.bands.get_mut(8) {
+        band.gain_db = -1.8;
+    }
+    profiles.insert("Night".to_string(), night);
+
+    profiles
 }
 
 impl SettingsHandle {
@@ -329,11 +403,6 @@ impl SettingsHandle {
         settings.open_ui_on_launch = Some(enable);
     }
 
-    pub async fn get_activate(&self) -> Option<String> {
-        let settings = self.settings.read().await;
-        settings.activate.clone()
-    }
-
     #[allow(dead_code)]
     pub async fn set_activate(&self, activate: Option<String>) {
         let mut settings = self.settings.write().await;
@@ -516,6 +585,112 @@ impl SettingsHandle {
             .unwrap_or(500)
     }
 
+    pub async fn get_clip_guard_enabled(&self, device_serial: &str) -> bool {
+        let settings = self.settings.read().await;
+        settings
+            .devices
+            .as_ref()
+            .unwrap()
+            .get(device_serial)
+            .map(|d| d.clip_guard_enabled.unwrap_or(false))
+            .unwrap_or(false)
+    }
+
+    pub async fn get_clip_guard_threshold(&self, device_serial: &str) -> u8 {
+        let settings = self.settings.read().await;
+        settings
+            .devices
+            .as_ref()
+            .unwrap()
+            .get(device_serial)
+            .map(|d| d.clip_guard_threshold.unwrap_or(255))
+            .unwrap_or(255)
+    }
+
+    pub async fn get_headphone_limiter_enabled(&self, device_serial: &str) -> bool {
+        let settings = self.settings.read().await;
+        settings
+            .devices
+            .as_ref()
+            .unwrap()
+            .get(device_serial)
+            .map(|d| d.headphone_limiter_enabled.unwrap_or(false))
+            .unwrap_or(false)
+    }
+
+    pub async fn get_headphone_limiter_threshold(&self, device_serial: &str) -> u8 {
+        let settings = self.settings.read().await;
+        settings
+            .devices
+            .as_ref()
+            .unwrap()
+            .get(device_serial)
+            .map(|d| d.headphone_limiter_threshold.unwrap_or(255))
+            .unwrap_or(255)
+    }
+
+    pub async fn get_headphone_eq_enabled(&self, device_serial: &str) -> bool {
+        let settings = self.settings.read().await;
+        settings
+            .devices
+            .as_ref()
+            .unwrap()
+            .get(device_serial)
+            .map(|d| d.headphone_eq_enabled.unwrap_or(false))
+            .unwrap_or(false)
+    }
+
+    pub async fn get_headphone_eq_active_profile(&self, device_serial: &str) -> Option<String> {
+        let settings = self.settings.read().await;
+        settings
+            .devices
+            .as_ref()
+            .unwrap()
+            .get(device_serial)
+            .and_then(|d| d.headphone_eq_active_profile.clone())
+    }
+
+    pub async fn get_headphone_eq_profiles(
+        &self,
+        device_serial: &str,
+    ) -> HashMap<String, HeadphoneEqProfile> {
+        let settings = self.settings.read().await;
+        settings
+            .devices
+            .as_ref()
+            .unwrap()
+            .get(device_serial)
+            .and_then(|d| d.headphone_eq_profiles.clone())
+            .filter(|profiles| !profiles.is_empty())
+            .unwrap_or_else(default_headphone_eq_profiles)
+    }
+
+    pub async fn get_headphone_eq_current(&self, device_serial: &str) -> HeadphoneEqProfile {
+        let settings = self.settings.read().await;
+        let Some(device_settings) = settings
+            .devices
+            .as_ref()
+            .unwrap()
+            .get(device_serial)
+            .cloned()
+        else {
+            return default_headphone_eq_profile();
+        };
+
+        if let Some(profile) = device_settings.headphone_eq_current {
+            return profile;
+        }
+
+        if let Some(active_name) = device_settings.headphone_eq_active_profile
+            && let Some(profiles) = device_settings.headphone_eq_profiles
+            && let Some(profile) = profiles.get(&active_name)
+        {
+            return profile.clone();
+        }
+
+        default_headphone_eq_profile()
+    }
+
     pub async fn get_sample_gain_percent(&self, name: String) -> u8 {
         let settings = self.settings.read().await;
         if let Some(gain) = &settings.sample_gain {
@@ -689,6 +864,165 @@ impl SettingsHandle {
         entry.sampler_fade_duration = Some(duration);
     }
 
+    pub async fn set_clip_guard_enabled(&self, device_serial: &str, setting: bool) {
+        let mut settings = self.settings.write().await;
+        let entry = settings
+            .devices
+            .as_mut()
+            .unwrap()
+            .entry(device_serial.to_owned())
+            .or_insert_with(DeviceSettings::default);
+        entry.clip_guard_enabled = Some(setting);
+    }
+
+    pub async fn set_clip_guard_threshold(&self, device_serial: &str, threshold: u8) {
+        let mut settings = self.settings.write().await;
+        let entry = settings
+            .devices
+            .as_mut()
+            .unwrap()
+            .entry(device_serial.to_owned())
+            .or_insert_with(DeviceSettings::default);
+        entry.clip_guard_threshold = Some(threshold);
+    }
+
+    pub async fn set_headphone_limiter_enabled(&self, device_serial: &str, setting: bool) {
+        let mut settings = self.settings.write().await;
+        let entry = settings
+            .devices
+            .as_mut()
+            .unwrap()
+            .entry(device_serial.to_owned())
+            .or_insert_with(DeviceSettings::default);
+        entry.headphone_limiter_enabled = Some(setting);
+    }
+
+    pub async fn set_headphone_limiter_threshold(&self, device_serial: &str, threshold: u8) {
+        let mut settings = self.settings.write().await;
+        let entry = settings
+            .devices
+            .as_mut()
+            .unwrap()
+            .entry(device_serial.to_owned())
+            .or_insert_with(DeviceSettings::default);
+        entry.headphone_limiter_threshold = Some(threshold);
+    }
+
+    pub async fn set_headphone_eq_enabled(&self, device_serial: &str, setting: bool) {
+        let mut settings = self.settings.write().await;
+        let entry = settings
+            .devices
+            .as_mut()
+            .unwrap()
+            .entry(device_serial.to_owned())
+            .or_insert_with(DeviceSettings::default);
+        entry.headphone_eq_enabled = Some(setting);
+    }
+
+    pub async fn set_headphone_eq_current(
+        &self,
+        device_serial: &str,
+        profile: HeadphoneEqProfile,
+    ) {
+        let mut settings = self.settings.write().await;
+        let entry = settings
+            .devices
+            .as_mut()
+            .unwrap()
+            .entry(device_serial.to_owned())
+            .or_insert_with(DeviceSettings::default);
+        entry.headphone_eq_current = Some(profile);
+    }
+
+    pub async fn save_headphone_eq_profile(&self, device_serial: &str, profile_name: &str) {
+        let mut settings = self.settings.write().await;
+        let entry = settings
+            .devices
+            .as_mut()
+            .unwrap()
+            .entry(device_serial.to_owned())
+            .or_insert_with(DeviceSettings::default);
+
+        let current = entry
+            .headphone_eq_current
+            .clone()
+            .unwrap_or_else(default_headphone_eq_profile);
+
+        if entry.headphone_eq_profiles.is_none() {
+            entry
+                .headphone_eq_profiles
+                .replace(default_headphone_eq_profiles());
+        }
+
+        if let Some(profiles) = entry.headphone_eq_profiles.as_mut() {
+            profiles.insert(profile_name.to_owned(), current);
+        }
+        entry.headphone_eq_active_profile = Some(profile_name.to_owned());
+    }
+
+    pub async fn load_headphone_eq_profile(
+        &self,
+        device_serial: &str,
+        profile_name: &str,
+    ) -> bool {
+        let mut settings = self.settings.write().await;
+        let entry = settings
+            .devices
+            .as_mut()
+            .unwrap()
+            .entry(device_serial.to_owned())
+            .or_insert_with(DeviceSettings::default);
+
+        if entry.headphone_eq_profiles.is_none() {
+            entry
+                .headphone_eq_profiles
+                .replace(default_headphone_eq_profiles());
+        }
+
+        if let Some(profile) = entry
+            .headphone_eq_profiles
+            .as_ref()
+            .and_then(|profiles| profiles.get(profile_name))
+            .cloned()
+        {
+            entry.headphone_eq_current = Some(profile);
+            entry.headphone_eq_active_profile = Some(profile_name.to_owned());
+            return true;
+        }
+        false
+    }
+
+    pub async fn delete_headphone_eq_profile(
+        &self,
+        device_serial: &str,
+        profile_name: &str,
+    ) -> bool {
+        let mut settings = self.settings.write().await;
+        let entry = settings
+            .devices
+            .as_mut()
+            .unwrap()
+            .entry(device_serial.to_owned())
+            .or_insert_with(DeviceSettings::default);
+
+        let removed = entry
+            .headphone_eq_profiles
+            .as_mut()
+            .and_then(|profiles| profiles.remove(profile_name))
+            .is_some();
+
+        if removed
+            && entry
+                .headphone_eq_active_profile
+                .as_ref()
+                .is_some_and(|active| active == profile_name)
+        {
+            entry.headphone_eq_active_profile = None;
+        }
+
+        removed
+    }
+
     pub async fn set_sample_gain_percent(&self, name: String, value: u8) {
         let mut settings = self.settings.write().await;
         if settings.sample_gain.is_none() {
@@ -778,21 +1112,31 @@ impl Settings {
         drop(temp_file);
 
         debug!("Save Complete and synced, renaming to {:?}", path);
-        if path.exists() {
-            debug!("Target exists, removing..");
-            fs::remove_file(path).unwrap_or_else(|e| {
-                warn!("Error Removing File: {}", e);
-            });
+        #[cfg(target_os = "windows")]
+        {
+            if path.exists() {
+                debug!("Target exists, removing..");
+                fs::remove_file(path).unwrap_or_else(|e| {
+                    log::warn!("Error Removing File: {}", e);
+                });
+            }
+            debug!("Renaming {:?} to {:?}", tmp_file_name, path);
+            fs::rename(tmp_file_name, path)?;
         }
-        debug!("Renaming {:?} to {:?}", tmp_file_name, path);
-        fs::rename(tmp_file_name, path)?;
+
+        #[cfg(not(target_os = "windows"))]
+        {
+            // Atomic replace on Unix avoids a delete-before-rename gap.
+            debug!("Renaming {:?} to {:?}", tmp_file_name, path);
+            fs::rename(tmp_file_name, path)?;
+        }
 
         debug!("Settings Saved.");
         Ok(())
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 struct DeviceSettings {
     profile: String,
@@ -819,6 +1163,20 @@ struct DeviceSettings {
     // VoD 'Mode'
     vod_mode: Option<VodMode>,
 
+    // ClipGuard clamps volume values to this threshold when enabled.
+    clip_guard_enabled: Option<bool>,
+    clip_guard_threshold: Option<u8>,
+
+    // Additional headphone protection.
+    headphone_limiter_enabled: Option<bool>,
+    headphone_limiter_threshold: Option<u8>,
+
+    // Headphone EQ profile and backend state.
+    headphone_eq_enabled: Option<bool>,
+    headphone_eq_active_profile: Option<String>,
+    headphone_eq_profiles: Option<HashMap<String, HeadphoneEqProfile>>,
+    headphone_eq_current: Option<HeadphoneEqProfile>,
+
     // 'Shutdown' commands..
     shutdown_commands: Vec<GoXLRCommand>,
     sleep_commands: Vec<GoXLRCommand>,
@@ -840,6 +1198,14 @@ impl Default for DeviceSettings {
             sampler_fade_duration: Some(500),
 
             vod_mode: Some(Routable),
+            clip_guard_enabled: Some(false),
+            clip_guard_threshold: Some(255),
+            headphone_limiter_enabled: Some(false),
+            headphone_limiter_threshold: Some(255),
+            headphone_eq_enabled: Some(false),
+            headphone_eq_active_profile: Some("Flat".to_string()),
+            headphone_eq_profiles: Some(default_headphone_eq_profiles()),
+            headphone_eq_current: Some(default_headphone_eq_profile()),
 
             shutdown_commands: vec![],
             sleep_commands: vec![],

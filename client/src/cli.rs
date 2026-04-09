@@ -182,6 +182,48 @@ fn percent_value_float(s: &str) -> Result<f32, String> {
     Ok(value)
 }
 
+fn headphone_eq_band_value(s: &str) -> Result<u8, String> {
+    let value = u8::from_str(s).map_err(|_| String::from("Band must be between 0 and 9"))?;
+    if value > 9 {
+        return Err(String::from("Band must be between 0 and 9"));
+    }
+    Ok(value)
+}
+
+fn headphone_eq_preamp_value(s: &str) -> Result<f32, String> {
+    let value =
+        f32::from_str(s).map_err(|_| String::from("Preamp must be between -24.0 and 24.0 dB"))?;
+    if !(-24.0..=24.0).contains(&value) {
+        return Err(String::from("Preamp must be between -24.0 and 24.0 dB"));
+    }
+    Ok(value)
+}
+
+fn headphone_eq_gain_value(s: &str) -> Result<f32, String> {
+    let value =
+        f32::from_str(s).map_err(|_| String::from("Gain must be between -24.0 and 24.0 dB"))?;
+    if !(-24.0..=24.0).contains(&value) {
+        return Err(String::from("Gain must be between -24.0 and 24.0 dB"));
+    }
+    Ok(value)
+}
+
+fn headphone_eq_frequency_value(s: &str) -> Result<f32, String> {
+    let value = f32::from_str(s).map_err(|_| String::from("Frequency must be 20.0 to 20000.0 Hz"))?;
+    if !(20.0..=20_000.0).contains(&value) {
+        return Err(String::from("Frequency must be 20.0 to 20000.0 Hz"));
+    }
+    Ok(value)
+}
+
+fn headphone_eq_q_value(s: &str) -> Result<f32, String> {
+    let value = f32::from_str(s).map_err(|_| String::from("Q must be between 0.1 and 10.0"))?;
+    if !(0.1..=10.0).contains(&value) {
+        return Err(String::from("Q must be between 0.1 and 10.0"));
+    }
+    Ok(value)
+}
+
 #[derive(Subcommand, Debug)]
 #[command(arg_required_else_help = true)]
 #[allow(clippy::enum_variant_names)]
@@ -302,6 +344,9 @@ pub enum MicrophoneCommands {
         #[arg(value_parser, action = ArgAction::Set)]
         enabled: bool,
     },
+
+    /// Read the current input level from the active microphone.
+    InputLevel,
 }
 
 #[derive(Subcommand, Debug)]
@@ -1180,5 +1225,95 @@ pub enum DeviceSettings {
         /// Whether the setting is enabled
         #[arg(value_parser, action = ArgAction::Set)]
         enabled: bool,
+    },
+
+    /// Clamp channel volumes to reduce clipping risk.
+    ClipGuard {
+        /// Whether ClipGuard is enabled
+        #[arg(value_parser, action = ArgAction::Set)]
+        enabled: bool,
+    },
+
+    /// Set ClipGuard threshold as a percentage [0 - 100].
+    ClipGuardThreshold {
+        #[arg(value_parser=percent_value)]
+        threshold_percent: u8,
+    },
+
+    /// Add a dedicated limiter for the Headphones channel.
+    HeadphoneLimiter {
+        /// Whether the limiter is enabled
+        #[arg(value_parser, action = ArgAction::Set)]
+        enabled: bool,
+    },
+
+    /// Set Headphone limiter threshold as a percentage [0 - 100].
+    HeadphoneLimiterThreshold {
+        #[arg(value_parser=percent_value)]
+        threshold_percent: u8,
+    },
+
+    /// Configure headphone parametric EQ and profile management.
+    HeadphoneEq {
+        #[command(subcommand)]
+        command: HeadphoneEqCommands,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+#[command(arg_required_else_help = true)]
+pub enum HeadphoneEqCommands {
+    /// Enable or disable headphone EQ processing.
+    Enabled {
+        #[arg(value_parser, action = ArgAction::Set)]
+        enabled: bool,
+    },
+
+    /// Set headphone EQ preamp in dB [-24.0 .. 24.0].
+    Preamp {
+        #[arg(value_parser=headphone_eq_preamp_value, allow_hyphen_values = true)]
+        preamp_db: f32,
+    },
+
+    /// Set gain for a parametric EQ band in dB [-24.0 .. 24.0].
+    BandGain {
+        #[arg(value_parser=headphone_eq_band_value)]
+        band: u8,
+
+        #[arg(value_parser=headphone_eq_gain_value, allow_hyphen_values = true)]
+        gain_db: f32,
+    },
+
+    /// Set center frequency for a parametric EQ band in Hz [20.0 .. 20000.0].
+    BandFrequency {
+        #[arg(value_parser=headphone_eq_band_value)]
+        band: u8,
+
+        #[arg(value_parser=headphone_eq_frequency_value)]
+        frequency_hz: f32,
+    },
+
+    /// Set Q for a parametric EQ band [0.1 .. 10.0].
+    BandQ {
+        #[arg(value_parser=headphone_eq_band_value)]
+        band: u8,
+
+        #[arg(value_parser=headphone_eq_q_value)]
+        q: f32,
+    },
+
+    /// Save current headphone EQ state as a named profile.
+    SaveProfile {
+        profile_name: String,
+    },
+
+    /// Load a named headphone EQ profile.
+    LoadProfile {
+        profile_name: String,
+    },
+
+    /// Delete a named headphone EQ profile.
+    DeleteProfile {
+        profile_name: String,
     },
 }

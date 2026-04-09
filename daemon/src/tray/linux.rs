@@ -127,6 +127,14 @@ impl Tray for GoXLRTray {
                 ..Default::default()
             }
             .into(),
+            StandardItem {
+                label: String::from("Run Health Check"),
+                activate: Box::new(|this: &mut GoXLRTray| {
+                    let _ = this.tx.try_send(EventTriggers::RunPreflight);
+                }),
+                ..Default::default()
+            }
+            .into(),
             MenuItem::Separator,
             SubMenu {
                 label: String::from("Open Path"),

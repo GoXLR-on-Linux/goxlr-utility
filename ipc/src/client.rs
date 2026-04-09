@@ -5,6 +5,7 @@ use async_trait::async_trait;
 #[async_trait]
 pub trait Client {
     async fn send(&mut self, request: DaemonRequest) -> Result<()>;
+    async fn get_mic_level(&mut self, serial: &str) -> Result<f64>;
     async fn poll_status(&mut self) -> Result<()>;
     async fn command(&mut self, serial: &str, command: GoXLRCommand) -> Result<()>;
     async fn daemon_command(&mut self, command: DaemonRequest) -> Result<()>;

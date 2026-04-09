@@ -53,6 +53,28 @@ impl Client for WebClient {
         self.send(DaemonRequest::GetStatus).await
     }
 
+    async fn get_mic_level(&mut self, serial: &str) -> anyhow::Result<f64> {
+        let resp = reqwest::Client::new()
+            .post(&self.url)
+            .json(&DaemonRequest::GetMicLevel(serial.to_string()))
+            .send()
+            .await?
+            .json::<DaemonResponse>()
+            .await?;
+
+        match resp {
+            DaemonResponse::MicLevel(level) => Ok(level),
+            DaemonResponse::Error(error) => bail!("{}", error),
+            DaemonResponse::Status(status) => {
+                self.status = status.clone();
+                self.http_settings = status.config.http_settings;
+                bail!("Received status while waiting for mic level response")
+            }
+            DaemonResponse::Ok => bail!("Received OK while waiting for mic level response"),
+            DaemonResponse::Patch(_) => bail!("Received patch while waiting for mic level response"),
+        }
+    }
+
     async fn command(&mut self, serial: &str, command: GoXLRCommand) -> anyhow::Result<()> {
         self.send(DaemonRequest::Command(serial.to_string(), command))
             .await

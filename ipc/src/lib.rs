@@ -19,6 +19,37 @@ use goxlr_types::{
     VodMode, WaterfallDirection,
 };
 
+#[cfg(windows)]
+const IPC_NAMED_PIPE: &str = "@goxlr.socket";
+
+#[cfg(target_family = "unix")]
+const IPC_SOCKET_FILE: &str = "goxlr.socket";
+
+#[cfg(windows)]
+pub fn ipc_socket_path() -> String {
+    IPC_NAMED_PIPE.to_string()
+}
+
+#[cfg(target_family = "unix")]
+pub fn ipc_socket_path() -> String {
+    if let Some(runtime_dir) = std::env::var_os("XDG_RUNTIME_DIR")
+        && !runtime_dir.is_empty()
+    {
+        return PathBuf::from(runtime_dir)
+            .join(IPC_SOCKET_FILE)
+            .to_string_lossy()
+            .to_string();
+    }
+
+    let uid = nix::unistd::Uid::current().as_raw();
+    format!("/tmp/goxlr-{uid}.socket")
+}
+
+#[cfg(not(any(windows, target_family = "unix")))]
+pub fn ipc_socket_path() -> String {
+    String::from("/tmp/goxlr.socket")
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DaemonRequest {
     Ping,
@@ -113,7 +144,6 @@ pub enum LogLevel {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DaemonCommand {
-    OpenUi,
     Activate,
     StopDaemon,
     OpenPath(PathTypes),
@@ -308,6 +338,18 @@ pub enum GoXLRCommand {
     SetSamplerFadeDuration(u32),
     SetLockFaders(bool),
     SetVodMode(VodMode),
+    SetClipGuardEnabled(bool),
+    SetClipGuardThreshold(u8),
+    SetHeadphoneLimiterEnabled(bool),
+    SetHeadphoneLimiterThreshold(u8),
+    SetHeadphoneEqEnabled(bool),
+    SetHeadphoneEqPreamp(f32),
+    SetHeadphoneEqBandGain(u8, f32),
+    SetHeadphoneEqBandFrequency(u8, f32),
+    SetHeadphoneEqBandQ(u8, f32),
+    SaveHeadphoneEqProfile(String),
+    LoadHeadphoneEqProfile(String),
+    DeleteHeadphoneEqProfile(String),
 
     // These control the current GoXLR 'State'..
     SetActiveEffectPreset(EffectBankPresets),

@@ -43,6 +43,7 @@ struct AppData {
     usb_tx: DeviceSender,
     broadcast_tx: BroadcastSender<PatchEvent>,
     file_paths: FilePaths,
+    http_auth_token: Option<String>,
 
     scribble_state: EnumMap<FaderName, ScribbleState>,
 }
@@ -65,6 +66,7 @@ pub async fn spawn_http_server(
         broadcast_tx: broadcast_tx.clone(),
         usb_tx: usb_tx.clone(),
         file_paths: file_paths.clone(),
+        http_auth_token: settings.auth_token.clone(),
         scribble_state: EnumMap::default(),
     }));
 
@@ -132,6 +134,10 @@ async fn websocket(
     req: HttpRequest,
     body: web::Payload,
 ) -> Result<HttpResponse, actix_web::Error> {
+    if !is_request_authorized(&app_data, &req).await {
+        return Ok(HttpResponse::Unauthorized().finish());
+    }
+
     let (response, mut session, msg_stream) = actix_ws::handle(&req, body)?;
 
     let data = app_data.read().await;
@@ -309,9 +315,14 @@ async fn send_response(res: WsResponse, session: &mut Session) -> Result<(), Opt
 // news everybody! So do we.. :)
 #[post("/api/command")]
 async fn execute_command(
+    req: HttpRequest,
     request: web::Json<DaemonRequest>,
     app_data: Data<RwLock<AppData>>,
 ) -> HttpResponse {
+    if !is_request_authorized(&app_data, &req).await {
+        return HttpResponse::Unauthorized().finish();
+    }
+
     let mut data = app_data.write().await;
 
     // Errors propagate weirdly in the javascript world, so send all as OK, and handle there.
@@ -322,7 +333,11 @@ async fn execute_command(
 }
 
 #[get("/api/get-devices")]
-async fn get_devices(app_data: Data<RwLock<AppData>>) -> HttpResponse {
+async fn get_devices(req: HttpRequest, app_data: Data<RwLock<AppData>>) -> HttpResponse {
+    if !is_request_authorized(&app_data, &req).await {
+        return HttpResponse::Unauthorized().finish();
+    }
+
     if let Ok(response) = get_status(app_data).await {
         return HttpResponse::Ok().json(&response);
     }
@@ -331,6 +346,10 @@ async fn get_devices(app_data: Data<RwLock<AppData>>) -> HttpResponse {
 
 #[get("/api/path")]
 async fn get_path(app_data: Data<RwLock<AppData>>, req: HttpRequest) -> HttpResponse {
+    if !is_request_authorized(&app_data, &req).await {
+        return HttpResponse::Unauthorized().finish();
+    }
+
     let params = web::Query::<HashMap<String, String>>::from_query(req.query_string());
     if let Ok(params) = params {
         if let Some(path) = params.get("path") {
@@ -359,9 +378,14 @@ async fn get_path(app_data: Data<RwLock<AppData>>, req: HttpRequest) -> HttpResp
 
 #[get("/files/scribble/{serial}/{fader}.png")]
 async fn get_scribble(
+    req: HttpRequest,
     path: web::Path<(String, FaderName)>,
     app_data: Data<RwLock<AppData>>,
 ) -> HttpResponse {
+    if !is_request_authorized(&app_data, &req).await {
+        return HttpResponse::Unauthorized().finish();
+    }
+
     let serial = &path.0;
     let fader = path.1;
 
@@ -436,7 +460,15 @@ async fn get_scribble(
 }
 
 #[get("/files/samples/{sample}")]
-async fn get_sample(sample: web::Path<String>, app_data: Data<RwLock<AppData>>) -> HttpResponse {
+async fn get_sample(
+    req: HttpRequest,
+    sample: web::Path<String>,
+    app_data: Data<RwLock<AppData>>,
+) -> HttpResponse {
+    if !is_request_authorized(&app_data, &req).await {
+        return HttpResponse::Unauthorized().finish();
+    }
+
     // Get the Base Samples Path..
     let sample_path = {
         let data = app_data.read().await;
@@ -458,7 +490,13 @@ async fn get_sample(sample: web::Path<String>, app_data: Data<RwLock<AppData>>) 
         let mime_type = MimeGuess::from_path(path.clone()).first_or_octet_stream();
         let mut builder = HttpResponse::Ok();
         builder.insert_header(ContentType(mime_type));
-        return builder.body(fs::read(path).unwrap());
+        return match fs::read(path.clone()) {
+            Ok(content) => builder.body(content),
+            Err(error) => {
+                warn!("Unable to read sample file {:?}: {}", path, error);
+                HttpResponse::InternalServerError().finish()
+            }
+        };
     }
 
     HttpResponse::NotFound().finish()
@@ -466,10 +504,15 @@ async fn get_sample(sample: web::Path<String>, app_data: Data<RwLock<AppData>>) 
 
 #[post("/firmware-upload/{serial}")]
 async fn upload_firmware(
+    req: HttpRequest,
     path: web::Path<String>,
     mut payload: Multipart,
     app_data: Data<RwLock<AppData>>,
 ) -> HttpResponse {
+    if !is_request_authorized(&app_data, &req).await {
+        return HttpResponse::Unauthorized().finish();
+    }
+
     let serial = path.into_inner();
     let file_path = env::temp_dir().join(format!("{serial}.bin"));
 
@@ -519,7 +562,7 @@ async fn upload_firmware(
         .await;
     let result = rx.await;
     match result {
-        Ok(_) => HttpResponse::Ok().body(serde_json::to_string(&DaemonResponse::Ok).unwrap()),
+        Ok(_) => HttpResponse::Ok().json(DaemonResponse::Ok),
         Err(e) => HttpResponse::InternalServerError().body(format!("Error Occurred: {e}")),
     }
 }
@@ -551,4 +594,33 @@ async fn get_status(app_data: Data<RwLock<AppData>>) -> Result<DaemonStatus> {
         DaemonResponse::Status(status) => Ok(status),
         _ => Err(anyhow!("Unexpected Daemon Status Result: {:?}", result)),
     }
+}
+
+async fn is_request_authorized(app_data: &Data<RwLock<AppData>>, req: &HttpRequest) -> bool {
+    let data = app_data.read().await;
+    is_token_authorized(req, data.http_auth_token.as_deref())
+}
+
+fn is_token_authorized(req: &HttpRequest, expected: Option<&str>) -> bool {
+    let Some(expected) = expected else {
+        return true;
+    };
+
+    if let Some(auth) = req.headers().get("Authorization")
+        && let Ok(auth) = auth.to_str()
+        && let Some(token) = auth.strip_prefix("Bearer ")
+        && token == expected
+    {
+        return true;
+    }
+
+    let params = web::Query::<HashMap<String, String>>::from_query(req.query_string());
+    if let Ok(params) = params
+        && let Some(token) = params.get("token")
+        && token == expected
+    {
+        return true;
+    }
+
+    false
 }

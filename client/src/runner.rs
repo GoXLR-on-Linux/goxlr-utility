@@ -2,9 +2,9 @@ use crate::cli::{
     AnimationCommands, ButtonGroupLightingCommands, ButtonLightingCommands, CompressorCommands,
     CoughButtonBehaviours, Echo, EffectsCommands, EqualiserCommands, EqualiserMiniCommands,
     FaderCommands, FaderLightingCommands, FadersAllLightingCommands, FirmwareCommands, Gender,
-    HardTune, LightingCommands, Megaphone, MicrophoneCommands, NoiseGateCommands, Pitch,
-    ProfileAction, ProfileType, Reverb, Robot, SamplerCommands, Scribbles, SubCommands,
-    SubmixCommands,
+    HardTune, HeadphoneEqCommands, LightingCommands, Megaphone, MicrophoneCommands,
+    NoiseGateCommands, Pitch, ProfileAction, ProfileType, Reverb, Robot, SamplerCommands,
+    Scribbles, SubCommands, SubmixCommands,
 };
 use crate::cli::{Cli, DeviceSettings};
 use crate::microphone::apply_microphone_controls;
@@ -15,16 +15,13 @@ use goxlr_ipc::client::Client;
 use goxlr_ipc::clients::ipc::ipc_client::IPCClient;
 use goxlr_ipc::clients::ipc::ipc_socket::Socket;
 use goxlr_ipc::clients::web::web_client::WebClient;
-use goxlr_ipc::{DaemonRequest, DaemonResponse, MixerStatus, UsbProductInformation};
+use goxlr_ipc::{DaemonRequest, DaemonResponse, MixerStatus, UsbProductInformation, ipc_socket_path};
 use goxlr_types::{ChannelName, DeviceType, FaderName, InputDevice, MicrophoneType, OutputDevice};
 
 use interprocess::local_socket::tokio::prelude::LocalSocketStream;
 use interprocess::local_socket::traits::tokio::Stream;
 use interprocess::local_socket::{GenericFilePath, GenericNamespaced, ToFsName, ToNsName};
 use strum::IntoEnumIterator;
-
-static SOCKET_PATH: &str = "/tmp/goxlr.socket";
-static NAMED_PIPE: &str = "@goxlr.socket";
 
 pub async fn run_cli() -> Result<()> {
     let cli: Cli = Cli::parse();
@@ -36,10 +33,11 @@ pub async fn run_cli() -> Result<()> {
     } else {
         // Windows supports unix sockets now, but we want to maintain the historic behaviour
         // so we'll force it to a NameSpace here..
+        let socket_path = ipc_socket_path();
         let path = if cfg!(windows) {
-            NAMED_PIPE.to_ns_name::<GenericNamespaced>()
+            socket_path.as_str().to_ns_name::<GenericNamespaced>()
         } else {
-            SOCKET_PATH.to_fs_name::<GenericFilePath>()
+            socket_path.as_str().to_fs_name::<GenericFilePath>()
         };
 
         let path = match path {
@@ -180,6 +178,10 @@ pub async fn run_cli() -> Result<()> {
                         client
                             .command(&serial, GoXLRCommand::SetMonitorWithFx(*enabled))
                             .await?;
+                    }
+                    MicrophoneCommands::InputLevel => {
+                        let level = client.get_mic_level(&serial).await?;
+                        println!("Microphone input level: {level:.2} dB");
                     }
                 },
                 SubCommands::Faders { fader } => match fader {
@@ -1022,6 +1024,94 @@ pub async fn run_cli() -> Result<()> {
                             .command(&serial, GoXLRCommand::SetLockFaders(*enabled))
                             .await?;
                     }
+                    DeviceSettings::ClipGuard { enabled } => {
+                        client
+                            .command(&serial, GoXLRCommand::SetClipGuardEnabled(*enabled))
+                            .await?;
+                    }
+                    DeviceSettings::ClipGuardThreshold { threshold_percent } => {
+                        let value = (255 * *threshold_percent as u16) / 100;
+                        client
+                            .command(
+                                &serial,
+                                GoXLRCommand::SetClipGuardThreshold(value as u8),
+                            )
+                            .await?;
+                    }
+                    DeviceSettings::HeadphoneLimiter { enabled } => {
+                        client
+                            .command(
+                                &serial,
+                                GoXLRCommand::SetHeadphoneLimiterEnabled(*enabled),
+                            )
+                            .await?;
+                    }
+                    DeviceSettings::HeadphoneLimiterThreshold { threshold_percent } => {
+                        let value = (255 * *threshold_percent as u16) / 100;
+                        client
+                            .command(
+                                &serial,
+                                GoXLRCommand::SetHeadphoneLimiterThreshold(value as u8),
+                            )
+                            .await?;
+                    }
+                    DeviceSettings::HeadphoneEq { command } => match command {
+                        HeadphoneEqCommands::Enabled { enabled } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetHeadphoneEqEnabled(*enabled))
+                                .await?;
+                        }
+                        HeadphoneEqCommands::Preamp { preamp_db } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetHeadphoneEqPreamp(*preamp_db))
+                                .await?;
+                        }
+                        HeadphoneEqCommands::BandGain { band, gain_db } => {
+                            client
+                                .command(
+                                    &serial,
+                                    GoXLRCommand::SetHeadphoneEqBandGain(*band, *gain_db),
+                                )
+                                .await?;
+                        }
+                        HeadphoneEqCommands::BandFrequency { band, frequency_hz } => {
+                            client
+                                .command(
+                                    &serial,
+                                    GoXLRCommand::SetHeadphoneEqBandFrequency(*band, *frequency_hz),
+                                )
+                                .await?;
+                        }
+                        HeadphoneEqCommands::BandQ { band, q } => {
+                            client
+                                .command(&serial, GoXLRCommand::SetHeadphoneEqBandQ(*band, *q))
+                                .await?;
+                        }
+                        HeadphoneEqCommands::SaveProfile { profile_name } => {
+                            client
+                                .command(
+                                    &serial,
+                                    GoXLRCommand::SaveHeadphoneEqProfile(profile_name.clone()),
+                                )
+                                .await?;
+                        }
+                        HeadphoneEqCommands::LoadProfile { profile_name } => {
+                            client
+                                .command(
+                                    &serial,
+                                    GoXLRCommand::LoadHeadphoneEqProfile(profile_name.clone()),
+                                )
+                                .await?;
+                        }
+                        HeadphoneEqCommands::DeleteProfile { profile_name } => {
+                            client
+                                .command(
+                                    &serial,
+                                    GoXLRCommand::DeleteHeadphoneEqProfile(profile_name.clone()),
+                                )
+                                .await?;
+                        }
+                    },
                 },
                 SubCommands::Firmware { command } => match command {
                     FirmwareCommands::FirmwareUpdate { path } => {

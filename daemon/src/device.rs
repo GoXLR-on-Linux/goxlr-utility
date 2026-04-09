@@ -13,7 +13,8 @@ use tokio::sync::mpsc::Sender;
 use tokio::time::Instant;
 
 use goxlr_ipc::{
-    Display, FaderStatus, GoXLRCommand, HardwareStatus, Levels, MicSettings, MixerStatus,
+    Display, FaderStatus, GoXLRCommand, HardwareStatus, HeadphoneEqBand as IpcHeadphoneEqBand,
+    HeadphoneEqProfile as IpcHeadphoneEqProfile, Levels, MicSettings, MixerStatus,
     SampleProcessState, Settings,
 };
 use goxlr_profile_loader::components::mute::MuteFunction;
@@ -42,6 +43,7 @@ use crate::mic_profile::{DEFAULT_MIC_PROFILE_NAME, MicProfileAdapter};
 use crate::profile::{
     DEFAULT_PROFILE_NAME, ProfileAdapter, usb_to_standard_button, version_newer_or_equal_to,
 };
+use crate::settings::HeadphoneEqProfile;
 
 pub struct Device<'a> {
     goxlr: Box<dyn FullGoXLRDevice>,
@@ -83,6 +85,25 @@ pub(crate) struct CurrentState {
     pub(crate) faders: EnumMap<FaderName, ChannelName>,
     pub(crate) mute_state: EnumMap<ChannelName, ChannelState>,
     pub(crate) volumes: EnumMap<ChannelName, u8>,
+}
+
+fn to_ipc_headphone_eq_profile(profile: HeadphoneEqProfile) -> IpcHeadphoneEqProfile {
+    IpcHeadphoneEqProfile {
+        preamp_db: profile.preamp_db,
+        bands: profile
+            .bands
+            .into_iter()
+            .map(|band| IpcHeadphoneEqBand {
+                frequency_hz: band.frequency_hz,
+                gain_db: band.gain_db,
+                q: band.q,
+            })
+            .collect(),
+    }
+}
+
+fn clamp_f32(value: f32, min: f32, max: f32) -> f32 {
+    value.max(min).min(max)
 }
 
 impl<'a> Device<'a> {
@@ -286,6 +307,28 @@ impl<'a> Device<'a> {
         let vod_mode = self.settings.get_device_vod_mode(self.serial()).await;
 
         let sampler_fade_duration = self.settings.get_sampler_fade_duration(self.serial()).await;
+        let clip_guard_enabled = self.settings.get_clip_guard_enabled(self.serial()).await;
+        let clip_guard_threshold = self.settings.get_clip_guard_threshold(self.serial()).await;
+        let headphone_limiter_enabled = self
+            .settings
+            .get_headphone_limiter_enabled(self.serial())
+            .await;
+        let headphone_limiter_threshold = self
+            .settings
+            .get_headphone_limiter_threshold(self.serial())
+            .await;
+        let headphone_eq_enabled = self.settings.get_headphone_eq_enabled(self.serial()).await;
+        let headphone_eq_active_profile = self
+            .settings
+            .get_headphone_eq_active_profile(self.serial())
+            .await;
+        let headphone_eq_current = self
+            .settings
+            .get_headphone_eq_current(self.serial())
+            .await;
+        let headphone_eq_profiles = self.settings.get_headphone_eq_profiles(self.serial()).await;
+        let headphone_eq_backend_ready = crate::platform::headphone_eq_backend_ready();
+        let headphone_eq_backend_name = crate::platform::headphone_eq_backend_name();
 
         let submix_supported = self.device_supports_submixes();
 
@@ -356,6 +399,19 @@ impl<'a> Device<'a> {
                 lock_faders: locked_faders,
                 fade_duration: sampler_fade_duration,
                 vod_mode,
+                clip_guard_enabled,
+                clip_guard_threshold,
+                headphone_limiter_enabled,
+                headphone_limiter_threshold,
+                headphone_eq_enabled,
+                headphone_eq_backend_ready,
+                headphone_eq_backend_name,
+                headphone_eq_active_profile,
+                headphone_eq_current: to_ipc_headphone_eq_profile(headphone_eq_current),
+                headphone_eq_profiles: headphone_eq_profiles
+                    .into_iter()
+                    .map(|(name, profile)| (name, to_ipc_headphone_eq_profile(profile)))
+                    .collect(),
             },
             button_down: button_states,
             profile_name: self.profile.name().to_owned(),
@@ -424,7 +480,13 @@ impl<'a> Device<'a> {
                 | GoXLRCommand::SetVCMuteAlsoMuteCM(_)
                 | GoXLRCommand::SetMonitorWithFx(_)
                 | GoXLRCommand::SetSamplerResetOnClear(_)
+                | GoXLRCommand::SetSamplerFadeDuration(_)
                 | GoXLRCommand::SetLockFaders(_)
+                | GoXLRCommand::SetVodMode(_)
+                | GoXLRCommand::SetClipGuardEnabled(_)
+                | GoXLRCommand::SetClipGuardThreshold(_)
+                | GoXLRCommand::SetHeadphoneLimiterEnabled(_)
+                | GoXLRCommand::SetHeadphoneLimiterThreshold(_)
                 => {
                     if !avoid_write {
                         let _ = self.perform_command(command).await;
@@ -1637,13 +1699,78 @@ impl<'a> Device<'a> {
         muted_to_all || (muted_to_x && mute_function == MuteFunction::All)
     }
 
+    async fn apply_channel_volume_cap(&self, channel: ChannelName, volume: u8) -> u8 {
+        let serial = self.serial();
+        let mut limit = 255;
+
+        if self.settings.get_clip_guard_enabled(serial).await {
+            let threshold = self.settings.get_clip_guard_threshold(serial).await;
+            limit = limit.min(threshold);
+        }
+
+        if channel == ChannelName::Headphones
+            && self.settings.get_headphone_limiter_enabled(serial).await
+        {
+            let threshold = self.settings.get_headphone_limiter_threshold(serial).await;
+            limit = limit.min(threshold);
+        }
+
+        volume.min(limit)
+    }
+
+    async fn enforce_volume_caps(&mut self) -> Result<()> {
+        for channel in ChannelName::iter() {
+            let current = self.profile.get_channel_volume(channel);
+            let capped = self.apply_channel_volume_cap(channel, current).await;
+
+            if capped == current {
+                continue;
+            }
+
+            debug!(
+                "Applying volume cap to {}: {} -> {}",
+                channel, current, capped
+            );
+            self.profile.set_channel_volume(channel, capped)?;
+            self.goxlr.set_volume(channel, capped)?;
+
+            if let Some(fader) = self.profile.get_fader_from_channel(channel) {
+                self.fader_pause_until[fader].paused = true;
+                self.fader_pause_until[fader].until = capped;
+            }
+
+            self.update_submix_for(channel, capped).await?;
+        }
+
+        Ok(())
+    }
+
+    async fn apply_headphone_eq_state(&self) {
+        let enabled = self.settings.get_headphone_eq_enabled(self.serial()).await;
+        let profile = self.settings.get_headphone_eq_current(self.serial()).await;
+        if let Err(error) = crate::platform::apply_headphone_eq(self.serial(), enabled, &profile) {
+            warn!("Unable to apply headphone EQ backend state: {}", error);
+        }
+    }
+
+    async fn update_headphone_eq_current<F>(&self, updater: F)
+    where
+        F: FnOnce(&mut HeadphoneEqProfile),
+    {
+        let mut profile = self.settings.get_headphone_eq_current(self.serial()).await;
+        updater(&mut profile);
+        self.settings
+            .set_headphone_eq_current(self.serial(), profile)
+            .await;
+    }
+
     async fn update_volumes_to(&mut self, volumes: [u8; 4]) -> Result<bool> {
         let mut value_changed = false;
 
         for fader in FaderName::iter() {
-            let new_volume = volumes[fader as usize];
+            let requested_volume = volumes[fader as usize];
             if self.is_device_mini() {
-                if new_volume == self.fader_last_seen[fader] {
+                if requested_volume == self.fader_last_seen[fader] {
                     continue;
                 }
             } else if self.fader_pause_until[fader].paused {
@@ -1661,16 +1788,28 @@ impl<'a> Device<'a> {
                 };
 
                 // Are we in this range?
-                if !(min..=max).contains(&new_volume) {
+                if !(min..=max).contains(&requested_volume) {
                     continue;
                 } else {
                     self.fader_pause_until[fader].paused = false;
                 }
             }
-            self.fader_last_seen[fader] = new_volume;
+            let previous_fader_value = self.fader_last_seen[fader];
+            self.fader_last_seen[fader] = requested_volume;
 
             let channel = self.profile.get_fader_assignment(fader);
             let old_volume = self.profile.get_channel_volume(channel);
+            let new_volume = self.apply_channel_volume_cap(channel, requested_volume).await;
+
+            if requested_volume != new_volume {
+                debug!(
+                    "Volume cap triggered for {}: requested {} -> {}",
+                    channel, requested_volume, new_volume
+                );
+                if old_volume != new_volume || previous_fader_value != requested_volume {
+                    self.goxlr.set_volume(channel, new_volume)?;
+                }
+            }
 
             if new_volume != old_volume {
                 debug!(
@@ -1682,13 +1821,13 @@ impl<'a> Device<'a> {
                 self.profile.set_channel_volume(channel, new_volume)?;
 
                 // Update the Submix..
-                self.update_submix_for(channel, new_volume)?;
+                self.update_submix_for(channel, new_volume).await?;
             }
         }
         Ok(value_changed)
     }
 
-    fn update_submix_for(&mut self, channel: ChannelName, volume: u8) -> Result<()> {
+    async fn update_submix_for(&mut self, channel: ChannelName, volume: u8) -> Result<()> {
         if self.device_supports_submixes()
             && self.profile.is_submix_enabled()
             && let Some(mix) = self.profile.get_submix_from_channel(channel)
@@ -1700,7 +1839,8 @@ impl<'a> Device<'a> {
             let mix_current_volume = self.profile.get_submix_volume(mix);
             let ratio = self.profile.get_submix_ratio(mix);
 
-            let linked_volume = (volume as f64 * ratio) as u8;
+            let linked_volume_raw = (volume as f64 * ratio) as u8;
+            let linked_volume = self.apply_channel_volume_cap(channel, linked_volume_raw).await;
 
             if linked_volume != mix_current_volume {
                 self.profile.set_submix_volume(mix, linked_volume);
@@ -1910,16 +2050,24 @@ impl<'a> Device<'a> {
             }
 
             GoXLRCommand::SetVolume(channel, volume) => {
-                debug!("Setting Mix volume for {} to {}", channel, volume);
-                self.goxlr.set_volume(channel, volume)?;
-                self.profile.set_channel_volume(channel, volume)?;
+                let capped = self.apply_channel_volume_cap(channel, volume).await;
+                if capped != volume {
+                    debug!(
+                        "Volume cap triggered for {}: requested {} -> {}",
+                        channel, volume, capped
+                    );
+                }
+
+                debug!("Setting Mix volume for {} to {}", channel, capped);
+                self.goxlr.set_volume(channel, capped)?;
+                self.profile.set_channel_volume(channel, capped)?;
 
                 // Update the Submix when volume changes via IPC
-                self.update_submix_for(channel, volume)?;
+                self.update_submix_for(channel, capped).await?;
 
                 if let Some(fader) = self.profile.get_fader_from_channel(channel) {
                     self.fader_pause_until[fader].paused = true;
-                    self.fader_pause_until[fader].until = volume;
+                    self.fader_pause_until[fader].until = capped;
                 }
             }
 
@@ -2950,6 +3098,129 @@ impl<'a> Device<'a> {
                 }
             }
 
+            GoXLRCommand::SetClipGuardEnabled(enabled) => {
+                self.settings
+                    .set_clip_guard_enabled(self.serial(), enabled)
+                    .await;
+                self.settings.save().await;
+                self.enforce_volume_caps().await?;
+            }
+
+            GoXLRCommand::SetClipGuardThreshold(threshold) => {
+                self.settings
+                    .set_clip_guard_threshold(self.serial(), threshold)
+                    .await;
+                self.settings.save().await;
+                self.enforce_volume_caps().await?;
+            }
+
+            GoXLRCommand::SetHeadphoneLimiterEnabled(enabled) => {
+                self.settings
+                    .set_headphone_limiter_enabled(self.serial(), enabled)
+                    .await;
+                self.settings.save().await;
+                self.enforce_volume_caps().await?;
+            }
+
+            GoXLRCommand::SetHeadphoneLimiterThreshold(threshold) => {
+                self.settings
+                    .set_headphone_limiter_threshold(self.serial(), threshold)
+                    .await;
+                self.settings.save().await;
+                self.enforce_volume_caps().await?;
+            }
+
+            GoXLRCommand::SetHeadphoneEqEnabled(enabled) => {
+                self.settings
+                    .set_headphone_eq_enabled(self.serial(), enabled)
+                    .await;
+                self.settings.save().await;
+                self.apply_headphone_eq_state().await;
+            }
+
+            GoXLRCommand::SetHeadphoneEqPreamp(preamp_db) => {
+                self.update_headphone_eq_current(|profile| {
+                    profile.preamp_db = clamp_f32(preamp_db, -24.0, 24.0);
+                })
+                .await;
+                self.settings.save().await;
+                self.apply_headphone_eq_state().await;
+            }
+
+            GoXLRCommand::SetHeadphoneEqBandGain(band, gain_db) => {
+                self.update_headphone_eq_current(|profile| {
+                    if let Some(target_band) = profile.bands.get_mut(usize::from(band)) {
+                        target_band.gain_db = clamp_f32(gain_db, -24.0, 24.0);
+                    }
+                })
+                .await;
+                self.settings.save().await;
+                self.apply_headphone_eq_state().await;
+            }
+
+            GoXLRCommand::SetHeadphoneEqBandFrequency(band, frequency_hz) => {
+                self.update_headphone_eq_current(|profile| {
+                    if let Some(target_band) = profile.bands.get_mut(usize::from(band)) {
+                        target_band.frequency_hz = clamp_f32(frequency_hz, 20.0, 20_000.0);
+                    }
+                })
+                .await;
+                self.settings.save().await;
+                self.apply_headphone_eq_state().await;
+            }
+
+            GoXLRCommand::SetHeadphoneEqBandQ(band, q) => {
+                self.update_headphone_eq_current(|profile| {
+                    if let Some(target_band) = profile.bands.get_mut(usize::from(band)) {
+                        target_band.q = clamp_f32(q, 0.1, 10.0);
+                    }
+                })
+                .await;
+                self.settings.save().await;
+                self.apply_headphone_eq_state().await;
+            }
+
+            GoXLRCommand::SaveHeadphoneEqProfile(profile_name) => {
+                let profile_name = profile_name.trim();
+                if !profile_name.is_empty() {
+                    self.settings
+                        .save_headphone_eq_profile(self.serial(), profile_name)
+                        .await;
+                    self.settings.save().await;
+                    self.apply_headphone_eq_state().await;
+                }
+            }
+
+            GoXLRCommand::LoadHeadphoneEqProfile(profile_name) => {
+                let profile_name = profile_name.trim();
+                if !profile_name.is_empty() {
+                    let loaded = self
+                        .settings
+                        .load_headphone_eq_profile(self.serial(), profile_name)
+                        .await;
+                    if loaded {
+                        self.settings
+                            .set_headphone_eq_enabled(self.serial(), true)
+                            .await;
+                        self.settings.save().await;
+                        self.apply_headphone_eq_state().await;
+                    }
+                }
+            }
+
+            GoXLRCommand::DeleteHeadphoneEqProfile(profile_name) => {
+                let profile_name = profile_name.trim();
+                if !profile_name.is_empty() {
+                    let removed = self
+                        .settings
+                        .delete_headphone_eq_profile(self.serial(), profile_name)
+                        .await;
+                    if removed {
+                        self.settings.save().await;
+                    }
+                }
+            }
+
             GoXLRCommand::SetActiveEffectPreset(preset) => {
                 self.load_effect_bank(preset).await?;
                 self.update_button_states()?;
@@ -3021,7 +3292,7 @@ impl<'a> Device<'a> {
                 }
             }
             GoXLRCommand::SetSubMixVolume(channel, volume) => {
-                self.apply_submix_volume(channel, volume)?;
+                self.apply_submix_volume(channel, volume).await?;
             }
             GoXLRCommand::SetSubMixLinked(channel, linked) => {
                 self.link_submix_channel(channel, linked)?;
@@ -4072,13 +4343,24 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
-    fn apply_submix_volume(&mut self, channel: ChannelName, volume: u8) -> Result<()> {
+    async fn apply_submix_volume(&mut self, channel: ChannelName, volume: u8) -> Result<()> {
         if let Some(mix) = self.profile.get_submix_from_channel(channel) {
+            let submix_volume = self.apply_channel_volume_cap(channel, volume).await;
+            if submix_volume != volume {
+                debug!(
+                    "Volume cap triggered for submix {}: requested {} -> {}",
+                    channel, volume, submix_volume
+                );
+            }
+
             if self.profile.is_channel_linked(mix) {
                 // We need to calculate the new value for the main channel..
                 let ratio = self.profile.get_submix_ratio(mix);
 
-                let linked_volume = (volume as f64 / ratio) as u8;
+                let linked_volume_raw = (submix_volume as f64 / ratio) as u8;
+                let linked_volume = self
+                    .apply_channel_volume_cap(channel, linked_volume_raw)
+                    .await;
                 if self.profile.get_channel_volume(channel) != linked_volume {
                     // Setup the latch..
                     if let Some(fader) = self.profile.get_fader_from_channel(channel) {
@@ -4091,10 +4373,10 @@ impl<'a> Device<'a> {
             }
 
             // Apply the submix volume..
-            self.profile.set_submix_volume(mix, volume);
+            self.profile.set_submix_volume(mix, submix_volume);
 
-            debug!("Setting Sub Mix volume for {} to {}", mix, volume);
-            self.goxlr.set_sub_volume(mix, volume)?;
+            debug!("Setting Sub Mix volume for {} to {}", mix, submix_volume);
+            self.goxlr.set_sub_volume(mix, submix_volume)?;
         }
         Ok(())
     }

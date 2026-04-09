@@ -154,20 +154,14 @@ pub async fn spawn_usb_handler(
                             state.status.progress = 0;
                             change_found = true;
                         } else {
-                            // We don't have a state for this device, set one.
-                            let status = FirmwareStatus {
-                                state: status,
-                                progress: 0,
-                                error: None
-                            };
-
                             // Only create this if the serial is present..
                             if devices.contains_key(&serial) {
-                                // Get the current status..
-                                let state = devices_firmware.get_mut(&serial).unwrap();
-                                state.status = status;
-
-                                change_found = true;
+                                // This can happen if an update state races ahead of registration.
+                                // Keep the daemon alive and wait for a full update state setup.
+                                warn!(
+                                    "Received firmware state update for connected device {} without active update state: {:?}",
+                                    serial, status
+                                );
                             }
                         }
                     }
@@ -379,10 +373,6 @@ pub async fn spawn_usb_handler(
                                 let _ = global_tx.send(EventTriggers::Stop(false)).await;
                                 let _ = sender.send(Ok(()));
                             }
-                            DaemonCommand::OpenUi => {
-                                let _ = global_tx.send(EventTriggers::OpenUi).await;
-                                let _ = sender.send(Ok(()));
-                            }
                             DaemonCommand::Activate => {
                                 let _ = global_tx.send(EventTriggers::Activate).await;
                                 let _ = sender.send(Ok(()));
@@ -473,13 +463,14 @@ pub async fn spawn_usb_handler(
                                 let _ = sender.send(Ok(()));
                             }
                             DaemonCommand::SetActivatorPath(path) => {
-                                if let Some(path) = path {
-                                    settings.set_activate(Some(path.to_string_lossy().to_string())).await;
-                                    settings.save().await;
-                                } else {
-                                    settings.set_activate(None).await;
-                                    settings.save().await;
+                                // App-only UI handling: always normalize activation to the detected
+                                // app path, regardless of the value requested by the client.
+                                let app_only_path = app_check.clone();
+                                if path.is_some() && app_only_path.is_none() {
+                                    warn!("UI activator update requested, but no app UI is currently detected.");
                                 }
+                                settings.set_activate(app_only_path).await;
+                                settings.save().await;
                                 change_found = true;
                                 let _ = sender.send(Ok(()));
                             }
@@ -681,7 +672,8 @@ async fn get_daemon_status(
             firmware_source: settings.get_firmware_source().await,
             open_ui_on_launch: settings.get_open_ui_on_launch().await,
             activation: Activation {
-                active_path: settings.get_activate().await,
+                // App-only behavior: expose app path as active path so UI reflects the enforced mode.
+                active_path: app_check.clone(),
                 app_path: app_check.clone(),
             },
             platform: env::consts::OS.to_string(),

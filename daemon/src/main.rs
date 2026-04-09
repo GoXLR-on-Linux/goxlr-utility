@@ -3,6 +3,7 @@
 extern crate core;
 
 use std::fs::create_dir_all;
+use std::env;
 use std::process;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -30,8 +31,7 @@ use goxlr_ipc::{FirmwareSource, HttpSettings, LogLevel};
 use crate::cli::{Cli, LevelFilter};
 use crate::events::{DaemonState, EventTriggers, spawn_event_handler};
 use crate::files::{FileManager, spawn_file_notification_service};
-use crate::platform::perform_preflight;
-use crate::platform::spawn_runtime;
+use crate::platform::{display_error, get_ui_app_path, perform_preflight, spawn_runtime};
 use crate::primary_worker::spawn_usb_handler;
 use crate::servers::http_server::spawn_http_server;
 use crate::servers::ipc_server::{bind_socket, spawn_ipc_server};
@@ -265,12 +265,21 @@ async fn run_utility() -> Result<()> {
         String::from("localhost")
     };
 
+    let http_auth_token = env::var("GOXLR_HTTP_TOKEN")
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty());
+    if http_auth_token.is_some() {
+        info!("HTTP API authentication token is enabled.");
+    }
+
     debug!("HTTP Bind Address: {}", bind_address);
     let http_settings = HttpSettings {
         enabled: !args.http_disable,
         bind_address,
         cors_enabled: args.http_enable_cors,
         port: args.http_port,
+        auth_token: http_auth_token,
     };
 
     // Create the Global Event Channel..
@@ -390,7 +399,6 @@ async fn run_utility() -> Result<()> {
         shutdown_blocking,
 
         settings_handle: settings.clone(),
-        http_settings: http_settings.clone(),
     };
 
     // Spawn the general event handler..
@@ -404,7 +412,13 @@ async fn run_utility() -> Result<()> {
     let platform_handle = tokio::spawn(spawn_runtime(state.clone(), global_tx.clone()));
 
     if args.start_ui || settings.get_open_ui_on_launch().await {
-        let _ = global_tx.send(EventTriggers::Activate).await;
+        if get_ui_app_path().is_some() {
+            let _ = global_tx.send(EventTriggers::Activate).await;
+        } else {
+            let message = "Unable to launch GoXLR UI application: `goxlr-utility-ui` was not found. Please install it.";
+            warn!("{}", message);
+            display_error(message.to_string());
+        }
     }
 
     // Tray management has to occur on the main thread, so we'll start it now.
