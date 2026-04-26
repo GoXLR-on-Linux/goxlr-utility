@@ -44,7 +44,8 @@ the
 
 <sup>1</sup> Windows requires the official device drivers provided by TC-Helicon. If you have the official app
 installed you don't need to do anything, otherwise download the latest drivers from TC-Helicon's
-website [here](https://mediadl.musictribe.com/media/PLM/sftp/incoming/hybris/import/goxlr/driverRepair/TC-Helicon_GoXLR_Driver.zip).
+website [here](https://cdn.mediavalet.com/aunsw/musictribe/ABweYC9l6k6YDIo7GuJKtA/CRPSsxjjrESY-UT1RCEygw/Original/TC-Helicon_GoXLR_Driver.zip).
+
 
 <sup>2</sup> MacOS support is still somewhat experimental, and the package may conflict with the existing
 GoXLR-MacOS project as they attempt to do the same thing in certain situations.
