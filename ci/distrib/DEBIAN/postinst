@@ -6,11 +6,7 @@ set -e
 udevadm control --reload-rules || echo -e "\033[0;31mReloading udev failed. You might need to reboot after installation.\033[0m" 1>&2
 udevadm trigger || echo -e "\033[0;31mReloading udev failed. You might need to reboot after installation.\033[0m" 1>&2
 
-# Work around ALSA UCM variable parsing differences which can cause GoXLR UCM errors on some distros.
-split_conf="/usr/share/alsa/ucm2/common/pcm/split.conf"
-if [ -f "$split_conf" ]; then
-  [ -f "$split_conf.bak.goxlr" ] || cp "$split_conf" "$split_conf.bak.goxlr" || true
-  perl -0777 -i -pe 's/Empty "\$\{var:__dev\}"/Empty "\$\{var:-__dev\}"/g; s/Empty "\$\{var:__Device\}"/Empty "\$\{var:-__Device\}"/g' "$split_conf" || true
-fi
+# Do not mutate distro-owned ALSA UCM files here. Runtime preflight will warn
+# if the host's ALSA split.conf needs a manual compatibility workaround.
 
 exit 0

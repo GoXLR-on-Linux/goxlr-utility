@@ -1,7 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use anyhow::{Result, bail};
-use std::ffi::OsStr;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -12,7 +11,7 @@ use goxlr_ipc::{DaemonCommand, DaemonRequest, DaemonResponse, ipc_socket_path};
 use interprocess::local_socket::tokio::prelude::LocalSocketStream;
 use interprocess::local_socket::traits::tokio::Stream;
 use interprocess::local_socket::{GenericFilePath, GenericNamespaced, ToFsName, ToNsName};
-use tokio::time::sleep;
+use tokio::time::{sleep, timeout};
 use which::which;
 
 static DAEMON_NAME: &str = "goxlr-daemon";
@@ -21,8 +20,9 @@ const UI_CONNECT_RETRY_DELAY_MS: u64 = 250;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // First thing to do, is check to see if the Daemon is running..
-    if !is_daemon_running() {
+    // A process named goxlr-daemon is not enough: IPC sockets are per-user, so
+    // verify that this user can actually talk to the daemon before skipping launch.
+    if !is_daemon_running().await {
         launch_daemon()?;
     }
 
@@ -76,17 +76,16 @@ fn launch_daemon() -> Result<()> {
     bail!("Unable to Locate GoXLR Daemon Binary");
 }
 
-fn is_daemon_running() -> bool {
-    use sysinfo::{ProcessRefreshKind, RefreshKind, System};
+async fn is_daemon_running() -> bool {
+    let Ok(connection) = get_connection().await else {
+        return false;
+    };
 
-    let process_refresh_kind = ProcessRefreshKind::everything().without_tasks();
-    let refresh_kind = RefreshKind::nothing().with_processes(process_refresh_kind);
-    let system = System::new_with_specifics(refresh_kind);
-
-    let binding = get_daemon_binary_name();
-    let processes = system.processes_by_exact_name(OsStr::new(&binding));
-
-    processes.count() > 0
+    let socket: Socket<DaemonResponse, DaemonRequest> = Socket::new(connection);
+    let mut client = IPCClient::new(socket);
+    timeout(Duration::from_secs(1), client.send(DaemonRequest::Ping))
+        .await
+        .is_ok_and(|result| result.is_ok())
 }
 
 #[cfg(windows)]

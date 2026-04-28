@@ -112,8 +112,9 @@ When set, these endpoints require authentication:
 
 Token can be provided as either:
 
-* `Authorization: Bearer <token>`
-* `?token=<token>` query parameter (useful for websocket clients)
+* Bearer authorization header for ordinary HTTP requests
+* `?token=<token>` query parameter for `/api/websocket` only (browser websocket clients cannot reliably set `Authorization` headers)
+* `/?token=<token>` once in the bundled browser UI, which sets an HttpOnly same-origin session cookie and redirects back to `/`
 
 Example request:
 
@@ -149,7 +150,9 @@ This section tracks local source changes made on this machine so context survive
   * Applied to daemon, launcher, and client
 * Added optional HTTP API authentication token:
   * `GOXLR_HTTP_TOKEN` enables auth
-  * Protected endpoints require `Authorization: Bearer <token>` or `?token=<token>`
+  * Protected HTTP endpoints require a bearer `Authorization` header
+  * `/api/websocket` may also use `?token=<token>` because browser websocket clients cannot reliably set auth headers
+  * The bundled browser UI can be unlocked by visiting `/?token=<token>`, which stores a same-origin HttpOnly session cookie and redirects back to `/` for later API and websocket requests
 * Changed UI launch behavior to app-first and then app-only:
   * Activate path now prefers native UI app (`goxlr-utility-ui`) when available
   * Browser fallback removed from UI activation path
@@ -232,6 +235,26 @@ This section tracks local source changes made on this machine so context survive
   * Added per-band Gain/Frequency/Q controls for all available bands (default 10)
   * Added active profile indicator and dynamic load/save buttons for detected profile names
   * Added `Save As...` and `Delete Profile...` actions directly in the modal
+
+### 2026-04-28
+
+* Reviewed and hardened local AI-generated changes:
+  * Limited query-string auth for direct API calls to `/api/websocket`; ordinary protected HTTP endpoints require a bearer `Authorization` header or the browser UI auth cookie
+  * Added browser UI auth cookie bootstrap: visiting `/?token=<token>` sets an HttpOnly SameSite session cookie, redirects back to `/`, and only accepts that cookie for same-origin browser API/websocket requests
+  * Removed `GOXLR_HTTP_TOKEN` from public daemon status/config responses
+  * Restores enabled headphone EQ state during device initialization after daemon restart or reconnect
+  * Starts EasyEffects with non-blocking `spawn()` during retry instead of waiting for the process to exit
+  * Added additional headless/session error detection for EasyEffects auto-load failures
+  * Added Headphone EQ commands to the shutdown/sleep/wake disk-write guard
+  * Re-applies headphone EQ state after deleting a profile, and resets current EQ to default if the active profile is deleted
+  * Launcher now verifies the current user's IPC socket with `Ping` instead of trusting any process named `goxlr-daemon`
+  * Manual tray preflight now runs in a blocking background task so the event loop stays responsive
+  * ALSA `split.conf` preflight now warns only instead of mutating distro-owned ALSA files
+  * Removed Debian `postinst` mutation of distro-owned ALSA `split.conf`
+  * Restored deprecated `OpenUi` IPC command as an alias for `Activate` for existing clients
+  * Added optional HTTP bearer-token support for CLI `--use-http` via `--http-token` or `GOXLR_HTTP_TOKEN`
+  * Added serde defaults for new IPC status fields so newer clients tolerate older daemon status payloads
+  * Runs EasyEffects EQ application in a blocking task with a hard process timeout to avoid wedging async device handling
 
 ### Logging Rule
 

@@ -1018,6 +1018,7 @@ impl SettingsHandle {
                 .is_some_and(|active| active == profile_name)
         {
             entry.headphone_eq_active_profile = None;
+            entry.headphone_eq_current = Some(default_headphone_eq_profile());
         }
 
         removed

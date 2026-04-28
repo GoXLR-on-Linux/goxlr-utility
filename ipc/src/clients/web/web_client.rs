@@ -1,21 +1,21 @@
 use crate::client::Client;
 use crate::{DaemonRequest, DaemonResponse, DaemonStatus, GoXLRCommand, HttpSettings};
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 use async_trait::async_trait;
 
 #[derive(Debug)]
 pub struct WebClient {
     url: String,
     status: DaemonStatus,
-    http_settings: HttpSettings,
+    auth_token: Option<String>,
 }
 
 impl WebClient {
-    pub fn new(url: String) -> Self {
+    pub fn new(url: String, auth_token: Option<String>) -> Self {
         Self {
             url,
             status: DaemonStatus::default(),
-            http_settings: Default::default(),
+            auth_token,
         }
     }
 }
@@ -23,11 +23,17 @@ impl WebClient {
 #[async_trait]
 impl Client for WebClient {
     async fn send(&mut self, request: DaemonRequest) -> anyhow::Result<()> {
-        let resp = reqwest::Client::new()
-            .post(&self.url)
-            .json(&request)
+        let client = reqwest::Client::new();
+        let mut request = client.post(&self.url).json(&request);
+        if let Some(token) = &self.auth_token {
+            request = request.bearer_auth(token);
+        }
+
+        let resp = request
             .send()
             .await?
+            .error_for_status()
+            .context("HTTP command request failed")?
             .json::<DaemonResponse>()
             .await?;
 
@@ -35,7 +41,6 @@ impl Client for WebClient {
         match resp {
             DaemonResponse::Status(status) => {
                 self.status = status.clone();
-                self.http_settings = status.config.http_settings;
                 Ok(())
             }
             DaemonResponse::Ok => Ok(()),
@@ -54,11 +59,19 @@ impl Client for WebClient {
     }
 
     async fn get_mic_level(&mut self, serial: &str) -> anyhow::Result<f64> {
-        let resp = reqwest::Client::new()
+        let client = reqwest::Client::new();
+        let mut request = client
             .post(&self.url)
-            .json(&DaemonRequest::GetMicLevel(serial.to_string()))
+            .json(&DaemonRequest::GetMicLevel(serial.to_string()));
+        if let Some(token) = &self.auth_token {
+            request = request.bearer_auth(token);
+        }
+
+        let resp = request
             .send()
             .await?
+            .error_for_status()
+            .context("HTTP mic-level request failed")?
             .json::<DaemonResponse>()
             .await?;
 
@@ -67,7 +80,6 @@ impl Client for WebClient {
             DaemonResponse::Error(error) => bail!("{}", error),
             DaemonResponse::Status(status) => {
                 self.status = status.clone();
-                self.http_settings = status.config.http_settings;
                 bail!("Received status while waiting for mic level response")
             }
             DaemonResponse::Ok => bail!("Received OK while waiting for mic level response"),
@@ -89,6 +101,6 @@ impl Client for WebClient {
     }
 
     fn http_status(&self) -> &HttpSettings {
-        &self.http_settings
+        &self.status.config.http_settings
     }
 }

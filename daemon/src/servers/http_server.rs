@@ -1,7 +1,8 @@
 use actix_cors::Cors;
 use actix_multipart::Multipart;
 use actix_web::dev::ServerHandle;
-use actix_web::http::header::ContentType;
+use actix_web::http::Method;
+use actix_web::http::header::{COOKIE, ContentType, HeaderValue, ORIGIN, REFERER, SET_COOKIE};
 use actix_web::middleware::Condition;
 use actix_web::web::Data;
 use actix_web::{App, HttpRequest, HttpResponse, HttpServer, get, post, web};
@@ -38,6 +39,7 @@ use crate::primary_worker::{DeviceCommand, DeviceSender};
 use crate::servers::server_packet::handle_packet;
 
 const WEB_CONTENT: Dir = include_dir!("./daemon/web-content/");
+const AUTH_COOKIE_NAME: &str = "goxlr_http_auth";
 
 struct AppData {
     usb_tx: DeviceSender,
@@ -567,7 +569,7 @@ async fn upload_firmware(
     }
 }
 
-async fn default(req: HttpRequest) -> HttpResponse {
+async fn default(req: HttpRequest, app_data: Data<RwLock<AppData>>) -> HttpResponse {
     let path = if req.path() == "/" || req.path() == "" {
         "/index.html"
     } else {
@@ -576,6 +578,18 @@ async fn default(req: HttpRequest) -> HttpResponse {
     let path_part = &path[1..path.len()];
     let file = WEB_CONTENT.get_file(path_part);
     if let Some(file) = file {
+        if let Some(cookie) = build_auth_cookie_from_query(&app_data, &req).await {
+            let redirect_path = if req.path().is_empty() {
+                "/"
+            } else {
+                req.path()
+            };
+            return HttpResponse::Found()
+                .insert_header((SET_COOKIE, cookie))
+                .insert_header(("Location", redirect_path))
+                .finish();
+        }
+
         let mime_type = MimeGuess::from_path(path).first_or_octet_stream();
         let mut builder = HttpResponse::Ok();
         builder.insert_header(ContentType(mime_type));
@@ -614,13 +628,196 @@ fn is_token_authorized(req: &HttpRequest, expected: Option<&str>) -> bool {
         return true;
     }
 
-    let params = web::Query::<HashMap<String, String>>::from_query(req.query_string());
-    if let Ok(params) = params
-        && let Some(token) = params.get("token")
-        && token == expected
-    {
+    if has_auth_cookie(req, expected) && is_cookie_auth_origin_allowed(req) {
         return true;
     }
 
+    // Query-string bearer tokens are a compromise for websocket clients, which
+    // cannot reliably set Authorization headers from browser WebSocket APIs.
+    // Do not allow them on ordinary HTTP endpoints where they are more likely
+    // to leak through logs, browser history, or referrers.
+    if req.path() == "/api/websocket" {
+        let params = web::Query::<HashMap<String, String>>::from_query(req.query_string());
+        if let Ok(params) = params
+            && let Some(token) = params.get("token")
+            && token == expected
+        {
+            return true;
+        }
+    }
+
     false
+}
+
+async fn build_auth_cookie_from_query(
+    app_data: &Data<RwLock<AppData>>,
+    req: &HttpRequest,
+) -> Option<HeaderValue> {
+    let data = app_data.read().await;
+    let expected = data.http_auth_token.as_deref()?;
+    let params = web::Query::<HashMap<String, String>>::from_query(req.query_string()).ok()?;
+    let token = params.get("token")?;
+
+    if token != expected || !is_cookie_value_safe(token) {
+        return None;
+    }
+
+    HeaderValue::from_str(&format!(
+        "{AUTH_COOKIE_NAME}={token}; Path=/; HttpOnly; SameSite=Strict"
+    ))
+    .ok()
+}
+
+fn has_auth_cookie(req: &HttpRequest, expected: &str) -> bool {
+    req.headers()
+        .get_all(COOKIE)
+        .filter_map(|value| value.to_str().ok())
+        .flat_map(|header| header.split(';'))
+        .filter_map(|part| part.trim().split_once('='))
+        .any(|(name, value)| name == AUTH_COOKIE_NAME && value == expected)
+}
+
+fn is_cookie_auth_origin_allowed(req: &HttpRequest) -> bool {
+    let request_origin = request_origin(req);
+
+    if let Some(origin) = req.headers().get(ORIGIN).and_then(|value| value.to_str().ok()) {
+        return origin == request_origin;
+    }
+
+    if let Some(referer) = req
+        .headers()
+        .get(REFERER)
+        .and_then(|value| value.to_str().ok())
+    {
+        return referer == request_origin || referer.starts_with(&format!("{request_origin}/"));
+    }
+
+    if req.path() == "/api/websocket" {
+        return false;
+    }
+
+    matches!(*req.method(), Method::GET | Method::HEAD)
+}
+
+fn request_origin(req: &HttpRequest) -> String {
+    let connection_info = req.connection_info();
+    format!("{}://{}", connection_info.scheme(), connection_info.host())
+}
+
+fn is_cookie_value_safe(value: &str) -> bool {
+    value.bytes().all(|byte| {
+        byte == 0x21
+            || (0x23..=0x2b).contains(&byte)
+            || (0x2d..=0x3a).contains(&byte)
+            || (0x3c..=0x5b).contains(&byte)
+            || (0x5d..=0x7e).contains(&byte)
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use actix_web::test::TestRequest;
+
+    #[test]
+    fn auth_allows_bearer_header() {
+        let req = TestRequest::default()
+            .insert_header(("Authorization", "Bearer expected-token"))
+            .to_http_request();
+
+        assert!(is_token_authorized(&req, Some("expected-token")));
+    }
+
+    #[test]
+    fn auth_allows_session_cookie() {
+        let req = TestRequest::default()
+            .insert_header((COOKIE, format!("{AUTH_COOKIE_NAME}=expected-token")))
+            .to_http_request();
+
+        assert!(is_token_authorized(&req, Some("expected-token")));
+    }
+
+    #[test]
+    fn auth_allows_same_origin_session_cookie_on_post() {
+        let req = TestRequest::post()
+            .uri("/api/command")
+            .insert_header(("Host", "127.0.0.1:14564"))
+            .insert_header((ORIGIN, "http://127.0.0.1:14564"))
+            .insert_header((COOKIE, format!("{AUTH_COOKIE_NAME}=expected-token")))
+            .to_http_request();
+
+        assert!(is_token_authorized(&req, Some("expected-token")));
+    }
+
+    #[test]
+    fn auth_rejects_cross_origin_session_cookie_on_post() {
+        let req = TestRequest::post()
+            .uri("/api/command")
+            .insert_header(("Host", "127.0.0.1:14564"))
+            .insert_header((ORIGIN, "http://127.0.0.1:3000"))
+            .insert_header((COOKIE, format!("{AUTH_COOKIE_NAME}=expected-token")))
+            .to_http_request();
+
+        assert!(!is_token_authorized(&req, Some("expected-token")));
+    }
+
+    #[test]
+    fn auth_rejects_cross_origin_websocket_cookie() {
+        let req = TestRequest::with_uri("/api/websocket")
+            .insert_header(("Host", "127.0.0.1:14564"))
+            .insert_header((ORIGIN, "http://127.0.0.1:3000"))
+            .insert_header((COOKIE, format!("{AUTH_COOKIE_NAME}=expected-token")))
+            .to_http_request();
+
+        assert!(!is_token_authorized(&req, Some("expected-token")));
+    }
+
+    #[test]
+    fn auth_allows_same_origin_websocket_cookie() {
+        let req = TestRequest::with_uri("/api/websocket")
+            .insert_header(("Host", "127.0.0.1:14564"))
+            .insert_header((ORIGIN, "http://127.0.0.1:14564"))
+            .insert_header((COOKIE, format!("{AUTH_COOKIE_NAME}=expected-token")))
+            .to_http_request();
+
+        assert!(is_token_authorized(&req, Some("expected-token")));
+    }
+
+    #[test]
+    fn auth_rejects_websocket_cookie_without_origin() {
+        let req = TestRequest::with_uri("/api/websocket")
+            .insert_header((COOKIE, format!("{AUTH_COOKIE_NAME}=expected-token")))
+            .to_http_request();
+
+        assert!(!is_token_authorized(&req, Some("expected-token")));
+    }
+
+    #[test]
+    fn auth_allows_query_token_for_websocket_only() {
+        let websocket_req = TestRequest::with_uri("/api/websocket?token=expected-token")
+            .to_http_request();
+        let command_req = TestRequest::with_uri("/api/command?token=expected-token").to_http_request();
+
+        assert!(is_token_authorized(
+            &websocket_req,
+            Some("expected-token")
+        ));
+        assert!(!is_token_authorized(&command_req, Some("expected-token")));
+    }
+
+    #[test]
+    fn auth_rejects_wrong_cookie() {
+        let req = TestRequest::default()
+            .insert_header((COOKIE, format!("{AUTH_COOKIE_NAME}=wrong-token")))
+            .to_http_request();
+
+        assert!(!is_token_authorized(&req, Some("expected-token")));
+    }
+
+    #[test]
+    fn cookie_values_must_be_header_safe() {
+        assert!(is_cookie_value_safe("abc-123_~"));
+        assert!(!is_cookie_value_safe("has spaces"));
+        assert!(!is_cookie_value_safe("has;semicolon"));
+    }
 }

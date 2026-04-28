@@ -253,6 +253,13 @@ impl<'a> Device<'a> {
 
         device.apply_profile(None).await?;
         device.apply_mic_profile().await?;
+        if device
+            .settings
+            .get_headphone_eq_enabled(device.serial())
+            .await
+        {
+            device.apply_headphone_eq_state().await;
+        }
 
         Ok(device)
     }
@@ -487,7 +494,14 @@ impl<'a> Device<'a> {
                 | GoXLRCommand::SetClipGuardThreshold(_)
                 | GoXLRCommand::SetHeadphoneLimiterEnabled(_)
                 | GoXLRCommand::SetHeadphoneLimiterThreshold(_)
-                => {
+                | GoXLRCommand::SetHeadphoneEqEnabled(_)
+                | GoXLRCommand::SetHeadphoneEqPreamp(_)
+                | GoXLRCommand::SetHeadphoneEqBandGain(_, _)
+                | GoXLRCommand::SetHeadphoneEqBandFrequency(_, _)
+                | GoXLRCommand::SetHeadphoneEqBandQ(_, _)
+                | GoXLRCommand::SaveHeadphoneEqProfile(_)
+                | GoXLRCommand::LoadHeadphoneEqProfile(_)
+                | GoXLRCommand::DeleteHeadphoneEqProfile(_) => {
                     if !avoid_write {
                         let _ = self.perform_command(command).await;
                     } else {
@@ -1746,10 +1760,18 @@ impl<'a> Device<'a> {
     }
 
     async fn apply_headphone_eq_state(&self) {
+        let serial = self.serial().to_string();
         let enabled = self.settings.get_headphone_eq_enabled(self.serial()).await;
         let profile = self.settings.get_headphone_eq_current(self.serial()).await;
-        if let Err(error) = crate::platform::apply_headphone_eq(self.serial(), enabled, &profile) {
-            warn!("Unable to apply headphone EQ backend state: {}", error);
+        let result = tokio::task::spawn_blocking(move || {
+            crate::platform::apply_headphone_eq(&serial, enabled, &profile)
+        })
+        .await;
+
+        match result {
+            Ok(Ok(())) => {}
+            Ok(Err(error)) => warn!("Unable to apply headphone EQ backend state: {}", error),
+            Err(error) => warn!("Headphone EQ backend task failed: {}", error),
         }
     }
 
@@ -3217,6 +3239,7 @@ impl<'a> Device<'a> {
                         .await;
                     if removed {
                         self.settings.save().await;
+                        self.apply_headphone_eq_state().await;
                     }
                 }
             }

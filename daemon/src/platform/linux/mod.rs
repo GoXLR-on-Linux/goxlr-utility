@@ -3,7 +3,7 @@ pub mod headphone_eq;
 pub mod sleep;
 
 use anyhow::Result;
-use log::{debug, info, warn};
+use log::{debug, warn};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -188,39 +188,12 @@ fn check_alsa_split_conf() {
         return;
     }
 
-    let patched = patch_split_conf_contents(&contents);
-    if patched != contents {
-        if split_conf_is_writable(&split_conf) {
-            let backup_path = PathBuf::from(format!("{}.bak.goxlr", split_conf.to_string_lossy()));
-            if !backup_path.exists() {
-                let _ = fs::copy(&split_conf, &backup_path);
-            }
-
-            match fs::write(&split_conf, patched) {
-                Ok(_) => {
-                    info!("Applied ALSA split.conf compatibility patch for GoXLR UCM support.");
-                    return;
-                }
-                Err(error) => {
-                    warn!(
-                        "Unable to write ALSA split.conf compatibility patch automatically: {}",
-                        error
-                    );
-                }
-            }
-        } else {
-            warn!(
-                "ALSA split.conf compatibility patch is required but file is not writable. Run as root: \
-perl -0777 -i -pe 's/Empty \"\\$\\{{var:__dev\\}}\"/Empty \"\\$\\{{var:-__dev\\}}\"/g; \
-s/Empty \"\\$\\{{var:__Device\\}}\"/Empty \"\\$\\{{var:-__Device\\}}\"/g' {}",
-                split_conf.to_string_lossy()
-            );
-        }
+    if patch_split_conf_contents(&contents) != contents {
+        warn!(
+            "ALSA split.conf compatibility markers are incomplete. GoXLR UCM profile errors may occur. \
+The daemon will not modify distro-owned ALSA files automatically; apply the documented split.conf workaround manually if audio setup fails."
+        );
     }
-
-    warn!(
-        "ALSA split.conf compatibility markers are incomplete. GoXLR UCM profile errors may occur."
-    );
 }
 
 fn has_split_conf_compat_markers(contents: &str) -> bool {
@@ -231,12 +204,6 @@ fn patch_split_conf_contents(contents: &str) -> String {
     contents
         .replace("${var:__dev}", "${var:-__dev}")
         .replace("${var:__Device}", "${var:-__Device}")
-}
-
-fn split_conf_is_writable(path: &Path) -> bool {
-    fs::metadata(path)
-        .map(|meta| !meta.permissions().readonly())
-        .unwrap_or(false)
 }
 
 fn read_trimmed(path: &Path) -> Option<String> {

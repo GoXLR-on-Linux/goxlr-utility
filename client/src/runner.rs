@@ -29,7 +29,11 @@ pub async fn run_cli() -> Result<()> {
     let mut client: Box<dyn Client>;
 
     if let Some(url) = cli.use_http {
-        client = Box::new(WebClient::new(format!("{url}/api/command")));
+        let http_token = cli
+            .http_token
+            .clone()
+            .or_else(|| std::env::var("GOXLR_HTTP_TOKEN").ok());
+        client = Box::new(WebClient::new(format!("{url}/api/command"), http_token));
     } else {
         // Windows supports unix sockets now, but we want to maintain the historic behaviour
         // so we'll force it to a NameSpace here..

@@ -125,10 +125,12 @@ pub async fn spawn_event_handler(
                     }
                     EventTriggers::RunPreflight => {
                         debug!("Manual preflight requested from tray.");
-                        if let Err(error) = perform_preflight() {
-                            warn!("Manual preflight failed: {}", error);
-                            display_error(format!("GoXLR preflight failed: {error}"));
-                        }
+                        tokio::task::spawn_blocking(|| {
+                            if let Err(error) = perform_preflight() {
+                                warn!("Manual preflight failed: {}", error);
+                                display_error(format!("GoXLR preflight failed: {error}"));
+                            }
+                        });
                     }
                 }
             },

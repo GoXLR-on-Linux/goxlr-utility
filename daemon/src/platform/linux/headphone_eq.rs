@@ -4,7 +4,9 @@ use log::warn;
 use serde_json::{Value, json};
 use std::fs;
 use std::path::PathBuf;
-use std::process::Command;
+use std::process::{Command, Stdio};
+use std::thread;
+use std::time::{Duration, Instant};
 use which::which;
 
 const PRESET_PREFIX: &str = "GoXLR-HeadphoneEQ";
@@ -48,10 +50,20 @@ pub fn apply_headphone_eq(
     })?;
 
     if let Err(first_error) = run_easyeffects(&["-l", &preset_name]) {
-        // If loading failed, try to start EasyEffects hidden and retry once.
-        let _ = Command::new("easyeffects").arg("-w").status();
+        // If loading failed, try to start EasyEffects hidden and retry briefly;
+        // DBus/session registration can lag behind the process spawn.
+        let _ = Command::new("easyeffects").arg("-w").spawn();
 
-        if let Err(retry_error) = run_easyeffects(&["-l", &preset_name]) {
+        let mut last_error = None;
+        for _ in 0..10 {
+            thread::sleep(Duration::from_millis(250));
+            match run_easyeffects(&["-l", &preset_name]) {
+                Ok(()) => return Ok(()),
+                Err(error) => last_error = Some(error),
+            }
+        }
+
+        if let Some(retry_error) = last_error {
             let retry_message = retry_error.to_string();
             if is_display_error(&retry_message) {
                 warn!(
@@ -162,22 +174,55 @@ fn create_preset_json(enabled: bool, profile: &HeadphoneEqProfile) -> Value {
 }
 
 fn run_easyeffects(args: &[&str]) -> Result<()> {
-    let output = Command::new("easyeffects")
+    let mut child = Command::new("easyeffects")
         .args(args)
-        .output()
+        .stderr(Stdio::piped())
+        .spawn()
         .with_context(|| format!("Unable to execute EasyEffects with args {args:?}"))?;
-    if output.status.success() {
-        return Ok(());
-    }
 
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    bail!(
-        "EasyEffects command failed (args {args:?}): {}",
-        stderr.trim()
-    )
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        if child
+            .try_wait()
+            .with_context(|| format!("Unable to poll EasyEffects with args {args:?}"))?
+            .is_some()
+        {
+            let output = child
+                .wait_with_output()
+                .with_context(|| format!("Unable to collect EasyEffects output for args {args:?}"))?;
+            if output.status.success() {
+                return Ok(());
+            }
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            bail!(
+                "EasyEffects command failed (args {args:?}) with status {}: {}",
+                output.status,
+                stderr.trim()
+            );
+        }
+
+        if Instant::now() >= deadline {
+            let _ = child.kill();
+            let output = child.wait_with_output().ok();
+            let stderr = output
+                .as_ref()
+                .map(|output| String::from_utf8_lossy(&output.stderr).trim().to_string())
+                .unwrap_or_default();
+            bail!("EasyEffects command timed out (args {args:?}): {stderr}");
+        }
+
+        thread::sleep(Duration::from_millis(50));
+    }
 }
 
 fn is_display_error(message: &str) -> bool {
     let msg = message.to_ascii_lowercase();
-    msg.contains("failed to open display") || msg.contains("cannot open display")
+    msg.contains("failed to open display")
+        || msg.contains("cannot open display")
+        || msg.contains("wayland")
+        || msg.contains("xdg_runtime_dir")
+        || msg.contains("session bus")
+        || msg.contains("dbus")
+        || msg.contains("pipewire")
+        || msg.contains("pulse")
 }

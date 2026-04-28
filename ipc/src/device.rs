@@ -67,6 +67,7 @@ pub struct HttpSettings {
     pub bind_address: String,
     pub cors_enabled: bool,
     pub port: u16,
+    #[serde(default)]
     pub auth_token: Option<String>,
 }
 
@@ -402,15 +403,64 @@ pub struct Sample {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HeadphoneEqBand {
+    #[serde(default)]
     pub frequency_hz: f32,
+    #[serde(default)]
     pub gain_db: f32,
+    #[serde(default = "default_headphone_eq_q")]
     pub q: f32,
+}
+
+impl Default for HeadphoneEqBand {
+    fn default() -> Self {
+        Self {
+            frequency_hz: 0.0,
+            gain_db: 0.0,
+            q: default_headphone_eq_q(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HeadphoneEqProfile {
+    #[serde(default)]
     pub preamp_db: f32,
+    #[serde(default = "default_headphone_eq_bands")]
     pub bands: Vec<HeadphoneEqBand>,
+}
+
+impl Default for HeadphoneEqProfile {
+    fn default() -> Self {
+        Self {
+            preamp_db: 0.0,
+            bands: default_headphone_eq_bands(),
+        }
+    }
+}
+
+fn default_headphone_eq_q() -> f32 {
+    1.6
+}
+
+fn default_headphone_eq_bands() -> Vec<HeadphoneEqBand> {
+    [
+        32.0_f32, 64.0, 125.0, 250.0, 500.0, 1000.0, 2000.0, 4000.0, 8000.0, 16000.0,
+    ]
+    .into_iter()
+    .map(|frequency_hz| HeadphoneEqBand {
+        frequency_hz,
+        gain_db: 0.0,
+        q: default_headphone_eq_q(),
+    })
+    .collect()
+}
+
+fn default_clip_guard_threshold() -> u8 {
+    90
+}
+
+fn default_headphone_limiter_threshold() -> u8 {
+    85
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -423,15 +473,25 @@ pub struct Settings {
     pub lock_faders: bool,
     pub fade_duration: u32,
     pub vod_mode: VodMode,
+    #[serde(default)]
     pub clip_guard_enabled: bool,
+    #[serde(default = "default_clip_guard_threshold")]
     pub clip_guard_threshold: u8,
+    #[serde(default)]
     pub headphone_limiter_enabled: bool,
+    #[serde(default = "default_headphone_limiter_threshold")]
     pub headphone_limiter_threshold: u8,
+    #[serde(default)]
     pub headphone_eq_enabled: bool,
+    #[serde(default)]
     pub headphone_eq_backend_ready: bool,
+    #[serde(default)]
     pub headphone_eq_backend_name: String,
+    #[serde(default)]
     pub headphone_eq_active_profile: Option<String>,
+    #[serde(default)]
     pub headphone_eq_current: HeadphoneEqProfile,
+    #[serde(default)]
     pub headphone_eq_profiles: HashMap<String, HeadphoneEqProfile>,
 }
 

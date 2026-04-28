@@ -145,6 +145,8 @@ pub enum LogLevel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DaemonCommand {
     Activate,
+    /// Deprecated compatibility alias for Activate.
+    OpenUi,
     StopDaemon,
     OpenPath(PathTypes),
     SetLogLevel(LogLevel),

@@ -373,7 +373,7 @@ pub async fn spawn_usb_handler(
                                 let _ = global_tx.send(EventTriggers::Stop(false)).await;
                                 let _ = sender.send(Ok(()));
                             }
-                            DaemonCommand::Activate => {
+                            DaemonCommand::Activate | DaemonCommand::OpenUi => {
                                 let _ = global_tx.send(EventTriggers::Activate).await;
                                 let _ = sender.send(Ok(()));
                             }
@@ -654,9 +654,12 @@ async fn get_daemon_status(
     files: Files,
     app_check: &Option<String>,
 ) -> DaemonStatus {
+    let mut public_http_settings = http_settings.clone();
+    public_http_settings.auth_token = None;
+
     let mut status = DaemonStatus {
         config: DaemonConfig {
-            http_settings: http_settings.clone(),
+            http_settings: public_http_settings,
             daemon_version: String::from(VERSION),
             driver_interface: driver_details.clone(),
             latest_firmware: firmware_versions.clone(),

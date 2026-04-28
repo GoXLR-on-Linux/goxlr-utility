@@ -36,6 +36,10 @@ pub struct Cli {
     #[arg(long, num_args=0..=1, default_missing_value="http://localhost:14564")]
     pub use_http: Option<String>,
 
+    /// Bearer token for HTTP mode. Defaults to GOXLR_HTTP_TOKEN if omitted.
+    #[arg(long)]
+    pub http_token: Option<String>,
+
     #[command(flatten, next_help_heading = "Microphone controls")]
     pub microphone_controls: MicrophoneControls,
 
