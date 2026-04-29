@@ -282,6 +282,9 @@ This section tracks local source changes made on this machine so context survive
 * Added one-click persistent routing from active playback streams:
   * Active streams now preserve the PulseAudio/PipeWire application name separately from the display label so rules save as app matches like `Firefox` instead of `Firefox — YouTube Music`
   * Added `Always <target>` buttons beside the manual route buttons to save or update an enabled app auto-routing rule and immediately move the current stream to the selected GoXLR output
+* Added per-stream mute controls to the personal native UI active playback panel:
+  * Each active playback stream now shows `Mute stream` or `Unmute stream` based on its current PipeWire/PulseAudio mute state
+  * The worker applies mute changes with `pactl set-sink-input-mute <stream_id> 1|0` and refreshes the active stream snapshot afterward
 
 ### Logging Rule
 

@@ -113,6 +113,30 @@ fn ui_command_can_request_moving_audio_stream_to_sink() {
 }
 
 #[test]
+fn ui_command_can_request_muting_and_unmuting_audio_stream() {
+    assert_eq!(
+        UiCommand::SetAudioStreamMute {
+            stream_id: 12,
+            muted: true,
+        },
+        UiCommand::SetAudioStreamMute {
+            stream_id: 12,
+            muted: true,
+        }
+    );
+    assert_eq!(
+        UiCommand::SetAudioStreamMute {
+            stream_id: 12,
+            muted: false,
+        },
+        UiCommand::SetAudioStreamMute {
+            stream_id: 12,
+            muted: false,
+        }
+    );
+}
+
+#[test]
 fn app_config_parses_persistent_audio_routing_rules() {
     let config = AppConfig::from_json_str(
         r#"

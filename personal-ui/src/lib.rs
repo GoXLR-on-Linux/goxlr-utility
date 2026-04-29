@@ -1337,6 +1337,7 @@ pub enum UiCommand {
     ApplyWindow(WindowAction),
     SelectDevice(String),
     MoveAudioStream { stream_id: u64, sink_name: String },
+    SetAudioStreamMute { stream_id: u64, muted: bool },
     SetAudioRoutingRules(Vec<AudioRoutingRule>),
     Refresh,
     Quit,
@@ -2067,6 +2068,19 @@ impl PersonalUiApp {
                                 .color(Self::muted_text()),
                         );
                     }
+                    ui.horizontal(|ui| {
+                        let mute_label = if stream.muted {
+                            "Unmute stream"
+                        } else {
+                            "Mute stream"
+                        };
+                        if ui.add(egui::Button::new(mute_label).small()).clicked() {
+                            self.send(UiCommand::SetAudioStreamMute {
+                                stream_id: stream.id,
+                                muted: !stream.muted,
+                            });
+                        }
+                    });
                     if !route_targets.is_empty() {
                         ui.horizontal_wrapped(|ui| {
                             ui.label(
@@ -2718,6 +2732,18 @@ async fn ipc_worker_loop(commands: Receiver<UiCommand>, events: Sender<WorkerEve
                 )
                 .await;
             }
+            Ok(UiCommand::SetAudioStreamMute { stream_id, muted }) => {
+                if let Err(error) = set_audio_stream_mute(stream_id, muted) {
+                    let _ = events.send(WorkerEvent::Error(error.to_string()));
+                }
+                poll_and_publish(
+                    &mut client,
+                    &events,
+                    selected_serial.as_deref(),
+                    &routing_rules,
+                )
+                .await;
+            }
             Ok(UiCommand::SetAudioRoutingRules(rules)) => {
                 routing_rules = rules;
                 poll_and_publish(
@@ -2804,6 +2830,24 @@ fn move_audio_stream(stream_id: u64, sink_name: &str) -> Result<()> {
     if !output.status.success() {
         anyhow::bail!(
             "pactl move-sink-input failed: {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        );
+    }
+
+    Ok(())
+}
+
+fn set_audio_stream_mute(stream_id: u64, muted: bool) -> Result<()> {
+    let output = Command::new("pactl")
+        .arg("set-sink-input-mute")
+        .arg(stream_id.to_string())
+        .arg(if muted { "1" } else { "0" })
+        .output()
+        .context("failed to run pactl set-sink-input-mute")?;
+
+    if !output.status.success() {
+        anyhow::bail!(
+            "pactl set-sink-input-mute failed: {}",
             String::from_utf8_lossy(&output.stderr).trim()
         );
     }
