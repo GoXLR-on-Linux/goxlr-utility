@@ -919,11 +919,7 @@ impl SettingsHandle {
         entry.headphone_eq_enabled = Some(setting);
     }
 
-    pub async fn set_headphone_eq_current(
-        &self,
-        device_serial: &str,
-        profile: HeadphoneEqProfile,
-    ) {
+    pub async fn set_headphone_eq_current(&self, device_serial: &str, profile: HeadphoneEqProfile) {
         let mut settings = self.settings.write().await;
         let entry = settings
             .devices
@@ -960,11 +956,7 @@ impl SettingsHandle {
         entry.headphone_eq_active_profile = Some(profile_name.to_owned());
     }
 
-    pub async fn load_headphone_eq_profile(
-        &self,
-        device_serial: &str,
-        profile_name: &str,
-    ) -> bool {
+    pub async fn load_headphone_eq_profile(&self, device_serial: &str, profile_name: &str) -> bool {
         let mut settings = self.settings.write().await;
         let entry = settings
             .devices

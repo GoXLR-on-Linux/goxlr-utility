@@ -5,8 +5,8 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use goxlr_personal_ui::{
     ActiveAudioStreams, AppConfig, AppSceneConfig, AppSnapshot, AppViewMode, AudioRouteTarget,
     AudioRoutingRule, ControlledChannel, DeviceSelection, MiniWindowMode, OptionalBoolAction,
-    PersonalCommand, QuickActions, RoutingRuleEditor, SceneEditor, TrayAction, TrayMenuModel, UiCommand, UiScene,
-    VolumeDebouncer, WindowAction, ipc_socket_path_candidates,
+    PersonalCommand, QuickActions, RoutingRuleEditor, SceneEditor, TrayAction, TrayMenuModel,
+    UiCommand, UiScene, VolumeDebouncer, WindowAction, ipc_socket_path_candidates,
 };
 use goxlr_types::ChannelName;
 
@@ -78,10 +78,22 @@ fn active_audio_streams_build_goxlr_route_targets_from_sink_names() {
     assert_eq!(
         streams.route_targets,
         vec![
-            AudioRouteTarget::new("System", "alsa_output.usb-TC-Helicon_GoXLRMini-00.HiFi__Speaker__sink"),
-            AudioRouteTarget::new("Game", "alsa_output.usb-TC-Helicon_GoXLRMini-00.HiFi__Line1__sink"),
-            AudioRouteTarget::new("Music", "alsa_output.usb-TC-Helicon_GoXLRMini-00.HiFi__Line2__sink"),
-            AudioRouteTarget::new("Chat", "alsa_output.usb-TC-Helicon_GoXLRMini-00.HiFi__Headphones__sink"),
+            AudioRouteTarget::new(
+                "System",
+                "alsa_output.usb-TC-Helicon_GoXLRMini-00.HiFi__Speaker__sink"
+            ),
+            AudioRouteTarget::new(
+                "Game",
+                "alsa_output.usb-TC-Helicon_GoXLRMini-00.HiFi__Line1__sink"
+            ),
+            AudioRouteTarget::new(
+                "Music",
+                "alsa_output.usb-TC-Helicon_GoXLRMini-00.HiFi__Line2__sink"
+            ),
+            AudioRouteTarget::new(
+                "Chat",
+                "alsa_output.usb-TC-Helicon_GoXLRMini-00.HiFi__Headphones__sink"
+            ),
         ]
     );
 }
@@ -138,6 +150,45 @@ fn app_config_uses_default_audio_routing_rules_when_existing_config_omits_them()
 }
 
 #[test]
+fn active_stream_can_be_saved_as_persistent_routing_rule() {
+    let path = temp_scene_config_path("save-stream-routing-rule");
+    fs::write(
+        &path,
+        r#"{"scenes":[{"name":"Scene"}],"audio_routing_rules":[{"app":"Spotify","route":"Music"}]}"#,
+    )
+    .unwrap();
+    let mut state = AppSceneConfig::load_or_default(path.clone());
+    let streams = ActiveAudioStreams::from_pactl_json(
+        r#"[
+          {"index": 88, "name": "alsa_output.usb-TC-Helicon_GoXLRMini-00.HiFi__Speaker__sink", "description": "GoXLRMini System"},
+          {"index": 86, "name": "alsa_output.usb-TC-Helicon_GoXLRMini-00.HiFi__Line1__sink", "description": "GoXLRMini Game"}
+        ]"#,
+        r#"[
+          {"index": 31, "sink": 88, "properties": {"application.name": "Firefox", "media.name": "YouTube Music"}}
+        ]"#,
+    )
+    .unwrap();
+
+    state
+        .save_audio_routing_rule_for_stream(&streams.streams[0], "Game")
+        .unwrap();
+
+    let saved = AppConfig::from_json_str(&fs::read_to_string(&path).unwrap()).unwrap();
+    assert_eq!(
+        saved.audio_routing_rules(),
+        vec![
+            AudioRoutingRule::new("Spotify", "Music"),
+            AudioRoutingRule::new("Firefox", "Game"),
+        ]
+    );
+    assert_eq!(
+        state.config().audio_routing_rules(),
+        saved.audio_routing_rules()
+    );
+    let _ = fs::remove_file(path);
+}
+
+#[test]
 fn routing_rule_editor_adds_edits_deletes_and_reorders_rules() {
     let config = AppConfig::from_json_str(
         r#"{"scenes":[],"audio_routing_rules":[{"app":"Spotify","route":"Music"},{"app":"Discord","route":"Chat"}]}"#,
@@ -145,7 +196,10 @@ fn routing_rule_editor_adds_edits_deletes_and_reorders_rules() {
     .unwrap();
     let mut editor = RoutingRuleEditor::from_config(&config);
 
-    assert_eq!(editor.rule_summaries(), vec!["Spotify -> Music", "Discord -> Chat"]);
+    assert_eq!(
+        editor.rule_summaries(),
+        vec!["Spotify -> Music", "Discord -> Chat"]
+    );
 
     editor.set_selected_rule(0);
     editor.add_rule();
@@ -156,18 +210,29 @@ fn routing_rule_editor_adds_edits_deletes_and_reorders_rules() {
 
     assert_eq!(
         editor.rule_summaries(),
-        vec!["Spotify -> Music", "Firefox -> Music (disabled)", "Discord -> Chat"]
+        vec![
+            "Spotify -> Music",
+            "Firefox -> Music (disabled)",
+            "Discord -> Chat"
+        ]
     );
 
     editor.move_selected_rule_down();
     assert_eq!(
         editor.rule_summaries(),
-        vec!["Spotify -> Music", "Discord -> Chat", "Firefox -> Music (disabled)"]
+        vec![
+            "Spotify -> Music",
+            "Discord -> Chat",
+            "Firefox -> Music (disabled)"
+        ]
     );
     assert_eq!(editor.selected_rule(), 2);
 
     editor.delete_selected_rule();
-    assert_eq!(editor.rule_summaries(), vec!["Spotify -> Music", "Discord -> Chat"]);
+    assert_eq!(
+        editor.rule_summaries(),
+        vec!["Spotify -> Music", "Discord -> Chat"]
+    );
 }
 
 #[test]
@@ -198,7 +263,10 @@ fn routing_rule_editor_saves_rules_to_config_file_and_updates_runtime_state() {
             AudioRoutingRule::new("Discord", "Chat"),
         ]
     );
-    assert_eq!(state.config().audio_routing_rules(), saved.audio_routing_rules());
+    assert_eq!(
+        state.config().audio_routing_rules(),
+        saved.audio_routing_rules()
+    );
     let _ = fs::remove_file(path);
 }
 
@@ -233,7 +301,8 @@ fn active_audio_streams_plan_auto_route_moves_matching_apps_to_targets() {
             },
             UiCommand::MoveAudioStream {
                 stream_id: 13,
-                sink_name: "alsa_output.usb-TC-Helicon_GoXLRMini-00.HiFi__Headphones__sink".to_string(),
+                sink_name: "alsa_output.usb-TC-Helicon_GoXLRMini-00.HiFi__Headphones__sink"
+                    .to_string(),
             },
         ]
     );
@@ -257,10 +326,14 @@ fn active_audio_streams_do_not_auto_route_disabled_or_already_routed_rules() {
     )
     .unwrap();
 
-    assert!(streams.routing_moves(&[
-        AudioRoutingRule::new("Spotify", "Music"),
-        AudioRoutingRule::disabled("Discord", "Chat"),
-    ]).is_empty());
+    assert!(
+        streams
+            .routing_moves(&[
+                AudioRoutingRule::new("Spotify", "Music"),
+                AudioRoutingRule::disabled("Discord", "Chat"),
+            ])
+            .is_empty()
+    );
 }
 
 #[test]
@@ -281,7 +354,10 @@ fn ipc_socket_candidates_include_legacy_tmp_socket_for_installed_daemon() {
         "expected legacy installed-daemon socket fallback in {candidates:?}"
     );
     assert_eq!(
-        candidates.iter().filter(|path| *path == "/tmp/goxlr.socket").count(),
+        candidates
+            .iter()
+            .filter(|path| *path == "/tmp/goxlr.socket")
+            .count(),
         1
     );
 }
@@ -291,7 +367,10 @@ fn channel_controls_cover_personal_mvp_channels() {
     let channels = ControlledChannel::mvp_channels();
 
     assert_eq!(
-        channels.iter().map(|channel| channel.channel).collect::<Vec<_>>(),
+        channels
+            .iter()
+            .map(|channel| channel.channel)
+            .collect::<Vec<_>>(),
         vec![
             ChannelName::Headphones,
             ChannelName::Music,
@@ -365,7 +444,13 @@ fn app_config_parses_editable_scene_volumes_and_eq_profiles() {
 
     let scenes = config.scenes();
 
-    assert_eq!(scenes.iter().map(|scene| scene.name().to_string()).collect::<Vec<_>>(), vec!["Late Night Custom"]);
+    assert_eq!(
+        scenes
+            .iter()
+            .map(|scene| scene.name().to_string())
+            .collect::<Vec<_>>(),
+        vec!["Late Night Custom"]
+    );
     assert_eq!(
         scenes[0].commands(),
         vec![
@@ -451,7 +536,10 @@ fn scene_editor_saves_updated_scene_to_config_file() {
     assert_eq!(saved.scenes[0].name, "Edited");
     assert_eq!(saved.scenes[0].volumes.music, Some(66));
     assert_eq!(saved.scenes[0].volumes.game, None);
-    assert_eq!(saved.scenes[0].headphone_eq_profile.as_deref(), Some("Edited EQ"));
+    assert_eq!(
+        saved.scenes[0].headphone_eq_profile.as_deref(),
+        Some("Edited EQ")
+    );
     assert_eq!(state.scene_names(), vec!["Edited"]);
     assert_eq!(
         state.scenes()[0].commands(),
@@ -472,7 +560,10 @@ fn scene_editor_exposes_optional_bool_actions_as_unset_set_true_or_set_false() {
     let mut editor = SceneEditor::from_config(&config);
 
     assert_eq!(editor.clip_guard_action(), OptionalBoolAction::SetTrue);
-    assert_eq!(editor.headphone_limiter_action(), OptionalBoolAction::SetFalse);
+    assert_eq!(
+        editor.headphone_limiter_action(),
+        OptionalBoolAction::SetFalse
+    );
     assert_eq!(editor.headphone_eq_action(), OptionalBoolAction::Unset);
 
     editor.set_clip_guard_action(OptionalBoolAction::Unset);
@@ -487,23 +578,23 @@ fn scene_editor_exposes_optional_bool_actions_as_unset_set_true_or_set_false() {
 
 #[test]
 fn scene_editor_can_clear_headphone_eq_profile_action() {
-    let config = AppConfig::from_json_str(
-        r#"{"scenes":[{"name":"Scene","headphone_eq_profile":"Music"}]}"#,
-    )
-    .unwrap();
+    let config =
+        AppConfig::from_json_str(r#"{"scenes":[{"name":"Scene","headphone_eq_profile":"Music"}]}"#)
+            .unwrap();
     let mut editor = SceneEditor::from_config(&config);
 
     editor.set_headphone_eq_profile_action_enabled(false);
 
-    assert_eq!(editor.selected_scene_config().unwrap().headphone_eq_profile, None);
+    assert_eq!(
+        editor.selected_scene_config().unwrap().headphone_eq_profile,
+        None
+    );
 }
 
 #[test]
 fn scene_editor_adds_new_scene_after_selected_scene() {
-    let config = AppConfig::from_json_str(
-        r#"{"scenes":[{"name":"First"},{"name":"Second"}]}"#,
-    )
-    .unwrap();
+    let config =
+        AppConfig::from_json_str(r#"{"scenes":[{"name":"First"},{"name":"Second"}]}"#).unwrap();
     let mut editor = SceneEditor::from_config(&config);
 
     editor.set_selected_scene(0);
@@ -511,7 +602,10 @@ fn scene_editor_adds_new_scene_after_selected_scene() {
 
     assert_eq!(editor.scene_names(), vec!["First", "New Scene", "Second"]);
     assert_eq!(editor.selected_scene(), 1);
-    assert_eq!(editor.selected_scene_config().unwrap().volumes, Default::default());
+    assert_eq!(
+        editor.selected_scene_config().unwrap().volumes,
+        Default::default()
+    );
 }
 
 #[test]
@@ -573,7 +667,9 @@ fn music_scene_prioritizes_music_and_eq() {
     assert!(commands.contains(&PersonalCommand::SetVolume(ChannelName::Headphones, 80)));
     assert!(commands.contains(&PersonalCommand::SetHeadphoneLimiterEnabled(true)));
     assert!(commands.contains(&PersonalCommand::SetHeadphoneEqEnabled(true)));
-    assert!(commands.contains(&PersonalCommand::LoadHeadphoneEqProfile("Music".to_string())));
+    assert!(commands.contains(&PersonalCommand::LoadHeadphoneEqProfile(
+        "Music".to_string()
+    )));
 }
 
 #[test]
@@ -586,7 +682,9 @@ fn night_scene_keeps_headphones_quiet_and_safety_enabled() {
     assert!(commands.contains(&PersonalCommand::SetVolume(ChannelName::Headphones, 55)));
     assert!(commands.contains(&PersonalCommand::SetHeadphoneLimiterEnabled(true)));
     assert!(commands.contains(&PersonalCommand::SetHeadphoneEqEnabled(true)));
-    assert!(commands.contains(&PersonalCommand::LoadHeadphoneEqProfile("Night".to_string())));
+    assert!(commands.contains(&PersonalCommand::LoadHeadphoneEqProfile(
+        "Night".to_string()
+    )));
 }
 
 #[test]
@@ -735,10 +833,16 @@ fn volume_debouncer_waits_until_channel_has_been_idle() {
     debouncer.queue(ChannelName::Music, 10, Duration::from_millis(0));
     debouncer.queue(ChannelName::Music, 20, Duration::from_millis(50));
 
-    assert_eq!(debouncer.drain_ready(Duration::from_millis(149)), Vec::new());
+    assert_eq!(
+        debouncer.drain_ready(Duration::from_millis(149)),
+        Vec::new()
+    );
     assert_eq!(
         debouncer.drain_ready(Duration::from_millis(200)),
-        vec![UiCommand::Send(PersonalCommand::SetVolume(ChannelName::Music, 20))]
+        vec![UiCommand::Send(PersonalCommand::SetVolume(
+            ChannelName::Music,
+            20
+        ))]
     );
 }
 
@@ -752,11 +856,17 @@ fn volume_debouncer_coalesces_per_channel_independently() {
 
     assert_eq!(
         debouncer.drain_ready(Duration::from_millis(130)),
-        vec![UiCommand::Send(PersonalCommand::SetVolume(ChannelName::Game, 30))]
+        vec![UiCommand::Send(PersonalCommand::SetVolume(
+            ChannelName::Game,
+            30
+        ))]
     );
     assert_eq!(
         debouncer.drain_ready(Duration::from_millis(150)),
-        vec![UiCommand::Send(PersonalCommand::SetVolume(ChannelName::Music, 20))]
+        vec![UiCommand::Send(PersonalCommand::SetVolume(
+            ChannelName::Music,
+            20
+        ))]
     );
 }
 

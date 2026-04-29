@@ -213,7 +213,8 @@ fn headphone_eq_gain_value(s: &str) -> Result<f32, String> {
 }
 
 fn headphone_eq_frequency_value(s: &str) -> Result<f32, String> {
-    let value = f32::from_str(s).map_err(|_| String::from("Frequency must be 20.0 to 20000.0 Hz"))?;
+    let value =
+        f32::from_str(s).map_err(|_| String::from("Frequency must be 20.0 to 20000.0 Hz"))?;
     if !(20.0..=20_000.0).contains(&value) {
         return Err(String::from("Frequency must be 20.0 to 20000.0 Hz"));
     }
@@ -1307,17 +1308,11 @@ pub enum HeadphoneEqCommands {
     },
 
     /// Save current headphone EQ state as a named profile.
-    SaveProfile {
-        profile_name: String,
-    },
+    SaveProfile { profile_name: String },
 
     /// Load a named headphone EQ profile.
-    LoadProfile {
-        profile_name: String,
-    },
+    LoadProfile { profile_name: String },
 
     /// Delete a named headphone EQ profile.
-    DeleteProfile {
-        profile_name: String,
-    },
+    DeleteProfile { profile_name: String },
 }

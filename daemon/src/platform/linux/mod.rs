@@ -8,7 +8,11 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-const RULE_SEARCH_PATHS: [&str; 3] = ["/etc/udev/rules.d", "/usr/lib/udev/rules.d", "/lib/udev/rules.d"];
+const RULE_SEARCH_PATHS: [&str; 3] = [
+    "/etc/udev/rules.d",
+    "/usr/lib/udev/rules.d",
+    "/lib/udev/rules.d",
+];
 const SPLIT_CONF_PATH: &str = "/usr/share/alsa/ucm2/common/pcm/split.conf";
 
 pub fn perform_platform_preflight() -> Result<()> {

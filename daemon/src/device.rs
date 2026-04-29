@@ -329,10 +329,7 @@ impl<'a> Device<'a> {
             .settings
             .get_headphone_eq_active_profile(self.serial())
             .await;
-        let headphone_eq_current = self
-            .settings
-            .get_headphone_eq_current(self.serial())
-            .await;
+        let headphone_eq_current = self.settings.get_headphone_eq_current(self.serial()).await;
         let headphone_eq_profiles = self.settings.get_headphone_eq_profiles(self.serial()).await;
         let headphone_eq_backend_ready = crate::platform::headphone_eq_backend_ready();
         let headphone_eq_backend_name = crate::platform::headphone_eq_backend_name();
@@ -1821,7 +1818,9 @@ impl<'a> Device<'a> {
 
             let channel = self.profile.get_fader_assignment(fader);
             let old_volume = self.profile.get_channel_volume(channel);
-            let new_volume = self.apply_channel_volume_cap(channel, requested_volume).await;
+            let new_volume = self
+                .apply_channel_volume_cap(channel, requested_volume)
+                .await;
 
             if requested_volume != new_volume {
                 debug!(
@@ -1862,7 +1861,9 @@ impl<'a> Device<'a> {
             let ratio = self.profile.get_submix_ratio(mix);
 
             let linked_volume_raw = (volume as f64 * ratio) as u8;
-            let linked_volume = self.apply_channel_volume_cap(channel, linked_volume_raw).await;
+            let linked_volume = self
+                .apply_channel_volume_cap(channel, linked_volume_raw)
+                .await;
 
             if linked_volume != mix_current_volume {
                 self.profile.set_submix_volume(mix, linked_volume);

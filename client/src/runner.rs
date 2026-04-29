@@ -15,7 +15,9 @@ use goxlr_ipc::client::Client;
 use goxlr_ipc::clients::ipc::ipc_client::IPCClient;
 use goxlr_ipc::clients::ipc::ipc_socket::Socket;
 use goxlr_ipc::clients::web::web_client::WebClient;
-use goxlr_ipc::{DaemonRequest, DaemonResponse, MixerStatus, UsbProductInformation, ipc_socket_path};
+use goxlr_ipc::{
+    DaemonRequest, DaemonResponse, MixerStatus, UsbProductInformation, ipc_socket_path,
+};
 use goxlr_types::{ChannelName, DeviceType, FaderName, InputDevice, MicrophoneType, OutputDevice};
 
 use interprocess::local_socket::tokio::prelude::LocalSocketStream;
@@ -1036,18 +1038,12 @@ pub async fn run_cli() -> Result<()> {
                     DeviceSettings::ClipGuardThreshold { threshold_percent } => {
                         let value = (255 * *threshold_percent as u16) / 100;
                         client
-                            .command(
-                                &serial,
-                                GoXLRCommand::SetClipGuardThreshold(value as u8),
-                            )
+                            .command(&serial, GoXLRCommand::SetClipGuardThreshold(value as u8))
                             .await?;
                     }
                     DeviceSettings::HeadphoneLimiter { enabled } => {
                         client
-                            .command(
-                                &serial,
-                                GoXLRCommand::SetHeadphoneLimiterEnabled(*enabled),
-                            )
+                            .command(&serial, GoXLRCommand::SetHeadphoneLimiterEnabled(*enabled))
                             .await?;
                     }
                     DeviceSettings::HeadphoneLimiterThreshold { threshold_percent } => {

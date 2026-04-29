@@ -277,6 +277,12 @@ This section tracks local source changes made on this machine so context survive
   * Added persistent app auto-routing rules to the personal native UI JSON config; default rules route `Spotify` to GoXLR `Music` and `Discord` to GoXLR `Chat`, and the worker applies matching rules to active playback streams with `pactl move-sink-input`
   * Added an in-app audio routing rule editor so app-match rules can be added, deleted, reordered, enabled/disabled, retargeted to GoXLR `System`/`Game`/`Music`/`Chat`/`Sample`, and saved back to the personal UI config without hand-editing JSON
 
+### 2026-04-29
+
+* Added one-click persistent routing from active playback streams:
+  * Active streams now preserve the PulseAudio/PipeWire application name separately from the display label so rules save as app matches like `Firefox` instead of `Firefox — YouTube Music`
+  * Added `Always <target>` buttons beside the manual route buttons to save or update an enabled app auto-routing rule and immediately move the current stream to the selected GoXLR output
+
 ### Logging Rule
 
 For every future functional change, add a short dated bullet under this section in the same format.

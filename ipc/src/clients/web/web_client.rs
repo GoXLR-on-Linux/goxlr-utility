@@ -83,7 +83,9 @@ impl Client for WebClient {
                 bail!("Received status while waiting for mic level response")
             }
             DaemonResponse::Ok => bail!("Received OK while waiting for mic level response"),
-            DaemonResponse::Patch(_) => bail!("Received patch while waiting for mic level response"),
+            DaemonResponse::Patch(_) => {
+                bail!("Received patch while waiting for mic level response")
+            }
         }
     }
 

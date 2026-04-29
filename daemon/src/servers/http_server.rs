@@ -680,7 +680,11 @@ fn has_auth_cookie(req: &HttpRequest, expected: &str) -> bool {
 fn is_cookie_auth_origin_allowed(req: &HttpRequest) -> bool {
     let request_origin = request_origin(req);
 
-    if let Some(origin) = req.headers().get(ORIGIN).and_then(|value| value.to_str().ok()) {
+    if let Some(origin) = req
+        .headers()
+        .get(ORIGIN)
+        .and_then(|value| value.to_str().ok())
+    {
         return origin == request_origin;
     }
 
@@ -794,14 +798,12 @@ mod tests {
 
     #[test]
     fn auth_allows_query_token_for_websocket_only() {
-        let websocket_req = TestRequest::with_uri("/api/websocket?token=expected-token")
-            .to_http_request();
-        let command_req = TestRequest::with_uri("/api/command?token=expected-token").to_http_request();
+        let websocket_req =
+            TestRequest::with_uri("/api/websocket?token=expected-token").to_http_request();
+        let command_req =
+            TestRequest::with_uri("/api/command?token=expected-token").to_http_request();
 
-        assert!(is_token_authorized(
-            &websocket_req,
-            Some("expected-token")
-        ));
+        assert!(is_token_authorized(&websocket_req, Some("expected-token")));
         assert!(!is_token_authorized(&command_req, Some("expected-token")));
     }
 

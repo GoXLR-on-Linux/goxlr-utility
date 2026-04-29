@@ -2,8 +2,8 @@
 
 extern crate core;
 
-use std::fs::create_dir_all;
 use std::env;
+use std::fs::create_dir_all;
 use std::process;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};

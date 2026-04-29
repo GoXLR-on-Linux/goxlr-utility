@@ -1,8 +1,8 @@
 // This file primarily handles 'global' events which may occur inside the daemon from a potential
 // variety of sources, which affect other parts of the daemon.
 
-use crate::primary_worker::DeviceStateChange;
 use crate::platform::{display_error, perform_preflight};
+use crate::primary_worker::DeviceStateChange;
 use crate::{SettingsHandle, Shutdown};
 use goxlr_ipc::PathTypes;
 use log::{debug, warn};
@@ -147,10 +147,7 @@ fn launch_detected_ui_app(tmp_dir: &Path) -> bool {
             .spawn();
 
         if let Err(error) = result {
-            warn!(
-                "Error launching detected UI application: {:?}",
-                error
-            );
+            warn!("Error launching detected UI application: {:?}", error);
             return false;
         }
         return true;

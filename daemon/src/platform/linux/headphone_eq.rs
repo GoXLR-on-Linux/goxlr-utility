@@ -19,11 +19,7 @@ pub fn is_backend_available() -> bool {
     which("easyeffects").is_ok()
 }
 
-pub fn apply_headphone_eq(
-    serial: &str,
-    enabled: bool,
-    profile: &HeadphoneEqProfile,
-) -> Result<()> {
+pub fn apply_headphone_eq(serial: &str, enabled: bool, profile: &HeadphoneEqProfile) -> Result<()> {
     if !is_backend_available() {
         bail!("EasyEffects backend is not available on this system");
     }
@@ -187,9 +183,9 @@ fn run_easyeffects(args: &[&str]) -> Result<()> {
             .with_context(|| format!("Unable to poll EasyEffects with args {args:?}"))?
             .is_some()
         {
-            let output = child
-                .wait_with_output()
-                .with_context(|| format!("Unable to collect EasyEffects output for args {args:?}"))?;
+            let output = child.wait_with_output().with_context(|| {
+                format!("Unable to collect EasyEffects output for args {args:?}")
+            })?;
             if output.status.success() {
                 return Ok(());
             }

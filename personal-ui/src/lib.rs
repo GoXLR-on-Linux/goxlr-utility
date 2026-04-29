@@ -6,7 +6,6 @@ use std::sync::mpsc::{Receiver, Sender};
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result};
-use serde::{Deserialize, Serialize};
 use goxlr_ipc::client::Client;
 use goxlr_ipc::clients::ipc::ipc_client::IPCClient;
 use goxlr_ipc::clients::ipc::ipc_socket::Socket;
@@ -15,6 +14,7 @@ use goxlr_types::{ChannelName, DeviceType};
 use interprocess::local_socket::tokio::prelude::LocalSocketStream;
 use interprocess::local_socket::traits::tokio::Stream;
 use interprocess::local_socket::{GenericFilePath, GenericNamespaced, ToFsName, ToNsName};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ControlledChannel {
@@ -212,7 +212,10 @@ impl AppConfig {
 
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent).with_context(|| {
-                format!("failed to create scene config directory {}", parent.display())
+                format!(
+                    "failed to create scene config directory {}",
+                    parent.display()
+                )
             })?;
         }
 
@@ -378,7 +381,10 @@ impl AppSceneConfig {
     pub fn save_config(&mut self, config: AppConfig) -> Result<()> {
         if let Some(parent) = self.path.parent() {
             fs::create_dir_all(parent).with_context(|| {
-                format!("failed to create scene config directory {}", parent.display())
+                format!(
+                    "failed to create scene config directory {}",
+                    parent.display()
+                )
             })?;
         }
 
@@ -390,6 +396,30 @@ impl AppSceneConfig {
         self.config = config;
         self.reload_error = None;
         Ok(())
+    }
+
+    pub fn save_audio_routing_rule_for_stream(
+        &mut self,
+        stream: &AudioStream,
+        route: impl Into<String>,
+    ) -> Result<()> {
+        let app = stream.routing_rule_app_name();
+        let route = route.into();
+        let mut config = self.config.clone();
+        if let Some(existing) = config
+            .audio_routing_rules
+            .iter_mut()
+            .find(|rule| rule.app.eq_ignore_ascii_case(&app))
+        {
+            existing.app = app;
+            existing.route = route;
+            existing.enabled = true;
+        } else {
+            config
+                .audio_routing_rules
+                .push(AudioRoutingRuleConfig::new(app, route));
+        }
+        self.save_config(config)
     }
 
     pub fn config(&self) -> &AppConfig {
@@ -475,9 +505,13 @@ impl SceneEditor {
         let insert_at = if self.config.scenes.is_empty() {
             0
         } else {
-            self.selected_scene.saturating_add(1).min(self.config.scenes.len())
+            self.selected_scene
+                .saturating_add(1)
+                .min(self.config.scenes.len())
         };
-        self.config.scenes.insert(insert_at, SceneConfig::empty("New Scene"));
+        self.config
+            .scenes
+            .insert(insert_at, SceneConfig::empty("New Scene"));
         self.selected_scene = insert_at;
     }
 
@@ -499,14 +533,18 @@ impl SceneEditor {
 
     pub fn move_selected_scene_up(&mut self) {
         if self.selected_scene > 0 && self.selected_scene < self.config.scenes.len() {
-            self.config.scenes.swap(self.selected_scene, self.selected_scene - 1);
+            self.config
+                .scenes
+                .swap(self.selected_scene, self.selected_scene - 1);
             self.selected_scene -= 1;
         }
     }
 
     pub fn move_selected_scene_down(&mut self) {
         if self.selected_scene + 1 < self.config.scenes.len() {
-            self.config.scenes.swap(self.selected_scene, self.selected_scene + 1);
+            self.config
+                .scenes
+                .swap(self.selected_scene, self.selected_scene + 1);
             self.selected_scene += 1;
         }
     }
@@ -708,7 +746,9 @@ impl RoutingRuleEditor {
         if self.config.audio_routing_rules.is_empty() {
             self.selected_rule = 0;
         } else {
-            self.selected_rule = self.selected_rule.min(self.config.audio_routing_rules.len() - 1);
+            self.selected_rule = self
+                .selected_rule
+                .min(self.config.audio_routing_rules.len() - 1);
         }
     }
 
@@ -960,11 +1000,23 @@ impl DeviceSelection {
 #[derive(Debug, Clone, PartialEq)]
 pub struct AudioStream {
     pub id: u64,
+    pub app_name: Option<String>,
     pub display_name: String,
     pub sink_label: String,
     pub muted: bool,
     pub corked: bool,
     pub volume_percent: Option<String>,
+}
+
+impl AudioStream {
+    pub fn routing_rule_app_name(&self) -> String {
+        self.app_name
+            .as_deref()
+            .filter(|app| !app.trim().is_empty())
+            .unwrap_or(&self.display_name)
+            .trim()
+            .to_string()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -990,8 +1042,8 @@ pub struct ActiveAudioStreams {
 
 impl ActiveAudioStreams {
     pub fn from_pactl_json(sinks_json: &str, sink_inputs_json: &str) -> Result<Self> {
-        let sinks: serde_json::Value = serde_json::from_str(sinks_json)
-            .context("failed to parse pactl sink JSON")?;
+        let sinks: serde_json::Value =
+            serde_json::from_str(sinks_json).context("failed to parse pactl sink JSON")?;
         let sink_inputs: serde_json::Value = serde_json::from_str(sink_inputs_json)
             .context("failed to parse pactl sink-input JSON")?;
 
@@ -1058,6 +1110,7 @@ impl ActiveAudioStreams {
 
             streams.push(AudioStream {
                 id,
+                app_name: app_name.map(ToOwned::to_owned),
                 display_name,
                 sink_label,
                 muted: input
@@ -1191,7 +1244,10 @@ impl AppSnapshot {
         Self::from_daemon_status_for_selected(status, None)
     }
 
-    pub fn from_daemon_status_for_selected(status: &DaemonStatus, selected_serial: Option<&str>) -> Self {
+    pub fn from_daemon_status_for_selected(
+        status: &DaemonStatus,
+        selected_serial: Option<&str>,
+    ) -> Self {
         let daemon_version = Some(status.config.daemon_version.clone());
         let mut device_serials = status.mixers.keys().cloned().collect::<Vec<_>>();
         device_serials.sort();
@@ -1481,8 +1537,12 @@ impl TrayMenuModel {
         quick_actions: &mut QuickActions,
     ) -> Vec<UiCommand> {
         match action {
-            TrayAction::ShowFull => vec![UiCommand::ApplyWindow(mini_window.show_full(quick_actions))],
-            TrayAction::ShowMini => vec![UiCommand::ApplyWindow(mini_window.show_mini(quick_actions))],
+            TrayAction::ShowFull => {
+                vec![UiCommand::ApplyWindow(mini_window.show_full(quick_actions))]
+            }
+            TrayAction::ShowMini => {
+                vec![UiCommand::ApplyWindow(mini_window.show_mini(quick_actions))]
+            }
             TrayAction::SafeNow => vec![UiCommand::ApplyScene(UiScene::safe_now())],
             TrayAction::Gaming => vec![UiCommand::ApplyScene(UiScene::gaming())],
             TrayAction::Music => vec![UiCommand::ApplyScene(UiScene::music())],
@@ -1520,7 +1580,11 @@ impl VolumeDebouncer {
     }
 
     pub fn queue(&mut self, channel: ChannelName, value: u8, updated_at: Duration) {
-        if let Some(pending) = self.pending.iter_mut().find(|pending| pending.channel == channel) {
+        if let Some(pending) = self
+            .pending
+            .iter_mut()
+            .find(|pending| pending.channel == channel)
+        {
             pending.value = value;
             pending.updated_at = updated_at;
         } else {
@@ -1658,8 +1722,26 @@ impl PersonalUiApp {
     }
 
     fn save_routing_rule_editor(&mut self) {
-        if self.routing_rule_editor.save_to(&mut self.scene_config).is_ok() {
+        if self
+            .routing_rule_editor
+            .save_to(&mut self.scene_config)
+            .is_ok()
+        {
             self.scene_editor = SceneEditor::from_config(self.scene_config.config());
+            self.send(UiCommand::SetAudioRoutingRules(
+                self.scene_config.config().audio_routing_rules(),
+            ));
+        }
+    }
+
+    fn save_stream_route_rule(&mut self, stream: &AudioStream, route: &str) {
+        if self
+            .scene_config
+            .save_audio_routing_rule_for_stream(stream, route)
+            .is_ok()
+        {
+            self.scene_editor = SceneEditor::from_config(self.scene_config.config());
+            self.routing_rule_editor = RoutingRuleEditor::from_config(self.scene_config.config());
             self.send(UiCommand::SetAudioRoutingRules(
                 self.scene_config.config().audio_routing_rules(),
             ));
@@ -1801,13 +1883,25 @@ impl PersonalUiApp {
                         .color(Self::accent()),
                 );
             } else {
-                ui.label(egui::RichText::new("No profile reported").monospace().color(Self::muted_text()));
+                ui.label(
+                    egui::RichText::new("No profile reported")
+                        .monospace()
+                        .color(Self::muted_text()),
+                );
             }
             if let Some(mic_profile) = &self.snapshot.mic_profile_name {
-                ui.label(egui::RichText::new(format!("Mic: {mic_profile}")).monospace().color(Self::muted_text()));
+                ui.label(
+                    egui::RichText::new(format!("Mic: {mic_profile}"))
+                        .monospace()
+                        .color(Self::muted_text()),
+                );
             }
             ui.add_space(14.0);
-            ui.label(egui::RichText::new("Quick scenes").monospace().color(Self::muted_text()));
+            ui.label(
+                egui::RichText::new("Quick scenes")
+                    .monospace()
+                    .color(Self::muted_text()),
+            );
             for scene in QuickActions::scene_buttons(&self.scene_config.scenes()) {
                 let is_safe = scene.name().eq_ignore_ascii_case("safe now");
                 let response = if is_safe {
@@ -1821,7 +1915,10 @@ impl PersonalUiApp {
             }
             ui.add_space(10.0);
             if let Some(error) = self.scene_config.reload_error() {
-                ui.colored_label(egui::Color32::YELLOW, format!("Scene reload issue: {error}"));
+                ui.colored_label(
+                    egui::Color32::YELLOW,
+                    format!("Scene reload issue: {error}"),
+                );
             }
         });
     }
@@ -1840,11 +1937,19 @@ impl PersonalUiApp {
                 ui.label(
                     egui::RichText::new(self.snapshot.status_line())
                         .monospace()
-                        .color(if self.snapshot.connected { Self::accent() } else { egui::Color32::YELLOW }),
+                        .color(if self.snapshot.connected {
+                            Self::accent()
+                        } else {
+                            egui::Color32::YELLOW
+                        }),
                 );
             });
             ui.separator();
-            ui.label(egui::RichText::new("Device").monospace().color(Self::muted_text()));
+            ui.label(
+                egui::RichText::new("Device")
+                    .monospace()
+                    .color(Self::muted_text()),
+            );
             ui.label(
                 egui::RichText::new(
                     self.snapshot
@@ -1856,7 +1961,11 @@ impl PersonalUiApp {
                 .color(egui::Color32::WHITE),
             );
             if let Some(serial) = &self.snapshot.device_serial {
-                ui.label(egui::RichText::new(serial).monospace().color(Self::muted_text()));
+                ui.label(
+                    egui::RichText::new(serial)
+                        .monospace()
+                        .color(Self::muted_text()),
+                );
             }
             ui.add_space(8.0);
             if self.snapshot.device_serials.len() > 1 {
@@ -1884,8 +1993,19 @@ impl PersonalUiApp {
                     ("Limiter", self.snapshot.headphone_limiter_enabled),
                     ("EQ", self.snapshot.headphone_eq_enabled),
                 ] {
-                    let color = if enabled { Self::accent() } else { Self::muted_text() };
-                    ui.label(egui::RichText::new(format!("{label}: {}", if enabled { "ON" } else { "OFF" })).monospace().color(color));
+                    let color = if enabled {
+                        Self::accent()
+                    } else {
+                        Self::muted_text()
+                    };
+                    ui.label(
+                        egui::RichText::new(format!(
+                            "{label}: {}",
+                            if enabled { "ON" } else { "OFF" }
+                        ))
+                        .monospace()
+                        .color(color),
+                    );
                 }
             });
         });
@@ -1968,6 +2088,24 @@ impl PersonalUiApp {
                                         sink_name: target.sink_name.clone(),
                                     });
                                 }
+                                if ui
+                                    .add(
+                                        egui::Button::new(format!("Always {}", target.label))
+                                            .small(),
+                                    )
+                                    .on_hover_text(format!(
+                                        "Always route {} to {}",
+                                        stream.routing_rule_app_name(),
+                                        target.label
+                                    ))
+                                    .clicked()
+                                {
+                                    self.save_stream_route_rule(&stream, &target.label);
+                                    self.send(UiCommand::MoveAudioStream {
+                                        stream_id: stream.id,
+                                        sink_name: target.sink_name.clone(),
+                                    });
+                                }
                             }
                         });
                     }
@@ -1976,11 +2114,21 @@ impl PersonalUiApp {
         });
     }
 
-    fn render_channel_strip(&mut self, ui: &mut egui::Ui, label: &str, channel: ChannelName, mut value: u8) {
+    fn render_channel_strip(
+        &mut self,
+        ui: &mut egui::Ui,
+        label: &str,
+        channel: ChannelName,
+        mut value: u8,
+    ) {
         Self::soft_panel_frame().show(ui, |ui| {
             ui.set_min_width(94.0);
             ui.vertical_centered(|ui| {
-                ui.label(egui::RichText::new(label.to_uppercase()).monospace().color(egui::Color32::WHITE));
+                ui.label(
+                    egui::RichText::new(label.to_uppercase())
+                        .monospace()
+                        .color(egui::Color32::WHITE),
+                );
                 ui.add_space(6.0);
                 let changed = ui
                     .add_sized(
@@ -2037,10 +2185,14 @@ impl PersonalUiApp {
                         self.send(UiCommand::Send(PersonalCommand::SetClipGuardEnabled(true)));
                     }
                     if ui.add(Self::accent_button("Enable limiter")).clicked() {
-                        self.send(UiCommand::Send(PersonalCommand::SetHeadphoneLimiterEnabled(true)));
+                        self.send(UiCommand::Send(
+                            PersonalCommand::SetHeadphoneLimiterEnabled(true),
+                        ));
                     }
                     if ui.add(Self::accent_button("Enable EQ")).clicked() {
-                        self.send(UiCommand::Send(PersonalCommand::SetHeadphoneEqEnabled(true)));
+                        self.send(UiCommand::Send(PersonalCommand::SetHeadphoneEqEnabled(
+                            true,
+                        )));
                     }
                 });
             });
@@ -2058,7 +2210,9 @@ impl PersonalUiApp {
             WindowAction::MiniSize => MiniWindowMode::MINI_SIZE,
             WindowAction::NormalSize => MiniWindowMode::NORMAL_SIZE,
         };
-        ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(size[0], size[1])));
+        ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(
+            size[0], size[1],
+        )));
         ctx.send_viewport_cmd(egui::ViewportCommand::WindowLevel(if always_on_top {
             egui::WindowLevel::AlwaysOnTop
         } else {
@@ -2081,9 +2235,9 @@ impl PersonalUiApp {
 
     #[cfg(feature = "system-tray")]
     fn handle_tray_action(&mut self, ctx: &egui::Context, action: TrayAction) {
-        for command in self
-            .tray_menu
-            .handle_action(action, &mut self.mini_window, &mut self.quick_actions)
+        for command in
+            self.tray_menu
+                .handle_action(action, &mut self.mini_window, &mut self.quick_actions)
         {
             self.handle_local_command(ctx, command);
         }
@@ -2505,25 +2659,49 @@ async fn ipc_worker_loop(commands: Receiver<UiCommand>, events: Sender<WorkerEve
     let mut client = connect_ipc().await?;
     let mut selected_serial: Option<String> = None;
     let mut routing_rules: Vec<AudioRoutingRule> = Vec::new();
-    poll_and_publish(&mut client, &events, selected_serial.as_deref(), &routing_rules).await;
+    poll_and_publish(
+        &mut client,
+        &events,
+        selected_serial.as_deref(),
+        &routing_rules,
+    )
+    .await;
 
     loop {
         match commands.recv_timeout(Duration::from_millis(500)) {
             Ok(UiCommand::Send(command)) => {
                 let serial = active_serial(client.status(), selected_serial.as_deref())?;
                 client.command(&serial, command.into()).await?;
-                poll_and_publish(&mut client, &events, selected_serial.as_deref(), &routing_rules).await;
+                poll_and_publish(
+                    &mut client,
+                    &events,
+                    selected_serial.as_deref(),
+                    &routing_rules,
+                )
+                .await;
             }
             Ok(UiCommand::ApplyScene(scene)) => {
                 let serial = active_serial(client.status(), selected_serial.as_deref())?;
                 for command in scene.commands() {
                     client.command(&serial, command.into()).await?;
                 }
-                poll_and_publish(&mut client, &events, selected_serial.as_deref(), &routing_rules).await;
+                poll_and_publish(
+                    &mut client,
+                    &events,
+                    selected_serial.as_deref(),
+                    &routing_rules,
+                )
+                .await;
             }
             Ok(UiCommand::SelectDevice(serial)) => {
                 selected_serial = Some(serial);
-                poll_and_publish(&mut client, &events, selected_serial.as_deref(), &routing_rules).await;
+                poll_and_publish(
+                    &mut client,
+                    &events,
+                    selected_serial.as_deref(),
+                    &routing_rules,
+                )
+                .await;
             }
             Ok(UiCommand::MoveAudioStream {
                 stream_id,
@@ -2532,19 +2710,43 @@ async fn ipc_worker_loop(commands: Receiver<UiCommand>, events: Sender<WorkerEve
                 if let Err(error) = move_audio_stream(stream_id, &sink_name) {
                     let _ = events.send(WorkerEvent::Error(error.to_string()));
                 }
-                poll_and_publish(&mut client, &events, selected_serial.as_deref(), &routing_rules).await;
+                poll_and_publish(
+                    &mut client,
+                    &events,
+                    selected_serial.as_deref(),
+                    &routing_rules,
+                )
+                .await;
             }
             Ok(UiCommand::SetAudioRoutingRules(rules)) => {
                 routing_rules = rules;
-                poll_and_publish(&mut client, &events, selected_serial.as_deref(), &routing_rules).await;
+                poll_and_publish(
+                    &mut client,
+                    &events,
+                    selected_serial.as_deref(),
+                    &routing_rules,
+                )
+                .await;
             }
             Ok(UiCommand::Refresh) => {
-                poll_and_publish(&mut client, &events, selected_serial.as_deref(), &routing_rules).await;
+                poll_and_publish(
+                    &mut client,
+                    &events,
+                    selected_serial.as_deref(),
+                    &routing_rules,
+                )
+                .await;
             }
             Ok(UiCommand::ApplyWindow(_)) => {}
             Ok(UiCommand::Quit) => return Ok(()),
             Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
-                poll_and_publish(&mut client, &events, selected_serial.as_deref(), &routing_rules).await;
+                poll_and_publish(
+                    &mut client,
+                    &events,
+                    selected_serial.as_deref(),
+                    &routing_rules,
+                )
+                .await;
             }
             Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => return Ok(()),
         }
@@ -2640,10 +2842,8 @@ async fn poll_and_publish(
 ) {
     match client.poll_status().await {
         Ok(()) => {
-            let mut snapshot = AppSnapshot::from_daemon_status_for_selected(
-                client.status(),
-                selected_serial,
-            );
+            let mut snapshot =
+                AppSnapshot::from_daemon_status_for_selected(client.status(), selected_serial);
             match read_active_audio_streams() {
                 Ok(streams) => {
                     for move_command in streams.routing_moves(routing_rules) {
@@ -2696,10 +2896,12 @@ impl TrayIntegration {
         use ksni::blocking::TrayMethods;
 
         let (actions_tx, actions_rx) = std::sync::mpsc::channel();
-        let handle = GoXlrTray { actions: actions_tx }
-            .assume_sni_available(true)
-            .spawn()
-            .context("failed to start Linux StatusNotifier tray")?;
+        let handle = GoXlrTray {
+            actions: actions_tx,
+        }
+        .assume_sni_available(true)
+        .spawn()
+        .context("failed to start Linux StatusNotifier tray")?;
 
         Ok(Self {
             _handle: handle,
