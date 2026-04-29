@@ -1,0 +1,27 @@
+[package]
+name = "goxlr-personal-ui"
+description = "Personal native Rust control panel for GoXLR Utility."
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+goxlr-ipc = { path = "../ipc" }
+goxlr-types = { path = "../types", features = ["serde"] }
+
+eframe = "0.33.2"
+egui = "0.33.2"
+ksni = { version = "0.3.4", default-features = false, features = ["async-io", "blocking"], optional = true }
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+interprocess = { workspace = true }
+
+[features]
+default = []
+system-tray = ["dep:ksni"]
+
+[dev-dependencies]

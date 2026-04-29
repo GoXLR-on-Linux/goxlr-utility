@@ -9,3 +9,6 @@
 
 # Used by CI to make distributables
 /deployment
+
+# Local Hermes planning/context files
+/.hermes/

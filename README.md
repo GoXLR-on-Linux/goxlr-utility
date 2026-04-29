@@ -255,6 +255,27 @@ This section tracks local source changes made on this machine so context survive
   * Added optional HTTP bearer-token support for CLI `--use-http` via `--http-token` or `GOXLR_HTTP_TOKEN`
   * Added serde defaults for new IPC status fields so newer clients tolerate older daemon status payloads
   * Runs EasyEffects EQ application in a blocking task with a hard process timeout to avoid wedging async device handling
+* Started a personal native Rust UI crate:
+  * Added `goxlr-personal-ui` workspace member using `eframe`/`egui` and direct `goxlr-ipc` access instead of the browser/Tauri wrapper UI
+  * Added a first native control panel with daemon IPC polling, connection/profile/status display, MVP channel sliders, `Safe Now`, ClipGuard, headphone limiter, and headphone EQ toggles
+  * Added model tests for MVP channels, `Safe Now` command mapping, and disconnected status text
+  * Added first personal scene buttons: `Gaming`, `Music`, `Night`, `Call`, and `Safe Now`, each mapped to practical volume/safety/EQ command bundles
+  * Debounced native volume sliders so drag updates coalesce per channel before sending IPC volume commands
+  * Added JSON scene config loading for the personal native UI at `$XDG_CONFIG_HOME/goxlr-personal-ui/scenes.json` or `~/.config/goxlr-personal-ui/scenes.json`; missing config files are created with the default scenes so volumes/profile names can be edited without recompiling
+  * Added a `Reload scenes` button to re-read the JSON scene config while the native UI is running; failed reloads keep the previous scene buttons and show the parse/load error in the UI
+  * Added a first in-app scene editor for renaming scenes, editing per-channel volume actions, setting safety/EQ actions, and saving changes back to the JSON scene config
+  * Added in-app scene editor controls to add, delete, and reorder scenes before saving them back to the JSON scene config
+  * Added a native UI device picker for multi-GoXLR setups; commands now route to the selected device instead of failing when more than one mixer is reported
+  * Improved the scene editor with explicit `Leave unchanged`, `Set on`, and `Set off` controls for optional ClipGuard, headphone limiter, and headphone EQ actions, plus a clearable `Load EQ profile` action
+  * Added a compact `Quick actions` view to the personal native UI with fast scene buttons, `Safe Now` priority, quick safety enable buttons, volume sliders, refresh, and a toggle back to the full editor/control view
+  * Added a `Mini window` mode for the personal native UI that switches into quick actions, resizes to a smaller always-on-top control window, and can restore the normal full window
+  * Added optional Linux StatusNotifier system tray support for the personal native UI behind the `system-tray` Cargo feature, with tray actions for showing full/mini windows, applying `Safe Now`/`Gaming`/`Music` scenes, refreshing daemon status, and quitting
+  * Added a legacy `/tmp/goxlr.socket` IPC fallback for the personal native UI so it connects to the currently installed autostart daemon while still preferring the newer runtime-dir socket path
+  * Redesigned the personal native UI default view into a GoXLR-style mixer dashboard with charcoal/cyan styling, tab-like navigation, a left profiles/scenes panel, vertical channel strips, a right device/status card, and configuration moved behind the `Configuration` view
+  * Added an active playback stream monitor to the personal native UI using `pactl --format=json`, showing currently playing apps, their routed output sink, volume, mute, and paused state in the mixer dashboard
+  * Added click-to-route playback buttons in the active playback panel so currently playing app streams can be moved to GoXLR `System`, `Game`, `Music`, `Chat`, or `Sample` outputs via `pactl move-sink-input`
+  * Added persistent app auto-routing rules to the personal native UI JSON config; default rules route `Spotify` to GoXLR `Music` and `Discord` to GoXLR `Chat`, and the worker applies matching rules to active playback streams with `pactl move-sink-input`
+  * Added an in-app audio routing rule editor so app-match rules can be added, deleted, reordered, enabled/disabled, retargeted to GoXLR `System`/`Game`/`Music`/`Chat`/`Sample`, and saved back to the personal UI config without hand-editing JSON
 
 ### Logging Rule
 
