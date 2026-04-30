@@ -9,7 +9,10 @@ use goxlr_personal_ui::{
     SceneEditor, TrayAction, TrayMenuModel, UiCommand, UiScene, VolumeDebouncer, WindowAction,
     ipc_socket_path_candidates,
 };
-use goxlr_types::ChannelName;
+use goxlr_types::{
+    ChannelName, CompressorAttackTime, CompressorRatio, CompressorReleaseTime, GateTimes,
+    MicrophoneType,
+};
 
 fn temp_scene_config_path(name: &str) -> PathBuf {
     let nonce = SystemTime::now()
@@ -555,6 +558,95 @@ fn app_config_parses_editable_scene_volumes_and_eq_profiles() {
             PersonalCommand::LoadHeadphoneEqProfile("Soft Night".to_string()),
         ]
     );
+}
+
+#[test]
+fn app_config_parses_mic_processing_and_safety_threshold_scene_actions() {
+    let config = AppConfig::from_json_str(
+        r#"
+        {
+          "scenes": [
+            {
+              "name": "Broadcast Mic",
+              "mic_type": "Dynamic",
+              "mic_gain": 58,
+              "gate_enabled": true,
+              "gate_threshold": -42,
+              "gate_attenuation": 75,
+              "gate_attack": 9,
+              "gate_release": 20,
+              "compressor_threshold": -18,
+              "compressor_ratio": 9,
+              "compressor_attack": 8,
+              "compressor_release": 10,
+              "compressor_makeup_gain": 6,
+              "deesser": 45,
+              "clip_guard_threshold": 12,
+              "headphone_limiter_threshold": 87
+            }
+          ]
+        }
+        "#,
+    )
+    .expect("mic processing config should parse");
+
+    assert_eq!(
+        config.scenes()[0].commands(),
+        vec![
+            PersonalCommand::SetMicrophoneType(MicrophoneType::Dynamic),
+            PersonalCommand::SetMicrophoneGain(MicrophoneType::Dynamic, 58),
+            PersonalCommand::SetGateActive(true),
+            PersonalCommand::SetGateThreshold(-42),
+            PersonalCommand::SetGateAttenuation(75),
+            PersonalCommand::SetGateAttack(GateTimes::Gate100ms),
+            PersonalCommand::SetGateRelease(GateTimes::Gate250ms),
+            PersonalCommand::SetCompressorThreshold(-18),
+            PersonalCommand::SetCompressorRatio(CompressorRatio::Ratio4_0),
+            PersonalCommand::SetCompressorAttack(CompressorAttackTime::Comp9ms),
+            PersonalCommand::SetCompressorReleaseTime(CompressorReleaseTime::Comp115ms),
+            PersonalCommand::SetCompressorMakeupGain(6),
+            PersonalCommand::SetDeesser(45),
+            PersonalCommand::SetClipGuardThreshold(12),
+            PersonalCommand::SetHeadphoneLimiterThreshold(87),
+        ]
+    );
+}
+
+#[test]
+fn personal_command_maps_mic_processing_to_backend_commands() {
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetMicrophoneGain(
+            MicrophoneType::Condenser,
+            33,
+        )),
+        goxlr_ipc::GoXLRCommand::SetMicrophoneGain(MicrophoneType::Condenser, 33)
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetGateRelease(GateTimes::Gate500ms)),
+        goxlr_ipc::GoXLRCommand::SetGateRelease(GateTimes::Gate500ms)
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetCompressorRatio(
+            CompressorRatio::Ratio8_0,
+        )),
+        goxlr_ipc::GoXLRCommand::SetCompressorRatio(CompressorRatio::Ratio8_0)
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetDeesser(64)),
+        goxlr_ipc::GoXLRCommand::SetDeeser(64)
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetHeadphoneLimiterThreshold(90)),
+        goxlr_ipc::GoXLRCommand::SetHeadphoneLimiterThreshold(90)
+    ));
+}
+
+#[test]
+fn app_view_mode_has_dedicated_mic_page_for_parity_chunks() {
+    let mut quick_actions = QuickActions::default();
+    quick_actions.set_view_mode(AppViewMode::Mic);
+
+    assert_eq!(quick_actions.view_mode(), AppViewMode::Mic);
 }
 
 #[test]

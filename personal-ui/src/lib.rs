@@ -10,7 +10,10 @@ use goxlr_ipc::client::Client;
 use goxlr_ipc::clients::ipc::ipc_client::IPCClient;
 use goxlr_ipc::clients::ipc::ipc_socket::Socket;
 use goxlr_ipc::{DaemonRequest, DaemonResponse, DaemonStatus, GoXLRCommand, ipc_socket_path};
-use goxlr_types::{ChannelName, DeviceType};
+use goxlr_types::{
+    ChannelName, CompressorAttackTime, CompressorRatio, CompressorReleaseTime, DeviceType,
+    GateTimes, MicrophoneType,
+};
 use interprocess::local_socket::tokio::prelude::LocalSocketStream;
 use interprocess::local_socket::traits::tokio::Stream;
 use interprocess::local_socket::{GenericFilePath, GenericNamespaced, ToFsName, ToNsName};
@@ -99,21 +102,73 @@ impl ExternalAudioTool {
 #[derive(Debug, Clone, PartialEq)]
 pub enum PersonalCommand {
     SetVolume(ChannelName, u8),
+    SetMicrophoneType(MicrophoneType),
+    SetMicrophoneGain(MicrophoneType, u16),
+    SetGateActive(bool),
+    SetGateThreshold(i8),
+    SetGateAttenuation(u8),
+    SetGateAttack(GateTimes),
+    SetGateRelease(GateTimes),
+    SetCompressorThreshold(i8),
+    SetCompressorRatio(CompressorRatio),
+    SetCompressorAttack(CompressorAttackTime),
+    SetCompressorReleaseTime(CompressorReleaseTime),
+    SetCompressorMakeupGain(i8),
+    SetDeesser(u8),
     SetClipGuardEnabled(bool),
+    SetClipGuardThreshold(u8),
     SetHeadphoneLimiterEnabled(bool),
+    SetHeadphoneLimiterThreshold(u8),
     SetHeadphoneEqEnabled(bool),
     LoadHeadphoneEqProfile(String),
+    SaveMicProfile,
+    ReloadSettings,
 }
 
 impl From<PersonalCommand> for GoXLRCommand {
     fn from(value: PersonalCommand) -> Self {
         match value {
             PersonalCommand::SetVolume(channel, volume) => GoXLRCommand::SetVolume(channel, volume),
+            PersonalCommand::SetMicrophoneType(mic_type) => {
+                GoXLRCommand::SetMicrophoneType(mic_type)
+            }
+            PersonalCommand::SetMicrophoneGain(mic_type, gain) => {
+                GoXLRCommand::SetMicrophoneGain(mic_type, gain)
+            }
+            PersonalCommand::SetGateActive(enabled) => GoXLRCommand::SetGateActive(enabled),
+            PersonalCommand::SetGateThreshold(threshold) => {
+                GoXLRCommand::SetGateThreshold(threshold)
+            }
+            PersonalCommand::SetGateAttenuation(attenuation) => {
+                GoXLRCommand::SetGateAttenuation(attenuation)
+            }
+            PersonalCommand::SetGateAttack(attack) => GoXLRCommand::SetGateAttack(attack),
+            PersonalCommand::SetGateRelease(release) => GoXLRCommand::SetGateRelease(release),
+            PersonalCommand::SetCompressorThreshold(threshold) => {
+                GoXLRCommand::SetCompressorThreshold(threshold)
+            }
+            PersonalCommand::SetCompressorRatio(ratio) => GoXLRCommand::SetCompressorRatio(ratio),
+            PersonalCommand::SetCompressorAttack(attack) => {
+                GoXLRCommand::SetCompressorAttack(attack)
+            }
+            PersonalCommand::SetCompressorReleaseTime(release) => {
+                GoXLRCommand::SetCompressorReleaseTime(release)
+            }
+            PersonalCommand::SetCompressorMakeupGain(gain) => {
+                GoXLRCommand::SetCompressorMakeupGain(gain)
+            }
+            PersonalCommand::SetDeesser(deesser) => GoXLRCommand::SetDeeser(deesser),
             PersonalCommand::SetClipGuardEnabled(enabled) => {
                 GoXLRCommand::SetClipGuardEnabled(enabled)
             }
+            PersonalCommand::SetClipGuardThreshold(threshold) => {
+                GoXLRCommand::SetClipGuardThreshold(threshold)
+            }
             PersonalCommand::SetHeadphoneLimiterEnabled(enabled) => {
                 GoXLRCommand::SetHeadphoneLimiterEnabled(enabled)
+            }
+            PersonalCommand::SetHeadphoneLimiterThreshold(threshold) => {
+                GoXLRCommand::SetHeadphoneLimiterThreshold(threshold)
             }
             PersonalCommand::SetHeadphoneEqEnabled(enabled) => {
                 GoXLRCommand::SetHeadphoneEqEnabled(enabled)
@@ -121,6 +176,8 @@ impl From<PersonalCommand> for GoXLRCommand {
             PersonalCommand::LoadHeadphoneEqProfile(profile) => {
                 GoXLRCommand::LoadHeadphoneEqProfile(profile)
             }
+            PersonalCommand::SaveMicProfile => GoXLRCommand::SaveMicProfile(),
+            PersonalCommand::ReloadSettings => GoXLRCommand::ReloadSettings(),
         }
     }
 }
@@ -884,9 +941,24 @@ pub struct SceneConfig {
     #[serde(default)]
     pub volumes: SceneVolumes,
     pub clip_guard_enabled: Option<bool>,
+    pub clip_guard_threshold: Option<u8>,
     pub headphone_limiter_enabled: Option<bool>,
+    pub headphone_limiter_threshold: Option<u8>,
     pub headphone_eq_enabled: Option<bool>,
     pub headphone_eq_profile: Option<String>,
+    pub mic_type: Option<MicrophoneType>,
+    pub mic_gain: Option<u16>,
+    pub gate_enabled: Option<bool>,
+    pub gate_threshold: Option<i8>,
+    pub gate_attenuation: Option<u8>,
+    pub gate_attack: Option<GateTimes>,
+    pub gate_release: Option<GateTimes>,
+    pub compressor_threshold: Option<i8>,
+    pub compressor_ratio: Option<CompressorRatio>,
+    pub compressor_attack: Option<CompressorAttackTime>,
+    pub compressor_release: Option<CompressorReleaseTime>,
+    pub compressor_makeup_gain: Option<i8>,
+    pub deesser: Option<u8>,
 }
 
 impl SceneConfig {
@@ -895,9 +967,24 @@ impl SceneConfig {
             name: name.into(),
             volumes: SceneVolumes::default(),
             clip_guard_enabled: None,
+            clip_guard_threshold: None,
             headphone_limiter_enabled: None,
+            headphone_limiter_threshold: None,
             headphone_eq_enabled: None,
             headphone_eq_profile: None,
+            mic_type: None,
+            mic_gain: None,
+            gate_enabled: None,
+            gate_threshold: None,
+            gate_attenuation: None,
+            gate_attack: None,
+            gate_release: None,
+            compressor_threshold: None,
+            compressor_ratio: None,
+            compressor_attack: None,
+            compressor_release: None,
+            compressor_makeup_gain: None,
+            deesser: None,
         }
     }
 
@@ -914,6 +1001,7 @@ impl SceneConfig {
             headphone_limiter_enabled: Some(true),
             headphone_eq_enabled: None,
             headphone_eq_profile: None,
+            ..Self::empty("")
         }
     }
 
@@ -930,6 +1018,7 @@ impl SceneConfig {
             headphone_limiter_enabled: Some(true),
             headphone_eq_enabled: Some(true),
             headphone_eq_profile: Some("Music".to_string()),
+            ..Self::empty("")
         }
     }
 
@@ -946,6 +1035,7 @@ impl SceneConfig {
             headphone_limiter_enabled: Some(true),
             headphone_eq_enabled: Some(true),
             headphone_eq_profile: Some("Night".to_string()),
+            ..Self::empty("")
         }
     }
 
@@ -962,6 +1052,7 @@ impl SceneConfig {
             headphone_limiter_enabled: Some(true),
             headphone_eq_enabled: None,
             headphone_eq_profile: None,
+            ..Self::empty("")
         }
     }
 
@@ -978,6 +1069,7 @@ impl SceneConfig {
             headphone_limiter_enabled: Some(true),
             headphone_eq_enabled: None,
             headphone_eq_profile: None,
+            ..Self::empty("")
         }
     }
 
@@ -985,11 +1077,56 @@ impl SceneConfig {
         let mut commands = Vec::new();
 
         self.volumes.push_commands(&mut commands);
+        if let Some(mic_type) = self.mic_type {
+            commands.push(PersonalCommand::SetMicrophoneType(mic_type));
+            if let Some(gain) = self.mic_gain {
+                commands.push(PersonalCommand::SetMicrophoneGain(mic_type, gain));
+            }
+        }
+        if let Some(enabled) = self.gate_enabled {
+            commands.push(PersonalCommand::SetGateActive(enabled));
+        }
+        if let Some(threshold) = self.gate_threshold {
+            commands.push(PersonalCommand::SetGateThreshold(threshold));
+        }
+        if let Some(attenuation) = self.gate_attenuation {
+            commands.push(PersonalCommand::SetGateAttenuation(attenuation));
+        }
+        if let Some(attack) = self.gate_attack {
+            commands.push(PersonalCommand::SetGateAttack(attack));
+        }
+        if let Some(release) = self.gate_release {
+            commands.push(PersonalCommand::SetGateRelease(release));
+        }
+        if let Some(threshold) = self.compressor_threshold {
+            commands.push(PersonalCommand::SetCompressorThreshold(threshold));
+        }
+        if let Some(ratio) = self.compressor_ratio {
+            commands.push(PersonalCommand::SetCompressorRatio(ratio));
+        }
+        if let Some(attack) = self.compressor_attack {
+            commands.push(PersonalCommand::SetCompressorAttack(attack));
+        }
+        if let Some(release) = self.compressor_release {
+            commands.push(PersonalCommand::SetCompressorReleaseTime(release));
+        }
+        if let Some(gain) = self.compressor_makeup_gain {
+            commands.push(PersonalCommand::SetCompressorMakeupGain(gain));
+        }
+        if let Some(deesser) = self.deesser {
+            commands.push(PersonalCommand::SetDeesser(deesser));
+        }
         if let Some(enabled) = self.clip_guard_enabled {
             commands.push(PersonalCommand::SetClipGuardEnabled(enabled));
         }
+        if let Some(threshold) = self.clip_guard_threshold {
+            commands.push(PersonalCommand::SetClipGuardThreshold(threshold));
+        }
         if let Some(enabled) = self.headphone_limiter_enabled {
             commands.push(PersonalCommand::SetHeadphoneLimiterEnabled(enabled));
+        }
+        if let Some(threshold) = self.headphone_limiter_threshold {
+            commands.push(PersonalCommand::SetHeadphoneLimiterThreshold(threshold));
         }
         if let Some(enabled) = self.headphone_eq_enabled {
             commands.push(PersonalCommand::SetHeadphoneEqEnabled(enabled));
@@ -1284,9 +1421,24 @@ pub struct AppSnapshot {
     pub device_type: Option<String>,
     pub profile_name: Option<String>,
     pub mic_profile_name: Option<String>,
+    pub mic_type: MicrophoneType,
+    pub mic_gain: u16,
+    pub gate_enabled: bool,
+    pub gate_threshold: i8,
+    pub gate_attenuation: u8,
+    pub gate_attack: GateTimes,
+    pub gate_release: GateTimes,
+    pub compressor_threshold: i8,
+    pub compressor_ratio: CompressorRatio,
+    pub compressor_attack: CompressorAttackTime,
+    pub compressor_release: CompressorReleaseTime,
+    pub compressor_makeup_gain: i8,
+    pub deesser: u8,
     pub channel_volumes: Vec<ChannelVolume>,
     pub clip_guard_enabled: bool,
+    pub clip_guard_threshold: u8,
     pub headphone_limiter_enabled: bool,
+    pub headphone_limiter_threshold: u8,
     pub headphone_eq_enabled: bool,
     pub headphone_eq_backend: Option<String>,
     pub headphone_eq_profile: Option<String>,
@@ -1305,6 +1457,19 @@ impl AppSnapshot {
             device_type: None,
             profile_name: None,
             mic_profile_name: None,
+            mic_type: MicrophoneType::Dynamic,
+            mic_gain: 0,
+            gate_enabled: false,
+            gate_threshold: -50,
+            gate_attenuation: 100,
+            gate_attack: GateTimes::Gate10ms,
+            gate_release: GateTimes::Gate200ms,
+            compressor_threshold: 0,
+            compressor_ratio: CompressorRatio::Ratio1_0,
+            compressor_attack: CompressorAttackTime::Comp10ms,
+            compressor_release: CompressorReleaseTime::Comp100ms,
+            compressor_makeup_gain: 0,
+            deesser: 0,
             channel_volumes: ControlledChannel::mvp_channels()
                 .into_iter()
                 .map(|channel| ChannelVolume {
@@ -1313,7 +1478,9 @@ impl AppSnapshot {
                 })
                 .collect(),
             clip_guard_enabled: false,
+            clip_guard_threshold: 0,
             headphone_limiter_enabled: false,
+            headphone_limiter_threshold: 0,
             headphone_eq_enabled: false,
             headphone_eq_backend: None,
             headphone_eq_profile: None,
@@ -1353,6 +1520,10 @@ impl AppSnapshot {
         };
 
         let settings = &mixer.settings;
+        let mic_status = &mixer.mic_status;
+        let gate = &mic_status.noise_gate;
+        let compressor = &mic_status.compressor;
+        let mic_type = mic_status.mic_type;
         Self {
             connected: true,
             error: None,
@@ -1362,6 +1533,19 @@ impl AppSnapshot {
             device_type: Some(device_type_label(mixer.hardware.device_type).to_string()),
             profile_name: Some(mixer.profile_name.clone()),
             mic_profile_name: Some(mixer.mic_profile_name.clone()),
+            mic_type,
+            mic_gain: mic_status.mic_gains[mic_type],
+            gate_enabled: gate.enabled,
+            gate_threshold: gate.threshold,
+            gate_attenuation: gate.attenuation,
+            gate_attack: gate.attack,
+            gate_release: gate.release,
+            compressor_threshold: compressor.threshold,
+            compressor_ratio: compressor.ratio,
+            compressor_attack: compressor.attack,
+            compressor_release: compressor.release,
+            compressor_makeup_gain: compressor.makeup_gain,
+            deesser: mixer.levels.deess,
             channel_volumes: ControlledChannel::mvp_channels()
                 .into_iter()
                 .map(|channel| ChannelVolume {
@@ -1370,7 +1554,9 @@ impl AppSnapshot {
                 })
                 .collect(),
             clip_guard_enabled: settings.clip_guard_enabled,
+            clip_guard_threshold: settings.clip_guard_threshold,
             headphone_limiter_enabled: settings.headphone_limiter_enabled,
+            headphone_limiter_threshold: settings.headphone_limiter_threshold,
             headphone_eq_enabled: settings.headphone_eq_enabled,
             headphone_eq_backend: if settings.headphone_eq_backend_name.is_empty() {
                 None
@@ -1429,6 +1615,7 @@ pub enum UiCommand {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AppViewMode {
+    Mic,
     Full,
     QuickActions,
 }
@@ -1457,7 +1644,7 @@ impl QuickActions {
 
     pub fn toggle_view_mode(&mut self) {
         self.view_mode = match self.view_mode {
-            AppViewMode::Full => AppViewMode::QuickActions,
+            AppViewMode::Mic | AppViewMode::Full => AppViewMode::QuickActions,
             AppViewMode::QuickActions => AppViewMode::Full,
         };
     }
@@ -1930,7 +2117,7 @@ impl PersonalUiApp {
             );
             ui.add_space(12.0);
             let toggle_label = match self.quick_actions.view_mode() {
-                AppViewMode::Full => "Mixer dashboard",
+                AppViewMode::Mic | AppViewMode::Full => "Mixer dashboard",
                 AppViewMode::QuickActions => "Configuration",
             };
             if ui.add(Self::accent_button(toggle_label)).clicked() {
@@ -2281,6 +2468,189 @@ impl PersonalUiApp {
         });
     }
 
+    fn render_mic_processing_page(&mut self, ui: &mut egui::Ui) {
+        ui.add_space(8.0);
+        ui.horizontal(|ui| {
+            Self::panel_frame().show(ui, |ui| {
+                ui.set_min_width(360.0);
+                ui.label(
+                    egui::RichText::new("MIC SETUP")
+                        .monospace()
+                        .size(18.0)
+                        .color(egui::Color32::WHITE)
+                        .strong(),
+                );
+                ui.label(format!(
+                    "Active mic profile: {}",
+                    self.snapshot
+                        .mic_profile_name
+                        .as_deref()
+                        .unwrap_or("unknown")
+                ));
+                ui.add_space(8.0);
+                ui.horizontal_wrapped(|ui| {
+                    for mic_type in [
+                        MicrophoneType::Dynamic,
+                        MicrophoneType::Condenser,
+                        MicrophoneType::Jack,
+                    ] {
+                        let selected = self.snapshot.mic_type == mic_type;
+                        let label = format!("{:?}", mic_type);
+                        let button = if selected {
+                            Self::accent_button(label)
+                        } else {
+                            egui::Button::new(label).small()
+                        };
+                        if ui.add(button).clicked() {
+                            self.send(UiCommand::Send(PersonalCommand::SetMicrophoneType(
+                                mic_type,
+                            )));
+                        }
+                    }
+                });
+                let mut mic_gain = self.snapshot.mic_gain;
+                if ui
+                    .add(egui::Slider::new(&mut mic_gain, 0..=72).text("Mic gain"))
+                    .changed()
+                {
+                    self.send(UiCommand::Send(PersonalCommand::SetMicrophoneGain(
+                        self.snapshot.mic_type,
+                        mic_gain,
+                    )));
+                }
+                ui.add_space(8.0);
+                ui.horizontal_wrapped(|ui| {
+                    if ui.add(Self::accent_button("Save mic profile")).clicked() {
+                        self.send(UiCommand::Send(PersonalCommand::SaveMicProfile));
+                    }
+                    if ui.add(Self::accent_button("Reload settings")).clicked() {
+                        self.send(UiCommand::Send(PersonalCommand::ReloadSettings));
+                    }
+                });
+            });
+
+            ui.add_space(12.0);
+            Self::panel_frame().show(ui, |ui| {
+                ui.set_min_width(360.0);
+                ui.label(
+                    egui::RichText::new("GATE / DE-ESS")
+                        .monospace()
+                        .size(18.0)
+                        .color(egui::Color32::WHITE)
+                        .strong(),
+                );
+                if ui
+                    .add(Self::accent_button(if self.snapshot.gate_enabled {
+                        "Disable gate"
+                    } else {
+                        "Enable gate"
+                    }))
+                    .clicked()
+                {
+                    self.send(UiCommand::Send(PersonalCommand::SetGateActive(
+                        !self.snapshot.gate_enabled,
+                    )));
+                }
+                let mut gate_threshold = self.snapshot.gate_threshold;
+                if ui
+                    .add(egui::Slider::new(&mut gate_threshold, -59..=0).text("Gate threshold dB"))
+                    .changed()
+                {
+                    self.send(UiCommand::Send(PersonalCommand::SetGateThreshold(
+                        gate_threshold,
+                    )));
+                }
+                let mut gate_attenuation = self.snapshot.gate_attenuation;
+                if ui
+                    .add(
+                        egui::Slider::new(&mut gate_attenuation, 0..=100)
+                            .text("Gate attenuation %"),
+                    )
+                    .changed()
+                {
+                    self.send(UiCommand::Send(PersonalCommand::SetGateAttenuation(
+                        gate_attenuation,
+                    )));
+                }
+                let mut deesser = self.snapshot.deesser;
+                if ui
+                    .add(egui::Slider::new(&mut deesser, 0..=100).text("De-esser %"))
+                    .changed()
+                {
+                    self.send(UiCommand::Send(PersonalCommand::SetDeesser(deesser)));
+                }
+            });
+
+            ui.add_space(12.0);
+            Self::panel_frame().show(ui, |ui| {
+                ui.set_min_width(360.0);
+                ui.label(
+                    egui::RichText::new("COMPRESSOR / SAFETY")
+                        .monospace()
+                        .size(18.0)
+                        .color(egui::Color32::WHITE)
+                        .strong(),
+                );
+                let mut compressor_threshold = self.snapshot.compressor_threshold;
+                if ui
+                    .add(
+                        egui::Slider::new(&mut compressor_threshold, -40..=0)
+                            .text("Compressor threshold dB"),
+                    )
+                    .changed()
+                {
+                    self.send(UiCommand::Send(PersonalCommand::SetCompressorThreshold(
+                        compressor_threshold,
+                    )));
+                }
+                let mut makeup_gain = self.snapshot.compressor_makeup_gain;
+                if ui
+                    .add(egui::Slider::new(&mut makeup_gain, 0..=24).text("Makeup gain dB"))
+                    .changed()
+                {
+                    self.send(UiCommand::Send(PersonalCommand::SetCompressorMakeupGain(
+                        makeup_gain,
+                    )));
+                }
+                ui.horizontal_wrapped(|ui| {
+                    ui.label("Ratio:");
+                    for ratio in [
+                        CompressorRatio::Ratio2_0,
+                        CompressorRatio::Ratio4_0,
+                        CompressorRatio::Ratio8_0,
+                    ] {
+                        if ui.button(format!("{:?}", ratio)).clicked() {
+                            self.send(UiCommand::Send(PersonalCommand::SetCompressorRatio(ratio)));
+                        }
+                    }
+                });
+                let mut clip_threshold = self.snapshot.clip_guard_threshold;
+                if ui
+                    .add(
+                        egui::Slider::new(&mut clip_threshold, 0..=100).text("ClipGuard threshold"),
+                    )
+                    .changed()
+                {
+                    self.send(UiCommand::Send(PersonalCommand::SetClipGuardThreshold(
+                        clip_threshold,
+                    )));
+                }
+                let mut limiter_threshold = self.snapshot.headphone_limiter_threshold;
+                if ui
+                    .add(
+                        egui::Slider::new(&mut limiter_threshold, 0..=100)
+                            .text("Limiter threshold"),
+                    )
+                    .changed()
+                {
+                    self.send(UiCommand::Send(
+                        PersonalCommand::SetHeadphoneLimiterThreshold(limiter_threshold),
+                    ));
+                }
+            });
+        });
+    }
+
     fn render_mixer_dashboard(&mut self, ui: &mut egui::Ui) {
         ui.add_space(8.0);
         ui.horizontal(|ui| {
@@ -2402,7 +2772,7 @@ impl eframe::App for PersonalUiApp {
             ui.add_space(6.0);
             ui.horizontal(|ui| {
                 for (label, selected) in [
-                    ("Mic", false),
+                    ("Mic", self.quick_actions.view_mode() == AppViewMode::Mic),
                     (DashboardCopy::mixer_tab(), self.quick_actions.view_mode() == AppViewMode::QuickActions),
                     (DashboardCopy::configuration_tab(), self.quick_actions.view_mode() == AppViewMode::Full),
                     ("Lighting", false),
@@ -2418,6 +2788,7 @@ impl eframe::App for PersonalUiApp {
                         .min_size(egui::vec2(138.0, 34.0));
                     if ui.add(button).clicked() {
                         match label {
+                            "Mic" => self.quick_actions.set_view_mode(AppViewMode::Mic),
                             label if label == DashboardCopy::mixer_tab() => self.quick_actions.set_view_mode(AppViewMode::QuickActions),
                             label if label == DashboardCopy::configuration_tab() => self.quick_actions.set_view_mode(AppViewMode::Full),
                             _ => {}
@@ -2428,6 +2799,11 @@ impl eframe::App for PersonalUiApp {
 
             if self.quick_actions.view_mode() == AppViewMode::QuickActions {
                 self.render_mixer_dashboard(ui);
+                return;
+            }
+
+            if self.quick_actions.view_mode() == AppViewMode::Mic {
+                self.render_mic_processing_page(ui);
                 return;
             }
 

@@ -291,6 +291,12 @@ This section tracks local source changes made on this machine so context survive
   * Active playback streams with reported volume now expose an inline volume slider backed by `pactl set-sink-input-volume <stream_id> <percent>%`
   * Header helper buttons can launch `pavucontrol` and `qpwgraph` for deeper PipeWire/PulseAudio routing inspection
 
+* Added the first feature-parity `Mic` page to the personal native UI:
+  * The top navigation now opens a dedicated mic processing page alongside the mixer dashboard and config/routing view
+  * The mic page exposes mic type selection, mic gain, gate enable/threshold/attenuation, de-esser, compressor threshold/ratio/makeup gain, ClipGuard threshold, and headphone limiter threshold controls
+  * Scene JSON can now include mic/safety processing actions such as `mic_type`, `mic_gain`, `gate_*`, `compressor_*`, `deesser`, `clip_guard_threshold`, and `headphone_limiter_threshold`
+  * Added command mappings for mic setup, gate, compressor, de-esser, safety thresholds, saving the active mic profile, and reloading settings
+
 ### Logging Rule
 
 For every future functional change, add a short dated bullet under this section in the same format.
