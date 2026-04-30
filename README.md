@@ -285,6 +285,11 @@ This section tracks local source changes made on this machine so context survive
 * Added per-stream mute controls to the personal native UI active playback panel:
   * Each active playback stream now shows `Mute stream` or `Unmute stream` based on its current PipeWire/PulseAudio mute state
   * The worker applies mute changes with `pactl set-sink-input-mute <stream_id> 1|0` and refreshes the active stream snapshot afterward
+* Added personal UI polish for safer config editing and daily audio routing:
+  * Scene/routing JSON saves now keep a `.bak` copy of the previous config before overwriting it
+  * The active apps panel separates one-off `Move now` routing from persistent `Always route` buttons and renames the configuration tab to `Config / Routing`
+  * Active playback streams with reported volume now expose an inline volume slider backed by `pactl set-sink-input-volume <stream_id> <percent>%`
+  * Header helper buttons can launch `pavucontrol` and `qpwgraph` for deeper PipeWire/PulseAudio routing inspection
 
 ### Logging Rule
 

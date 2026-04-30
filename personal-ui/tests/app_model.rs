@@ -4,9 +4,10 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use goxlr_personal_ui::{
     ActiveAudioStreams, AppConfig, AppSceneConfig, AppSnapshot, AppViewMode, AudioRouteTarget,
-    AudioRoutingRule, ControlledChannel, DeviceSelection, MiniWindowMode, OptionalBoolAction,
-    PersonalCommand, QuickActions, RoutingRuleEditor, SceneEditor, TrayAction, TrayMenuModel,
-    UiCommand, UiScene, VolumeDebouncer, WindowAction, ipc_socket_path_candidates,
+    AudioRoutingRule, ControlledChannel, DashboardCopy, DeviceSelection, ExternalAudioTool,
+    MiniWindowMode, OptionalBoolAction, PersonalCommand, QuickActions, RoutingRuleEditor,
+    SceneEditor, TrayAction, TrayMenuModel, UiCommand, UiScene, VolumeDebouncer, WindowAction,
+    ipc_socket_path_candidates,
 };
 use goxlr_types::ChannelName;
 
@@ -137,6 +138,55 @@ fn ui_command_can_request_muting_and_unmuting_audio_stream() {
 }
 
 #[test]
+fn audio_stream_exposes_numeric_volume_for_slider_controls() {
+    let streams = ActiveAudioStreams::from_pactl_json(
+        r#"[{"index":88,"name":"alsa_output.usb-TC-Helicon_GoXLRMini-00.HiFi__Speaker__sink","description":"GoXLRMini System"}]"#,
+        r#"[{"index":12,"sink":88,"volume":{"front-left":{"value_percent":"73%"}},"properties":{"application.name":"Firefox"}}]"#,
+    )
+    .unwrap();
+
+    assert_eq!(streams.streams[0].volume_percent_value(), Some(73));
+}
+
+#[test]
+fn ui_command_can_request_per_stream_volume_changes() {
+    assert_eq!(
+        UiCommand::SetAudioStreamVolume {
+            stream_id: 12,
+            volume_percent: 67,
+        },
+        UiCommand::SetAudioStreamVolume {
+            stream_id: 12,
+            volume_percent: 67,
+        }
+    );
+}
+
+#[test]
+fn external_audio_tool_model_lists_daily_routing_helpers() {
+    assert_eq!(
+        ExternalAudioTool::daily_helpers(),
+        vec![ExternalAudioTool::Pavucontrol, ExternalAudioTool::Qpwgraph]
+    );
+    assert_eq!(ExternalAudioTool::Pavucontrol.label(), "Open pavucontrol");
+    assert_eq!(ExternalAudioTool::Pavucontrol.command(), "pavucontrol");
+    assert_eq!(ExternalAudioTool::Qpwgraph.label(), "Open qpwgraph");
+    assert_eq!(ExternalAudioTool::Qpwgraph.command(), "qpwgraph");
+}
+
+#[test]
+fn dashboard_copy_uses_clear_routing_and_configuration_labels() {
+    assert_eq!(DashboardCopy::mixer_tab(), "Mixer");
+    assert_eq!(DashboardCopy::configuration_tab(), "Config / Routing");
+    assert_eq!(
+        DashboardCopy::active_playback_heading(),
+        "ACTIVE APPS / ROUTING"
+    );
+    assert_eq!(DashboardCopy::manual_route_label(), "Move now:");
+    assert_eq!(DashboardCopy::persistent_route_label(), "Always route:");
+}
+
+#[test]
 fn app_config_parses_persistent_audio_routing_rules() {
     let config = AppConfig::from_json_str(
         r#"
@@ -210,6 +260,23 @@ fn active_stream_can_be_saved_as_persistent_routing_rule() {
         saved.audio_routing_rules()
     );
     let _ = fs::remove_file(path);
+}
+
+#[test]
+fn saving_scene_config_keeps_backup_of_previous_json() {
+    let path = temp_scene_config_path("backup-before-save");
+    let original =
+        r#"{"scenes":[{"name":"Old"}],"audio_routing_rules":[{"app":"Spotify","route":"Music"}]}"#;
+    fs::write(&path, original).unwrap();
+    let mut state = AppSceneConfig::load_or_default(path.clone());
+
+    state.save_config(AppConfig::default()).unwrap();
+
+    let backup_path = state.backup_path();
+    assert_eq!(fs::read_to_string(&backup_path).unwrap(), original);
+    assert_ne!(fs::read_to_string(&path).unwrap(), original);
+    let _ = fs::remove_file(path);
+    let _ = fs::remove_file(backup_path);
 }
 
 #[test]

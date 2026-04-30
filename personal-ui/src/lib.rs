@@ -45,6 +45,57 @@ impl ControlledChannel {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DashboardCopy;
+
+impl DashboardCopy {
+    pub fn mixer_tab() -> &'static str {
+        "Mixer"
+    }
+
+    pub fn configuration_tab() -> &'static str {
+        "Config / Routing"
+    }
+
+    pub fn active_playback_heading() -> &'static str {
+        "ACTIVE APPS / ROUTING"
+    }
+
+    pub fn manual_route_label() -> &'static str {
+        "Move now:"
+    }
+
+    pub fn persistent_route_label() -> &'static str {
+        "Always route:"
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ExternalAudioTool {
+    Pavucontrol,
+    Qpwgraph,
+}
+
+impl ExternalAudioTool {
+    pub fn daily_helpers() -> Vec<Self> {
+        vec![Self::Pavucontrol, Self::Qpwgraph]
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Pavucontrol => "Open pavucontrol",
+            Self::Qpwgraph => "Open qpwgraph",
+        }
+    }
+
+    pub fn command(self) -> &'static str {
+        match self {
+            Self::Pavucontrol => "pavucontrol",
+            Self::Qpwgraph => "qpwgraph",
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum PersonalCommand {
     SetVolume(ChannelName, u8),
@@ -388,6 +439,15 @@ impl AppSceneConfig {
             })?;
         }
 
+        if self.path.exists() {
+            fs::copy(&self.path, self.backup_path()).with_context(|| {
+                format!(
+                    "failed to back up scene config {} before writing",
+                    self.path.display()
+                )
+            })?;
+        }
+
         let contents = serde_json::to_string_pretty(&config)
             .context("failed to serialize GoXLR personal UI scene config")?;
         fs::write(&self.path, contents)
@@ -396,6 +456,18 @@ impl AppSceneConfig {
         self.config = config;
         self.reload_error = None;
         Ok(())
+    }
+
+    pub fn backup_path(&self) -> PathBuf {
+        let mut path = self.path.clone();
+        let extension = self
+            .path
+            .extension()
+            .and_then(|extension| extension.to_str())
+            .map(|extension| format!("{extension}.bak"))
+            .unwrap_or_else(|| "bak".to_string());
+        path.set_extension(extension);
+        path
     }
 
     pub fn save_audio_routing_rule_for_stream(
@@ -1017,6 +1089,16 @@ impl AudioStream {
             .trim()
             .to_string()
     }
+
+    pub fn volume_percent_value(&self) -> Option<u8> {
+        self.volume_percent
+            .as_deref()?
+            .trim()
+            .trim_end_matches('%')
+            .parse::<u8>()
+            .ok()
+            .map(|value| value.min(100))
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -1338,6 +1420,8 @@ pub enum UiCommand {
     SelectDevice(String),
     MoveAudioStream { stream_id: u64, sink_name: String },
     SetAudioStreamMute { stream_id: u64, muted: bool },
+    SetAudioStreamVolume { stream_id: u64, volume_percent: u8 },
+    OpenAudioTool(ExternalAudioTool),
     SetAudioRoutingRules(Vec<AudioRoutingRule>),
     Refresh,
     Quit,
@@ -1864,6 +1948,11 @@ impl PersonalUiApp {
             if ui.add(Self::accent_button("Refresh")).clicked() {
                 self.send(UiCommand::Refresh);
             }
+            for tool in ExternalAudioTool::daily_helpers() {
+                if ui.add(egui::Button::new(tool.label()).small()).clicked() {
+                    self.send(UiCommand::OpenAudioTool(tool));
+                }
+            }
         });
     }
 
@@ -2016,7 +2105,7 @@ impl PersonalUiApp {
         Self::panel_frame().show(ui, |ui| {
             ui.set_min_width(260.0);
             ui.label(
-                egui::RichText::new("ACTIVE PLAYBACK")
+                egui::RichText::new(DashboardCopy::active_playback_heading())
                     .monospace()
                     .color(egui::Color32::WHITE)
                     .size(16.0),
@@ -2080,11 +2169,30 @@ impl PersonalUiApp {
                                 muted: !stream.muted,
                             });
                         }
+                        if let Some(mut volume) = stream.volume_percent_value() {
+                            ui.label(
+                                egui::RichText::new("Volume")
+                                    .monospace()
+                                    .color(Self::muted_text()),
+                            );
+                            if ui
+                                .add_sized(
+                                    egui::vec2(118.0, 18.0),
+                                    egui::Slider::new(&mut volume, 0..=100).suffix("%"),
+                                )
+                                .changed()
+                            {
+                                self.send(UiCommand::SetAudioStreamVolume {
+                                    stream_id: stream.id,
+                                    volume_percent: volume,
+                                });
+                            }
+                        }
                     });
                     if !route_targets.is_empty() {
                         ui.horizontal_wrapped(|ui| {
                             ui.label(
-                                egui::RichText::new("Route to:")
+                                egui::RichText::new(DashboardCopy::manual_route_label())
                                     .monospace()
                                     .color(Self::muted_text()),
                             );
@@ -2102,11 +2210,17 @@ impl PersonalUiApp {
                                         sink_name: target.sink_name.clone(),
                                     });
                                 }
+                            }
+                        });
+                        ui.horizontal_wrapped(|ui| {
+                            ui.label(
+                                egui::RichText::new(DashboardCopy::persistent_route_label())
+                                    .monospace()
+                                    .color(Self::muted_text()),
+                            );
+                            for target in &route_targets {
                                 if ui
-                                    .add(
-                                        egui::Button::new(format!("Always {}", target.label))
-                                            .small(),
-                                    )
+                                    .add(egui::Button::new(target.label.clone()).small())
                                     .on_hover_text(format!(
                                         "Always route {} to {}",
                                         stream.routing_rule_app_name(),
@@ -2289,8 +2403,8 @@ impl eframe::App for PersonalUiApp {
             ui.horizontal(|ui| {
                 for (label, selected) in [
                     ("Mic", false),
-                    ("Mixer", self.quick_actions.view_mode() == AppViewMode::QuickActions),
-                    ("Configuration", self.quick_actions.view_mode() == AppViewMode::Full),
+                    (DashboardCopy::mixer_tab(), self.quick_actions.view_mode() == AppViewMode::QuickActions),
+                    (DashboardCopy::configuration_tab(), self.quick_actions.view_mode() == AppViewMode::Full),
                     ("Lighting", false),
                     ("Routing", false),
                     ("System", false),
@@ -2304,8 +2418,8 @@ impl eframe::App for PersonalUiApp {
                         .min_size(egui::vec2(138.0, 34.0));
                     if ui.add(button).clicked() {
                         match label {
-                            "Mixer" => self.quick_actions.set_view_mode(AppViewMode::QuickActions),
-                            "Configuration" => self.quick_actions.set_view_mode(AppViewMode::Full),
+                            label if label == DashboardCopy::mixer_tab() => self.quick_actions.set_view_mode(AppViewMode::QuickActions),
+                            label if label == DashboardCopy::configuration_tab() => self.quick_actions.set_view_mode(AppViewMode::Full),
                             _ => {}
                         }
                     }
@@ -2744,6 +2858,26 @@ async fn ipc_worker_loop(commands: Receiver<UiCommand>, events: Sender<WorkerEve
                 )
                 .await;
             }
+            Ok(UiCommand::SetAudioStreamVolume {
+                stream_id,
+                volume_percent,
+            }) => {
+                if let Err(error) = set_audio_stream_volume(stream_id, volume_percent) {
+                    let _ = events.send(WorkerEvent::Error(error.to_string()));
+                }
+                poll_and_publish(
+                    &mut client,
+                    &events,
+                    selected_serial.as_deref(),
+                    &routing_rules,
+                )
+                .await;
+            }
+            Ok(UiCommand::OpenAudioTool(tool)) => {
+                if let Err(error) = open_audio_tool(tool) {
+                    let _ = events.send(WorkerEvent::Error(error.to_string()));
+                }
+            }
             Ok(UiCommand::SetAudioRoutingRules(rules)) => {
                 routing_rules = rules;
                 poll_and_publish(
@@ -2852,6 +2986,31 @@ fn set_audio_stream_mute(stream_id: u64, muted: bool) -> Result<()> {
         );
     }
 
+    Ok(())
+}
+
+fn set_audio_stream_volume(stream_id: u64, volume_percent: u8) -> Result<()> {
+    let output = Command::new("pactl")
+        .arg("set-sink-input-volume")
+        .arg(stream_id.to_string())
+        .arg(format!("{}%", volume_percent.min(100)))
+        .output()
+        .context("failed to run pactl set-sink-input-volume")?;
+
+    if !output.status.success() {
+        anyhow::bail!(
+            "pactl set-sink-input-volume failed: {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        );
+    }
+
+    Ok(())
+}
+
+fn open_audio_tool(tool: ExternalAudioTool) -> Result<()> {
+    Command::new(tool.command())
+        .spawn()
+        .with_context(|| format!("failed to launch {}", tool.command()))?;
     Ok(())
 }
 
