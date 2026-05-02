@@ -296,6 +296,10 @@ This section tracks local source changes made on this machine so context survive
   * The mic page exposes mic type selection, mic gain, gate enable/threshold/attenuation, de-esser, compressor threshold/ratio/makeup gain, ClipGuard threshold, and headphone limiter threshold controls
   * Scene JSON can now include mic/safety processing actions such as `mic_type`, `mic_gain`, `gate_*`, `compressor_*`, `deesser`, `clip_guard_threshold`, and `headphone_limiter_threshold`
   * Added command mappings for mic setup, gate, compressor, de-esser, safety thresholds, saving the active mic profile, and reloading settings
+* Added the next feature-parity `Effects` page to the personal native UI:
+  * The top navigation now opens an `Effects` page for fast GoXLR voice-FX control without launching the browser/web UI
+  * Added daily quick presets for `FX Off`, `Clean Reverb`, `Robot Fun`, and `Hard Tune`
+  * Added native command mappings for active FX preset selection, FX enable, reverb, echo, pitch, gender, megaphone, robot, and hard tune controls
 
 ### Logging Rule
 

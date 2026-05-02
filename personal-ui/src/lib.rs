@@ -12,7 +12,8 @@ use goxlr_ipc::clients::ipc::ipc_socket::Socket;
 use goxlr_ipc::{DaemonRequest, DaemonResponse, DaemonStatus, GoXLRCommand, ipc_socket_path};
 use goxlr_types::{
     ChannelName, CompressorAttackTime, CompressorRatio, CompressorReleaseTime, DeviceType,
-    GateTimes, MicrophoneType,
+    EchoStyle, EffectBankPresets, GateTimes, GenderStyle, HardTuneStyle, MegaphoneStyle,
+    MicrophoneType, PitchStyle, ReverbStyle, RobotStyle,
 };
 use interprocess::local_socket::tokio::prelude::LocalSocketStream;
 use interprocess::local_socket::traits::tokio::Stream;
@@ -121,6 +122,23 @@ pub enum PersonalCommand {
     SetHeadphoneLimiterThreshold(u8),
     SetHeadphoneEqEnabled(bool),
     LoadHeadphoneEqProfile(String),
+    SetActiveEffectPreset(EffectBankPresets),
+    SetFXEnabled(bool),
+    SetReverbStyle(ReverbStyle),
+    SetReverbAmount(u8),
+    SetEchoStyle(EchoStyle),
+    SetEchoAmount(u8),
+    SetPitchStyle(PitchStyle),
+    SetPitchAmount(i8),
+    SetGenderStyle(GenderStyle),
+    SetGenderAmount(i8),
+    SetMegaphoneEnabled(bool),
+    SetMegaphoneStyle(MegaphoneStyle),
+    SetMegaphoneAmount(u8),
+    SetRobotEnabled(bool),
+    SetRobotStyle(RobotStyle),
+    SetHardTuneEnabled(bool),
+    SetHardTuneStyle(HardTuneStyle),
     SaveMicProfile,
     ReloadSettings,
 }
@@ -176,9 +194,120 @@ impl From<PersonalCommand> for GoXLRCommand {
             PersonalCommand::LoadHeadphoneEqProfile(profile) => {
                 GoXLRCommand::LoadHeadphoneEqProfile(profile)
             }
+            PersonalCommand::SetActiveEffectPreset(preset) => {
+                GoXLRCommand::SetActiveEffectPreset(preset)
+            }
+            PersonalCommand::SetFXEnabled(enabled) => GoXLRCommand::SetFXEnabled(enabled),
+            PersonalCommand::SetReverbStyle(style) => GoXLRCommand::SetReverbStyle(style),
+            PersonalCommand::SetReverbAmount(amount) => GoXLRCommand::SetReverbAmount(amount),
+            PersonalCommand::SetEchoStyle(style) => GoXLRCommand::SetEchoStyle(style),
+            PersonalCommand::SetEchoAmount(amount) => GoXLRCommand::SetEchoAmount(amount),
+            PersonalCommand::SetPitchStyle(style) => GoXLRCommand::SetPitchStyle(style),
+            PersonalCommand::SetPitchAmount(amount) => GoXLRCommand::SetPitchAmount(amount),
+            PersonalCommand::SetGenderStyle(style) => GoXLRCommand::SetGenderStyle(style),
+            PersonalCommand::SetGenderAmount(amount) => GoXLRCommand::SetGenderAmount(amount),
+            PersonalCommand::SetMegaphoneEnabled(enabled) => {
+                GoXLRCommand::SetMegaphoneEnabled(enabled)
+            }
+            PersonalCommand::SetMegaphoneStyle(style) => GoXLRCommand::SetMegaphoneStyle(style),
+            PersonalCommand::SetMegaphoneAmount(amount) => GoXLRCommand::SetMegaphoneAmount(amount),
+            PersonalCommand::SetRobotEnabled(enabled) => GoXLRCommand::SetRobotEnabled(enabled),
+            PersonalCommand::SetRobotStyle(style) => GoXLRCommand::SetRobotStyle(style),
+            PersonalCommand::SetHardTuneEnabled(enabled) => {
+                GoXLRCommand::SetHardTuneEnabled(enabled)
+            }
+            PersonalCommand::SetHardTuneStyle(style) => GoXLRCommand::SetHardTuneStyle(style),
             PersonalCommand::SaveMicProfile => GoXLRCommand::SaveMicProfile(),
             PersonalCommand::ReloadSettings => GoXLRCommand::ReloadSettings(),
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct EffectsQuickPreset {
+    name: &'static str,
+    description: &'static str,
+    commands: Vec<PersonalCommand>,
+}
+
+impl EffectsQuickPreset {
+    pub fn new(
+        name: &'static str,
+        description: &'static str,
+        commands: Vec<PersonalCommand>,
+    ) -> Self {
+        Self {
+            name,
+            description,
+            commands,
+        }
+    }
+
+    pub fn daily_presets() -> Vec<Self> {
+        vec![
+            Self::new(
+                "FX Off",
+                "Disable voice effects for normal calls and recording.",
+                vec![
+                    PersonalCommand::SetFXEnabled(false),
+                    PersonalCommand::SetMegaphoneEnabled(false),
+                    PersonalCommand::SetRobotEnabled(false),
+                    PersonalCommand::SetHardTuneEnabled(false),
+                ],
+            ),
+            Self::new(
+                "Clean Reverb",
+                "Light plate reverb without echo for a subtle broadcast sound.",
+                vec![
+                    PersonalCommand::SetActiveEffectPreset(EffectBankPresets::Preset1),
+                    PersonalCommand::SetFXEnabled(true),
+                    PersonalCommand::SetReverbStyle(ReverbStyle::RealPlate),
+                    PersonalCommand::SetReverbAmount(28),
+                    PersonalCommand::SetEchoStyle(EchoStyle::Quarter),
+                    PersonalCommand::SetEchoAmount(0),
+                ],
+            ),
+            Self::new(
+                "Robot Fun",
+                "Turn on robot voice while keeping megaphone and hard tune off.",
+                vec![
+                    PersonalCommand::SetActiveEffectPreset(EffectBankPresets::Preset2),
+                    PersonalCommand::SetFXEnabled(true),
+                    PersonalCommand::SetRobotEnabled(true),
+                    PersonalCommand::SetRobotStyle(RobotStyle::Robot1),
+                    PersonalCommand::SetMegaphoneEnabled(false),
+                    PersonalCommand::SetHardTuneEnabled(false),
+                ],
+            ),
+            Self::new(
+                "Hard Tune",
+                "Enable hard tune with neutral pitch/gender/megaphone shaping.",
+                vec![
+                    PersonalCommand::SetActiveEffectPreset(EffectBankPresets::Preset3),
+                    PersonalCommand::SetFXEnabled(true),
+                    PersonalCommand::SetHardTuneEnabled(true),
+                    PersonalCommand::SetHardTuneStyle(HardTuneStyle::Medium),
+                    PersonalCommand::SetPitchStyle(PitchStyle::Narrow),
+                    PersonalCommand::SetPitchAmount(0),
+                    PersonalCommand::SetGenderStyle(GenderStyle::Medium),
+                    PersonalCommand::SetGenderAmount(0),
+                    PersonalCommand::SetMegaphoneStyle(MegaphoneStyle::Megaphone),
+                    PersonalCommand::SetMegaphoneAmount(0),
+                ],
+            ),
+        ]
+    }
+
+    pub fn name(&self) -> &'static str {
+        self.name
+    }
+
+    pub fn description(&self) -> &'static str {
+        self.description
+    }
+
+    pub fn commands(&self) -> Vec<PersonalCommand> {
+        self.commands.clone()
     }
 }
 
@@ -1616,6 +1745,7 @@ pub enum UiCommand {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AppViewMode {
     Mic,
+    Effects,
     Full,
     QuickActions,
 }
@@ -1644,7 +1774,9 @@ impl QuickActions {
 
     pub fn toggle_view_mode(&mut self) {
         self.view_mode = match self.view_mode {
-            AppViewMode::Mic | AppViewMode::Full => AppViewMode::QuickActions,
+            AppViewMode::Mic | AppViewMode::Effects | AppViewMode::Full => {
+                AppViewMode::QuickActions
+            }
             AppViewMode::QuickActions => AppViewMode::Full,
         };
     }
@@ -2117,7 +2249,7 @@ impl PersonalUiApp {
             );
             ui.add_space(12.0);
             let toggle_label = match self.quick_actions.view_mode() {
-                AppViewMode::Mic | AppViewMode::Full => "Mixer dashboard",
+                AppViewMode::Mic | AppViewMode::Effects | AppViewMode::Full => "Mixer dashboard",
                 AppViewMode::QuickActions => "Configuration",
             };
             if ui.add(Self::accent_button(toggle_label)).clicked() {
@@ -2468,6 +2600,53 @@ impl PersonalUiApp {
         });
     }
 
+    fn render_effects_page(&mut self, ui: &mut egui::Ui) {
+        ui.add_space(8.0);
+        ui.horizontal(|ui| {
+            ui.heading("Voice Effects");
+            ui.separator();
+            ui.label("Quick presets for the GoXLR effects bank");
+        });
+        ui.add_space(8.0);
+        ui.label("This is the next practical web-UI parity chunk: fast access to FX on/off, reverb, robot, and hard tune without opening the full browser UI.");
+        ui.add_space(12.0);
+
+        egui::Grid::new("effects_quick_presets")
+            .num_columns(2)
+            .spacing(egui::vec2(12.0, 10.0))
+            .show(ui, |ui| {
+                for preset in EffectsQuickPreset::daily_presets() {
+                    ui.vertical(|ui| {
+                        if ui.add(Self::accent_button(preset.name())).clicked() {
+                            self.send(UiCommand::ApplyScene(UiScene::new(
+                                preset.name(),
+                                preset.commands(),
+                            )));
+                        }
+                        ui.label(preset.description());
+                    });
+                    ui.label(format!("{} commands", preset.commands().len()));
+                    ui.end_row();
+                }
+            });
+
+        ui.add_space(12.0);
+        ui.horizontal_wrapped(|ui| {
+            if ui.button("FX On").clicked() {
+                self.send(UiCommand::Send(PersonalCommand::SetFXEnabled(true)));
+            }
+            if ui.button("FX Off").clicked() {
+                self.send(UiCommand::Send(PersonalCommand::SetFXEnabled(false)));
+            }
+            if ui.button("Robot On").clicked() {
+                self.send(UiCommand::Send(PersonalCommand::SetRobotEnabled(true)));
+            }
+            if ui.button("Hard Tune On").clicked() {
+                self.send(UiCommand::Send(PersonalCommand::SetHardTuneEnabled(true)));
+            }
+        });
+    }
+
     fn render_mic_processing_page(&mut self, ui: &mut egui::Ui) {
         ui.add_space(8.0);
         ui.horizontal(|ui| {
@@ -2773,6 +2952,7 @@ impl eframe::App for PersonalUiApp {
             ui.horizontal(|ui| {
                 for (label, selected) in [
                     ("Mic", self.quick_actions.view_mode() == AppViewMode::Mic),
+                    ("Effects", self.quick_actions.view_mode() == AppViewMode::Effects),
                     (DashboardCopy::mixer_tab(), self.quick_actions.view_mode() == AppViewMode::QuickActions),
                     (DashboardCopy::configuration_tab(), self.quick_actions.view_mode() == AppViewMode::Full),
                     ("Lighting", false),
@@ -2789,6 +2969,7 @@ impl eframe::App for PersonalUiApp {
                     if ui.add(button).clicked() {
                         match label {
                             "Mic" => self.quick_actions.set_view_mode(AppViewMode::Mic),
+                            "Effects" => self.quick_actions.set_view_mode(AppViewMode::Effects),
                             label if label == DashboardCopy::mixer_tab() => self.quick_actions.set_view_mode(AppViewMode::QuickActions),
                             label if label == DashboardCopy::configuration_tab() => self.quick_actions.set_view_mode(AppViewMode::Full),
                             _ => {}
@@ -2804,6 +2985,11 @@ impl eframe::App for PersonalUiApp {
 
             if self.quick_actions.view_mode() == AppViewMode::Mic {
                 self.render_mic_processing_page(ui);
+                return;
+            }
+
+            if self.quick_actions.view_mode() == AppViewMode::Effects {
+                self.render_effects_page(ui);
                 return;
             }
 

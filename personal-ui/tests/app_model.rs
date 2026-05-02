@@ -4,14 +4,15 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use goxlr_personal_ui::{
     ActiveAudioStreams, AppConfig, AppSceneConfig, AppSnapshot, AppViewMode, AudioRouteTarget,
-    AudioRoutingRule, ControlledChannel, DashboardCopy, DeviceSelection, ExternalAudioTool,
-    MiniWindowMode, OptionalBoolAction, PersonalCommand, QuickActions, RoutingRuleEditor,
-    SceneEditor, TrayAction, TrayMenuModel, UiCommand, UiScene, VolumeDebouncer, WindowAction,
-    ipc_socket_path_candidates,
+    AudioRoutingRule, ControlledChannel, DashboardCopy, DeviceSelection, EffectsQuickPreset,
+    ExternalAudioTool, MiniWindowMode, OptionalBoolAction, PersonalCommand, QuickActions,
+    RoutingRuleEditor, SceneEditor, TrayAction, TrayMenuModel, UiCommand, UiScene, VolumeDebouncer,
+    WindowAction, ipc_socket_path_candidates,
 };
 use goxlr_types::{
-    ChannelName, CompressorAttackTime, CompressorRatio, CompressorReleaseTime, GateTimes,
-    MicrophoneType,
+    ChannelName, CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EchoStyle,
+    EffectBankPresets, GateTimes, GenderStyle, HardTuneStyle, MegaphoneStyle, MicrophoneType,
+    PitchStyle, ReverbStyle, RobotStyle,
 };
 
 fn temp_scene_config_path(name: &str) -> PathBuf {
@@ -642,11 +643,103 @@ fn personal_command_maps_mic_processing_to_backend_commands() {
 }
 
 #[test]
-fn app_view_mode_has_dedicated_mic_page_for_parity_chunks() {
+fn app_view_mode_has_dedicated_mic_and_effects_pages_for_parity_chunks() {
     let mut quick_actions = QuickActions::default();
     quick_actions.set_view_mode(AppViewMode::Mic);
-
     assert_eq!(quick_actions.view_mode(), AppViewMode::Mic);
+
+    quick_actions.set_view_mode(AppViewMode::Effects);
+    assert_eq!(quick_actions.view_mode(), AppViewMode::Effects);
+}
+
+#[test]
+fn effects_quick_presets_cover_daily_voice_fx_controls() {
+    let presets = EffectsQuickPreset::daily_presets();
+    let names = presets
+        .iter()
+        .map(|preset| preset.name())
+        .collect::<Vec<_>>();
+
+    assert_eq!(
+        names,
+        vec!["FX Off", "Clean Reverb", "Robot Fun", "Hard Tune"]
+    );
+    assert_eq!(
+        presets[0].commands(),
+        vec![
+            PersonalCommand::SetFXEnabled(false),
+            PersonalCommand::SetMegaphoneEnabled(false),
+            PersonalCommand::SetRobotEnabled(false),
+            PersonalCommand::SetHardTuneEnabled(false),
+        ]
+    );
+    assert_eq!(
+        presets[1].commands(),
+        vec![
+            PersonalCommand::SetActiveEffectPreset(EffectBankPresets::Preset1),
+            PersonalCommand::SetFXEnabled(true),
+            PersonalCommand::SetReverbStyle(ReverbStyle::RealPlate),
+            PersonalCommand::SetReverbAmount(28),
+            PersonalCommand::SetEchoStyle(EchoStyle::Quarter),
+            PersonalCommand::SetEchoAmount(0),
+        ]
+    );
+    assert_eq!(
+        presets[2].commands(),
+        vec![
+            PersonalCommand::SetActiveEffectPreset(EffectBankPresets::Preset2),
+            PersonalCommand::SetFXEnabled(true),
+            PersonalCommand::SetRobotEnabled(true),
+            PersonalCommand::SetRobotStyle(RobotStyle::Robot1),
+            PersonalCommand::SetMegaphoneEnabled(false),
+            PersonalCommand::SetHardTuneEnabled(false),
+        ]
+    );
+    assert_eq!(
+        presets[3].commands(),
+        vec![
+            PersonalCommand::SetActiveEffectPreset(EffectBankPresets::Preset3),
+            PersonalCommand::SetFXEnabled(true),
+            PersonalCommand::SetHardTuneEnabled(true),
+            PersonalCommand::SetHardTuneStyle(HardTuneStyle::Medium),
+            PersonalCommand::SetPitchStyle(PitchStyle::Narrow),
+            PersonalCommand::SetPitchAmount(0),
+            PersonalCommand::SetGenderStyle(GenderStyle::Medium),
+            PersonalCommand::SetGenderAmount(0),
+            PersonalCommand::SetMegaphoneStyle(MegaphoneStyle::Megaphone),
+            PersonalCommand::SetMegaphoneAmount(0),
+        ]
+    );
+}
+
+#[test]
+fn personal_command_maps_effects_controls_to_backend_commands() {
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetActiveEffectPreset(
+            EffectBankPresets::Preset4
+        )),
+        goxlr_ipc::GoXLRCommand::SetActiveEffectPreset(EffectBankPresets::Preset4)
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetFXEnabled(true)),
+        goxlr_ipc::GoXLRCommand::SetFXEnabled(true)
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetReverbStyle(ReverbStyle::Chapel)),
+        goxlr_ipc::GoXLRCommand::SetReverbStyle(ReverbStyle::Chapel)
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetEchoAmount(42)),
+        goxlr_ipc::GoXLRCommand::SetEchoAmount(42)
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetRobotEnabled(true)),
+        goxlr_ipc::GoXLRCommand::SetRobotEnabled(true)
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetHardTuneStyle(HardTuneStyle::Hard)),
+        goxlr_ipc::GoXLRCommand::SetHardTuneStyle(HardTuneStyle::Hard)
+    ));
 }
 
 #[test]
