@@ -300,6 +300,12 @@ This section tracks local source changes made on this machine so context survive
   * The top navigation now opens an `Effects` page for fast GoXLR voice-FX control without launching the browser/web UI
   * Added daily quick presets for `FX Off`, `Clean Reverb`, `Robot Fun`, and `Hard Tune`
   * Added native command mappings for active FX preset selection, FX enable, reverb, echo, pitch, gender, megaphone, robot, and hard tune controls
+* Added a practical web-UI parity checklist for the personal native UI:
+  * New `personal-ui/PARITY_CHECKLIST.md` tracks implemented areas, remaining parity gaps, priorities, and the TDD implementation rule for future chunks
+* Added the first feature-parity `Lighting` page to the personal native UI:
+  * The top navigation now opens a `Lighting` page for quick GoXLR colour theme changes without launching the browser/web UI
+  * Added daily quick themes for `Dim White`, `Broadcast Red`, `Cool Blue`, and `Lights Off`
+  * Added native command mappings for animation mode, global colour, all-fader colours/display style, button-group colours, and simple accent colour
 
 ### Logging Rule
 

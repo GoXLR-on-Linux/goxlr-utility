@@ -11,9 +11,10 @@ use goxlr_ipc::clients::ipc::ipc_client::IPCClient;
 use goxlr_ipc::clients::ipc::ipc_socket::Socket;
 use goxlr_ipc::{DaemonRequest, DaemonResponse, DaemonStatus, GoXLRCommand, ipc_socket_path};
 use goxlr_types::{
-    ChannelName, CompressorAttackTime, CompressorRatio, CompressorReleaseTime, DeviceType,
-    EchoStyle, EffectBankPresets, GateTimes, GenderStyle, HardTuneStyle, MegaphoneStyle,
-    MicrophoneType, PitchStyle, ReverbStyle, RobotStyle,
+    AnimationMode, ButtonColourGroups, ChannelName, CompressorAttackTime, CompressorRatio,
+    CompressorReleaseTime, DeviceType, EchoStyle, EffectBankPresets, FaderDisplayStyle, GateTimes,
+    GenderStyle, HardTuneStyle, MegaphoneStyle, MicrophoneType, PitchStyle, ReverbStyle,
+    RobotStyle, SimpleColourTargets,
 };
 use interprocess::local_socket::tokio::prelude::LocalSocketStream;
 use interprocess::local_socket::traits::tokio::Stream;
@@ -139,6 +140,12 @@ pub enum PersonalCommand {
     SetRobotStyle(RobotStyle),
     SetHardTuneEnabled(bool),
     SetHardTuneStyle(HardTuneStyle),
+    SetAnimationMode(AnimationMode),
+    SetGlobalColour(String),
+    SetAllFaderColours(String, String),
+    SetAllFaderDisplayStyle(FaderDisplayStyle),
+    SetButtonGroupColours(ButtonColourGroups, String, Option<String>),
+    SetSimpleColour(SimpleColourTargets, String),
     SaveMicProfile,
     ReloadSettings,
 }
@@ -217,6 +224,20 @@ impl From<PersonalCommand> for GoXLRCommand {
                 GoXLRCommand::SetHardTuneEnabled(enabled)
             }
             PersonalCommand::SetHardTuneStyle(style) => GoXLRCommand::SetHardTuneStyle(style),
+            PersonalCommand::SetAnimationMode(mode) => GoXLRCommand::SetAnimationMode(mode),
+            PersonalCommand::SetGlobalColour(colour) => GoXLRCommand::SetGlobalColour(colour),
+            PersonalCommand::SetAllFaderColours(top, bottom) => {
+                GoXLRCommand::SetAllFaderColours(top, bottom)
+            }
+            PersonalCommand::SetAllFaderDisplayStyle(style) => {
+                GoXLRCommand::SetAllFaderDisplayStyle(style)
+            }
+            PersonalCommand::SetButtonGroupColours(group, colour_one, colour_two) => {
+                GoXLRCommand::SetButtonGroupColours(group, colour_one, colour_two)
+            }
+            PersonalCommand::SetSimpleColour(target, colour) => {
+                GoXLRCommand::SetSimpleColour(target, colour)
+            }
             PersonalCommand::SaveMicProfile => GoXLRCommand::SaveMicProfile(),
             PersonalCommand::ReloadSettings => GoXLRCommand::ReloadSettings(),
         }
@@ -293,6 +314,123 @@ impl EffectsQuickPreset {
                     PersonalCommand::SetGenderAmount(0),
                     PersonalCommand::SetMegaphoneStyle(MegaphoneStyle::Megaphone),
                     PersonalCommand::SetMegaphoneAmount(0),
+                ],
+            ),
+        ]
+    }
+
+    pub fn name(&self) -> &'static str {
+        self.name
+    }
+
+    pub fn description(&self) -> &'static str {
+        self.description
+    }
+
+    pub fn commands(&self) -> Vec<PersonalCommand> {
+        self.commands.clone()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct LightingQuickTheme {
+    name: &'static str,
+    description: &'static str,
+    commands: Vec<PersonalCommand>,
+}
+
+impl LightingQuickTheme {
+    pub fn new(
+        name: &'static str,
+        description: &'static str,
+        commands: Vec<PersonalCommand>,
+    ) -> Self {
+        Self {
+            name,
+            description,
+            commands,
+        }
+    }
+
+    pub fn daily_themes() -> Vec<Self> {
+        vec![
+            Self::new(
+                "Dim White",
+                "Low-key neutral lighting for calls and late desktop use.",
+                vec![
+                    PersonalCommand::SetAnimationMode(AnimationMode::Simple),
+                    PersonalCommand::SetGlobalColour("404040".to_string()),
+                    PersonalCommand::SetAllFaderColours("606060".to_string(), "202020".to_string()),
+                    PersonalCommand::SetButtonGroupColours(
+                        ButtonColourGroups::FaderMute,
+                        "404040".to_string(),
+                        Some("101010".to_string()),
+                    ),
+                    PersonalCommand::SetSimpleColour(
+                        SimpleColourTargets::Accent,
+                        "808080".to_string(),
+                    ),
+                ],
+            ),
+            Self::new(
+                "Broadcast Red",
+                "Warm red theme for recording or stream mode.",
+                vec![
+                    PersonalCommand::SetAnimationMode(AnimationMode::Simple),
+                    PersonalCommand::SetGlobalColour("FF1F1F".to_string()),
+                    PersonalCommand::SetAllFaderColours("FF3030".to_string(), "400000".to_string()),
+                    PersonalCommand::SetButtonGroupColours(
+                        ButtonColourGroups::EffectTypes,
+                        "FF3030".to_string(),
+                        Some("400000".to_string()),
+                    ),
+                    PersonalCommand::SetSimpleColour(
+                        SimpleColourTargets::Accent,
+                        "FF8080".to_string(),
+                    ),
+                ],
+            ),
+            Self::new(
+                "Cool Blue",
+                "Calm blue/cyan theme for normal desktop work.",
+                vec![
+                    PersonalCommand::SetAnimationMode(AnimationMode::Simple),
+                    PersonalCommand::SetGlobalColour("1F6FFF".to_string()),
+                    PersonalCommand::SetAllFaderColours("2E8BFF".to_string(), "002040".to_string()),
+                    PersonalCommand::SetButtonGroupColours(
+                        ButtonColourGroups::EffectSelector,
+                        "00A8FF".to_string(),
+                        Some("001A33".to_string()),
+                    ),
+                    PersonalCommand::SetSimpleColour(
+                        SimpleColourTargets::Accent,
+                        "80DFFF".to_string(),
+                    ),
+                ],
+            ),
+            Self::new(
+                "Lights Off",
+                "Disable animated lighting and set visible groups to black.",
+                vec![
+                    PersonalCommand::SetAnimationMode(AnimationMode::None),
+                    PersonalCommand::SetGlobalColour("000000".to_string()),
+                    PersonalCommand::SetAllFaderColours("000000".to_string(), "000000".to_string()),
+                    PersonalCommand::SetAllFaderDisplayStyle(FaderDisplayStyle::TwoColour),
+                    PersonalCommand::SetButtonGroupColours(
+                        ButtonColourGroups::FaderMute,
+                        "000000".to_string(),
+                        Some("000000".to_string()),
+                    ),
+                    PersonalCommand::SetButtonGroupColours(
+                        ButtonColourGroups::EffectSelector,
+                        "000000".to_string(),
+                        Some("000000".to_string()),
+                    ),
+                    PersonalCommand::SetButtonGroupColours(
+                        ButtonColourGroups::EffectTypes,
+                        "000000".to_string(),
+                        Some("000000".to_string()),
+                    ),
                 ],
             ),
         ]
@@ -1746,6 +1884,7 @@ pub enum UiCommand {
 pub enum AppViewMode {
     Mic,
     Effects,
+    Lighting,
     Full,
     QuickActions,
 }
@@ -1774,7 +1913,7 @@ impl QuickActions {
 
     pub fn toggle_view_mode(&mut self) {
         self.view_mode = match self.view_mode {
-            AppViewMode::Mic | AppViewMode::Effects | AppViewMode::Full => {
+            AppViewMode::Mic | AppViewMode::Effects | AppViewMode::Lighting | AppViewMode::Full => {
                 AppViewMode::QuickActions
             }
             AppViewMode::QuickActions => AppViewMode::Full,
@@ -2249,7 +2388,10 @@ impl PersonalUiApp {
             );
             ui.add_space(12.0);
             let toggle_label = match self.quick_actions.view_mode() {
-                AppViewMode::Mic | AppViewMode::Effects | AppViewMode::Full => "Mixer dashboard",
+                AppViewMode::Mic
+                | AppViewMode::Effects
+                | AppViewMode::Lighting
+                | AppViewMode::Full => "Mixer dashboard",
                 AppViewMode::QuickActions => "Configuration",
             };
             if ui.add(Self::accent_button(toggle_label)).clicked() {
@@ -2597,6 +2739,57 @@ impl PersonalUiApp {
                         .color(Self::accent()),
                 );
             });
+        });
+    }
+
+    fn render_lighting_page(&mut self, ui: &mut egui::Ui) {
+        ui.add_space(8.0);
+        ui.horizontal(|ui| {
+            ui.heading("Lighting");
+            ui.separator();
+            ui.label("Quick themes for visible GoXLR lighting states");
+        });
+        ui.add_space(8.0);
+        ui.label("Preset-first lighting parity: set global colour, fader colours, key button groups, and accent colour without opening the browser UI.");
+        ui.add_space(12.0);
+
+        egui::Grid::new("lighting_quick_themes")
+            .num_columns(2)
+            .spacing(egui::vec2(12.0, 10.0))
+            .show(ui, |ui| {
+                for theme in LightingQuickTheme::daily_themes() {
+                    ui.vertical(|ui| {
+                        if ui.add(Self::accent_button(theme.name())).clicked() {
+                            self.send(UiCommand::ApplyScene(UiScene::new(
+                                theme.name(),
+                                theme.commands(),
+                            )));
+                        }
+                        ui.label(theme.description());
+                    });
+                    ui.label(format!("{} commands", theme.commands().len()));
+                    ui.end_row();
+                }
+            });
+
+        ui.add_space(12.0);
+        ui.horizontal_wrapped(|ui| {
+            if ui.button("Animation: Simple").clicked() {
+                self.send(UiCommand::Send(PersonalCommand::SetAnimationMode(
+                    AnimationMode::Simple,
+                )));
+            }
+            if ui.button("Animation: None").clicked() {
+                self.send(UiCommand::Send(PersonalCommand::SetAnimationMode(
+                    AnimationMode::None,
+                )));
+            }
+            if ui.button("Accent White").clicked() {
+                self.send(UiCommand::Send(PersonalCommand::SetSimpleColour(
+                    SimpleColourTargets::Accent,
+                    "FFFFFF".to_string(),
+                )));
+            }
         });
     }
 
@@ -2953,9 +3146,9 @@ impl eframe::App for PersonalUiApp {
                 for (label, selected) in [
                     ("Mic", self.quick_actions.view_mode() == AppViewMode::Mic),
                     ("Effects", self.quick_actions.view_mode() == AppViewMode::Effects),
+                    ("Lighting", self.quick_actions.view_mode() == AppViewMode::Lighting),
                     (DashboardCopy::mixer_tab(), self.quick_actions.view_mode() == AppViewMode::QuickActions),
                     (DashboardCopy::configuration_tab(), self.quick_actions.view_mode() == AppViewMode::Full),
-                    ("Lighting", false),
                     ("Routing", false),
                     ("System", false),
                 ] {
@@ -2970,6 +3163,7 @@ impl eframe::App for PersonalUiApp {
                         match label {
                             "Mic" => self.quick_actions.set_view_mode(AppViewMode::Mic),
                             "Effects" => self.quick_actions.set_view_mode(AppViewMode::Effects),
+                            "Lighting" => self.quick_actions.set_view_mode(AppViewMode::Lighting),
                             label if label == DashboardCopy::mixer_tab() => self.quick_actions.set_view_mode(AppViewMode::QuickActions),
                             label if label == DashboardCopy::configuration_tab() => self.quick_actions.set_view_mode(AppViewMode::Full),
                             _ => {}
@@ -2990,6 +3184,11 @@ impl eframe::App for PersonalUiApp {
 
             if self.quick_actions.view_mode() == AppViewMode::Effects {
                 self.render_effects_page(ui);
+                return;
+            }
+
+            if self.quick_actions.view_mode() == AppViewMode::Lighting {
+                self.render_lighting_page(ui);
                 return;
             }
 

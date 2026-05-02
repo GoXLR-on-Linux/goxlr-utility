@@ -5,14 +5,15 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use goxlr_personal_ui::{
     ActiveAudioStreams, AppConfig, AppSceneConfig, AppSnapshot, AppViewMode, AudioRouteTarget,
     AudioRoutingRule, ControlledChannel, DashboardCopy, DeviceSelection, EffectsQuickPreset,
-    ExternalAudioTool, MiniWindowMode, OptionalBoolAction, PersonalCommand, QuickActions,
-    RoutingRuleEditor, SceneEditor, TrayAction, TrayMenuModel, UiCommand, UiScene, VolumeDebouncer,
-    WindowAction, ipc_socket_path_candidates,
+    ExternalAudioTool, LightingQuickTheme, MiniWindowMode, OptionalBoolAction, PersonalCommand,
+    QuickActions, RoutingRuleEditor, SceneEditor, TrayAction, TrayMenuModel, UiCommand, UiScene,
+    VolumeDebouncer, WindowAction, ipc_socket_path_candidates,
 };
 use goxlr_types::{
-    ChannelName, CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EchoStyle,
-    EffectBankPresets, GateTimes, GenderStyle, HardTuneStyle, MegaphoneStyle, MicrophoneType,
-    PitchStyle, ReverbStyle, RobotStyle,
+    AnimationMode, ButtonColourGroups, ChannelName, CompressorAttackTime, CompressorRatio,
+    CompressorReleaseTime, EchoStyle, EffectBankPresets, FaderDisplayStyle, GateTimes, GenderStyle,
+    HardTuneStyle, MegaphoneStyle, MicrophoneType, PitchStyle, ReverbStyle, RobotStyle,
+    SimpleColourTargets,
 };
 
 fn temp_scene_config_path(name: &str) -> PathBuf {
@@ -643,13 +644,119 @@ fn personal_command_maps_mic_processing_to_backend_commands() {
 }
 
 #[test]
-fn app_view_mode_has_dedicated_mic_and_effects_pages_for_parity_chunks() {
+fn app_view_mode_has_dedicated_mic_effects_and_lighting_pages_for_parity_chunks() {
     let mut quick_actions = QuickActions::default();
     quick_actions.set_view_mode(AppViewMode::Mic);
     assert_eq!(quick_actions.view_mode(), AppViewMode::Mic);
 
     quick_actions.set_view_mode(AppViewMode::Effects);
     assert_eq!(quick_actions.view_mode(), AppViewMode::Effects);
+
+    quick_actions.set_view_mode(AppViewMode::Lighting);
+    assert_eq!(quick_actions.view_mode(), AppViewMode::Lighting);
+}
+
+#[test]
+fn lighting_quick_themes_cover_daily_visual_states() {
+    let themes = LightingQuickTheme::daily_themes();
+    let names = themes.iter().map(|theme| theme.name()).collect::<Vec<_>>();
+
+    assert_eq!(
+        names,
+        vec!["Dim White", "Broadcast Red", "Cool Blue", "Lights Off"]
+    );
+    assert_eq!(
+        themes[0].commands(),
+        vec![
+            PersonalCommand::SetAnimationMode(AnimationMode::Simple),
+            PersonalCommand::SetGlobalColour("404040".to_string()),
+            PersonalCommand::SetAllFaderColours("606060".to_string(), "202020".to_string()),
+            PersonalCommand::SetButtonGroupColours(
+                ButtonColourGroups::FaderMute,
+                "404040".to_string(),
+                Some("101010".to_string()),
+            ),
+            PersonalCommand::SetSimpleColour(SimpleColourTargets::Accent, "808080".to_string()),
+        ]
+    );
+    assert_eq!(
+        themes[1].commands(),
+        vec![
+            PersonalCommand::SetAnimationMode(AnimationMode::Simple),
+            PersonalCommand::SetGlobalColour("FF1F1F".to_string()),
+            PersonalCommand::SetAllFaderColours("FF3030".to_string(), "400000".to_string()),
+            PersonalCommand::SetButtonGroupColours(
+                ButtonColourGroups::EffectTypes,
+                "FF3030".to_string(),
+                Some("400000".to_string()),
+            ),
+            PersonalCommand::SetSimpleColour(SimpleColourTargets::Accent, "FF8080".to_string()),
+        ]
+    );
+    assert_eq!(
+        themes[3].commands(),
+        vec![
+            PersonalCommand::SetAnimationMode(AnimationMode::None),
+            PersonalCommand::SetGlobalColour("000000".to_string()),
+            PersonalCommand::SetAllFaderColours("000000".to_string(), "000000".to_string()),
+            PersonalCommand::SetAllFaderDisplayStyle(FaderDisplayStyle::TwoColour),
+            PersonalCommand::SetButtonGroupColours(
+                ButtonColourGroups::FaderMute,
+                "000000".to_string(),
+                Some("000000".to_string()),
+            ),
+            PersonalCommand::SetButtonGroupColours(
+                ButtonColourGroups::EffectSelector,
+                "000000".to_string(),
+                Some("000000".to_string()),
+            ),
+            PersonalCommand::SetButtonGroupColours(
+                ButtonColourGroups::EffectTypes,
+                "000000".to_string(),
+                Some("000000".to_string()),
+            ),
+        ]
+    );
+}
+
+#[test]
+fn personal_command_maps_lighting_controls_to_backend_commands() {
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetAnimationMode(AnimationMode::Ripple)),
+        goxlr_ipc::GoXLRCommand::SetAnimationMode(AnimationMode::Ripple)
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetGlobalColour("ABCDEF".to_string())),
+        goxlr_ipc::GoXLRCommand::SetGlobalColour(colour) if colour == "ABCDEF"
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetAllFaderColours(
+            "112233".to_string(),
+            "445566".to_string(),
+        )),
+        goxlr_ipc::GoXLRCommand::SetAllFaderColours(top, bottom)
+            if top == "112233" && bottom == "445566"
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetButtonGroupColours(
+            ButtonColourGroups::EffectSelector,
+            "AA0000".to_string(),
+            Some("110000".to_string()),
+        )),
+        goxlr_ipc::GoXLRCommand::SetButtonGroupColours(
+            ButtonColourGroups::EffectSelector,
+            colour_one,
+            Some(colour_two),
+        ) if colour_one == "AA0000" && colour_two == "110000"
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetSimpleColour(
+            SimpleColourTargets::Accent,
+            "00AAFF".to_string(),
+        )),
+        goxlr_ipc::GoXLRCommand::SetSimpleColour(SimpleColourTargets::Accent, colour)
+            if colour == "00AAFF"
+    ));
 }
 
 #[test]
