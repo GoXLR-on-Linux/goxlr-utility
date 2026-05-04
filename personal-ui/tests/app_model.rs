@@ -10,14 +10,14 @@ use goxlr_personal_ui::{
     FaderMuteFunctionControl, HardwareScribbleControl, HeadphoneEqBandControl,
     HeadphoneEqLayoutPolicy, HeadphoneEqProfileAction, LightingAnimationControl,
     LightingButtonColourTarget, LightingFaderColourTarget, LightingLayoutPolicy,
-    LightingQuickTheme, LightingSimpleColourTarget, LightingTripleColourTarget, MicEqBandControl,
-    MicLayoutPolicy, MicProfileAction, MiniWindowMode, MixerLayoutPolicy, MonitorMixControl,
-    OptionalBoolAction, PersonalCommand, QuickActions, RoutingMatrixLayoutPolicy,
-    RoutingMatrixModel, RoutingMatrixRoute, RoutingPreset, RoutingRuleEditor, RoutingStateBadge,
-    SampleTrimAction, SamplerAction, SamplerLayoutPolicy, SamplerWorkflowSetting, SceneEditor,
-    SubmixChannelControl, SubmixOutputMixControl, SystemLayoutPolicy, SystemSettingsAction,
-    TrayAction, TrayMenuModel, UiCommand, UiScene, VolumeDebouncer, WindowAction,
-    ipc_socket_path_candidates,
+    LightingQuickTheme, LightingSimpleColourTarget, LightingTripleColourTarget, MainProfileAction,
+    MicEqBandControl, MicLayoutPolicy, MicProfileAction, MiniWindowMode, MixerLayoutPolicy,
+    MonitorMixControl, OptionalBoolAction, PersonalCommand, QuickActions,
+    RoutingMatrixLayoutPolicy, RoutingMatrixModel, RoutingMatrixRoute, RoutingPreset,
+    RoutingRuleEditor, RoutingStateBadge, SampleTrimAction, SamplerAction, SamplerLayoutPolicy,
+    SamplerWorkflowSetting, SceneEditor, SubmixChannelControl, SubmixOutputMixControl,
+    SystemLayoutPolicy, SystemSettingsAction, TrayAction, TrayMenuModel, UiCommand, UiScene,
+    VolumeDebouncer, WindowAction, ipc_socket_path_candidates,
 };
 use goxlr_types::{
     AnimationMode, Button, ButtonColourGroups, ButtonColourOffStyle, ChannelName,
@@ -2512,6 +2512,84 @@ fn system_settings_page_exposes_safe_daily_device_controls() {
             .iter()
             .all(|action| !action.label().is_empty() && !action.description().is_empty())
     );
+}
+
+#[test]
+fn main_profile_actions_are_guarded_named_slot_workflows() {
+    assert!(SystemLayoutPolicy::uses_guarded_main_profile_actions());
+    assert_eq!(SystemLayoutPolicy::profile_panel_width(), 420.0);
+    assert_eq!(SystemLayoutPolicy::profile_button_width(), 150.0);
+
+    let actions = MainProfileAction::guarded_daily_actions("Personal");
+    assert_eq!(actions.len(), 5);
+    assert!(actions.iter().all(MainProfileAction::requires_confirmation));
+    assert!(
+        actions
+            .iter()
+            .all(|action| !action.description().is_empty())
+    );
+
+    let load = actions
+        .iter()
+        .find(|action| {
+            action.command() == PersonalCommand::LoadProfile("Personal".to_string(), true)
+        })
+        .expect("load profile action");
+    assert_eq!(load.label(), "Load Personal");
+    assert_eq!(
+        load.command_if_confirmed(false),
+        None,
+        "profile load must require an explicit second click"
+    );
+    assert_eq!(
+        load.command_if_confirmed(true),
+        Some(PersonalCommand::LoadProfile("Personal".to_string(), true))
+    );
+
+    assert!(
+        actions
+            .iter()
+            .any(|action| action.command() == PersonalCommand::SaveProfile)
+    );
+    assert!(
+        actions.iter().any(
+            |action| action.command() == PersonalCommand::SaveProfileAs("Personal".to_string())
+        )
+    );
+    assert!(
+        actions
+            .iter()
+            .any(|action| action.command() == PersonalCommand::NewProfile("Personal".to_string()))
+    );
+    assert!(
+        actions.iter().any(
+            |action| action.command() == PersonalCommand::DeleteProfile("Personal".to_string())
+        )
+    );
+}
+
+#[test]
+fn main_profile_actions_map_to_backend_commands() {
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::NewProfile("Personal".to_string())),
+        goxlr_ipc::GoXLRCommand::NewProfile(profile) if profile == "Personal"
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::LoadProfile("Personal".to_string(), true)),
+        goxlr_ipc::GoXLRCommand::LoadProfile(profile, true) if profile == "Personal"
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SaveProfile),
+        goxlr_ipc::GoXLRCommand::SaveProfile()
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SaveProfileAs("Personal".to_string())),
+        goxlr_ipc::GoXLRCommand::SaveProfileAs(profile) if profile == "Personal"
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::DeleteProfile("Personal".to_string())),
+        goxlr_ipc::GoXLRCommand::DeleteProfile(profile) if profile == "Personal"
+    ));
 }
 
 #[test]

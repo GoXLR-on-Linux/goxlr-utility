@@ -140,7 +140,7 @@ Priority: partially implemented. The native page now covers safe playback/bank c
 
 ## 8. Profiles and persistence
 
-- [ ] Main profile create/load/save-as/delete controls.
+- [~] Main profile create/load/save-as/delete controls: guarded named-slot full-profile load, save-active, save-as, create, and delete actions exist on the System page with same-action second-click confirmation; full dynamic profile browser/list management remains pending.
 - [~] Mic profile create/load/save-as/delete controls: guarded Mic-page actions exist for a named profile slot with same-action second-click confirmation; a full profile manager remains pending.
 - [~] Effect preset load/save/rename controls: guarded named-slot actions exist on the Effects page with same-action second-click confirmation; full browser/list management remains pending.
 - [~] Headphone EQ profile save/load/delete controls: guarded named-slot load, save-as, and delete actions exist on the Headphone EQ page with same-action second-click confirmation; full dynamic profile list/browser management remains pending.

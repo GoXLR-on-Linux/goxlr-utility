@@ -395,6 +395,10 @@ This section tracks local source changes made on this machine so context survive
   * Added a bounded `EQ PROFILES` panel on the Headphone EQ page for named-slot load, save-as, and delete workflows
   * Added same-action second-click confirmation before dispatching headphone EQ profile load/save/delete commands
   * Added model-backed `HeadphoneEqProfileAction` coverage and layout helpers for the guarded profile panel
+* Added guarded first-pass main profile workflows:
+  * Added a bounded `MAIN PROFILE` panel on the System page for named-slot full-profile load, save-active, save-as, create, and delete workflows
+  * Added same-action second-click confirmation before dispatching full-profile load/save/create/delete commands
+  * Added typed `PersonalCommand` mappings for `NewProfile`, `LoadProfile`, `SaveProfile`, `SaveProfileAs`, and `DeleteProfile` with focused model-level coverage
 
 ### Logging Rule
 

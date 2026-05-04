@@ -148,6 +148,86 @@ impl SystemLayoutPolicy {
     pub fn destructive_actions_are_omitted_from_daily_controls() -> bool {
         true
     }
+
+    pub fn uses_guarded_main_profile_actions() -> bool {
+        true
+    }
+
+    pub fn profile_panel_width() -> f32 {
+        420.0
+    }
+
+    pub fn profile_button_width() -> f32 {
+        150.0
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct MainProfileAction {
+    label: String,
+    description: &'static str,
+    command: PersonalCommand,
+}
+
+impl MainProfileAction {
+    pub fn new(label: String, description: &'static str, command: PersonalCommand) -> Self {
+        Self {
+            label,
+            description,
+            command,
+        }
+    }
+
+    pub fn guarded_daily_actions(profile: &str) -> Vec<Self> {
+        let profile_name = profile.to_string();
+        vec![
+            Self::new(
+                format!("Load {profile}"),
+                "Load the named full GoXLR profile, including hardware settings.",
+                PersonalCommand::LoadProfile(profile_name.clone(), true),
+            ),
+            Self::new(
+                "Save active".to_string(),
+                "Overwrite the currently active full GoXLR profile with current settings.",
+                PersonalCommand::SaveProfile,
+            ),
+            Self::new(
+                format!("Save as {profile}"),
+                "Save current full GoXLR settings into the named personal profile slot.",
+                PersonalCommand::SaveProfileAs(profile_name.clone()),
+            ),
+            Self::new(
+                format!("Create {profile}"),
+                "Create the named personal full-profile slot if it does not already exist.",
+                PersonalCommand::NewProfile(profile_name.clone()),
+            ),
+            Self::new(
+                format!("Delete {profile}"),
+                "Delete the named personal full-profile slot.",
+                PersonalCommand::DeleteProfile(profile_name),
+            ),
+        ]
+    }
+
+    pub fn label(&self) -> &str {
+        &self.label
+    }
+
+    pub fn description(&self) -> &'static str {
+        self.description
+    }
+
+    pub fn command(&self) -> PersonalCommand {
+        self.command.clone()
+    }
+
+    pub fn requires_confirmation(&self) -> bool {
+        true
+    }
+
+    pub fn command_if_confirmed(&self, confirmed: bool) -> Option<PersonalCommand> {
+        confirmed.then(|| self.command())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -1555,6 +1635,11 @@ pub enum PersonalCommand {
     SetSampleStopPercent(SampleBank, SampleButtons, usize, f32),
     PlayNextSample(SampleBank, SampleButtons),
     StopSamplePlayback(SampleBank, SampleButtons),
+    NewProfile(String),
+    LoadProfile(String, bool),
+    SaveProfile,
+    SaveProfileAs(String),
+    DeleteProfile(String),
     SaveMicProfile,
     ReloadSettings,
 }
@@ -1816,6 +1901,13 @@ impl From<PersonalCommand> for GoXLRCommand {
             PersonalCommand::StopSamplePlayback(bank, button) => {
                 GoXLRCommand::StopSamplePlayback(bank, button)
             }
+            PersonalCommand::NewProfile(profile) => GoXLRCommand::NewProfile(profile),
+            PersonalCommand::LoadProfile(profile, load_hardware) => {
+                GoXLRCommand::LoadProfile(profile, load_hardware)
+            }
+            PersonalCommand::SaveProfile => GoXLRCommand::SaveProfile(),
+            PersonalCommand::SaveProfileAs(profile) => GoXLRCommand::SaveProfileAs(profile),
+            PersonalCommand::DeleteProfile(profile) => GoXLRCommand::DeleteProfile(profile),
             PersonalCommand::SaveMicProfile => GoXLRCommand::SaveMicProfile(),
             PersonalCommand::ReloadSettings => GoXLRCommand::ReloadSettings(),
         }
@@ -4516,6 +4608,7 @@ pub struct PersonalUiApp {
     pending_mic_profile_confirmation: Option<PersonalCommand>,
     pending_effect_preset_confirmation: Option<PersonalCommand>,
     pending_headphone_eq_profile_confirmation: Option<PersonalCommand>,
+    pending_main_profile_confirmation: Option<PersonalCommand>,
 }
 
 impl PersonalUiApp {
@@ -4551,6 +4644,7 @@ impl PersonalUiApp {
             pending_mic_profile_confirmation: None,
             pending_effect_preset_confirmation: None,
             pending_headphone_eq_profile_confirmation: None,
+            pending_main_profile_confirmation: None,
         }
     }
 
@@ -5836,13 +5930,65 @@ impl PersonalUiApp {
         );
     }
 
+    fn render_main_profile_panel(&mut self, ui: &mut egui::Ui) {
+        Self::bounded_panel(ui, SystemLayoutPolicy::profile_panel_width(), |ui| {
+            ui.set_width(SystemLayoutPolicy::profile_panel_width());
+            ui.label(
+                egui::RichText::new("MAIN PROFILE")
+                    .monospace()
+                    .size(18.0)
+                    .color(egui::Color32::WHITE)
+                    .strong(),
+            );
+            ui.label("Guarded full-profile load, save, create, and delete actions for one named personal slot.");
+            ui.add_space(8.0);
+            ui.horizontal_wrapped(|ui| {
+                for action in MainProfileAction::guarded_daily_actions("Personal") {
+                    let confirmed = self
+                        .pending_main_profile_confirmation
+                        .as_ref()
+                        .is_some_and(|pending| pending == &action.command());
+                    let label = if confirmed {
+                        format!("Confirm {}", action.label())
+                    } else {
+                        action.label().to_string()
+                    };
+                    if ui
+                        .add_sized(
+                            egui::vec2(SystemLayoutPolicy::profile_button_width(), 26.0),
+                            egui::Button::new(label).small(),
+                        )
+                        .clicked()
+                    {
+                        if let Some(command) = action.command_if_confirmed(confirmed) {
+                            self.pending_main_profile_confirmation = None;
+                            self.send(UiCommand::Send(command));
+                        } else {
+                            self.pending_main_profile_confirmation = Some(action.command());
+                        }
+                    }
+                }
+            });
+            if self.pending_main_profile_confirmation.is_some() {
+                ui.add_space(6.0);
+                ui.label(
+                    egui::RichText::new("Click the same main profile action again to confirm.")
+                        .small()
+                        .color(Self::muted_text()),
+                );
+            }
+        });
+    }
+
     fn render_system_page(&mut self, ui: &mut egui::Ui) {
         Self::section_header(
             ui,
             "System",
-            "Daily device settings without destructive profile actions",
-            "Quick controls for mute timing, monitoring, fader lock, VOD mode, and reloading settings. Profile create/delete workflows stay out of this first pass until they have stronger guardrails.",
+            "Daily device settings plus guarded profile workflows",
+            "Quick controls for mute timing, monitoring, fader lock, VOD mode, reloading settings, and same-action-confirmed full-profile workflows.",
         );
+        ui.add_space(12.0);
+        self.render_main_profile_panel(ui);
         ui.add_space(12.0);
 
         ui.allocate_ui_with_layout(
