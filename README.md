@@ -380,6 +380,21 @@ This section tracks local source changes made on this machine so context survive
 * Added first-pass Mixer scribble-strip parity controls:
   * Added a bounded `SCRIBBLE STRIPS` panel on the Mixer dashboard for Fader A-D hardware strip labels, numbers, icon presets, and invert toggles
   * Added typed `PersonalCommand` mappings for `SetScribbleIcon`, `SetScribbleText`, `SetScribbleNumber`, and `SetScribbleInvert` with focused model-level coverage
+* Added first-pass Mixer monitor-mix selector parity:
+  * Added a bounded `MONITOR MIX` panel on the Mixer dashboard for choosing Headphones, Broadcast, Chat Mic, or Line Out as the hardware monitor source
+  * Added typed `PersonalCommand` mapping for `SetMonitorMix(OutputDevice)` with focused model-level coverage
+* Added first-pass Mixer submix parity controls:
+  * Added a bounded `SUBMIX` panel on the Mixer dashboard for enabling/disabling submix mode, setting conservative channel volume presets, linking/unlinking daily channels, and choosing output mix A/B routing
+  * Added model-backed daily submix controls for Mic, Chat, Music, Game, Console, Line In, System, and Sample channels plus Headphones, Broadcast, Chat Mic, and Line Out output mix routing
+  * Added typed `PersonalCommand` mappings for `SetSubMixEnabled`, `SetSubMixVolume` (percentage presets converted to the backend raw 0-255 volume scale), `SetSubMixLinked`, and `SetSubMixOutputMix` with focused model-level coverage
+* Added guarded first-pass Effects preset management:
+  * Added a bounded `EFFECT PRESETS` panel on the Effects page for named-slot load, rename-active, and save-active workflows
+  * Added same-action second-click confirmation before dispatching effect preset load/rename/save commands
+  * Added typed `PersonalCommand` mappings for `LoadEffectPreset`, `RenameActiveEffectPreset`, and `SaveActiveEffectPreset` with focused model-level coverage
+* Added guarded Headphone EQ profile workflows:
+  * Added a bounded `EQ PROFILES` panel on the Headphone EQ page for named-slot load, save-as, and delete workflows
+  * Added same-action second-click confirmation before dispatching headphone EQ profile load/save/delete commands
+  * Added model-backed `HeadphoneEqProfileAction` coverage and layout helpers for the guarded profile panel
 
 ### Logging Rule
 

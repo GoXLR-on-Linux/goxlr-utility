@@ -36,8 +36,8 @@ Priority: keep stable; only extend if debugging or multiple-device use becomes a
 - [~] First-pass fader assignment editor: Mixer dashboard exposes Fader A-D assignment buttons for daily channels (Mic, Chat, Music, Game, Console, Line In, System, Sample) backed by typed `SetFader` commands; less-used output/monitor assignments remain deferred.
 - [~] First-pass fader mute-behaviour editor: Mixer dashboard exposes safe mute-target buttons for All, Stream, Voice Chat, and Phones backed by typed `SetFaderMuteFunction` commands; hold/toggle and less-used mute targets remain pending.
 - [~] First-pass scribble strip editor: Mixer dashboard exposes Fader A-D hardware strip label, number, icon preset, and invert buttons backed by typed scribble commands; free-text entry and full icon browsing remain deferred.
-- [ ] Submix controls: enable, per-channel submix volume/linking, output mix routing.
-- [ ] Monitor mix selector.
+- [x] First-pass monitor mix selector: Mixer dashboard exposes safe hardware monitor-source buttons for Headphones, Broadcast, Chat Mic, and Line Out backed by typed `SetMonitorMix` commands.
+- [~] First-pass submix controls: Mixer dashboard exposes safe enable/disable, daily channel volume presets/linking, and output mix A/B routing backed by typed `SetSubMixEnabled`, percent-to-raw `SetSubMixVolume`, `SetSubMixLinked`, and `SetSubMixOutputMix` commands; live submix state reflection, arbitrary slider values, and exhaustive output coverage remain deferred.
 
 Priority: medium. Daily mute/routing is already useful; fader assignment and scribbles would improve web parity but are less urgent than Lighting or full Effects.
 
@@ -75,7 +75,7 @@ Priority: medium-low after current work. Mic basics are covered; EQ/profile poli
 - [x] Quick preset layout polish: compact wrapped cards keep preset name, description, and command count together, keep command labels horizontal, share a top-aligned row height, and fit all four quick presets cleanly at normal window width.
 - [x] Command mappings for active preset, FX enable, reverb, echo, pitch, gender, megaphone, robot, and hard tune basics.
 - [x] Quick buttons for FX on/off, robot, and hard tune.
-- [~] Full active preset management: load, rename, save still pending.
+- [~] Full active preset management: guarded named-slot load, rename-active, and save-active controls exist with same-action second-click confirmation; full preset browser/list management remains pending.
 - [~] Reverb detailed controls: amount/style are native, plus first-pass advanced decay default; early/tail/pre-delay/colour/mod remain pending.
 - [~] Echo detailed controls: amount/style are native, plus first-pass feedback default; tempo/delay/cross-feedback remain pending.
 - [~] Pitch detailed controls: amount/style are native, plus first-pass character default.
@@ -142,8 +142,8 @@ Priority: partially implemented. The native page now covers safe playback/bank c
 
 - [ ] Main profile create/load/save-as/delete controls.
 - [~] Mic profile create/load/save-as/delete controls: guarded Mic-page actions exist for a named profile slot with same-action second-click confirmation; a full profile manager remains pending.
-- [ ] Effect preset load/save/rename controls.
-- [ ] Headphone EQ profile save/load/delete controls.
+- [~] Effect preset load/save/rename controls: guarded named-slot actions exist on the Effects page with same-action second-click confirmation; full browser/list management remains pending.
+- [~] Headphone EQ profile save/load/delete controls: guarded named-slot load, save-as, and delete actions exist on the Headphone EQ page with same-action second-click confirmation; full dynamic profile list/browser management remains pending.
 - [ ] Named personal presets for common routing, lighting, and effect states.
 - [x] Clear warning boundaries around destructive profile operations for first-pass mic profile actions.
 
@@ -225,6 +225,7 @@ Implemented first System settings chunk:
 - Added `AppViewMode::System` and a dedicated System tab for safe daily device settings.
 - Added model-backed `SystemSettingsAction` controls for mute hold duration, VC mute/chat mic coupling, monitor-with-FX, lock faders, VOD mode, and reload settings.
 - Added `PersonalCommand` mappings for `SetMuteHoldDuration`, `SetVCMuteAlsoMuteCM`, `SetMonitorWithFx`, `SetLockFaders`, and `SetVodMode`; destructive profile create/delete workflows remain intentionally omitted from this first-pass daily settings page.
+- Added Mixer monitor-mix selector controls backed by `SetMonitorMix(OutputDevice)` for Headphones, Broadcast, Chat Mic, and Line Out.
 
 
 Implemented ordered parity batch:
@@ -232,6 +233,8 @@ Implemented ordered parity batch:
 - Added Mic EQ models and Mic-page controls for mini/full EQ band gain/frequency command helpers.
 - Added guarded Mic profile actions for load, save current, save-as, and delete against an explicit named slot, with profile-switching/destructive actions requiring a same-action second click before dispatch.
 - Added first-pass advanced Effects DSP actions for reverb decay, echo feedback, pitch character, megaphone post gain, robot threshold, and hard-tune source.
+- Added guarded Effects preset actions for load, rename-active, and save-active against an explicit named slot, with profile-switching/stateful actions requiring a same-action second click before dispatch.
+- Added guarded Headphone EQ profile actions for load, save-as, and delete against an explicit named slot, with profile-changing/destructive actions requiring a same-action second click before dispatch.
 - Added a dedicated Headphone EQ tab with enable/disable, preamp, and ten-band gain/frequency/Q command controls; follow-up screenshot QA tightened it into a compact fixed 5x2 grid so the bands read as one equalizer surface rather than a tall scattered card layout.
 - Added a dedicated Sampler tab with bank cards, pad actions, active-bank selection, play/stop mode, random order, play-next, and stop playback controls.
 - Added model-level tests for all five requested chunks plus typed `PersonalCommand -> GoXLRCommand` mappings.

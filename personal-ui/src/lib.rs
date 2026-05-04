@@ -16,7 +16,7 @@ use goxlr_types::{
     CompressorAttackTime, CompressorRatio, CompressorReleaseTime, DeviceType, EchoStyle,
     EffectBankPresets, EncoderColourTargets, EqFrequencies, FaderDisplayStyle, FaderName,
     GateTimes, GenderStyle, HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle,
-    MicrophoneType, MiniEqFrequencies, MuteFunction, OutputDevice, PitchStyle, ReverbStyle,
+    MicrophoneType, MiniEqFrequencies, Mix, MuteFunction, OutputDevice, PitchStyle, ReverbStyle,
     RobotRange, RobotStyle, SampleBank, SampleButtons, SamplePlayOrder, SamplePlaybackMode,
     SamplerColourTargets, SimpleColourTargets, VodMode, WaterfallDirection,
 };
@@ -363,6 +363,18 @@ impl EffectsLayoutPolicy {
     pub fn detail_panel_gap() -> f32 {
         8.0
     }
+
+    pub fn preset_management_panel_width() -> f32 {
+        520.0
+    }
+
+    pub fn preset_management_button_width() -> f32 {
+        150.0
+    }
+
+    pub fn uses_guarded_preset_management() -> bool {
+        true
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -592,6 +604,63 @@ impl MicProfileAction {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct EffectPresetAction {
+    label: String,
+    command: PersonalCommand,
+    requires_confirmation: bool,
+}
+
+impl EffectPresetAction {
+    pub fn guarded_daily_actions(preset: &str) -> Vec<Self> {
+        vec![
+            Self::new(
+                format!("Load {preset}"),
+                PersonalCommand::LoadEffectPreset(preset.to_string()),
+                true,
+            ),
+            Self::new(
+                format!("Rename to {preset}"),
+                PersonalCommand::RenameActiveEffectPreset(preset.to_string()),
+                true,
+            ),
+            Self::new(
+                "Save active".to_string(),
+                PersonalCommand::SaveActiveEffectPreset,
+                true,
+            ),
+        ]
+    }
+
+    fn new(label: String, command: PersonalCommand, requires_confirmation: bool) -> Self {
+        Self {
+            label,
+            command,
+            requires_confirmation,
+        }
+    }
+
+    pub fn label(&self) -> &str {
+        &self.label
+    }
+
+    pub fn command(&self) -> PersonalCommand {
+        self.command.clone()
+    }
+
+    pub fn requires_confirmation(&self) -> bool {
+        self.requires_confirmation
+    }
+
+    pub fn command_if_confirmed(&self, confirmed: bool) -> Option<PersonalCommand> {
+        if self.requires_confirmation && !confirmed {
+            None
+        } else {
+            Some(self.command())
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct EffectsAdvancedControl {
     label: &'static str,
     default_command: PersonalCommand,
@@ -653,7 +722,67 @@ impl HeadphoneEqLayoutPolicy {
         10.0
     }
     pub fn uses_guarded_profile_actions() -> bool {
-        false
+        true
+    }
+    pub fn profile_panel_width() -> f32 {
+        420.0
+    }
+    pub fn profile_button_width() -> f32 {
+        150.0
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct HeadphoneEqProfileAction {
+    label: String,
+    command: PersonalCommand,
+    requires_confirmation: bool,
+}
+
+impl HeadphoneEqProfileAction {
+    pub fn guarded_daily_actions(profile: &str) -> Vec<Self> {
+        vec![
+            Self::new(
+                format!("Load {profile}"),
+                PersonalCommand::LoadHeadphoneEqProfile(profile.to_string()),
+                true,
+            ),
+            Self::new(
+                format!("Save as {profile}"),
+                PersonalCommand::SaveHeadphoneEqProfile(profile.to_string()),
+                true,
+            ),
+            Self::new(
+                format!("Delete {profile}"),
+                PersonalCommand::DeleteHeadphoneEqProfile(profile.to_string()),
+                true,
+            ),
+        ]
+    }
+
+    fn new(label: String, command: PersonalCommand, requires_confirmation: bool) -> Self {
+        Self {
+            label,
+            command,
+            requires_confirmation,
+        }
+    }
+
+    pub fn label(&self) -> &str {
+        &self.label
+    }
+    pub fn command(&self) -> PersonalCommand {
+        self.command.clone()
+    }
+    pub fn requires_confirmation(&self) -> bool {
+        self.requires_confirmation
+    }
+    pub fn command_if_confirmed(&self, confirmed: bool) -> Option<PersonalCommand> {
+        if self.requires_confirmation && !confirmed {
+            None
+        } else {
+            Some(self.command())
+        }
     }
 }
 
@@ -872,6 +1001,22 @@ impl MixerLayoutPolicy {
         118.0
     }
 
+    pub fn monitor_mix_panel_width() -> f32 {
+        520.0
+    }
+
+    pub fn monitor_mix_button_width() -> f32 {
+        118.0
+    }
+
+    pub fn submix_panel_width() -> f32 {
+        640.0
+    }
+
+    pub fn submix_button_width() -> f32 {
+        96.0
+    }
+
     pub fn channel_strip_width() -> f32 {
         94.0
     }
@@ -897,6 +1042,14 @@ impl MixerLayoutPolicy {
     }
 
     pub fn uses_scribble_strip_editor() -> bool {
+        true
+    }
+
+    pub fn uses_monitor_mix_selector() -> bool {
+        true
+    }
+
+    pub fn uses_submix_controls() -> bool {
         true
     }
 }
@@ -1012,6 +1165,133 @@ impl FaderMuteFunctionControl {
 
     pub fn function_command(&self, function: MuteFunction) -> PersonalCommand {
         PersonalCommand::SetFaderMuteFunction(self.fader, function)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct MonitorMixControl {
+    output: OutputDevice,
+    label: &'static str,
+}
+
+impl MonitorMixControl {
+    pub fn daily_controls() -> Vec<Self> {
+        vec![
+            Self::new(OutputDevice::Headphones, "Headphones"),
+            Self::new(OutputDevice::BroadcastMix, "Broadcast"),
+            Self::new(OutputDevice::ChatMic, "Chat Mic"),
+            Self::new(OutputDevice::LineOut, "Line Out"),
+        ]
+    }
+
+    fn new(output: OutputDevice, label: &'static str) -> Self {
+        Self { output, label }
+    }
+
+    pub fn output(&self) -> OutputDevice {
+        self.output
+    }
+
+    pub fn label(&self) -> &'static str {
+        self.label
+    }
+
+    pub fn description(&self) -> &'static str {
+        "Choose which GoXLR output mix is monitored in headphones."
+    }
+
+    pub fn command(&self) -> PersonalCommand {
+        PersonalCommand::SetMonitorMix(self.output)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SubmixChannelControl {
+    channel: ChannelName,
+    label: &'static str,
+}
+
+impl SubmixChannelControl {
+    pub fn daily_controls() -> Vec<Self> {
+        vec![
+            Self::new(ChannelName::Mic, "Mic"),
+            Self::new(ChannelName::Chat, "Chat"),
+            Self::new(ChannelName::Music, "Music"),
+            Self::new(ChannelName::Game, "Game"),
+            Self::new(ChannelName::Console, "Console"),
+            Self::new(ChannelName::LineIn, "Line In"),
+            Self::new(ChannelName::System, "System"),
+            Self::new(ChannelName::Sample, "Sample"),
+        ]
+    }
+
+    fn new(channel: ChannelName, label: &'static str) -> Self {
+        Self { channel, label }
+    }
+
+    pub fn channel(&self) -> ChannelName {
+        self.channel
+    }
+
+    pub fn label(&self) -> &'static str {
+        self.label
+    }
+
+    pub fn description(&self) -> &'static str {
+        "Set a conservative submix volume preset or link this channel to the main mix."
+    }
+
+    pub fn volume_presets(&self) -> Vec<u8> {
+        vec![0, 50, 100]
+    }
+
+    pub fn percent_to_raw_volume(volume_percent: u8) -> u8 {
+        ((255 * volume_percent as u16) / 100) as u8
+    }
+
+    pub fn volume_command(&self, volume_percent: u8) -> PersonalCommand {
+        PersonalCommand::SetSubMixVolume(self.channel, Self::percent_to_raw_volume(volume_percent))
+    }
+
+    pub fn link_command(&self, linked: bool) -> PersonalCommand {
+        PersonalCommand::SetSubMixLinked(self.channel, linked)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SubmixOutputMixControl {
+    output: OutputDevice,
+    label: &'static str,
+}
+
+impl SubmixOutputMixControl {
+    pub fn daily_controls() -> Vec<Self> {
+        vec![
+            Self::new(OutputDevice::Headphones, "Headphones"),
+            Self::new(OutputDevice::BroadcastMix, "Broadcast"),
+            Self::new(OutputDevice::ChatMic, "Chat Mic"),
+            Self::new(OutputDevice::LineOut, "Line Out"),
+        ]
+    }
+
+    fn new(output: OutputDevice, label: &'static str) -> Self {
+        Self { output, label }
+    }
+
+    pub fn output(&self) -> OutputDevice {
+        self.output
+    }
+
+    pub fn label(&self) -> &'static str {
+        self.label
+    }
+
+    pub fn mixes(&self) -> Vec<Mix> {
+        vec![Mix::A, Mix::B]
+    }
+
+    pub fn mix_command(&self, mix: Mix) -> PersonalCommand {
+        PersonalCommand::SetSubMixOutputMix(self.output, mix)
     }
 }
 
@@ -1188,6 +1468,9 @@ pub enum PersonalCommand {
     SaveMicProfileAs(String),
     DeleteMicProfile(String),
     SetActiveEffectPreset(EffectBankPresets),
+    LoadEffectPreset(String),
+    RenameActiveEffectPreset(String),
+    SaveActiveEffectPreset,
     SetFXEnabled(bool),
     SetReverbStyle(ReverbStyle),
     SetReverbAmount(u8),
@@ -1255,6 +1538,11 @@ pub enum PersonalCommand {
     SetMuteHoldDuration(u16),
     SetVCMuteAlsoMuteCM(bool),
     SetMonitorWithFx(bool),
+    SetMonitorMix(OutputDevice),
+    SetSubMixEnabled(bool),
+    SetSubMixVolume(ChannelName, u8),
+    SetSubMixLinked(ChannelName, bool),
+    SetSubMixOutputMix(OutputDevice, Mix),
     SetLockFaders(bool),
     SetVodMode(VodMode),
     SetActiveSamplerBank(SampleBank),
@@ -1373,6 +1661,11 @@ impl From<PersonalCommand> for GoXLRCommand {
             PersonalCommand::SetActiveEffectPreset(preset) => {
                 GoXLRCommand::SetActiveEffectPreset(preset)
             }
+            PersonalCommand::LoadEffectPreset(preset) => GoXLRCommand::LoadEffectPreset(preset),
+            PersonalCommand::RenameActiveEffectPreset(preset) => {
+                GoXLRCommand::RenameActivePreset(preset)
+            }
+            PersonalCommand::SaveActiveEffectPreset => GoXLRCommand::SaveActivePreset(),
             PersonalCommand::SetFXEnabled(enabled) => GoXLRCommand::SetFXEnabled(enabled),
             PersonalCommand::SetReverbStyle(style) => GoXLRCommand::SetReverbStyle(style),
             PersonalCommand::SetReverbAmount(amount) => GoXLRCommand::SetReverbAmount(amount),
@@ -1484,6 +1777,17 @@ impl From<PersonalCommand> for GoXLRCommand {
                 GoXLRCommand::SetVCMuteAlsoMuteCM(enabled)
             }
             PersonalCommand::SetMonitorWithFx(enabled) => GoXLRCommand::SetMonitorWithFx(enabled),
+            PersonalCommand::SetMonitorMix(output) => GoXLRCommand::SetMonitorMix(output),
+            PersonalCommand::SetSubMixEnabled(enabled) => GoXLRCommand::SetSubMixEnabled(enabled),
+            PersonalCommand::SetSubMixVolume(channel, volume) => {
+                GoXLRCommand::SetSubMixVolume(channel, volume)
+            }
+            PersonalCommand::SetSubMixLinked(channel, linked) => {
+                GoXLRCommand::SetSubMixLinked(channel, linked)
+            }
+            PersonalCommand::SetSubMixOutputMix(output, mix) => {
+                GoXLRCommand::SetSubMixOutputMix(output, mix)
+            }
             PersonalCommand::SetLockFaders(enabled) => GoXLRCommand::SetLockFaders(enabled),
             PersonalCommand::SetVodMode(mode) => GoXLRCommand::SetVodMode(mode),
             PersonalCommand::SetActiveSamplerBank(bank) => GoXLRCommand::SetActiveSamplerBank(bank),
@@ -4210,6 +4514,8 @@ pub struct PersonalUiApp {
     started_at: Instant,
     last_repaint: Instant,
     pending_mic_profile_confirmation: Option<PersonalCommand>,
+    pending_effect_preset_confirmation: Option<PersonalCommand>,
+    pending_headphone_eq_profile_confirmation: Option<PersonalCommand>,
 }
 
 impl PersonalUiApp {
@@ -4243,6 +4549,8 @@ impl PersonalUiApp {
             started_at: now,
             last_repaint: now,
             pending_mic_profile_confirmation: None,
+            pending_effect_preset_confirmation: None,
+            pending_headphone_eq_profile_confirmation: None,
         }
     }
 
@@ -4926,6 +5234,138 @@ impl PersonalUiApp {
         });
     }
 
+    fn render_monitor_mix_panel(&mut self, ui: &mut egui::Ui) {
+        Self::bounded_panel(ui, MixerLayoutPolicy::monitor_mix_panel_width(), |ui| {
+            ui.set_width(MixerLayoutPolicy::monitor_mix_panel_width());
+            ui.label(
+                egui::RichText::new("MONITOR MIX")
+                    .strong()
+                    .color(Self::accent()),
+            );
+            ui.label(
+                "Choose which output mix is monitored in headphones. This is the hardware monitor selector, not the monitor-with-FX toggle.",
+            );
+            ui.add_space(6.0);
+
+            ui.horizontal_wrapped(|ui| {
+                for control in MonitorMixControl::daily_controls() {
+                    if ui
+                        .add_sized(
+                            egui::vec2(MixerLayoutPolicy::monitor_mix_button_width(), 24.0),
+                            Self::accent_button(control.label()),
+                        )
+                        .on_hover_text(control.description())
+                        .clicked()
+                    {
+                        self.send(UiCommand::Send(control.command()));
+                    }
+                }
+            });
+        });
+    }
+
+    fn render_submix_panel(&mut self, ui: &mut egui::Ui) {
+        Self::bounded_panel(ui, MixerLayoutPolicy::submix_panel_width(), |ui| {
+            ui.set_width(MixerLayoutPolicy::submix_panel_width());
+            ui.label(egui::RichText::new("SUBMIX").strong().color(Self::accent()));
+            ui.label(
+                "First-pass submix controls: enable/disable submix, set safe channel volume presets, link channels, and choose whether each output follows mix A or B.",
+            );
+            ui.add_space(6.0);
+            ui.horizontal_wrapped(|ui| {
+                if ui
+                    .add_sized(
+                        egui::vec2(MixerLayoutPolicy::submix_button_width(), 24.0),
+                        Self::accent_button("Enable"),
+                    )
+                    .on_hover_text("Enable GoXLR submix routing")
+                    .clicked()
+                {
+                    self.send(UiCommand::Send(PersonalCommand::SetSubMixEnabled(true)));
+                }
+                if ui
+                    .add_sized(
+                        egui::vec2(MixerLayoutPolicy::submix_button_width(), 24.0),
+                        egui::Button::new("Disable").small(),
+                    )
+                    .on_hover_text("Disable GoXLR submix routing")
+                    .clicked()
+                {
+                    self.send(UiCommand::Send(PersonalCommand::SetSubMixEnabled(false)));
+                }
+            });
+            ui.separator();
+            ui.label(
+                egui::RichText::new("CHANNEL PRESETS")
+                    .monospace()
+                    .color(Self::muted_text()),
+            );
+            for control in SubmixChannelControl::daily_controls() {
+                ui.vertical(|ui| {
+                    ui.label(control.label());
+                    ui.horizontal_wrapped(|ui| {
+                        for volume in control.volume_presets() {
+                            if ui
+                                .add_sized(
+                                    egui::vec2(MixerLayoutPolicy::submix_button_width(), 22.0),
+                                    egui::Button::new(format!("{}%", volume)).small(),
+                                )
+                                .on_hover_text(format!(
+                                    "Set {} submix volume to {}%",
+                                    control.label(),
+                                    volume
+                                ))
+                                .clicked()
+                            {
+                                self.send(UiCommand::Send(control.volume_command(volume)));
+                            }
+                        }
+                        for (label, linked) in [("Link", true), ("Unlink", false)] {
+                            if ui
+                                .add_sized(
+                                    egui::vec2(MixerLayoutPolicy::submix_button_width(), 22.0),
+                                    egui::Button::new(label).small(),
+                                )
+                                .on_hover_text(format!(
+                                    "{} {} with the main mix",
+                                    label,
+                                    control.label()
+                                ))
+                                .clicked()
+                            {
+                                self.send(UiCommand::Send(control.link_command(linked)));
+                            }
+                        }
+                    });
+                    ui.add_space(4.0);
+                });
+            }
+            ui.separator();
+            ui.label(
+                egui::RichText::new("OUTPUT MIX")
+                    .monospace()
+                    .color(Self::muted_text()),
+            );
+            for output in SubmixOutputMixControl::daily_controls() {
+                ui.horizontal_wrapped(|ui| {
+                    ui.label(output.label());
+                    for mix in output.mixes() {
+                        if ui
+                            .add_sized(
+                                egui::vec2(MixerLayoutPolicy::submix_button_width(), 22.0),
+                                egui::Button::new(format!("Mix {}", mix)).small(),
+                            )
+                            .on_hover_text(format!("Route {} to submix {}", output.label(), mix))
+                            .clicked()
+                        {
+                            self.send(UiCommand::Send(output.mix_command(mix)));
+                        }
+                    }
+                });
+            }
+        });
+    }
+
     fn render_scribble_strip_panel(&mut self, ui: &mut egui::Ui) {
         Self::bounded_panel(ui, MixerLayoutPolicy::scribble_panel_width(), |ui| {
             ui.set_width(MixerLayoutPolicy::scribble_panel_width());
@@ -5438,6 +5878,67 @@ impl PersonalUiApp {
         );
     }
 
+    fn render_effect_preset_management_panel(&mut self, ui: &mut egui::Ui) {
+        Self::bounded_panel(
+            ui,
+            EffectsLayoutPolicy::preset_management_panel_width(),
+            |ui| {
+                ui.set_width(EffectsLayoutPolicy::preset_management_panel_width());
+                ui.label(
+                    egui::RichText::new("EFFECT PRESETS")
+                        .monospace()
+                        .size(18.0)
+                        .color(egui::Color32::WHITE)
+                        .strong(),
+                );
+                ui.label(
+                    "Guarded load, rename, and save actions for the active effects bank preset.",
+                );
+                ui.add_space(8.0);
+                ui.horizontal_wrapped(|ui| {
+                    for action in EffectPresetAction::guarded_daily_actions("Personal") {
+                        let confirmed = self
+                            .pending_effect_preset_confirmation
+                            .as_ref()
+                            .is_some_and(|pending| pending == &action.command());
+                        let label = if confirmed {
+                            format!("Confirm {}", action.label())
+                        } else {
+                            action.label().to_string()
+                        };
+                        if ui
+                            .add_sized(
+                                egui::vec2(
+                                    EffectsLayoutPolicy::preset_management_button_width(),
+                                    26.0,
+                                ),
+                                egui::Button::new(label).small(),
+                            )
+                            .clicked()
+                        {
+                            if let Some(command) = action.command_if_confirmed(confirmed) {
+                                self.pending_effect_preset_confirmation = None;
+                                self.send(UiCommand::Send(command));
+                            } else {
+                                self.pending_effect_preset_confirmation = Some(action.command());
+                            }
+                        }
+                    }
+                });
+                if self.pending_effect_preset_confirmation.is_some() {
+                    ui.add_space(6.0);
+                    ui.label(
+                        egui::RichText::new(
+                            "Click the same effect preset action again to confirm.",
+                        )
+                        .small()
+                        .color(Self::muted_text()),
+                    );
+                }
+            },
+        );
+    }
+
     fn render_effects_page(&mut self, ui: &mut egui::Ui) {
         ui.add_space(8.0);
         Self::section_header(
@@ -5503,6 +6004,9 @@ impl PersonalUiApp {
                 }
             },
         );
+
+        ui.add_space(12.0);
+        self.render_effect_preset_management_panel(ui);
 
         ui.add_space(12.0);
         ui.horizontal_wrapped(|ui| {
@@ -6016,6 +6520,66 @@ impl PersonalUiApp {
         );
     }
 
+    fn render_headphone_eq_profile_panel(&mut self, ui: &mut egui::Ui) {
+        Self::bounded_panel(ui, HeadphoneEqLayoutPolicy::profile_panel_width(), |ui| {
+            ui.label(
+                egui::RichText::new("EQ PROFILES")
+                    .monospace()
+                    .size(18.0)
+                    .color(egui::Color32::WHITE)
+                    .strong(),
+            );
+            ui.label(
+                egui::RichText::new(
+                    "Guarded named-slot profile actions. Click the same action twice to send it.",
+                )
+                .color(Self::muted_text()),
+            );
+            ui.separator();
+            ui.horizontal_wrapped(|ui| {
+                for action in HeadphoneEqProfileAction::guarded_daily_actions("Personal Phones") {
+                    let confirmed = self
+                        .pending_headphone_eq_profile_confirmation
+                        .as_ref()
+                        .is_some_and(|pending| pending == &action.command());
+                    let label = if confirmed {
+                        format!("CONFIRM {}", action.label())
+                    } else {
+                        action.label().to_string()
+                    };
+                    let button = if confirmed {
+                        Self::accent_button(label)
+                    } else {
+                        egui::Button::new(label).small()
+                    };
+                    if ui
+                        .add_sized(
+                            egui::vec2(HeadphoneEqLayoutPolicy::profile_button_width(), 24.0),
+                            button,
+                        )
+                        .clicked()
+                    {
+                        if let Some(command) = action.command_if_confirmed(confirmed) {
+                            self.pending_headphone_eq_profile_confirmation = None;
+                            self.send(UiCommand::Send(command));
+                        } else {
+                            self.pending_headphone_eq_profile_confirmation = Some(action.command());
+                        }
+                    }
+                }
+            });
+            if self.pending_headphone_eq_profile_confirmation.is_some() {
+                ui.add_space(6.0);
+                ui.label(
+                    egui::RichText::new(
+                        "Pending confirmation: click the same EQ profile action again.",
+                    )
+                    .color(egui::Color32::YELLOW),
+                );
+            }
+        });
+    }
+
     fn render_headphone_eq_page(&mut self, ui: &mut egui::Ui) {
         ui.add_space(8.0);
         Self::section_header(
@@ -6089,6 +6653,7 @@ impl PersonalUiApp {
                         });
                     }
                 });
+                self.render_headphone_eq_profile_panel(ui);
             },
         );
     }
@@ -6268,6 +6833,8 @@ impl PersonalUiApp {
                     });
                 });
                 self.render_fader_assignment_panel(ui);
+                self.render_monitor_mix_panel(ui);
+                self.render_submix_panel(ui);
                 self.render_scribble_strip_panel(ui);
                 ui.vertical(|ui| {
                     self.render_status_card(ui);

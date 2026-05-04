@@ -5,26 +5,28 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use goxlr_personal_ui::{
     ActiveAudioStreams, AppConfig, AppSceneConfig, AppSnapshot, AppViewMode, AudioRouteTarget,
     AudioRoutingRule, ContentLayoutPolicy, ControlledChannel, DashboardCopy, DeviceSelection,
-    EffectsAdvancedControl, EffectsAmountControl, EffectsLayoutPolicy, EffectsQuickPreset,
-    EffectsStyleGroup, ExternalAudioTool, FaderAssignmentControl, FaderMuteFunctionControl,
-    HardwareScribbleControl, HeadphoneEqBandControl, HeadphoneEqLayoutPolicy,
-    LightingAnimationControl, LightingButtonColourTarget, LightingFaderColourTarget,
-    LightingLayoutPolicy, LightingQuickTheme, LightingSimpleColourTarget,
-    LightingTripleColourTarget, MicEqBandControl, MicLayoutPolicy, MicProfileAction,
-    MiniWindowMode, MixerLayoutPolicy, OptionalBoolAction, PersonalCommand, QuickActions,
-    RoutingMatrixLayoutPolicy, RoutingMatrixModel, RoutingMatrixRoute, RoutingPreset,
-    RoutingRuleEditor, RoutingStateBadge, SampleTrimAction, SamplerAction, SamplerLayoutPolicy,
-    SamplerWorkflowSetting, SceneEditor, SystemLayoutPolicy, SystemSettingsAction, TrayAction,
-    TrayMenuModel, UiCommand, UiScene, VolumeDebouncer, WindowAction, ipc_socket_path_candidates,
+    EffectPresetAction, EffectsAdvancedControl, EffectsAmountControl, EffectsLayoutPolicy,
+    EffectsQuickPreset, EffectsStyleGroup, ExternalAudioTool, FaderAssignmentControl,
+    FaderMuteFunctionControl, HardwareScribbleControl, HeadphoneEqBandControl,
+    HeadphoneEqLayoutPolicy, HeadphoneEqProfileAction, LightingAnimationControl,
+    LightingButtonColourTarget, LightingFaderColourTarget, LightingLayoutPolicy,
+    LightingQuickTheme, LightingSimpleColourTarget, LightingTripleColourTarget, MicEqBandControl,
+    MicLayoutPolicy, MicProfileAction, MiniWindowMode, MixerLayoutPolicy, MonitorMixControl,
+    OptionalBoolAction, PersonalCommand, QuickActions, RoutingMatrixLayoutPolicy,
+    RoutingMatrixModel, RoutingMatrixRoute, RoutingPreset, RoutingRuleEditor, RoutingStateBadge,
+    SampleTrimAction, SamplerAction, SamplerLayoutPolicy, SamplerWorkflowSetting, SceneEditor,
+    SubmixChannelControl, SubmixOutputMixControl, SystemLayoutPolicy, SystemSettingsAction,
+    TrayAction, TrayMenuModel, UiCommand, UiScene, VolumeDebouncer, WindowAction,
+    ipc_socket_path_candidates,
 };
 use goxlr_types::{
     AnimationMode, Button, ButtonColourGroups, ButtonColourOffStyle, ChannelName,
     CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EchoStyle, EffectBankPresets,
     EncoderColourTargets, EqFrequencies, FaderDisplayStyle, FaderName, GateTimes, GenderStyle,
     HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies,
-    MuteFunction, OutputDevice, PitchStyle, ReverbStyle, RobotStyle, SampleBank, SampleButtons,
-    SamplePlayOrder, SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets, VodMode,
-    WaterfallDirection,
+    Mix, MuteFunction, OutputDevice, PitchStyle, ReverbStyle, RobotStyle, SampleBank,
+    SampleButtons, SamplePlayOrder, SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets,
+    VodMode, WaterfallDirection,
 };
 
 fn temp_scene_config_path(name: &str) -> PathBuf {
@@ -349,6 +351,138 @@ fn fader_assignment_commands_map_to_backend_commands() {
             MuteFunction::ToStream,
         )),
         goxlr_ipc::GoXLRCommand::SetFaderMuteFunction(FaderName::B, MuteFunction::ToStream)
+    ));
+}
+
+#[test]
+fn monitor_mix_controls_expose_safe_output_selector() {
+    assert!(MixerLayoutPolicy::uses_monitor_mix_selector());
+    assert_eq!(MixerLayoutPolicy::monitor_mix_panel_width(), 520.0);
+    assert_eq!(MixerLayoutPolicy::monitor_mix_button_width(), 118.0);
+
+    let controls = MonitorMixControl::daily_controls();
+    assert_eq!(controls.len(), 4);
+    assert_eq!(
+        controls
+            .iter()
+            .map(|control| control.output())
+            .collect::<Vec<_>>(),
+        vec![
+            OutputDevice::Headphones,
+            OutputDevice::BroadcastMix,
+            OutputDevice::ChatMic,
+            OutputDevice::LineOut,
+        ]
+    );
+    assert_eq!(controls[0].label(), "Headphones");
+    assert_eq!(
+        controls[0].command(),
+        PersonalCommand::SetMonitorMix(OutputDevice::Headphones)
+    );
+    assert!(
+        controls
+            .iter()
+            .all(|control| !control.label().is_empty() && !control.description().is_empty())
+    );
+}
+
+#[test]
+fn monitor_mix_command_maps_to_backend_command() {
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetMonitorMix(OutputDevice::LineOut)),
+        goxlr_ipc::GoXLRCommand::SetMonitorMix(OutputDevice::LineOut)
+    ));
+}
+
+#[test]
+fn submix_controls_expose_safe_daily_channel_actions() {
+    assert!(MixerLayoutPolicy::uses_submix_controls());
+    assert_eq!(MixerLayoutPolicy::submix_panel_width(), 640.0);
+    assert_eq!(MixerLayoutPolicy::submix_button_width(), 96.0);
+
+    let controls = SubmixChannelControl::daily_controls();
+    assert_eq!(controls.len(), 8);
+    assert_eq!(
+        controls
+            .iter()
+            .map(|control| control.channel())
+            .collect::<Vec<_>>(),
+        vec![
+            ChannelName::Mic,
+            ChannelName::Chat,
+            ChannelName::Music,
+            ChannelName::Game,
+            ChannelName::Console,
+            ChannelName::LineIn,
+            ChannelName::System,
+            ChannelName::Sample,
+        ]
+    );
+    assert_eq!(controls[0].label(), "Mic");
+    assert_eq!(controls[0].volume_presets(), vec![0, 50, 100]);
+    assert_eq!(SubmixChannelControl::percent_to_raw_volume(0), 0);
+    assert_eq!(SubmixChannelControl::percent_to_raw_volume(50), 127);
+    assert_eq!(SubmixChannelControl::percent_to_raw_volume(75), 191);
+    assert_eq!(SubmixChannelControl::percent_to_raw_volume(100), 255);
+    assert_eq!(
+        controls[0].volume_command(75),
+        PersonalCommand::SetSubMixVolume(ChannelName::Mic, 191)
+    );
+    assert_eq!(
+        controls[0].link_command(true),
+        PersonalCommand::SetSubMixLinked(ChannelName::Mic, true)
+    );
+    assert!(
+        controls
+            .iter()
+            .all(|control| !control.label().is_empty() && !control.description().is_empty())
+    );
+}
+
+#[test]
+fn submix_output_controls_expose_safe_mix_routing() {
+    let outputs = SubmixOutputMixControl::daily_controls();
+    assert_eq!(outputs.len(), 4);
+    assert_eq!(
+        outputs
+            .iter()
+            .map(|control| control.output())
+            .collect::<Vec<_>>(),
+        vec![
+            OutputDevice::Headphones,
+            OutputDevice::BroadcastMix,
+            OutputDevice::ChatMic,
+            OutputDevice::LineOut,
+        ]
+    );
+    assert_eq!(outputs[0].label(), "Headphones");
+    assert_eq!(outputs[0].mixes(), vec![Mix::A, Mix::B]);
+    assert_eq!(
+        outputs[1].mix_command(Mix::B),
+        PersonalCommand::SetSubMixOutputMix(OutputDevice::BroadcastMix, Mix::B)
+    );
+}
+
+#[test]
+fn submix_commands_map_to_backend_commands() {
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetSubMixEnabled(true)),
+        goxlr_ipc::GoXLRCommand::SetSubMixEnabled(true)
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetSubMixVolume(ChannelName::Music, 64)),
+        goxlr_ipc::GoXLRCommand::SetSubMixVolume(ChannelName::Music, 64)
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetSubMixLinked(ChannelName::Game, false)),
+        goxlr_ipc::GoXLRCommand::SetSubMixLinked(ChannelName::Game, false)
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetSubMixOutputMix(
+            OutputDevice::LineOut,
+            Mix::B
+        )),
+        goxlr_ipc::GoXLRCommand::SetSubMixOutputMix(OutputDevice::LineOut, Mix::B)
     ));
 }
 
@@ -1166,7 +1300,74 @@ fn headphone_eq_editor_exposes_preamp_and_ten_bands() {
         bands[2].q_command(0.9),
         PersonalCommand::SetHeadphoneEqBandQ(2, 0.9)
     );
-    assert!(!HeadphoneEqLayoutPolicy::uses_guarded_profile_actions());
+    assert!(HeadphoneEqLayoutPolicy::uses_guarded_profile_actions());
+}
+
+#[test]
+fn headphone_eq_profile_actions_are_guarded_daily_workflows() {
+    assert!(HeadphoneEqLayoutPolicy::uses_guarded_profile_actions());
+    assert_eq!(HeadphoneEqLayoutPolicy::profile_panel_width(), 420.0);
+    assert_eq!(HeadphoneEqLayoutPolicy::profile_button_width(), 150.0);
+
+    let actions = HeadphoneEqProfileAction::guarded_daily_actions("Personal Phones");
+    assert_eq!(actions.len(), 3);
+    assert!(actions.iter().all(|action| action.requires_confirmation()));
+    assert!(actions.iter().all(|action| !action.label().is_empty()));
+
+    let load = actions
+        .iter()
+        .find(|action| action.label() == "Load Personal Phones")
+        .unwrap();
+    assert_eq!(
+        load.command(),
+        PersonalCommand::LoadHeadphoneEqProfile("Personal Phones".to_string())
+    );
+    assert_eq!(load.command_if_confirmed(false), None);
+    assert_eq!(load.command_if_confirmed(true), Some(load.command()));
+
+    let save = actions
+        .iter()
+        .find(|action| action.label() == "Save as Personal Phones")
+        .unwrap();
+    assert_eq!(
+        save.command(),
+        PersonalCommand::SaveHeadphoneEqProfile("Personal Phones".to_string())
+    );
+    assert_eq!(save.command_if_confirmed(false), None);
+    assert_eq!(save.command_if_confirmed(true), Some(save.command()));
+
+    let delete = actions
+        .iter()
+        .find(|action| action.label() == "Delete Personal Phones")
+        .unwrap();
+    assert_eq!(
+        delete.command(),
+        PersonalCommand::DeleteHeadphoneEqProfile("Personal Phones".to_string())
+    );
+    assert_eq!(delete.command_if_confirmed(false), None);
+    assert_eq!(delete.command_if_confirmed(true), Some(delete.command()));
+}
+
+#[test]
+fn headphone_eq_profile_actions_map_to_backend_commands() {
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::LoadHeadphoneEqProfile(
+            "Personal Phones".to_string(),
+        )),
+        goxlr_ipc::GoXLRCommand::LoadHeadphoneEqProfile(profile) if profile == "Personal Phones"
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SaveHeadphoneEqProfile(
+            "Personal Phones".to_string(),
+        )),
+        goxlr_ipc::GoXLRCommand::SaveHeadphoneEqProfile(profile) if profile == "Personal Phones"
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::DeleteHeadphoneEqProfile(
+            "Personal Phones".to_string(),
+        )),
+        goxlr_ipc::GoXLRCommand::DeleteHeadphoneEqProfile(profile) if profile == "Personal Phones"
+    ));
 }
 
 #[test]
@@ -1703,6 +1904,53 @@ fn effects_quick_presets_cover_daily_voice_fx_controls() {
             PersonalCommand::SetMegaphoneAmount(0),
         ]
     );
+}
+
+#[test]
+fn effects_preset_actions_are_guarded_daily_workflows() {
+    assert!(EffectsLayoutPolicy::uses_guarded_preset_management());
+    assert_eq!(EffectsLayoutPolicy::preset_management_panel_width(), 520.0);
+    assert_eq!(EffectsLayoutPolicy::preset_management_button_width(), 150.0);
+
+    let actions = EffectPresetAction::guarded_daily_actions("Personal");
+    assert_eq!(actions.len(), 3);
+    assert_eq!(actions[0].label(), "Load Personal");
+    assert_eq!(
+        actions[0].command(),
+        PersonalCommand::LoadEffectPreset("Personal".to_string())
+    );
+    assert_eq!(
+        actions[1].command(),
+        PersonalCommand::RenameActiveEffectPreset("Personal".to_string())
+    );
+    assert_eq!(
+        actions[2].command(),
+        PersonalCommand::SaveActiveEffectPreset
+    );
+    assert!(actions.iter().all(|action| action.requires_confirmation()));
+    assert_eq!(actions[0].command_if_confirmed(false), None);
+    assert_eq!(
+        actions[0].command_if_confirmed(true),
+        Some(PersonalCommand::LoadEffectPreset("Personal".to_string()))
+    );
+}
+
+#[test]
+fn effect_preset_actions_map_to_backend_commands() {
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::LoadEffectPreset("Personal".to_string())),
+        goxlr_ipc::GoXLRCommand::LoadEffectPreset(profile) if profile == "Personal"
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::RenameActiveEffectPreset(
+            "Personal".to_string()
+        )),
+        goxlr_ipc::GoXLRCommand::RenameActivePreset(profile) if profile == "Personal"
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SaveActiveEffectPreset),
+        goxlr_ipc::GoXLRCommand::SaveActivePreset()
+    ));
 }
 
 #[test]
