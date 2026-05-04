@@ -306,6 +306,66 @@ This section tracks local source changes made on this machine so context survive
   * The top navigation now opens a `Lighting` page for quick GoXLR colour theme changes without launching the browser/web UI
   * Added daily quick themes for `Dim White`, `Broadcast Red`, `Cool Blue`, and `Lights Off`
   * Added native command mappings for animation mode, global colour, all-fader colours/display style, button-group colours, and simple accent colour
+* Expanded the personal native `Effects` page with first-pass detailed controls:
+  * Added amount sliders for reverb, echo, pitch, gender, and megaphone
+  * Added style button groups for reverb, echo, pitch, gender, megaphone, robot, and hard tune
+  * Added model-level tests for the new `EffectsAmountControl` and `EffectsStyleGroup` command coverage
+* Made the main personal native UI content scrollable below the fixed header/navigation:
+  * Dedicated pages such as Effects, Mic, Lighting, and Config/Routing can now scroll vertically and horizontally when their controls do not fit the window
+  * Added model-level coverage for the both-axis scrollable main-content layout policy (`ContentLayoutPolicy`)
+
+* Expanded the personal native `Lighting` page into a first-pass colour editor:
+  * Added animation mode/modifier/waterfall controls and per-target colour buttons for simple colours, faders, button groups/buttons, encoders, and sampler select buttons
+  * Added native command mappings for per-fader colours/display style, button colours/off styles, encoder colours, sampler colours/off styles, animation modifiers, and waterfall direction
+  * Added model-level tests for `LightingSimpleColourTarget`, `LightingFaderColourTarget`, `LightingButtonColourTarget`, `LightingTripleColourTarget`, and `LightingAnimationControl`
+
+### 2026-05-02
+
+* Polished the personal native `Lighting` page layout after screenshot review:
+  * Quick themes now render as tighter, adaptive-width cards across the available window instead of a cramped two-column label grid
+  * Detailed Lighting editor panels now use smaller model-backed layout widths and wrapped panel rows, reducing wasted empty space and horizontal scrolling at normal window sizes
+  * Follow-up pass tightened card gaps/panel widths so an 800px-wide window fits the four quick themes without clipping the `Lights Off` card
+  * Screenshot-driven wrap fix now forces Lighting cards/editor panels back to vertical content flow, uses a compact grid for animation mode/modifier/waterfall controls, and gives quick-theme cards a shared minimum height so controls no longer collapse into skinny one-character columns
+  * Added `LightingLayoutPolicy` model coverage for the card/panel sizing and animation grid used by the dense Lighting editor
+* Polished the personal native `Effects` page layout after screenshot review:
+  * Quick presets now render as compact wrapped cards that keep the button, description, and command count together instead of a left-heavy two-column grid
+  * Tightened card sizing after manual screenshot QA so the command count stays horizontal, card height is lower, all four presets fit cleanly at the normal ~800px window width, and the preset row stays top-aligned with shared card heights
+  * Effects detail panels now use model-backed compact widths and wrapped panel flow so amount/style controls use normal window widths more gracefully
+  * Header controls now wrap instead of clipping the external audio tool buttons at narrower window widths
+  * Added `EffectsLayoutPolicy` model coverage for quick-preset card sizing and compact detail panel widths
+* Added the first native web-UI-style routing matrix to the personal native `Config / Routing` page:
+  * Added a matrix of GoXLR input devices (`Mic`, `Chat`, `Music`, `Game`, `Console`, `Line In`, `System`, `Samples`) to output devices (`Headphones`, `Broadcast`, `Chat Mic`, `Sampler`, `Line Out`)
+  * Each matrix cell shows daemon-confirmed route state (`Active`, `Off`, or `Unknown`) as a compact centered badge and keeps explicit `On` / `Off` controls backed by typed `PersonalCommand::SetRouter(input, output, enabled)` mapping to `GoXLRCommand::SetRouter`
+  * Fixed screenshot-found badge layout regression by constraining routing matrix cells and badges to compact heights, avoiding `centered_and_justified` expansion that stretched active badges into full-height green columns
+  * Tightened the verified routing matrix one more pass for commit-readiness: smaller cell slots, smaller state badges, shorter fixed-size `On` / `Off` buttons, and reduced grid gaps so the matrix is less tall and repetitive while keeping deliberate explicit route commands
+  * Added model-level `RoutingMatrixModel`, `RoutingMatrixRoute`, `RoutingMatrixLayoutPolicy`, and `RoutingStateBadge` tests for the matrix inputs, outputs, labels, live state lookup, compact non-stretching state-badge styling, cell command generation, dense layout sizing, and backend command mapping
+* Continued native web-UI parity from the latest composite screenshot review:
+  * Effects `STYLES` now renders style groups as bounded wrapped cards with fixed-size style buttons, preventing labels such as `Natural`, `Medium`, and `Hard` from collapsing into vertical one-letter stacks
+  * The Mic page processing panels now use wrapped, model-backed panel widths/gaps so the compressor/safety section can wrap below instead of clipping off the right edge at normal window widths
+  * Added named routing preset cards above the routing matrix (`Broadcast Mix`, `Chat Mic`, `Line Out Safe`) backed by explicit `SetRouter(input, output, enabled)` command bundles
+  * The Mixer dashboard now uses wrapped layout policies for the scene/device panels and channel-strip row, reducing the mostly-empty fixed horizontal layout and making the page degrade better at narrower sizes
+  * Added model-level coverage for `EffectsLayoutPolicy` style-card sizing, `MicLayoutPolicy`, `MixerLayoutPolicy`, and `RoutingPreset` command bundles
+* Added a broad screenshot-driven native UI layout containment pass:
+  * Introduced reusable bounded panel helpers with fixed widths and natural heights, preventing panels from stretching across huge wide-window regions, collapsing child controls into vertical-letter buttons, or stepping diagonally because of sentinel-height allocation
+  * Applied fixed/minimum action-button widths to known screenshot offenders including `Save mic profile`, `Reload settings`, `Enable ClipGuard`, `Enable limiter`, `Enable EQ`, compressor ratio buttons, hard-tune controls, and long Lighting off-style controls
+  * Kept Mic, Effects, Lighting, Mixer, and Config/Routing content in left-aligned wrapped dashboard rows with bounded cards/panels instead of full-width horizontal strips, while preserving horizontal scrolling for intentional wide tables such as the routing matrix
+  * Extended `ContentLayoutPolicy` model coverage for reusable no-vertical-text button widths, bounded panel behavior, top-aligned wrapped rows, and scrollable main content
+* Added a follow-up design polish pass after manual screenshot QA still looked messy:
+  * Replaced one-off page headings with consistent section headers on Mic, Effects, Lighting, Mixer, and Config/Routing so each page has a clear title, short context line, and constrained description width
+  * Fixed the diagonal/stair-step card look by removing the old fixed-height preallocation inside bounded panel helpers and using top-aligned wrapped rows for card groups
+  * Widened the Effects `STYLES` section so style cards form a cleaner compact grid instead of a long sparse vertical column
+  * Wrapped Config/Routing scene controls plus volumes/safety controls into bounded panels, keeping the routing matrix readable while making the page less like loose controls on a blank canvas
+  * Fixed the egui frame sizing regression found in follow-up screenshots by preallocating bounded frame slots with zero minimum height, so Mic/Effects/Config cards shrink to natural content height instead of stretching to the scroll viewport bottom
+  * Completed the three requested screenshot-polish follow-ups: centered the bounded page body in very wide windows with a wider 1320px content policy, made Lighting's detailed editor denser by flowing the encoder/sampler card with the fader/button cards, and tightened the routing matrix cells/badges/buttons/gaps so the explicit On/Off controls are less visually repetitive
+* Continued native web-UI feature parity with a first-pass System tab:
+  * Added a dedicated `System` view mode and top navigation tab for safe daily device settings
+  * Added model-backed System action cards for mute hold duration, VC mute also mutes Chat Mic, monitor-with-FX, lock faders, VOD mode, and reload settings
+  * Added typed `PersonalCommand` mappings for `SetMuteHoldDuration`, `SetVCMuteAlsoMuteCM`, `SetMonitorWithFx`, `SetLockFaders`, and `SetVodMode`; intentionally kept destructive profile create/delete operations out of this first-pass daily settings page
+* Ported the next ordered native web-UI parity batch across Mic, Effects, Headphone EQ, and Sampler:
+  * Added first-pass Mic EQ controls with model-backed mini/full EQ band helpers and typed gain/frequency command mappings, plus guarded Mic profile load/save/save-as/delete actions that require a same-action second click before destructive/profile-switching commands are sent
+  * Added first-pass advanced Effects DSP actions for reverb decay, echo feedback, pitch character, megaphone post gain, robot threshold, and hard-tune source/default command paths
+  * Added dedicated `Headphone EQ` and `Sampler` view modes/tabs; Headphone EQ exposes enable/disable, preamp, and ten-band gain/frequency/Q command controls, while Sampler exposes bank cards, per-pad play/stop mode, random order, play-next, and stop playback controls
+  * Added model-level tests for the ordered parity batch and expanded `PersonalCommand -> GoXLRCommand` mapping coverage; focused `app_model` verification now covers 79 tests
 
 ### Logging Rule
 

@@ -4,16 +4,25 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use goxlr_personal_ui::{
     ActiveAudioStreams, AppConfig, AppSceneConfig, AppSnapshot, AppViewMode, AudioRouteTarget,
-    AudioRoutingRule, ControlledChannel, DashboardCopy, DeviceSelection, EffectsQuickPreset,
-    ExternalAudioTool, LightingQuickTheme, MiniWindowMode, OptionalBoolAction, PersonalCommand,
-    QuickActions, RoutingRuleEditor, SceneEditor, TrayAction, TrayMenuModel, UiCommand, UiScene,
+    AudioRoutingRule, ContentLayoutPolicy, ControlledChannel, DashboardCopy, DeviceSelection,
+    EffectsAdvancedControl, EffectsAmountControl, EffectsLayoutPolicy, EffectsQuickPreset,
+    EffectsStyleGroup, ExternalAudioTool, HeadphoneEqBandControl, HeadphoneEqLayoutPolicy,
+    LightingAnimationControl, LightingButtonColourTarget, LightingFaderColourTarget,
+    LightingLayoutPolicy, LightingQuickTheme, LightingSimpleColourTarget,
+    LightingTripleColourTarget, MicEqBandControl, MicLayoutPolicy, MicProfileAction,
+    MiniWindowMode, MixerLayoutPolicy, OptionalBoolAction, PersonalCommand, QuickActions,
+    RoutingMatrixLayoutPolicy, RoutingMatrixModel, RoutingMatrixRoute, RoutingPreset,
+    RoutingRuleEditor, RoutingStateBadge, SamplerAction, SamplerLayoutPolicy, SceneEditor,
+    SystemLayoutPolicy, SystemSettingsAction, TrayAction, TrayMenuModel, UiCommand, UiScene,
     VolumeDebouncer, WindowAction, ipc_socket_path_candidates,
 };
 use goxlr_types::{
-    AnimationMode, ButtonColourGroups, ChannelName, CompressorAttackTime, CompressorRatio,
-    CompressorReleaseTime, EchoStyle, EffectBankPresets, FaderDisplayStyle, GateTimes, GenderStyle,
-    HardTuneStyle, MegaphoneStyle, MicrophoneType, PitchStyle, ReverbStyle, RobotStyle,
-    SimpleColourTargets,
+    AnimationMode, Button, ButtonColourGroups, ButtonColourOffStyle, ChannelName,
+    CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EchoStyle, EffectBankPresets,
+    EncoderColourTargets, EqFrequencies, FaderDisplayStyle, FaderName, GateTimes, GenderStyle,
+    HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies,
+    OutputDevice, PitchStyle, ReverbStyle, RobotStyle, SampleBank, SampleButtons, SamplePlayOrder,
+    SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets, VodMode, WaterfallDirection,
 };
 
 fn temp_scene_config_path(name: &str) -> PathBuf {
@@ -22,6 +31,272 @@ fn temp_scene_config_path(name: &str) -> PathBuf {
         .unwrap()
         .as_nanos();
     std::env::temp_dir().join(format!("goxlr-personal-ui-{name}-{nonce}.json"))
+}
+
+#[test]
+fn content_layout_policy_keeps_main_content_scrollable_below_fixed_header() {
+    assert!(ContentLayoutPolicy::main_content_scroll_enabled());
+    assert!(ContentLayoutPolicy::main_content_vertical_scroll_enabled());
+    assert!(ContentLayoutPolicy::main_content_horizontal_scroll_enabled());
+    assert_eq!(
+        ContentLayoutPolicy::scroll_area_id(),
+        "personal_ui_main_content_scroll"
+    );
+    assert!(ContentLayoutPolicy::bounded_panel_allocates_before_frame());
+    assert!(ContentLayoutPolicy::bounded_panel_avoids_sentinel_height_allocation());
+    assert_eq!(ContentLayoutPolicy::bounded_panel_outer_min_height(), 0.0);
+    assert!(ContentLayoutPolicy::min_action_button_width() >= 112.0);
+    assert!(ContentLayoutPolicy::wide_action_button_width() >= 140.0);
+    assert!(ContentLayoutPolicy::slider_width() <= 190.0);
+    assert!(ContentLayoutPolicy::max_content_width() >= 1280.0);
+    assert!(ContentLayoutPolicy::max_content_width() <= 1320.0);
+    assert!(ContentLayoutPolicy::desktop_panel_gap() >= 12.0);
+    assert!(ContentLayoutPolicy::wrapped_rows_top_align());
+    assert!(ContentLayoutPolicy::section_header_width() < ContentLayoutPolicy::max_content_width());
+    assert!(ContentLayoutPolicy::page_body_centers_in_wide_windows());
+    assert_eq!(
+        ContentLayoutPolicy::content_width_for_available_width(3440.0),
+        ContentLayoutPolicy::max_content_width()
+    );
+    assert!(ContentLayoutPolicy::wide_window_side_margin(3440.0) > 1000.0);
+}
+
+#[test]
+fn routing_matrix_model_covers_web_ui_input_output_router() {
+    assert_eq!(
+        RoutingMatrixModel::inputs(),
+        vec![
+            InputDevice::Microphone,
+            InputDevice::Chat,
+            InputDevice::Music,
+            InputDevice::Game,
+            InputDevice::Console,
+            InputDevice::LineIn,
+            InputDevice::System,
+            InputDevice::Samples,
+        ]
+    );
+    assert_eq!(
+        RoutingMatrixModel::outputs(),
+        vec![
+            OutputDevice::Headphones,
+            OutputDevice::BroadcastMix,
+            OutputDevice::ChatMic,
+            OutputDevice::Sampler,
+            OutputDevice::LineOut,
+        ]
+    );
+    assert_eq!(
+        RoutingMatrixModel::cells().len(),
+        RoutingMatrixModel::inputs().len() * RoutingMatrixModel::outputs().len()
+    );
+
+    let cell = RoutingMatrixModel::cell(InputDevice::Music, OutputDevice::BroadcastMix);
+    assert_eq!(cell.input_label(), "Music");
+    assert_eq!(cell.output_label(), "Broadcast");
+    assert_eq!(
+        cell.command_for_enabled(true),
+        PersonalCommand::SetRouter(InputDevice::Music, OutputDevice::BroadcastMix, true)
+    );
+    assert_eq!(
+        cell.command_for_enabled(false),
+        PersonalCommand::SetRouter(InputDevice::Music, OutputDevice::BroadcastMix, false)
+    );
+}
+
+#[test]
+fn routing_matrix_snapshot_exposes_live_route_state_for_indicators() {
+    let mut snapshot = AppSnapshot::disconnected("unit test");
+    snapshot.routing_matrix_routes = vec![
+        RoutingMatrixRoute::new(InputDevice::Music, OutputDevice::BroadcastMix, true),
+        RoutingMatrixRoute::new(InputDevice::Microphone, OutputDevice::ChatMic, false),
+    ];
+
+    assert_eq!(
+        snapshot.routing_enabled_for(InputDevice::Music, OutputDevice::BroadcastMix),
+        Some(true)
+    );
+    assert_eq!(
+        snapshot.routing_enabled_for(InputDevice::Microphone, OutputDevice::ChatMic),
+        Some(false)
+    );
+    assert_eq!(
+        snapshot.routing_enabled_for(InputDevice::Game, OutputDevice::LineOut),
+        None
+    );
+    assert_eq!(
+        snapshot.routing_state_label(InputDevice::Music, OutputDevice::BroadcastMix),
+        "Active"
+    );
+    assert_eq!(
+        snapshot.routing_state_label(InputDevice::Microphone, OutputDevice::ChatMic),
+        "Off"
+    );
+    assert_eq!(
+        snapshot.routing_state_label(InputDevice::Game, OutputDevice::LineOut),
+        "Unknown"
+    );
+}
+
+#[test]
+fn routing_state_badges_are_compact_centered_state_pills() {
+    let active = RoutingStateBadge::for_state(Some(true));
+    let off = RoutingStateBadge::for_state(Some(false));
+    let unknown = RoutingStateBadge::for_state(None);
+
+    assert_eq!(active.label(), "Active");
+    assert_eq!(off.label(), "Off");
+    assert_eq!(unknown.label(), "Unknown");
+    assert!(RoutingStateBadge::min_width() >= 48.0);
+    assert!(RoutingStateBadge::min_width() <= 56.0);
+    assert_eq!(RoutingMatrixLayoutPolicy::cell_width(), 74.0);
+    assert_eq!(RoutingMatrixLayoutPolicy::cell_height(), 40.0);
+    assert_eq!(RoutingMatrixLayoutPolicy::badge_width(), 50.0);
+    assert_eq!(RoutingMatrixLayoutPolicy::badge_height(), 15.0);
+    assert_eq!(RoutingMatrixLayoutPolicy::button_width(), 28.0);
+    assert_eq!(RoutingMatrixLayoutPolicy::button_height(), 15.0);
+    assert_eq!(RoutingMatrixLayoutPolicy::grid_column_gap(), 4.0);
+    assert_eq!(RoutingMatrixLayoutPolicy::grid_row_gap(), 1.0);
+    assert_eq!(RoutingMatrixLayoutPolicy::badge_text_size(), 9.0);
+    assert!(RoutingMatrixLayoutPolicy::cell_height() < 44.0);
+    assert!(
+        RoutingMatrixLayoutPolicy::button_height() <= RoutingMatrixLayoutPolicy::badge_height()
+    );
+    assert!(
+        RoutingMatrixLayoutPolicy::badge_height() < RoutingMatrixLayoutPolicy::cell_height() / 2.0
+    );
+    assert!(
+        RoutingMatrixLayoutPolicy::cell_height() <= RoutingMatrixLayoutPolicy::cell_width() * 0.55
+    );
+    assert!(!RoutingMatrixLayoutPolicy::badge_uses_available_height());
+    assert!(RoutingMatrixLayoutPolicy::uses_compact_action_labels());
+    assert!(RoutingMatrixLayoutPolicy::matrix_width_for_model() < 460.0);
+    assert_ne!(active.fill(), off.fill());
+    assert_ne!(active.stroke(), off.stroke());
+    assert_ne!(unknown.stroke(), off.stroke());
+    assert_ne!(active.text(), off.text());
+}
+
+#[test]
+fn personal_command_maps_routing_matrix_to_backend_router_command() {
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetRouter(
+            InputDevice::Game,
+            OutputDevice::Headphones,
+            true
+        )),
+        goxlr_ipc::GoXLRCommand::SetRouter(InputDevice::Game, OutputDevice::Headphones, true)
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetRouter(
+            InputDevice::Microphone,
+            OutputDevice::ChatMic,
+            false
+        )),
+        goxlr_ipc::GoXLRCommand::SetRouter(InputDevice::Microphone, OutputDevice::ChatMic, false)
+    ));
+}
+
+#[test]
+fn lighting_layout_policy_uses_cards_and_wrapping_panels_for_dense_editor() {
+    assert_eq!(LightingLayoutPolicy::quick_theme_target_columns(), 4);
+    assert_eq!(LightingLayoutPolicy::quick_theme_card_width(), 150.0);
+    assert_eq!(LightingLayoutPolicy::quick_theme_card_height(), 116.0);
+    assert_eq!(LightingLayoutPolicy::animation_control_grid_columns(), 2);
+    assert!(LightingLayoutPolicy::compact_editor_panel_width() < 430.0);
+    assert!(LightingLayoutPolicy::wide_editor_panel_width() < 520.0);
+    assert!(LightingLayoutPolicy::wide_editor_panel_width() < 400.0);
+    assert_eq!(LightingLayoutPolicy::panel_gap(), 8.0);
+    assert!(
+        LightingLayoutPolicy::quick_theme_card_width_for_available_width(760.0)
+            <= LightingLayoutPolicy::quick_theme_card_width()
+    );
+    assert!(
+        LightingLayoutPolicy::quick_theme_card_width_for_available_width(760.0)
+            * (LightingLayoutPolicy::quick_theme_target_columns() as f32)
+            < 680.0
+    );
+    assert!(LightingLayoutPolicy::uses_dense_editor_flow());
+    assert!(LightingLayoutPolicy::theme_row_stays_compact_in_wide_windows());
+    assert_eq!(LightingLayoutPolicy::editor_intro_width(), 960.0);
+    assert!(LightingLayoutPolicy::wide_editor_panel_width() <= 360.0);
+    assert!(
+        LightingLayoutPolicy::balanced_editor_row_width()
+            <= ContentLayoutPolicy::max_content_width()
+    );
+}
+
+#[test]
+fn effects_layout_policy_uses_wrapped_preset_cards_instead_of_skinny_grid() {
+    assert_eq!(EffectsLayoutPolicy::quick_preset_target_columns(), 4);
+    assert_eq!(EffectsLayoutPolicy::quick_preset_card_width(), 180.0);
+    assert_eq!(EffectsLayoutPolicy::quick_preset_card_height(), 112.0);
+    assert_eq!(EffectsLayoutPolicy::quick_preset_inner_height(), 88.0);
+    assert_eq!(
+        EffectsLayoutPolicy::quick_preset_row_cross_align(),
+        egui::Align::Min
+    );
+    assert!(EffectsLayoutPolicy::quick_preset_cards_share_height());
+    assert_eq!(EffectsLayoutPolicy::detail_panel_gap(), 8.0);
+    assert!(EffectsLayoutPolicy::amount_panel_width() <= 360.0);
+    assert!(EffectsLayoutPolicy::style_panel_width() <= 720.0);
+    assert!(
+        EffectsLayoutPolicy::quick_preset_inner_width()
+            >= EffectsLayoutPolicy::quick_preset_command_label_min_width() * 2.0
+    );
+    assert_eq!(
+        EffectsLayoutPolicy::quick_preset_card_width_for_available_width(760.0),
+        EffectsLayoutPolicy::quick_preset_card_width()
+    );
+    assert!(
+        EffectsLayoutPolicy::quick_preset_card_width_for_available_width(700.0)
+            < EffectsLayoutPolicy::quick_preset_card_width()
+    );
+    let row_width = EffectsLayoutPolicy::quick_preset_card_width_for_available_width(760.0)
+        * (EffectsLayoutPolicy::quick_preset_target_columns() as f32)
+        + EffectsLayoutPolicy::detail_panel_gap()
+            * ((EffectsLayoutPolicy::quick_preset_target_columns() - 1) as f32);
+    assert!(row_width <= 760.0);
+    assert_eq!(EffectsLayoutPolicy::style_panel_width(), 700.0);
+    assert_eq!(EffectsLayoutPolicy::style_group_card_width(), 170.0);
+    assert!(EffectsLayoutPolicy::style_button_min_width() >= 60.0);
+}
+
+#[test]
+fn mic_and_mixer_layout_policies_wrap_screenshot_problem_panels() {
+    assert!(MicLayoutPolicy::uses_wrapped_panels());
+    assert_eq!(MicLayoutPolicy::panel_width(), 360.0);
+    assert_eq!(MicLayoutPolicy::panel_gap(), 8.0);
+    assert!(MicLayoutPolicy::slider_width() <= 200.0);
+
+    assert!(MixerLayoutPolicy::uses_wrapped_dashboard_panels());
+    assert_eq!(MixerLayoutPolicy::panel_width(), 560.0);
+    assert_eq!(MixerLayoutPolicy::channel_strip_width(), 94.0);
+    assert_eq!(MixerLayoutPolicy::channel_strip_height(), 270.0);
+    assert_eq!(MixerLayoutPolicy::channel_slider_height(), 190.0);
+}
+
+#[test]
+fn routing_presets_provide_named_command_bundles_above_matrix() {
+    let presets = RoutingPreset::daily_presets();
+    assert_eq!(presets.len(), 3);
+    assert_eq!(presets[0].name(), "Broadcast Mix");
+    assert!(presets[0].description().contains("broadcast output"));
+    assert!(presets[0].commands().contains(&PersonalCommand::SetRouter(
+        InputDevice::Music,
+        OutputDevice::BroadcastMix,
+        true
+    )));
+    assert!(presets[1].commands().contains(&PersonalCommand::SetRouter(
+        InputDevice::Microphone,
+        OutputDevice::ChatMic,
+        true
+    )));
+    assert!(presets[2].commands().contains(&PersonalCommand::SetRouter(
+        InputDevice::Game,
+        OutputDevice::LineOut,
+        false
+    )));
 }
 
 #[test]
@@ -615,6 +890,210 @@ fn app_config_parses_mic_processing_and_safety_threshold_scene_actions() {
 }
 
 #[test]
+fn mic_eq_editor_exposes_mini_and_full_band_controls() {
+    let mini_bands = MicEqBandControl::mini_bands();
+    assert_eq!(mini_bands.len(), 6);
+    assert_eq!(mini_bands[0].label(), "90 Hz");
+    assert_eq!(mini_bands[0].default_frequency_hz(), 90.0);
+    assert_eq!(mini_bands[5].label(), "8 kHz");
+    assert_eq!(mini_bands[5].default_frequency_hz(), 8000.0);
+    assert_eq!(
+        mini_bands[0].gain_command(3),
+        PersonalCommand::SetEqMiniGain(MiniEqFrequencies::Equalizer90Hz, 3)
+    );
+    assert_eq!(
+        mini_bands[0].frequency_command(95.0),
+        PersonalCommand::SetEqMiniFreq(MiniEqFrequencies::Equalizer90Hz, 95.0)
+    );
+
+    let full_bands = MicEqBandControl::full_bands();
+    assert_eq!(full_bands.len(), 10);
+    assert_eq!(full_bands[0].label(), "31 Hz");
+    assert_eq!(full_bands[0].default_frequency_hz(), 31.0);
+    assert_eq!(full_bands[9].label(), "16 kHz");
+    assert_eq!(full_bands[9].default_frequency_hz(), 16_000.0);
+    assert_eq!(
+        full_bands[9].gain_command(-2),
+        PersonalCommand::SetEqGain(EqFrequencies::Equalizer16KHz, -2)
+    );
+    assert_eq!(
+        full_bands[9].frequency_command(15_800.0),
+        PersonalCommand::SetEqFreq(EqFrequencies::Equalizer16KHz, 15_800.0)
+    );
+    assert_eq!(MicLayoutPolicy::eq_panel_width(), 720.0);
+}
+
+#[test]
+fn guarded_mic_profile_actions_require_confirmation_for_destructive_workflows() {
+    let actions = MicProfileAction::guarded_daily_actions("Broadcast");
+    let load = actions
+        .iter()
+        .find(|action| action.label() == "Load Broadcast")
+        .expect("load action is exposed");
+    let save_as = actions
+        .iter()
+        .find(|action| {
+            action.command() == PersonalCommand::SaveMicProfileAs("Broadcast".to_string())
+        })
+        .expect("save-as action is exposed");
+    let delete = actions
+        .iter()
+        .find(|action| {
+            action.command() == PersonalCommand::DeleteMicProfile("Broadcast".to_string())
+        })
+        .expect("delete action is exposed");
+    let save_current = actions
+        .iter()
+        .find(|action| action.command() == PersonalCommand::SaveMicProfile)
+        .expect("save-current action is exposed");
+
+    assert!(load.requires_confirmation());
+    assert!(save_as.requires_confirmation());
+    assert!(delete.requires_confirmation());
+    assert!(save_current.requires_confirmation());
+    assert_eq!(load.command_if_confirmed(false), None);
+    assert_eq!(save_as.command_if_confirmed(false), None);
+    assert_eq!(delete.command_if_confirmed(false), None);
+    assert_eq!(save_current.command_if_confirmed(false), None);
+    assert_eq!(
+        save_current.command_if_confirmed(true),
+        Some(PersonalCommand::SaveMicProfile)
+    );
+    assert_eq!(
+        delete.command_if_confirmed(true),
+        Some(PersonalCommand::DeleteMicProfile("Broadcast".to_string()))
+    );
+}
+
+#[test]
+fn advanced_effects_controls_cover_deeper_dsp_parameters() {
+    let controls = EffectsAdvancedControl::daily_controls();
+    assert!(controls.iter().any(|control| {
+        control.label() == "Reverb decay"
+            && control.command_for_default() == PersonalCommand::SetReverbDecay(1500)
+    }));
+    assert!(controls.iter().any(|control| {
+        control.label() == "Echo feedback"
+            && control.command_for_default() == PersonalCommand::SetEchoFeedback(35)
+    }));
+    assert!(controls.iter().any(|control| {
+        control.label() == "Pitch character"
+            && control.command_for_default() == PersonalCommand::SetPitchCharacter(50)
+    }));
+    assert!(controls.iter().any(|control| {
+        control.label() == "Robot threshold"
+            && control.command_for_default() == PersonalCommand::SetRobotThreshold(-40)
+    }));
+    assert!(controls.iter().any(|control| {
+        control.label() == "Hard Tune source"
+            && control.command_for_default()
+                == PersonalCommand::SetHardTuneSource(HardTuneSource::Music)
+    }));
+}
+
+#[test]
+fn headphone_eq_editor_exposes_preamp_and_ten_bands() {
+    let bands = HeadphoneEqBandControl::ten_band_editor();
+    assert_eq!(bands.len(), 10);
+    assert_eq!(bands[0].index(), 0);
+    assert_eq!(bands[0].label(), "31 Hz");
+    assert_eq!(bands[0].default_frequency_hz(), 31.0);
+    assert_eq!(bands[9].index(), 9);
+    assert_eq!(bands[9].label(), "16 kHz");
+    assert_eq!(bands[9].default_frequency_hz(), 16_000.0);
+    assert_eq!(
+        bands[2].gain_command(1.5),
+        PersonalCommand::SetHeadphoneEqBandGain(2, 1.5)
+    );
+    assert_eq!(
+        bands[2].frequency_command(128.0),
+        PersonalCommand::SetHeadphoneEqBandFrequency(2, 128.0)
+    );
+    assert_eq!(
+        bands[2].frequency_command(bands[2].default_frequency_hz()),
+        PersonalCommand::SetHeadphoneEqBandFrequency(2, 125.0)
+    );
+    assert_eq!(
+        bands[2].q_command(0.9),
+        PersonalCommand::SetHeadphoneEqBandQ(2, 0.9)
+    );
+    assert!(!HeadphoneEqLayoutPolicy::uses_guarded_profile_actions());
+}
+
+#[test]
+fn dedicated_parity_tabs_expose_headphone_eq_and_sampler_pages() {
+    let mut quick = QuickActions::default();
+
+    quick.set_view_mode(AppViewMode::HeadphoneEq);
+    assert_eq!(quick.view_mode(), AppViewMode::HeadphoneEq);
+    quick.toggle_view_mode();
+    assert_eq!(quick.view_mode(), AppViewMode::QuickActions);
+
+    quick.set_view_mode(AppViewMode::Sampler);
+    assert_eq!(quick.view_mode(), AppViewMode::Sampler);
+    quick.toggle_view_mode();
+    assert_eq!(quick.view_mode(), AppViewMode::QuickActions);
+}
+
+#[test]
+fn sampler_page_exposes_bank_button_playback_actions() {
+    let actions = SamplerAction::daily_bank_actions(SampleBank::A, SampleButtons::TopLeft);
+    assert!(actions.iter().any(|action| {
+        action.command() == PersonalCommand::SetActiveSamplerBank(SampleBank::A)
+    }));
+    assert!(actions.iter().any(|action| {
+        action.command()
+            == PersonalCommand::SetSamplerFunction(
+                SampleBank::A,
+                SampleButtons::TopLeft,
+                SamplePlaybackMode::PlayStop,
+            )
+    }));
+    assert!(actions.iter().any(|action| {
+        action.command()
+            == PersonalCommand::SetSamplerOrder(
+                SampleBank::A,
+                SampleButtons::TopLeft,
+                SamplePlayOrder::Random,
+            )
+    }));
+    assert!(actions.iter().any(|action| {
+        action.command() == PersonalCommand::PlayNextSample(SampleBank::A, SampleButtons::TopLeft)
+    }));
+    assert!(SamplerLayoutPolicy::uses_bank_button_cards());
+}
+
+#[test]
+fn personal_command_maps_new_parity_chunks_to_backend_commands() {
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetEqGain(EqFrequencies::Equalizer1KHz, 4,)),
+        goxlr_ipc::GoXLRCommand::SetEqGain(EqFrequencies::Equalizer1KHz, 4)
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::LoadMicProfile(
+            "Broadcast".to_string(),
+            true,
+        )),
+        goxlr_ipc::GoXLRCommand::LoadMicProfile(_, true)
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetReverbDecay(1200)),
+        goxlr_ipc::GoXLRCommand::SetReverbDecay(1200)
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetHeadphoneEqPreamp(-1.5)),
+        goxlr_ipc::GoXLRCommand::SetHeadphoneEqPreamp(preamp) if preamp == -1.5
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::PlayNextSample(
+            SampleBank::B,
+            SampleButtons::BottomRight,
+        )),
+        goxlr_ipc::GoXLRCommand::PlayNextSample(SampleBank::B, SampleButtons::BottomRight)
+    ));
+}
+
+#[test]
 fn personal_command_maps_mic_processing_to_backend_commands() {
     assert!(matches!(
         goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetMicrophoneGain(
@@ -720,6 +1199,105 @@ fn lighting_quick_themes_cover_daily_visual_states() {
 }
 
 #[test]
+fn lighting_colour_editor_targets_cover_full_lighting_parity_controls() {
+    let simple_targets = LightingSimpleColourTarget::all_targets();
+    assert_eq!(simple_targets.len(), 6);
+    assert_eq!(simple_targets[0].label(), "Global");
+    assert_eq!(
+        simple_targets[0].command_for_colour("ABCDEF"),
+        PersonalCommand::SetSimpleColour(SimpleColourTargets::Global, "ABCDEF".to_string())
+    );
+    assert!(
+        simple_targets
+            .iter()
+            .any(|target| target.target() == SimpleColourTargets::Scribble4)
+    );
+
+    let fader_targets = LightingFaderColourTarget::all_targets();
+    assert_eq!(fader_targets.len(), 5);
+    assert_eq!(fader_targets[0].label(), "All faders");
+    assert_eq!(
+        fader_targets[0].colour_command("112233", "445566"),
+        PersonalCommand::SetAllFaderColours("112233".to_string(), "445566".to_string())
+    );
+    assert_eq!(
+        fader_targets[1].colour_command("010203", "040506"),
+        PersonalCommand::SetFaderColours(FaderName::A, "010203".to_string(), "040506".to_string(),)
+    );
+    assert_eq!(
+        fader_targets[1].display_command(FaderDisplayStyle::GradientMeter),
+        PersonalCommand::SetFaderDisplayStyle(FaderName::A, FaderDisplayStyle::GradientMeter)
+    );
+
+    let button_targets = LightingButtonColourTarget::daily_targets();
+    assert!(
+        button_targets
+            .iter()
+            .any(|target| target.label() == "Effect types")
+    );
+    assert!(
+        button_targets
+            .iter()
+            .any(|target| target.label() == "Cough button")
+    );
+    assert_eq!(
+        button_targets[0].off_style_command(ButtonColourOffStyle::DimmedColour2),
+        PersonalCommand::SetButtonGroupOffStyle(
+            ButtonColourGroups::FaderMute,
+            ButtonColourOffStyle::DimmedColour2,
+        )
+    );
+
+    let triple_targets = LightingTripleColourTarget::all_targets();
+    assert_eq!(triple_targets.len(), 7);
+    assert_eq!(
+        triple_targets[0].colour_command("111111", "222222", "333333"),
+        PersonalCommand::SetEncoderColour(
+            EncoderColourTargets::Reverb,
+            "111111".to_string(),
+            "222222".to_string(),
+            "333333".to_string(),
+        )
+    );
+    assert!(
+        triple_targets
+            .iter()
+            .any(|target| target.label() == "Sampler select C")
+    );
+}
+
+#[test]
+fn lighting_animation_controls_cover_modes_modifiers_and_waterfall() {
+    let controls = LightingAnimationControl::practical_controls();
+    let labels = controls
+        .iter()
+        .map(|control| control.label())
+        .collect::<Vec<_>>();
+
+    assert_eq!(labels, vec!["Mode", "Mod 1", "Mod 2", "Waterfall"]);
+    assert_eq!(
+        controls[0].command_for_value(1),
+        PersonalCommand::SetAnimationMode(AnimationMode::RainbowDark)
+    );
+    assert_eq!(
+        controls[1].command_for_value(200),
+        PersonalCommand::SetAnimationMod1(100)
+    );
+    assert_eq!(
+        controls[2].command_for_value(42),
+        PersonalCommand::SetAnimationMod2(42)
+    );
+    assert_eq!(
+        controls[3].command_for_value(0),
+        PersonalCommand::SetAnimationWaterfall(WaterfallDirection::Down)
+    );
+    assert_eq!(
+        controls[3].command_for_value(1),
+        PersonalCommand::SetAnimationWaterfall(WaterfallDirection::Up)
+    );
+}
+
+#[test]
 fn personal_command_maps_lighting_controls_to_backend_commands() {
     assert!(matches!(
         goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetAnimationMode(AnimationMode::Ripple)),
@@ -756,6 +1334,58 @@ fn personal_command_maps_lighting_controls_to_backend_commands() {
         )),
         goxlr_ipc::GoXLRCommand::SetSimpleColour(SimpleColourTargets::Accent, colour)
             if colour == "00AAFF"
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetAnimationMod1(77)),
+        goxlr_ipc::GoXLRCommand::SetAnimationMod1(77)
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetAnimationWaterfall(
+            WaterfallDirection::Up,
+        )),
+        goxlr_ipc::GoXLRCommand::SetAnimationWaterfall(WaterfallDirection::Up)
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetFaderColours(
+            FaderName::B,
+            "010101".to_string(),
+            "020202".to_string(),
+        )),
+        goxlr_ipc::GoXLRCommand::SetFaderColours(FaderName::B, top, bottom)
+            if top == "010101" && bottom == "020202"
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetButtonColours(
+            Button::Cough,
+            "101010".to_string(),
+            Some("202020".to_string()),
+        )),
+        goxlr_ipc::GoXLRCommand::SetButtonColours(Button::Cough, colour_one, Some(colour_two))
+            if colour_one == "101010" && colour_two == "202020"
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetEncoderColour(
+            EncoderColourTargets::Pitch,
+            "111111".to_string(),
+            "222222".to_string(),
+            "333333".to_string(),
+        )),
+        goxlr_ipc::GoXLRCommand::SetEncoderColour(
+            EncoderColourTargets::Pitch,
+            colour_one,
+            colour_two,
+            colour_three,
+        ) if colour_one == "111111" && colour_two == "222222" && colour_three == "333333"
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetSampleOffStyle(
+            SamplerColourTargets::SamplerSelectB,
+            ButtonColourOffStyle::Colour2,
+        )),
+        goxlr_ipc::GoXLRCommand::SetSampleOffStyle(
+            SamplerColourTargets::SamplerSelectB,
+            ButtonColourOffStyle::Colour2,
+        )
     ));
 }
 
@@ -816,6 +1446,93 @@ fn effects_quick_presets_cover_daily_voice_fx_controls() {
             PersonalCommand::SetMegaphoneStyle(MegaphoneStyle::Megaphone),
             PersonalCommand::SetMegaphoneAmount(0),
         ]
+    );
+}
+
+#[test]
+fn effects_amount_controls_cover_full_slider_parity() {
+    let controls = EffectsAmountControl::full_controls();
+    let labels = controls
+        .iter()
+        .map(|control| control.label())
+        .collect::<Vec<_>>();
+
+    assert_eq!(
+        labels,
+        vec![
+            "Reverb amount",
+            "Echo amount",
+            "Pitch amount",
+            "Gender amount",
+            "Megaphone amount",
+        ]
+    );
+    assert_eq!(controls[0].range(), 0..=100);
+    assert_eq!(controls[2].range(), -50..=50);
+    assert_eq!(
+        controls[0].command_for_value(37),
+        PersonalCommand::SetReverbAmount(37)
+    );
+    assert_eq!(
+        controls[1].command_for_value(44),
+        PersonalCommand::SetEchoAmount(44)
+    );
+    assert_eq!(
+        controls[2].command_for_value(-12),
+        PersonalCommand::SetPitchAmount(-12)
+    );
+    assert_eq!(
+        controls[3].command_for_value(18),
+        PersonalCommand::SetGenderAmount(18)
+    );
+    assert_eq!(
+        controls[4].command_for_value(63),
+        PersonalCommand::SetMegaphoneAmount(63)
+    );
+}
+
+#[test]
+fn effects_style_groups_cover_full_button_parity() {
+    let groups = EffectsStyleGroup::full_groups();
+    let labels = groups.iter().map(|group| group.label()).collect::<Vec<_>>();
+
+    assert_eq!(
+        labels,
+        vec![
+            "Reverb style",
+            "Echo style",
+            "Pitch style",
+            "Gender style",
+            "Megaphone style",
+            "Robot style",
+            "Hard tune style",
+        ]
+    );
+    assert_eq!(groups[0].commands().len(), 6);
+    assert!(
+        groups[0]
+            .commands()
+            .contains(&PersonalCommand::SetReverbStyle(ReverbStyle::HockeyArena))
+    );
+    assert!(
+        groups[1]
+            .commands()
+            .contains(&PersonalCommand::SetEchoStyle(EchoStyle::PingPong))
+    );
+    assert!(
+        groups[4]
+            .commands()
+            .contains(&PersonalCommand::SetMegaphoneStyle(MegaphoneStyle::Radio))
+    );
+    assert!(
+        groups[5]
+            .commands()
+            .contains(&PersonalCommand::SetRobotStyle(RobotStyle::Robot3))
+    );
+    assert!(
+        groups[6]
+            .commands()
+            .contains(&PersonalCommand::SetHardTuneStyle(HardTuneStyle::Natural))
     );
 }
 
@@ -1251,6 +1968,79 @@ fn volume_debouncer_coalesces_per_channel_independently() {
             20
         ))]
     );
+}
+
+#[test]
+fn system_settings_page_exposes_safe_daily_device_controls() {
+    let mut quick = QuickActions::default();
+    quick.set_view_mode(AppViewMode::System);
+    assert_eq!(quick.view_mode(), AppViewMode::System);
+
+    let actions = SystemSettingsAction::daily_controls();
+    assert_eq!(actions.len(), 12);
+    assert!(
+        actions
+            .iter()
+            .any(|action| action.command() == PersonalCommand::SetMuteHoldDuration(500))
+    );
+    assert!(
+        actions
+            .iter()
+            .any(|action| action.command() == PersonalCommand::SetVCMuteAlsoMuteCM(true))
+    );
+    assert!(
+        actions
+            .iter()
+            .any(|action| action.command() == PersonalCommand::SetMonitorWithFx(true))
+    );
+    assert!(
+        actions
+            .iter()
+            .any(|action| action.command() == PersonalCommand::SetLockFaders(true))
+    );
+    assert!(
+        actions
+            .iter()
+            .any(|action| action.command() == PersonalCommand::SetVodMode(VodMode::StreamNoMusic))
+    );
+    assert!(
+        actions
+            .iter()
+            .all(|action| !action.label().is_empty() && !action.description().is_empty())
+    );
+}
+
+#[test]
+fn system_settings_commands_map_to_backend_device_settings() {
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetMuteHoldDuration(750)),
+        goxlr_ipc::GoXLRCommand::SetMuteHoldDuration(750)
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetVCMuteAlsoMuteCM(true)),
+        goxlr_ipc::GoXLRCommand::SetVCMuteAlsoMuteCM(true)
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetMonitorWithFx(false)),
+        goxlr_ipc::GoXLRCommand::SetMonitorWithFx(false)
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetLockFaders(true)),
+        goxlr_ipc::GoXLRCommand::SetLockFaders(true)
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetVodMode(VodMode::Routable)),
+        goxlr_ipc::GoXLRCommand::SetVodMode(VodMode::Routable)
+    ));
+}
+
+#[test]
+fn system_layout_policy_keeps_settings_cards_compact_and_safe() {
+    assert!(SystemLayoutPolicy::panel_width() >= 360.0);
+    assert!(SystemLayoutPolicy::panel_width() <= 420.0);
+    assert!(SystemLayoutPolicy::button_width() >= ContentLayoutPolicy::min_action_button_width());
+    assert!(SystemLayoutPolicy::uses_wrapped_cards());
+    assert!(SystemLayoutPolicy::destructive_actions_are_omitted_from_daily_controls());
 }
 
 #[test]
