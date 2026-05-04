@@ -6,7 +6,8 @@ use goxlr_personal_ui::{
     ActiveAudioStreams, AppConfig, AppSceneConfig, AppSnapshot, AppViewMode, AudioRouteTarget,
     AudioRoutingRule, ContentLayoutPolicy, ControlledChannel, DashboardCopy, DeviceSelection,
     EffectsAdvancedControl, EffectsAmountControl, EffectsLayoutPolicy, EffectsQuickPreset,
-    EffectsStyleGroup, ExternalAudioTool, HeadphoneEqBandControl, HeadphoneEqLayoutPolicy,
+    EffectsStyleGroup, ExternalAudioTool, FaderAssignmentControl, FaderMuteFunctionControl,
+    HardwareScribbleControl, HeadphoneEqBandControl, HeadphoneEqLayoutPolicy,
     LightingAnimationControl, LightingButtonColourTarget, LightingFaderColourTarget,
     LightingLayoutPolicy, LightingQuickTheme, LightingSimpleColourTarget,
     LightingTripleColourTarget, MicEqBandControl, MicLayoutPolicy, MicProfileAction,
@@ -21,8 +22,9 @@ use goxlr_types::{
     CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EchoStyle, EffectBankPresets,
     EncoderColourTargets, EqFrequencies, FaderDisplayStyle, FaderName, GateTimes, GenderStyle,
     HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies,
-    OutputDevice, PitchStyle, ReverbStyle, RobotStyle, SampleBank, SampleButtons, SamplePlayOrder,
-    SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets, VodMode, WaterfallDirection,
+    MuteFunction, OutputDevice, PitchStyle, ReverbStyle, RobotStyle, SampleBank, SampleButtons,
+    SamplePlayOrder, SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets, VodMode,
+    WaterfallDirection,
 };
 
 fn temp_scene_config_path(name: &str) -> PathBuf {
@@ -263,7 +265,7 @@ fn effects_layout_policy_uses_wrapped_preset_cards_instead_of_skinny_grid() {
 }
 
 #[test]
-fn mic_and_mixer_layout_policies_wrap_screenshot_problem_panels() {
+fn mixer_layout_policy_supports_fader_assignment_editor() {
     assert!(MicLayoutPolicy::uses_wrapped_panels());
     assert_eq!(MicLayoutPolicy::panel_width(), 360.0);
     assert_eq!(MicLayoutPolicy::panel_gap(), 8.0);
@@ -274,6 +276,153 @@ fn mic_and_mixer_layout_policies_wrap_screenshot_problem_panels() {
     assert_eq!(MixerLayoutPolicy::channel_strip_width(), 94.0);
     assert_eq!(MixerLayoutPolicy::channel_strip_height(), 270.0);
     assert_eq!(MixerLayoutPolicy::channel_slider_height(), 190.0);
+    assert!(MixerLayoutPolicy::uses_fader_assignment_editor());
+    assert!(MixerLayoutPolicy::assignment_panel_width() <= MixerLayoutPolicy::panel_width());
+    assert!(
+        MixerLayoutPolicy::assignment_button_width()
+            >= ContentLayoutPolicy::min_action_button_width()
+    );
+}
+
+#[test]
+fn fader_assignment_controls_expose_daily_channels_and_mute_targets() {
+    let assignments = FaderAssignmentControl::daily_controls();
+    assert_eq!(assignments.len(), 4);
+    assert_eq!(assignments[0].fader(), FaderName::A);
+    assert_eq!(assignments[0].label(), "Fader A");
+    assert_eq!(assignments[0].default_channel(), ChannelName::Mic);
+    assert!(
+        assignments
+            .iter()
+            .all(|control| !control.label().is_empty() && !control.description().is_empty())
+    );
+
+    let channels = FaderAssignmentControl::daily_channels();
+    assert_eq!(
+        channels,
+        vec![
+            ChannelName::Mic,
+            ChannelName::Chat,
+            ChannelName::Music,
+            ChannelName::Game,
+            ChannelName::Console,
+            ChannelName::LineIn,
+            ChannelName::System,
+            ChannelName::Sample,
+        ]
+    );
+    assert_eq!(
+        assignments[1].assign_command(ChannelName::Music),
+        PersonalCommand::SetFader(FaderName::B, ChannelName::Music)
+    );
+
+    let mute_controls = FaderMuteFunctionControl::daily_controls();
+    assert_eq!(mute_controls.len(), 4);
+    assert_eq!(mute_controls[2].fader(), FaderName::C);
+    assert_eq!(mute_controls[2].default_function(), MuteFunction::ToStream);
+    assert_eq!(
+        FaderMuteFunctionControl::daily_functions(),
+        vec![
+            MuteFunction::All,
+            MuteFunction::ToStream,
+            MuteFunction::ToVoiceChat,
+            MuteFunction::ToPhones,
+        ]
+    );
+    assert_eq!(
+        mute_controls[0].function_command(MuteFunction::ToVoiceChat),
+        PersonalCommand::SetFaderMuteFunction(FaderName::A, MuteFunction::ToVoiceChat)
+    );
+}
+
+#[test]
+fn fader_assignment_commands_map_to_backend_commands() {
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(
+            PersonalCommand::SetFader(FaderName::D, ChannelName::System,)
+        ),
+        goxlr_ipc::GoXLRCommand::SetFader(FaderName::D, ChannelName::System)
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetFaderMuteFunction(
+            FaderName::B,
+            MuteFunction::ToStream,
+        )),
+        goxlr_ipc::GoXLRCommand::SetFaderMuteFunction(FaderName::B, MuteFunction::ToStream)
+    ));
+}
+
+#[test]
+fn hardware_scribble_controls_expose_safe_daily_fields() {
+    assert!(MixerLayoutPolicy::uses_scribble_strip_editor());
+    assert!(MixerLayoutPolicy::scribble_panel_width() <= MixerLayoutPolicy::panel_width());
+    assert!(
+        MixerLayoutPolicy::scribble_button_width()
+            >= ContentLayoutPolicy::min_action_button_width()
+    );
+
+    let controls = HardwareScribbleControl::daily_controls();
+    assert_eq!(controls.len(), 4);
+    assert_eq!(controls[0].fader(), FaderName::A);
+    assert_eq!(controls[0].label(), "Fader A scribble");
+    assert_eq!(controls[0].default_text(), "Mic");
+    assert_eq!(controls[0].default_number(), "1");
+    assert!(
+        controls
+            .iter()
+            .all(|control| !control.description().is_empty())
+    );
+
+    assert_eq!(
+        HardwareScribbleControl::daily_icon_presets(),
+        vec![
+            None,
+            Some("mic.png"),
+            Some("music.png"),
+            Some("person.png"),
+            Some("scale.png")
+        ]
+    );
+    assert_eq!(
+        controls[2].text_command("Music"),
+        PersonalCommand::SetScribbleText(FaderName::C, "Music".to_string())
+    );
+    assert_eq!(
+        controls[2].number_command("3"),
+        PersonalCommand::SetScribbleNumber(FaderName::C, "3".to_string())
+    );
+    assert_eq!(
+        controls[1].icon_command(Some("music.png")),
+        PersonalCommand::SetScribbleIcon(FaderName::B, Some("music.png".to_string()))
+    );
+    assert_eq!(
+        controls[0].icon_command(None),
+        PersonalCommand::SetScribbleIcon(FaderName::A, None)
+    );
+    assert_eq!(
+        controls[3].invert_command(true),
+        PersonalCommand::SetScribbleInvert(FaderName::D, true)
+    );
+}
+
+#[test]
+fn hardware_scribble_commands_map_to_backend_commands() {
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetScribbleIcon(FaderName::A, Some("mic.png".to_string()))),
+        goxlr_ipc::GoXLRCommand::SetScribbleIcon(FaderName::A, Some(icon)) if icon == "mic.png"
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetScribbleText(FaderName::B, "Chat".to_string())),
+        goxlr_ipc::GoXLRCommand::SetScribbleText(FaderName::B, text) if text == "Chat"
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetScribbleNumber(FaderName::C, "3".to_string())),
+        goxlr_ipc::GoXLRCommand::SetScribbleNumber(FaderName::C, number) if number == "3"
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetScribbleInvert(FaderName::D, true)),
+        goxlr_ipc::GoXLRCommand::SetScribbleInvert(FaderName::D, true)
+    ));
 }
 
 #[test]
@@ -1018,6 +1167,17 @@ fn headphone_eq_editor_exposes_preamp_and_ten_bands() {
         PersonalCommand::SetHeadphoneEqBandQ(2, 0.9)
     );
     assert!(!HeadphoneEqLayoutPolicy::uses_guarded_profile_actions());
+}
+
+#[test]
+fn headphone_eq_layout_uses_compact_five_by_two_grid() {
+    assert_eq!(HeadphoneEqLayoutPolicy::grid_columns(), 5);
+    assert_eq!(HeadphoneEqLayoutPolicy::grid_rows_for_band_count(10), 2);
+    assert!(HeadphoneEqLayoutPolicy::uses_fixed_grid_rows());
+    assert_eq!(HeadphoneEqLayoutPolicy::band_card_width(), 112.0);
+    assert_eq!(HeadphoneEqLayoutPolicy::band_card_gap(), 10.0);
+    assert!(HeadphoneEqLayoutPolicy::panel_width() <= 660.0);
+    assert!(HeadphoneEqLayoutPolicy::panel_width() >= 600.0);
 }
 
 #[test]

@@ -32,10 +32,10 @@ Priority: keep stable; only extend if debugging or multiple-device use becomes a
 - [x] Active stream mute controls.
 - [x] Persistent route buttons for active streams.
 - [x] PipeWire/PulseAudio routing helpers for local Linux workflow.
-- [~] Scene-style quick actions for common personal routing/mute states.
-- [ ] Full fader assignment editor.
-- [ ] Full fader mute-behaviour editor: mute target, hold/toggle behaviour, and related per-fader settings.
-- [ ] Scribble strip editor: icon, label text, number text, invert.
+- [x] Scene-style quick actions for common personal routing/mute states.
+- [~] First-pass fader assignment editor: Mixer dashboard exposes Fader A-D assignment buttons for daily channels (Mic, Chat, Music, Game, Console, Line In, System, Sample) backed by typed `SetFader` commands; less-used output/monitor assignments remain deferred.
+- [~] First-pass fader mute-behaviour editor: Mixer dashboard exposes safe mute-target buttons for All, Stream, Voice Chat, and Phones backed by typed `SetFaderMuteFunction` commands; hold/toggle and less-used mute targets remain pending.
+- [~] First-pass scribble strip editor: Mixer dashboard exposes Fader A-D hardware strip label, number, icon preset, and invert buttons backed by typed scribble commands; free-text entry and full icon browsing remain deferred.
 - [ ] Submix controls: enable, per-channel submix volume/linking, output mix routing.
 - [ ] Monitor mix selector.
 
@@ -158,7 +158,7 @@ Priority: medium. Useful once daily control pages are stable, but should be impl
 - [x] Monitor-with-FX toggle.
 - [x] Lock faders toggle.
 - [x] VOD mode setting.
-- [x] Headphone EQ full editor: dedicated tab with enabled/preamp and ten-band gain/frequency/Q command controls.
+- [x] Headphone EQ full editor: dedicated tab with enabled/preamp and ten-band gain/frequency/Q command controls; screenshot-polished into a compact fixed 5x2 band grid instead of a sparse staggered card flow.
 - [x] General device/system settings page: first-pass safe daily controls for mute hold duration, VC/chat mic coupling, monitor-with-FX, fader lock, VOD mode, and reload settings; destructive profile operations remain intentionally omitted.
 
 Priority: medium-low. Add only settings that solve a current annoyance; avoid building a settings junk drawer too early.
@@ -204,7 +204,7 @@ Implemented composite screenshot polish pass:
 - Effects `STYLES` now uses bounded wrapped style-group cards and fixed-size style buttons to prevent hard-tune style labels from collapsing into vertical one-letter columns.
 - Mic processing panels now use `MicLayoutPolicy` wrapped widths/gaps so compressor and safety controls can move to the next row instead of clipping horizontally.
 - Mixer dashboard panels and channel strips now use `MixerLayoutPolicy` wrapping so the page is less dependent on one wide mostly-empty horizontal area.
-- Added model-level coverage for the new layout policies and routing preset command bundles.
+- Added model-level coverage for the new layout policies, routing preset command bundles, fader assignment/mute behaviour controls, and first-pass scribble-strip command mappings.
 
 Implemented broad layout containment pass:
 
@@ -232,7 +232,7 @@ Implemented ordered parity batch:
 - Added Mic EQ models and Mic-page controls for mini/full EQ band gain/frequency command helpers.
 - Added guarded Mic profile actions for load, save current, save-as, and delete against an explicit named slot, with profile-switching/destructive actions requiring a same-action second click before dispatch.
 - Added first-pass advanced Effects DSP actions for reverb decay, echo feedback, pitch character, megaphone post gain, robot threshold, and hard-tune source.
-- Added a dedicated Headphone EQ tab with enable/disable, preamp, and ten-band gain/frequency/Q command controls.
+- Added a dedicated Headphone EQ tab with enable/disable, preamp, and ten-band gain/frequency/Q command controls; follow-up screenshot QA tightened it into a compact fixed 5x2 grid so the bands read as one equalizer surface rather than a tall scattered card layout.
 - Added a dedicated Sampler tab with bank cards, pad actions, active-bank selection, play/stop mode, random order, play-next, and stop playback controls.
 - Added model-level tests for all five requested chunks plus typed `PersonalCommand -> GoXLRCommand` mappings.
 

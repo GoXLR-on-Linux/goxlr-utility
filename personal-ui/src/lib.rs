@@ -16,8 +16,8 @@ use goxlr_types::{
     CompressorAttackTime, CompressorRatio, CompressorReleaseTime, DeviceType, EchoStyle,
     EffectBankPresets, EncoderColourTargets, EqFrequencies, FaderDisplayStyle, FaderName,
     GateTimes, GenderStyle, HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle,
-    MicrophoneType, MiniEqFrequencies, OutputDevice, PitchStyle, ReverbStyle, RobotRange,
-    RobotStyle, SampleBank, SampleButtons, SamplePlayOrder, SamplePlaybackMode,
+    MicrophoneType, MiniEqFrequencies, MuteFunction, OutputDevice, PitchStyle, ReverbStyle,
+    RobotRange, RobotStyle, SampleBank, SampleButtons, SamplePlayOrder, SamplePlaybackMode,
     SamplerColourTargets, SimpleColourTargets, VodMode, WaterfallDirection,
 };
 use interprocess::local_socket::tokio::prelude::LocalSocketStream;
@@ -635,7 +635,22 @@ pub struct HeadphoneEqLayoutPolicy;
 
 impl HeadphoneEqLayoutPolicy {
     pub fn panel_width() -> f32 {
-        720.0
+        640.0
+    }
+    pub fn grid_columns() -> usize {
+        5
+    }
+    pub fn grid_rows_for_band_count(band_count: usize) -> usize {
+        band_count.div_ceil(Self::grid_columns())
+    }
+    pub fn uses_fixed_grid_rows() -> bool {
+        true
+    }
+    pub fn band_card_width() -> f32 {
+        112.0
+    }
+    pub fn band_card_gap() -> f32 {
+        10.0
     }
     pub fn uses_guarded_profile_actions() -> bool {
         false
@@ -841,6 +856,22 @@ impl MixerLayoutPolicy {
         560.0
     }
 
+    pub fn assignment_panel_width() -> f32 {
+        520.0
+    }
+
+    pub fn assignment_button_width() -> f32 {
+        118.0
+    }
+
+    pub fn scribble_panel_width() -> f32 {
+        520.0
+    }
+
+    pub fn scribble_button_width() -> f32 {
+        118.0
+    }
+
     pub fn channel_strip_width() -> f32 {
         94.0
     }
@@ -859,6 +890,207 @@ impl MixerLayoutPolicy {
 
     pub fn uses_wrapped_dashboard_panels() -> bool {
         true
+    }
+
+    pub fn uses_fader_assignment_editor() -> bool {
+        true
+    }
+
+    pub fn uses_scribble_strip_editor() -> bool {
+        true
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct FaderAssignmentControl {
+    fader: FaderName,
+    label: &'static str,
+    default_channel: ChannelName,
+}
+
+impl FaderAssignmentControl {
+    pub fn daily_controls() -> Vec<Self> {
+        vec![
+            Self::new(FaderName::A, "Fader A", ChannelName::Mic),
+            Self::new(FaderName::B, "Fader B", ChannelName::Chat),
+            Self::new(FaderName::C, "Fader C", ChannelName::Music),
+            Self::new(FaderName::D, "Fader D", ChannelName::Game),
+        ]
+    }
+
+    pub fn daily_channels() -> Vec<ChannelName> {
+        vec![
+            ChannelName::Mic,
+            ChannelName::Chat,
+            ChannelName::Music,
+            ChannelName::Game,
+            ChannelName::Console,
+            ChannelName::LineIn,
+            ChannelName::System,
+            ChannelName::Sample,
+        ]
+    }
+
+    fn new(fader: FaderName, label: &'static str, default_channel: ChannelName) -> Self {
+        Self {
+            fader,
+            label,
+            default_channel,
+        }
+    }
+
+    pub fn fader(&self) -> FaderName {
+        self.fader
+    }
+
+    pub fn label(&self) -> &'static str {
+        self.label
+    }
+
+    pub fn description(&self) -> &'static str {
+        "Assign a GoXLR channel to this hardware fader."
+    }
+
+    pub fn default_channel(&self) -> ChannelName {
+        self.default_channel
+    }
+
+    pub fn assign_command(&self, channel: ChannelName) -> PersonalCommand {
+        PersonalCommand::SetFader(self.fader, channel)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct FaderMuteFunctionControl {
+    fader: FaderName,
+    label: &'static str,
+    default_function: MuteFunction,
+}
+
+impl FaderMuteFunctionControl {
+    pub fn daily_controls() -> Vec<Self> {
+        vec![
+            Self::new(FaderName::A, "Fader A mute", MuteFunction::ToStream),
+            Self::new(FaderName::B, "Fader B mute", MuteFunction::ToStream),
+            Self::new(FaderName::C, "Fader C mute", MuteFunction::ToStream),
+            Self::new(FaderName::D, "Fader D mute", MuteFunction::ToStream),
+        ]
+    }
+
+    pub fn daily_functions() -> Vec<MuteFunction> {
+        vec![
+            MuteFunction::All,
+            MuteFunction::ToStream,
+            MuteFunction::ToVoiceChat,
+            MuteFunction::ToPhones,
+        ]
+    }
+
+    fn new(fader: FaderName, label: &'static str, default_function: MuteFunction) -> Self {
+        Self {
+            fader,
+            label,
+            default_function,
+        }
+    }
+
+    pub fn fader(&self) -> FaderName {
+        self.fader
+    }
+
+    pub fn label(&self) -> &'static str {
+        self.label
+    }
+
+    pub fn description(&self) -> &'static str {
+        "Choose where this fader mute button sends silence."
+    }
+
+    pub fn default_function(&self) -> MuteFunction {
+        self.default_function
+    }
+
+    pub fn function_command(&self, function: MuteFunction) -> PersonalCommand {
+        PersonalCommand::SetFaderMuteFunction(self.fader, function)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct HardwareScribbleControl {
+    fader: FaderName,
+    label: &'static str,
+    default_text: &'static str,
+    default_number: &'static str,
+}
+
+impl HardwareScribbleControl {
+    pub fn daily_controls() -> Vec<Self> {
+        vec![
+            Self::new(FaderName::A, "Fader A scribble", "Mic", "1"),
+            Self::new(FaderName::B, "Fader B scribble", "Chat", "2"),
+            Self::new(FaderName::C, "Fader C scribble", "Music", "3"),
+            Self::new(FaderName::D, "Fader D scribble", "Game", "4"),
+        ]
+    }
+
+    pub fn daily_icon_presets() -> Vec<Option<&'static str>> {
+        vec![
+            None,
+            Some("mic.png"),
+            Some("music.png"),
+            Some("person.png"),
+            Some("scale.png"),
+        ]
+    }
+
+    fn new(
+        fader: FaderName,
+        label: &'static str,
+        default_text: &'static str,
+        default_number: &'static str,
+    ) -> Self {
+        Self {
+            fader,
+            label,
+            default_text,
+            default_number,
+        }
+    }
+
+    pub fn fader(&self) -> FaderName {
+        self.fader
+    }
+
+    pub fn label(&self) -> &'static str {
+        self.label
+    }
+
+    pub fn description(&self) -> &'static str {
+        "Set the hardware scribble-strip icon, label, number, or invert state."
+    }
+
+    pub fn default_text(&self) -> &'static str {
+        self.default_text
+    }
+
+    pub fn default_number(&self) -> &'static str {
+        self.default_number
+    }
+
+    pub fn icon_command(&self, icon: Option<&str>) -> PersonalCommand {
+        PersonalCommand::SetScribbleIcon(self.fader, icon.map(str::to_string))
+    }
+
+    pub fn text_command(&self, text: &str) -> PersonalCommand {
+        PersonalCommand::SetScribbleText(self.fader, text.to_string())
+    }
+
+    pub fn number_command(&self, number: &str) -> PersonalCommand {
+        PersonalCommand::SetScribbleNumber(self.fader, number.to_string())
+    }
+
+    pub fn invert_command(&self, inverted: bool) -> PersonalCommand {
+        PersonalCommand::SetScribbleInvert(self.fader, inverted)
     }
 }
 
@@ -916,6 +1148,12 @@ impl ExternalAudioTool {
 #[derive(Debug, Clone, PartialEq)]
 pub enum PersonalCommand {
     SetVolume(ChannelName, u8),
+    SetFader(FaderName, ChannelName),
+    SetFaderMuteFunction(FaderName, MuteFunction),
+    SetScribbleIcon(FaderName, Option<String>),
+    SetScribbleText(FaderName, String),
+    SetScribbleNumber(FaderName, String),
+    SetScribbleInvert(FaderName, bool),
     SetRouter(InputDevice, OutputDevice, bool),
     SetMicrophoneType(MicrophoneType),
     SetMicrophoneGain(MicrophoneType, u16),
@@ -1037,6 +1275,22 @@ impl From<PersonalCommand> for GoXLRCommand {
     fn from(value: PersonalCommand) -> Self {
         match value {
             PersonalCommand::SetVolume(channel, volume) => GoXLRCommand::SetVolume(channel, volume),
+            PersonalCommand::SetFader(fader, channel) => GoXLRCommand::SetFader(fader, channel),
+            PersonalCommand::SetFaderMuteFunction(fader, function) => {
+                GoXLRCommand::SetFaderMuteFunction(fader, function)
+            }
+            PersonalCommand::SetScribbleIcon(fader, icon) => {
+                GoXLRCommand::SetScribbleIcon(fader, icon)
+            }
+            PersonalCommand::SetScribbleText(fader, text) => {
+                GoXLRCommand::SetScribbleText(fader, text)
+            }
+            PersonalCommand::SetScribbleNumber(fader, number) => {
+                GoXLRCommand::SetScribbleNumber(fader, number)
+            }
+            PersonalCommand::SetScribbleInvert(fader, inverted) => {
+                GoXLRCommand::SetScribbleInvert(fader, inverted)
+            }
             PersonalCommand::SetRouter(input, output, enabled) => {
                 GoXLRCommand::SetRouter(input, output, enabled)
             }
@@ -4597,6 +4851,158 @@ impl PersonalUiApp {
         });
     }
 
+    fn render_fader_assignment_panel(&mut self, ui: &mut egui::Ui) {
+        Self::bounded_panel(ui, MixerLayoutPolicy::assignment_panel_width(), |ui| {
+            ui.set_width(MixerLayoutPolicy::assignment_panel_width());
+            ui.label(
+                egui::RichText::new("FADER ASSIGNMENT")
+                    .monospace()
+                    .size(18.0)
+                    .color(egui::Color32::WHITE)
+                    .strong(),
+            );
+            ui.label("Safe first-pass hardware fader channel and mute-target controls.");
+            ui.add_space(8.0);
+            for assignment in FaderAssignmentControl::daily_controls() {
+                ui.vertical(|ui| {
+                    ui.label(
+                        egui::RichText::new(assignment.label())
+                            .monospace()
+                            .color(Self::muted_text()),
+                    );
+                    ui.label(assignment.description());
+                    ui.horizontal_wrapped(|ui| {
+                        for channel in FaderAssignmentControl::daily_channels() {
+                            if ui
+                                .add_sized(
+                                    egui::vec2(MixerLayoutPolicy::assignment_button_width(), 24.0),
+                                    egui::Button::new(channel.to_string()).small(),
+                                )
+                                .on_hover_text(format!(
+                                    "Assign {} to {}",
+                                    channel,
+                                    assignment.label()
+                                ))
+                                .clicked()
+                            {
+                                self.send(UiCommand::Send(assignment.assign_command(channel)));
+                            }
+                        }
+                    });
+                    ui.add_space(6.0);
+                });
+            }
+            ui.separator();
+            ui.add_space(6.0);
+            ui.label(
+                egui::RichText::new("MUTE BEHAVIOUR")
+                    .monospace()
+                    .color(Self::muted_text()),
+            );
+            for control in FaderMuteFunctionControl::daily_controls() {
+                ui.vertical(|ui| {
+                    ui.label(control.label());
+                    ui.horizontal_wrapped(|ui| {
+                        for function in FaderMuteFunctionControl::daily_functions() {
+                            if ui
+                                .add_sized(
+                                    egui::vec2(MixerLayoutPolicy::assignment_button_width(), 24.0),
+                                    egui::Button::new(function.to_string()).small(),
+                                )
+                                .on_hover_text(format!(
+                                    "Set {} mute behaviour to {}",
+                                    control.label(),
+                                    function
+                                ))
+                                .clicked()
+                            {
+                                self.send(UiCommand::Send(control.function_command(function)));
+                            }
+                        }
+                    });
+                    ui.add_space(4.0);
+                });
+            }
+        });
+    }
+
+    fn render_scribble_strip_panel(&mut self, ui: &mut egui::Ui) {
+        Self::bounded_panel(ui, MixerLayoutPolicy::scribble_panel_width(), |ui| {
+            ui.set_width(MixerLayoutPolicy::scribble_panel_width());
+            ui.label(
+                egui::RichText::new("SCRIBBLE STRIPS")
+                    .monospace()
+                    .size(18.0)
+                    .color(egui::Color32::WHITE)
+                    .strong(),
+            );
+            ui.label(
+                "First-pass hardware scribble-strip labels, numbers, icons, and invert toggles.",
+            );
+            ui.add_space(8.0);
+            for control in HardwareScribbleControl::daily_controls() {
+                ui.vertical(|ui| {
+                    ui.label(
+                        egui::RichText::new(control.label())
+                            .monospace()
+                            .color(Self::muted_text()),
+                    );
+                    ui.label(control.description());
+                    ui.horizontal_wrapped(|ui| {
+                        if ui
+                            .add_sized(
+                                egui::vec2(MixerLayoutPolicy::scribble_button_width(), 24.0),
+                                egui::Button::new(format!("Text: {}", control.default_text()))
+                                    .small(),
+                            )
+                            .clicked()
+                        {
+                            self.send(UiCommand::Send(
+                                control.text_command(control.default_text()),
+                            ));
+                        }
+                        if ui
+                            .add_sized(
+                                egui::vec2(MixerLayoutPolicy::scribble_button_width(), 24.0),
+                                egui::Button::new(format!("No. {}", control.default_number()))
+                                    .small(),
+                            )
+                            .clicked()
+                        {
+                            self.send(UiCommand::Send(
+                                control.number_command(control.default_number()),
+                            ));
+                        }
+                        for icon in HardwareScribbleControl::daily_icon_presets() {
+                            let label = icon.unwrap_or("no icon");
+                            if ui
+                                .add_sized(
+                                    egui::vec2(MixerLayoutPolicy::scribble_button_width(), 24.0),
+                                    egui::Button::new(format!("Icon: {label}")).small(),
+                                )
+                                .clicked()
+                            {
+                                self.send(UiCommand::Send(control.icon_command(icon)));
+                            }
+                        }
+                        for (label, inverted) in [("Invert on", true), ("Invert off", false)] {
+                            if ui
+                                .add_sized(
+                                    egui::vec2(MixerLayoutPolicy::scribble_button_width(), 24.0),
+                                    egui::Button::new(label).small(),
+                                )
+                                .clicked()
+                            {
+                                self.send(UiCommand::Send(control.invert_command(inverted)));
+                            }
+                        }
+                    });
+                    ui.add_space(6.0);
+                });
+            }
+        });
+    }
+
     fn render_channel_strip(
         &mut self,
         ui: &mut egui::Ui,
@@ -5650,24 +6056,38 @@ impl PersonalUiApp {
                         }
                     });
                     ui.separator();
-                    ui.horizontal_wrapped(|ui| {
-                        for band in HeadphoneEqBandControl::ten_band_editor() {
-                            Self::soft_bounded_panel(ui, 112.0, |ui| {
-                                ui.label(egui::RichText::new(band.label()).monospace().strong());
-                                if ui.button("Gain 0").clicked() {
-                                    self.send(UiCommand::Send(band.gain_command(0.0)));
-                                }
-                                if ui.button("Freq default").clicked() {
-                                    self.send(UiCommand::Send(
-                                        band.frequency_command(band.default_frequency_hz()),
-                                    ));
-                                }
-                                if ui.button("Q 0.9").clicked() {
-                                    self.send(UiCommand::Send(band.q_command(0.9)));
-                                }
-                            });
-                        }
-                    });
+                    let bands = HeadphoneEqBandControl::ten_band_editor();
+                    let columns = HeadphoneEqLayoutPolicy::grid_columns();
+                    ui.spacing_mut().item_spacing = egui::vec2(
+                        HeadphoneEqLayoutPolicy::band_card_gap(),
+                        HeadphoneEqLayoutPolicy::band_card_gap(),
+                    );
+                    for row in bands.chunks(columns) {
+                        ui.horizontal(|ui| {
+                            for band in row {
+                                Self::soft_bounded_panel(
+                                    ui,
+                                    HeadphoneEqLayoutPolicy::band_card_width(),
+                                    |ui| {
+                                        ui.label(
+                                            egui::RichText::new(band.label()).monospace().strong(),
+                                        );
+                                        if ui.button("Gain 0").clicked() {
+                                            self.send(UiCommand::Send(band.gain_command(0.0)));
+                                        }
+                                        if ui.button("Freq default").clicked() {
+                                            self.send(UiCommand::Send(
+                                                band.frequency_command(band.default_frequency_hz()),
+                                            ));
+                                        }
+                                        if ui.button("Q 0.9").clicked() {
+                                            self.send(UiCommand::Send(band.q_command(0.9)));
+                                        }
+                                    },
+                                );
+                            }
+                        });
+                    }
                 });
             },
         );
@@ -5847,6 +6267,8 @@ impl PersonalUiApp {
                         }
                     });
                 });
+                self.render_fader_assignment_panel(ui);
+                self.render_scribble_strip_panel(ui);
                 ui.vertical(|ui| {
                     self.render_status_card(ui);
                     ui.add_space(12.0);

@@ -370,6 +370,16 @@ This section tracks local source changes made on this machine so context survive
   * Added model-backed workflow actions for clearing sample process errors, toggling sampler reset-on-clear, and setting a short sampler fade duration
   * Added safe sample trim reset buttons for slot 0 start/stop percentages on each bank/pad while continuing to defer file import/removal workflows
   * Added typed `PersonalCommand` mappings for `ClearSampleProcessError`, `SetSamplerResetOnClear`, `SetSamplerFadeDuration`, `SetSampleStartPercent`, and `SetSampleStopPercent` with focused `app_model` coverage
+* Added first-pass Mixer fader assignment and mute-behaviour parity controls:
+  * Added a bounded `FADER ASSIGNMENT` panel on the Mixer dashboard with model-backed Fader A-D assignment controls for daily GoXLR channels
+  * Added first-pass fader mute-target controls for All, Stream, Voice Chat, and Phones mute behaviours
+  * Added typed `PersonalCommand` mappings for `SetFader` and `SetFaderMuteFunction` with focused model-level coverage
+* Polished the personal native `Headphone EQ` page after screenshot review:
+  * Replaced the sparse wrapped/staggered ten-band card flow with a compact fixed 5x2 band grid
+  * Tightened the Headphone EQ panel width and added model-level layout policy coverage so the editor reads as one cohesive equalizer instead of scattered cards in a tall empty panel
+* Added first-pass Mixer scribble-strip parity controls:
+  * Added a bounded `SCRIBBLE STRIPS` panel on the Mixer dashboard for Fader A-D hardware strip labels, numbers, icon presets, and invert toggles
+  * Added typed `PersonalCommand` mappings for `SetScribbleIcon`, `SetScribbleText`, `SetScribbleNumber`, and `SetScribbleInvert` with focused model-level coverage
 
 ### Logging Rule
 
