@@ -131,12 +131,12 @@ Implemented Lighting colour-editor chunk:
 - [x] Stop sample playback.
 - [x] Playback mode/order controls: first-pass play/stop mode and random order actions.
 - [ ] Add/remove sample controls.
-- [ ] Sample start/stop percentage controls.
-- [ ] Clear sample process error.
-- [ ] Sampler reset-on-clear setting.
-- [ ] Sampler fade duration setting.
+- [~] Sample start/stop percentage controls: safe first-pass slot-0 reset buttons are exposed per bank/pad; richer per-sample editing remains pending.
+- [x] Clear sample process error.
+- [x] Sampler reset-on-clear setting.
+- [x] Sampler fade duration setting.
 
-Priority: partially implemented. The native page now covers safe playback/bank controls; file import/removal and sample position settings remain deferred because they have more file/workflow edge cases.
+Priority: partially implemented. The native page now covers safe playback/bank controls, workflow settings, and conservative trim reset controls; file import/removal and richer sample-list editing remain deferred because they have more file/workflow edge cases.
 
 ## 8. Profiles and persistence
 
@@ -180,10 +180,10 @@ Priority: medium-low. Add only settings that solve a current annoyance; avoid bu
 ## Recommended next choices
 
 1. Manual QA of the newly added Mic EQ, guarded Mic profiles, advanced Effects, Headphone EQ, and Sampler pages.
-   - The current chunk intentionally favors typed safe controls over exhaustive file/profile managers; screenshots/use will reveal the next best polish pass.
+   - The current chunks intentionally favor typed safe controls over exhaustive file/profile managers; screenshots/use will reveal the next best polish pass.
 
 2. Fill the remaining file/workflow-heavy gaps only if they become real workflows.
-   - Sampler add/remove samples, sample start/stop percentages, and full profile managers have more destructive/file-state risk than the daily controls now exposed.
+   - Sampler add/remove samples and full profile managers have more destructive/file-state risk than the daily controls now exposed.
 
 3. Further Lighting/editor UX tweaks.
    - Only if manual testing still shows a specific pain point; prefer custom hex inputs or collapsible sections over more preset button spam.

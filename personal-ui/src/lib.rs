@@ -703,6 +703,9 @@ impl SamplerLayoutPolicy {
     pub fn uses_bank_button_cards() -> bool {
         true
     }
+    pub fn exposes_file_import_controls() -> bool {
+        false
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -734,6 +737,97 @@ impl SamplerAction {
     pub fn label(&self) -> &'static str {
         self.label
     }
+    pub fn command(&self) -> PersonalCommand {
+        self.command.clone()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SamplerWorkflowSetting {
+    label: &'static str,
+    description: &'static str,
+    command: PersonalCommand,
+}
+
+impl SamplerWorkflowSetting {
+    pub fn safe_settings() -> Vec<Self> {
+        vec![
+            Self::new(
+                "Clear process error",
+                "Reset the daemon's last sample-processing error after reviewing it.",
+                PersonalCommand::ClearSampleProcessError,
+            ),
+            Self::new(
+                "Reset on clear: on",
+                "Return sampler buttons to a reset state when cleared.",
+                PersonalCommand::SetSamplerResetOnClear(true),
+            ),
+            Self::new(
+                "Reset on clear: off",
+                "Keep sampler state stable when clearing sample slots.",
+                PersonalCommand::SetSamplerResetOnClear(false),
+            ),
+            Self::new(
+                "Fade 250 ms",
+                "Use a short fade for sampler playback changes.",
+                PersonalCommand::SetSamplerFadeDuration(250),
+            ),
+        ]
+    }
+
+    fn new(label: &'static str, description: &'static str, command: PersonalCommand) -> Self {
+        Self {
+            label,
+            description,
+            command,
+        }
+    }
+
+    pub fn label(&self) -> &'static str {
+        self.label
+    }
+
+    pub fn description(&self) -> &'static str {
+        self.description
+    }
+
+    pub fn command(&self) -> PersonalCommand {
+        self.command.clone()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SampleTrimAction {
+    label: &'static str,
+    command: PersonalCommand,
+}
+
+impl SampleTrimAction {
+    pub fn safe_trim_actions(
+        bank: SampleBank,
+        button: SampleButtons,
+        sample_index: usize,
+    ) -> Vec<Self> {
+        vec![
+            Self::new(
+                "Start 0%",
+                PersonalCommand::SetSampleStartPercent(bank, button, sample_index, 0.0),
+            ),
+            Self::new(
+                "Stop 100%",
+                PersonalCommand::SetSampleStopPercent(bank, button, sample_index, 100.0),
+            ),
+        ]
+    }
+
+    fn new(label: &'static str, command: PersonalCommand) -> Self {
+        Self { label, command }
+    }
+
+    pub fn label(&self) -> &'static str {
+        self.label
+    }
+
     pub fn command(&self) -> PersonalCommand {
         self.command.clone()
     }
@@ -928,6 +1022,11 @@ pub enum PersonalCommand {
     SetActiveSamplerBank(SampleBank),
     SetSamplerFunction(SampleBank, SampleButtons, SamplePlaybackMode),
     SetSamplerOrder(SampleBank, SampleButtons, SamplePlayOrder),
+    ClearSampleProcessError,
+    SetSamplerResetOnClear(bool),
+    SetSamplerFadeDuration(u32),
+    SetSampleStartPercent(SampleBank, SampleButtons, usize, f32),
+    SetSampleStopPercent(SampleBank, SampleButtons, usize, f32),
     PlayNextSample(SampleBank, SampleButtons),
     StopSamplePlayback(SampleBank, SampleButtons),
     SaveMicProfile,
@@ -1139,6 +1238,19 @@ impl From<PersonalCommand> for GoXLRCommand {
             }
             PersonalCommand::SetSamplerOrder(bank, button, order) => {
                 GoXLRCommand::SetSamplerOrder(bank, button, order)
+            }
+            PersonalCommand::ClearSampleProcessError => GoXLRCommand::ClearSampleProcessError(),
+            PersonalCommand::SetSamplerResetOnClear(enabled) => {
+                GoXLRCommand::SetSamplerResetOnClear(enabled)
+            }
+            PersonalCommand::SetSamplerFadeDuration(duration_ms) => {
+                GoXLRCommand::SetSamplerFadeDuration(duration_ms)
+            }
+            PersonalCommand::SetSampleStartPercent(bank, button, index, percent) => {
+                GoXLRCommand::SetSampleStartPercent(bank, button, index, percent)
+            }
+            PersonalCommand::SetSampleStopPercent(bank, button, index, percent) => {
+                GoXLRCommand::SetSampleStopPercent(bank, button, index, percent)
             }
             PersonalCommand::PlayNextSample(bank, button) => {
                 GoXLRCommand::PlayNextSample(bank, button)
@@ -5567,7 +5679,7 @@ impl PersonalUiApp {
             ui,
             "Sampler",
             "Sampler bank and playback controls",
-            "First-pass sampler parity focuses on bank selection, play/stop mode, play-next, stop, and random order controls.",
+            "First-pass sampler parity focuses on bank selection, play/stop mode, play-next, stop, random order, safe workflow settings, and default trim reset controls.",
         );
         ui.add_space(12.0);
         Self::polished_row(
@@ -5577,6 +5689,31 @@ impl PersonalUiApp {
                 ContentLayoutPolicy::desktop_panel_gap(),
             ),
             |ui| {
+                Self::bounded_panel(ui, SamplerLayoutPolicy::panel_width(), |ui| {
+                    ui.label(
+                        egui::RichText::new("WORKFLOW SETTINGS")
+                            .monospace()
+                            .size(18.0)
+                            .color(egui::Color32::WHITE)
+                            .strong(),
+                    );
+                    ui.label(
+                        "Safe global sampler actions; sample file import/removal remains deferred.",
+                    );
+                    ui.separator();
+                    for setting in SamplerWorkflowSetting::safe_settings() {
+                        if ui
+                            .add_sized(
+                                egui::vec2(ContentLayoutPolicy::wide_action_button_width(), 24.0),
+                                egui::Button::new(setting.label()).small(),
+                            )
+                            .on_hover_text(setting.description())
+                            .clicked()
+                        {
+                            self.send(UiCommand::Send(setting.command()));
+                        }
+                    }
+                });
                 for bank in [SampleBank::A, SampleBank::B, SampleBank::C] {
                     Self::bounded_panel(ui, SamplerLayoutPolicy::panel_width(), |ui| {
                         ui.label(
@@ -5607,6 +5744,23 @@ impl PersonalUiApp {
                                             ),
                                             egui::Button::new(action.label()).small(),
                                         )
+                                        .clicked()
+                                    {
+                                        self.send(UiCommand::Send(action.command()));
+                                    }
+                                }
+                            });
+                            ui.horizontal_wrapped(|ui| {
+                                for action in SampleTrimAction::safe_trim_actions(bank, button, 0) {
+                                    if ui
+                                        .add_sized(
+                                            egui::vec2(
+                                                ContentLayoutPolicy::min_action_button_width(),
+                                                22.0,
+                                            ),
+                                            egui::Button::new(action.label()).small(),
+                                        )
+                                        .on_hover_text("Reset sample slot 0 trim boundary without importing or removing files.")
                                         .clicked()
                                     {
                                         self.send(UiCommand::Send(action.command()));

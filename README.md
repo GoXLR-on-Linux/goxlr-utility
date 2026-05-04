@@ -366,6 +366,10 @@ This section tracks local source changes made on this machine so context survive
   * Added first-pass advanced Effects DSP actions for reverb decay, echo feedback, pitch character, megaphone post gain, robot threshold, and hard-tune source/default command paths
   * Added dedicated `Headphone EQ` and `Sampler` view modes/tabs; Headphone EQ exposes enable/disable, preamp, and ten-band gain/frequency/Q command controls, while Sampler exposes bank cards, per-pad play/stop mode, random order, play-next, and stop playback controls
   * Added model-level tests for the ordered parity batch and expanded `PersonalCommand -> GoXLRCommand` mapping coverage; focused `app_model` verification now covers 79 tests
+* Extended the Sampler page with the next safe workflow-settings parity chunk:
+  * Added model-backed workflow actions for clearing sample process errors, toggling sampler reset-on-clear, and setting a short sampler fade duration
+  * Added safe sample trim reset buttons for slot 0 start/stop percentages on each bank/pad while continuing to defer file import/removal workflows
+  * Added typed `PersonalCommand` mappings for `ClearSampleProcessError`, `SetSamplerResetOnClear`, `SetSamplerFadeDuration`, `SetSampleStartPercent`, and `SetSampleStopPercent` with focused `app_model` coverage
 
 ### Logging Rule
 

@@ -12,9 +12,9 @@ use goxlr_personal_ui::{
     LightingTripleColourTarget, MicEqBandControl, MicLayoutPolicy, MicProfileAction,
     MiniWindowMode, MixerLayoutPolicy, OptionalBoolAction, PersonalCommand, QuickActions,
     RoutingMatrixLayoutPolicy, RoutingMatrixModel, RoutingMatrixRoute, RoutingPreset,
-    RoutingRuleEditor, RoutingStateBadge, SamplerAction, SamplerLayoutPolicy, SceneEditor,
-    SystemLayoutPolicy, SystemSettingsAction, TrayAction, TrayMenuModel, UiCommand, UiScene,
-    VolumeDebouncer, WindowAction, ipc_socket_path_candidates,
+    RoutingRuleEditor, RoutingStateBadge, SampleTrimAction, SamplerAction, SamplerLayoutPolicy,
+    SamplerWorkflowSetting, SceneEditor, SystemLayoutPolicy, SystemSettingsAction, TrayAction,
+    TrayMenuModel, UiCommand, UiScene, VolumeDebouncer, WindowAction, ipc_socket_path_candidates,
 };
 use goxlr_types::{
     AnimationMode, Button, ButtonColourGroups, ButtonColourOffStyle, ChannelName,
@@ -1061,6 +1061,102 @@ fn sampler_page_exposes_bank_button_playback_actions() {
         action.command() == PersonalCommand::PlayNextSample(SampleBank::A, SampleButtons::TopLeft)
     }));
     assert!(SamplerLayoutPolicy::uses_bank_button_cards());
+}
+
+#[test]
+fn sampler_page_exposes_safe_workflow_settings_and_trim_actions() {
+    let settings = SamplerWorkflowSetting::safe_settings();
+    assert!(settings.iter().any(|setting| {
+        setting.command() == PersonalCommand::ClearSampleProcessError
+            && setting.label() == "Clear process error"
+    }));
+    assert!(
+        settings
+            .iter()
+            .any(|setting| { setting.command() == PersonalCommand::SetSamplerResetOnClear(true) })
+    );
+    assert!(
+        settings
+            .iter()
+            .any(|setting| { setting.command() == PersonalCommand::SetSamplerResetOnClear(false) })
+    );
+    assert!(
+        settings
+            .iter()
+            .any(|setting| { setting.command() == PersonalCommand::SetSamplerFadeDuration(250) })
+    );
+    assert!(
+        settings
+            .iter()
+            .all(|setting| !setting.description().is_empty())
+    );
+
+    let trim_actions =
+        SampleTrimAction::safe_trim_actions(SampleBank::B, SampleButtons::BottomRight, 0);
+    assert!(trim_actions.iter().any(|action| {
+        action.command()
+            == PersonalCommand::SetSampleStartPercent(
+                SampleBank::B,
+                SampleButtons::BottomRight,
+                0,
+                0.0,
+            )
+    }));
+    assert!(trim_actions.iter().any(|action| {
+        action.command()
+            == PersonalCommand::SetSampleStopPercent(
+                SampleBank::B,
+                SampleButtons::BottomRight,
+                0,
+                100.0,
+            )
+    }));
+    assert!(trim_actions.iter().all(|action| !action.label().is_empty()));
+    assert!(!SamplerLayoutPolicy::exposes_file_import_controls());
+}
+
+#[test]
+fn sampler_workflow_settings_map_to_backend_commands() {
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::ClearSampleProcessError),
+        goxlr_ipc::GoXLRCommand::ClearSampleProcessError()
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetSamplerResetOnClear(true)),
+        goxlr_ipc::GoXLRCommand::SetSamplerResetOnClear(true)
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetSamplerFadeDuration(350)),
+        goxlr_ipc::GoXLRCommand::SetSamplerFadeDuration(350)
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetSampleStartPercent(
+            SampleBank::C,
+            SampleButtons::TopRight,
+            1,
+            12.5,
+        )),
+        goxlr_ipc::GoXLRCommand::SetSampleStartPercent(
+            SampleBank::C,
+            SampleButtons::TopRight,
+            1,
+            pct,
+        ) if pct == 12.5
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetSampleStopPercent(
+            SampleBank::C,
+            SampleButtons::TopRight,
+            1,
+            87.5,
+        )),
+        goxlr_ipc::GoXLRCommand::SetSampleStopPercent(
+            SampleBank::C,
+            SampleButtons::TopRight,
+            1,
+            pct,
+        ) if pct == 87.5
+    ));
 }
 
 #[test]
