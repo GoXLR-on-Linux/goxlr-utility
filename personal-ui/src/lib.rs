@@ -163,6 +163,51 @@ impl SystemLayoutPolicy {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct LightingProfileAction {
+    label: String,
+    description: &'static str,
+    command: PersonalCommand,
+}
+
+impl LightingProfileAction {
+    pub fn new(label: String, description: &'static str, command: PersonalCommand) -> Self {
+        Self {
+            label,
+            description,
+            command,
+        }
+    }
+
+    pub fn guarded_daily_actions(profile: &str) -> Vec<Self> {
+        vec![Self::new(
+            format!("Load {profile} lighting"),
+            "Load only lighting colours from the named profile without changing audio routing, mix, mic, or effects settings.",
+            PersonalCommand::LoadProfileColours(profile.to_string()),
+        )]
+    }
+
+    pub fn label(&self) -> &str {
+        &self.label
+    }
+
+    pub fn description(&self) -> &'static str {
+        self.description
+    }
+
+    pub fn command(&self) -> PersonalCommand {
+        self.command.clone()
+    }
+
+    pub fn requires_confirmation(&self) -> bool {
+        true
+    }
+
+    pub fn command_if_confirmed(&self, confirmed: bool) -> Option<PersonalCommand> {
+        confirmed.then(|| self.command())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct MainProfileAction {
     label: String,
     description: &'static str,
@@ -374,6 +419,18 @@ impl LightingLayoutPolicy {
 
     pub fn balanced_editor_row_width() -> f32 {
         Self::wide_editor_panel_width() * 3.0 + Self::panel_gap() * 2.0
+    }
+
+    pub fn profile_panel_width() -> f32 {
+        420.0
+    }
+
+    pub fn profile_button_width() -> f32 {
+        170.0
+    }
+
+    pub fn uses_guarded_profile_colour_actions() -> bool {
+        true
     }
 
     pub fn panel_gap() -> f32 {
@@ -1635,6 +1692,7 @@ pub enum PersonalCommand {
     SetSampleStopPercent(SampleBank, SampleButtons, usize, f32),
     PlayNextSample(SampleBank, SampleButtons),
     StopSamplePlayback(SampleBank, SampleButtons),
+    LoadProfileColours(String),
     NewProfile(String),
     LoadProfile(String, bool),
     SaveProfile,
@@ -1900,6 +1958,9 @@ impl From<PersonalCommand> for GoXLRCommand {
             }
             PersonalCommand::StopSamplePlayback(bank, button) => {
                 GoXLRCommand::StopSamplePlayback(bank, button)
+            }
+            PersonalCommand::LoadProfileColours(profile) => {
+                GoXLRCommand::LoadProfileColours(profile)
             }
             PersonalCommand::NewProfile(profile) => GoXLRCommand::NewProfile(profile),
             PersonalCommand::LoadProfile(profile, load_hardware) => {
@@ -4609,6 +4670,7 @@ pub struct PersonalUiApp {
     pending_effect_preset_confirmation: Option<PersonalCommand>,
     pending_headphone_eq_profile_confirmation: Option<PersonalCommand>,
     pending_main_profile_confirmation: Option<PersonalCommand>,
+    pending_lighting_profile_confirmation: Option<PersonalCommand>,
 }
 
 impl PersonalUiApp {
@@ -4645,6 +4707,7 @@ impl PersonalUiApp {
             pending_effect_preset_confirmation: None,
             pending_headphone_eq_profile_confirmation: None,
             pending_main_profile_confirmation: None,
+            pending_lighting_profile_confirmation: None,
         }
     }
 
@@ -5578,6 +5641,54 @@ impl PersonalUiApp {
         });
     }
 
+    fn render_lighting_profile_panel(&mut self, ui: &mut egui::Ui) {
+        Self::bounded_panel(ui, LightingLayoutPolicy::profile_panel_width(), |ui| {
+            ui.set_width(LightingLayoutPolicy::profile_panel_width());
+            ui.vertical(|ui| {
+                ui.set_width(LightingLayoutPolicy::profile_panel_width());
+                ui.label(
+                    egui::RichText::new("LIGHTING PROFILE")
+                        .monospace()
+                        .size(18.0)
+                        .color(egui::Color32::WHITE)
+                        .strong(),
+                );
+                ui.label("Load only colours from your personal profile; audio, routing, mic, and effects stay untouched.");
+                ui.add_space(6.0);
+                for action in LightingProfileAction::guarded_daily_actions("Personal") {
+                    let confirmed = self
+                        .pending_lighting_profile_confirmation
+                        .as_ref()
+                        .is_some_and(|pending| pending == &action.command());
+                    let label = if confirmed {
+                        format!("Confirm {}", action.label())
+                    } else {
+                        action.label().to_string()
+                    };
+                    let button = ui.add_sized(
+                        [LightingLayoutPolicy::profile_button_width(), 28.0],
+                        Self::accent_button(label),
+                    );
+                    if button.on_hover_text(action.description()).clicked() {
+                        if let Some(command) = action.command_if_confirmed(confirmed) {
+                            self.pending_lighting_profile_confirmation = None;
+                            self.send(UiCommand::Send(command));
+                        } else {
+                            self.pending_lighting_profile_confirmation = Some(action.command());
+                        }
+                    }
+                }
+            });
+            if self.pending_lighting_profile_confirmation.is_some() {
+                ui.add_space(6.0);
+                ui.label(
+                    egui::RichText::new("Click the same lighting action again to confirm.")
+                        .color(egui::Color32::from_rgb(255, 210, 120)),
+                );
+            }
+        });
+    }
+
     fn render_lighting_page(&mut self, ui: &mut egui::Ui) {
         ui.add_space(8.0);
         Self::section_header(
@@ -5598,6 +5709,8 @@ impl PersonalUiApp {
             },
         );
         ui.add_space(6.0);
+        self.render_lighting_profile_panel(ui);
+        ui.add_space(8.0);
         let quick_theme_card_width =
             LightingLayoutPolicy::quick_theme_card_width_for_available_width(ui.available_width());
         Self::polished_row(

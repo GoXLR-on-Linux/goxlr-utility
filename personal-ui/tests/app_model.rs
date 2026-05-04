@@ -10,14 +10,14 @@ use goxlr_personal_ui::{
     FaderMuteFunctionControl, HardwareScribbleControl, HeadphoneEqBandControl,
     HeadphoneEqLayoutPolicy, HeadphoneEqProfileAction, LightingAnimationControl,
     LightingButtonColourTarget, LightingFaderColourTarget, LightingLayoutPolicy,
-    LightingQuickTheme, LightingSimpleColourTarget, LightingTripleColourTarget, MainProfileAction,
-    MicEqBandControl, MicLayoutPolicy, MicProfileAction, MiniWindowMode, MixerLayoutPolicy,
-    MonitorMixControl, OptionalBoolAction, PersonalCommand, QuickActions,
-    RoutingMatrixLayoutPolicy, RoutingMatrixModel, RoutingMatrixRoute, RoutingPreset,
-    RoutingRuleEditor, RoutingStateBadge, SampleTrimAction, SamplerAction, SamplerLayoutPolicy,
-    SamplerWorkflowSetting, SceneEditor, SubmixChannelControl, SubmixOutputMixControl,
-    SystemLayoutPolicy, SystemSettingsAction, TrayAction, TrayMenuModel, UiCommand, UiScene,
-    VolumeDebouncer, WindowAction, ipc_socket_path_candidates,
+    LightingProfileAction, LightingQuickTheme, LightingSimpleColourTarget,
+    LightingTripleColourTarget, MainProfileAction, MicEqBandControl, MicLayoutPolicy,
+    MicProfileAction, MiniWindowMode, MixerLayoutPolicy, MonitorMixControl, OptionalBoolAction,
+    PersonalCommand, QuickActions, RoutingMatrixLayoutPolicy, RoutingMatrixModel,
+    RoutingMatrixRoute, RoutingPreset, RoutingRuleEditor, RoutingStateBadge, SampleTrimAction,
+    SamplerAction, SamplerLayoutPolicy, SamplerWorkflowSetting, SceneEditor, SubmixChannelControl,
+    SubmixOutputMixControl, SystemLayoutPolicy, SystemSettingsAction, TrayAction, TrayMenuModel,
+    UiCommand, UiScene, VolumeDebouncer, WindowAction, ipc_socket_path_candidates,
 };
 use goxlr_types::{
     AnimationMode, Button, ButtonColourGroups, ButtonColourOffStyle, ChannelName,
@@ -1590,6 +1590,52 @@ fn app_view_mode_has_dedicated_mic_effects_and_lighting_pages_for_parity_chunks(
 
     quick_actions.set_view_mode(AppViewMode::Lighting);
     assert_eq!(quick_actions.view_mode(), AppViewMode::Lighting);
+}
+
+#[test]
+fn lighting_profile_actions_are_guarded_colour_only_workflows() {
+    assert!(LightingLayoutPolicy::uses_guarded_profile_colour_actions());
+    assert_eq!(LightingLayoutPolicy::profile_panel_width(), 420.0);
+    assert_eq!(LightingLayoutPolicy::profile_button_width(), 170.0);
+
+    let actions = LightingProfileAction::guarded_daily_actions("Personal");
+    assert_eq!(actions.len(), 1);
+    assert!(
+        actions
+            .iter()
+            .all(LightingProfileAction::requires_confirmation)
+    );
+    assert!(
+        actions
+            .iter()
+            .all(|action| !action.description().is_empty())
+    );
+
+    let action = &actions[0];
+    assert_eq!(action.label(), "Load Personal lighting");
+    assert_eq!(
+        action.command(),
+        PersonalCommand::LoadProfileColours("Personal".to_string())
+    );
+    assert_eq!(
+        action.command_if_confirmed(false),
+        None,
+        "lighting-only profile load must require an explicit second click"
+    );
+    assert_eq!(
+        action.command_if_confirmed(true),
+        Some(PersonalCommand::LoadProfileColours("Personal".to_string()))
+    );
+}
+
+#[test]
+fn lighting_profile_colour_action_maps_to_backend_command() {
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::LoadProfileColours(
+            "Personal".to_string()
+        )),
+        goxlr_ipc::GoXLRCommand::LoadProfileColours(profile) if profile == "Personal"
+    ));
 }
 
 #[test]

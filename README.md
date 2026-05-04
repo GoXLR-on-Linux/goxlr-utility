@@ -399,6 +399,10 @@ This section tracks local source changes made on this machine so context survive
   * Added a bounded `MAIN PROFILE` panel on the System page for named-slot full-profile load, save-active, save-as, create, and delete workflows
   * Added same-action second-click confirmation before dispatching full-profile load/save/create/delete commands
   * Added typed `PersonalCommand` mappings for `NewProfile`, `LoadProfile`, `SaveProfile`, `SaveProfileAs`, and `DeleteProfile` with focused model-level coverage
+* Added guarded lighting-only profile loading:
+  * Added a bounded `LIGHTING PROFILE` panel on the Lighting page for loading only colour settings from the named personal profile slot
+  * Added same-action second-click confirmation before dispatching the colour-only profile load command
+  * Added typed `PersonalCommand::LoadProfileColours` mapping to `GoXLRCommand::LoadProfileColours` with focused model-level coverage
 
 ### Logging Rule
 

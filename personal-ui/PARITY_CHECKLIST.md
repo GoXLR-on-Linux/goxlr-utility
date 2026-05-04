@@ -106,7 +106,7 @@ Implemented Effects detail chunk:
 - [x] Animation mode controls: editor covers Simple, Rainbow, Ripple, Retro, and None.
 - [x] Animation modifiers and waterfall direction.
 - [x] Layout polish for dense Lighting controls: adaptive quick-theme cards and wrapped editor panel rows reduce the cramped left column, fit the four quick themes at an 800px-wide window, keep card heights consistent, keep animation/editor controls in vertical panel flow instead of skinny one-character wrapped columns, and give long fader/button/sampler style actions fixed widths.
-- [ ] Load only lighting from profile.
+- [~] Load only lighting from profile: guarded named-slot colour-only load exists on the Lighting page with same-action second-click confirmation; full dynamic profile browser/list management remains pending.
 
 Priority: mostly implemented for daily personal use. Remaining Lighting work is profile-only loading and deeper per-button polish if the current editor feels too broad or too click-heavy.
 
