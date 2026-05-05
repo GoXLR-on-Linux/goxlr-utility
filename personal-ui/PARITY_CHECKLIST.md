@@ -37,7 +37,7 @@ Priority: keep stable; only extend if debugging or multiple-device use becomes a
 - [~] First-pass fader mute-behaviour editor: Mixer dashboard exposes safe mute-target buttons for All, Stream, Voice Chat, and Phones backed by typed `SetFaderMuteFunction` commands; hold/toggle and less-used mute targets remain pending.
 - [~] First-pass scribble strip editor: Mixer dashboard exposes Fader A-D hardware strip label, number, icon preset, and invert buttons backed by typed scribble commands; free-text entry and full icon browsing remain deferred.
 - [x] First-pass monitor mix selector: Mixer dashboard exposes safe hardware monitor-source buttons for Headphones, Broadcast, Chat Mic, and Line Out backed by typed `SetMonitorMix` commands.
-- [~] First-pass submix controls: Mixer dashboard exposes safe enable/disable, daily channel volume presets/linking, and output mix A/B routing backed by typed `SetSubMixEnabled`, percent-to-raw `SetSubMixVolume`, `SetSubMixLinked`, and `SetSubMixOutputMix` commands; live submix state reflection, arbitrary slider values, and exhaustive output coverage remain deferred.
+- [~] First-pass submix controls: Mixer dashboard exposes safe enable/disable, daily channel volume presets/linking, and output mix A/B routing backed by typed `SetSubMixEnabled`, percent-to-raw `SetSubMixVolume`, `SetSubMixLinked`, and `SetSubMixOutputMix` commands; current daemon-reported channel volume/link state and output mix A/B state are reflected inline when available; arbitrary slider values and exhaustive output coverage remain deferred.
 
 Priority: medium. Daily mute/routing is already useful; fader assignment and scribbles would improve web parity but are less urgent than Lighting or full Effects.
 

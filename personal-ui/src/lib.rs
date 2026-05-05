@@ -11,7 +11,7 @@ use goxlr_ipc::client::Client;
 use goxlr_ipc::clients::ipc::ipc_client::IPCClient;
 use goxlr_ipc::clients::ipc::ipc_socket::Socket;
 use goxlr_ipc::{
-    DaemonRequest, DaemonResponse, DaemonStatus, GoXLRCommand, Sampler, ipc_socket_path,
+    DaemonRequest, DaemonResponse, DaemonStatus, GoXLRCommand, Sampler, Submixes, ipc_socket_path,
 };
 use goxlr_types::{
     AnimationMode, Button, ButtonColourGroups, ButtonColourOffStyle, ChannelName,
@@ -20,7 +20,7 @@ use goxlr_types::{
     GateTimes, GenderStyle, HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle,
     MicrophoneType, MiniEqFrequencies, Mix, MuteFunction, OutputDevice, PitchStyle, ReverbStyle,
     RobotRange, RobotStyle, SampleBank, SampleButtons, SamplePlayOrder, SamplePlaybackMode,
-    SamplerColourTargets, SimpleColourTargets, VodMode, WaterfallDirection,
+    SamplerColourTargets, SimpleColourTargets, SubMixChannelName, VodMode, WaterfallDirection,
 };
 use interprocess::local_socket::tokio::prelude::LocalSocketStream;
 use interprocess::local_socket::traits::tokio::Stream;
@@ -2426,6 +2426,141 @@ impl SubmixOutputMixControl {
 
     pub fn mix_command(&self, mix: Mix) -> PersonalCommand {
         PersonalCommand::SetSubMixOutputMix(self.output, mix)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SubmixChannelSnapshot {
+    channel: ChannelName,
+    label: String,
+    volume: u8,
+    linked: bool,
+    ratio: f64,
+}
+
+impl SubmixChannelSnapshot {
+    pub fn new(
+        channel: ChannelName,
+        label: impl Into<String>,
+        volume: u8,
+        linked: bool,
+        ratio: f64,
+    ) -> Self {
+        Self {
+            channel,
+            label: label.into(),
+            volume,
+            linked,
+            ratio,
+        }
+    }
+
+    pub fn from_submixes(submixes: &Submixes) -> Vec<Self> {
+        SubmixChannelControl::daily_controls()
+            .into_iter()
+            .map(|control| {
+                let state = &submixes.inputs[channel_to_submix_channel(control.channel())];
+                Self::new(
+                    control.channel(),
+                    control.label(),
+                    state.volume,
+                    state.linked,
+                    state.ratio,
+                )
+            })
+            .collect()
+    }
+
+    pub fn channel(&self) -> ChannelName {
+        self.channel
+    }
+
+    pub fn label(&self) -> &str {
+        &self.label
+    }
+
+    pub fn volume(&self) -> u8 {
+        self.volume
+    }
+
+    pub fn volume_percent(&self) -> u8 {
+        ((self.volume as u16 * 100) / 255) as u8
+    }
+
+    pub fn linked(&self) -> bool {
+        self.linked
+    }
+
+    pub fn ratio(&self) -> f64 {
+        self.ratio
+    }
+
+    pub fn state_label(&self) -> String {
+        format!(
+            "{}% {}",
+            self.volume_percent(),
+            if self.linked { "linked" } else { "unlinked" }
+        )
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SubmixOutputSnapshot {
+    output: OutputDevice,
+    label: String,
+    mix: Mix,
+}
+
+impl SubmixOutputSnapshot {
+    pub fn new(output: OutputDevice, label: impl Into<String>, mix: Mix) -> Self {
+        Self {
+            output,
+            label: label.into(),
+            mix,
+        }
+    }
+
+    pub fn from_submixes(submixes: &Submixes) -> Vec<Self> {
+        SubmixOutputMixControl::daily_controls()
+            .into_iter()
+            .map(|control| {
+                Self::new(
+                    control.output(),
+                    control.label(),
+                    submixes.outputs[control.output()],
+                )
+            })
+            .collect()
+    }
+
+    pub fn output(&self) -> OutputDevice {
+        self.output
+    }
+
+    pub fn label(&self) -> &str {
+        &self.label
+    }
+
+    pub fn mix(&self) -> Mix {
+        self.mix
+    }
+
+    pub fn state_label(&self) -> String {
+        format!("Mix {}", self.mix)
+    }
+}
+
+fn channel_to_submix_channel(channel: ChannelName) -> SubMixChannelName {
+    match channel {
+        ChannelName::Mic => SubMixChannelName::Mic,
+        ChannelName::Chat => SubMixChannelName::Chat,
+        ChannelName::Music => SubMixChannelName::Music,
+        ChannelName::Game => SubMixChannelName::Game,
+        ChannelName::Console => SubMixChannelName::Console,
+        ChannelName::LineIn => SubMixChannelName::LineIn,
+        ChannelName::System => SubMixChannelName::System,
+        ChannelName::Sample => SubMixChannelName::Sample,
+        _ => SubMixChannelName::Mic,
     }
 }
 
@@ -5338,6 +5473,8 @@ pub struct AppSnapshot {
     pub active_audio_streams: ActiveAudioStreams,
     pub active_audio_error: Option<String>,
     pub sampler_slots: Vec<SamplerSlotSnapshot>,
+    pub submix_channels: Vec<SubmixChannelSnapshot>,
+    pub submix_outputs: Vec<SubmixOutputSnapshot>,
 }
 
 impl AppSnapshot {
@@ -5382,6 +5519,8 @@ impl AppSnapshot {
             active_audio_streams: ActiveAudioStreams::default(),
             active_audio_error: None,
             sampler_slots: Vec::new(),
+            submix_channels: Vec::new(),
+            submix_outputs: Vec::new(),
         }
     }
 
@@ -5477,7 +5616,33 @@ impl AppSnapshot {
                 .as_ref()
                 .map(SamplerSlotSnapshot::from_sampler)
                 .unwrap_or_default(),
+            submix_channels: mixer
+                .levels
+                .submix
+                .as_ref()
+                .map(SubmixChannelSnapshot::from_submixes)
+                .unwrap_or_default(),
+            submix_outputs: mixer
+                .levels
+                .submix
+                .as_ref()
+                .map(SubmixOutputSnapshot::from_submixes)
+                .unwrap_or_default(),
         }
+    }
+
+    pub fn submix_channel_state(&self, channel: ChannelName) -> Option<String> {
+        self.submix_channels
+            .iter()
+            .find(|snapshot| snapshot.channel() == channel)
+            .map(SubmixChannelSnapshot::state_label)
+    }
+
+    pub fn submix_output_state(&self, output: OutputDevice) -> Option<String> {
+        self.submix_outputs
+            .iter()
+            .find(|snapshot| snapshot.output() == output)
+            .map(SubmixOutputSnapshot::state_label)
     }
 
     pub fn status_line(&self) -> String {
@@ -7106,7 +7271,12 @@ impl PersonalUiApp {
             );
             for control in SubmixChannelControl::daily_controls() {
                 ui.vertical(|ui| {
-                    ui.label(control.label());
+                    ui.horizontal_wrapped(|ui| {
+                        ui.label(control.label());
+                        if let Some(state) = self.snapshot.submix_channel_state(control.channel()) {
+                            ui.label(egui::RichText::new(state).small().color(Self::muted_text()));
+                        }
+                    });
                     ui.horizontal_wrapped(|ui| {
                         for volume in control.volume_presets() {
                             if ui
@@ -7153,6 +7323,9 @@ impl PersonalUiApp {
             for output in SubmixOutputMixControl::daily_controls() {
                 ui.horizontal_wrapped(|ui| {
                     ui.label(output.label());
+                    if let Some(state) = self.snapshot.submix_output_state(output.output()) {
+                        ui.label(egui::RichText::new(state).small().color(Self::muted_text()));
+                    }
                     for mix in output.mixes() {
                         if ui
                             .add_sized(

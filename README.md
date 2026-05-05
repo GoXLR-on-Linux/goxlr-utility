@@ -127,6 +127,11 @@ curl -H "Authorization: Bearer replace-with-a-strong-token" \
 
 This section tracks local source changes made on this machine so context survives restarts.
 
+* Added live daemon-backed submix state reflection to the native Mixer dashboard:
+  * Added `SubmixChannelSnapshot` and `SubmixOutputSnapshot` model helpers for current channel volume/link state and output Mix A/B state
+  * Populated submix snapshots from daemon `levels.submix` when available, while leaving the existing safe preset/link/output buttons unchanged
+  * Rendered inline current submix state beside channel and output controls; arbitrary sliders and exhaustive outputs remain deferred
+
 * Added a read-only recent app/IPC event log to the native Diagnostics / Status page:
   * Added `DiagnosticsLogEntry` and `DiagnosticsLogFilter` model helpers for read-only filtering and recent-row limiting
   * Recorded app startup, daemon snapshot, and IPC error events in the personal UI without adding any device-changing diagnostics commands

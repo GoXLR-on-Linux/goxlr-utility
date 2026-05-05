@@ -21,9 +21,9 @@ use goxlr_personal_ui::{
     RoutingMatrixRoute, RoutingPreset, RoutingRuleDiffStatus, RoutingRuleEditor, RoutingStateBadge,
     SampleTrimAction, SamplerAction, SamplerFileAction, SamplerLayoutPolicy, SamplerLoadedSample,
     SamplerSampleBrowser, SamplerSlotSnapshot, SamplerWorkflowSetting, SceneEditor,
-    SubmixChannelControl, SubmixOutputMixControl, SystemLayoutPolicy, SystemSettingsAction,
-    TrayAction, TrayMenuModel, UiCommand, UiScene, VolumeDebouncer, WindowAction,
-    ipc_socket_path_candidates,
+    SubmixChannelControl, SubmixChannelSnapshot, SubmixOutputMixControl, SubmixOutputSnapshot,
+    SystemLayoutPolicy, SystemSettingsAction, TrayAction, TrayMenuModel, UiCommand, UiScene,
+    VolumeDebouncer, WindowAction, ipc_socket_path_candidates,
 };
 use goxlr_types::{
     AnimationMode, Button, ButtonColourGroups, ButtonColourOffStyle, ChannelName,
@@ -631,6 +631,40 @@ fn submix_controls_expose_safe_daily_channel_actions() {
             .iter()
             .all(|control| !control.label().is_empty() && !control.description().is_empty())
     );
+}
+
+#[test]
+fn live_submix_snapshots_expose_daemon_volume_link_and_output_mix_state() {
+    let channels = vec![
+        SubmixChannelSnapshot::new(ChannelName::Mic, "Mic", 127, true, 0.5),
+        SubmixChannelSnapshot::new(ChannelName::Music, "Music", 255, false, 1.0),
+    ];
+    assert_eq!(channels[0].volume_percent(), 49);
+    assert_eq!(channels[0].state_label(), "49% linked");
+    assert_eq!(channels[1].volume_percent(), 100);
+    assert_eq!(channels[1].state_label(), "100% unlinked");
+
+    let outputs = vec![
+        SubmixOutputSnapshot::new(OutputDevice::Headphones, "Headphones", Mix::A),
+        SubmixOutputSnapshot::new(OutputDevice::BroadcastMix, "Broadcast", Mix::B),
+    ];
+    assert_eq!(outputs[0].state_label(), "Mix A");
+    assert_eq!(outputs[1].state_label(), "Mix B");
+
+    let mut snapshot = AppSnapshot::disconnected("offline");
+    snapshot.submix_channels = channels;
+    snapshot.submix_outputs = outputs;
+    assert_eq!(
+        snapshot.submix_channel_state(ChannelName::Mic).unwrap(),
+        "49% linked"
+    );
+    assert_eq!(
+        snapshot
+            .submix_output_state(OutputDevice::BroadcastMix)
+            .unwrap(),
+        "Mix B"
+    );
+    assert_eq!(snapshot.submix_channel_state(ChannelName::Game), None);
 }
 
 #[test]
