@@ -76,13 +76,13 @@ Priority: medium-low after current work. Mic basics are covered; EQ/profile poli
 - [x] Command mappings for active preset, FX enable, reverb, echo, pitch, gender, megaphone, robot, and hard tune basics.
 - [x] Quick buttons for FX on/off, robot, and hard tune.
 - [~] Full active preset management: guarded named-slot load, rename-active, and save-active controls exist with same-action second-click confirmation, plus a discovered `.preset` browser for available bundled/user preset files; arbitrary preset import/file editing remains pending.
-- [~] Reverb detailed controls: amount/style are native, plus advanced default buttons for decay, early/tail levels, pre-delay, low/high colour, high factor, diffuse, and modulation speed/depth; full arbitrary sliders remain pending.
-- [~] Echo detailed controls: amount/style are native, plus advanced default buttons for feedback, tempo, left/right delay, left/right feedback, and cross-feedback; full arbitrary sliders remain pending.
-- [~] Pitch detailed controls: amount/style are native, plus first-pass character default.
+- [x] Reverb detailed controls: amount/style are native, plus arbitrary clamped sliders for decay, early/tail levels, pre-delay, low/high colour, high factor, diffuse, and modulation speed/depth backed by typed `SetReverb*` commands.
+- [x] Echo detailed controls: amount/style are native, plus arbitrary clamped sliders for feedback, tempo, left/right delay, left/right feedback, and cross-feedback backed by typed `SetEcho*` commands.
+- [x] Pitch detailed controls: amount/style are native, plus arbitrary clamped pitch character slider backed by typed `SetPitchCharacter` commands.
 - [x] Gender detailed controls: amount and style.
-- [~] Megaphone detailed controls: enable/style/amount are native, plus first-pass post-gain default; deeper parameters remain pending.
-- [~] Robot detailed controls: enable/style are native, plus advanced default buttons for threshold, low gain, mid frequency, high width, waveform, pulse width, and dry mix; full range editing remains pending.
-- [~] Hard tune detailed controls: enable/style are native, plus advanced default buttons for amount, rate, window, and source; fuller editing remains pending.
+- [~] Megaphone detailed controls: enable/style/amount are native, plus arbitrary clamped post-gain slider backed by typed `SetMegaphonePostGain` commands; deeper hidden profile parameters remain pending.
+- [x] Robot detailed controls: enable/style are native, plus arbitrary clamped sliders for low/mid/high gain, frequency, and width bands, waveform, pulse width, threshold, and dry mix backed by typed `SetRobot*` commands.
+- [x] Hard tune detailed controls: enable/style are native, plus arbitrary clamped sliders for amount, rate, and window backed by typed `SetHardTune*` commands; source remains an explicit advanced default button.
 
 Priority: partially implemented. The Effects page now has daily presets plus first-pass detailed sliders/style buttons; future Effects work should only go deeper if the missing advanced DSP parameters matter in day-to-day use.
 
@@ -91,8 +91,14 @@ Implemented Effects detail chunk:
 - Added model-level `EffectsAmountControl` coverage for reverb, echo, pitch, gender, and megaphone amount sliders.
 - Added model-level `EffectsStyleGroup` coverage for reverb, echo, pitch, gender, megaphone, robot, and hard tune style buttons.
 - Expanded `EffectsAdvancedControl` coverage and the Effects `ADVANCED DSP` panel from a handful of defaults to broader quick-default buttons for reverb early/tail/pre-delay/colour/mod, echo tempo/delay/cross-feedback, robot gain/frequency/width/waveform/pulse/dry mix, and hard-tune amount/rate/window/source.
+- Added arbitrary clamped `EffectsReverbSlider` coverage and a `REVERB SLIDERS` section for decay, early/tail levels, pre-delay, low/high colour, high factor, diffuse, and modulation speed/depth.
+- Added arbitrary clamped `EffectsEchoSlider` coverage and an `ECHO SLIDERS` section for feedback, tempo, left/right delay, left/right feedback, and cross-feedback.
+- Added arbitrary clamped `EffectsPitchSlider` coverage and a `PITCH SLIDERS` section for pitch character.
+- Added arbitrary clamped `EffectsMegaphoneSlider` coverage and a `MEGAPHONE SLIDERS` section for post gain.
+- Added arbitrary clamped `EffectsRobotSlider` coverage and a `ROBOT SLIDERS` section for low/mid/high gain, frequency, and width bands, waveform, pulse width, threshold, and dry mix.
+- Added arbitrary clamped `EffectsHardTuneSlider` coverage and a `HARD TUNE SLIDERS` section for amount, rate, and window.
 - Added `EffectsLayoutPolicy` coverage for wrapped quick-preset cards, compact detail panel widths, and bounded style-group cards/buttons so the `STYLES` panel avoids vertical-letter button wrapping.
-- Wired the Effects page to render amount sliders, style button groups, and advanced DSP defaults backed by typed `PersonalCommand` mappings.
+- Wired the Effects page to render amount sliders, style button groups, Reverb/Echo/Pitch/Megaphone/Robot/Hard Tune arbitrary DSP sliders, and advanced DSP defaults backed by typed `PersonalCommand` mappings.
 
 ## 6. Lighting
 
@@ -133,12 +139,12 @@ Implemented Lighting colour-editor chunk:
 - [x] Stop sample playback.
 - [x] Playback mode/order controls: first-pass play/stop mode and random order actions.
 - [~] Add/remove sample controls: guarded typed-path import and remove actions are exposed per bank/pad with same-action second-click confirmation, plus a simple directory sample browser and daemon-backed live slot/sample list with per-index play/remove controls; deeper waveform/drag/drop editing remains pending.
-- [~] Sample start/stop percentage controls: safe bounded start presets (0%, 25%, 50%) and stop presets (50%, 75%, 100%) are exposed per live sample index when daemon slot state is available; arbitrary percentage editing remains pending.
+- [x] Sample start/stop percentage controls: safe bounded start presets (0%, 25%, 50%) and stop presets (50%, 75%, 100%) are exposed per live sample index when daemon slot state is available, and live sample rows now include arbitrary 0–100% Start/Stop sliders backed by typed `SetSampleStartPercent` / `SetSampleStopPercent` commands.
 - [x] Clear sample process error.
 - [x] Sampler reset-on-clear setting.
 - [x] Sampler fade duration setting.
 
-Priority: partially implemented. The native page now covers safe playback/bank controls, workflow settings, conservative trim reset controls, guarded typed-path add/remove sample actions, a simple supported-audio directory browser, and daemon-backed live sample slot/index rows. Richer waveform editing, drag/drop, and bulk sample workflows remain deferred.
+Priority: partially implemented. The native page now covers safe playback/bank controls, workflow settings, conservative trim reset controls, guarded typed-path add/remove sample actions, a simple supported-audio directory browser, daemon-backed live sample slot/index rows, and per-index custom Start/Stop trim sliders. Richer waveform editing, drag/drop, and bulk sample workflows remain deferred.
 
 ## 8. Profiles and persistence
 
@@ -154,7 +160,7 @@ Priority: medium. Useful once daily control pages are stable, but should be impl
 ## 9. Device/system settings
 
 - [x] Headphone limiter / ClipGuard controls: Mic and compact/full views expose toggles and thresholds backed by typed `SetClipGuardEnabled`, `SetClipGuardThreshold`, `SetHeadphoneLimiterEnabled`, and `SetHeadphoneLimiterThreshold` commands; safety presets also enable the protective defaults.
-- [~] Some personal app settings/config editing exists for routing workflows.
+- [x] Routing workflow app-config editing: Config / Routing exposes persisted scene editing, routing-rule editing, save/reload actions, JSON backup-on-save, active-stream-to-rule saving, and runtime rule refresh for the personal routing workflows; this row is scoped to routing config rather than a broad app settings manager.
 - [x] Mute hold duration.
 - [x] Cough button behaviour and mute-target controls: System page exposes hold/toggle mode plus daily mute targets (All, Stream, Voice Chat, Phones) backed by typed `SetCoughIsHold` and `SetCoughMuteFunction` commands.
 - [x] VC mute also mutes chat mic.

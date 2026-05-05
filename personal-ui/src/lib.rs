@@ -1166,6 +1166,34 @@ impl EffectsLayoutPolicy {
         150.0
     }
 
+    pub fn advanced_slider_width() -> f32 {
+        180.0
+    }
+
+    pub fn uses_advanced_reverb_sliders() -> bool {
+        true
+    }
+
+    pub fn uses_advanced_echo_sliders() -> bool {
+        true
+    }
+
+    pub fn uses_advanced_pitch_sliders() -> bool {
+        true
+    }
+
+    pub fn uses_advanced_megaphone_sliders() -> bool {
+        true
+    }
+
+    pub fn uses_advanced_robot_sliders() -> bool {
+        true
+    }
+
+    pub fn uses_advanced_hard_tune_sliders() -> bool {
+        true
+    }
+
     pub fn uses_guarded_preset_management() -> bool {
         true
     }
@@ -1558,7 +1586,7 @@ impl EffectsAdvancedControl {
                 "Megaphone post gain",
                 PersonalCommand::SetMegaphonePostGain(0),
             ),
-            Self::new("Robot threshold", PersonalCommand::SetRobotThreshold(-40)),
+            Self::new("Robot threshold", PersonalCommand::SetRobotThreshold(-36)),
             Self::new(
                 "Robot low gain",
                 PersonalCommand::SetRobotGain(RobotRange::Low, 0),
@@ -1790,6 +1818,14 @@ impl SamplerLayoutPolicy {
     pub fn sample_browser_row_button_width() -> f32 {
         84.0
     }
+
+    pub fn exposes_custom_trim_editor() -> bool {
+        true
+    }
+
+    pub fn custom_trim_slider_width() -> f32 {
+        150.0
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -1930,6 +1966,71 @@ impl SampleTrimAction {
 
     pub fn command(&self) -> PersonalCommand {
         self.command.clone()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SampleTrimEditor {
+    bank: SampleBank,
+    button: SampleButtons,
+    sample_index: usize,
+    start_pct: f32,
+    stop_pct: f32,
+}
+
+impl SampleTrimEditor {
+    pub fn new(
+        bank: SampleBank,
+        button: SampleButtons,
+        sample_index: usize,
+        start_pct: f32,
+        stop_pct: f32,
+    ) -> Self {
+        Self {
+            bank,
+            button,
+            sample_index,
+            start_pct: start_pct.clamp(0.0, 100.0),
+            stop_pct: stop_pct.clamp(0.0, 100.0),
+        }
+    }
+
+    pub fn start_pct(&self) -> f32 {
+        self.start_pct
+    }
+
+    pub fn stop_pct(&self) -> f32 {
+        self.stop_pct
+    }
+
+    pub fn start_label(&self) -> String {
+        format!("Start {:.1}%", self.start_pct)
+    }
+
+    pub fn stop_label(&self) -> String {
+        format!("Stop {:.1}%", self.stop_pct)
+    }
+
+    pub fn clamp_percent(&self, value: f32) -> f32 {
+        value.clamp(0.0, 100.0)
+    }
+
+    pub fn start_command(&self, percent: f32) -> PersonalCommand {
+        PersonalCommand::SetSampleStartPercent(
+            self.bank,
+            self.button,
+            self.sample_index,
+            self.clamp_percent(percent),
+        )
+    }
+
+    pub fn stop_command(&self, percent: f32) -> PersonalCommand {
+        PersonalCommand::SetSampleStopPercent(
+            self.bank,
+            self.button,
+            self.sample_index,
+            self.clamp_percent(percent),
+        )
     }
 }
 
@@ -3713,6 +3814,399 @@ impl EffectsQuickPreset {
 
     pub fn commands(&self) -> Vec<PersonalCommand> {
         self.commands.clone()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EffectsReverbSlider {
+    Decay,
+    EarlyLevel,
+    TailLevel,
+    PreDelay,
+    LowColour,
+    HighColour,
+    HighFactor,
+    Diffuse,
+    ModSpeed,
+    ModDepth,
+}
+
+impl EffectsReverbSlider {
+    pub fn full_sliders() -> Vec<Self> {
+        vec![
+            Self::Decay,
+            Self::EarlyLevel,
+            Self::TailLevel,
+            Self::PreDelay,
+            Self::LowColour,
+            Self::HighColour,
+            Self::HighFactor,
+            Self::Diffuse,
+            Self::ModSpeed,
+            Self::ModDepth,
+        ]
+    }
+
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Decay => "Decay",
+            Self::EarlyLevel => "Early level",
+            Self::TailLevel => "Tail level",
+            Self::PreDelay => "Pre-delay",
+            Self::LowColour => "Low colour",
+            Self::HighColour => "High colour",
+            Self::HighFactor => "High factor",
+            Self::Diffuse => "Diffuse",
+            Self::ModSpeed => "Mod speed",
+            Self::ModDepth => "Mod depth",
+        }
+    }
+
+    pub fn range(&self) -> RangeInclusive<i16> {
+        match self {
+            Self::Decay => 0..=3000,
+            Self::PreDelay => 0..=100,
+            Self::EarlyLevel
+            | Self::TailLevel
+            | Self::LowColour
+            | Self::HighColour
+            | Self::HighFactor
+            | Self::Diffuse
+            | Self::ModSpeed
+            | Self::ModDepth => -50..=50,
+        }
+    }
+
+    pub fn default_value(&self) -> i16 {
+        match self {
+            Self::Decay => 1500,
+            Self::PreDelay => 25,
+            Self::EarlyLevel
+            | Self::TailLevel
+            | Self::LowColour
+            | Self::HighColour
+            | Self::HighFactor
+            | Self::Diffuse
+            | Self::ModSpeed
+            | Self::ModDepth => 0,
+        }
+    }
+
+    pub fn command_for_value(&self, value: i16) -> PersonalCommand {
+        let clamped = value.clamp(*self.range().start(), *self.range().end());
+        match self {
+            Self::Decay => PersonalCommand::SetReverbDecay(clamped as u16),
+            Self::EarlyLevel => PersonalCommand::SetReverbEarlyLevel(clamped as i8),
+            Self::TailLevel => PersonalCommand::SetReverbTailLevel(clamped as i8),
+            Self::PreDelay => PersonalCommand::SetReverbPreDelay(clamped as u8),
+            Self::LowColour => PersonalCommand::SetReverbLowColour(clamped as i8),
+            Self::HighColour => PersonalCommand::SetReverbHighColour(clamped as i8),
+            Self::HighFactor => PersonalCommand::SetReverbHighFactor(clamped as i8),
+            Self::Diffuse => PersonalCommand::SetReverbDiffuse(clamped as i8),
+            Self::ModSpeed => PersonalCommand::SetReverbModSpeed(clamped as i8),
+            Self::ModDepth => PersonalCommand::SetReverbModDepth(clamped as i8),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EffectsEchoSlider {
+    Feedback,
+    Tempo,
+    DelayLeft,
+    DelayRight,
+    FeedbackLeft,
+    FeedbackRight,
+    CrossFeedbackLeftToRight,
+    CrossFeedbackRightToLeft,
+}
+
+impl EffectsEchoSlider {
+    pub fn full_sliders() -> Vec<Self> {
+        vec![
+            Self::Feedback,
+            Self::Tempo,
+            Self::DelayLeft,
+            Self::DelayRight,
+            Self::FeedbackLeft,
+            Self::FeedbackRight,
+            Self::CrossFeedbackLeftToRight,
+            Self::CrossFeedbackRightToLeft,
+        ]
+    }
+
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Feedback => "Feedback",
+            Self::Tempo => "Tempo",
+            Self::DelayLeft => "Left delay",
+            Self::DelayRight => "Right delay",
+            Self::FeedbackLeft => "Left feedback",
+            Self::FeedbackRight => "Right feedback",
+            Self::CrossFeedbackLeftToRight => "Cross L→R",
+            Self::CrossFeedbackRightToLeft => "Cross R→L",
+        }
+    }
+
+    pub fn range(&self) -> RangeInclusive<i16> {
+        match self {
+            Self::Tempo => 60..=300,
+            Self::DelayLeft | Self::DelayRight => 0..=2500,
+            Self::Feedback
+            | Self::FeedbackLeft
+            | Self::FeedbackRight
+            | Self::CrossFeedbackLeftToRight
+            | Self::CrossFeedbackRightToLeft => 0..=100,
+        }
+    }
+
+    pub fn default_value(&self) -> i16 {
+        match self {
+            Self::Feedback | Self::FeedbackLeft | Self::FeedbackRight => 35,
+            Self::Tempo => 120,
+            Self::DelayLeft => 250,
+            Self::DelayRight => 375,
+            Self::CrossFeedbackLeftToRight | Self::CrossFeedbackRightToLeft => 0,
+        }
+    }
+
+    pub fn command_for_value(&self, value: i16) -> PersonalCommand {
+        let clamped = value.clamp(*self.range().start(), *self.range().end());
+        match self {
+            Self::Feedback => PersonalCommand::SetEchoFeedback(clamped as u8),
+            Self::Tempo => PersonalCommand::SetEchoTempo(clamped as u16),
+            Self::DelayLeft => PersonalCommand::SetEchoDelayLeft(clamped as u16),
+            Self::DelayRight => PersonalCommand::SetEchoDelayRight(clamped as u16),
+            Self::FeedbackLeft => PersonalCommand::SetEchoFeedbackLeft(clamped as u8),
+            Self::FeedbackRight => PersonalCommand::SetEchoFeedbackRight(clamped as u8),
+            Self::CrossFeedbackLeftToRight => {
+                PersonalCommand::SetEchoFeedbackXFBLtoR(clamped as u8)
+            }
+            Self::CrossFeedbackRightToLeft => {
+                PersonalCommand::SetEchoFeedbackXFBRtoL(clamped as u8)
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EffectsPitchSlider {
+    Character,
+}
+
+impl EffectsPitchSlider {
+    pub fn full_sliders() -> Vec<Self> {
+        vec![Self::Character]
+    }
+
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Character => "Character",
+        }
+    }
+
+    pub fn range(&self) -> RangeInclusive<i16> {
+        match self {
+            Self::Character => 0..=100,
+        }
+    }
+
+    pub fn default_value(&self) -> i16 {
+        match self {
+            Self::Character => 50,
+        }
+    }
+
+    pub fn command_for_value(&self, value: i16) -> PersonalCommand {
+        let clamped = value.clamp(*self.range().start(), *self.range().end());
+        match self {
+            Self::Character => PersonalCommand::SetPitchCharacter(clamped as u8),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EffectsMegaphoneSlider {
+    PostGain,
+}
+
+impl EffectsMegaphoneSlider {
+    pub fn full_sliders() -> Vec<Self> {
+        vec![Self::PostGain]
+    }
+
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::PostGain => "Post gain",
+        }
+    }
+
+    pub fn range(&self) -> RangeInclusive<i16> {
+        match self {
+            Self::PostGain => -20..=20,
+        }
+    }
+
+    pub fn default_value(&self) -> i16 {
+        match self {
+            Self::PostGain => 0,
+        }
+    }
+
+    pub fn command_for_value(&self, value: i16) -> PersonalCommand {
+        let clamped = value.clamp(*self.range().start(), *self.range().end());
+        match self {
+            Self::PostGain => PersonalCommand::SetMegaphonePostGain(clamped as i8),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EffectsRobotSlider {
+    LowGain,
+    LowFrequency,
+    LowWidth,
+    MidGain,
+    MidFrequency,
+    MidWidth,
+    HighGain,
+    HighFrequency,
+    HighWidth,
+    Waveform,
+    PulseWidth,
+    Threshold,
+    DryMix,
+}
+
+impl EffectsRobotSlider {
+    pub fn full_sliders() -> Vec<Self> {
+        vec![
+            Self::LowGain,
+            Self::LowFrequency,
+            Self::LowWidth,
+            Self::MidGain,
+            Self::MidFrequency,
+            Self::MidWidth,
+            Self::HighGain,
+            Self::HighFrequency,
+            Self::HighWidth,
+            Self::Waveform,
+            Self::PulseWidth,
+            Self::Threshold,
+            Self::DryMix,
+        ]
+    }
+
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::LowGain => "Low gain",
+            Self::LowFrequency => "Low frequency",
+            Self::LowWidth => "Low width",
+            Self::MidGain => "Mid gain",
+            Self::MidFrequency => "Mid frequency",
+            Self::MidWidth => "Mid width",
+            Self::HighGain => "High gain",
+            Self::HighFrequency => "High frequency",
+            Self::HighWidth => "High width",
+            Self::Waveform => "Waveform",
+            Self::PulseWidth => "Pulse width",
+            Self::Threshold => "Threshold",
+            Self::DryMix => "Dry mix",
+        }
+    }
+
+    pub fn range(&self) -> RangeInclusive<i16> {
+        match self {
+            Self::LowGain | Self::MidGain | Self::HighGain => -12..=12,
+            Self::LowFrequency => 0..=88,
+            Self::MidFrequency => 86..=184,
+            Self::HighFrequency => 182..=240,
+            Self::LowWidth | Self::MidWidth | Self::HighWidth => 0..=32,
+            Self::Waveform => 0..=3,
+            Self::PulseWidth => 0..=100,
+            Self::Threshold | Self::DryMix => -36..=0,
+        }
+    }
+
+    pub fn default_value(&self) -> i16 {
+        match self {
+            Self::LowGain => -10,
+            Self::LowFrequency => 88,
+            Self::LowWidth => 0,
+            Self::MidGain => 5,
+            Self::MidFrequency => 173,
+            Self::MidWidth => 32,
+            Self::HighGain => 0,
+            Self::HighFrequency => 182,
+            Self::HighWidth => 0,
+            Self::Waveform => 0,
+            Self::PulseWidth => 50,
+            Self::Threshold => -36,
+            Self::DryMix => -6,
+        }
+    }
+
+    pub fn command_for_value(&self, value: i16) -> PersonalCommand {
+        let clamped = value.clamp(*self.range().start(), *self.range().end());
+        match self {
+            Self::LowGain => PersonalCommand::SetRobotGain(RobotRange::Low, clamped as i8),
+            Self::LowFrequency => PersonalCommand::SetRobotFreq(RobotRange::Low, clamped as u8),
+            Self::LowWidth => PersonalCommand::SetRobotWidth(RobotRange::Low, clamped as u8),
+            Self::MidGain => PersonalCommand::SetRobotGain(RobotRange::Medium, clamped as i8),
+            Self::MidFrequency => PersonalCommand::SetRobotFreq(RobotRange::Medium, clamped as u8),
+            Self::MidWidth => PersonalCommand::SetRobotWidth(RobotRange::Medium, clamped as u8),
+            Self::HighGain => PersonalCommand::SetRobotGain(RobotRange::High, clamped as i8),
+            Self::HighFrequency => PersonalCommand::SetRobotFreq(RobotRange::High, clamped as u8),
+            Self::HighWidth => PersonalCommand::SetRobotWidth(RobotRange::High, clamped as u8),
+            Self::Waveform => PersonalCommand::SetRobotWaveform(clamped as u8),
+            Self::PulseWidth => PersonalCommand::SetRobotPulseWidth(clamped as u8),
+            Self::Threshold => PersonalCommand::SetRobotThreshold(clamped as i8),
+            Self::DryMix => PersonalCommand::SetRobotDryMix(clamped as i8),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EffectsHardTuneSlider {
+    Amount,
+    Rate,
+    Window,
+}
+
+impl EffectsHardTuneSlider {
+    pub fn full_sliders() -> Vec<Self> {
+        vec![Self::Amount, Self::Rate, Self::Window]
+    }
+
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Amount => "Amount",
+            Self::Rate => "Rate",
+            Self::Window => "Window",
+        }
+    }
+
+    pub fn range(&self) -> RangeInclusive<i16> {
+        match self {
+            Self::Amount | Self::Rate => 0..=100,
+            Self::Window => 0..=600,
+        }
+    }
+
+    pub fn default_value(&self) -> i16 {
+        match self {
+            Self::Amount | Self::Rate => 50,
+            Self::Window => 200,
+        }
+    }
+
+    pub fn command_for_value(&self, value: i16) -> PersonalCommand {
+        let clamped = value.clamp(*self.range().start(), *self.range().end());
+        match self {
+            Self::Amount => PersonalCommand::SetHardTuneAmount(clamped as u8),
+            Self::Rate => PersonalCommand::SetHardTuneRate(clamped as u8),
+            Self::Window => PersonalCommand::SetHardTuneWindow(clamped as u16),
+        }
     }
 }
 
@@ -8782,9 +9276,134 @@ impl PersonalUiApp {
                             .strong(),
                     );
                     ui.label(
-                        "Deeper DSP quick defaults for reverb, echo, pitch, robot, and hard tune.",
+                        "Arbitrary clamped reverb sliders plus quick defaults for deeper Effects DSP.",
                     );
                     ui.add_space(8.0);
+                    ui.label(
+                        egui::RichText::new("REVERB SLIDERS")
+                            .monospace()
+                            .color(egui::Color32::WHITE),
+                    );
+                    for slider in EffectsReverbSlider::full_sliders() {
+                        let mut value = slider.default_value();
+                        if ui
+                            .add_sized(
+                                egui::vec2(EffectsLayoutPolicy::advanced_slider_width(), 20.0),
+                                egui::Slider::new(&mut value, slider.range())
+                                    .text(slider.label())
+                                    .clamping(egui::SliderClamping::Always),
+                            )
+                            .changed()
+                        {
+                            self.send(UiCommand::Send(slider.command_for_value(value)));
+                        }
+                    }
+                    ui.add_space(8.0);
+                    ui.label(
+                        egui::RichText::new("ECHO SLIDERS")
+                            .monospace()
+                            .color(egui::Color32::WHITE),
+                    );
+                    for slider in EffectsEchoSlider::full_sliders() {
+                        let mut value = slider.default_value();
+                        if ui
+                            .add_sized(
+                                egui::vec2(EffectsLayoutPolicy::advanced_slider_width(), 20.0),
+                                egui::Slider::new(&mut value, slider.range())
+                                    .text(slider.label())
+                                    .clamping(egui::SliderClamping::Always),
+                            )
+                            .changed()
+                        {
+                            self.send(UiCommand::Send(slider.command_for_value(value)));
+                        }
+                    }
+                    ui.add_space(8.0);
+                    ui.label(
+                        egui::RichText::new("PITCH SLIDERS")
+                            .monospace()
+                            .color(egui::Color32::WHITE),
+                    );
+                    for slider in EffectsPitchSlider::full_sliders() {
+                        let mut value = slider.default_value();
+                        if ui
+                            .add_sized(
+                                egui::vec2(EffectsLayoutPolicy::advanced_slider_width(), 20.0),
+                                egui::Slider::new(&mut value, slider.range())
+                                    .text(slider.label())
+                                    .clamping(egui::SliderClamping::Always),
+                            )
+                            .changed()
+                        {
+                            self.send(UiCommand::Send(slider.command_for_value(value)));
+                        }
+                    }
+                    ui.add_space(8.0);
+                    ui.label(
+                        egui::RichText::new("MEGAPHONE SLIDERS")
+                            .monospace()
+                            .color(egui::Color32::WHITE),
+                    );
+                    for slider in EffectsMegaphoneSlider::full_sliders() {
+                        let mut value = slider.default_value();
+                        if ui
+                            .add_sized(
+                                egui::vec2(EffectsLayoutPolicy::advanced_slider_width(), 20.0),
+                                egui::Slider::new(&mut value, slider.range())
+                                    .text(slider.label())
+                                    .clamping(egui::SliderClamping::Always),
+                            )
+                            .changed()
+                        {
+                            self.send(UiCommand::Send(slider.command_for_value(value)));
+                        }
+                    }
+                    ui.add_space(8.0);
+                    ui.label(
+                        egui::RichText::new("ROBOT SLIDERS")
+                            .monospace()
+                            .color(egui::Color32::WHITE),
+                    );
+                    for slider in EffectsRobotSlider::full_sliders() {
+                        let mut value = slider.default_value();
+                        if ui
+                            .add_sized(
+                                egui::vec2(EffectsLayoutPolicy::advanced_slider_width(), 20.0),
+                                egui::Slider::new(&mut value, slider.range())
+                                    .text(slider.label())
+                                    .clamping(egui::SliderClamping::Always),
+                            )
+                            .changed()
+                        {
+                            self.send(UiCommand::Send(slider.command_for_value(value)));
+                        }
+                    }
+                    ui.add_space(8.0);
+                    ui.label(
+                        egui::RichText::new("HARD TUNE SLIDERS")
+                            .monospace()
+                            .color(egui::Color32::WHITE),
+                    );
+                    for slider in EffectsHardTuneSlider::full_sliders() {
+                        let mut value = slider.default_value();
+                        if ui
+                            .add_sized(
+                                egui::vec2(EffectsLayoutPolicy::advanced_slider_width(), 20.0),
+                                egui::Slider::new(&mut value, slider.range())
+                                    .text(slider.label())
+                                    .clamping(egui::SliderClamping::Always),
+                            )
+                            .changed()
+                        {
+                            self.send(UiCommand::Send(slider.command_for_value(value)));
+                        }
+                    }
+                    ui.add_space(8.0);
+                    ui.label(
+                        egui::RichText::new("QUICK DEFAULTS")
+                            .monospace()
+                            .color(egui::Color32::WHITE),
+                    );
                     for control in EffectsAdvancedControl::daily_controls() {
                         if ui
                             .add_sized(
@@ -9457,6 +10076,60 @@ impl PersonalUiApp {
                                             {
                                                 self.send(UiCommand::Send(trim.command()));
                                             }
+                                        }
+                                    });
+
+                                    ui.horizontal_wrapped(|ui| {
+                                        let trim_editor = SampleTrimEditor::new(
+                                            slot.bank(),
+                                            slot.button(),
+                                            sample.index(),
+                                            sample.start_pct(),
+                                            sample.stop_pct(),
+                                        );
+                                        ui.label(
+                                            egui::RichText::new("Custom trim")
+                                                .monospace()
+                                                .color(Self::muted_text()),
+                                        );
+                                        let mut start_pct = trim_editor.start_pct();
+                                        if ui
+                                            .add_sized(
+                                                egui::vec2(
+                                                    SamplerLayoutPolicy::custom_trim_slider_width(),
+                                                    20.0,
+                                                ),
+                                                egui::Slider::new(&mut start_pct, 0.0..=100.0)
+                                                    .text(trim_editor.start_label())
+                                                    .clamping(egui::SliderClamping::Always),
+                                            )
+                                            .on_hover_text(
+                                                "Set this sample's start point to an arbitrary percentage from 0–100.",
+                                            )
+                                            .changed()
+                                        {
+                                            self.send(UiCommand::Send(
+                                                trim_editor.start_command(start_pct),
+                                            ));
+                                        }
+
+                                        let mut stop_pct = trim_editor.stop_pct();
+                                        if ui
+                                            .add_sized(
+                                                egui::vec2(
+                                                    SamplerLayoutPolicy::custom_trim_slider_width(),
+                                                    20.0,
+                                                ),
+                                                egui::Slider::new(&mut stop_pct, 0.0..=100.0)
+                                                    .text(trim_editor.stop_label())
+                                                    .clamping(egui::SliderClamping::Always),
+                                            )
+                                            .on_hover_text(
+                                                "Set this sample's stop point to an arbitrary percentage from 0–100.",
+                                            )
+                                            .changed()
+                                        {
+                                            self.send(UiCommand::Send(trim_editor.stop_command(stop_pct)));
                                         }
                                     });
                                 }

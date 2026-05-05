@@ -9,22 +9,24 @@ use goxlr_personal_ui::{
     AudioRouteTarget, AudioRoutingRule, ContentLayoutPolicy, ControlledChannel, DashboardCopy,
     DeviceSelection, DiagnosticsLayoutPolicy, DiagnosticsLogEntry, DiagnosticsLogFilter,
     DiagnosticsStatusRow, DiagnosticsStatusSeverity, EffectPresetAction, EffectsAdvancedControl,
-    EffectsAmountControl, EffectsLayoutPolicy, EffectsQuickPreset, EffectsStyleGroup,
-    ExternalAudioTool, FaderAssignmentControl, FaderMuteFunctionControl, HardwareScribbleControl,
-    HeadphoneEqBandControl, HeadphoneEqLayoutPolicy, HeadphoneEqProfileAction,
-    ImplementedParityItem, LightingAnimationControl, LightingButtonColourTarget,
-    LightingFaderColourTarget, LightingLayoutPolicy, LightingProfileAction, LightingQuickTheme,
-    LightingSimpleColourTarget, LightingTripleColourTarget, MainProfileAction, MicEqBandControl,
-    MicLayoutPolicy, MicProfileAction, MicSetupGuideStep, MiniWindowMode, MixerLayoutPolicy,
-    MonitorMixControl, OptionalBoolAction, PersonalCommand, PersonalPreset, ProfileBrowser,
-    ProfileBrowserAction, ProfileBrowserKind, QuickActions, RoutingMatrixLayoutPolicy,
-    RoutingMatrixModel, RoutingMatrixRoute, RoutingPreset, RoutingRuleDiffStatus,
-    RoutingRuleEditor, RoutingStateBadge, SampleTrimAction, SamplerAction, SamplerFileAction,
-    SamplerLayoutPolicy, SamplerLoadedSample, SamplerSampleBrowser, SamplerSlotSnapshot,
-    SamplerWorkflowSetting, SceneEditor, SubmixChannelControl, SubmixChannelSnapshot,
-    SubmixOutputMixControl, SubmixOutputSnapshot, SystemLayoutPolicy, SystemSettingsAction,
-    SystemSettingsSnapshot, TrayAction, TrayMenuModel, UiCommand, UiScene, VolumeDebouncer,
-    WindowAction, ipc_socket_path_candidates,
+    EffectsAmountControl, EffectsEchoSlider, EffectsHardTuneSlider, EffectsLayoutPolicy,
+    EffectsMegaphoneSlider, EffectsPitchSlider, EffectsQuickPreset, EffectsReverbSlider,
+    EffectsRobotSlider, EffectsStyleGroup, ExternalAudioTool, FaderAssignmentControl,
+    FaderMuteFunctionControl, HardwareScribbleControl, HeadphoneEqBandControl,
+    HeadphoneEqLayoutPolicy, HeadphoneEqProfileAction, ImplementedParityItem,
+    LightingAnimationControl, LightingButtonColourTarget, LightingFaderColourTarget,
+    LightingLayoutPolicy, LightingProfileAction, LightingQuickTheme, LightingSimpleColourTarget,
+    LightingTripleColourTarget, MainProfileAction, MicEqBandControl, MicLayoutPolicy,
+    MicProfileAction, MicSetupGuideStep, MiniWindowMode, MixerLayoutPolicy, MonitorMixControl,
+    OptionalBoolAction, PersonalCommand, PersonalPreset, ProfileBrowser, ProfileBrowserAction,
+    ProfileBrowserKind, QuickActions, RoutingMatrixLayoutPolicy, RoutingMatrixModel,
+    RoutingMatrixRoute, RoutingPreset, RoutingRuleDiffStatus, RoutingRuleEditor, RoutingStateBadge,
+    SampleTrimAction, SampleTrimEditor, SamplerAction, SamplerFileAction, SamplerLayoutPolicy,
+    SamplerLoadedSample, SamplerSampleBrowser, SamplerSlotSnapshot, SamplerWorkflowSetting,
+    SceneEditor, SubmixChannelControl, SubmixChannelSnapshot, SubmixOutputMixControl,
+    SubmixOutputSnapshot, SystemLayoutPolicy, SystemSettingsAction, SystemSettingsSnapshot,
+    TrayAction, TrayMenuModel, UiCommand, UiScene, VolumeDebouncer, WindowAction,
+    ipc_socket_path_candidates,
 };
 use goxlr_types::{
     AnimationMode, Button, ButtonColourGroups, ButtonColourOffStyle, ChannelName,
@@ -1678,7 +1680,7 @@ fn advanced_effects_controls_cover_deeper_dsp_parameters() {
     }));
     assert!(controls.iter().any(|control| {
         control.label() == "Robot threshold"
-            && control.command_for_default() == PersonalCommand::SetRobotThreshold(-40)
+            && control.command_for_default() == PersonalCommand::SetRobotThreshold(-36)
     }));
     assert!(controls.iter().any(|control| {
         control.label() == "Hard Tune source"
@@ -2019,6 +2021,28 @@ fn sampler_page_exposes_safe_workflow_settings_and_trim_actions() {
     }));
     assert!(trim_actions.iter().all(|action| !action.label().is_empty()));
     assert!(SamplerLayoutPolicy::exposes_file_import_controls());
+}
+
+#[test]
+fn sampler_custom_trim_editor_clamps_arbitrary_percent_commands() {
+    assert_eq!(SamplerLayoutPolicy::custom_trim_slider_width(), 150.0);
+    assert!(SamplerLayoutPolicy::exposes_custom_trim_editor());
+
+    let editor = SampleTrimEditor::new(SampleBank::C, SampleButtons::BottomLeft, 2, 12.5, 87.5);
+    assert_eq!(editor.start_pct(), 12.5);
+    assert_eq!(editor.stop_pct(), 87.5);
+    assert_eq!(editor.start_label(), "Start 12.5%");
+    assert_eq!(editor.stop_label(), "Stop 87.5%");
+    assert_eq!(editor.clamp_percent(-15.0), 0.0);
+    assert_eq!(editor.clamp_percent(112.0), 100.0);
+    assert_eq!(
+        editor.start_command(44.4),
+        PersonalCommand::SetSampleStartPercent(SampleBank::C, SampleButtons::BottomLeft, 2, 44.4,)
+    );
+    assert_eq!(
+        editor.stop_command(101.0),
+        PersonalCommand::SetSampleStopPercent(SampleBank::C, SampleButtons::BottomLeft, 2, 100.0,)
+    );
 }
 
 #[test]
@@ -2798,6 +2822,266 @@ fn effect_preset_actions_map_to_backend_commands() {
         goxlr_ipc::GoXLRCommand::from(PersonalCommand::SaveActiveEffectPreset),
         goxlr_ipc::GoXLRCommand::SaveActivePreset()
     ));
+}
+
+#[test]
+fn effects_reverb_sliders_expose_arbitrary_clamped_dsp_commands() {
+    let sliders = EffectsReverbSlider::full_sliders();
+    assert_eq!(sliders.len(), 10);
+    assert!(EffectsLayoutPolicy::uses_advanced_reverb_sliders());
+    assert_eq!(EffectsLayoutPolicy::advanced_slider_width(), 180.0);
+
+    let decay = sliders
+        .iter()
+        .find(|slider| slider.label() == "Decay")
+        .expect("decay slider should exist");
+    assert_eq!(decay.range(), 0..=3000);
+    assert_eq!(decay.default_value(), 1500);
+    assert_eq!(
+        decay.command_for_value(5000),
+        PersonalCommand::SetReverbDecay(3000)
+    );
+
+    let pre_delay = sliders
+        .iter()
+        .find(|slider| slider.label() == "Pre-delay")
+        .expect("pre-delay slider should exist");
+    assert_eq!(pre_delay.range(), 0..=100);
+    assert_eq!(
+        pre_delay.command_for_value(150),
+        PersonalCommand::SetReverbPreDelay(100)
+    );
+
+    let early = sliders
+        .iter()
+        .find(|slider| slider.label() == "Early level")
+        .expect("early level slider should exist");
+    assert_eq!(early.range(), -50..=50);
+    assert_eq!(
+        early.command_for_value(-75),
+        PersonalCommand::SetReverbEarlyLevel(-50)
+    );
+
+    let mod_depth = sliders
+        .iter()
+        .find(|slider| slider.label() == "Mod depth")
+        .expect("mod depth slider should exist");
+    assert_eq!(
+        mod_depth.command_for_value(42),
+        PersonalCommand::SetReverbModDepth(42)
+    );
+}
+
+#[test]
+fn effects_echo_sliders_expose_arbitrary_clamped_dsp_commands() {
+    let sliders = EffectsEchoSlider::full_sliders();
+    assert_eq!(sliders.len(), 8);
+    assert!(EffectsLayoutPolicy::uses_advanced_echo_sliders());
+    assert_eq!(EffectsLayoutPolicy::advanced_slider_width(), 180.0);
+
+    let tempo = sliders
+        .iter()
+        .find(|slider| slider.label() == "Tempo")
+        .expect("tempo slider should exist");
+    assert_eq!(tempo.range(), 60..=300);
+    assert_eq!(tempo.default_value(), 120);
+    assert_eq!(
+        tempo.command_for_value(500),
+        PersonalCommand::SetEchoTempo(300)
+    );
+
+    let left_delay = sliders
+        .iter()
+        .find(|slider| slider.label() == "Left delay")
+        .expect("left delay slider should exist");
+    assert_eq!(left_delay.range(), 0..=2500);
+    assert_eq!(
+        left_delay.command_for_value(3250),
+        PersonalCommand::SetEchoDelayLeft(2500)
+    );
+
+    let feedback = sliders
+        .iter()
+        .find(|slider| slider.label() == "Feedback")
+        .expect("feedback slider should exist");
+    assert_eq!(feedback.range(), 0..=100);
+    assert_eq!(
+        feedback.command_for_value(-25),
+        PersonalCommand::SetEchoFeedback(0)
+    );
+
+    let cross_right_to_left = sliders
+        .iter()
+        .find(|slider| slider.label() == "Cross R→L")
+        .expect("right-to-left cross-feedback slider should exist");
+    assert_eq!(
+        cross_right_to_left.command_for_value(42),
+        PersonalCommand::SetEchoFeedbackXFBRtoL(42)
+    );
+}
+
+#[test]
+fn effects_pitch_sliders_expose_arbitrary_clamped_dsp_commands() {
+    let sliders = EffectsPitchSlider::full_sliders();
+    assert_eq!(sliders.len(), 1);
+    assert!(EffectsLayoutPolicy::uses_advanced_pitch_sliders());
+    assert_eq!(EffectsLayoutPolicy::advanced_slider_width(), 180.0);
+
+    let character = sliders
+        .iter()
+        .find(|slider| slider.label() == "Character")
+        .expect("pitch character slider should exist");
+    assert_eq!(character.range(), 0..=100);
+    assert_eq!(character.default_value(), 50);
+    assert_eq!(
+        character.command_for_value(125),
+        PersonalCommand::SetPitchCharacter(100)
+    );
+    assert_eq!(
+        character.command_for_value(-12),
+        PersonalCommand::SetPitchCharacter(0)
+    );
+}
+
+#[test]
+fn effects_megaphone_sliders_expose_arbitrary_clamped_dsp_commands() {
+    let sliders = EffectsMegaphoneSlider::full_sliders();
+    assert_eq!(sliders.len(), 1);
+    assert!(EffectsLayoutPolicy::uses_advanced_megaphone_sliders());
+    assert_eq!(EffectsLayoutPolicy::advanced_slider_width(), 180.0);
+
+    let post_gain = sliders
+        .iter()
+        .find(|slider| slider.label() == "Post gain")
+        .expect("megaphone post-gain slider should exist");
+    assert_eq!(post_gain.range(), -20..=20);
+    assert_eq!(post_gain.default_value(), 0);
+    assert_eq!(
+        post_gain.command_for_value(50),
+        PersonalCommand::SetMegaphonePostGain(20)
+    );
+    assert_eq!(
+        post_gain.command_for_value(-50),
+        PersonalCommand::SetMegaphonePostGain(-20)
+    );
+}
+
+#[test]
+fn effects_robot_sliders_expose_arbitrary_clamped_dsp_commands() {
+    let sliders = EffectsRobotSlider::full_sliders();
+    assert_eq!(sliders.len(), 13);
+    assert!(EffectsLayoutPolicy::uses_advanced_robot_sliders());
+    assert_eq!(EffectsLayoutPolicy::advanced_slider_width(), 180.0);
+
+    let threshold = sliders
+        .iter()
+        .find(|slider| slider.label() == "Threshold")
+        .expect("threshold slider should exist");
+    assert_eq!(threshold.range(), -36..=0);
+    assert_eq!(threshold.default_value(), -36);
+    assert_eq!(
+        threshold.command_for_value(-99),
+        PersonalCommand::SetRobotThreshold(-36)
+    );
+
+    let low_gain = sliders
+        .iter()
+        .find(|slider| slider.label() == "Low gain")
+        .expect("low gain slider should exist");
+    assert_eq!(low_gain.range(), -12..=12);
+    assert_eq!(
+        low_gain.command_for_value(99),
+        PersonalCommand::SetRobotGain(RobotRange::Low, 12)
+    );
+
+    let mid_frequency = sliders
+        .iter()
+        .find(|slider| slider.label() == "Mid frequency")
+        .expect("mid frequency slider should exist");
+    assert_eq!(mid_frequency.range(), 86..=184);
+    assert_eq!(
+        mid_frequency.command_for_value(60),
+        PersonalCommand::SetRobotFreq(RobotRange::Medium, 86)
+    );
+
+    let high_width = sliders
+        .iter()
+        .find(|slider| slider.label() == "High width")
+        .expect("high width slider should exist");
+    assert_eq!(high_width.range(), 0..=32);
+    assert_eq!(
+        high_width.command_for_value(42),
+        PersonalCommand::SetRobotWidth(RobotRange::High, 32)
+    );
+
+    let waveform = sliders
+        .iter()
+        .find(|slider| slider.label() == "Waveform")
+        .expect("waveform slider should exist");
+    assert_eq!(waveform.range(), 0..=3);
+    assert_eq!(
+        waveform.command_for_value(8),
+        PersonalCommand::SetRobotWaveform(3)
+    );
+
+    let dry_mix = sliders
+        .iter()
+        .find(|slider| slider.label() == "Dry mix")
+        .expect("dry mix slider should exist");
+    assert_eq!(dry_mix.range(), -36..=0);
+    assert_eq!(
+        dry_mix.command_for_value(-12),
+        PersonalCommand::SetRobotDryMix(-12)
+    );
+
+    assert!(
+        EffectsAdvancedControl::daily_controls()
+            .iter()
+            .any(|control| {
+                control.label() == "Robot threshold"
+                    && control.command_for_default() == PersonalCommand::SetRobotThreshold(-36)
+            })
+    );
+}
+
+#[test]
+fn effects_hard_tune_sliders_expose_arbitrary_clamped_dsp_commands() {
+    let sliders = EffectsHardTuneSlider::full_sliders();
+    assert_eq!(sliders.len(), 3);
+    assert!(EffectsLayoutPolicy::uses_advanced_hard_tune_sliders());
+    assert_eq!(EffectsLayoutPolicy::advanced_slider_width(), 180.0);
+
+    let amount = sliders
+        .iter()
+        .find(|slider| slider.label() == "Amount")
+        .expect("amount slider should exist");
+    assert_eq!(amount.range(), 0..=100);
+    assert_eq!(amount.default_value(), 50);
+    assert_eq!(
+        amount.command_for_value(125),
+        PersonalCommand::SetHardTuneAmount(100)
+    );
+
+    let rate = sliders
+        .iter()
+        .find(|slider| slider.label() == "Rate")
+        .expect("rate slider should exist");
+    assert_eq!(rate.range(), 0..=100);
+    assert_eq!(
+        rate.command_for_value(-5),
+        PersonalCommand::SetHardTuneRate(0)
+    );
+
+    let window = sliders
+        .iter()
+        .find(|slider| slider.label() == "Window")
+        .expect("window slider should exist");
+    assert_eq!(window.range(), 0..=600);
+    assert_eq!(window.default_value(), 200);
+    assert_eq!(
+        window.command_for_value(725),
+        PersonalCommand::SetHardTuneWindow(600)
+    );
 }
 
 #[test]

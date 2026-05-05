@@ -127,6 +127,31 @@ curl -H "Authorization: Bearer replace-with-a-strong-token" \
 
 This section tracks local source changes made on this machine so context survives restarts.
 
+* Added arbitrary clamped Pitch and Megaphone DSP sliders to the native Effects page:
+  * Added `EffectsPitchSlider` for pitch character and `EffectsMegaphoneSlider` for megaphone post gain
+  * Rendered `PITCH SLIDERS` and `MEGAPHONE SLIDERS` sections in the Effects `ADVANCED DSP` panel alongside the existing Reverb/Echo/Robot/Hard Tune sections
+  * Clamped slider input to safe typed ranges and dispatched existing `SetPitchCharacter` / `SetMegaphonePostGain` command mappings
+
+* Added arbitrary clamped Robot and Hard Tune DSP sliders to the native Effects page:
+  * Added `EffectsRobotSlider` model helpers for low/mid/high gain, frequency, and width bands plus waveform, pulse width, threshold, and dry mix
+  * Added `EffectsHardTuneSlider` model helpers for amount, rate, and window
+  * Rendered `ROBOT SLIDERS` and `HARD TUNE SLIDERS` sections in the Effects `ADVANCED DSP` panel, with clamped typed `SetRobot*` / `SetHardTune*` command dispatch
+
+* Added arbitrary clamped Echo DSP sliders to the native Effects page:
+  * Added `EffectsEchoSlider` model helpers for feedback, tempo, left/right delays, left/right feedback, and cross-feedback in both directions
+  * Rendered an `ECHO SLIDERS` section in the Effects `ADVANCED DSP` panel next to the existing Reverb sliders and quick-default buttons
+  * Clamped slider input to safe typed ranges and dispatched existing `SetEcho*` `PersonalCommand` / `GoXLRCommand` mappings
+
+* Added arbitrary clamped Reverb DSP sliders to the native Effects page:
+  * Added `EffectsReverbSlider` model helpers for decay, early/tail levels, pre-delay, low/high colour, high factor, diffuse, and modulation speed/depth
+  * Rendered a `REVERB SLIDERS` section in the Effects `ADVANCED DSP` panel before the existing quick-default buttons
+  * Clamped slider input to safe typed ranges and dispatched existing `SetReverb*` `PersonalCommand` / `GoXLRCommand` mappings; Echo/Robot/Hard Tune arbitrary sliders remain separate future chunks
+
+* Added live Sampler custom start/stop trim sliders:
+  * Added `SampleTrimEditor` model helpers that clamp arbitrary percentages to 0–100 and emit typed `SetSampleStartPercent` / `SetSampleStopPercent` commands for the daemon-reported bank/pad/sample index
+  * Rendered Start and Stop sliders beside each live sample row, so per-index trim no longer depends only on preset boundary buttons
+  * Kept trim editing tied to live daemon sample rows; waveform visualization, drag/drop, and bulk sample workflows remain deferred
+
 * Added a discovered Lighting profile browser for colour-only loads:
   * Added `ProfileBrowserKind::LightingColours` so the Lighting page can list `.goxlr` profiles and send guarded per-row `LoadProfileColours` actions
   * Reused the existing same-action second-click confirmation flow and separate lighting-profile pending state instead of adding destructive profile management
@@ -482,6 +507,9 @@ This section tracks local source changes made on this machine so context survive
 * Confirmed guarded effect preset profile-workflow status:
   * Marked the Profiles/Persistence `Effect preset load/save/rename controls` row complete because guarded named-slot actions and discovered `.preset` browser rows are already backed by typed `LoadEffectPreset`, `RenameActivePreset`, and `SaveActivePreset` command mappings
   * Broader arbitrary preset import/file editing remains tracked separately under the Effects section, so this status cleanup does not overstate exhaustive web UI preset management
+* Confirmed routing workflow app-config editing status:
+  * Marked the Device/System `personal app settings/config editing` row complete for its routing-workflow scope because Config / Routing already exposes persisted scene editing, routing-rule editing, save/reload actions, JSON backup-on-save, active-stream-to-rule saving, and runtime rule refresh
+  * Kept the wording scoped to routing workflow config editing rather than claiming a broad native app settings manager
 
 * Added guarded discovered profile/preset browser panels to the personal native UI:
   * Added model-backed `ProfileBrowser`, `ProfileBrowserKind`, row, and action helpers that discover `.goxlr`, `.goxlrMicProfile`, `.preset`, and `.goxlrHeadphoneProfile` files, mark active rows when snapshot state is available, and build guarded per-row command actions
