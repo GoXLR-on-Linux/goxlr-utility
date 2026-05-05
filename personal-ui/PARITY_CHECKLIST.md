@@ -145,7 +145,7 @@ Priority: partially implemented. The native page now covers safe playback/bank c
 - [~] Main profile create/load/save-as/delete controls: guarded named-slot full-profile load, save-active, save-as, create, and delete actions exist on the System page with same-action second-click confirmation, plus a discovered `.goxlr` browser with guarded per-row load, lighting-only load, save-as, and delete actions; arbitrary import/rename/location management remains pending.
 - [~] Mic profile create/load/save-as/delete controls: guarded Mic-page actions exist for a named profile slot with same-action second-click confirmation, plus a discovered mic-profile browser for available profile rows; free-form import/rename workflows remain pending.
 - [~] Effect preset load/save/rename controls: guarded named-slot actions exist on the Effects page with same-action second-click confirmation, plus a discovered preset browser for available `.preset` rows.
-- [~] Headphone EQ profile save/load/delete controls: guarded named-slot load, save-as, and delete actions exist on the Headphone EQ page with same-action second-click confirmation; the shared browser model is wired for headphone EQ profiles but depends on profile files being present in the expected directory.
+- [~] Headphone EQ profile save/load/delete controls: guarded named-slot load, save-as, and delete actions exist on the Headphone EQ page with same-action second-click confirmation, plus discovered `.goxlrHeadphoneProfile` browser rows for available headphone EQ profiles; arbitrary import/rename/location management remains pending.
 - [x] Named personal presets for common routing, lighting, and effect states: dashboard `Personal presets` buttons expose Go Live, Desktop Focus, Late Night, and FX Panic bundles backed by explicit typed command lists.
 - [x] Clear warning boundaries around destructive profile operations for first-pass mic profile actions.
 
@@ -177,7 +177,7 @@ Priority: medium-low. Add only settings that solve a current annoyance; avoid bu
   - `cargo check -p goxlr-personal-ui`
   - `cargo test -p goxlr-personal-ui --lib --bins --tests`
   - `cargo check -p goxlr-personal-ui --features system-tray`
-- [ ] Lightweight screenshot/manual QA notes for each new page after local run.
+- [~] Lightweight screenshot/manual QA notes after local run: `personal-ui/MANUAL_QA.md` now records the current running app session, pages/features to spot-check, and the COSMIC Wayland screenshot-portal failure; fresh page-specific screenshot findings are still pending.
 - [x] A small in-app "About / implemented parity" screen: read-only About tab summarizes implemented and partial parity areas so manual QA can distinguish completed daily controls from intentionally deferred full managers/editors.
 
 ## Recommended next choices

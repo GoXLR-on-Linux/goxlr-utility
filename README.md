@@ -467,11 +467,14 @@ This section tracks local source changes made on this machine so context survive
   * The top navigation now includes an About tab summarizing the native personal UI's implemented and partial parity areas inside the app
   * The summary covers Mixer, Routing, Mic, Effects, Lighting, Headphone EQ, Sampler, Profiles, and Diagnostics so manual QA can quickly see what is intentionally complete versus deferred
   * Added model-level `AboutLayoutPolicy` and `ImplementedParityItem` coverage and wired the page into `AppViewMode::About`
+* Added lightweight local-run manual QA notes for the personal native UI:
+  * Created `personal-ui/MANUAL_QA.md` with the current running app session/PID, feature/page spot-check checklist, and expected safe behavior per page
+  * Recorded that non-interactive COSMIC Wayland screenshot capture via `cosmic-screenshot --interactive=false` failed through the portal, so fresh visual evidence still needs a manual/user screenshot path before marking the checklist item fully complete
 
 * Added guarded discovered profile/preset browser panels to the personal native UI:
-  * Added model-backed `ProfileBrowser`, `ProfileBrowserKind`, row, and action helpers that discover `.goxlr`, `.goxlrMicProfile`, and `.preset` files, mark active rows when snapshot state is available, and build guarded per-row command actions
-  * Wired browser panels into System/Main profiles, Mic profiles, Effects presets, and Headphone EQ profiles, reusing same-action second-click confirmation before dispatching stateful load/save/delete/rename commands
-  * Added focused `app_model` coverage for directory discovery, active-row labeling, and main/mic/effects browser command mapping while keeping free-form import/rename/file management deferred
+  * Added model-backed `ProfileBrowser`, `ProfileBrowserKind`, row, and action helpers that discover `.goxlr`, `.goxlrMicProfile`, `.preset`, and `.goxlrHeadphoneProfile` files, mark active rows when snapshot state is available, and build guarded per-row command actions
+  * Wired browser panels into System/Main profiles, Mic profiles, Effects presets, Lighting colour-only loads, and Headphone EQ profiles, reusing same-action second-click confirmation before dispatching stateful load/save/delete/rename commands
+  * Added focused `app_model` coverage for directory discovery, active-row labeling, and main/mic/effects/lighting/headphone-EQ browser command mapping while keeping free-form import/rename/file management deferred
 * Added a guarded sampler sample-file workflow panel to the personal native UI:
   * Added model-backed `SamplerFileAction` helpers for typed-path `AddSample`, guarded index-0 `RemoveSampleByIndex`, and unguarded index-0 `PlaySampleByIndex` verification actions
   * Added a Sampler page path entry and per-bank/per-pad file actions that require same-action second-click confirmation before importing or removing sample files

@@ -17,13 +17,14 @@ use goxlr_personal_ui::{
     LightingSimpleColourTarget, LightingTripleColourTarget, MainProfileAction, MicEqBandControl,
     MicLayoutPolicy, MicProfileAction, MicSetupGuideStep, MiniWindowMode, MixerLayoutPolicy,
     MonitorMixControl, OptionalBoolAction, PersonalCommand, PersonalPreset, ProfileBrowser,
-    ProfileBrowserKind, QuickActions, RoutingMatrixLayoutPolicy, RoutingMatrixModel,
-    RoutingMatrixRoute, RoutingPreset, RoutingRuleDiffStatus, RoutingRuleEditor, RoutingStateBadge,
-    SampleTrimAction, SamplerAction, SamplerFileAction, SamplerLayoutPolicy, SamplerLoadedSample,
-    SamplerSampleBrowser, SamplerSlotSnapshot, SamplerWorkflowSetting, SceneEditor,
-    SubmixChannelControl, SubmixChannelSnapshot, SubmixOutputMixControl, SubmixOutputSnapshot,
-    SystemLayoutPolicy, SystemSettingsAction, SystemSettingsSnapshot, TrayAction, TrayMenuModel,
-    UiCommand, UiScene, VolumeDebouncer, WindowAction, ipc_socket_path_candidates,
+    ProfileBrowserAction, ProfileBrowserKind, QuickActions, RoutingMatrixLayoutPolicy,
+    RoutingMatrixModel, RoutingMatrixRoute, RoutingPreset, RoutingRuleDiffStatus,
+    RoutingRuleEditor, RoutingStateBadge, SampleTrimAction, SamplerAction, SamplerFileAction,
+    SamplerLayoutPolicy, SamplerLoadedSample, SamplerSampleBrowser, SamplerSlotSnapshot,
+    SamplerWorkflowSetting, SceneEditor, SubmixChannelControl, SubmixChannelSnapshot,
+    SubmixOutputMixControl, SubmixOutputSnapshot, SystemLayoutPolicy, SystemSettingsAction,
+    SystemSettingsSnapshot, TrayAction, TrayMenuModel, UiCommand, UiScene, VolumeDebouncer,
+    WindowAction, ipc_socket_path_candidates,
 };
 use goxlr_types::{
     AnimationMode, Button, ButtonColourGroups, ButtonColourOffStyle, ChannelName,
@@ -3509,7 +3510,7 @@ fn profile_browser_lists_available_files_and_builds_guarded_row_actions() {
 }
 
 #[test]
-fn profile_browser_supports_mic_effect_and_lighting_profile_workflows() {
+fn profile_browser_supports_mic_effect_lighting_and_headphone_eq_profile_workflows() {
     let mic = ProfileBrowser::from_names(
         ProfileBrowserKind::Mic,
         Some("Broadcast"),
@@ -3557,6 +3558,42 @@ fn profile_browser_supports_mic_effect_and_lighting_profile_workflows() {
         lighting_actions[0].command(),
         PersonalCommand::LoadProfileColours("Personal".to_string())
     );
+
+    let headphone_eq = ProfileBrowser::from_names(
+        ProfileBrowserKind::HeadphoneEq,
+        Some("Personal Phones"),
+        vec!["Personal Phones".to_string(), "Flat".to_string()],
+    );
+    assert_eq!(headphone_eq.title(), "Headphone EQ profile browser");
+    let eq_row = headphone_eq
+        .rows()
+        .iter()
+        .find(|row| row.name() == "Personal Phones")
+        .unwrap();
+    assert_eq!(eq_row.kind(), ProfileBrowserKind::HeadphoneEq);
+    assert!(eq_row.is_active());
+    let eq_actions = eq_row.actions();
+    assert_eq!(eq_actions.len(), 3);
+    assert!(
+        eq_actions
+            .iter()
+            .all(ProfileBrowserAction::requires_confirmation)
+    );
+    assert!(eq_actions.iter().any(|action| {
+        action.label() == "Load"
+            && action.command()
+                == PersonalCommand::LoadHeadphoneEqProfile("Personal Phones".to_string())
+    }));
+    assert!(eq_actions.iter().any(|action| {
+        action.label() == "Save as"
+            && action.command()
+                == PersonalCommand::SaveHeadphoneEqProfile("Personal Phones".to_string())
+    }));
+    assert!(eq_actions.iter().any(|action| {
+        action.label() == "Delete"
+            && action.command()
+                == PersonalCommand::DeleteHeadphoneEqProfile("Personal Phones".to_string())
+    }));
 }
 
 #[test]
