@@ -4049,6 +4049,21 @@ impl LightingButtonColourTarget {
             Self::Group("Effect types", ButtonColourGroups::EffectTypes),
             Self::Button("Cough button", Button::Cough),
             Self::Button("Bleep button", Button::Bleep),
+            Self::Button("Effect preset 1", Button::EffectSelect1),
+            Self::Button("Effect preset 2", Button::EffectSelect2),
+            Self::Button("Effect preset 3", Button::EffectSelect3),
+            Self::Button("Effect preset 4", Button::EffectSelect4),
+            Self::Button("Effect preset 5", Button::EffectSelect5),
+            Self::Button("Effect preset 6", Button::EffectSelect6),
+            Self::Button("FX button", Button::EffectFx),
+            Self::Button("Megaphone button", Button::EffectMegaphone),
+            Self::Button("Robot button", Button::EffectRobot),
+            Self::Button("Hard Tune button", Button::EffectHardTune),
+            Self::Button("Sampler top left", Button::SamplerTopLeft),
+            Self::Button("Sampler top right", Button::SamplerTopRight),
+            Self::Button("Sampler bottom left", Button::SamplerBottomLeft),
+            Self::Button("Sampler bottom right", Button::SamplerBottomRight),
+            Self::Button("Sampler clear", Button::SamplerClear),
         ]
     }
 

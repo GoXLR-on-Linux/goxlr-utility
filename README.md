@@ -127,6 +127,11 @@ curl -H "Authorization: Bearer replace-with-a-strong-token" \
 
 This section tracks local source changes made on this machine so context survives restarts.
 
+* Expanded native Lighting individual button colour/off-style coverage:
+  * Broadened `LightingButtonColourTarget::daily_targets()` from button groups plus Cough/Bleep to 20 safe targets covering effect preset buttons, FX/Megaphone/Robot/Hard Tune buttons, and sampler pad/clear buttons
+  * Kept the workflow model-backed through existing typed `SetButtonColours` and `SetButtonOffStyle` commands; no arbitrary/raw lighting command editor was added
+  * Updated focused Lighting model coverage for target count plus representative effect and sampler button command mappings
+
 * Added read-only live System settings status rows to the native System page:
   * Added `SystemSettingsSnapshot` and `SystemSettingsStatusRow` model helpers for daemon-reported mute hold, VC/chat mic coupling, monitor-with-FX, fader lock, and VOD mode
   * Populated the snapshot from daemon mixer settings and rendered a `LIVE SYSTEM SETTINGS` panel above the explicit action buttons

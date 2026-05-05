@@ -99,7 +99,7 @@ Implemented Effects detail chunk:
 - [x] Dedicated Lighting page.
 - [x] Global colour preset buttons via quick themes.
 - [x] Fader colours and display style controls: first-pass editor covers all faders plus fader A-D colour pairs and display style buttons.
-- [~] Button colours and off-style controls: first-pass editor covers button groups plus daily Cough/Bleep buttons; remaining individual sampler/effects buttons can be added if needed.
+- [x] Button colours and off-style controls: editor covers button groups plus individual Cough/Bleep, effect preset/type, FX, and sampler pad/clear buttons backed by typed `SetButtonColours` / `SetButtonOffStyle` commands.
 - [x] Button group colour controls: editor covers fader mute, effect selector, and effect types groups.
 - [x] Simple colour targets: editor covers Global, Accent, and Scribble 1-4.
 - [x] Encoder colours: editor covers Reverb, Pitch, Echo, and Gender encoder colour triplets.

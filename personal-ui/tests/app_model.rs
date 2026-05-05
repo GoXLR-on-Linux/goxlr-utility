@@ -2459,6 +2459,7 @@ fn lighting_colour_editor_targets_cover_full_lighting_parity_controls() {
     );
 
     let button_targets = LightingButtonColourTarget::daily_targets();
+    assert_eq!(button_targets.len(), 20);
     assert!(
         button_targets
             .iter()
@@ -2469,12 +2470,42 @@ fn lighting_colour_editor_targets_cover_full_lighting_parity_controls() {
             .iter()
             .any(|target| target.label() == "Cough button")
     );
+    assert!(
+        button_targets
+            .iter()
+            .any(|target| target.label() == "Effect preset 6")
+    );
+    assert!(
+        button_targets
+            .iter()
+            .any(|target| target.label() == "Sampler clear")
+    );
     assert_eq!(
         button_targets[0].off_style_command(ButtonColourOffStyle::DimmedColour2),
         PersonalCommand::SetButtonGroupOffStyle(
             ButtonColourGroups::FaderMute,
             ButtonColourOffStyle::DimmedColour2,
         )
+    );
+    let effect_fx = button_targets
+        .iter()
+        .find(|target| target.label() == "FX button")
+        .expect("FX button target");
+    assert_eq!(
+        effect_fx.colour_command("AA0000", "110000"),
+        PersonalCommand::SetButtonColours(
+            Button::EffectFx,
+            "AA0000".to_string(),
+            Some("110000".to_string()),
+        )
+    );
+    let sampler_clear = button_targets
+        .iter()
+        .find(|target| target.label() == "Sampler clear")
+        .expect("sampler clear target");
+    assert_eq!(
+        sampler_clear.off_style_command(ButtonColourOffStyle::Colour2),
+        PersonalCommand::SetButtonOffStyle(Button::SamplerClear, ButtonColourOffStyle::Colour2)
     );
 
     let triple_targets = LightingTripleColourTarget::all_targets();
