@@ -187,6 +187,22 @@ impl DiagnosticsLayoutPolicy {
     pub fn shows_ipc_socket_candidates() -> bool {
         true
     }
+
+    pub fn shows_read_only_log_viewer() -> bool {
+        true
+    }
+
+    pub fn log_panel_width() -> f32 {
+        640.0
+    }
+
+    pub fn log_row_height() -> f32 {
+        46.0
+    }
+
+    pub fn log_row_limit() -> usize {
+        12
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -236,6 +252,77 @@ impl DiagnosticsStatusRow {
 
     pub fn severity(&self) -> DiagnosticsStatusSeverity {
         self.severity
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DiagnosticsLogFilter {
+    All,
+    WarningsOnly,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DiagnosticsLogEntry {
+    timestamp: String,
+    severity: DiagnosticsStatusSeverity,
+    category: String,
+    message: String,
+}
+
+impl DiagnosticsLogEntry {
+    pub fn new(
+        timestamp: impl Into<String>,
+        severity: DiagnosticsStatusSeverity,
+        category: impl Into<String>,
+        message: impl Into<String>,
+    ) -> Self {
+        Self {
+            timestamp: timestamp.into(),
+            severity,
+            category: category.into(),
+            message: message.into(),
+        }
+    }
+
+    pub fn timestamp(&self) -> &str {
+        &self.timestamp
+    }
+
+    pub fn severity(&self) -> DiagnosticsStatusSeverity {
+        self.severity
+    }
+
+    pub fn category(&self) -> &str {
+        &self.category
+    }
+
+    pub fn message(&self) -> &str {
+        &self.message
+    }
+
+    pub fn is_read_only(&self) -> bool {
+        true
+    }
+
+    pub fn filtered_rows(entries: &[Self], filter: DiagnosticsLogFilter) -> Vec<Self> {
+        entries
+            .iter()
+            .filter(|entry| match filter {
+                DiagnosticsLogFilter::All => true,
+                DiagnosticsLogFilter::WarningsOnly => {
+                    entry.severity == DiagnosticsStatusSeverity::Warning
+                }
+            })
+            .cloned()
+            .collect()
+    }
+
+    pub fn recent_rows(entries: &[Self], limit: usize, filter: DiagnosticsLogFilter) -> Vec<Self> {
+        let mut rows = Self::filtered_rows(entries, filter);
+        if rows.len() > limit {
+            rows.drain(0..rows.len() - limit);
+        }
+        rows
     }
 }
 
@@ -336,7 +423,7 @@ impl ImplementedParityItem {
             Self::new(
                 "Diagnostics",
                 ImplementedParityStatus::Partial,
-                "Read-only status, socket candidates, connection/device/profile visibility; embedded log viewer remains pending.",
+                "Read-only status, socket candidates, connection/device/profile visibility, plus recent in-app IPC event log; external daemon log tailing remains pending.",
             ),
         ]
     }
@@ -6013,6 +6100,7 @@ pub struct PersonalUiApp {
     pending_sampler_file_confirmation: Option<PersonalCommand>,
     sampler_file_path: String,
     sampler_browser_path: String,
+    diagnostics_log: Vec<DiagnosticsLogEntry>,
 }
 
 impl PersonalUiApp {
@@ -6055,6 +6143,12 @@ impl PersonalUiApp {
             sampler_browser_path: Self::default_sampler_browser_path()
                 .to_string_lossy()
                 .to_string(),
+            diagnostics_log: vec![DiagnosticsLogEntry::new(
+                "00:00",
+                DiagnosticsStatusSeverity::Info,
+                "App",
+                "personal UI started; waiting for daemon status",
+            )],
         }
     }
 
@@ -6062,16 +6156,51 @@ impl PersonalUiApp {
         while let Ok(event) = self.events.try_recv() {
             match event {
                 WorkerEvent::Snapshot(snapshot) => {
+                    let status_line = snapshot.status_line();
                     self.device_selection
                         .sync_available_devices(snapshot.device_serials.clone());
                     self.pending_volumes = snapshot.channel_volumes.clone();
                     self.snapshot = snapshot;
+                    self.record_diagnostics_log(
+                        DiagnosticsStatusSeverity::Info,
+                        "Snapshot",
+                        status_line,
+                    );
                 }
                 WorkerEvent::Error(error) => {
+                    self.record_diagnostics_log(
+                        DiagnosticsStatusSeverity::Warning,
+                        "IPC error",
+                        error.clone(),
+                    );
                     self.snapshot = AppSnapshot::disconnected(error);
                     self.pending_volumes = self.snapshot.channel_volumes.clone();
                 }
             }
+        }
+    }
+
+    fn diagnostics_timestamp(&self) -> String {
+        let elapsed = self.started_at.elapsed().as_secs();
+        format!("{:02}:{:02}", elapsed / 60, elapsed % 60)
+    }
+
+    fn record_diagnostics_log(
+        &mut self,
+        severity: DiagnosticsStatusSeverity,
+        category: impl Into<String>,
+        message: impl Into<String>,
+    ) {
+        self.diagnostics_log.push(DiagnosticsLogEntry::new(
+            self.diagnostics_timestamp(),
+            severity,
+            category,
+            message,
+        ));
+        let max_entries = DiagnosticsLayoutPolicy::log_row_limit() * 4;
+        if self.diagnostics_log.len() > max_entries {
+            self.diagnostics_log
+                .drain(0..self.diagnostics_log.len() - max_entries);
         }
     }
 
@@ -7792,6 +7921,67 @@ impl PersonalUiApp {
                 );
                 if let Some(error) = self.scene_config.reload_error() {
                     ui.colored_label(egui::Color32::YELLOW, format!("Scene reload issue: {error}"));
+                }
+            });
+
+            Self::bounded_panel(ui, DiagnosticsLayoutPolicy::log_panel_width(), |ui| {
+                ui.label(
+                    egui::RichText::new("RECENT APP / IPC LOG")
+                        .monospace()
+                        .color(egui::Color32::WHITE)
+                        .size(16.0),
+                );
+                ui.separator();
+                ui.label(
+                    egui::RichText::new(
+                        "Read-only in-app event trail for snapshots, IPC errors, and troubleshooting context. This does not tail daemon files yet.",
+                    )
+                    .monospace()
+                    .color(Self::muted_text()),
+                );
+                ui.add_space(6.0);
+                let rows = DiagnosticsLogEntry::recent_rows(
+                    &self.diagnostics_log,
+                    DiagnosticsLayoutPolicy::log_row_limit(),
+                    DiagnosticsLogFilter::All,
+                );
+                if rows.is_empty() {
+                    ui.label(
+                        egui::RichText::new("No app events recorded yet")
+                            .monospace()
+                            .color(Self::muted_text()),
+                    );
+                }
+                for row in rows {
+                    Self::soft_panel_frame().show(ui, |ui| {
+                        ui.set_min_width(DiagnosticsLayoutPolicy::log_panel_width() - 24.0);
+                        ui.set_max_width(DiagnosticsLayoutPolicy::log_panel_width() - 24.0);
+                        ui.set_min_height(DiagnosticsLayoutPolicy::log_row_height());
+                        ui.horizontal_wrapped(|ui| {
+                            ui.label(
+                                egui::RichText::new(row.timestamp())
+                                    .monospace()
+                                    .color(Self::muted_text()),
+                            );
+                            ui.label(
+                                egui::RichText::new(row.severity().label())
+                                    .monospace()
+                                    .color(Self::diagnostics_severity_color(row.severity())),
+                            );
+                            ui.label(
+                                egui::RichText::new(row.category())
+                                    .monospace()
+                                    .strong()
+                                    .color(egui::Color32::WHITE),
+                            );
+                        });
+                        ui.label(
+                            egui::RichText::new(row.message())
+                                .monospace()
+                                .color(Self::muted_text()),
+                        );
+                    });
+                    ui.add_space(4.0);
                 }
             });
         });

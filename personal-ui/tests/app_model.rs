@@ -7,22 +7,23 @@ use goxlr_ipc::{Sample, SampleProcessState, Sampler, SamplerButton};
 use goxlr_personal_ui::{
     AboutLayoutPolicy, ActiveAudioStreams, AppConfig, AppSceneConfig, AppSnapshot, AppViewMode,
     AudioRouteTarget, AudioRoutingRule, ContentLayoutPolicy, ControlledChannel, DashboardCopy,
-    DeviceSelection, DiagnosticsLayoutPolicy, DiagnosticsStatusRow, DiagnosticsStatusSeverity,
-    EffectPresetAction, EffectsAdvancedControl, EffectsAmountControl, EffectsLayoutPolicy,
-    EffectsQuickPreset, EffectsStyleGroup, ExternalAudioTool, FaderAssignmentControl,
-    FaderMuteFunctionControl, HardwareScribbleControl, HeadphoneEqBandControl,
-    HeadphoneEqLayoutPolicy, HeadphoneEqProfileAction, ImplementedParityItem,
-    LightingAnimationControl, LightingButtonColourTarget, LightingFaderColourTarget,
-    LightingLayoutPolicy, LightingProfileAction, LightingQuickTheme, LightingSimpleColourTarget,
-    LightingTripleColourTarget, MainProfileAction, MicEqBandControl, MicLayoutPolicy,
-    MicProfileAction, MicSetupGuideStep, MiniWindowMode, MixerLayoutPolicy, MonitorMixControl,
-    OptionalBoolAction, PersonalCommand, PersonalPreset, ProfileBrowser, ProfileBrowserKind,
-    QuickActions, RoutingMatrixLayoutPolicy, RoutingMatrixModel, RoutingMatrixRoute, RoutingPreset,
-    RoutingRuleDiffStatus, RoutingRuleEditor, RoutingStateBadge, SampleTrimAction, SamplerAction,
-    SamplerFileAction, SamplerLayoutPolicy, SamplerLoadedSample, SamplerSampleBrowser,
-    SamplerSlotSnapshot, SamplerWorkflowSetting, SceneEditor, SubmixChannelControl,
-    SubmixOutputMixControl, SystemLayoutPolicy, SystemSettingsAction, TrayAction, TrayMenuModel,
-    UiCommand, UiScene, VolumeDebouncer, WindowAction, ipc_socket_path_candidates,
+    DeviceSelection, DiagnosticsLayoutPolicy, DiagnosticsLogEntry, DiagnosticsLogFilter,
+    DiagnosticsStatusRow, DiagnosticsStatusSeverity, EffectPresetAction, EffectsAdvancedControl,
+    EffectsAmountControl, EffectsLayoutPolicy, EffectsQuickPreset, EffectsStyleGroup,
+    ExternalAudioTool, FaderAssignmentControl, FaderMuteFunctionControl, HardwareScribbleControl,
+    HeadphoneEqBandControl, HeadphoneEqLayoutPolicy, HeadphoneEqProfileAction,
+    ImplementedParityItem, LightingAnimationControl, LightingButtonColourTarget,
+    LightingFaderColourTarget, LightingLayoutPolicy, LightingProfileAction, LightingQuickTheme,
+    LightingSimpleColourTarget, LightingTripleColourTarget, MainProfileAction, MicEqBandControl,
+    MicLayoutPolicy, MicProfileAction, MicSetupGuideStep, MiniWindowMode, MixerLayoutPolicy,
+    MonitorMixControl, OptionalBoolAction, PersonalCommand, PersonalPreset, ProfileBrowser,
+    ProfileBrowserKind, QuickActions, RoutingMatrixLayoutPolicy, RoutingMatrixModel,
+    RoutingMatrixRoute, RoutingPreset, RoutingRuleDiffStatus, RoutingRuleEditor, RoutingStateBadge,
+    SampleTrimAction, SamplerAction, SamplerFileAction, SamplerLayoutPolicy, SamplerLoadedSample,
+    SamplerSampleBrowser, SamplerSlotSnapshot, SamplerWorkflowSetting, SceneEditor,
+    SubmixChannelControl, SubmixOutputMixControl, SystemLayoutPolicy, SystemSettingsAction,
+    TrayAction, TrayMenuModel, UiCommand, UiScene, VolumeDebouncer, WindowAction,
+    ipc_socket_path_candidates,
 };
 use goxlr_types::{
     AnimationMode, Button, ButtonColourGroups, ButtonColourOffStyle, ChannelName,
@@ -163,6 +164,51 @@ fn diagnostics_status_rows_have_stable_labels_and_severity() {
     assert_eq!(DiagnosticsStatusSeverity::Ok.label(), "OK");
     assert_eq!(DiagnosticsStatusSeverity::Warning.label(), "Warning");
     assert_eq!(DiagnosticsStatusSeverity::Info.label(), "Info");
+}
+
+#[test]
+fn diagnostics_log_entries_filter_recent_events_without_dispatching_commands() {
+    let entries = vec![
+        DiagnosticsLogEntry::new(
+            "12:00:00",
+            DiagnosticsStatusSeverity::Info,
+            "Snapshot",
+            "connected to daemon",
+        ),
+        DiagnosticsLogEntry::new(
+            "12:00:01",
+            DiagnosticsStatusSeverity::Warning,
+            "IPC error",
+            "socket refused",
+        ),
+        DiagnosticsLogEntry::new(
+            "12:00:02",
+            DiagnosticsStatusSeverity::Info,
+            "Command",
+            "Refresh status",
+        ),
+    ];
+
+    let warnings = DiagnosticsLogEntry::filtered_rows(&entries, DiagnosticsLogFilter::WarningsOnly);
+    assert_eq!(warnings.len(), 1);
+    assert_eq!(warnings[0].category(), "IPC error");
+    assert_eq!(warnings[0].message(), "socket refused");
+
+    let all_recent = DiagnosticsLogEntry::recent_rows(&entries, 2, DiagnosticsLogFilter::All);
+    assert_eq!(all_recent.len(), 2);
+    assert_eq!(all_recent[0].category(), "IPC error");
+    assert_eq!(all_recent[1].category(), "Command");
+    assert!(all_recent.iter().all(|entry| entry.is_read_only()));
+}
+
+#[test]
+fn diagnostics_layout_policy_exposes_read_only_log_viewer() {
+    assert!(DiagnosticsLayoutPolicy::shows_read_only_log_viewer());
+    assert!(
+        DiagnosticsLayoutPolicy::log_panel_width() >= DiagnosticsLayoutPolicy::detail_panel_width()
+    );
+    assert!(DiagnosticsLayoutPolicy::log_row_height() >= 42.0);
+    assert!(DiagnosticsLayoutPolicy::log_row_limit() >= 8);
 }
 
 #[test]

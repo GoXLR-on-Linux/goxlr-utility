@@ -127,6 +127,11 @@ curl -H "Authorization: Bearer replace-with-a-strong-token" \
 
 This section tracks local source changes made on this machine so context survives restarts.
 
+* Added a read-only recent app/IPC event log to the native Diagnostics / Status page:
+  * Added `DiagnosticsLogEntry` and `DiagnosticsLogFilter` model helpers for read-only filtering and recent-row limiting
+  * Recorded app startup, daemon snapshot, and IPC error events in the personal UI without adding any device-changing diagnostics commands
+  * Rendered a `RECENT APP / IPC LOG` diagnostics panel and documented that external daemon/journal log tailing remains pending
+
 * Added dashboard-level named personal preset bundles to the native personal UI:
   * Added `PersonalPreset` model support for Go Live, Desktop Focus, Late Night, and FX Panic command bundles spanning routing, lighting, volume/safety, and voice-effect state
   * Wired a `Personal presets` button group into the dashboard Profiles / Scenes panel, prioritizing the safety-style FX Panic action before normal presets

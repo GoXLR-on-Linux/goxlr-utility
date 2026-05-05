@@ -19,7 +19,7 @@ Branch: `personal-native-ui-safety`
 - [x] Legacy `/tmp/goxlr.socket` fallback path.
 - [x] Optional system tray build path.
 - [x] Device/status visibility: Diagnostics / Status page exposes connection state, daemon version, selected device, profiles, detected device count, desktop-audio status, and IPC socket candidates.
-- [~] Dedicated diagnostics/log viewer page: read-only status/socket diagnostics exist; embedded daemon log history remains pending.
+- [~] Dedicated diagnostics/log viewer page: read-only status/socket diagnostics and a recent in-app IPC event log exist; external daemon/journal log tailing remains pending.
 - [x] Multi-device picker, if more than one GoXLR is attached.
 
 Priority: keep stable; only extend if debugging or multiple-device use becomes a real need.
@@ -254,6 +254,7 @@ Implemented diagnostics/status chunk:
 - Added model-backed diagnostics rows for connection state, daemon version, selected device, detected device count, main/mic/headphone EQ profiles, and desktop-audio status.
 - Added IPC socket candidate visibility, including legacy `/tmp/goxlr.socket`, so local daemon/socket problems can be inspected without leaving the native UI.
 - Added `DiagnosticsLayoutPolicy`, `DiagnosticsStatusRow`, and `DiagnosticsStatusSeverity` model coverage; this is status-only and does not send device-changing commands.
+- Added a read-only recent app/IPC event log panel backed by `DiagnosticsLogEntry` filtering/row-limit model coverage; external daemon/journal log tailing remains pending.
 
 ## Implementation rule for each chunk
 
