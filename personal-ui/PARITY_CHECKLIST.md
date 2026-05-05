@@ -45,7 +45,7 @@ Priority: medium. Daily mute/routing is already useful; fader assignment and scr
 
 - [x] Persistent routing rules UI/config editor.
 - [x] Practical route toggles for active desktop streams.
-- [~] Uses typed `SetRouter` backend support indirectly through personal routing workflows.
+- [x] Uses typed `SetRouter` backend support directly: the routing matrix, named routing preset cards, dashboard personal presets, and persistent-rule move helpers use explicit typed `PersonalCommand::SetRouter(input, output, enabled)` / safe stream-move workflows rather than raw router edits.
 - [x] Full matrix-style input-to-output router equivalent to the web UI: native matrix reads daemon route state, shows compact centered state badges with constrained non-stretching cell/badge heights and a denser screenshot-polished row layout, and sends typed `SetRouter(input, output, enabled)` commands for Mic/Chat/Music/Game/Console/Line In/System/Samples to Headphones/Broadcast/Chat Mic/Sampler/Line Out.
 - [x] Save/load named routing presets: native preset cards above the matrix apply common explicit `SetRouter` command bundles for Broadcast Mix, Chat Mic, and Line Out Safe.
 - [x] Visual diff between desired persistent rules and current active desktop stream routes: Config / Routing now shows current route, desired route, status, and an `Apply pending moves` action for live streams that need moving.
@@ -61,7 +61,7 @@ Priority: medium-low. Core routing parity is strong; remaining routing work shou
 - [x] Compressor controls.
 - [x] ClipGuard and headphone limiter threshold controls.
 - [x] Screenshot-polished wrapped Mic layout: processing/safety panels use bounded wrapped panel widths so compressor and safety controls do not clip off the right edge at normal window widths, and screenshot-offender controls such as `Save mic profile`, `Reload settings`, and compressor ratio buttons get fixed/minimum widths to avoid vertical-letter text.
-- [~] Practical safety presets / threshold workflows.
+- [x] Practical safety presets / threshold workflows: `Safe Now`, dashboard personal presets, and quick-action safety commands enable ClipGuard, headphone limiter, and headphone EQ; app-config scenes can set gate/compressor/de-ess thresholds plus ClipGuard and headphone limiter thresholds through typed commands.
 - [x] Microphone EQ editor: first-pass mini/full EQ frequency and gain command controls.
 - [~] Mic setup wizard-style guidance and live level meter: the Mic page now has a read-only setup guide for type/gain/gate/compressor order plus an explicit note that live mic levels are not exposed in the current IPC snapshot; true live meter remains pending.
 - [~] Mic profile create/save/load/delete controls: guarded daily load/save/save-as/delete actions are exposed on the Mic page with same-action second-click confirmation, and the page now includes a discovered mic-profile browser for available `.goxlrMicProfile` rows; free-form import/rename workflows remain deferred.
@@ -144,7 +144,7 @@ Priority: partially implemented. The native page now covers safe playback/bank c
 
 - [~] Main profile create/load/save-as/delete controls: guarded named-slot full-profile load, save-active, save-as, create, and delete actions exist on the System page with same-action second-click confirmation, plus a discovered `.goxlr` browser with guarded per-row load, lighting-only load, save-as, and delete actions; arbitrary import/rename/location management remains pending.
 - [~] Mic profile create/load/save-as/delete controls: guarded Mic-page actions exist for a named profile slot with same-action second-click confirmation, plus a discovered mic-profile browser for available profile rows; free-form import/rename workflows remain pending.
-- [~] Effect preset load/save/rename controls: guarded named-slot actions exist on the Effects page with same-action second-click confirmation, plus a discovered preset browser for available `.preset` rows.
+- [x] Effect preset load/save/rename controls: guarded named-slot actions exist on the Effects page with same-action second-click confirmation, plus a discovered preset browser for available `.preset` rows; broader arbitrary preset import/file editing remains tracked separately under Effects.
 - [~] Headphone EQ profile save/load/delete controls: guarded named-slot load, save-as, and delete actions exist on the Headphone EQ page with same-action second-click confirmation, plus discovered `.goxlrHeadphoneProfile` browser rows for available headphone EQ profiles; arbitrary import/rename/location management remains pending.
 - [x] Named personal presets for common routing, lighting, and effect states: dashboard `Personal presets` buttons expose Go Live, Desktop Focus, Late Night, and FX Panic bundles backed by explicit typed command lists.
 - [x] Clear warning boundaries around destructive profile operations for first-pass mic profile actions.
@@ -153,7 +153,7 @@ Priority: medium. Useful once daily control pages are stable, but should be impl
 
 ## 9. Device/system settings
 
-- [~] Headphone limiter / ClipGuard controls are exposed through the Mic page.
+- [x] Headphone limiter / ClipGuard controls: Mic and compact/full views expose toggles and thresholds backed by typed `SetClipGuardEnabled`, `SetClipGuardThreshold`, `SetHeadphoneLimiterEnabled`, and `SetHeadphoneLimiterThreshold` commands; safety presets also enable the protective defaults.
 - [~] Some personal app settings/config editing exists for routing workflows.
 - [x] Mute hold duration.
 - [x] Cough button behaviour and mute-target controls: System page exposes hold/toggle mode plus daily mute targets (All, Stream, Voice Chat, Phones) backed by typed `SetCoughIsHold` and `SetCoughMuteFunction` commands.

@@ -470,6 +470,18 @@ This section tracks local source changes made on this machine so context survive
 * Added lightweight local-run manual QA notes for the personal native UI:
   * Created `personal-ui/MANUAL_QA.md` with the current running app session/PID, feature/page spot-check checklist, and expected safe behavior per page
   * Recorded that non-interactive COSMIC Wayland screenshot capture via `cosmic-screenshot --interactive=false` failed through the portal, so fresh visual evidence still needs a manual/user screenshot path before marking the checklist item fully complete
+* Confirmed the personal native Mic safety preset / threshold workflow parity status:
+  * Marked the checklist row complete because existing typed coverage already includes `Safe Now`, dashboard personal safety presets, quick-action safety commands, and app-config scene parsing for gate/compressor/de-ess thresholds plus ClipGuard/headphone-limiter thresholds
+  * No new device-mutating controls were added in this cleanup; it only documents the already verified safe typed workflow coverage
+* Confirmed Headphone limiter / ClipGuard controls are complete in the native personal UI checklist:
+  * The Mic and compact/full views already expose toggles and threshold controls backed by typed ClipGuard and headphone-limiter commands, while the safety presets keep the protective defaults easy to apply
+  * This was a checklist/docs cleanup only; no additional device-changing controls were introduced
+* Confirmed direct typed routing backend parity status:
+  * Marked the `SetRouter` checklist row complete because the native routing matrix, named routing preset cards, dashboard personal presets, and routing helpers already use explicit typed `PersonalCommand::SetRouter(input, output, enabled)` / safe stream-move workflows
+  * This was a documentation/status cleanup; no raw router editor or additional device-changing controls were added
+* Confirmed guarded effect preset profile-workflow status:
+  * Marked the Profiles/Persistence `Effect preset load/save/rename controls` row complete because guarded named-slot actions and discovered `.preset` browser rows are already backed by typed `LoadEffectPreset`, `RenameActivePreset`, and `SaveActivePreset` command mappings
+  * Broader arbitrary preset import/file editing remains tracked separately under the Effects section, so this status cleanup does not overstate exhaustive web UI preset management
 
 * Added guarded discovered profile/preset browser panels to the personal native UI:
   * Added model-backed `ProfileBrowser`, `ProfileBrowserKind`, row, and action helpers that discover `.goxlr`, `.goxlrMicProfile`, `.preset`, and `.goxlrHeadphoneProfile` files, mark active rows when snapshot state is available, and build guarded per-row command actions
