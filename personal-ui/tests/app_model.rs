@@ -16,8 +16,8 @@ use goxlr_personal_ui::{
     LightingLayoutPolicy, LightingProfileAction, LightingQuickTheme, LightingSimpleColourTarget,
     LightingTripleColourTarget, MainProfileAction, MicEqBandControl, MicLayoutPolicy,
     MicProfileAction, MicSetupGuideStep, MiniWindowMode, MixerLayoutPolicy, MonitorMixControl,
-    OptionalBoolAction, PersonalCommand, ProfileBrowser, ProfileBrowserKind, QuickActions,
-    RoutingMatrixLayoutPolicy, RoutingMatrixModel, RoutingMatrixRoute, RoutingPreset,
+    OptionalBoolAction, PersonalCommand, PersonalPreset, ProfileBrowser, ProfileBrowserKind,
+    QuickActions, RoutingMatrixLayoutPolicy, RoutingMatrixModel, RoutingMatrixRoute, RoutingPreset,
     RoutingRuleDiffStatus, RoutingRuleEditor, RoutingStateBadge, SampleTrimAction, SamplerAction,
     SamplerFileAction, SamplerLayoutPolicy, SamplerLoadedSample, SamplerSampleBrowser,
     SamplerSlotSnapshot, SamplerWorkflowSetting, SceneEditor, SubmixChannelControl,
@@ -1281,6 +1281,87 @@ fn personal_scenes_are_available_in_button_order() {
         .collect::<Vec<_>>();
 
     assert_eq!(names, vec!["Gaming", "Music", "Night", "Call", "Safe Now"]);
+}
+
+#[test]
+fn named_personal_presets_bundle_routing_lighting_and_effects() {
+    let presets = PersonalPreset::daily_presets();
+    let names = presets
+        .iter()
+        .map(|preset| preset.name())
+        .collect::<Vec<_>>();
+
+    assert_eq!(
+        names,
+        vec!["Go Live", "Desktop Focus", "Late Night", "FX Panic"]
+    );
+    assert!(
+        presets
+            .iter()
+            .all(|preset| !preset.description().is_empty() && preset.commands().len() >= 4)
+    );
+
+    let go_live = &presets[0];
+    assert!(go_live.commands().contains(&PersonalCommand::SetRouter(
+        InputDevice::Microphone,
+        OutputDevice::BroadcastMix,
+        true
+    )));
+    assert!(
+        go_live
+            .commands()
+            .contains(&PersonalCommand::SetGlobalColour("FF1F1F".to_string()))
+    );
+    assert!(
+        go_live
+            .commands()
+            .contains(&PersonalCommand::SetFXEnabled(false))
+    );
+
+    let desktop_focus = &presets[1];
+    assert!(
+        desktop_focus
+            .commands()
+            .contains(&PersonalCommand::SetRouter(
+                InputDevice::Music,
+                OutputDevice::Headphones,
+                true
+            ))
+    );
+    assert!(
+        desktop_focus
+            .commands()
+            .contains(&PersonalCommand::SetGlobalColour("1F6FFF".to_string()))
+    );
+
+    let panic = presets.last().unwrap();
+    assert!(panic.is_safety_preset());
+    assert!(
+        panic
+            .commands()
+            .contains(&PersonalCommand::SetFXEnabled(false))
+    );
+    assert!(
+        panic
+            .commands()
+            .contains(&PersonalCommand::SetHardTuneEnabled(false))
+    );
+    assert!(
+        panic
+            .commands()
+            .contains(&PersonalCommand::SetGlobalColour("404040".to_string()))
+    );
+}
+
+#[test]
+fn quick_actions_limit_named_personal_presets_for_dashboard_cards() {
+    let presets = PersonalPreset::daily_presets();
+    let selected = QuickActions::personal_preset_buttons(&presets);
+
+    assert_eq!(selected.len(), 4);
+    assert_eq!(selected[0].name(), "FX Panic");
+    assert!(selected[0].is_safety_preset());
+    assert_eq!(selected[1].name(), "Go Live");
 }
 
 #[test]

@@ -127,6 +127,11 @@ curl -H "Authorization: Bearer replace-with-a-strong-token" \
 
 This section tracks local source changes made on this machine so context survives restarts.
 
+* Added dashboard-level named personal preset bundles to the native personal UI:
+  * Added `PersonalPreset` model support for Go Live, Desktop Focus, Late Night, and FX Panic command bundles spanning routing, lighting, volume/safety, and voice-effect state
+  * Wired a `Personal presets` button group into the dashboard Profiles / Scenes panel, prioritizing the safety-style FX Panic action before normal presets
+  * Added focused `app_model` coverage for bundle ordering, safety preset selection, descriptions, and typed command membership
+
 ### 2026-04-09
 
 * Added Linux startup preflight checks in daemon startup path:

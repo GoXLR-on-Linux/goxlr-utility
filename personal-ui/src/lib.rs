@@ -5580,6 +5580,132 @@ impl Default for QuickActions {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct PersonalPreset {
+    name: &'static str,
+    description: &'static str,
+    safety_preset: bool,
+    commands: Vec<PersonalCommand>,
+}
+
+impl PersonalPreset {
+    pub fn new(
+        name: &'static str,
+        description: &'static str,
+        safety_preset: bool,
+        commands: Vec<PersonalCommand>,
+    ) -> Self {
+        Self {
+            name,
+            description,
+            safety_preset,
+            commands,
+        }
+    }
+
+    pub fn daily_presets() -> Vec<Self> {
+        vec![
+            Self::new(
+                "Go Live",
+                "Route mic/music/game to broadcast, switch to recording lighting, and keep voice FX clean.",
+                false,
+                vec![
+                    PersonalCommand::SetRouter(
+                        InputDevice::Microphone,
+                        OutputDevice::BroadcastMix,
+                        true,
+                    ),
+                    PersonalCommand::SetRouter(
+                        InputDevice::Music,
+                        OutputDevice::BroadcastMix,
+                        true,
+                    ),
+                    PersonalCommand::SetRouter(InputDevice::Game, OutputDevice::BroadcastMix, true),
+                    PersonalCommand::SetRouter(
+                        InputDevice::Chat,
+                        OutputDevice::BroadcastMix,
+                        false,
+                    ),
+                    PersonalCommand::SetMonitorMix(OutputDevice::Headphones),
+                    PersonalCommand::SetAnimationMode(AnimationMode::Simple),
+                    PersonalCommand::SetGlobalColour("FF1F1F".to_string()),
+                    PersonalCommand::SetAllFaderColours("FF3030".to_string(), "400000".to_string()),
+                    PersonalCommand::SetFXEnabled(false),
+                    PersonalCommand::SetHardTuneEnabled(false),
+                ],
+            ),
+            Self::new(
+                "Desktop Focus",
+                "Keep routing local to headphones, use calm blue lighting, and disable voice FX distractions.",
+                false,
+                vec![
+                    PersonalCommand::SetRouter(InputDevice::Music, OutputDevice::Headphones, true),
+                    PersonalCommand::SetRouter(InputDevice::Game, OutputDevice::Headphones, true),
+                    PersonalCommand::SetRouter(InputDevice::Chat, OutputDevice::Headphones, true),
+                    PersonalCommand::SetMonitorMix(OutputDevice::Headphones),
+                    PersonalCommand::SetAnimationMode(AnimationMode::Simple),
+                    PersonalCommand::SetGlobalColour("1F6FFF".to_string()),
+                    PersonalCommand::SetAllFaderColours("2E8BFF".to_string(), "002040".to_string()),
+                    PersonalCommand::SetFXEnabled(false),
+                ],
+            ),
+            Self::new(
+                "Late Night",
+                "Drop playback levels, keep limiter/EQ safety on, and use lights-off styling.",
+                false,
+                vec![
+                    PersonalCommand::SetVolume(ChannelName::Music, 35),
+                    PersonalCommand::SetVolume(ChannelName::Game, 35),
+                    PersonalCommand::SetVolume(ChannelName::Chat, 45),
+                    PersonalCommand::SetVolume(ChannelName::Headphones, 55),
+                    PersonalCommand::SetHeadphoneLimiterEnabled(true),
+                    PersonalCommand::SetHeadphoneEqEnabled(true),
+                    PersonalCommand::SetAnimationMode(AnimationMode::None),
+                    PersonalCommand::SetGlobalColour("000000".to_string()),
+                    PersonalCommand::SetFXEnabled(false),
+                ],
+            ),
+            Self::new(
+                "FX Panic",
+                "Immediately return voice effects and lighting to a safe neutral state.",
+                true,
+                vec![
+                    PersonalCommand::SetFXEnabled(false),
+                    PersonalCommand::SetMegaphoneEnabled(false),
+                    PersonalCommand::SetRobotEnabled(false),
+                    PersonalCommand::SetHardTuneEnabled(false),
+                    PersonalCommand::SetReverbAmount(0),
+                    PersonalCommand::SetEchoAmount(0),
+                    PersonalCommand::SetPitchAmount(0),
+                    PersonalCommand::SetGenderAmount(0),
+                    PersonalCommand::SetAnimationMode(AnimationMode::Simple),
+                    PersonalCommand::SetGlobalColour("404040".to_string()),
+                ],
+            ),
+        ]
+    }
+
+    pub fn name(&self) -> &'static str {
+        self.name
+    }
+
+    pub fn description(&self) -> &'static str {
+        self.description
+    }
+
+    pub fn is_safety_preset(&self) -> bool {
+        self.safety_preset
+    }
+
+    pub fn commands(&self) -> Vec<PersonalCommand> {
+        self.commands.clone()
+    }
+
+    pub fn to_scene(&self) -> UiScene {
+        UiScene::new(self.name, self.commands())
+    }
+}
+
 impl QuickActions {
     pub fn view_mode(&self) -> AppViewMode {
         self.view_mode
@@ -5615,6 +5741,22 @@ impl QuickActions {
             }
             if scene.name() != "Safe Now" {
                 selected.push(scene.clone());
+            }
+        }
+        selected
+    }
+
+    pub fn personal_preset_buttons(presets: &[PersonalPreset]) -> Vec<PersonalPreset> {
+        let mut selected = Vec::new();
+        if let Some(safety) = presets.iter().find(|preset| preset.is_safety_preset()) {
+            selected.push(safety.clone());
+        }
+        for preset in presets {
+            if selected.len() >= 4 {
+                break;
+            }
+            if !preset.is_safety_preset() {
+                selected.push(preset.clone());
             }
         }
         selected
@@ -6412,6 +6554,23 @@ impl PersonalUiApp {
                 };
                 if response.clicked() {
                     self.send(UiCommand::ApplyScene(scene));
+                }
+            }
+            ui.add_space(14.0);
+            ui.label(
+                egui::RichText::new("Personal presets")
+                    .monospace()
+                    .color(Self::muted_text()),
+            );
+            for preset in QuickActions::personal_preset_buttons(&PersonalPreset::daily_presets()) {
+                let response = if preset.is_safety_preset() {
+                    ui.add(Self::danger_button(preset.name().to_string()))
+                } else {
+                    ui.add(Self::accent_button(preset.name().to_string()))
+                }
+                .on_hover_text(preset.description());
+                if response.clicked() {
+                    self.send(UiCommand::ApplyScene(preset.to_scene()));
                 }
             }
             ui.add_space(10.0);

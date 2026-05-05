@@ -146,7 +146,7 @@ Priority: partially implemented. The native page now covers safe playback/bank c
 - [~] Mic profile create/load/save-as/delete controls: guarded Mic-page actions exist for a named profile slot with same-action second-click confirmation, plus a discovered mic-profile browser for available profile rows; free-form import/rename workflows remain pending.
 - [~] Effect preset load/save/rename controls: guarded named-slot actions exist on the Effects page with same-action second-click confirmation, plus a discovered preset browser for available `.preset` rows.
 - [~] Headphone EQ profile save/load/delete controls: guarded named-slot load, save-as, and delete actions exist on the Headphone EQ page with same-action second-click confirmation; the shared browser model is wired for headphone EQ profiles but depends on profile files being present in the expected directory.
-- [ ] Named personal presets for common routing, lighting, and effect states.
+- [x] Named personal presets for common routing, lighting, and effect states: dashboard `Personal presets` buttons expose Go Live, Desktop Focus, Late Night, and FX Panic bundles backed by explicit typed command lists.
 - [x] Clear warning boundaries around destructive profile operations for first-pass mic profile actions.
 
 Priority: medium. Useful once daily control pages are stable, but should be implemented carefully because profile operations are stateful/destructive.
