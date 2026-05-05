@@ -18,9 +18,9 @@ Branch: `personal-native-ui-safety`
 - [x] Direct `goxlr-ipc` command dispatch.
 - [x] Legacy `/tmp/goxlr.socket` fallback path.
 - [x] Optional system tray build path.
-- [~] Device/status visibility: enough for basic connection feedback, but not a full device-management screen.
-- [ ] Dedicated diagnostics/log viewer page.
-- [ ] Multi-device picker, if more than one GoXLR is attached.
+- [x] Device/status visibility: Diagnostics / Status page exposes connection state, daemon version, selected device, profiles, detected device count, desktop-audio status, and IPC socket candidates.
+- [~] Dedicated diagnostics/log viewer page: read-only status/socket diagnostics exist; embedded daemon log history remains pending.
+- [x] Multi-device picker, if more than one GoXLR is attached.
 
 Priority: keep stable; only extend if debugging or multiple-device use becomes a real need.
 
@@ -33,7 +33,7 @@ Priority: keep stable; only extend if debugging or multiple-device use becomes a
 - [x] Persistent route buttons for active streams.
 - [x] PipeWire/PulseAudio routing helpers for local Linux workflow.
 - [x] Scene-style quick actions for common personal routing/mute states.
-- [~] First-pass fader assignment editor: Mixer dashboard exposes Fader A-D assignment buttons for daily channels (Mic, Chat, Music, Game, Console, Line In, System, Sample) backed by typed `SetFader` commands; less-used output/monitor assignments remain deferred.
+- [~] First-pass fader assignment editor: Mixer dashboard exposes compact Fader A-D cards with assignment buttons for daily channels (Mic, Chat, Music, Game, Console, Line In, System, Sample) plus each fader's daily mute behaviour controls in the same card, backed by typed `SetFader` / `SetFaderMuteFunction` commands; less-used output/monitor assignments, hold/toggle behaviour, and rarer mute targets remain deferred.
 - [~] First-pass fader mute-behaviour editor: Mixer dashboard exposes safe mute-target buttons for All, Stream, Voice Chat, and Phones backed by typed `SetFaderMuteFunction` commands; hold/toggle and less-used mute targets remain pending.
 - [~] First-pass scribble strip editor: Mixer dashboard exposes Fader A-D hardware strip label, number, icon preset, and invert buttons backed by typed scribble commands; free-text entry and full icon browsing remain deferred.
 - [x] First-pass monitor mix selector: Mixer dashboard exposes safe hardware monitor-source buttons for Headphones, Broadcast, Chat Mic, and Line Out backed by typed `SetMonitorMix` commands.
@@ -48,9 +48,9 @@ Priority: medium. Daily mute/routing is already useful; fader assignment and scr
 - [~] Uses typed `SetRouter` backend support indirectly through personal routing workflows.
 - [x] Full matrix-style input-to-output router equivalent to the web UI: native matrix reads daemon route state, shows compact centered state badges with constrained non-stretching cell/badge heights and a denser screenshot-polished row layout, and sends typed `SetRouter(input, output, enabled)` commands for Mic/Chat/Music/Game/Console/Line In/System/Samples to Headphones/Broadcast/Chat Mic/Sampler/Line Out.
 - [x] Save/load named routing presets: native preset cards above the matrix apply common explicit `SetRouter` command bundles for Broadcast Mix, Chat Mic, and Line Out Safe.
-- [ ] Visual diff between desired persistent rules and current GoXLR route state.
+- [x] Visual diff between desired persistent rules and current active desktop stream routes: Config / Routing now shows current route, desired route, status, and an `Apply pending moves` action for live streams that need moving.
 
-Priority: medium. A full routing matrix is valuable, but the current personal routing buttons cover the main Linux desktop use case.
+Priority: medium-low. Core routing parity is strong; remaining routing work should be manual-QA/layout polish or dynamic preset/config ergonomics rather than another matrix rewrite.
 
 ## 4. Microphone and processing
 
@@ -63,8 +63,8 @@ Priority: medium. A full routing matrix is valuable, but the current personal ro
 - [x] Screenshot-polished wrapped Mic layout: processing/safety panels use bounded wrapped panel widths so compressor and safety controls do not clip off the right edge at normal window widths, and screenshot-offender controls such as `Save mic profile`, `Reload settings`, and compressor ratio buttons get fixed/minimum widths to avoid vertical-letter text.
 - [~] Practical safety presets / threshold workflows.
 - [x] Microphone EQ editor: first-pass mini/full EQ frequency and gain command controls.
-- [ ] Mic setup wizard-style guidance and live level meter.
-- [~] Mic profile create/save/load/delete controls: guarded daily load/save/save-as/delete actions are exposed on the Mic page with same-action second-click confirmation, but no full browser-style profile manager yet.
+- [~] Mic setup wizard-style guidance and live level meter: the Mic page now has a read-only setup guide for type/gain/gate/compressor order plus an explicit note that live mic levels are not exposed in the current IPC snapshot; true live meter remains pending.
+- [~] Mic profile create/save/load/delete controls: guarded daily load/save/save-as/delete actions are exposed on the Mic page with same-action second-click confirmation, and the page now includes a discovered mic-profile browser for available `.goxlrMicProfile` rows; free-form import/rename workflows remain deferred.
 
 Priority: medium-low after current work. Mic basics are covered; EQ/profile polish can wait unless voice tuning becomes the next focus.
 
@@ -75,14 +75,14 @@ Priority: medium-low after current work. Mic basics are covered; EQ/profile poli
 - [x] Quick preset layout polish: compact wrapped cards keep preset name, description, and command count together, keep command labels horizontal, share a top-aligned row height, and fit all four quick presets cleanly at normal window width.
 - [x] Command mappings for active preset, FX enable, reverb, echo, pitch, gender, megaphone, robot, and hard tune basics.
 - [x] Quick buttons for FX on/off, robot, and hard tune.
-- [~] Full active preset management: guarded named-slot load, rename-active, and save-active controls exist with same-action second-click confirmation; full preset browser/list management remains pending.
-- [~] Reverb detailed controls: amount/style are native, plus first-pass advanced decay default; early/tail/pre-delay/colour/mod remain pending.
-- [~] Echo detailed controls: amount/style are native, plus first-pass feedback default; tempo/delay/cross-feedback remain pending.
+- [~] Full active preset management: guarded named-slot load, rename-active, and save-active controls exist with same-action second-click confirmation, plus a discovered `.preset` browser for available bundled/user preset files; arbitrary preset import/file editing remains pending.
+- [~] Reverb detailed controls: amount/style are native, plus advanced default buttons for decay, early/tail levels, pre-delay, low/high colour, high factor, diffuse, and modulation speed/depth; full arbitrary sliders remain pending.
+- [~] Echo detailed controls: amount/style are native, plus advanced default buttons for feedback, tempo, left/right delay, left/right feedback, and cross-feedback; full arbitrary sliders remain pending.
 - [~] Pitch detailed controls: amount/style are native, plus first-pass character default.
 - [x] Gender detailed controls: amount and style.
 - [~] Megaphone detailed controls: enable/style/amount are native, plus first-pass post-gain default; deeper parameters remain pending.
-- [~] Robot detailed controls: enable/style are native, plus first-pass threshold default; gain/frequency/width ranges, waveform, pulse width, and dry mix remain pending.
-- [~] Hard tune detailed controls: enable/style are native, plus first-pass amount/rate/window/source command mappings and source default; fuller editing remains pending.
+- [~] Robot detailed controls: enable/style are native, plus advanced default buttons for threshold, low gain, mid frequency, high width, waveform, pulse width, and dry mix; full range editing remains pending.
+- [~] Hard tune detailed controls: enable/style are native, plus advanced default buttons for amount, rate, window, and source; fuller editing remains pending.
 
 Priority: partially implemented. The Effects page now has daily presets plus first-pass detailed sliders/style buttons; future Effects work should only go deeper if the missing advanced DSP parameters matter in day-to-day use.
 
@@ -90,8 +90,9 @@ Implemented Effects detail chunk:
 
 - Added model-level `EffectsAmountControl` coverage for reverb, echo, pitch, gender, and megaphone amount sliders.
 - Added model-level `EffectsStyleGroup` coverage for reverb, echo, pitch, gender, megaphone, robot, and hard tune style buttons.
+- Expanded `EffectsAdvancedControl` coverage and the Effects `ADVANCED DSP` panel from a handful of defaults to broader quick-default buttons for reverb early/tail/pre-delay/colour/mod, echo tempo/delay/cross-feedback, robot gain/frequency/width/waveform/pulse/dry mix, and hard-tune amount/rate/window/source.
 - Added `EffectsLayoutPolicy` coverage for wrapped quick-preset cards, compact detail panel widths, and bounded style-group cards/buttons so the `STYLES` panel avoids vertical-letter button wrapping.
-- Wired the Effects page to render amount sliders and style button groups backed by typed `PersonalCommand` mappings.
+- Wired the Effects page to render amount sliders, style button groups, and advanced DSP defaults backed by typed `PersonalCommand` mappings.
 
 ## 6. Lighting
 
@@ -126,24 +127,25 @@ Implemented Lighting colour-editor chunk:
 ## 7. Sampler
 
 - [x] Dedicated Sampler page.
+- [x] Compact two-by-two Sampler bank card layout: each bank now groups TopLeft/TopRight/BottomLeft/BottomRight into equal slot cards instead of one long repeated vertical button wall.
 - [x] Active sampler bank selector.
 - [x] Play next sample for each pad.
 - [x] Stop sample playback.
 - [x] Playback mode/order controls: first-pass play/stop mode and random order actions.
-- [ ] Add/remove sample controls.
-- [~] Sample start/stop percentage controls: safe first-pass slot-0 reset buttons are exposed per bank/pad; richer per-sample editing remains pending.
+- [~] Add/remove sample controls: guarded typed-path import and remove actions are exposed per bank/pad with same-action second-click confirmation, plus a simple directory sample browser and daemon-backed live slot/sample list with per-index play/remove controls; deeper waveform/drag/drop editing remains pending.
+- [~] Sample start/stop percentage controls: safe first-pass start-0% and stop-100% reset buttons are exposed per live sample index when daemon slot state is available; arbitrary percentage editing remains pending.
 - [x] Clear sample process error.
 - [x] Sampler reset-on-clear setting.
 - [x] Sampler fade duration setting.
 
-Priority: partially implemented. The native page now covers safe playback/bank controls, workflow settings, and conservative trim reset controls; file import/removal and richer sample-list editing remain deferred because they have more file/workflow edge cases.
+Priority: partially implemented. The native page now covers safe playback/bank controls, workflow settings, conservative trim reset controls, guarded typed-path add/remove sample actions, a simple supported-audio directory browser, and daemon-backed live sample slot/index rows. Richer waveform editing, drag/drop, and bulk sample workflows remain deferred.
 
 ## 8. Profiles and persistence
 
-- [~] Main profile create/load/save-as/delete controls: guarded named-slot full-profile load, save-active, save-as, create, and delete actions exist on the System page with same-action second-click confirmation; full dynamic profile browser/list management remains pending.
-- [~] Mic profile create/load/save-as/delete controls: guarded Mic-page actions exist for a named profile slot with same-action second-click confirmation; a full profile manager remains pending.
-- [~] Effect preset load/save/rename controls: guarded named-slot actions exist on the Effects page with same-action second-click confirmation; full browser/list management remains pending.
-- [~] Headphone EQ profile save/load/delete controls: guarded named-slot load, save-as, and delete actions exist on the Headphone EQ page with same-action second-click confirmation; full dynamic profile list/browser management remains pending.
+- [~] Main profile create/load/save-as/delete controls: guarded named-slot full-profile load, save-active, save-as, create, and delete actions exist on the System page with same-action second-click confirmation, plus a discovered `.goxlr` browser with guarded per-row load, lighting-only load, save-as, and delete actions; arbitrary import/rename/location management remains pending.
+- [~] Mic profile create/load/save-as/delete controls: guarded Mic-page actions exist for a named profile slot with same-action second-click confirmation, plus a discovered mic-profile browser for available profile rows; free-form import/rename workflows remain pending.
+- [~] Effect preset load/save/rename controls: guarded named-slot actions exist on the Effects page with same-action second-click confirmation, plus a discovered preset browser for available `.preset` rows.
+- [~] Headphone EQ profile save/load/delete controls: guarded named-slot load, save-as, and delete actions exist on the Headphone EQ page with same-action second-click confirmation; the shared browser model is wired for headphone EQ profiles but depends on profile files being present in the expected directory.
 - [ ] Named personal presets for common routing, lighting, and effect states.
 - [x] Clear warning boundaries around destructive profile operations for first-pass mic profile actions.
 
@@ -158,7 +160,7 @@ Priority: medium. Useful once daily control pages are stable, but should be impl
 - [x] Monitor-with-FX toggle.
 - [x] Lock faders toggle.
 - [x] VOD mode setting.
-- [x] Headphone EQ full editor: dedicated tab with enabled/preamp and ten-band gain/frequency/Q command controls; screenshot-polished into a compact fixed 5x2 band grid instead of a sparse staggered card flow.
+- [x] Headphone EQ full editor: dedicated tab with enabled/preamp and ten-band gain/frequency/Q command controls; screenshot-polished into a compact fixed 5x2 equal-height band grid instead of a sparse staggered card flow.
 - [x] General device/system settings page: first-pass safe daily controls for mute hold duration, VC/chat mic coupling, monitor-with-FX, fader lock, VOD mode, and reload settings; destructive profile operations remain intentionally omitted.
 
 Priority: medium-low. Add only settings that solve a current annoyance; avoid building a settings junk drawer too early.
@@ -175,7 +177,7 @@ Priority: medium-low. Add only settings that solve a current annoyance; avoid bu
   - `cargo test -p goxlr-personal-ui --lib --bins --tests`
   - `cargo check -p goxlr-personal-ui --features system-tray`
 - [ ] Lightweight screenshot/manual QA notes for each new page after local run.
-- [ ] A small in-app "About / implemented parity" screen, if the checklist becomes useful in the UI itself.
+- [x] A small in-app "About / implemented parity" screen: read-only About tab summarizes implemented and partial parity areas so manual QA can distinguish completed daily controls from intentionally deferred full managers/editors.
 
 ## Recommended next choices
 
@@ -183,7 +185,7 @@ Priority: medium-low. Add only settings that solve a current annoyance; avoid bu
    - The current chunks intentionally favor typed safe controls over exhaustive file/profile managers; screenshots/use will reveal the next best polish pass.
 
 2. Fill the remaining file/workflow-heavy gaps only if they become real workflows.
-   - Sampler add/remove samples and full profile managers have more destructive/file-state risk than the daily controls now exposed.
+   - Sampler now has guarded typed-path add/remove actions, a simple audio-file directory browser, and live per-index sample rows; remaining higher-risk work is waveform/drag-drop/bulk editing and free-form profile import/rename/location management.
 
 3. Further Lighting/editor UX tweaks.
    - Only if manual testing still shows a specific pain point; prefer custom hex inputs or collapsible sections over more preset button spam.
@@ -198,6 +200,13 @@ Implemented routing matrix chunk:
 - Added typed `PersonalCommand::SetRouter(input, output, enabled)` mapping to backend `GoXLRCommand::SetRouter` and UI `On`/`Off` buttons per matrix cell.
 - Added `RoutingStateBadge` and `RoutingMatrixLayoutPolicy` model coverage so screenshot-driven state-label polish stays testable without brittle widget snapshots.
 - Added named routing preset cards above the matrix for `Broadcast Mix`, `Chat Mic`, and `Line Out Safe`; each preset is a deliberate bundle of explicit `SetRouter(input, output, enabled)` commands instead of an optimistic single-toggle state.
+- Added a visual routing-rule diff panel that compares saved app-match routing rules against current active playback stream destinations, labels each rule as `Matched`, `Move needed`, `Waiting`, `Missing target`, or `Disabled`, and can apply only the pending live-stream moves.
+
+Implemented screenshot-driven compactness pass after the latest composite QA:
+
+- Headphone EQ band cards now use equal-height fixed slots in the 5x2 grid, eliminating the remaining diagonal/stair-step equalizer layout.
+- Sampler bank panels now render TopLeft/TopRight/BottomLeft/BottomRight as compact two-by-two slot cards, reducing the tall repeated button wall while keeping file import/removal deferred.
+- Mixer fader assignment now combines each fader's channel assignment and mute-behaviour controls into compact Fader A-D cards, reducing the very long single-column hardware section.
 
 Implemented composite screenshot polish pass:
 
@@ -238,6 +247,13 @@ Implemented ordered parity batch:
 - Added a dedicated Headphone EQ tab with enable/disable, preamp, and ten-band gain/frequency/Q command controls; follow-up screenshot QA tightened it into a compact fixed 5x2 grid so the bands read as one equalizer surface rather than a tall scattered card layout.
 - Added a dedicated Sampler tab with bank cards, pad actions, active-bank selection, play/stop mode, random order, play-next, and stop playback controls.
 - Added model-level tests for all five requested chunks plus typed `PersonalCommand -> GoXLRCommand` mappings.
+
+Implemented diagnostics/status chunk:
+
+- Added `AppViewMode::Diagnostics` and a dedicated read-only Diagnostics / Status tab.
+- Added model-backed diagnostics rows for connection state, daemon version, selected device, detected device count, main/mic/headphone EQ profiles, and desktop-audio status.
+- Added IPC socket candidate visibility, including legacy `/tmp/goxlr.socket`, so local daemon/socket problems can be inspected without leaving the native UI.
+- Added `DiagnosticsLayoutPolicy`, `DiagnosticsStatusRow`, and `DiagnosticsStatusSeverity` model coverage; this is status-only and does not send device-changing commands.
 
 ## Implementation rule for each chunk
 

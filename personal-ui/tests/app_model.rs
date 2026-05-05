@@ -1,21 +1,26 @@
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use goxlr_ipc::{Sample, SampleProcessState, Sampler, SamplerButton};
 use goxlr_personal_ui::{
-    ActiveAudioStreams, AppConfig, AppSceneConfig, AppSnapshot, AppViewMode, AudioRouteTarget,
-    AudioRoutingRule, ContentLayoutPolicy, ControlledChannel, DashboardCopy, DeviceSelection,
+    AboutLayoutPolicy, ActiveAudioStreams, AppConfig, AppSceneConfig, AppSnapshot, AppViewMode,
+    AudioRouteTarget, AudioRoutingRule, ContentLayoutPolicy, ControlledChannel, DashboardCopy,
+    DeviceSelection, DiagnosticsLayoutPolicy, DiagnosticsStatusRow, DiagnosticsStatusSeverity,
     EffectPresetAction, EffectsAdvancedControl, EffectsAmountControl, EffectsLayoutPolicy,
     EffectsQuickPreset, EffectsStyleGroup, ExternalAudioTool, FaderAssignmentControl,
     FaderMuteFunctionControl, HardwareScribbleControl, HeadphoneEqBandControl,
-    HeadphoneEqLayoutPolicy, HeadphoneEqProfileAction, LightingAnimationControl,
-    LightingButtonColourTarget, LightingFaderColourTarget, LightingLayoutPolicy,
-    LightingProfileAction, LightingQuickTheme, LightingSimpleColourTarget,
+    HeadphoneEqLayoutPolicy, HeadphoneEqProfileAction, ImplementedParityItem,
+    LightingAnimationControl, LightingButtonColourTarget, LightingFaderColourTarget,
+    LightingLayoutPolicy, LightingProfileAction, LightingQuickTheme, LightingSimpleColourTarget,
     LightingTripleColourTarget, MainProfileAction, MicEqBandControl, MicLayoutPolicy,
-    MicProfileAction, MiniWindowMode, MixerLayoutPolicy, MonitorMixControl, OptionalBoolAction,
-    PersonalCommand, QuickActions, RoutingMatrixLayoutPolicy, RoutingMatrixModel,
-    RoutingMatrixRoute, RoutingPreset, RoutingRuleEditor, RoutingStateBadge, SampleTrimAction,
-    SamplerAction, SamplerLayoutPolicy, SamplerWorkflowSetting, SceneEditor, SubmixChannelControl,
+    MicProfileAction, MicSetupGuideStep, MiniWindowMode, MixerLayoutPolicy, MonitorMixControl,
+    OptionalBoolAction, PersonalCommand, ProfileBrowser, ProfileBrowserKind, QuickActions,
+    RoutingMatrixLayoutPolicy, RoutingMatrixModel, RoutingMatrixRoute, RoutingPreset,
+    RoutingRuleDiffStatus, RoutingRuleEditor, RoutingStateBadge, SampleTrimAction, SamplerAction,
+    SamplerFileAction, SamplerLayoutPolicy, SamplerLoadedSample, SamplerSampleBrowser,
+    SamplerSlotSnapshot, SamplerWorkflowSetting, SceneEditor, SubmixChannelControl,
     SubmixOutputMixControl, SystemLayoutPolicy, SystemSettingsAction, TrayAction, TrayMenuModel,
     UiCommand, UiScene, VolumeDebouncer, WindowAction, ipc_socket_path_candidates,
 };
@@ -24,7 +29,7 @@ use goxlr_types::{
     CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EchoStyle, EffectBankPresets,
     EncoderColourTargets, EqFrequencies, FaderDisplayStyle, FaderName, GateTimes, GenderStyle,
     HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies,
-    Mix, MuteFunction, OutputDevice, PitchStyle, ReverbStyle, RobotStyle, SampleBank,
+    Mix, MuteFunction, OutputDevice, PitchStyle, ReverbStyle, RobotRange, RobotStyle, SampleBank,
     SampleButtons, SamplePlayOrder, SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets,
     VodMode, WaterfallDirection,
 };
@@ -35,6 +40,16 @@ fn temp_scene_config_path(name: &str) -> PathBuf {
         .unwrap()
         .as_nanos();
     std::env::temp_dir().join(format!("goxlr-personal-ui-{name}-{nonce}.json"))
+}
+
+fn temp_test_dir(name: &str) -> PathBuf {
+    let nonce = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let path = std::env::temp_dir().join(format!("goxlr-personal-ui-{name}-{nonce}"));
+    fs::create_dir_all(&path).unwrap();
+    path
 }
 
 #[test]
@@ -63,6 +78,136 @@ fn content_layout_policy_keeps_main_content_scrollable_below_fixed_header() {
         ContentLayoutPolicy::max_content_width()
     );
     assert!(ContentLayoutPolicy::wide_window_side_margin(3440.0) > 1000.0);
+}
+
+#[test]
+fn diagnostics_layout_policy_keeps_status_page_read_only_and_compact() {
+    assert!(DiagnosticsLayoutPolicy::uses_read_only_status_cards());
+    assert!(DiagnosticsLayoutPolicy::panel_width() >= 420.0);
+    assert!(DiagnosticsLayoutPolicy::panel_width() <= 520.0);
+    assert!(
+        DiagnosticsLayoutPolicy::detail_panel_width() >= DiagnosticsLayoutPolicy::panel_width()
+    );
+    assert!(DiagnosticsLayoutPolicy::button_width() >= 120.0);
+    assert!(DiagnosticsLayoutPolicy::shows_ipc_socket_candidates());
+}
+
+#[test]
+fn app_snapshot_diagnostics_rows_explain_connection_device_and_profiles() {
+    let disconnected = AppSnapshot::disconnected("unit test socket refused");
+    let rows = disconnected.diagnostics_rows();
+    assert!(rows.iter().any(|row| {
+        row.label() == "Connection"
+            && row.value().contains("Disconnected")
+            && row.severity() == DiagnosticsStatusSeverity::Warning
+    }));
+    assert!(rows.iter().any(|row| {
+        row.label() == "Daemon"
+            && row.value() == "Unknown"
+            && row.severity() == DiagnosticsStatusSeverity::Warning
+    }));
+
+    let connected = AppSnapshot {
+        connected: true,
+        error: None,
+        daemon_version: Some("1.2.3".to_string()),
+        device_serials: vec!["SERIAL-2".to_string(), "SERIAL-1".to_string()],
+        device_serial: Some("SERIAL-1".to_string()),
+        device_type: Some("GoXLR".to_string()),
+        profile_name: Some("Personal".to_string()),
+        mic_profile_name: Some("Broadcast".to_string()),
+        headphone_eq_profile: Some("Personal Phones".to_string()),
+        ..AppSnapshot::disconnected("unused")
+    };
+    let rows = connected.diagnostics_rows();
+    assert!(rows.iter().any(|row| {
+        row.label() == "Connection"
+            && row.value() == "Connected"
+            && row.severity() == DiagnosticsStatusSeverity::Ok
+    }));
+    assert!(
+        rows.iter()
+            .any(|row| row.label() == "Daemon" && row.value() == "1.2.3")
+    );
+    assert!(rows.iter().any(|row| {
+        row.label() == "Device" && row.value().contains("GoXLR") && row.value().contains("SERIAL-1")
+    }));
+    assert!(
+        rows.iter()
+            .any(|row| row.label() == "Profiles" && row.value().contains("Personal"))
+    );
+    assert!(
+        rows.iter()
+            .any(|row| row.label() == "Mic profile" && row.value() == "Broadcast")
+    );
+    assert!(
+        rows.iter()
+            .any(|row| row.label() == "Headphone EQ" && row.value() == "Personal Phones")
+    );
+    assert!(
+        rows.iter()
+            .any(|row| row.label() == "Detected devices" && row.value() == "2")
+    );
+}
+
+#[test]
+fn diagnostics_status_rows_have_stable_labels_and_severity() {
+    let row = DiagnosticsStatusRow::new(
+        "IPC socket",
+        "/tmp/goxlr.socket",
+        DiagnosticsStatusSeverity::Info,
+    );
+    assert_eq!(row.label(), "IPC socket");
+    assert_eq!(row.value(), "/tmp/goxlr.socket");
+    assert_eq!(row.severity(), DiagnosticsStatusSeverity::Info);
+    assert_eq!(DiagnosticsStatusSeverity::Ok.label(), "OK");
+    assert_eq!(DiagnosticsStatusSeverity::Warning.label(), "Warning");
+    assert_eq!(DiagnosticsStatusSeverity::Info.label(), "Info");
+}
+
+#[test]
+fn diagnostics_view_mode_is_available_from_quick_actions() {
+    let mut quick = QuickActions::default();
+    quick.set_view_mode(AppViewMode::Diagnostics);
+    assert_eq!(quick.view_mode(), AppViewMode::Diagnostics);
+    quick.toggle_view_mode();
+    assert_eq!(quick.view_mode(), AppViewMode::QuickActions);
+}
+
+#[test]
+fn about_view_mode_exposes_implemented_parity_summary() {
+    let mut quick = QuickActions::default();
+    quick.set_view_mode(AppViewMode::About);
+    assert_eq!(quick.view_mode(), AppViewMode::About);
+    quick.toggle_view_mode();
+    assert_eq!(quick.view_mode(), AppViewMode::QuickActions);
+
+    assert!(AboutLayoutPolicy::uses_read_only_summary_cards());
+    assert!(AboutLayoutPolicy::panel_width() >= 420.0);
+    assert!(AboutLayoutPolicy::panel_width() <= 560.0);
+
+    let items = ImplementedParityItem::current_items();
+    assert!(items.len() >= 8);
+    assert!(
+        items
+            .iter()
+            .any(|item| item.label() == "Mixer" && item.status_label() == "Implemented")
+    );
+    assert!(
+        items
+            .iter()
+            .any(|item| item.label() == "Sampler" && item.status_label() == "Partial")
+    );
+    assert!(
+        items
+            .iter()
+            .any(|item| item.label() == "Profiles" && item.description().contains("guarded"))
+    );
+    assert!(
+        items
+            .iter()
+            .all(|item| !item.label().is_empty() && !item.description().is_empty())
+    );
 }
 
 #[test]
@@ -279,11 +424,14 @@ fn mixer_layout_policy_supports_fader_assignment_editor() {
     assert_eq!(MixerLayoutPolicy::channel_strip_height(), 270.0);
     assert_eq!(MixerLayoutPolicy::channel_slider_height(), 190.0);
     assert!(MixerLayoutPolicy::uses_fader_assignment_editor());
-    assert!(MixerLayoutPolicy::assignment_panel_width() <= MixerLayoutPolicy::panel_width());
+    assert!(MixerLayoutPolicy::uses_compact_fader_assignment_cards());
+    assert!(MixerLayoutPolicy::assignment_panel_width() > MixerLayoutPolicy::panel_width());
+    assert_eq!(MixerLayoutPolicy::assignment_cards_per_row(), 2);
     assert!(
-        MixerLayoutPolicy::assignment_button_width()
-            >= ContentLayoutPolicy::min_action_button_width()
+        MixerLayoutPolicy::assignment_card_width() * 2.0 + MixerLayoutPolicy::assignment_card_gap()
+            <= MixerLayoutPolicy::assignment_panel_width()
     );
+    assert!(MixerLayoutPolicy::assignment_button_width() < 100.0);
 }
 
 #[test]
@@ -999,6 +1147,85 @@ fn active_audio_streams_report_empty_playback_clearly() {
 }
 
 #[test]
+fn active_audio_streams_diff_persistent_rules_against_current_routes() {
+    let streams = ActiveAudioStreams::from_pactl_json(
+        r#"
+        [
+          {"index": 88, "name": "alsa_output.usb-TC-Helicon_GoXLRMini-00.HiFi__Speaker__sink", "description": "GoXLRMini System"},
+          {"index": 86, "name": "alsa_output.usb-TC-Helicon_GoXLRMini-00.HiFi__Line1__sink", "description": "GoXLRMini Game"},
+          {"index": 84, "name": "alsa_output.usb-TC-Helicon_GoXLRMini-00.HiFi__Line2__sink", "description": "GoXLRMini Music"},
+          {"index": 82, "name": "alsa_output.usb-TC-Helicon_GoXLRMini-00.HiFi__Headphones__sink", "description": "GoXLRMini Chat"}
+        ]
+        "#,
+        r#"
+        [
+          {"index": 12, "sink": 88, "properties": {"application.name": "Spotify"}},
+          {"index": 13, "sink": 84, "properties": {"application.name": "Discord"}}
+        ]
+        "#,
+    )
+    .unwrap();
+
+    let rows = streams.routing_rule_diffs(&[
+        AudioRoutingRule::new("Spotify", "Music"),
+        AudioRoutingRule::new("Discord", "Chat"),
+        AudioRoutingRule::new("Firefox", "Game"),
+        AudioRoutingRule::disabled("Steam", "Game"),
+    ]);
+
+    assert_eq!(rows.len(), 4);
+    assert_eq!(rows[0].app(), "Spotify");
+    assert_eq!(rows[0].desired_route(), "Music");
+    assert_eq!(rows[0].current_route(), Some("System"));
+    assert_eq!(rows[0].status(), RoutingRuleDiffStatus::NeedsMove);
+    assert_eq!(rows[0].status_label(), "Move needed");
+    assert_eq!(rows[0].summary(), "Spotify: System → Music");
+
+    assert_eq!(rows[1].app(), "Discord");
+    assert_eq!(rows[1].current_route(), Some("Music"));
+    assert_eq!(rows[1].status(), RoutingRuleDiffStatus::NeedsMove);
+
+    assert_eq!(rows[2].app(), "Firefox");
+    assert_eq!(rows[2].current_route(), None);
+    assert_eq!(rows[2].status(), RoutingRuleDiffStatus::WaitingForStream);
+    assert_eq!(rows[2].status_label(), "Waiting");
+
+    assert_eq!(rows[3].app(), "Steam");
+    assert_eq!(rows[3].status(), RoutingRuleDiffStatus::Disabled);
+    assert_eq!(rows[3].status_label(), "Disabled");
+}
+
+#[test]
+fn active_audio_streams_diff_marks_matching_and_missing_targets() {
+    let streams = ActiveAudioStreams::from_pactl_json(
+        r#"
+        [
+          {"index": 84, "name": "alsa_output.usb-TC-Helicon_GoXLRMini-00.HiFi__Line2__sink", "description": "GoXLRMini Music"}
+        ]
+        "#,
+        r#"
+        [
+          {"index": 12, "sink": 84, "properties": {"application.name": "Spotify"}}
+        ]
+        "#,
+    )
+    .unwrap();
+
+    let rows = streams.routing_rule_diffs(&[
+        AudioRoutingRule::new("Spotify", "Music"),
+        AudioRoutingRule::new("OBS", "Broadcast"),
+    ]);
+
+    assert_eq!(rows[0].status(), RoutingRuleDiffStatus::Matched);
+    assert_eq!(rows[0].status_label(), "Matched");
+    assert_eq!(rows[0].summary(), "Spotify: Music ✓");
+
+    assert_eq!(rows[1].status(), RoutingRuleDiffStatus::MissingTarget);
+    assert_eq!(rows[1].status_label(), "No route target");
+    assert_eq!(rows[1].summary(), "OBS: Broadcast target unavailable");
+}
+
+#[test]
 fn ipc_socket_candidates_include_legacy_tmp_socket_for_installed_daemon() {
     let candidates = ipc_socket_path_candidates();
 
@@ -1207,6 +1434,30 @@ fn mic_eq_editor_exposes_mini_and_full_band_controls() {
 }
 
 #[test]
+fn mic_setup_guidance_explains_gain_gate_compressor_and_live_meter_gap() {
+    assert!(MicLayoutPolicy::uses_setup_guidance_cards());
+    assert!(MicLayoutPolicy::setup_guide_panel_width() >= MicLayoutPolicy::panel_width());
+    assert!(MicLayoutPolicy::setup_guide_panel_width() <= 460.0);
+    assert!(MicLayoutPolicy::meter_placeholder_is_read_only());
+
+    let steps = MicSetupGuideStep::daily_steps();
+    assert_eq!(steps.len(), 4);
+    assert_eq!(steps[0].label(), "1. Pick mic type");
+    assert!(steps[0].description().contains("Dynamic"));
+    assert_eq!(steps[1].label(), "2. Set gain before processing");
+    assert!(steps[1].description().contains("peaks"));
+    assert_eq!(steps[2].label(), "3. Close the gate gently");
+    assert!(steps[2].description().contains("Gate threshold"));
+    assert_eq!(steps[3].label(), "4. Add compression last");
+    assert!(steps[3].description().contains("makeup gain"));
+    assert!(steps.iter().all(|step| step.command().is_none()));
+
+    let meter_note = MicSetupGuideStep::live_meter_status_note();
+    assert!(meter_note.contains("not exposed"));
+    assert!(meter_note.contains("read-only"));
+}
+
+#[test]
 fn guarded_mic_profile_actions_require_confirmation_for_destructive_workflows() {
     let actions = MicProfileAction::guarded_daily_actions("Broadcast");
     let load = actions
@@ -1272,6 +1523,73 @@ fn advanced_effects_controls_cover_deeper_dsp_parameters() {
             && control.command_for_default()
                 == PersonalCommand::SetHardTuneSource(HardTuneSource::Music)
     }));
+}
+
+#[test]
+fn advanced_effects_controls_include_fuller_dsp_default_buttons() {
+    let controls = EffectsAdvancedControl::daily_controls();
+    assert!(controls.len() >= 24);
+
+    let expected = [
+        (
+            "Reverb early level",
+            PersonalCommand::SetReverbEarlyLevel(0),
+        ),
+        ("Reverb tail level", PersonalCommand::SetReverbTailLevel(0)),
+        ("Reverb pre-delay", PersonalCommand::SetReverbPreDelay(25)),
+        ("Reverb low colour", PersonalCommand::SetReverbLowColour(0)),
+        (
+            "Reverb high colour",
+            PersonalCommand::SetReverbHighColour(0),
+        ),
+        (
+            "Reverb high factor",
+            PersonalCommand::SetReverbHighFactor(0),
+        ),
+        ("Reverb diffuse", PersonalCommand::SetReverbDiffuse(0)),
+        ("Reverb mod speed", PersonalCommand::SetReverbModSpeed(0)),
+        ("Reverb mod depth", PersonalCommand::SetReverbModDepth(0)),
+        ("Echo tempo", PersonalCommand::SetEchoTempo(120)),
+        ("Echo left delay", PersonalCommand::SetEchoDelayLeft(250)),
+        ("Echo right delay", PersonalCommand::SetEchoDelayRight(375)),
+        (
+            "Echo left feedback",
+            PersonalCommand::SetEchoFeedbackLeft(35),
+        ),
+        (
+            "Echo right feedback",
+            PersonalCommand::SetEchoFeedbackRight(35),
+        ),
+        ("Echo cross L→R", PersonalCommand::SetEchoFeedbackXFBLtoR(0)),
+        ("Echo cross R→L", PersonalCommand::SetEchoFeedbackXFBRtoL(0)),
+        (
+            "Robot low gain",
+            PersonalCommand::SetRobotGain(RobotRange::Low, 0),
+        ),
+        (
+            "Robot mid frequency",
+            PersonalCommand::SetRobotFreq(RobotRange::Medium, 60),
+        ),
+        (
+            "Robot high width",
+            PersonalCommand::SetRobotWidth(RobotRange::High, 50),
+        ),
+        ("Robot waveform", PersonalCommand::SetRobotWaveform(0)),
+        ("Robot pulse width", PersonalCommand::SetRobotPulseWidth(50)),
+        ("Robot dry mix", PersonalCommand::SetRobotDryMix(0)),
+        ("Hard Tune amount", PersonalCommand::SetHardTuneAmount(50)),
+        ("Hard Tune rate", PersonalCommand::SetHardTuneRate(50)),
+        ("Hard Tune window", PersonalCommand::SetHardTuneWindow(200)),
+    ];
+
+    for (label, command) in expected {
+        assert!(
+            controls.iter().any(|control| {
+                control.label() == label && control.command_for_default() == command
+            }),
+            "missing advanced Effects default control: {label}"
+        );
+    }
 }
 
 #[test]
@@ -1376,9 +1694,31 @@ fn headphone_eq_layout_uses_compact_five_by_two_grid() {
     assert_eq!(HeadphoneEqLayoutPolicy::grid_rows_for_band_count(10), 2);
     assert!(HeadphoneEqLayoutPolicy::uses_fixed_grid_rows());
     assert_eq!(HeadphoneEqLayoutPolicy::band_card_width(), 112.0);
+    assert_eq!(HeadphoneEqLayoutPolicy::band_card_height(), 126.0);
     assert_eq!(HeadphoneEqLayoutPolicy::band_card_gap(), 10.0);
+    assert!(HeadphoneEqLayoutPolicy::uses_equal_height_band_cards());
+    let row_width = HeadphoneEqLayoutPolicy::band_card_width()
+        * HeadphoneEqLayoutPolicy::grid_columns() as f32
+        + HeadphoneEqLayoutPolicy::band_card_gap()
+            * (HeadphoneEqLayoutPolicy::grid_columns() - 1) as f32;
+    assert!(row_width <= HeadphoneEqLayoutPolicy::panel_width());
     assert!(HeadphoneEqLayoutPolicy::panel_width() <= 660.0);
     assert!(HeadphoneEqLayoutPolicy::panel_width() >= 600.0);
+}
+
+#[test]
+fn sampler_layout_uses_compact_two_by_two_bank_cards() {
+    assert!(SamplerLayoutPolicy::uses_bank_button_cards());
+    assert!(SamplerLayoutPolicy::uses_two_by_two_slot_grid());
+    assert_eq!(SamplerLayoutPolicy::bank_slot_columns(), 2);
+    assert_eq!(SamplerLayoutPolicy::bank_slot_rows(), 2);
+    assert_eq!(SamplerLayoutPolicy::bank_slot_card_width(), 156.0);
+    assert_eq!(SamplerLayoutPolicy::bank_slot_card_height(), 132.0);
+    let row_width = SamplerLayoutPolicy::bank_slot_card_width()
+        * SamplerLayoutPolicy::bank_slot_columns() as f32
+        + SamplerLayoutPolicy::bank_slot_gap()
+            * (SamplerLayoutPolicy::bank_slot_columns() - 1) as f32;
+    assert!(row_width <= SamplerLayoutPolicy::panel_width());
 }
 
 #[test]
@@ -1473,7 +1813,200 @@ fn sampler_page_exposes_safe_workflow_settings_and_trim_actions() {
             )
     }));
     assert!(trim_actions.iter().all(|action| !action.label().is_empty()));
-    assert!(!SamplerLayoutPolicy::exposes_file_import_controls());
+    assert!(SamplerLayoutPolicy::exposes_file_import_controls());
+}
+
+#[test]
+fn sampler_live_slot_snapshot_exposes_daemon_sample_indexes_and_actions() {
+    let mut button_map = HashMap::new();
+    button_map.insert(
+        SampleButtons::TopLeft,
+        SamplerButton {
+            function: SamplePlaybackMode::PlayStop,
+            order: SamplePlayOrder::Sequential,
+            samples: vec![
+                Sample {
+                    name: "intro.wav".to_string(),
+                    start_pct: 0.0,
+                    stop_pct: 100.0,
+                },
+                Sample {
+                    name: "sting.wav".to_string(),
+                    start_pct: 12.5,
+                    stop_pct: 87.5,
+                },
+            ],
+            is_playing: true,
+            is_recording: false,
+        },
+    );
+    let mut banks = HashMap::new();
+    banks.insert(SampleBank::A, button_map);
+    let sampler = Sampler {
+        processing_state: SampleProcessState {
+            progress: None,
+            last_error: None,
+        },
+        active_bank: SampleBank::A,
+        clear_active: false,
+        record_buffer: 0,
+        banks,
+    };
+
+    let slots = SamplerSlotSnapshot::from_sampler(&sampler);
+    assert_eq!(slots.len(), 1);
+    let slot = &slots[0];
+    assert_eq!(slot.bank(), SampleBank::A);
+    assert_eq!(slot.button(), SampleButtons::TopLeft);
+    assert_eq!(slot.function(), SamplePlaybackMode::PlayStop);
+    assert_eq!(slot.order(), SamplePlayOrder::Sequential);
+    assert_eq!(slot.sample_count(), 2);
+    assert_eq!(slot.status_label(), "Playing");
+    assert_eq!(slot.samples()[1].index(), 1);
+    assert_eq!(slot.samples()[1].name(), "sting.wav");
+    assert_eq!(slot.samples()[1].trim_label(), "12%–88%");
+
+    let play_second = SamplerFileAction::play_by_index(SampleBank::A, SampleButtons::TopLeft, 1);
+    assert_eq!(play_second.label(), "Play #2");
+    assert_eq!(
+        play_second.command_if_confirmed(false),
+        Some(PersonalCommand::PlaySampleByIndex(
+            SampleBank::A,
+            SampleButtons::TopLeft,
+            1,
+        ))
+    );
+    let remove_second =
+        SamplerFileAction::remove_by_index(SampleBank::A, SampleButtons::TopLeft, 1);
+    assert_eq!(remove_second.label(), "Remove #2");
+    assert!(remove_second.command_if_confirmed(false).is_none());
+    assert_eq!(
+        remove_second.command_if_confirmed(true),
+        Some(PersonalCommand::RemoveSampleByIndex(
+            SampleBank::A,
+            SampleButtons::TopLeft,
+            1,
+        ))
+    );
+}
+
+#[test]
+fn sampler_loaded_sample_status_labels_cover_empty_ready_recording() {
+    let sample = SamplerLoadedSample::new(0, "clip.wav", 0.0, 100.0);
+    assert_eq!(sample.trim_label(), "0%–100%");
+
+    let empty = SamplerSlotSnapshot::new(
+        SampleBank::B,
+        SampleButtons::BottomLeft,
+        SamplePlaybackMode::PlayNext,
+        SamplePlayOrder::Random,
+        false,
+        false,
+        Vec::new(),
+    );
+    assert_eq!(empty.status_label(), "Empty");
+    let ready = SamplerSlotSnapshot::new(
+        SampleBank::B,
+        SampleButtons::BottomLeft,
+        SamplePlaybackMode::PlayNext,
+        SamplePlayOrder::Random,
+        false,
+        false,
+        vec![sample.clone()],
+    );
+    assert_eq!(ready.status_label(), "Ready");
+    let recording = SamplerSlotSnapshot::new(
+        SampleBank::B,
+        SampleButtons::BottomLeft,
+        SamplePlaybackMode::PlayNext,
+        SamplePlayOrder::Random,
+        true,
+        true,
+        vec![sample],
+    );
+    assert_eq!(recording.status_label(), "Recording");
+}
+
+#[test]
+fn sampler_sample_browser_discovers_supported_audio_files_only() {
+    assert_eq!(SamplerLayoutPolicy::sample_browser_panel_width(), 420.0);
+    assert_eq!(SamplerLayoutPolicy::sample_browser_row_button_width(), 84.0);
+    assert!(SamplerSampleBrowser::is_supported_audio_file(
+        std::path::Path::new("clip.WAV")
+    ));
+    assert!(!SamplerSampleBrowser::is_supported_audio_file(
+        std::path::Path::new("notes.txt")
+    ));
+
+    let dir = temp_test_dir("sampler-browser");
+    fs::write(dir.join("zeta.mp3"), b"fake mp3").unwrap();
+    fs::write(dir.join("alpha.WAV"), b"fake wav").unwrap();
+    fs::write(dir.join("ignore.txt"), b"not audio").unwrap();
+    fs::create_dir_all(dir.join("nested.flac")).unwrap();
+
+    let browser = SamplerSampleBrowser::from_directory(&dir);
+    let names = browser
+        .rows()
+        .iter()
+        .map(|row| row.display_name())
+        .collect::<Vec<_>>();
+    assert_eq!(names, vec!["alpha.WAV", "zeta.mp3"]);
+    assert!(browser.rows()[0].path().ends_with("alpha.WAV"));
+    assert_eq!(browser.root(), dir.as_path());
+
+    fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
+fn sampler_file_workflow_builds_guarded_add_remove_actions() {
+    assert_eq!(SamplerLayoutPolicy::file_workflow_panel_width(), 420.0);
+    assert_eq!(SamplerLayoutPolicy::file_workflow_button_width(), 120.0);
+
+    assert!(
+        SamplerFileAction::add_from_path(SampleBank::A, SampleButtons::TopLeft, "   ").is_none()
+    );
+
+    let add = SamplerFileAction::add_from_path(
+        SampleBank::A,
+        SampleButtons::TopLeft,
+        "  /home/pc/samples/clip.wav  ",
+    )
+    .expect("non-empty sample path should produce an add action");
+    assert_eq!(add.label(), "Add file");
+    assert!(add.requires_confirmation());
+    assert!(add.command_if_confirmed(false).is_none());
+    assert_eq!(
+        add.command_if_confirmed(true),
+        Some(PersonalCommand::AddSample(
+            SampleBank::A,
+            SampleButtons::TopLeft,
+            "/home/pc/samples/clip.wav".to_string(),
+        ))
+    );
+    assert!(!add.description().is_empty());
+
+    let remove = SamplerFileAction::remove_first(SampleBank::B, SampleButtons::BottomRight);
+    assert_eq!(remove.label(), "Remove #1");
+    assert!(remove.requires_confirmation());
+    assert_eq!(
+        remove.command_if_confirmed(true),
+        Some(PersonalCommand::RemoveSampleByIndex(
+            SampleBank::B,
+            SampleButtons::BottomRight,
+            0,
+        ))
+    );
+
+    let play = SamplerFileAction::play_first(SampleBank::C, SampleButtons::TopRight);
+    assert!(!play.requires_confirmation());
+    assert_eq!(
+        play.command_if_confirmed(false),
+        Some(PersonalCommand::PlaySampleByIndex(
+            SampleBank::C,
+            SampleButtons::TopRight,
+            0,
+        ))
+    );
 }
 
 #[test]
@@ -1517,6 +2050,38 @@ fn sampler_workflow_settings_map_to_backend_commands() {
             1,
             pct,
         ) if pct == 87.5
+    ));
+}
+
+#[test]
+fn sampler_file_workflow_maps_to_backend_commands() {
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::AddSample(
+            SampleBank::A,
+            SampleButtons::TopLeft,
+            "/tmp/clip.wav".to_string(),
+        )),
+        goxlr_ipc::GoXLRCommand::AddSample(
+            SampleBank::A,
+            SampleButtons::TopLeft,
+            path,
+        ) if path == "/tmp/clip.wav"
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::RemoveSampleByIndex(
+            SampleBank::B,
+            SampleButtons::BottomLeft,
+            0,
+        )),
+        goxlr_ipc::GoXLRCommand::RemoveSampleByIndex(SampleBank::B, SampleButtons::BottomLeft, 0,)
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::PlaySampleByIndex(
+            SampleBank::C,
+            SampleButtons::BottomRight,
+            0,
+        )),
+        goxlr_ipc::GoXLRCommand::PlaySampleByIndex(SampleBank::C, SampleButtons::BottomRight, 0,)
     ));
 }
 
@@ -2612,6 +3177,73 @@ fn main_profile_actions_are_guarded_named_slot_workflows() {
             |action| action.command() == PersonalCommand::DeleteProfile("Personal".to_string())
         )
     );
+}
+
+#[test]
+fn profile_browser_lists_available_files_and_builds_guarded_row_actions() {
+    let root = temp_scene_config_path("profile-browser");
+    fs::create_dir_all(&root).unwrap();
+    fs::write(root.join("Broadcast.goxlr"), "{}").unwrap();
+    fs::write(root.join("Personal.goxlr"), "{}").unwrap();
+    fs::write(root.join("ignore.txt"), "nope").unwrap();
+
+    let browser = ProfileBrowser::from_directory(
+        ProfileBrowserKind::Main,
+        Some("Personal"),
+        Some(root.as_path()),
+    );
+    assert_eq!(browser.title(), "Profile browser");
+    assert_eq!(browser.rows().len(), 2);
+    assert_eq!(browser.rows()[0].name(), "Broadcast");
+    assert!(!browser.rows()[0].is_active());
+    assert_eq!(browser.rows()[1].name(), "Personal");
+    assert!(browser.rows()[1].is_active());
+
+    let personal_actions = browser.rows()[1].actions();
+    assert!(personal_actions.iter().any(|action| {
+        action.label() == "Load"
+            && action.command() == PersonalCommand::LoadProfile("Personal".to_string(), true)
+    }));
+    assert!(personal_actions.iter().any(|action| {
+        action.label() == "Load lighting"
+            && action.command() == PersonalCommand::LoadProfileColours("Personal".to_string())
+    }));
+    assert!(personal_actions.iter().any(|action| {
+        action.label() == "Delete"
+            && action.command() == PersonalCommand::DeleteProfile("Personal".to_string())
+            && action.requires_confirmation()
+    }));
+
+    fs::remove_dir_all(root).ok();
+}
+
+#[test]
+fn profile_browser_supports_mic_and_effect_preset_workflows() {
+    let mic = ProfileBrowser::from_names(
+        ProfileBrowserKind::Mic,
+        Some("Broadcast"),
+        vec!["Broadcast".to_string(), "Podcast".to_string()],
+    );
+    assert_eq!(mic.rows()[0].kind(), ProfileBrowserKind::Mic);
+    assert!(mic.rows()[0].actions().iter().any(|action| {
+        action.command() == PersonalCommand::LoadMicProfile("Broadcast".to_string(), true)
+    }));
+    assert!(mic.rows()[0].actions().iter().any(|action| {
+        action.command() == PersonalCommand::DeleteMicProfile("Broadcast".to_string())
+    }));
+
+    let effects = ProfileBrowser::from_names(
+        ProfileBrowserKind::EffectsPreset,
+        None,
+        vec!["Big Verb".to_string()],
+    );
+    let actions = effects.rows()[0].actions();
+    assert!(actions.iter().any(
+        |action| action.command() == PersonalCommand::LoadEffectPreset("Big Verb".to_string())
+    ));
+    assert!(actions.iter().any(|action| {
+        action.command() == PersonalCommand::RenameActiveEffectPreset("Big Verb".to_string())
+    }));
 }
 
 #[test]

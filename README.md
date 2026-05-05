@@ -403,6 +403,48 @@ This section tracks local source changes made on this machine so context survive
   * Added a bounded `LIGHTING PROFILE` panel on the Lighting page for loading only colour settings from the named personal profile slot
   * Added same-action second-click confirmation before dispatching the colour-only profile load command
   * Added typed `PersonalCommand::LoadProfileColours` mapping to `GoXLRCommand::LoadProfileColours` with focused model-level coverage
+* Added visual routing rule diff support:
+  * Added model-backed `RoutingRuleDiff` / `RoutingRuleDiffStatus` coverage that compares persistent app routing rules with currently active playback stream routes
+  * Added a bounded `Routing rule diff` panel on Config / Routing showing current route, desired route, and status (`Matched`, `Move needed`, `Waiting`, `Missing target`, or `Disabled`)
+  * Added an `Apply pending moves` action that reuses existing safe routing-move commands for rules that have a live stream and need moving
+* Added a follow-up screenshot-driven compactness pass for the latest composite QA:
+  * Headphone EQ band cards now use equal-height fixed slots inside the 5x2 grid so the equalizer no longer reads as a diagonal/stair-stepped card layout
+  * Sampler bank panels now render the four pads as compact two-by-two slot cards, reducing the tall repeated button wall while keeping file import/removal deferred
+  * Mixer fader assignment now combines each fader's channel assignment and mute-behaviour controls into compact Fader A-D cards, reducing the very long single-column hardware section
+* Added a read-only Diagnostics / Status page to the personal native UI:
+  * The top navigation now exposes daemon connection state, daemon version, selected GoXLR device, profile names, detected-device count, and desktop-audio status without sending device-changing commands
+  * The page lists IPC socket candidates, including the legacy `/tmp/goxlr.socket` fallback, and highlights which candidates exist for faster local troubleshooting
+  * Added model-level diagnostics layout/status-row coverage and wired the page into `AppViewMode::Diagnostics`
+* Expanded the personal native `Effects` page advanced DSP defaults:
+  * Broadened the `ADVANCED DSP` panel beyond the original six defaults to include reverb early/tail/pre-delay/colour/mod, echo tempo/delay/cross-feedback, robot gain/frequency/width/waveform/pulse/dry mix, and hard-tune amount/rate/window/source buttons
+  * Kept the controls as safe typed quick-default buttons rather than arbitrary sliders, so deeper DSP parity improves without adding a fragile full parameter editor yet
+  * Added model-level `EffectsAdvancedControl` coverage for the broader advanced default set
+* Added a read-only Mic setup guide panel:
+  * The Mic page now includes wizard-style guidance for choosing mic type, setting gain before processing, tuning gate/de-ess, and adding compressor/makeup gain last
+  * The panel explicitly calls out that live mic metering is not exposed in the current IPC snapshot, so the guide is status-only and dispatches no device-changing commands
+  * Added model-level `MicSetupGuideStep` and `MicLayoutPolicy` coverage for the guidance panel and read-only live-meter placeholder
+* Added a read-only `About / Implemented Parity` page:
+  * The top navigation now includes an About tab summarizing the native personal UI's implemented and partial parity areas inside the app
+  * The summary covers Mixer, Routing, Mic, Effects, Lighting, Headphone EQ, Sampler, Profiles, and Diagnostics so manual QA can quickly see what is intentionally complete versus deferred
+  * Added model-level `AboutLayoutPolicy` and `ImplementedParityItem` coverage and wired the page into `AppViewMode::About`
+
+* Added guarded discovered profile/preset browser panels to the personal native UI:
+  * Added model-backed `ProfileBrowser`, `ProfileBrowserKind`, row, and action helpers that discover `.goxlr`, `.goxlrMicProfile`, and `.preset` files, mark active rows when snapshot state is available, and build guarded per-row command actions
+  * Wired browser panels into System/Main profiles, Mic profiles, Effects presets, and Headphone EQ profiles, reusing same-action second-click confirmation before dispatching stateful load/save/delete/rename commands
+  * Added focused `app_model` coverage for directory discovery, active-row labeling, and main/mic/effects browser command mapping while keeping free-form import/rename/file management deferred
+* Added a guarded sampler sample-file workflow panel to the personal native UI:
+  * Added model-backed `SamplerFileAction` helpers for typed-path `AddSample`, guarded index-0 `RemoveSampleByIndex`, and unguarded index-0 `PlaySampleByIndex` verification actions
+  * Added a Sampler page path entry and per-bank/per-pad file actions that require same-action second-click confirmation before importing or removing sample files
+  * Added typed `PersonalCommand` mappings for `AddSample`, `RemoveSampleByIndex`, and `PlaySampleByIndex`, plus focused `app_model` coverage for command mapping and confirmation semantics
+  * Kept richer live sample-list editing, arbitrary remove indexes, and a native file picker deferred until they are needed
+* Added a simple native sampler sample browser on top of the guarded sampler file workflow:
+  * Added model-backed `SamplerSampleBrowser` and `SamplerSampleRow` discovery for supported audio files (`wav`, `mp3`, `flac`, `ogg`, `aiff`, `aif`, `aac`, `m4a`) in a typed browser directory
+  * The Sampler page now lists discovered audio files with `Use path` actions that copy a chosen file into the add-path field without sending device-changing commands
+  * Added focused `app_model` coverage for extension filtering, alphabetical row ordering, row paths, and browser layout sizing while keeping live slot sample-list/index editing deferred
+* Added daemon-backed live sampler slot/sample rows to the personal native Sampler page:
+  * Added `SamplerLoadedSample` and `SamplerSlotSnapshot` models that map daemon `Sampler` bank/pad state into stable rows with sample indexes, names, trim percentages, playback mode/order, and playing/recording/empty status labels
+  * The Sampler page now shows a `LIVE SAMPLE SLOTS` panel when daemon slot state is available, with per-index `Play #N`, guarded `Remove #N`, and safe start-0%/stop-100% trim reset actions for the shown sample index
+  * Added focused `app_model` coverage for daemon sampler mapping, status labels, dynamic per-index play/remove commands, and guarded remove confirmation semantics
 
 ### Logging Rule
 

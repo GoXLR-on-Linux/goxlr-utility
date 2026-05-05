@@ -10,7 +10,9 @@ use anyhow::{Context, Result};
 use goxlr_ipc::client::Client;
 use goxlr_ipc::clients::ipc::ipc_client::IPCClient;
 use goxlr_ipc::clients::ipc::ipc_socket::Socket;
-use goxlr_ipc::{DaemonRequest, DaemonResponse, DaemonStatus, GoXLRCommand, ipc_socket_path};
+use goxlr_ipc::{
+    DaemonRequest, DaemonResponse, DaemonStatus, GoXLRCommand, Sampler, ipc_socket_path,
+};
 use goxlr_types::{
     AnimationMode, Button, ButtonColourGroups, ButtonColourOffStyle, ChannelName,
     CompressorAttackTime, CompressorRatio, CompressorReleaseTime, DeviceType, EchoStyle,
@@ -162,6 +164,200 @@ impl SystemLayoutPolicy {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DiagnosticsLayoutPolicy;
+
+impl DiagnosticsLayoutPolicy {
+    pub fn panel_width() -> f32 {
+        460.0
+    }
+
+    pub fn detail_panel_width() -> f32 {
+        640.0
+    }
+
+    pub fn button_width() -> f32 {
+        150.0
+    }
+
+    pub fn uses_read_only_status_cards() -> bool {
+        true
+    }
+
+    pub fn shows_ipc_socket_candidates() -> bool {
+        true
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DiagnosticsStatusSeverity {
+    Ok,
+    Warning,
+    Info,
+}
+
+impl DiagnosticsStatusSeverity {
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Ok => "OK",
+            Self::Warning => "Warning",
+            Self::Info => "Info",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DiagnosticsStatusRow {
+    label: String,
+    value: String,
+    severity: DiagnosticsStatusSeverity,
+}
+
+impl DiagnosticsStatusRow {
+    pub fn new(
+        label: impl Into<String>,
+        value: impl Into<String>,
+        severity: DiagnosticsStatusSeverity,
+    ) -> Self {
+        Self {
+            label: label.into(),
+            value: value.into(),
+            severity,
+        }
+    }
+
+    pub fn label(&self) -> &str {
+        &self.label
+    }
+
+    pub fn value(&self) -> &str {
+        &self.value
+    }
+
+    pub fn severity(&self) -> DiagnosticsStatusSeverity {
+        self.severity
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct AboutLayoutPolicy;
+
+impl AboutLayoutPolicy {
+    pub fn panel_width() -> f32 {
+        500.0
+    }
+
+    pub fn status_badge_width() -> f32 {
+        92.0
+    }
+
+    pub fn uses_read_only_summary_cards() -> bool {
+        true
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ImplementedParityStatus {
+    Implemented,
+    Partial,
+}
+
+impl ImplementedParityStatus {
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Implemented => "Implemented",
+            Self::Partial => "Partial",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ImplementedParityItem {
+    label: &'static str,
+    status: ImplementedParityStatus,
+    description: &'static str,
+}
+
+impl ImplementedParityItem {
+    pub fn new(
+        label: &'static str,
+        status: ImplementedParityStatus,
+        description: &'static str,
+    ) -> Self {
+        Self {
+            label,
+            status,
+            description,
+        }
+    }
+
+    pub fn current_items() -> Vec<Self> {
+        vec![
+            Self::new(
+                "Mixer",
+                ImplementedParityStatus::Implemented,
+                "Dashboard, scenes, fader assignment, mute targets, scribble presets, monitor mix, and first-pass submix controls.",
+            ),
+            Self::new(
+                "Routing",
+                ImplementedParityStatus::Implemented,
+                "Typed router matrix, live route-state badges, app-match routing rules, and visual routing-rule diff with safe apply actions.",
+            ),
+            Self::new(
+                "Mic",
+                ImplementedParityStatus::Partial,
+                "Mic type/gain, gate, de-ess, compressor, EQ, safety controls, guarded mic profiles, and setup guidance; true live meter remains pending.",
+            ),
+            Self::new(
+                "Effects",
+                ImplementedParityStatus::Partial,
+                "Quick presets, amounts, styles, expanded advanced DSP defaults, and guarded preset actions; arbitrary full editor/browser remains pending.",
+            ),
+            Self::new(
+                "Lighting",
+                ImplementedParityStatus::Partial,
+                "Quick themes, colour editor, animation controls, and guarded colour-only profile load; dynamic profile browser remains pending.",
+            ),
+            Self::new(
+                "Headphone EQ",
+                ImplementedParityStatus::Partial,
+                "Dedicated EQ page, compact 10-band editor, preamp, enable, and guarded profile slot controls.",
+            ),
+            Self::new(
+                "Sampler",
+                ImplementedParityStatus::Partial,
+                "Bank selector, compact pad cards, playback/order controls, workflow settings, conservative trim reset, guarded typed-path add/remove, a simple audio-file browser, and live per-index sample rows; waveform/bulk editing remains deferred.",
+            ),
+            Self::new(
+                "Profiles",
+                ImplementedParityStatus::Partial,
+                "guarded named-slot workflows exist for main, mic, effects, headphone EQ, and lighting; full dynamic browser remains pending.",
+            ),
+            Self::new(
+                "Diagnostics",
+                ImplementedParityStatus::Partial,
+                "Read-only status, socket candidates, connection/device/profile visibility; embedded log viewer remains pending.",
+            ),
+        ]
+    }
+
+    pub fn label(&self) -> &str {
+        self.label
+    }
+
+    pub fn status_label(&self) -> &'static str {
+        self.status.label()
+    }
+
+    pub fn status(&self) -> ImplementedParityStatus {
+        self.status
+    }
+
+    pub fn description(&self) -> &str {
+        self.description
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct LightingProfileAction {
     label: String,
@@ -272,6 +468,232 @@ impl MainProfileAction {
 
     pub fn command_if_confirmed(&self, confirmed: bool) -> Option<PersonalCommand> {
         confirmed.then(|| self.command())
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProfileBrowserKind {
+    Main,
+    Mic,
+    EffectsPreset,
+    HeadphoneEq,
+}
+
+impl ProfileBrowserKind {
+    pub fn title(self) -> &'static str {
+        match self {
+            Self::Main => "Profile browser",
+            Self::Mic => "Mic profile browser",
+            Self::EffectsPreset => "Effect preset browser",
+            Self::HeadphoneEq => "Headphone EQ profile browser",
+        }
+    }
+
+    pub fn empty_hint(self) -> &'static str {
+        match self {
+            Self::Main => "No .goxlr profiles found.",
+            Self::Mic => "No .goxlrMicProfile files found.",
+            Self::EffectsPreset => "No .preset files found.",
+            Self::HeadphoneEq => "No headphone EQ profiles found.",
+        }
+    }
+
+    fn file_suffix(self) -> &'static str {
+        match self {
+            Self::Main => ".goxlr",
+            Self::Mic => ".goxlrMicProfile",
+            Self::EffectsPreset => ".preset",
+            Self::HeadphoneEq => ".goxlrHeadphoneProfile",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ProfileBrowserAction {
+    label: &'static str,
+    command: PersonalCommand,
+    requires_confirmation: bool,
+}
+
+impl ProfileBrowserAction {
+    fn new(label: &'static str, command: PersonalCommand, requires_confirmation: bool) -> Self {
+        Self {
+            label,
+            command,
+            requires_confirmation,
+        }
+    }
+
+    pub fn label(&self) -> &'static str {
+        self.label
+    }
+
+    pub fn command(&self) -> PersonalCommand {
+        self.command.clone()
+    }
+
+    pub fn requires_confirmation(&self) -> bool {
+        self.requires_confirmation
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ProfileBrowserRow {
+    kind: ProfileBrowserKind,
+    name: String,
+    active: bool,
+}
+
+impl ProfileBrowserRow {
+    fn new(kind: ProfileBrowserKind, name: String, active: bool) -> Self {
+        Self { kind, name, active }
+    }
+
+    pub fn kind(&self) -> ProfileBrowserKind {
+        self.kind
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn is_active(&self) -> bool {
+        self.active
+    }
+
+    pub fn actions(&self) -> Vec<ProfileBrowserAction> {
+        let name = self.name.clone();
+        match self.kind {
+            ProfileBrowserKind::Main => vec![
+                ProfileBrowserAction::new(
+                    "Load",
+                    PersonalCommand::LoadProfile(name.clone(), true),
+                    true,
+                ),
+                ProfileBrowserAction::new(
+                    "Load lighting",
+                    PersonalCommand::LoadProfileColours(name.clone()),
+                    true,
+                ),
+                ProfileBrowserAction::new(
+                    "Save as",
+                    PersonalCommand::SaveProfileAs(name.clone()),
+                    true,
+                ),
+                ProfileBrowserAction::new("Delete", PersonalCommand::DeleteProfile(name), true),
+            ],
+            ProfileBrowserKind::Mic => vec![
+                ProfileBrowserAction::new(
+                    "Load",
+                    PersonalCommand::LoadMicProfile(name.clone(), true),
+                    true,
+                ),
+                ProfileBrowserAction::new(
+                    "Save as",
+                    PersonalCommand::SaveMicProfileAs(name.clone()),
+                    true,
+                ),
+                ProfileBrowserAction::new("Delete", PersonalCommand::DeleteMicProfile(name), true),
+            ],
+            ProfileBrowserKind::EffectsPreset => vec![
+                ProfileBrowserAction::new(
+                    "Load",
+                    PersonalCommand::LoadEffectPreset(name.clone()),
+                    true,
+                ),
+                ProfileBrowserAction::new(
+                    "Rename active",
+                    PersonalCommand::RenameActiveEffectPreset(name),
+                    true,
+                ),
+                ProfileBrowserAction::new(
+                    "Save active",
+                    PersonalCommand::SaveActiveEffectPreset,
+                    true,
+                ),
+            ],
+            ProfileBrowserKind::HeadphoneEq => vec![
+                ProfileBrowserAction::new(
+                    "Load",
+                    PersonalCommand::LoadHeadphoneEqProfile(name.clone()),
+                    true,
+                ),
+                ProfileBrowserAction::new(
+                    "Save as",
+                    PersonalCommand::SaveHeadphoneEqProfile(name.clone()),
+                    true,
+                ),
+                ProfileBrowserAction::new(
+                    "Delete",
+                    PersonalCommand::DeleteHeadphoneEqProfile(name),
+                    true,
+                ),
+            ],
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ProfileBrowser {
+    kind: ProfileBrowserKind,
+    rows: Vec<ProfileBrowserRow>,
+}
+
+impl ProfileBrowser {
+    pub fn from_names(
+        kind: ProfileBrowserKind,
+        active_name: Option<&str>,
+        mut names: Vec<String>,
+    ) -> Self {
+        names.sort_by_key(|name| name.to_ascii_lowercase());
+        names.dedup_by(|left, right| left.eq_ignore_ascii_case(right));
+        let rows = names
+            .into_iter()
+            .map(|name| {
+                let active = active_name.is_some_and(|active| active.eq_ignore_ascii_case(&name));
+                ProfileBrowserRow::new(kind, name, active)
+            })
+            .collect();
+        Self { kind, rows }
+    }
+
+    pub fn from_directory(
+        kind: ProfileBrowserKind,
+        active_name: Option<&str>,
+        path: Option<&Path>,
+    ) -> Self {
+        let Some(path) = path else {
+            return Self::from_names(kind, active_name, Vec::new());
+        };
+        let suffix = kind.file_suffix();
+        let mut names = Vec::new();
+        if let Ok(entries) = fs::read_dir(path) {
+            for entry in entries.flatten() {
+                let Some(file_name) = entry.file_name().to_str().map(str::to_string) else {
+                    continue;
+                };
+                if let Some(name) = file_name.strip_suffix(suffix) {
+                    names.push(name.to_string());
+                }
+            }
+        }
+        Self::from_names(kind, active_name, names)
+    }
+
+    pub fn title(&self) -> &'static str {
+        self.kind.title()
+    }
+
+    pub fn kind(&self) -> ProfileBrowserKind {
+        self.kind
+    }
+
+    pub fn rows(&self) -> &[ProfileBrowserRow] {
+        &self.rows
+    }
+
+    pub fn empty_hint(&self) -> &'static str {
+        self.kind.empty_hint()
     }
 }
 
@@ -545,6 +967,63 @@ impl MicLayoutPolicy {
     pub fn uses_wrapped_panels() -> bool {
         true
     }
+
+    pub fn setup_guide_panel_width() -> f32 {
+        420.0
+    }
+
+    pub fn uses_setup_guidance_cards() -> bool {
+        true
+    }
+
+    pub fn meter_placeholder_is_read_only() -> bool {
+        true
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct MicSetupGuideStep {
+    label: &'static str,
+    description: &'static str,
+}
+
+impl MicSetupGuideStep {
+    pub fn daily_steps() -> Vec<Self> {
+        vec![
+            Self {
+                label: "1. Pick mic type",
+                description: "Choose Dynamic, Condenser, or Jack before setting gain so the gain command targets the correct preamp mode.",
+            },
+            Self {
+                label: "2. Set gain before processing",
+                description: "Raise mic gain until normal speech has healthy peaks, then leave headroom before adding gate or compressor changes.",
+            },
+            Self {
+                label: "3. Close the gate gently",
+                description: "Use Gate threshold first, then attenuation, attack, and release so room noise closes without chopping word starts.",
+            },
+            Self {
+                label: "4. Add compression last",
+                description: "Set threshold and ratio for consistency, then use makeup gain after compression rather than chasing loudness with preamp gain.",
+            },
+        ]
+    }
+
+    pub fn live_meter_status_note() -> &'static str {
+        "Live mic metering is not exposed in the current IPC snapshot; this setup guide is read-only until a reliable level source is available."
+    }
+
+    pub fn label(&self) -> &'static str {
+        self.label
+    }
+
+    pub fn description(&self) -> &'static str {
+        self.description
+    }
+
+    pub fn command(&self) -> Option<PersonalCommand> {
+        None
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -807,13 +1286,62 @@ impl EffectsAdvancedControl {
     pub fn daily_controls() -> Vec<Self> {
         vec![
             Self::new("Reverb decay", PersonalCommand::SetReverbDecay(1500)),
+            Self::new(
+                "Reverb early level",
+                PersonalCommand::SetReverbEarlyLevel(0),
+            ),
+            Self::new("Reverb tail level", PersonalCommand::SetReverbTailLevel(0)),
+            Self::new("Reverb pre-delay", PersonalCommand::SetReverbPreDelay(25)),
+            Self::new("Reverb low colour", PersonalCommand::SetReverbLowColour(0)),
+            Self::new(
+                "Reverb high colour",
+                PersonalCommand::SetReverbHighColour(0),
+            ),
+            Self::new(
+                "Reverb high factor",
+                PersonalCommand::SetReverbHighFactor(0),
+            ),
+            Self::new("Reverb diffuse", PersonalCommand::SetReverbDiffuse(0)),
+            Self::new("Reverb mod speed", PersonalCommand::SetReverbModSpeed(0)),
+            Self::new("Reverb mod depth", PersonalCommand::SetReverbModDepth(0)),
             Self::new("Echo feedback", PersonalCommand::SetEchoFeedback(35)),
+            Self::new("Echo tempo", PersonalCommand::SetEchoTempo(120)),
+            Self::new("Echo left delay", PersonalCommand::SetEchoDelayLeft(250)),
+            Self::new("Echo right delay", PersonalCommand::SetEchoDelayRight(375)),
+            Self::new(
+                "Echo left feedback",
+                PersonalCommand::SetEchoFeedbackLeft(35),
+            ),
+            Self::new(
+                "Echo right feedback",
+                PersonalCommand::SetEchoFeedbackRight(35),
+            ),
+            Self::new("Echo cross L→R", PersonalCommand::SetEchoFeedbackXFBLtoR(0)),
+            Self::new("Echo cross R→L", PersonalCommand::SetEchoFeedbackXFBRtoL(0)),
             Self::new("Pitch character", PersonalCommand::SetPitchCharacter(50)),
             Self::new(
                 "Megaphone post gain",
                 PersonalCommand::SetMegaphonePostGain(0),
             ),
             Self::new("Robot threshold", PersonalCommand::SetRobotThreshold(-40)),
+            Self::new(
+                "Robot low gain",
+                PersonalCommand::SetRobotGain(RobotRange::Low, 0),
+            ),
+            Self::new(
+                "Robot mid frequency",
+                PersonalCommand::SetRobotFreq(RobotRange::Medium, 60),
+            ),
+            Self::new(
+                "Robot high width",
+                PersonalCommand::SetRobotWidth(RobotRange::High, 50),
+            ),
+            Self::new("Robot waveform", PersonalCommand::SetRobotWaveform(0)),
+            Self::new("Robot pulse width", PersonalCommand::SetRobotPulseWidth(50)),
+            Self::new("Robot dry mix", PersonalCommand::SetRobotDryMix(0)),
+            Self::new("Hard Tune amount", PersonalCommand::SetHardTuneAmount(50)),
+            Self::new("Hard Tune rate", PersonalCommand::SetHardTuneRate(50)),
+            Self::new("Hard Tune window", PersonalCommand::SetHardTuneWindow(200)),
             Self::new(
                 "Hard Tune source",
                 PersonalCommand::SetHardTuneSource(HardTuneSource::Music),
@@ -852,8 +1380,14 @@ impl HeadphoneEqLayoutPolicy {
     pub fn uses_fixed_grid_rows() -> bool {
         true
     }
+    pub fn uses_equal_height_band_cards() -> bool {
+        true
+    }
     pub fn band_card_width() -> f32 {
         112.0
+    }
+    pub fn band_card_height() -> f32 {
+        126.0
     }
     pub fn band_card_gap() -> f32 {
         10.0
@@ -984,8 +1518,42 @@ impl SamplerLayoutPolicy {
     pub fn uses_bank_button_cards() -> bool {
         true
     }
+    pub fn uses_two_by_two_slot_grid() -> bool {
+        true
+    }
+    pub fn bank_slot_columns() -> usize {
+        2
+    }
+    pub fn bank_slot_rows() -> usize {
+        2
+    }
+    pub fn bank_slot_card_width() -> f32 {
+        156.0
+    }
+    pub fn bank_slot_card_height() -> f32 {
+        132.0
+    }
+    pub fn bank_slot_gap() -> f32 {
+        8.0
+    }
     pub fn exposes_file_import_controls() -> bool {
-        false
+        true
+    }
+
+    pub fn file_workflow_panel_width() -> f32 {
+        420.0
+    }
+
+    pub fn file_workflow_button_width() -> f32 {
+        120.0
+    }
+
+    pub fn sample_browser_panel_width() -> f32 {
+        420.0
+    }
+
+    pub fn sample_browser_row_button_width() -> f32 {
+        84.0
     }
 }
 
@@ -1114,6 +1682,332 @@ impl SampleTrimAction {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct SamplerLoadedSample {
+    index: usize,
+    name: String,
+    start_pct: f32,
+    stop_pct: f32,
+}
+
+impl SamplerLoadedSample {
+    pub fn new(index: usize, name: impl Into<String>, start_pct: f32, stop_pct: f32) -> Self {
+        Self {
+            index,
+            name: name.into(),
+            start_pct,
+            stop_pct,
+        }
+    }
+
+    pub fn index(&self) -> usize {
+        self.index
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn start_pct(&self) -> f32 {
+        self.start_pct
+    }
+
+    pub fn stop_pct(&self) -> f32 {
+        self.stop_pct
+    }
+
+    pub fn trim_label(&self) -> String {
+        format!("{:.0}%–{:.0}%", self.start_pct, self.stop_pct)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SamplerSlotSnapshot {
+    bank: SampleBank,
+    button: SampleButtons,
+    function: SamplePlaybackMode,
+    order: SamplePlayOrder,
+    is_playing: bool,
+    is_recording: bool,
+    samples: Vec<SamplerLoadedSample>,
+}
+
+impl SamplerSlotSnapshot {
+    pub fn new(
+        bank: SampleBank,
+        button: SampleButtons,
+        function: SamplePlaybackMode,
+        order: SamplePlayOrder,
+        is_playing: bool,
+        is_recording: bool,
+        samples: Vec<SamplerLoadedSample>,
+    ) -> Self {
+        Self {
+            bank,
+            button,
+            function,
+            order,
+            is_playing,
+            is_recording,
+            samples,
+        }
+    }
+
+    pub fn from_sampler(sampler: &Sampler) -> Vec<Self> {
+        let mut rows = Vec::new();
+        for bank in [SampleBank::A, SampleBank::B, SampleBank::C] {
+            let Some(buttons) = sampler.banks.get(&bank) else {
+                continue;
+            };
+            for button in [
+                SampleButtons::TopLeft,
+                SampleButtons::TopRight,
+                SampleButtons::BottomLeft,
+                SampleButtons::BottomRight,
+            ] {
+                let Some(slot) = buttons.get(&button) else {
+                    continue;
+                };
+                rows.push(Self::new(
+                    bank,
+                    button,
+                    slot.function,
+                    slot.order,
+                    slot.is_playing,
+                    slot.is_recording,
+                    slot.samples
+                        .iter()
+                        .enumerate()
+                        .map(|(index, sample)| {
+                            SamplerLoadedSample::new(
+                                index,
+                                sample.name.clone(),
+                                sample.start_pct,
+                                sample.stop_pct,
+                            )
+                        })
+                        .collect(),
+                ));
+            }
+        }
+        rows
+    }
+
+    pub fn bank(&self) -> SampleBank {
+        self.bank
+    }
+
+    pub fn button(&self) -> SampleButtons {
+        self.button
+    }
+
+    pub fn function(&self) -> SamplePlaybackMode {
+        self.function
+    }
+
+    pub fn order(&self) -> SamplePlayOrder {
+        self.order
+    }
+
+    pub fn is_playing(&self) -> bool {
+        self.is_playing
+    }
+
+    pub fn is_recording(&self) -> bool {
+        self.is_recording
+    }
+
+    pub fn samples(&self) -> &[SamplerLoadedSample] {
+        &self.samples
+    }
+
+    pub fn sample_count(&self) -> usize {
+        self.samples.len()
+    }
+
+    pub fn status_label(&self) -> &'static str {
+        if self.is_recording {
+            "Recording"
+        } else if self.is_playing {
+            "Playing"
+        } else if self.samples.is_empty() {
+            "Empty"
+        } else {
+            "Ready"
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SamplerSampleRow {
+    display_name: String,
+    path: String,
+}
+
+impl SamplerSampleRow {
+    pub fn new(display_name: impl Into<String>, path: impl Into<String>) -> Self {
+        Self {
+            display_name: display_name.into(),
+            path: path.into(),
+        }
+    }
+
+    pub fn display_name(&self) -> &str {
+        &self.display_name
+    }
+
+    pub fn path(&self) -> &str {
+        &self.path
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SamplerSampleBrowser {
+    root: PathBuf,
+    rows: Vec<SamplerSampleRow>,
+}
+
+impl SamplerSampleBrowser {
+    pub fn from_directory(root: impl Into<PathBuf>) -> Self {
+        let root = root.into();
+        let mut rows = fs::read_dir(&root)
+            .ok()
+            .into_iter()
+            .flat_map(|entries| entries.filter_map(Result::ok))
+            .filter_map(|entry| {
+                let path = entry.path();
+                if !path.is_file() || !Self::is_supported_audio_file(&path) {
+                    return None;
+                }
+                let display_name = path.file_name()?.to_string_lossy().to_string();
+                Some(SamplerSampleRow::new(
+                    display_name,
+                    path.to_string_lossy().to_string(),
+                ))
+            })
+            .collect::<Vec<_>>();
+        rows.sort_by(|left, right| left.display_name.cmp(&right.display_name));
+        Self { root, rows }
+    }
+
+    pub fn root(&self) -> &Path {
+        &self.root
+    }
+
+    pub fn rows(&self) -> &[SamplerSampleRow] {
+        &self.rows
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.rows.is_empty()
+    }
+
+    pub fn supported_audio_extensions() -> &'static [&'static str] {
+        &["wav", "mp3", "flac", "ogg", "aiff", "aif", "aac", "m4a"]
+    }
+
+    pub fn is_supported_audio_file(path: &Path) -> bool {
+        path.extension()
+            .and_then(|extension| extension.to_str())
+            .is_some_and(|extension| {
+                Self::supported_audio_extensions()
+                    .iter()
+                    .any(|supported| extension.eq_ignore_ascii_case(supported))
+            })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SamplerFileAction {
+    label: String,
+    description: &'static str,
+    command: PersonalCommand,
+    requires_confirmation: bool,
+}
+
+impl SamplerFileAction {
+    pub fn add_from_path(
+        bank: SampleBank,
+        button: SampleButtons,
+        sample_path: &str,
+    ) -> Option<Self> {
+        let trimmed = sample_path.trim();
+        if trimmed.is_empty() {
+            return None;
+        }
+        Some(Self::new(
+            "Add file",
+            "Import the typed audio file path into this sampler slot.",
+            PersonalCommand::AddSample(bank, button, trimmed.to_string()),
+            true,
+        ))
+    }
+
+    pub fn remove_first(bank: SampleBank, button: SampleButtons) -> Self {
+        Self::remove_by_index(bank, button, 0)
+    }
+
+    pub fn remove_by_index(bank: SampleBank, button: SampleButtons, sample_index: usize) -> Self {
+        Self::new(
+            format!("Remove #{}", sample_index + 1),
+            "Remove this sample from this slot; use only after checking the live slot list.",
+            PersonalCommand::RemoveSampleByIndex(bank, button, sample_index),
+            true,
+        )
+    }
+
+    pub fn play_by_index(bank: SampleBank, button: SampleButtons, sample_index: usize) -> Self {
+        Self::new(
+            format!("Play #{}", sample_index + 1),
+            "Play this sample from this slot for quick verification.",
+            PersonalCommand::PlaySampleByIndex(bank, button, sample_index),
+            false,
+        )
+    }
+
+    pub fn play_first(bank: SampleBank, button: SampleButtons) -> Self {
+        Self::play_by_index(bank, button, 0)
+    }
+
+    fn new(
+        label: impl Into<String>,
+        description: &'static str,
+        command: PersonalCommand,
+        requires_confirmation: bool,
+    ) -> Self {
+        Self {
+            label: label.into(),
+            description,
+            command,
+            requires_confirmation,
+        }
+    }
+
+    pub fn label(&self) -> &str {
+        &self.label
+    }
+
+    pub fn description(&self) -> &'static str {
+        self.description
+    }
+
+    pub fn command(&self) -> PersonalCommand {
+        self.command.clone()
+    }
+
+    pub fn requires_confirmation(&self) -> bool {
+        self.requires_confirmation
+    }
+
+    pub fn command_if_confirmed(&self, confirmed: bool) -> Option<PersonalCommand> {
+        if self.requires_confirmation && !confirmed {
+            None
+        } else {
+            Some(self.command())
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MixerLayoutPolicy;
 
@@ -1123,11 +2017,23 @@ impl MixerLayoutPolicy {
     }
 
     pub fn assignment_panel_width() -> f32 {
-        520.0
+        640.0
     }
 
     pub fn assignment_button_width() -> f32 {
-        118.0
+        84.0
+    }
+
+    pub fn assignment_card_width() -> f32 {
+        294.0
+    }
+
+    pub fn assignment_card_gap() -> f32 {
+        8.0
+    }
+
+    pub fn assignment_cards_per_row() -> usize {
+        2
     }
 
     pub fn scribble_panel_width() -> f32 {
@@ -1175,6 +2081,10 @@ impl MixerLayoutPolicy {
     }
 
     pub fn uses_fader_assignment_editor() -> bool {
+        true
+    }
+
+    pub fn uses_compact_fader_assignment_cards() -> bool {
         true
     }
 
@@ -1690,6 +2600,9 @@ pub enum PersonalCommand {
     SetSamplerFadeDuration(u32),
     SetSampleStartPercent(SampleBank, SampleButtons, usize, f32),
     SetSampleStopPercent(SampleBank, SampleButtons, usize, f32),
+    AddSample(SampleBank, SampleButtons, String),
+    RemoveSampleByIndex(SampleBank, SampleButtons, usize),
+    PlaySampleByIndex(SampleBank, SampleButtons, usize),
     PlayNextSample(SampleBank, SampleButtons),
     StopSamplePlayback(SampleBank, SampleButtons),
     LoadProfileColours(String),
@@ -1952,6 +2865,15 @@ impl From<PersonalCommand> for GoXLRCommand {
             }
             PersonalCommand::SetSampleStopPercent(bank, button, index, percent) => {
                 GoXLRCommand::SetSampleStopPercent(bank, button, index, percent)
+            }
+            PersonalCommand::AddSample(bank, button, sample_path) => {
+                GoXLRCommand::AddSample(bank, button, sample_path)
+            }
+            PersonalCommand::RemoveSampleByIndex(bank, button, index) => {
+                GoXLRCommand::RemoveSampleByIndex(bank, button, index)
+            }
+            PersonalCommand::PlaySampleByIndex(bank, button, index) => {
+                GoXLRCommand::PlaySampleByIndex(bank, button, index)
             }
             PersonalCommand::PlayNextSample(bank, button) => {
                 GoXLRCommand::PlayNextSample(bank, button)
@@ -3969,6 +4891,106 @@ impl AudioRouteTarget {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RoutingRuleDiffStatus {
+    Matched,
+    NeedsMove,
+    WaitingForStream,
+    MissingTarget,
+    Disabled,
+}
+
+impl RoutingRuleDiffStatus {
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Matched => "Matched",
+            Self::NeedsMove => "Move needed",
+            Self::WaitingForStream => "Waiting",
+            Self::MissingTarget => "No route target",
+            Self::Disabled => "Disabled",
+        }
+    }
+
+    pub fn color(&self) -> egui::Color32 {
+        match self {
+            Self::Matched => egui::Color32::from_rgb(150, 255, 185),
+            Self::NeedsMove => egui::Color32::from_rgb(255, 205, 110),
+            Self::WaitingForStream => egui::Color32::from_rgb(180, 195, 205),
+            Self::MissingTarget => egui::Color32::from_rgb(255, 135, 120),
+            Self::Disabled => egui::Color32::from_rgb(140, 145, 150),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RoutingRuleDiffRow {
+    app: String,
+    desired_route: String,
+    current_route: Option<String>,
+    status: RoutingRuleDiffStatus,
+}
+
+impl RoutingRuleDiffRow {
+    pub fn new(
+        app: impl Into<String>,
+        desired_route: impl Into<String>,
+        current_route: Option<String>,
+        status: RoutingRuleDiffStatus,
+    ) -> Self {
+        Self {
+            app: app.into(),
+            desired_route: desired_route.into(),
+            current_route,
+            status,
+        }
+    }
+
+    pub fn app(&self) -> &str {
+        &self.app
+    }
+
+    pub fn desired_route(&self) -> &str {
+        &self.desired_route
+    }
+
+    pub fn current_route(&self) -> Option<&str> {
+        self.current_route.as_deref()
+    }
+
+    pub fn status(&self) -> RoutingRuleDiffStatus {
+        self.status
+    }
+
+    pub fn status_label(&self) -> &'static str {
+        self.status.label()
+    }
+
+    pub fn status_color(&self) -> egui::Color32 {
+        self.status.color()
+    }
+
+    pub fn summary(&self) -> String {
+        match self.status {
+            RoutingRuleDiffStatus::Matched => format!("{}: {} ✓", self.app, self.desired_route),
+            RoutingRuleDiffStatus::NeedsMove => format!(
+                "{}: {} → {}",
+                self.app,
+                self.current_route.as_deref().unwrap_or("Unknown"),
+                self.desired_route
+            ),
+            RoutingRuleDiffStatus::WaitingForStream => {
+                format!("{}: waiting for {} stream", self.app, self.desired_route)
+            }
+            RoutingRuleDiffStatus::MissingTarget => {
+                format!("{}: {} target unavailable", self.app, self.desired_route)
+            }
+            RoutingRuleDiffStatus::Disabled => {
+                format!("{}: disabled rule for {}", self.app, self.desired_route)
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct ActiveAudioStreams {
     pub streams: Vec<AudioStream>,
@@ -4105,6 +5127,73 @@ impl ActiveAudioStreams {
         }
         moves
     }
+
+    pub fn routing_rule_diffs(&self, rules: &[AudioRoutingRule]) -> Vec<RoutingRuleDiffRow> {
+        rules
+            .iter()
+            .map(|rule| {
+                let desired_target_exists = self
+                    .route_targets
+                    .iter()
+                    .any(|target| target.label.eq_ignore_ascii_case(&rule.route));
+                if !rule.enabled {
+                    return RoutingRuleDiffRow::new(
+                        rule.app.clone(),
+                        rule.route.clone(),
+                        None,
+                        RoutingRuleDiffStatus::Disabled,
+                    );
+                }
+                if !desired_target_exists {
+                    return RoutingRuleDiffRow::new(
+                        rule.app.clone(),
+                        rule.route.clone(),
+                        None,
+                        RoutingRuleDiffStatus::MissingTarget,
+                    );
+                }
+
+                let Some(stream) = self
+                    .streams
+                    .iter()
+                    .find(|stream| rule.matches_stream(stream))
+                else {
+                    return RoutingRuleDiffRow::new(
+                        rule.app.clone(),
+                        rule.route.clone(),
+                        None,
+                        RoutingRuleDiffStatus::WaitingForStream,
+                    );
+                };
+
+                let current_route = self
+                    .current_route_label_for_stream(stream)
+                    .map(str::to_string);
+                let status = if current_route
+                    .as_deref()
+                    .is_some_and(|route| route.eq_ignore_ascii_case(&rule.route))
+                {
+                    RoutingRuleDiffStatus::Matched
+                } else {
+                    RoutingRuleDiffStatus::NeedsMove
+                };
+
+                RoutingRuleDiffRow::new(rule.app.clone(), rule.route.clone(), current_route, status)
+            })
+            .collect()
+    }
+
+    fn current_route_label_for_stream(&self, stream: &AudioStream) -> Option<&str> {
+        self.route_targets
+            .iter()
+            .find(|target| {
+                stream
+                    .sink_label
+                    .to_ascii_lowercase()
+                    .contains(&target.label.to_ascii_lowercase())
+            })
+            .map(|target| target.label.as_str())
+    }
 }
 
 fn goxlr_route_target_label(sink_name: &str) -> Option<(u8, &'static str)> {
@@ -4161,6 +5250,7 @@ pub struct AppSnapshot {
     pub headphone_eq_profile: Option<String>,
     pub active_audio_streams: ActiveAudioStreams,
     pub active_audio_error: Option<String>,
+    pub sampler_slots: Vec<SamplerSlotSnapshot>,
 }
 
 impl AppSnapshot {
@@ -4204,6 +5294,7 @@ impl AppSnapshot {
             headphone_eq_profile: None,
             active_audio_streams: ActiveAudioStreams::default(),
             active_audio_error: None,
+            sampler_slots: Vec::new(),
         }
     }
 
@@ -4294,6 +5385,11 @@ impl AppSnapshot {
             headphone_eq_profile: settings.headphone_eq_active_profile.clone(),
             active_audio_streams: ActiveAudioStreams::default(),
             active_audio_error: None,
+            sampler_slots: mixer
+                .sampler
+                .as_ref()
+                .map(SamplerSlotSnapshot::from_sampler)
+                .unwrap_or_default(),
         }
     }
 
@@ -4308,6 +5404,103 @@ impl AppSnapshot {
                 self.error.as_deref().unwrap_or("unknown error")
             )
         }
+    }
+
+    pub fn diagnostics_rows(&self) -> Vec<DiagnosticsStatusRow> {
+        let connection_value = if self.connected {
+            "Connected".to_string()
+        } else {
+            format!(
+                "Disconnected: {}",
+                self.error.as_deref().unwrap_or("unknown error")
+            )
+        };
+        let connection_severity = if self.connected {
+            DiagnosticsStatusSeverity::Ok
+        } else {
+            DiagnosticsStatusSeverity::Warning
+        };
+
+        let daemon_value = self
+            .daemon_version
+            .as_deref()
+            .unwrap_or("Unknown")
+            .to_string();
+        let daemon_severity = if self.daemon_version.is_some() {
+            DiagnosticsStatusSeverity::Ok
+        } else {
+            DiagnosticsStatusSeverity::Warning
+        };
+
+        let device_value = match (self.device_type.as_deref(), self.device_serial.as_deref()) {
+            (Some(device), Some(serial)) => format!("{device} ({serial})"),
+            (Some(device), None) => device.to_string(),
+            (None, Some(serial)) => format!("GoXLR ({serial})"),
+            (None, None) => "No selected device".to_string(),
+        };
+        let device_severity = if self.device_serial.is_some() {
+            DiagnosticsStatusSeverity::Ok
+        } else {
+            DiagnosticsStatusSeverity::Warning
+        };
+
+        let audio_value = self
+            .active_audio_error
+            .clone()
+            .unwrap_or_else(|| self.active_audio_streams.summary());
+
+        vec![
+            DiagnosticsStatusRow::new("Connection", connection_value, connection_severity),
+            DiagnosticsStatusRow::new("Daemon", daemon_value, daemon_severity),
+            DiagnosticsStatusRow::new("Device", device_value, device_severity),
+            DiagnosticsStatusRow::new(
+                "Detected devices",
+                self.device_serials.len().to_string(),
+                DiagnosticsStatusSeverity::Info,
+            ),
+            DiagnosticsStatusRow::new(
+                "Profiles",
+                self.profile_name
+                    .as_deref()
+                    .unwrap_or("No profile reported"),
+                if self.profile_name.is_some() {
+                    DiagnosticsStatusSeverity::Ok
+                } else {
+                    DiagnosticsStatusSeverity::Info
+                },
+            ),
+            DiagnosticsStatusRow::new(
+                "Mic profile",
+                self.mic_profile_name
+                    .as_deref()
+                    .unwrap_or("No mic profile reported"),
+                if self.mic_profile_name.is_some() {
+                    DiagnosticsStatusSeverity::Ok
+                } else {
+                    DiagnosticsStatusSeverity::Info
+                },
+            ),
+            DiagnosticsStatusRow::new(
+                "Headphone EQ",
+                self.headphone_eq_profile
+                    .as_deref()
+                    .unwrap_or("No headphone EQ profile reported"),
+                if self.headphone_eq_profile.is_some() {
+                    DiagnosticsStatusSeverity::Ok
+                } else {
+                    DiagnosticsStatusSeverity::Info
+                },
+            ),
+            DiagnosticsStatusRow::new(
+                "Desktop audio",
+                audio_value,
+                if self.active_audio_error.is_some() {
+                    DiagnosticsStatusSeverity::Warning
+                } else {
+                    DiagnosticsStatusSeverity::Info
+                },
+            ),
+        ]
     }
 
     pub fn volume_for(&self, channel: ChannelName) -> Option<u8> {
@@ -4368,6 +5561,8 @@ pub enum AppViewMode {
     HeadphoneEq,
     Sampler,
     System,
+    Diagnostics,
+    About,
     Full,
     QuickActions,
 }
@@ -4402,6 +5597,8 @@ impl QuickActions {
             | AppViewMode::HeadphoneEq
             | AppViewMode::Sampler
             | AppViewMode::System
+            | AppViewMode::Diagnostics
+            | AppViewMode::About
             | AppViewMode::Full => AppViewMode::QuickActions,
             AppViewMode::QuickActions => AppViewMode::Full,
         };
@@ -4671,6 +5868,9 @@ pub struct PersonalUiApp {
     pending_headphone_eq_profile_confirmation: Option<PersonalCommand>,
     pending_main_profile_confirmation: Option<PersonalCommand>,
     pending_lighting_profile_confirmation: Option<PersonalCommand>,
+    pending_sampler_file_confirmation: Option<PersonalCommand>,
+    sampler_file_path: String,
+    sampler_browser_path: String,
 }
 
 impl PersonalUiApp {
@@ -4708,6 +5908,11 @@ impl PersonalUiApp {
             pending_headphone_eq_profile_confirmation: None,
             pending_main_profile_confirmation: None,
             pending_lighting_profile_confirmation: None,
+            pending_sampler_file_confirmation: None,
+            sampler_file_path: String::new(),
+            sampler_browser_path: Self::default_sampler_browser_path()
+                .to_string_lossy()
+                .to_string(),
         }
     }
 
@@ -4730,6 +5935,102 @@ impl PersonalUiApp {
 
     fn send(&self, command: UiCommand) {
         let _ = self.commands.send(command);
+    }
+
+    fn default_sampler_browser_path() -> &'static Path {
+        Path::new("defaults/resources/samples")
+    }
+
+    fn default_profile_browser_path(kind: ProfileBrowserKind) -> &'static Path {
+        match kind {
+            ProfileBrowserKind::Main => Path::new("defaults/resources/profiles"),
+            ProfileBrowserKind::Mic => Path::new("defaults/resources/mic-profiles"),
+            ProfileBrowserKind::EffectsPreset => Path::new("defaults/resources/presets"),
+            ProfileBrowserKind::HeadphoneEq => {
+                Path::new("defaults/resources/headphone-eq-profiles")
+            }
+        }
+    }
+
+    fn sampler_sample_browser(&self) -> SamplerSampleBrowser {
+        let browser_path = self.sampler_browser_path.trim();
+        let root = if browser_path.is_empty() {
+            Self::default_sampler_browser_path().to_path_buf()
+        } else {
+            PathBuf::from(browser_path)
+        };
+        SamplerSampleBrowser::from_directory(root)
+    }
+
+    fn profile_browser_for(&self, kind: ProfileBrowserKind) -> ProfileBrowser {
+        let active_name = match kind {
+            ProfileBrowserKind::Main => self.snapshot.profile_name.as_deref(),
+            ProfileBrowserKind::Mic => self.snapshot.mic_profile_name.as_deref(),
+            ProfileBrowserKind::EffectsPreset => None,
+            ProfileBrowserKind::HeadphoneEq => self.snapshot.headphone_eq_profile.as_deref(),
+        };
+        ProfileBrowser::from_directory(
+            kind,
+            active_name,
+            Some(Self::default_profile_browser_path(kind)),
+        )
+    }
+
+    fn pending_profile_confirmation(&self, kind: ProfileBrowserKind) -> Option<&PersonalCommand> {
+        match kind {
+            ProfileBrowserKind::Main => self.pending_main_profile_confirmation.as_ref(),
+            ProfileBrowserKind::Mic => self.pending_mic_profile_confirmation.as_ref(),
+            ProfileBrowserKind::EffectsPreset => self.pending_effect_preset_confirmation.as_ref(),
+            ProfileBrowserKind::HeadphoneEq => {
+                self.pending_headphone_eq_profile_confirmation.as_ref()
+            }
+        }
+    }
+
+    fn set_pending_profile_confirmation(
+        &mut self,
+        kind: ProfileBrowserKind,
+        command: Option<PersonalCommand>,
+    ) {
+        match kind {
+            ProfileBrowserKind::Main => self.pending_main_profile_confirmation = command,
+            ProfileBrowserKind::Mic => self.pending_mic_profile_confirmation = command,
+            ProfileBrowserKind::EffectsPreset => self.pending_effect_preset_confirmation = command,
+            ProfileBrowserKind::HeadphoneEq => {
+                self.pending_headphone_eq_profile_confirmation = command
+            }
+        }
+    }
+
+    fn handle_profile_browser_action(
+        &mut self,
+        kind: ProfileBrowserKind,
+        action: &ProfileBrowserAction,
+    ) {
+        let command = action.command();
+        let confirmed = self
+            .pending_profile_confirmation(kind)
+            .is_some_and(|pending| pending == &command);
+        if action.requires_confirmation() && !confirmed {
+            self.set_pending_profile_confirmation(kind, Some(command));
+        } else {
+            self.set_pending_profile_confirmation(kind, None);
+            self.send(UiCommand::Send(command));
+        }
+    }
+
+    fn handle_sampler_file_action(&mut self, action: &SamplerFileAction) {
+        let command = action.command();
+        let confirmed = self
+            .pending_sampler_file_confirmation
+            .as_ref()
+            .is_some_and(|pending| pending == &command);
+        if let Some(command) = action.command_if_confirmed(confirmed) {
+            self.pending_sampler_file_confirmation = None;
+            self.send(UiCommand::Send(command));
+        } else {
+            self.pending_sampler_file_confirmation = Some(command);
+        }
     }
 
     fn queue_volume(&mut self, channel: ChannelName, value: u8) {
@@ -4806,6 +6107,14 @@ impl PersonalUiApp {
 
     fn muted_text() -> egui::Color32 {
         egui::Color32::from_rgb(145, 154, 151)
+    }
+
+    fn diagnostics_severity_color(severity: DiagnosticsStatusSeverity) -> egui::Color32 {
+        match severity {
+            DiagnosticsStatusSeverity::Ok => Self::accent(),
+            DiagnosticsStatusSeverity::Warning => egui::Color32::YELLOW,
+            DiagnosticsStatusSeverity::Info => Self::muted_text(),
+        }
     }
 
     fn apply_goxlr_style(ctx: &egui::Context) {
@@ -4885,6 +6194,30 @@ impl PersonalUiApp {
                     .show(ui, |ui| {
                         ui.set_min_width(width);
                         ui.set_max_width(width);
+                        add_contents(ui)
+                    })
+                    .inner
+            },
+        )
+        .inner
+    }
+
+    fn soft_sized_panel<R>(
+        ui: &mut egui::Ui,
+        width: f32,
+        height: f32,
+        add_contents: impl FnOnce(&mut egui::Ui) -> R,
+    ) -> R {
+        let frame = Self::soft_panel_frame();
+        ui.allocate_ui_with_layout(
+            egui::vec2(width + frame.total_margin().sum().x, height),
+            egui::Layout::top_down(egui::Align::Min),
+            |ui| {
+                frame
+                    .show(ui, |ui| {
+                        ui.set_min_width(width);
+                        ui.set_max_width(width);
+                        ui.set_min_height((height - frame.total_margin().sum().y).max(0.0));
                         add_contents(ui)
                     })
                     .inner
@@ -5007,6 +6340,8 @@ impl PersonalUiApp {
                 | AppViewMode::HeadphoneEq
                 | AppViewMode::Sampler
                 | AppViewMode::System
+                | AppViewMode::Diagnostics
+                | AppViewMode::About
                 | AppViewMode::Full => "Mixer dashboard",
                 AppViewMode::QuickActions => "Configuration",
             };
@@ -5328,66 +6663,90 @@ impl PersonalUiApp {
             );
             ui.label("Safe first-pass hardware fader channel and mute-target controls.");
             ui.add_space(8.0);
-            for assignment in FaderAssignmentControl::daily_controls() {
-                ui.vertical(|ui| {
-                    ui.label(
-                        egui::RichText::new(assignment.label())
-                            .monospace()
-                            .color(Self::muted_text()),
-                    );
-                    ui.label(assignment.description());
-                    ui.horizontal_wrapped(|ui| {
-                        for channel in FaderAssignmentControl::daily_channels() {
-                            if ui
-                                .add_sized(
-                                    egui::vec2(MixerLayoutPolicy::assignment_button_width(), 24.0),
-                                    egui::Button::new(channel.to_string()).small(),
-                                )
-                                .on_hover_text(format!(
-                                    "Assign {} to {}",
-                                    channel,
-                                    assignment.label()
-                                ))
-                                .clicked()
-                            {
-                                self.send(UiCommand::Send(assignment.assign_command(channel)));
-                            }
+            ui.scope(|ui| {
+                ui.spacing_mut().item_spacing = egui::vec2(
+                    MixerLayoutPolicy::assignment_card_gap(),
+                    MixerLayoutPolicy::assignment_card_gap(),
+                );
+                for row in FaderAssignmentControl::daily_controls()
+                    .chunks(MixerLayoutPolicy::assignment_cards_per_row())
+                {
+                    ui.horizontal(|ui| {
+                        for assignment in row {
+                            Self::soft_bounded_panel(
+                                ui,
+                                MixerLayoutPolicy::assignment_card_width(),
+                                |ui| {
+                                    ui.label(
+                                        egui::RichText::new(assignment.label())
+                                            .monospace()
+                                            .color(Self::muted_text()),
+                                    );
+                                    ui.label(assignment.description());
+                                    ui.horizontal_wrapped(|ui| {
+                                        for channel in FaderAssignmentControl::daily_channels() {
+                                            if ui
+                                                .add_sized(
+                                                    egui::vec2(
+                                                        MixerLayoutPolicy::assignment_button_width(),
+                                                        22.0,
+                                                    ),
+                                                    egui::Button::new(channel.to_string()).small(),
+                                                )
+                                                .on_hover_text(format!(
+                                                    "Assign {} to {}",
+                                                    channel,
+                                                    assignment.label()
+                                                ))
+                                                .clicked()
+                                            {
+                                                self.send(UiCommand::Send(
+                                                    assignment.assign_command(channel),
+                                                ));
+                                            }
+                                        }
+                                    });
+                                    ui.separator();
+                                    ui.label(
+                                        egui::RichText::new("Mute")
+                                            .monospace()
+                                            .color(Self::muted_text()),
+                                    );
+                                    if let Some(control) = FaderMuteFunctionControl::daily_controls()
+                                        .into_iter()
+                                        .find(|control| control.fader() == assignment.fader())
+                                    {
+                                        ui.horizontal_wrapped(|ui| {
+                                            for function in FaderMuteFunctionControl::daily_functions() {
+                                                if ui
+                                                    .add_sized(
+                                                        egui::vec2(
+                                                            MixerLayoutPolicy::assignment_button_width(),
+                                                            22.0,
+                                                        ),
+                                                        egui::Button::new(function.to_string())
+                                                            .small(),
+                                                    )
+                                                    .on_hover_text(format!(
+                                                        "Set {} mute behaviour to {}",
+                                                        control.label(),
+                                                        function
+                                                    ))
+                                                    .clicked()
+                                                {
+                                                    self.send(UiCommand::Send(
+                                                        control.function_command(function),
+                                                    ));
+                                                }
+                                            }
+                                        });
+                                    }
+                                },
+                            );
                         }
                     });
-                    ui.add_space(6.0);
-                });
-            }
-            ui.separator();
-            ui.add_space(6.0);
-            ui.label(
-                egui::RichText::new("MUTE BEHAVIOUR")
-                    .monospace()
-                    .color(Self::muted_text()),
-            );
-            for control in FaderMuteFunctionControl::daily_controls() {
-                ui.vertical(|ui| {
-                    ui.label(control.label());
-                    ui.horizontal_wrapped(|ui| {
-                        for function in FaderMuteFunctionControl::daily_functions() {
-                            if ui
-                                .add_sized(
-                                    egui::vec2(MixerLayoutPolicy::assignment_button_width(), 24.0),
-                                    egui::Button::new(function.to_string()).small(),
-                                )
-                                .on_hover_text(format!(
-                                    "Set {} mute behaviour to {}",
-                                    control.label(),
-                                    function
-                                ))
-                                .clicked()
-                            {
-                                self.send(UiCommand::Send(control.function_command(function)));
-                            }
-                        }
-                    });
-                    ui.add_space(4.0);
-                });
-            }
+                }
+            });
         });
     }
 
@@ -6043,6 +7402,89 @@ impl PersonalUiApp {
         );
     }
 
+    fn render_profile_browser_panel(&mut self, ui: &mut egui::Ui, browser: ProfileBrowser) {
+        Self::bounded_panel(ui, 520.0, |ui| {
+            ui.set_width(520.0);
+            ui.label(
+                egui::RichText::new(browser.title().to_ascii_uppercase())
+                    .monospace()
+                    .size(18.0)
+                    .color(egui::Color32::WHITE)
+                    .strong(),
+            );
+            ui.label(
+                egui::RichText::new(
+                    "Browse discovered profile files and arm stateful load/save/delete commands per row.",
+                )
+                .color(Self::muted_text()),
+            );
+            ui.add_space(8.0);
+
+            if browser.rows().is_empty() {
+                ui.label(egui::RichText::new(browser.empty_hint()).color(Self::muted_text()));
+                return;
+            }
+
+            for row in browser.rows() {
+                Self::soft_panel_frame().show(ui, |ui| {
+                    ui.set_min_width(492.0);
+                    ui.set_max_width(492.0);
+                    ui.horizontal_wrapped(|ui| {
+                        let status = if row.is_active() {
+                            "active"
+                        } else {
+                            "available"
+                        };
+                        ui.label(
+                            egui::RichText::new(row.name())
+                                .monospace()
+                                .color(egui::Color32::WHITE)
+                                .strong(),
+                        );
+                        ui.label(
+                            egui::RichText::new(status)
+                                .small()
+                                .color(Self::muted_text()),
+                        );
+                    });
+                    ui.horizontal_wrapped(|ui| {
+                        for action in row.actions() {
+                            let command = action.command();
+                            let confirmed = self
+                                .pending_profile_confirmation(browser.kind())
+                                .is_some_and(|pending| pending == &command);
+                            let label = if action.requires_confirmation() && confirmed {
+                                format!("Confirm {}", action.label())
+                            } else if action.requires_confirmation() {
+                                format!("Arm {}", action.label())
+                            } else {
+                                action.label().to_string()
+                            };
+                            if ui
+                                .add_sized(
+                                    egui::vec2(112.0, 24.0),
+                                    egui::Button::new(label).small(),
+                                )
+                                .clicked()
+                            {
+                                self.handle_profile_browser_action(browser.kind(), &action);
+                            }
+                        }
+                    });
+                });
+                ui.add_space(4.0);
+            }
+
+            if self.pending_profile_confirmation(browser.kind()).is_some() {
+                ui.label(
+                    egui::RichText::new("Click the same armed row action again to send it.")
+                        .small()
+                        .color(Self::muted_text()),
+                );
+            }
+        });
+    }
+
     fn render_main_profile_panel(&mut self, ui: &mut egui::Ui) {
         Self::bounded_panel(ui, SystemLayoutPolicy::profile_panel_width(), |ui| {
             ui.set_width(SystemLayoutPolicy::profile_panel_width());
@@ -6093,6 +7535,155 @@ impl PersonalUiApp {
         });
     }
 
+    fn render_diagnostics_page(&mut self, ui: &mut egui::Ui) {
+        ui.add_space(8.0);
+        Self::section_header(
+            ui,
+            "Diagnostics / Status",
+            "Read-only connection, daemon, device, profile, and IPC details",
+            "Use this page before troubleshooting so socket paths, selected device state, and profile status are visible without touching destructive controls.",
+        );
+        ui.add_space(12.0);
+        ui.horizontal_wrapped(|ui| {
+            Self::bounded_panel(ui, DiagnosticsLayoutPolicy::panel_width(), |ui| {
+                ui.label(
+                    egui::RichText::new("LIVE STATUS")
+                        .monospace()
+                        .color(egui::Color32::WHITE)
+                        .size(16.0),
+                );
+                ui.separator();
+                for row in self.snapshot.diagnostics_rows() {
+                    Self::soft_panel_frame().show(ui, |ui| {
+                        ui.set_min_width(DiagnosticsLayoutPolicy::panel_width() - 24.0);
+                        ui.set_max_width(DiagnosticsLayoutPolicy::panel_width() - 24.0);
+                        ui.horizontal_wrapped(|ui| {
+                            ui.label(
+                                egui::RichText::new(row.label())
+                                    .monospace()
+                                    .color(Self::muted_text()),
+                            );
+                            ui.label(
+                                egui::RichText::new(row.severity().label())
+                                    .monospace()
+                                    .color(Self::diagnostics_severity_color(row.severity())),
+                            );
+                        });
+                        ui.label(
+                            egui::RichText::new(row.value())
+                                .monospace()
+                                .color(egui::Color32::WHITE),
+                        );
+                    });
+                    ui.add_space(4.0);
+                }
+                ui.add_space(8.0);
+                if ui
+                    .add_sized(
+                        [DiagnosticsLayoutPolicy::button_width(), 30.0],
+                        Self::accent_button("Refresh status"),
+                    )
+                    .clicked()
+                {
+                    self.send(UiCommand::Refresh);
+                }
+            });
+
+            Self::bounded_panel(ui, DiagnosticsLayoutPolicy::detail_panel_width(), |ui| {
+                ui.label(
+                    egui::RichText::new("IPC / SOCKET CANDIDATES")
+                        .monospace()
+                        .color(egui::Color32::WHITE)
+                        .size(16.0),
+                );
+                ui.separator();
+                ui.label(
+                    egui::RichText::new(
+                        "The app tries these daemon socket paths in order; existing paths are highlighted.",
+                    )
+                    .monospace()
+                    .color(Self::muted_text()),
+                );
+                ui.add_space(6.0);
+                for candidate in ipc_socket_path_candidates() {
+                    let exists = Path::new(&candidate).exists();
+                    Self::soft_panel_frame().show(ui, |ui| {
+                        ui.set_min_width(DiagnosticsLayoutPolicy::detail_panel_width() - 24.0);
+                        ui.set_max_width(DiagnosticsLayoutPolicy::detail_panel_width() - 24.0);
+                        ui.horizontal_wrapped(|ui| {
+                            ui.label(
+                                egui::RichText::new(if exists { "Found" } else { "Missing" })
+                                    .monospace()
+                                    .color(if exists { Self::accent() } else { Self::muted_text() }),
+                            );
+                            ui.label(
+                                egui::RichText::new(candidate)
+                                    .monospace()
+                                    .color(egui::Color32::WHITE),
+                            );
+                        });
+                    });
+                    ui.add_space(4.0);
+                }
+                ui.add_space(8.0);
+                ui.label(
+                    egui::RichText::new(format!("Scene config: {}", self.scene_config.path().display()))
+                        .monospace()
+                        .color(Self::muted_text()),
+                );
+                if let Some(error) = self.scene_config.reload_error() {
+                    ui.colored_label(egui::Color32::YELLOW, format!("Scene reload issue: {error}"));
+                }
+            });
+        });
+    }
+
+    fn render_about_page(&mut self, ui: &mut egui::Ui) {
+        ui.add_space(8.0);
+        Self::section_header(
+            ui,
+            "About / Implemented Parity",
+            "Read-only summary of what this native personal UI currently covers",
+            "Use this page as an in-app checklist: implemented means daily native parity is solid; partial means useful controls exist but a full web-style browser/editor is still intentionally deferred.",
+        );
+        ui.add_space(12.0);
+        ui.horizontal_wrapped(|ui| {
+            for item in ImplementedParityItem::current_items() {
+                Self::bounded_panel(ui, AboutLayoutPolicy::panel_width(), |ui| {
+                    ui.horizontal_wrapped(|ui| {
+                        ui.label(
+                            egui::RichText::new(item.label())
+                                .monospace()
+                                .size(16.0)
+                                .color(egui::Color32::WHITE)
+                                .strong(),
+                        );
+                        let status_color = match item.status() {
+                            ImplementedParityStatus::Implemented => Self::accent(),
+                            ImplementedParityStatus::Partial => egui::Color32::YELLOW,
+                        };
+                        ui.add_sized(
+                            egui::vec2(AboutLayoutPolicy::status_badge_width(), 20.0),
+                            egui::Label::new(
+                                egui::RichText::new(item.status_label())
+                                    .monospace()
+                                    .small()
+                                    .color(status_color),
+                            ),
+                        );
+                    });
+                    ui.separator();
+                    ui.label(
+                        egui::RichText::new(item.description())
+                            .monospace()
+                            .color(Self::muted_text()),
+                    );
+                });
+                ui.add_space(ContentLayoutPolicy::desktop_panel_gap());
+            }
+        });
+    }
+
     fn render_system_page(&mut self, ui: &mut egui::Ui) {
         Self::section_header(
             ui,
@@ -6102,6 +7693,8 @@ impl PersonalUiApp {
         );
         ui.add_space(12.0);
         self.render_main_profile_panel(ui);
+        ui.add_space(12.0);
+        self.render_profile_browser_panel(ui, self.profile_browser_for(ProfileBrowserKind::Main));
         ui.add_space(12.0);
 
         ui.allocate_ui_with_layout(
@@ -6266,6 +7859,11 @@ impl PersonalUiApp {
 
         ui.add_space(12.0);
         self.render_effect_preset_management_panel(ui);
+        ui.add_space(12.0);
+        self.render_profile_browser_panel(
+            ui,
+            self.profile_browser_for(ProfileBrowserKind::EffectsPreset),
+        );
 
         ui.add_space(12.0);
         ui.horizontal_wrapped(|ui| {
@@ -6523,6 +8121,34 @@ impl PersonalUiApp {
                     });
                 });
 
+                Self::bounded_panel(ui, MicLayoutPolicy::setup_guide_panel_width(), |ui| {
+                    ui.label(
+                        egui::RichText::new("SETUP GUIDE")
+                            .monospace()
+                            .size(18.0)
+                            .color(egui::Color32::WHITE)
+                            .strong(),
+                    );
+                    ui.label(
+                        egui::RichText::new(
+                            "Read-only workflow hints until live mic metering is available.",
+                        )
+                        .color(Self::muted_text()),
+                    );
+                    ui.separator();
+                    for step in MicSetupGuideStep::daily_steps() {
+                        ui.label(egui::RichText::new(step.label()).strong());
+                        ui.label(egui::RichText::new(step.description()).color(Self::muted_text()));
+                        ui.add_space(4.0);
+                    }
+                    ui.separator();
+                    ui.label(egui::RichText::new("LIVE METER").monospace().strong());
+                    ui.label(
+                        egui::RichText::new(MicSetupGuideStep::live_meter_status_note())
+                            .color(Self::muted_text()),
+                    );
+                });
+
                 Self::bounded_panel(ui, MicLayoutPolicy::panel_width(), |ui| {
                     ui.label(
                         egui::RichText::new("GATE / DE-ESS")
@@ -6775,6 +8401,11 @@ impl PersonalUiApp {
                         );
                     }
                 });
+
+                self.render_profile_browser_panel(
+                    ui,
+                    self.profile_browser_for(ProfileBrowserKind::Mic),
+                );
             },
         );
     }
@@ -6887,10 +8518,13 @@ impl PersonalUiApp {
                     );
                     for row in bands.chunks(columns) {
                         ui.horizontal(|ui| {
+                            ui.spacing_mut().item_spacing.x =
+                                HeadphoneEqLayoutPolicy::band_card_gap();
                             for band in row {
-                                Self::soft_bounded_panel(
+                                Self::soft_sized_panel(
                                     ui,
                                     HeadphoneEqLayoutPolicy::band_card_width(),
+                                    HeadphoneEqLayoutPolicy::band_card_height(),
                                     |ui| {
                                         ui.label(
                                             egui::RichText::new(band.label()).monospace().strong(),
@@ -6913,8 +8547,300 @@ impl PersonalUiApp {
                     }
                 });
                 self.render_headphone_eq_profile_panel(ui);
+                self.render_profile_browser_panel(
+                    ui,
+                    self.profile_browser_for(ProfileBrowserKind::HeadphoneEq),
+                );
             },
         );
+    }
+
+    fn render_sampler_live_slots_panel(&mut self, ui: &mut egui::Ui) {
+        Self::bounded_panel(
+            ui,
+            SamplerLayoutPolicy::sample_browser_panel_width(),
+            |ui| {
+                ui.label(
+                    egui::RichText::new("LIVE SAMPLE SLOTS")
+                        .monospace()
+                        .size(18.0)
+                        .color(egui::Color32::WHITE)
+                        .strong(),
+                );
+                ui.label(
+                egui::RichText::new(
+                    "Daemon-reported sampler contents. Remove is guarded; play and trim reset target the shown index.",
+                )
+                .color(Self::muted_text()),
+            );
+                ui.add_space(6.0);
+
+                let slots = self.snapshot.sampler_slots.clone();
+                if slots.is_empty() {
+                    ui.label(
+                    egui::RichText::new(
+                        "No live sampler slot state is available from the selected daemon/device yet.",
+                    )
+                    .color(Self::muted_text()),
+                );
+                    return;
+                }
+
+                egui::ScrollArea::vertical()
+                .max_height(360.0)
+                .id_salt("sampler_live_slots")
+                .show(ui, |ui| {
+                    for slot in slots {
+                        ui.group(|ui| {
+                            ui.horizontal_wrapped(|ui| {
+                                ui.label(
+                                    egui::RichText::new(format!(
+                                        "{:?} / {:?}",
+                                        slot.bank(),
+                                        slot.button()
+                                    ))
+                                    .monospace()
+                                    .strong(),
+                                );
+                                ui.label(format!("{} sample(s)", slot.sample_count()));
+                                ui.label(slot.status_label());
+                                ui.label(format!("{:?} / {:?}", slot.function(), slot.order()));
+                            });
+
+                            if slot.samples().is_empty() {
+                                ui.label(egui::RichText::new("Empty slot").color(Self::muted_text()));
+                            } else {
+                                for sample in slot.samples() {
+                                    ui.horizontal_wrapped(|ui| {
+                                        ui.label(format!(
+                                            "#{} {} ({})",
+                                            sample.index() + 1,
+                                            sample.name(),
+                                            sample.trim_label()
+                                        ));
+
+                                        let play = SamplerFileAction::play_by_index(
+                                            slot.bank(),
+                                            slot.button(),
+                                            sample.index(),
+                                        );
+                                        if ui
+                                            .add_sized(
+                                                egui::vec2(
+                                                    SamplerLayoutPolicy::sample_browser_row_button_width(),
+                                                    22.0,
+                                                ),
+                                                egui::Button::new(play.label()).small(),
+                                            )
+                                            .on_hover_text(play.description())
+                                            .clicked()
+                                        {
+                                            self.handle_sampler_file_action(&play);
+                                        }
+
+                                        let remove = SamplerFileAction::remove_by_index(
+                                            slot.bank(),
+                                            slot.button(),
+                                            sample.index(),
+                                        );
+                                        let confirmed = self
+                                            .pending_sampler_file_confirmation
+                                            .as_ref()
+                                            .is_some_and(|pending| pending == &remove.command());
+                                        let remove_label = if confirmed {
+                                            format!("Confirm {}", remove.label())
+                                        } else {
+                                            format!("Arm {}", remove.label())
+                                        };
+                                        if ui
+                                            .add_sized(
+                                                egui::vec2(112.0, 22.0),
+                                                egui::Button::new(remove_label).small(),
+                                            )
+                                            .on_hover_text(remove.description())
+                                            .clicked()
+                                        {
+                                            self.handle_sampler_file_action(&remove);
+                                        }
+
+                                        for trim in SampleTrimAction::safe_trim_actions(
+                                            slot.bank(),
+                                            slot.button(),
+                                            sample.index(),
+                                        ) {
+                                            if ui
+                                                .add_sized(
+                                                    egui::vec2(84.0, 22.0),
+                                                    egui::Button::new(trim.label()).small(),
+                                                )
+                                                .clicked()
+                                            {
+                                                self.send(UiCommand::Send(trim.command()));
+                                            }
+                                        }
+                                    });
+                                }
+                            }
+                        });
+                        ui.add_space(6.0);
+                    }
+                });
+            },
+        );
+    }
+
+    fn render_sampler_file_workflow_panel(&mut self, ui: &mut egui::Ui) {
+        Self::bounded_panel(ui, SamplerLayoutPolicy::file_workflow_panel_width(), |ui| {
+            ui.label(
+                egui::RichText::new("SAMPLE FILE WORKFLOW")
+                    .monospace()
+                    .size(18.0)
+                    .color(egui::Color32::WHITE)
+                    .strong(),
+            );
+            ui.label(
+                egui::RichText::new(
+                    "Paste an audio file path, then arm the exact bank/slot action before importing or removing sample index 0.",
+                )
+                .color(Self::muted_text()),
+            );
+            ui.add_space(6.0);
+            ui.label("Audio file path to add:");
+            ui.add(
+                egui::TextEdit::singleline(&mut self.sampler_file_path)
+                    .hint_text("/home/pc/samples/clip.wav")
+                    .desired_width(SamplerLayoutPolicy::file_workflow_panel_width() - 28.0),
+            );
+            ui.add_space(8.0);
+            ui.separator();
+            ui.label("Sample browser directory:");
+            ui.add(
+                egui::TextEdit::singleline(&mut self.sampler_browser_path)
+                    .hint_text("defaults/resources/samples")
+                    .desired_width(SamplerLayoutPolicy::sample_browser_panel_width() - 28.0),
+            );
+            let browser = self.sampler_sample_browser();
+            ui.label(
+                egui::RichText::new(format!(
+                    "{} supported audio file(s) in {}",
+                    browser.rows().len(),
+                    browser.root().display()
+                ))
+                .color(Self::muted_text()),
+            );
+            if browser.is_empty() {
+                ui.label(
+                    egui::RichText::new(
+                        "No .wav/.mp3/.flac/.ogg/.aiff/.aac/.m4a files found here.",
+                    )
+                    .color(Self::muted_text()),
+                );
+            } else {
+                egui::ScrollArea::vertical()
+                    .max_height(140.0)
+                    .id_salt("sampler_sample_browser")
+                    .show(ui, |ui| {
+                        for row in browser.rows() {
+                            ui.horizontal(|ui| {
+                                if ui
+                                    .add_sized(
+                                        egui::vec2(
+                                            SamplerLayoutPolicy::sample_browser_row_button_width(),
+                                            22.0,
+                                        ),
+                                        egui::Button::new("Use path").small(),
+                                    )
+                                    .on_hover_text(
+                                        "Copy this audio file path into the add-path field above.",
+                                    )
+                                    .clicked()
+                                {
+                                    self.sampler_file_path = row.path().to_string();
+                                    self.pending_sampler_file_confirmation = None;
+                                }
+                                ui.label(row.display_name());
+                            });
+                        }
+                    });
+            }
+            ui.add_space(8.0);
+
+            let buttons = [
+                SampleButtons::TopLeft,
+                SampleButtons::TopRight,
+                SampleButtons::BottomLeft,
+                SampleButtons::BottomRight,
+            ];
+            let sample_path = self.sampler_file_path.clone();
+            for bank in [SampleBank::A, SampleBank::B, SampleBank::C] {
+                ui.label(
+                    egui::RichText::new(format!("BANK {bank:?}"))
+                        .monospace()
+                        .strong(),
+                );
+                for row in buttons.chunks(2) {
+                    ui.horizontal(|ui| {
+                        for button in row {
+                            ui.vertical(|ui| {
+                                ui.label(format!("{button:?}"));
+                                let mut actions = Vec::new();
+                                if let Some(action) =
+                                    SamplerFileAction::add_from_path(bank, *button, &sample_path)
+                                {
+                                    actions.push(action);
+                                }
+                                actions.push(SamplerFileAction::remove_first(bank, *button));
+                                actions.push(SamplerFileAction::play_first(bank, *button));
+
+                                for action in actions {
+                                    let command = action.command();
+                                    let confirmed = self
+                                        .pending_sampler_file_confirmation
+                                        .as_ref()
+                                        .is_some_and(|pending| pending == &command);
+                                    let label = if action.requires_confirmation() && confirmed {
+                                        format!("Confirm {}", action.label())
+                                    } else if action.requires_confirmation() {
+                                        format!("Arm {}", action.label())
+                                    } else {
+                                        action.label().to_string()
+                                    };
+                                    if ui
+                                        .add_sized(
+                                            egui::vec2(
+                                                SamplerLayoutPolicy::file_workflow_button_width(),
+                                                22.0,
+                                            ),
+                                            egui::Button::new(label).small(),
+                                        )
+                                        .on_hover_text(action.description())
+                                        .clicked()
+                                    {
+                                        self.handle_sampler_file_action(&action);
+                                    }
+                                }
+                            });
+                        }
+                    });
+                }
+                ui.add_space(6.0);
+            }
+
+            if self.pending_sampler_file_confirmation.is_some() {
+                ui.label(
+                    egui::RichText::new(
+                        "Click the same armed sampler file action again to send it.",
+                    )
+                    .color(egui::Color32::YELLOW),
+                );
+            }
+            if self.sampler_file_path.trim().is_empty() {
+                ui.label(
+                    egui::RichText::new("Add buttons appear after a non-empty path is entered.")
+                        .color(Self::muted_text()),
+                );
+            }
+        });
     }
 
     fn render_sampler_page(&mut self, ui: &mut egui::Ui) {
@@ -6942,7 +8868,7 @@ impl PersonalUiApp {
                             .strong(),
                     );
                     ui.label(
-                        "Safe global sampler actions; sample file import/removal remains deferred.",
+                        "Safe global sampler actions; add/remove sample files are guarded separately.",
                     );
                     ui.separator();
                     for setting in SamplerWorkflowSetting::safe_settings() {
@@ -6958,6 +8884,8 @@ impl PersonalUiApp {
                         }
                     }
                 });
+                self.render_sampler_live_slots_panel(ui);
+                self.render_sampler_file_workflow_panel(ui);
                 for bank in [SampleBank::A, SampleBank::B, SampleBank::C] {
                     Self::bounded_panel(ui, SamplerLayoutPolicy::panel_width(), |ui| {
                         ui.label(
@@ -6967,51 +8895,76 @@ impl PersonalUiApp {
                                 .color(egui::Color32::WHITE)
                                 .strong(),
                         );
-                        for button in [
+                        let buttons = [
                             SampleButtons::TopLeft,
                             SampleButtons::TopRight,
                             SampleButtons::BottomLeft,
                             SampleButtons::BottomRight,
-                        ] {
-                            ui.label(
-                                egui::RichText::new(format!("{button:?}"))
-                                    .monospace()
-                                    .strong(),
+                        ];
+                        ui.scope(|ui| {
+                            ui.spacing_mut().item_spacing = egui::vec2(
+                                SamplerLayoutPolicy::bank_slot_gap(),
+                                SamplerLayoutPolicy::bank_slot_gap(),
                             );
-                            ui.horizontal_wrapped(|ui| {
-                                for action in SamplerAction::daily_bank_actions(bank, button) {
-                                    if ui
-                                        .add_sized(
-                                            egui::vec2(
-                                                ContentLayoutPolicy::min_action_button_width(),
-                                                22.0,
-                                            ),
-                                            egui::Button::new(action.label()).small(),
-                                        )
-                                        .clicked()
-                                    {
-                                        self.send(UiCommand::Send(action.command()));
+                            for row in buttons.chunks(SamplerLayoutPolicy::bank_slot_columns()) {
+                                ui.horizontal(|ui| {
+                                    for button in row {
+                                        Self::soft_sized_panel(
+                                            ui,
+                                            SamplerLayoutPolicy::bank_slot_card_width(),
+                                            SamplerLayoutPolicy::bank_slot_card_height(),
+                                            |ui| {
+                                                ui.label(
+                                                    egui::RichText::new(format!("{button:?}"))
+                                                        .monospace()
+                                                        .strong(),
+                                                );
+                                                for action_row in SamplerAction::daily_bank_actions(
+                                                    bank, *button,
+                                                )
+                                                .chunks(2)
+                                                {
+                                                    ui.horizontal(|ui| {
+                                                        for action in action_row {
+                                                            if ui
+                                                                .add_sized(
+                                                                    egui::vec2(70.0, 20.0),
+                                                                    egui::Button::new(action.label())
+                                                                        .small(),
+                                                                )
+                                                                .clicked()
+                                                            {
+                                                                self.send(UiCommand::Send(
+                                                                    action.command(),
+                                                                ));
+                                                            }
+                                                        }
+                                                    });
+                                                }
+                                                ui.horizontal(|ui| {
+                                                    for action in SampleTrimAction::safe_trim_actions(
+                                                        bank, *button, 0,
+                                                    ) {
+                                                        if ui
+                                                            .add_sized(
+                                                                egui::vec2(70.0, 20.0),
+                                                                egui::Button::new(action.label()).small(),
+                                                            )
+                                                            .on_hover_text("Reset sample slot 0 trim boundary without importing or removing files.")
+                                                            .clicked()
+                                                        {
+                                                            self.send(UiCommand::Send(
+                                                                action.command(),
+                                                            ));
+                                                        }
+                                                    }
+                                                });
+                                            },
+                                        );
                                     }
-                                }
-                            });
-                            ui.horizontal_wrapped(|ui| {
-                                for action in SampleTrimAction::safe_trim_actions(bank, button, 0) {
-                                    if ui
-                                        .add_sized(
-                                            egui::vec2(
-                                                ContentLayoutPolicy::min_action_button_width(),
-                                                22.0,
-                                            ),
-                                            egui::Button::new(action.label()).small(),
-                                        )
-                                        .on_hover_text("Reset sample slot 0 trim boundary without importing or removing files.")
-                                        .clicked()
-                                    {
-                                        self.send(UiCommand::Send(action.command()));
-                                    }
-                                }
-                            });
-                        }
+                                });
+                            }
+                        });
                     });
                 }
             },
@@ -7185,6 +9138,11 @@ impl eframe::App for PersonalUiApp {
                         "System",
                         self.quick_actions.view_mode() == AppViewMode::System,
                     ),
+                    (
+                        "Diagnostics",
+                        self.quick_actions.view_mode() == AppViewMode::Diagnostics,
+                    ),
+                    ("About", self.quick_actions.view_mode() == AppViewMode::About),
                     (DashboardCopy::mixer_tab(), self.quick_actions.view_mode() == AppViewMode::QuickActions),
                     (DashboardCopy::configuration_tab(), self.quick_actions.view_mode() == AppViewMode::Full),
                     ("Routing", false),
@@ -7204,6 +9162,8 @@ impl eframe::App for PersonalUiApp {
                             "Headphone EQ" => self.quick_actions.set_view_mode(AppViewMode::HeadphoneEq),
                             "Sampler" => self.quick_actions.set_view_mode(AppViewMode::Sampler),
                             "System" => self.quick_actions.set_view_mode(AppViewMode::System),
+                            "Diagnostics" => self.quick_actions.set_view_mode(AppViewMode::Diagnostics),
+                            "About" => self.quick_actions.set_view_mode(AppViewMode::About),
                             label if label == DashboardCopy::mixer_tab() => self.quick_actions.set_view_mode(AppViewMode::QuickActions),
                             label if label == DashboardCopy::configuration_tab() => self.quick_actions.set_view_mode(AppViewMode::Full),
                             _ => {}
@@ -7249,6 +9209,16 @@ impl eframe::App for PersonalUiApp {
 
             if self.quick_actions.view_mode() == AppViewMode::System {
                 self.render_system_page(ui);
+                return;
+            }
+
+            if self.quick_actions.view_mode() == AppViewMode::Diagnostics {
+                self.render_diagnostics_page(ui);
+                return;
+            }
+
+            if self.quick_actions.view_mode() == AppViewMode::About {
+                self.render_about_page(ui);
                 return;
             }
 
@@ -7528,6 +9498,59 @@ impl eframe::App for PersonalUiApp {
                     }
                 });
             }
+
+            ui.add_space(12.0);
+            Self::bounded_panel(ui, 700.0, |ui| {
+                ui.heading("Routing rule diff");
+                ui.label("Compares saved app routing rules with currently active playback stream routes.");
+                let rules = self.scene_config.config().audio_routing_rules();
+                let diffs = self.snapshot.active_audio_streams.routing_rule_diffs(&rules);
+                if diffs.is_empty() {
+                    ui.label("No persistent routing rules configured.");
+                } else {
+                    let pending_moves = self.snapshot.active_audio_streams.routing_moves(&rules);
+                    let needs_move_count = diffs
+                        .iter()
+                        .filter(|row| row.status() == RoutingRuleDiffStatus::NeedsMove)
+                        .count();
+                    ui.horizontal_wrapped(|ui| {
+                        ui.label(format!("{} rules", diffs.len()));
+                        ui.separator();
+                        ui.colored_label(
+                            RoutingRuleDiffStatus::NeedsMove.color(),
+                            format!("{needs_move_count} need moves"),
+                        );
+                        if ui
+                            .add_enabled(!pending_moves.is_empty(), egui::Button::new("Apply pending moves"))
+                            .clicked()
+                        {
+                            for command in pending_moves {
+                                self.send(command);
+                            }
+                        }
+                    });
+                    ui.add_space(6.0);
+                    egui::Grid::new("personal_routing_rule_diff")
+                        .striped(true)
+                        .spacing(egui::vec2(10.0, 4.0))
+                        .show(ui, |ui| {
+                            ui.label(egui::RichText::new("Rule").strong());
+                            ui.label(egui::RichText::new("Current").strong());
+                            ui.label(egui::RichText::new("Desired").strong());
+                            ui.label(egui::RichText::new("Status").strong());
+                            ui.end_row();
+
+                            for row in diffs {
+                                ui.label(row.app());
+                                ui.label(row.current_route().unwrap_or("—"));
+                                ui.label(row.desired_route());
+                                ui.colored_label(row.status_color(), row.status_label())
+                                    .on_hover_text(row.summary());
+                                ui.end_row();
+                            }
+                        });
+                }
+            });
 
             ui.add_space(12.0);
             Self::bounded_panel(ui, 700.0, |ui| {
