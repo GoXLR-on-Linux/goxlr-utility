@@ -107,7 +107,7 @@ Implemented Effects detail chunk:
 - [x] Animation mode controls: editor covers Simple, Rainbow, Ripple, Retro, and None.
 - [x] Animation modifiers and waterfall direction.
 - [x] Layout polish for dense Lighting controls: adaptive quick-theme cards and wrapped editor panel rows reduce the cramped left column, fit the four quick themes at an 800px-wide window, keep card heights consistent, keep animation/editor controls in vertical panel flow instead of skinny one-character wrapped columns, and give long fader/button/sampler style actions fixed widths.
-- [~] Load only lighting from profile: guarded named-slot colour-only load exists on the Lighting page with same-action second-click confirmation; full dynamic profile browser/list management remains pending.
+- [~] Load only lighting from profile: guarded named-slot colour-only load exists on the Lighting page with same-action second-click confirmation, and the page now includes a discovered `.goxlr` browser for guarded per-row lighting-only loads; arbitrary import/rename/location management remains pending.
 
 Priority: mostly implemented for daily personal use. Remaining Lighting work is profile-only loading and deeper per-button polish if the current editor feels too broad or too click-heavy.
 
@@ -133,7 +133,7 @@ Implemented Lighting colour-editor chunk:
 - [x] Stop sample playback.
 - [x] Playback mode/order controls: first-pass play/stop mode and random order actions.
 - [~] Add/remove sample controls: guarded typed-path import and remove actions are exposed per bank/pad with same-action second-click confirmation, plus a simple directory sample browser and daemon-backed live slot/sample list with per-index play/remove controls; deeper waveform/drag/drop editing remains pending.
-- [~] Sample start/stop percentage controls: safe first-pass start-0% and stop-100% reset buttons are exposed per live sample index when daemon slot state is available; arbitrary percentage editing remains pending.
+- [~] Sample start/stop percentage controls: safe bounded start presets (0%, 25%, 50%) and stop presets (50%, 75%, 100%) are exposed per live sample index when daemon slot state is available; arbitrary percentage editing remains pending.
 - [x] Clear sample process error.
 - [x] Sampler reset-on-clear setting.
 - [x] Sampler fade duration setting.

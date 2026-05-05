@@ -127,6 +127,16 @@ curl -H "Authorization: Bearer replace-with-a-strong-token" \
 
 This section tracks local source changes made on this machine so context survives restarts.
 
+* Added a discovered Lighting profile browser for colour-only loads:
+  * Added `ProfileBrowserKind::LightingColours` so the Lighting page can list `.goxlr` profiles and send guarded per-row `LoadProfileColours` actions
+  * Reused the existing same-action second-click confirmation flow and separate lighting-profile pending state instead of adding destructive profile management
+  * Kept the older named-slot lighting button as a quick action while adding discovered profile rows for real local profiles
+
+* Expanded safe Sampler start/stop trim presets:
+  * Broadened `SampleTrimAction::safe_trim_actions()` from reset-only `Start 0%` / `Stop 100%` buttons to bounded start presets at 0%, 25%, and 50% plus stop presets at 50%, 75%, and 100%
+  * Kept trim editing tied to daemon-backed live sample rows and existing typed `SetSampleStartPercent` / `SetSampleStopPercent` commands rather than adding arbitrary percentage inputs
+  * Updated focused Sampler model coverage for labels, target bank/pad/index, and representative start/stop percentages
+
 * Expanded native Lighting individual button colour/off-style coverage:
   * Broadened `LightingButtonColourTarget::daily_targets()` from button groups plus Cough/Bleep to 20 safe targets covering effect preset buttons, FX/Megaphone/Robot/Hard Tune buttons, and sampler pad/clear buttons
   * Kept the workflow model-backed through existing typed `SetButtonColours` and `SetButtonOffStyle` commands; no arbitrary/raw lighting command editor was added

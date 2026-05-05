@@ -1955,23 +1955,66 @@ fn sampler_page_exposes_safe_workflow_settings_and_trim_actions() {
 
     let trim_actions =
         SampleTrimAction::safe_trim_actions(SampleBank::B, SampleButtons::BottomRight, 0);
+    assert_eq!(trim_actions.len(), 6);
     assert!(trim_actions.iter().any(|action| {
-        action.command()
-            == PersonalCommand::SetSampleStartPercent(
-                SampleBank::B,
-                SampleButtons::BottomRight,
-                0,
-                0.0,
-            )
+        action.label() == "Start 0%"
+            && action.command()
+                == PersonalCommand::SetSampleStartPercent(
+                    SampleBank::B,
+                    SampleButtons::BottomRight,
+                    0,
+                    0.0,
+                )
     }));
     assert!(trim_actions.iter().any(|action| {
-        action.command()
-            == PersonalCommand::SetSampleStopPercent(
-                SampleBank::B,
-                SampleButtons::BottomRight,
-                0,
-                100.0,
-            )
+        action.label() == "Start 25%"
+            && action.command()
+                == PersonalCommand::SetSampleStartPercent(
+                    SampleBank::B,
+                    SampleButtons::BottomRight,
+                    0,
+                    25.0,
+                )
+    }));
+    assert!(trim_actions.iter().any(|action| {
+        action.label() == "Start 50%"
+            && action.command()
+                == PersonalCommand::SetSampleStartPercent(
+                    SampleBank::B,
+                    SampleButtons::BottomRight,
+                    0,
+                    50.0,
+                )
+    }));
+    assert!(trim_actions.iter().any(|action| {
+        action.label() == "Stop 50%"
+            && action.command()
+                == PersonalCommand::SetSampleStopPercent(
+                    SampleBank::B,
+                    SampleButtons::BottomRight,
+                    0,
+                    50.0,
+                )
+    }));
+    assert!(trim_actions.iter().any(|action| {
+        action.label() == "Stop 75%"
+            && action.command()
+                == PersonalCommand::SetSampleStopPercent(
+                    SampleBank::B,
+                    SampleButtons::BottomRight,
+                    0,
+                    75.0,
+                )
+    }));
+    assert!(trim_actions.iter().any(|action| {
+        action.label() == "Stop 100%"
+            && action.command()
+                == PersonalCommand::SetSampleStopPercent(
+                    SampleBank::B,
+                    SampleButtons::BottomRight,
+                    0,
+                    100.0,
+                )
     }));
     assert!(trim_actions.iter().all(|action| !action.label().is_empty()));
     assert!(SamplerLayoutPolicy::exposes_file_import_controls());
@@ -3466,7 +3509,7 @@ fn profile_browser_lists_available_files_and_builds_guarded_row_actions() {
 }
 
 #[test]
-fn profile_browser_supports_mic_and_effect_preset_workflows() {
+fn profile_browser_supports_mic_effect_and_lighting_profile_workflows() {
     let mic = ProfileBrowser::from_names(
         ProfileBrowserKind::Mic,
         Some("Broadcast"),
@@ -3492,6 +3535,28 @@ fn profile_browser_supports_mic_and_effect_preset_workflows() {
     assert!(actions.iter().any(|action| {
         action.command() == PersonalCommand::RenameActiveEffectPreset("Big Verb".to_string())
     }));
+
+    let lighting = ProfileBrowser::from_names(
+        ProfileBrowserKind::LightingColours,
+        Some("Personal"),
+        vec!["Personal".to_string(), "Dim Night".to_string()],
+    );
+    assert_eq!(lighting.title(), "Lighting profile browser");
+    let lighting_row = lighting
+        .rows()
+        .iter()
+        .find(|row| row.name() == "Personal")
+        .unwrap();
+    assert_eq!(lighting_row.kind(), ProfileBrowserKind::LightingColours);
+    assert!(lighting_row.is_active());
+    let lighting_actions = lighting_row.actions();
+    assert_eq!(lighting_actions.len(), 1);
+    assert_eq!(lighting_actions[0].label(), "Load lighting");
+    assert!(lighting_actions[0].requires_confirmation());
+    assert_eq!(
+        lighting_actions[0].command(),
+        PersonalCommand::LoadProfileColours("Personal".to_string())
+    );
 }
 
 #[test]

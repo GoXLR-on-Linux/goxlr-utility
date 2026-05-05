@@ -561,6 +561,7 @@ impl MainProfileAction {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProfileBrowserKind {
     Main,
+    LightingColours,
     Mic,
     EffectsPreset,
     HeadphoneEq,
@@ -570,6 +571,7 @@ impl ProfileBrowserKind {
     pub fn title(self) -> &'static str {
         match self {
             Self::Main => "Profile browser",
+            Self::LightingColours => "Lighting profile browser",
             Self::Mic => "Mic profile browser",
             Self::EffectsPreset => "Effect preset browser",
             Self::HeadphoneEq => "Headphone EQ profile browser",
@@ -579,6 +581,7 @@ impl ProfileBrowserKind {
     pub fn empty_hint(self) -> &'static str {
         match self {
             Self::Main => "No .goxlr profiles found.",
+            Self::LightingColours => "No .goxlr profiles found for lighting-only load.",
             Self::Mic => "No .goxlrMicProfile files found.",
             Self::EffectsPreset => "No .preset files found.",
             Self::HeadphoneEq => "No headphone EQ profiles found.",
@@ -587,7 +590,7 @@ impl ProfileBrowserKind {
 
     fn file_suffix(self) -> &'static str {
         match self {
-            Self::Main => ".goxlr",
+            Self::Main | Self::LightingColours => ".goxlr",
             Self::Mic => ".goxlrMicProfile",
             Self::EffectsPreset => ".preset",
             Self::HeadphoneEq => ".goxlrHeadphoneProfile",
@@ -669,6 +672,11 @@ impl ProfileBrowserRow {
                 ),
                 ProfileBrowserAction::new("Delete", PersonalCommand::DeleteProfile(name), true),
             ],
+            ProfileBrowserKind::LightingColours => vec![ProfileBrowserAction::new(
+                "Load lighting",
+                PersonalCommand::LoadProfileColours(name),
+                true,
+            )],
             ProfileBrowserKind::Mic => vec![
                 ProfileBrowserAction::new(
                     "Load",
@@ -1888,6 +1896,22 @@ impl SampleTrimAction {
             Self::new(
                 "Start 0%",
                 PersonalCommand::SetSampleStartPercent(bank, button, sample_index, 0.0),
+            ),
+            Self::new(
+                "Start 25%",
+                PersonalCommand::SetSampleStartPercent(bank, button, sample_index, 25.0),
+            ),
+            Self::new(
+                "Start 50%",
+                PersonalCommand::SetSampleStartPercent(bank, button, sample_index, 50.0),
+            ),
+            Self::new(
+                "Stop 50%",
+                PersonalCommand::SetSampleStopPercent(bank, button, sample_index, 50.0),
+            ),
+            Self::new(
+                "Stop 75%",
+                PersonalCommand::SetSampleStopPercent(bank, button, sample_index, 75.0),
             ),
             Self::new(
                 "Stop 100%",
@@ -6549,7 +6573,9 @@ impl PersonalUiApp {
 
     fn default_profile_browser_path(kind: ProfileBrowserKind) -> &'static Path {
         match kind {
-            ProfileBrowserKind::Main => Path::new("defaults/resources/profiles"),
+            ProfileBrowserKind::Main | ProfileBrowserKind::LightingColours => {
+                Path::new("defaults/resources/profiles")
+            }
             ProfileBrowserKind::Mic => Path::new("defaults/resources/mic-profiles"),
             ProfileBrowserKind::EffectsPreset => Path::new("defaults/resources/presets"),
             ProfileBrowserKind::HeadphoneEq => {
@@ -6570,7 +6596,9 @@ impl PersonalUiApp {
 
     fn profile_browser_for(&self, kind: ProfileBrowserKind) -> ProfileBrowser {
         let active_name = match kind {
-            ProfileBrowserKind::Main => self.snapshot.profile_name.as_deref(),
+            ProfileBrowserKind::Main | ProfileBrowserKind::LightingColours => {
+                self.snapshot.profile_name.as_deref()
+            }
             ProfileBrowserKind::Mic => self.snapshot.mic_profile_name.as_deref(),
             ProfileBrowserKind::EffectsPreset => None,
             ProfileBrowserKind::HeadphoneEq => self.snapshot.headphone_eq_profile.as_deref(),
@@ -6585,6 +6613,9 @@ impl PersonalUiApp {
     fn pending_profile_confirmation(&self, kind: ProfileBrowserKind) -> Option<&PersonalCommand> {
         match kind {
             ProfileBrowserKind::Main => self.pending_main_profile_confirmation.as_ref(),
+            ProfileBrowserKind::LightingColours => {
+                self.pending_lighting_profile_confirmation.as_ref()
+            }
             ProfileBrowserKind::Mic => self.pending_mic_profile_confirmation.as_ref(),
             ProfileBrowserKind::EffectsPreset => self.pending_effect_preset_confirmation.as_ref(),
             ProfileBrowserKind::HeadphoneEq => {
@@ -6600,6 +6631,9 @@ impl PersonalUiApp {
     ) {
         match kind {
             ProfileBrowserKind::Main => self.pending_main_profile_confirmation = command,
+            ProfileBrowserKind::LightingColours => {
+                self.pending_lighting_profile_confirmation = command
+            }
             ProfileBrowserKind::Mic => self.pending_mic_profile_confirmation = command,
             ProfileBrowserKind::EffectsPreset => self.pending_effect_preset_confirmation = command,
             ProfileBrowserKind::HeadphoneEq => {
@@ -7700,6 +7734,11 @@ impl PersonalUiApp {
         );
         ui.add_space(6.0);
         self.render_lighting_profile_panel(ui);
+        ui.add_space(8.0);
+        self.render_profile_browser_panel(
+            ui,
+            self.profile_browser_for(ProfileBrowserKind::LightingColours),
+        );
         ui.add_space(8.0);
         let quick_theme_card_width =
             LightingLayoutPolicy::quick_theme_card_width_for_available_width(ui.available_width());
