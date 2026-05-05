@@ -162,7 +162,7 @@ Priority: medium. Useful once daily control pages are stable, but should be impl
 - [x] Lock faders toggle.
 - [x] VOD mode setting.
 - [x] Headphone EQ full editor: dedicated tab with enabled/preamp and ten-band gain/frequency/Q command controls; screenshot-polished into a compact fixed 5x2 equal-height band grid instead of a sparse staggered card flow.
-- [x] General device/system settings page: first-pass safe daily controls for mute hold duration, VC/chat mic coupling, monitor-with-FX, fader lock, VOD mode, and reload settings; destructive profile operations remain intentionally omitted.
+- [x] General device/system settings page: first-pass safe daily controls for mute hold duration, cough hold/toggle and target, VC/chat mic coupling, monitor-with-FX, fader lock, VOD mode, and reload settings; the System page also shows a read-only live daemon settings snapshot for the same values. Destructive profile operations remain guarded separately.
 
 Priority: medium-low. Add only settings that solve a current annoyance; avoid building a settings junk drawer too early.
 

@@ -791,6 +791,116 @@ pub struct SystemSettingsAction {
     command: PersonalCommand,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct SystemSettingsSnapshot {
+    mute_hold_duration_ms: u16,
+    vc_mute_also_mute_chat_mic: bool,
+    monitor_with_fx_enabled: bool,
+    lock_faders_enabled: bool,
+    vod_mode: VodMode,
+}
+
+impl SystemSettingsSnapshot {
+    pub fn new(
+        mute_hold_duration_ms: u16,
+        vc_mute_also_mute_chat_mic: bool,
+        monitor_with_fx_enabled: bool,
+        lock_faders_enabled: bool,
+        vod_mode: VodMode,
+    ) -> Self {
+        Self {
+            mute_hold_duration_ms,
+            vc_mute_also_mute_chat_mic,
+            monitor_with_fx_enabled,
+            lock_faders_enabled,
+            vod_mode,
+        }
+    }
+
+    pub fn mute_hold_duration_ms(&self) -> u16 {
+        self.mute_hold_duration_ms
+    }
+
+    pub fn vc_mute_also_mute_chat_mic(&self) -> bool {
+        self.vc_mute_also_mute_chat_mic
+    }
+
+    pub fn monitor_with_fx_enabled(&self) -> bool {
+        self.monitor_with_fx_enabled
+    }
+
+    pub fn lock_faders_enabled(&self) -> bool {
+        self.lock_faders_enabled
+    }
+
+    pub fn vod_mode(&self) -> VodMode {
+        self.vod_mode
+    }
+
+    pub fn rows(&self) -> Vec<SystemSettingsStatusRow> {
+        vec![
+            SystemSettingsStatusRow::new(
+                "Mute hold",
+                format!("{} ms", self.mute_hold_duration_ms),
+                "Current daemon-reported hold time for mute-style buttons.",
+            ),
+            SystemSettingsStatusRow::new(
+                "VC mute links Chat Mic",
+                on_off(self.vc_mute_also_mute_chat_mic),
+                "Whether muting voice chat also mutes the Chat Mic output.",
+            ),
+            SystemSettingsStatusRow::new(
+                "Monitor with FX",
+                on_off(self.monitor_with_fx_enabled),
+                "Whether direct microphone monitoring includes voice effects.",
+            ),
+            SystemSettingsStatusRow::new(
+                "Lock faders",
+                on_off(self.lock_faders_enabled),
+                "Whether hardware faders are locked against movement.",
+            ),
+            SystemSettingsStatusRow::new(
+                "VOD mode",
+                format!("{:?}", self.vod_mode),
+                "Current VOD routing mode reported by daemon settings.",
+            ),
+        ]
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SystemSettingsStatusRow {
+    label: &'static str,
+    value: String,
+    description: &'static str,
+}
+
+impl SystemSettingsStatusRow {
+    pub fn new(label: &'static str, value: impl Into<String>, description: &'static str) -> Self {
+        Self {
+            label,
+            value: value.into(),
+            description,
+        }
+    }
+
+    pub fn label(&self) -> &'static str {
+        self.label
+    }
+
+    pub fn value(&self) -> &str {
+        &self.value
+    }
+
+    pub fn description(&self) -> &'static str {
+        self.description
+    }
+}
+
+fn on_off(enabled: bool) -> String {
+    if enabled { "On" } else { "Off" }.to_string()
+}
+
 impl SystemSettingsAction {
     pub fn new(label: &'static str, description: &'static str, command: PersonalCommand) -> Self {
         Self {
@@ -5506,6 +5616,7 @@ pub struct AppSnapshot {
     pub headphone_eq_enabled: bool,
     pub headphone_eq_backend: Option<String>,
     pub headphone_eq_profile: Option<String>,
+    pub system_settings: Option<SystemSettingsSnapshot>,
     pub active_audio_streams: ActiveAudioStreams,
     pub active_audio_error: Option<String>,
     pub sampler_slots: Vec<SamplerSlotSnapshot>,
@@ -5552,6 +5663,7 @@ impl AppSnapshot {
             headphone_eq_enabled: false,
             headphone_eq_backend: None,
             headphone_eq_profile: None,
+            system_settings: None,
             active_audio_streams: ActiveAudioStreams::default(),
             active_audio_error: None,
             sampler_slots: Vec::new(),
@@ -5645,6 +5757,13 @@ impl AppSnapshot {
                 Some(settings.headphone_eq_backend_name.clone())
             },
             headphone_eq_profile: settings.headphone_eq_active_profile.clone(),
+            system_settings: Some(SystemSettingsSnapshot::new(
+                settings.mute_hold_duration,
+                settings.vc_mute_also_mute_cm,
+                settings.enable_monitor_with_fx,
+                settings.lock_faders,
+                settings.vod_mode,
+            )),
             active_audio_streams: ActiveAudioStreams::default(),
             active_audio_error: None,
             sampler_slots: mixer
@@ -8242,6 +8361,53 @@ impl PersonalUiApp {
         });
     }
 
+    fn render_system_live_status_panel(&self, ui: &mut egui::Ui) {
+        Self::bounded_panel(ui, SystemLayoutPolicy::profile_panel_width(), |ui| {
+            ui.label(
+                egui::RichText::new("LIVE SYSTEM SETTINGS")
+                    .monospace()
+                    .size(18.0)
+                    .color(egui::Color32::WHITE)
+                    .strong(),
+            );
+            ui.label("Read-only daemon snapshot for the settings controlled below.");
+            ui.add_space(8.0);
+            if let Some(settings) = &self.snapshot.system_settings {
+                for row in settings.rows() {
+                    Self::soft_panel_frame().show(ui, |ui| {
+                        ui.set_min_width(SystemLayoutPolicy::profile_panel_width() - 24.0);
+                        ui.horizontal_wrapped(|ui| {
+                            ui.label(
+                                egui::RichText::new(row.label())
+                                    .monospace()
+                                    .strong()
+                                    .color(egui::Color32::WHITE),
+                            );
+                            ui.label(
+                                egui::RichText::new(row.value())
+                                    .monospace()
+                                    .color(Self::accent()),
+                            );
+                        });
+                        ui.label(
+                            egui::RichText::new(row.description())
+                                .monospace()
+                                .small()
+                                .color(Self::muted_text()),
+                        );
+                    });
+                    ui.add_space(4.0);
+                }
+            } else {
+                ui.label(
+                    egui::RichText::new("No daemon settings snapshot received yet.")
+                        .monospace()
+                        .color(Self::muted_text()),
+                );
+            }
+        });
+    }
+
     fn render_system_page(&mut self, ui: &mut egui::Ui) {
         Self::section_header(
             ui,
@@ -8253,6 +8419,8 @@ impl PersonalUiApp {
         self.render_main_profile_panel(ui);
         ui.add_space(12.0);
         self.render_profile_browser_panel(ui, self.profile_browser_for(ProfileBrowserKind::Main));
+        ui.add_space(12.0);
+        self.render_system_live_status_panel(ui);
         ui.add_space(12.0);
 
         ui.allocate_ui_with_layout(

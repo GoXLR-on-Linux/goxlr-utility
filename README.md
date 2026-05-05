@@ -127,6 +127,11 @@ curl -H "Authorization: Bearer replace-with-a-strong-token" \
 
 This section tracks local source changes made on this machine so context survives restarts.
 
+* Added read-only live System settings status rows to the native System page:
+  * Added `SystemSettingsSnapshot` and `SystemSettingsStatusRow` model helpers for daemon-reported mute hold, VC/chat mic coupling, monitor-with-FX, fader lock, and VOD mode
+  * Populated the snapshot from daemon mixer settings and rendered a `LIVE SYSTEM SETTINGS` panel above the explicit action buttons
+  * Kept this status panel read-only; all setting changes still go through the existing typed preset buttons
+
 * Added safe cough-button behaviour controls to the native System page:
   * Added typed `PersonalCommand::SetCoughIsHold` and `PersonalCommand::SetCoughMuteFunction` mappings to daemon `GoXLRCommand`
   * Added daily buttons for cough hold/toggle mode plus All, Stream, Voice Chat, and Phones mute targets

@@ -22,8 +22,8 @@ use goxlr_personal_ui::{
     SampleTrimAction, SamplerAction, SamplerFileAction, SamplerLayoutPolicy, SamplerLoadedSample,
     SamplerSampleBrowser, SamplerSlotSnapshot, SamplerWorkflowSetting, SceneEditor,
     SubmixChannelControl, SubmixChannelSnapshot, SubmixOutputMixControl, SubmixOutputSnapshot,
-    SystemLayoutPolicy, SystemSettingsAction, TrayAction, TrayMenuModel, UiCommand, UiScene,
-    VolumeDebouncer, WindowAction, ipc_socket_path_candidates,
+    SystemLayoutPolicy, SystemSettingsAction, SystemSettingsSnapshot, TrayAction, TrayMenuModel,
+    UiCommand, UiScene, VolumeDebouncer, WindowAction, ipc_socket_path_candidates,
 };
 use goxlr_types::{
     AnimationMode, Button, ButtonColourGroups, ButtonColourOffStyle, ChannelName,
@@ -3306,6 +3306,40 @@ fn system_settings_page_exposes_safe_daily_device_controls() {
             .iter()
             .all(|action| !action.label().is_empty() && !action.description().is_empty())
     );
+}
+
+#[test]
+fn system_settings_snapshot_exposes_live_daemon_values_without_commands() {
+    let snapshot = SystemSettingsSnapshot::new(750, true, false, true, VodMode::StreamNoMusic);
+    assert_eq!(snapshot.mute_hold_duration_ms(), 750);
+    assert!(snapshot.vc_mute_also_mute_chat_mic());
+    assert!(!snapshot.monitor_with_fx_enabled());
+    assert!(snapshot.lock_faders_enabled());
+    assert_eq!(snapshot.vod_mode(), VodMode::StreamNoMusic);
+
+    let rows = snapshot.rows();
+    assert_eq!(rows.len(), 5);
+    assert!(
+        rows.iter()
+            .any(|row| row.label() == "Mute hold" && row.value() == "750 ms")
+    );
+    assert!(
+        rows.iter()
+            .any(|row| row.label() == "VC mute links Chat Mic" && row.value() == "On")
+    );
+    assert!(
+        rows.iter()
+            .any(|row| row.label() == "Monitor with FX" && row.value() == "Off")
+    );
+    assert!(
+        rows.iter()
+            .any(|row| row.label() == "Lock faders" && row.value() == "On")
+    );
+    assert!(
+        rows.iter()
+            .any(|row| row.label() == "VOD mode" && row.value().contains("StreamNoMusic"))
+    );
+    assert!(rows.iter().all(|row| !row.description().is_empty()));
 }
 
 #[test]
