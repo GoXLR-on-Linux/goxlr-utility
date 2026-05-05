@@ -156,6 +156,7 @@ Priority: medium. Useful once daily control pages are stable, but should be impl
 - [~] Headphone limiter / ClipGuard controls are exposed through the Mic page.
 - [~] Some personal app settings/config editing exists for routing workflows.
 - [x] Mute hold duration.
+- [x] Cough button behaviour and mute-target controls: System page exposes hold/toggle mode plus daily mute targets (All, Stream, Voice Chat, Phones) backed by typed `SetCoughIsHold` and `SetCoughMuteFunction` commands.
 - [x] VC mute also mutes chat mic.
 - [x] Monitor-with-FX toggle.
 - [x] Lock faders toggle.

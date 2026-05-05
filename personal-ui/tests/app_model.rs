@@ -3253,11 +3253,33 @@ fn system_settings_page_exposes_safe_daily_device_controls() {
     assert_eq!(quick.view_mode(), AppViewMode::System);
 
     let actions = SystemSettingsAction::daily_controls();
-    assert_eq!(actions.len(), 12);
+    assert_eq!(actions.len(), 18);
     assert!(
         actions
             .iter()
             .any(|action| action.command() == PersonalCommand::SetMuteHoldDuration(500))
+    );
+    assert!(
+        actions
+            .iter()
+            .any(|action| action.command() == PersonalCommand::SetCoughIsHold(true))
+    );
+    assert!(
+        actions
+            .iter()
+            .any(|action| action.command() == PersonalCommand::SetCoughIsHold(false))
+    );
+    assert!(actions.iter().any(|action| action.command()
+        == PersonalCommand::SetCoughMuteFunction(MuteFunction::ToVoiceChat)));
+    assert!(
+        actions.iter().any(|action| action.command()
+            == PersonalCommand::SetCoughMuteFunction(MuteFunction::ToStream))
+    );
+    assert!(
+        actions
+            .iter()
+            .any(|action| action.command()
+                == PersonalCommand::SetCoughMuteFunction(MuteFunction::All))
     );
     assert!(
         actions
@@ -3450,8 +3472,14 @@ fn system_settings_commands_map_to_backend_device_settings() {
         goxlr_ipc::GoXLRCommand::SetLockFaders(true)
     ));
     assert!(matches!(
-        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetVodMode(VodMode::Routable)),
-        goxlr_ipc::GoXLRCommand::SetVodMode(VodMode::Routable)
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetCoughIsHold(true)),
+        goxlr_ipc::GoXLRCommand::SetCoughIsHold(true)
+    ));
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetCoughMuteFunction(
+            MuteFunction::ToStream
+        )),
+        goxlr_ipc::GoXLRCommand::SetCoughMuteFunction(MuteFunction::ToStream)
     ));
 }
 

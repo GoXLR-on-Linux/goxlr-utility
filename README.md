@@ -127,6 +127,11 @@ curl -H "Authorization: Bearer replace-with-a-strong-token" \
 
 This section tracks local source changes made on this machine so context survives restarts.
 
+* Added safe cough-button behaviour controls to the native System page:
+  * Added typed `PersonalCommand::SetCoughIsHold` and `PersonalCommand::SetCoughMuteFunction` mappings to daemon `GoXLRCommand`
+  * Added daily buttons for cough hold/toggle mode plus All, Stream, Voice Chat, and Phones mute targets
+  * Kept the workflow as explicit button presets rather than arbitrary/raw device setting edits
+
 * Added live daemon-backed submix state reflection to the native Mixer dashboard:
   * Added `SubmixChannelSnapshot` and `SubmixOutputSnapshot` model helpers for current channel volume/link state and output Mix A/B state
   * Populated submix snapshots from daemon `levels.submix` when available, while leaving the existing safe preset/link/output buttons unchanged

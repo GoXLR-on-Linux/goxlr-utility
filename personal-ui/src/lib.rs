@@ -818,6 +818,36 @@ impl SystemSettingsAction {
                 PersonalCommand::SetMuteHoldDuration(1000),
             ),
             Self::new(
+                "Cough hold mode",
+                "Require holding the cough button while muting.",
+                PersonalCommand::SetCoughIsHold(true),
+            ),
+            Self::new(
+                "Cough toggle mode",
+                "Make the cough button toggle mute state with each press.",
+                PersonalCommand::SetCoughIsHold(false),
+            ),
+            Self::new(
+                "Cough mutes VC",
+                "Route the cough button to mute the voice-chat output.",
+                PersonalCommand::SetCoughMuteFunction(MuteFunction::ToVoiceChat),
+            ),
+            Self::new(
+                "Cough mutes stream",
+                "Route the cough button to mute only the stream mix.",
+                PersonalCommand::SetCoughMuteFunction(MuteFunction::ToStream),
+            ),
+            Self::new(
+                "Cough mutes all",
+                "Route the cough button to mute all microphone destinations.",
+                PersonalCommand::SetCoughMuteFunction(MuteFunction::All),
+            ),
+            Self::new(
+                "Cough mutes phones",
+                "Route the cough button to mute the headphone monitor.",
+                PersonalCommand::SetCoughMuteFunction(MuteFunction::ToPhones),
+            ),
+            Self::new(
                 "VC mutes chat mic",
                 "Also mute Chat Mic output when the voice-chat mute is active.",
                 PersonalCommand::SetVCMuteAlsoMuteCM(true),
@@ -2805,6 +2835,8 @@ pub enum PersonalCommand {
     SetSampleColour(SamplerColourTargets, String, String, String),
     SetSampleOffStyle(SamplerColourTargets, ButtonColourOffStyle),
     SetMuteHoldDuration(u16),
+    SetCoughIsHold(bool),
+    SetCoughMuteFunction(MuteFunction),
     SetVCMuteAlsoMuteCM(bool),
     SetMonitorWithFx(bool),
     SetMonitorMix(OutputDevice),
@@ -3050,6 +3082,10 @@ impl From<PersonalCommand> for GoXLRCommand {
             }
             PersonalCommand::SetMuteHoldDuration(duration_ms) => {
                 GoXLRCommand::SetMuteHoldDuration(duration_ms)
+            }
+            PersonalCommand::SetCoughIsHold(enabled) => GoXLRCommand::SetCoughIsHold(enabled),
+            PersonalCommand::SetCoughMuteFunction(function) => {
+                GoXLRCommand::SetCoughMuteFunction(function)
             }
             PersonalCommand::SetVCMuteAlsoMuteCM(enabled) => {
                 GoXLRCommand::SetVCMuteAlsoMuteCM(enabled)
