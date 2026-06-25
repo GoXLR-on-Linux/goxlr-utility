@@ -1327,6 +1327,30 @@ fn active_audio_streams_do_not_auto_route_disabled_or_already_routed_rules() {
 }
 
 #[test]
+fn active_audio_streams_ignore_blank_routing_rules() {
+    let streams = ActiveAudioStreams::from_pactl_json(
+        r#"
+        [
+          {"index": 84, "name": "alsa_output.usb-TC-Helicon_GoXLRMini-00.HiFi__Line2__sink", "description": "GoXLRMini Music"}
+        ]
+        "#,
+        r#"
+        [
+          {"index": 12, "sink": 84, "properties": {"application.name": "Spotify"}}
+        ]
+        "#,
+    )
+    .unwrap();
+
+    assert!(
+        streams
+            .routing_moves(&[AudioRoutingRule::new("   ", "Music")])
+            .is_empty(),
+        "blank app match rules should not match every playback stream"
+    );
+}
+
+#[test]
 fn active_audio_streams_report_empty_playback_clearly() {
     let streams = ActiveAudioStreams::from_pactl_json("[]", "[]").unwrap();
 
@@ -1411,6 +1435,33 @@ fn active_audio_streams_diff_marks_matching_and_missing_targets() {
     assert_eq!(rows[1].status(), RoutingRuleDiffStatus::MissingTarget);
     assert_eq!(rows[1].status_label(), "No route target");
     assert_eq!(rows[1].summary(), "OBS: Broadcast target unavailable");
+}
+
+#[test]
+fn active_audio_streams_detect_current_route_from_sink_name_when_label_is_generic() {
+    let streams = ActiveAudioStreams::from_pactl_json(
+        r#"
+        [
+          {"index": 84, "name": "alsa_output.usb-TC-Helicon_GoXLRMini-00.HiFi__Line2__sink", "description": "Generic USB output"}
+        ]
+        "#,
+        r#"
+        [
+          {"index": 12, "sink": 84, "properties": {"application.name": "Spotify"}}
+        ]
+        "#,
+    )
+    .unwrap();
+
+    let rows = streams.routing_rule_diffs(&[AudioRoutingRule::new("Spotify", "Music")]);
+
+    assert!(
+        streams
+            .routing_moves(&[AudioRoutingRule::new("Spotify", "Music")])
+            .is_empty()
+    );
+    assert_eq!(rows[0].current_route(), Some("Music"));
+    assert_eq!(rows[0].status(), RoutingRuleDiffStatus::Matched);
 }
 
 #[test]

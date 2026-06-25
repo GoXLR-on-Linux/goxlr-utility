@@ -5295,13 +5295,14 @@ impl AudioRoutingRule {
     }
 
     fn matches_stream(&self, stream: &AudioStream) -> bool {
-        if !self.enabled {
+        let app = self.app.trim();
+        if !self.enabled || app.is_empty() {
             return false;
         }
         stream
             .display_name
             .to_ascii_lowercase()
-            .contains(&self.app.to_ascii_lowercase())
+            .contains(&app.to_ascii_lowercase())
     }
 }
 
@@ -6076,6 +6077,7 @@ pub struct AudioStream {
     pub id: u64,
     pub app_name: Option<String>,
     pub display_name: String,
+    pub sink_name: Option<String>,
     pub sink_label: String,
     pub muted: bool,
     pub corked: bool,
@@ -6231,7 +6233,7 @@ impl ActiveAudioStreams {
         let sink_inputs: serde_json::Value = serde_json::from_str(sink_inputs_json)
             .context("failed to parse pactl sink-input JSON")?;
 
-        let mut sink_labels = HashMap::new();
+        let mut sinks_by_index = HashMap::new();
         let mut route_targets = Vec::new();
         for sink in sinks.as_array().into_iter().flatten() {
             let Some(index) = sink.get("index").and_then(serde_json::Value::as_u64) else {
@@ -6247,7 +6249,7 @@ impl ActiveAudioStreams {
                 .or_else(|| sink.get("name").and_then(serde_json::Value::as_str))
                 .unwrap_or("Unknown sink")
                 .to_string();
-            sink_labels.insert(index, label);
+            sinks_by_index.insert(index, (sink_name.to_string(), label));
             if let Some((order, route_label)) = goxlr_route_target_label(sink_name) {
                 route_targets.push((order, AudioRouteTarget::new(route_label, sink_name)));
             }
@@ -6288,14 +6290,16 @@ impl ActiveAudioStreams {
                 .and_then(|channel| channel.get("value_percent"))
                 .and_then(serde_json::Value::as_str)
                 .map(ToOwned::to_owned);
-            let sink_label = sink_id
-                .and_then(|id| sink_labels.get(&id).cloned())
-                .unwrap_or_else(|| "Unknown output".to_string());
+            let (sink_name, sink_label) = sink_id
+                .and_then(|id| sinks_by_index.get(&id).cloned())
+                .map(|(name, label)| (Some(name), label))
+                .unwrap_or_else(|| (None, "Unknown output".to_string()));
 
             streams.push(AudioStream {
                 id,
                 app_name: app_name.map(ToOwned::to_owned),
                 display_name,
+                sink_name,
                 sink_label,
                 muted: input
                     .get("mute")
@@ -6338,10 +6342,9 @@ impl ActiveAudioStreams {
                 else {
                     continue;
                 };
-                if stream
-                    .sink_label
-                    .to_ascii_lowercase()
-                    .contains(&target.label.to_ascii_lowercase())
+                if self
+                    .current_route_label_for_stream(stream)
+                    .is_some_and(|route| route.eq_ignore_ascii_case(&target.label))
                 {
                     continue;
                 }
@@ -6414,10 +6417,11 @@ impl ActiveAudioStreams {
         self.route_targets
             .iter()
             .find(|target| {
-                stream
-                    .sink_label
-                    .to_ascii_lowercase()
-                    .contains(&target.label.to_ascii_lowercase())
+                stream.sink_name.as_deref() == Some(target.sink_name.as_str())
+                    || stream
+                        .sink_label
+                        .to_ascii_lowercase()
+                        .contains(&target.label.to_ascii_lowercase())
             })
             .map(|target| target.label.as_str())
     }

@@ -127,6 +127,12 @@ curl -H "Authorization: Bearer replace-with-a-strong-token" \
 
 This section tracks local source changes made on this machine so context survives restarts.
 
+* Reviewed core personal UI production features for routing/IPC/install-helper risks:
+  * Tightened active audio routing rules so blank app-match rules do not match every playback stream
+  * Preserved the daemon-reported sink name on active playback streams and use it to detect current GoXLR route targets, with the existing human label fallback retained for older/generic data
+  * Reused the same route-detection path when deciding whether an auto-route move is needed, preventing unnecessary moves when desktop sink descriptions are generic
+  * Added focused tests for blank routing rules and sink-name-based current-route detection
+
 * Fixed CI failures on the personal UI production launcher branch:
   * Updated the personal UI tray dependency to `ksni` 0.3.5 and switched the feature selection to the crate's default Tokio backend plus `blocking`, avoiding the CI `--all-features` conflict between `tokio` and `async-io`
   * Addressed Clippy `-D warnings` findings in `personal-ui/src/lib.rs`: derived `MiniWindowMode::Default`, boxed the large `WorkerEvent::Snapshot` variant, collapsed flagged nested conditionals, and removed cross-platform unused mutability from IPC socket candidates
