@@ -66,6 +66,37 @@ Open follow-up items:
 - Before commit, do one quick hands-on pass through Dashboard, Mixer, Effects, Headphone EQ, Sampler, System, Diagnostics, and About against the running PID above.
 - Keep `PARITY_CHECKLIST.md` at `[~]` for screenshot/manual QA until each major page has fresh visual notes or screenshots after the current local run.
 
+## 2026-06-25 — production-launcher final integration polish
+
+Branch/run state:
+
+- Branch: `personal-ui-production-launcher`
+- Latest pushed hardening commits at the time of this note:
+  - `33418b1a fix(personal-ui): harden active audio routing`
+  - `983fb0bd fix(personal-ui): harden guarded profile sample workflows`
+  - `11032ff9 fix(personal-ui): clamp headphone eq controls`
+- GitHub Actions run `28170810748` passed on macOS, Linux, and Windows after the headphone EQ safety commit.
+
+Integration notes to check during the next visual/manual pass:
+
+| Area | What changed | Manual QA expectation |
+| --- | --- | --- |
+| Config / Routing | Blank app-match rules are ignored; current-route detection prefers daemon sink names before display labels. | Empty routing rules should not move every stream; streams already on a matching GoXLR sink should not show unnecessary pending moves when the sink description is generic. |
+| Profiles | Profile browsers ignore non-files and empty stems like `.goxlr`. | Browser rows should list real named profile files only; no blank-name or directory-backed actions should appear. |
+| Sampler | Typed add-file paths use the same supported-audio filter as the sample browser. | Unsupported files such as `.txt` should not create guarded add commands; supported audio paths still should. |
+| Headphone EQ | Band gain/frequency/Q commands clamp to safe ranges and sanitize `NaN`/`Infinity`; daily presets have safe-bound invariants. | Presets should still render as before, but command generation should not forward extreme/non-finite EQ values. |
+
+Verification evidence:
+
+- Focused local checks passed for routing, guarded profile/sample workflows, and headphone EQ safety.
+- Focused temporary `/tmp/hermes-verify-*` ad-hoc verifiers were run after each changed behavior area and removed after passing.
+- Full personal UI tests reached `136` passing tests during these hardening passes.
+
+Remaining manual QA gate:
+
+- Fresh screenshots/page-by-page visual notes are still pending because non-interactive COSMIC Wayland screenshot capture previously failed through the portal.
+- Before opening/updating the PR, prefer a short hands-on pass through Config / Routing, Profiles/System, Sampler, and Headphone EQ to confirm the new hardening remains visually discoverable.
+
 ## 2026-06-25 — local production launcher install
 
 Installed artifacts:

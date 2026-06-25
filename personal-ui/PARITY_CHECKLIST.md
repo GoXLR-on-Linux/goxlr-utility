@@ -2,8 +2,8 @@
 
 Scope: practical parity for the personal Rust/egui GoXLR UI in `personal-ui`, not a full clone of every bundled web UI detail. Prioritize controls that are useful during daily desktop use and already have typed `GoXLRCommand` support.
 
-Last updated: 2026-05-05
-Branch: `personal-native-ui-safety`
+Last updated: 2026-06-25
+Branch: `personal-ui-production-launcher`
 
 ## Status legend
 
@@ -49,6 +49,7 @@ Priority: low. Daily mute/routing/submix coverage is now strong; remaining Mixer
 - [x] Full matrix-style input-to-output router equivalent to the web UI: native matrix reads daemon route state, shows compact centered state badges with constrained non-stretching cell/badge heights and a denser screenshot-polished row layout, and sends typed `SetRouter(input, output, enabled)` commands for Mic/Chat/Music/Game/Console/Line In/System/Samples to Headphones/Broadcast/Chat Mic/Sampler/Line Out.
 - [x] Save/load named routing presets: native preset cards above the matrix apply common explicit `SetRouter` command bundles for Broadcast Mix, Chat Mic, and Line Out Safe.
 - [x] Visual diff between desired persistent rules and current active desktop stream routes: Config / Routing now shows current route, desired route, status, and an `Apply pending moves` action for live streams that need moving.
+- [x] Routing hardening: blank app-match rules are ignored instead of matching every playback stream, and current-route detection prefers daemon-reported sink names before falling back to human sink descriptions so generic PipeWire/PulseAudio labels do not trigger redundant moves.
 
 Priority: medium-low. Core routing parity is strong; remaining routing work should be manual-QA/layout polish or dynamic preset/config ergonomics rather than another matrix rewrite.
 
@@ -138,7 +139,7 @@ Implemented Lighting colour-editor chunk:
 - [x] Play next sample for each pad.
 - [x] Stop sample playback.
 - [x] Playback mode/order controls: first-pass play/stop mode and random order actions.
-- [~] Add/remove sample controls: guarded typed-path import and remove actions are exposed per bank/pad with same-action second-click confirmation, plus a simple directory sample browser and daemon-backed live slot/sample list with per-index play/remove controls; deeper waveform/drag/drop editing remains pending.
+- [~] Add/remove sample controls: guarded typed-path import and remove actions are exposed per bank/pad with same-action second-click confirmation, plus a simple directory sample browser and daemon-backed live slot/sample list with per-index play/remove controls. Typed add paths now share the browser's supported-audio extension filter, so unsupported files are rejected before command dispatch; deeper waveform/drag/drop editing remains pending.
 - [x] Sample start/stop percentage controls: safe bounded start presets (0%, 25%, 50%) and stop presets (50%, 75%, 100%) are exposed per live sample index when daemon slot state is available, and live sample rows now include arbitrary 0–100% Start/Stop sliders backed by typed `SetSampleStartPercent` / `SetSampleStopPercent` commands.
 - [x] Clear sample process error.
 - [x] Sampler reset-on-clear setting.
@@ -148,7 +149,7 @@ Priority: mostly implemented for safe personal workflows. The native page covers
 
 ## 8. Profiles and persistence
 
-- [~] Main profile create/load/save-as/delete controls: guarded named-slot full-profile load, save-active, save-as, create, and delete actions exist on the System page with same-action second-click confirmation, plus a discovered `.goxlr` browser with guarded per-row load, lighting-only load, save-as, and delete actions; arbitrary import/rename/location management remains pending.
+- [~] Main profile create/load/save-as/delete controls: guarded named-slot full-profile load, save-active, save-as, create, and delete actions exist on the System page with same-action second-click confirmation, plus a discovered `.goxlr` browser with guarded per-row load, lighting-only load, save-as, and delete actions. Profile browsers ignore non-files and empty stems such as `.goxlr`; arbitrary import/rename/location management remains pending.
 - [~] Mic profile create/load/save-as/delete controls: guarded Mic-page actions exist for a named profile slot with same-action second-click confirmation, plus a discovered mic-profile browser for available profile rows; free-form import/rename workflows remain pending.
 - [x] Effect preset load/save/rename controls: guarded named-slot actions exist on the Effects page with same-action second-click confirmation, plus a discovered preset browser for available `.preset` rows; broader arbitrary preset import/file editing remains tracked separately under Effects.
 - [~] Headphone EQ profile save/load/delete controls: guarded named-slot load, save-as, and delete actions exist on the Headphone EQ page with same-action second-click confirmation, plus discovered `.goxlrHeadphoneProfile` browser rows for available headphone EQ profiles; arbitrary import/rename/location management remains pending.
@@ -167,8 +168,8 @@ Priority: medium. Useful once daily control pages are stable, but should be impl
 - [x] Monitor-with-FX toggle.
 - [x] Lock faders toggle.
 - [x] VOD mode setting.
-- [x] Headphone EQ full editor: dedicated tab with enabled/preamp and ten-band gain/frequency/Q command controls; screenshot-polished into a compact fixed 5x2 equal-height band grid instead of a sparse staggered card flow.
-- [x] Hardware-first headphone listening presets: Headphone EQ page exposes `Neutral Base`, `Music Detail`, `Game Imaging`, and `Night Safe` command bundles that set headphone monitor source, safe volume, limiter enable/threshold, EQ enable/preamp, and ten-band EQ gain/frequency/Q values for practical listening goals beyond original web-app parity.
+- [x] Headphone EQ full editor: dedicated tab with enabled/preamp and ten-band gain/frequency/Q command controls; screenshot-polished into a compact fixed 5x2 equal-height band grid instead of a sparse staggered card flow. Band command helpers clamp gain/frequency/Q to safe hardware-oriented ranges and sanitize non-finite values before command dispatch.
+- [x] Hardware-first headphone listening presets: Headphone EQ page exposes `Neutral Base`, `Music Detail`, `Game Imaging`, and `Night Safe` command bundles that set headphone monitor source, safe volume, limiter enable/threshold, EQ enable/preamp, and ten-band EQ gain/frequency/Q values for practical listening goals beyond original web-app parity. Daily presets are covered by safe-bound invariants for headphone volume, limiter threshold, non-positive preamp, and finite in-range band gains.
 - [x] Headphone tuning workflow guidance: Headphone EQ page documents the intended order of route intentionally, gain-stage/preamp first, enable limiter, tune by purpose, and save after real listening.
 - [x] General device/system settings page: first-pass safe daily controls for mute hold duration, cough hold/toggle and target, VC/chat mic coupling, monitor-with-FX, fader lock, VOD mode, and reload settings; the System page also shows a read-only live daemon settings snapshot for the same values. Destructive profile operations remain guarded separately.
 
@@ -187,17 +188,17 @@ Priority: medium-low. Add only settings that solve a current annoyance; avoid bu
   - `cargo check -p goxlr-personal-ui --features system-tray`
 - [x] Local user install/launcher helper: `personal-ui/scripts/install-local.sh` builds the release personal UI with the `system-tray` feature, installs `~/.local/bin/goxlr-personal-ui`, writes `~/.local/share/applications/goxlr-personal-ui.desktop`, and can optionally add/remove a user autostart entry at `~/.config/autostart/goxlr-personal-ui.desktop`.
 - [x] Local production smoke/diagnostic helpers: `personal-ui/scripts/smoke-local-install.sh` verifies installed artifacts and desktop metadata, while `personal-ui/scripts/diagnose-runtime.sh` reports common runtime blockers such as missing daemon/socket or unavailable `pactl` routing support.
-- [~] Lightweight screenshot/manual QA notes after local run: `personal-ui/MANUAL_QA.md` now records the current running app session, pages/features to spot-check, and the COSMIC Wayland screenshot-portal failure; fresh page-specific screenshot findings are still pending.
+- [~] Lightweight screenshot/manual QA notes after local run: `personal-ui/MANUAL_QA.md` records the current production-helper/runtime posture, pages/features to spot-check, and the COSMIC Wayland screenshot-portal limitation; fresh page-specific screenshot findings are still pending.
 - [x] A small in-app "About / implemented parity" screen: read-only About tab summarizes implemented and partial parity areas so manual QA can distinguish completed daily controls from intentionally deferred full managers/editors.
 
 ## Recommended next choices
 
-1. Finish production-readiness review, then commit the current combined safe chunk.
-   - Canonical Rust checks and the full personal UI test suite have passed after the dashboard label fix.
-   - `MANUAL_QA.md` now records the current running app session, production-use posture, clippy/audit tool blockers, and the remaining manual screenshot gate.
-   - Do one final hands-on pass through the running app before committing, but avoid stacking more feature work into this already-large verified slice.
+1. Open or update the PR for the production-launcher branch.
+   - The branch now has small verified commits for production helpers, CI fixes, routing hardening, guarded profile/sample hardening, and headphone EQ safety clamps.
+   - GitHub Actions have passed on macOS/Linux/Windows after the latest headphone EQ safety commit.
+   - Keep the PR scoped to daily-use hardening and production launchability rather than adding another broad feature batch.
 
-2. If continuing polish before commit, keep it strictly screenshot/manual-QA driven.
+2. If continuing polish before PR review, keep it strictly screenshot/manual-QA driven.
    - Effects, Lighting, Mixer, Sampler, Routing, Headphone EQ, System, Diagnostics, and About already have strong daily controls; only adjust layouts or labels that are visibly awkward in the current run.
 
 3. If continuing headphone audio work after commit, prefer measured/listening-driven iteration.
