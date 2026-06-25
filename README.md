@@ -127,6 +127,11 @@ curl -H "Authorization: Bearer replace-with-a-strong-token" \
 
 This section tracks local source changes made on this machine so context survives restarts.
 
+* Started a personal UI local production launcher/install chunk:
+  * Added `personal-ui/scripts/install-local.sh` to build the native personal UI with the `system-tray` feature and install it into the current user's `~/.local/bin`
+  * The script writes a desktop launcher at `~/.local/share/applications/goxlr-personal-ui.desktop` so the app can be started as `GoXLR Personal Control` from the desktop menu
+  * Added `personal-ui/scripts/README.md` documenting install, no-build reinstall, debug install, and daemon/socket expectations
+
 * Added a production-readiness stabilization pass for the current personal UI chunk:
   * Updated `personal-ui/MANUAL_QA.md` with the current running app session/PID, production-use posture, tool blockers for `cargo clippy` / `cargo audit`, and the remaining manual screenshot gate
   * Refreshed `personal-ui/PARITY_CHECKLIST.md` recommended next choices to prioritize one final hands-on pass and commit over stacking more feature work

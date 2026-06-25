@@ -185,6 +185,7 @@ Priority: medium-low. Add only settings that solve a current annoyance; avoid bu
   - `cargo check -p goxlr-personal-ui`
   - `cargo test -p goxlr-personal-ui --lib --bins --tests`
   - `cargo check -p goxlr-personal-ui --features system-tray`
+- [x] Local user install/launcher helper: `personal-ui/scripts/install-local.sh` builds the release personal UI with the `system-tray` feature, installs `~/.local/bin/goxlr-personal-ui`, and writes `~/.local/share/applications/goxlr-personal-ui.desktop` for desktop-menu launching.
 - [~] Lightweight screenshot/manual QA notes after local run: `personal-ui/MANUAL_QA.md` now records the current running app session, pages/features to spot-check, and the COSMIC Wayland screenshot-portal failure; fresh page-specific screenshot findings are still pending.
 - [x] A small in-app "About / implemented parity" screen: read-only About tab summarizes implemented and partial parity areas so manual QA can distinguish completed daily controls from intentionally deferred full managers/editors.
 

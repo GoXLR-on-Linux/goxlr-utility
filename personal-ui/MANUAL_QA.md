@@ -65,3 +65,16 @@ Open follow-up items:
 - Capture fresh screenshots manually or via a working portal/tool path, then append page-specific visual findings here.
 - Before commit, do one quick hands-on pass through Dashboard, Mixer, Effects, Headphone EQ, Sampler, System, Diagnostics, and About against the running PID above.
 - Keep `PARITY_CHECKLIST.md` at `[~]` for screenshot/manual QA until each major page has fresh visual notes or screenshots after the current local run.
+
+## 2026-06-25 — local production launcher install
+
+Installed artifacts:
+
+- `~/.local/bin/goxlr-personal-ui`
+- `~/.local/share/applications/goxlr-personal-ui.desktop`
+
+Verification:
+
+- `personal-ui/scripts/install-local.sh` was syntax-checked with `bash -n`.
+- The script completed a release build with `--features system-tray` and installed the binary plus desktop entry.
+- A Python assertion checked that the installed binary exists and is executable, and that the desktop entry contains the expected name, `Exec`, icon, and categories.
