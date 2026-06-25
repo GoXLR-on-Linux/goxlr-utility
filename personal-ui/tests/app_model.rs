@@ -2472,6 +2472,14 @@ fn sampler_file_workflow_builds_guarded_add_remove_actions() {
     assert!(
         SamplerFileAction::add_from_path(SampleBank::A, SampleButtons::TopLeft, "   ").is_none()
     );
+    assert!(
+        SamplerFileAction::add_from_path(
+            SampleBank::A,
+            SampleButtons::TopLeft,
+            "/home/pc/samples/notes.txt"
+        )
+        .is_none()
+    );
 
     let add = SamplerFileAction::add_from_path(
         SampleBank::A,
@@ -4039,7 +4047,9 @@ fn profile_browser_lists_available_files_and_builds_guarded_row_actions() {
     fs::create_dir_all(&root).unwrap();
     fs::write(root.join("Broadcast.goxlr"), "{}").unwrap();
     fs::write(root.join("Personal.goxlr"), "{}").unwrap();
+    fs::write(root.join(".goxlr"), "{}").unwrap();
     fs::write(root.join("ignore.txt"), "nope").unwrap();
+    fs::create_dir_all(root.join("Directory.goxlr")).unwrap();
 
     let browser = ProfileBrowser::from_directory(
         ProfileBrowserKind::Main,

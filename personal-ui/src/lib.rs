@@ -768,10 +768,19 @@ impl ProfileBrowser {
         let mut names = Vec::new();
         if let Ok(entries) = fs::read_dir(path) {
             for entry in entries.flatten() {
+                let Ok(file_type) = entry.file_type() else {
+                    continue;
+                };
+                if !file_type.is_file() {
+                    continue;
+                }
                 let Some(file_name) = entry.file_name().to_str().map(str::to_string) else {
                     continue;
                 };
                 if let Some(name) = file_name.strip_suffix(suffix) {
+                    if name.trim().is_empty() {
+                        continue;
+                    }
                     names.push(name.to_string());
                 }
             }
@@ -2448,7 +2457,8 @@ impl SamplerFileAction {
         sample_path: &str,
     ) -> Option<Self> {
         let trimmed = sample_path.trim();
-        if trimmed.is_empty() {
+        if trimmed.is_empty() || !SamplerSampleBrowser::is_supported_audio_file(Path::new(trimmed))
+        {
             return None;
         }
         Some(Self::new(

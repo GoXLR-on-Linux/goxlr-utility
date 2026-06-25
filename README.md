@@ -127,6 +127,11 @@ curl -H "Authorization: Bearer replace-with-a-strong-token" \
 
 This section tracks local source changes made on this machine so context survives restarts.
 
+* Hardened guarded profile/sample workflows after review:
+  * Profile browsers now ignore directories that merely end with a profile suffix and ignore empty profile stems such as `.goxlr`
+  * Typed sampler add-file actions now reject blank paths and unsupported extensions, matching the sampler browser's supported audio-file filter
+  * Added focused tests for profile-directory filtering, empty-stem filtering, and unsupported typed sampler add paths
+
 * Reviewed core personal UI production features for routing/IPC/install-helper risks:
   * Tightened active audio routing rules so blank app-match rules do not match every playback stream
   * Preserved the daemon-reported sink name on active playback streams and use it to detect current GoXLR route targets, with the existing human label fallback retained for older/generic data
