@@ -127,6 +127,31 @@ curl -H "Authorization: Bearer replace-with-a-strong-token" \
 
 This section tracks local source changes made on this machine so context survives restarts.
 
+* Added a production-readiness stabilization pass for the current personal UI chunk:
+  * Updated `personal-ui/MANUAL_QA.md` with the current running app session/PID, production-use posture, tool blockers for `cargo clippy` / `cargo audit`, and the remaining manual screenshot gate
+  * Refreshed `personal-ui/PARITY_CHECKLIST.md` recommended next choices to prioritize one final hands-on pass and commit over stacking more feature work
+  * Kept intentionally partial, higher-risk areas deferred instead of broadening scope while preparing the current safe chunk for production use
+
+* Added hardware-first headphone listening presets to the native Headphone EQ page:
+  * Added `HeadphoneListeningPreset` model bundles for `Neutral Base`, `Music Detail`, `Game Imaging`, and `Night Safe`
+  * Each preset deliberately sets the monitored output to Headphones, headphone volume, limiter enable/threshold, EQ enable/preamp, and ten-band hardware EQ gain/frequency/Q values rather than relying on the original web UI feature set
+  * Added a `HEADPHONE EXPERIENCE` panel with a five-step hardware-first tuning order so headphone work starts with routing, gain staging, limiter safety, purpose-specific EQ, and profile save discipline
+
+* Added direct Fader A-D mute-state controls to the native Mixer dashboard:
+  * Added `FaderMuteStateControl` model helpers and a compact `Current state` button row in each Mixer fader card for `Unmute`, `Mute target`, and `Mute all`
+  * Added typed `PersonalCommand::SetFaderMuteState` mapping to the existing daemon `GoXLRCommand::SetFaderMuteState`
+  * Kept hold/toggle behaviour and less-used mute targets deferred; this chunk only exposes deliberate current-state actions for the daily Fader A-D cards
+
+* Cleaned stale native parity checklist guidance after the Mixer submix slider pass:
+  * Refreshed the checklist date and recommended next choices to prioritize committing the verified Mixer chunk before stacking more code
+  * Updated Mixer, Effects, Lighting, and Sampler priority notes so remaining work is framed as scoped edge cases, profile/file workflows, or screenshot-driven polish instead of broad missing parity
+  * Left genuinely partial manager/editor rows as `[~]` where free-form import/rename, waveform/drag-drop, hidden Megaphone parameters, or exhaustive icon/output coverage remain deferred
+
+* Added arbitrary Mixer submix volume sliders to the native Mixer dashboard:
+  * Added `SubmixVolumeSlider` model helpers for Mic, Chat, Music, Game, Console, Line In, System, and Sample custom 0–100% channel volumes
+  * Rendered a `CUSTOM CHANNEL VOLUMES` section in the bounded `SUBMIX` panel, seeded from daemon-reported submix state when available
+  * Clamped percent values and converted them to the backend raw 0–255 `SetSubMixVolume` scale before dispatching typed commands
+
 * Added arbitrary clamped Pitch and Megaphone DSP sliders to the native Effects page:
   * Added `EffectsPitchSlider` for pitch character and `EffectsMegaphoneSlider` for megaphone post gain
   * Rendered `PITCH SLIDERS` and `MEGAPHONE SLIDERS` sections in the Effects `ADVANCED DSP` panel alongside the existing Reverb/Echo/Robot/Hard Tune sections

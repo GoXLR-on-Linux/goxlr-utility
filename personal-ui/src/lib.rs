@@ -18,9 +18,10 @@ use goxlr_types::{
     CompressorAttackTime, CompressorRatio, CompressorReleaseTime, DeviceType, EchoStyle,
     EffectBankPresets, EncoderColourTargets, EqFrequencies, FaderDisplayStyle, FaderName,
     GateTimes, GenderStyle, HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle,
-    MicrophoneType, MiniEqFrequencies, Mix, MuteFunction, OutputDevice, PitchStyle, ReverbStyle,
-    RobotRange, RobotStyle, SampleBank, SampleButtons, SamplePlayOrder, SamplePlaybackMode,
-    SamplerColourTargets, SimpleColourTargets, SubMixChannelName, VodMode, WaterfallDirection,
+    MicrophoneType, MiniEqFrequencies, Mix, MuteFunction, MuteState, OutputDevice, PitchStyle,
+    ReverbStyle, RobotRange, RobotStyle, SampleBank, SampleButtons, SamplePlayOrder,
+    SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets, SubMixChannelName, VodMode,
+    WaterfallDirection,
 };
 use interprocess::local_socket::tokio::prelude::LocalSocketStream;
 use interprocess::local_socket::traits::tokio::Stream;
@@ -62,7 +63,6 @@ pub struct ContentLayoutPolicy;
 impl ContentLayoutPolicy {
     pub fn main_content_scroll_enabled() -> bool {
         Self::main_content_vertical_scroll_enabled()
-            && Self::main_content_horizontal_scroll_enabled()
     }
 
     pub fn main_content_vertical_scroll_enabled() -> bool {
@@ -70,7 +70,7 @@ impl ContentLayoutPolicy {
     }
 
     pub fn main_content_horizontal_scroll_enabled() -> bool {
-        true
+        false
     }
 
     pub fn scroll_area_id() -> &'static str {
@@ -331,7 +331,11 @@ pub struct AboutLayoutPolicy;
 
 impl AboutLayoutPolicy {
     pub fn panel_width() -> f32 {
-        500.0
+        540.0
+    }
+
+    pub fn panel_height() -> f32 {
+        132.0
     }
 
     pub fn status_badge_width() -> f32 {
@@ -1659,10 +1663,170 @@ impl HeadphoneEqLayoutPolicy {
         true
     }
     pub fn profile_panel_width() -> f32 {
-        420.0
+        Self::panel_width()
     }
     pub fn profile_button_width() -> f32 {
         150.0
+    }
+    pub fn uses_listening_presets() -> bool {
+        true
+    }
+    pub fn preset_panel_width() -> f32 {
+        Self::panel_width()
+    }
+    pub fn preset_button_width() -> f32 {
+        144.0
+    }
+    pub fn preset_card_height() -> f32 {
+        104.0
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct HeadphoneListeningPreset {
+    name: &'static str,
+    description: &'static str,
+    headphone_volume: u8,
+    limiter_threshold: u8,
+    preamp_db: f32,
+    band_gains: [f32; 10],
+    safety_preset: bool,
+}
+
+impl HeadphoneListeningPreset {
+    pub fn daily_presets() -> Vec<Self> {
+        vec![
+            Self::new(
+                "Neutral Base",
+                "Flat, gain-staged hardware EQ with limiter protection for judging source audio.",
+                72,
+                85,
+                -3.0,
+                [0.0; 10],
+                false,
+            ),
+            Self::new(
+                "Music Detail",
+                "Slight low/high lift with conservative preamp headroom for enjoyable music listening.",
+                76,
+                88,
+                -4.0,
+                [1.5, 0.5, 0.0, -0.5, 0.0, 0.5, 1.0, 1.5, 1.0, 0.5],
+                false,
+            ),
+            Self::new(
+                "Game Imaging",
+                "Reduced rumble and boosted presence/air to make positional cues easier to hear.",
+                74,
+                86,
+                -5.0,
+                [-3.0, -2.0, -1.0, 0.0, 0.5, 1.0, 2.0, 3.0, 2.0, 0.5],
+                false,
+            ),
+            Self::new(
+                "Night Safe",
+                "Lower output, lower limiter ceiling, and darker EQ for fatigue-safe late listening.",
+                55,
+                72,
+                -6.0,
+                [-1.0, -1.0, -0.5, 0.0, 0.0, 0.0, -0.5, -1.0, -2.0, -3.0],
+                true,
+            ),
+        ]
+    }
+
+    fn new(
+        name: &'static str,
+        description: &'static str,
+        headphone_volume: u8,
+        limiter_threshold: u8,
+        preamp_db: f32,
+        band_gains: [f32; 10],
+        safety_preset: bool,
+    ) -> Self {
+        Self {
+            name,
+            description,
+            headphone_volume,
+            limiter_threshold,
+            preamp_db,
+            band_gains,
+            safety_preset,
+        }
+    }
+
+    pub fn name(&self) -> &'static str {
+        self.name
+    }
+    pub fn description(&self) -> &'static str {
+        self.description
+    }
+    pub fn is_safety_preset(&self) -> bool {
+        self.safety_preset
+    }
+    pub fn commands(&self) -> Vec<PersonalCommand> {
+        let mut commands = vec![
+            PersonalCommand::SetMonitorMix(OutputDevice::Headphones),
+            PersonalCommand::SetVolume(ChannelName::Headphones, self.headphone_volume),
+            PersonalCommand::SetHeadphoneLimiterEnabled(true),
+            PersonalCommand::SetHeadphoneLimiterThreshold(self.limiter_threshold),
+            PersonalCommand::SetHeadphoneEqEnabled(true),
+            PersonalCommand::SetHeadphoneEqPreamp(self.preamp_db),
+        ];
+        for (index, gain) in self.band_gains.iter().copied().enumerate() {
+            commands.push(PersonalCommand::SetHeadphoneEqBandGain(index as u8, gain));
+        }
+        for band in HeadphoneEqBandControl::ten_band_editor() {
+            commands.push(band.frequency_command(band.default_frequency_hz()));
+            commands.push(band.q_command(0.9));
+        }
+        commands
+    }
+    pub fn to_scene(&self) -> UiScene {
+        UiScene::new(self.name, self.commands())
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct HeadphoneAudioStep {
+    label: &'static str,
+    description: &'static str,
+}
+
+impl HeadphoneAudioStep {
+    pub fn recommended_steps() -> Vec<Self> {
+        vec![
+            Self::new(
+                "1. Route intentionally",
+                "Confirm the app/source is routed to GoXLR and the monitored output is Headphones before tuning.",
+            ),
+            Self::new(
+                "2. Gain-stage first",
+                "Set headphone volume for comfort, then use negative EQ preamp headroom before boosting bands.",
+            ),
+            Self::new(
+                "3. Enable limiter",
+                "Keep the hardware headphone limiter on; raise the threshold only after checking loud material.",
+            ),
+            Self::new(
+                "4. Tune by purpose",
+                "Use Neutral for judgement, Music for enjoyment, Game for cues, and Night Safe for fatigue control.",
+            ),
+            Self::new(
+                "5. Save after listening",
+                "After real listening, save the chosen EQ as a named Headphone EQ profile for recall.",
+            ),
+        ]
+    }
+
+    const fn new(label: &'static str, description: &'static str) -> Self {
+        Self { label, description }
+    }
+    pub fn label(&self) -> &'static str {
+        self.label
+    }
+    pub fn description(&self) -> &'static str {
+        self.description
     }
 }
 
@@ -2365,7 +2529,7 @@ pub struct MixerLayoutPolicy;
 
 impl MixerLayoutPolicy {
     pub fn panel_width() -> f32 {
-        560.0
+        640.0
     }
 
     pub fn assignment_panel_width() -> f32 {
@@ -2376,8 +2540,16 @@ impl MixerLayoutPolicy {
         84.0
     }
 
+    pub fn fader_mute_state_button_width() -> f32 {
+        92.0
+    }
+
     pub fn assignment_card_width() -> f32 {
         294.0
+    }
+
+    pub fn assignment_card_height() -> f32 {
+        292.0
     }
 
     pub fn assignment_card_gap() -> f32 {
@@ -2389,7 +2561,7 @@ impl MixerLayoutPolicy {
     }
 
     pub fn scribble_panel_width() -> f32 {
-        520.0
+        640.0
     }
 
     pub fn scribble_button_width() -> f32 {
@@ -2397,7 +2569,7 @@ impl MixerLayoutPolicy {
     }
 
     pub fn monitor_mix_panel_width() -> f32 {
-        520.0
+        640.0
     }
 
     pub fn monitor_mix_button_width() -> f32 {
@@ -2410,6 +2582,10 @@ impl MixerLayoutPolicy {
 
     pub fn submix_button_width() -> f32 {
         96.0
+    }
+
+    pub fn submix_slider_width() -> f32 {
+        220.0
     }
 
     pub fn channel_strip_width() -> f32 {
@@ -2428,8 +2604,32 @@ impl MixerLayoutPolicy {
         12.0
     }
 
-    pub fn uses_wrapped_dashboard_panels() -> bool {
+    pub fn top_row_height() -> f32 {
+        520.0
+    }
+
+    pub fn status_row_height() -> f32 {
+        320.0
+    }
+
+    pub fn detail_row_height() -> f32 {
+        660.0
+    }
+
+    pub fn overview_panel_height() -> f32 {
+        Self::top_row_height()
+    }
+
+    pub fn detail_panel_height() -> f32 {
+        Self::detail_row_height()
+    }
+
+    pub fn uses_equal_height_within_rows() -> bool {
         true
+    }
+
+    pub fn uses_wrapped_dashboard_panels() -> bool {
+        false
     }
 
     pub fn uses_fader_assignment_editor() -> bool {
@@ -2568,6 +2768,68 @@ impl FaderMuteFunctionControl {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct FaderMuteStateControl {
+    fader: FaderName,
+    label: &'static str,
+    default_state: MuteState,
+}
+
+impl FaderMuteStateControl {
+    pub fn daily_controls() -> Vec<Self> {
+        vec![
+            Self::new(FaderName::A, "Fader A state", MuteState::Unmuted),
+            Self::new(FaderName::B, "Fader B state", MuteState::Unmuted),
+            Self::new(FaderName::C, "Fader C state", MuteState::Unmuted),
+            Self::new(FaderName::D, "Fader D state", MuteState::Unmuted),
+        ]
+    }
+
+    pub fn daily_states() -> Vec<MuteState> {
+        vec![
+            MuteState::Unmuted,
+            MuteState::MutedToX,
+            MuteState::MutedToAll,
+        ]
+    }
+
+    fn new(fader: FaderName, label: &'static str, default_state: MuteState) -> Self {
+        Self {
+            fader,
+            label,
+            default_state,
+        }
+    }
+
+    pub fn fader(&self) -> FaderName {
+        self.fader
+    }
+
+    pub fn label(&self) -> &'static str {
+        self.label
+    }
+
+    pub fn description(&self) -> &'static str {
+        "Directly set the current mute state for this hardware fader."
+    }
+
+    pub fn default_state(&self) -> MuteState {
+        self.default_state
+    }
+
+    pub fn state_label(state: MuteState) -> &'static str {
+        match state {
+            MuteState::Unmuted => "Unmute",
+            MuteState::MutedToX => "Mute target",
+            MuteState::MutedToAll => "Mute all",
+        }
+    }
+
+    pub fn state_command(&self, state: MuteState) -> PersonalCommand {
+        PersonalCommand::SetFaderMuteState(self.fader, state)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MonitorMixControl {
     output: OutputDevice,
     label: &'static str,
@@ -2654,6 +2916,64 @@ impl SubmixChannelControl {
 
     pub fn link_command(&self, linked: bool) -> PersonalCommand {
         PersonalCommand::SetSubMixLinked(self.channel, linked)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SubmixVolumeSlider {
+    channel: ChannelName,
+    label: &'static str,
+}
+
+impl SubmixVolumeSlider {
+    pub fn daily_sliders() -> Vec<Self> {
+        SubmixChannelControl::daily_controls()
+            .into_iter()
+            .map(|control| {
+                Self::new(
+                    control.channel(),
+                    match control.channel() {
+                        ChannelName::Mic => "Mic volume",
+                        ChannelName::Chat => "Chat volume",
+                        ChannelName::Music => "Music volume",
+                        ChannelName::Game => "Game volume",
+                        ChannelName::Console => "Console volume",
+                        ChannelName::LineIn => "Line In volume",
+                        ChannelName::System => "System volume",
+                        ChannelName::Sample => "Sample volume",
+                        _ => "Submix volume",
+                    },
+                )
+            })
+            .collect()
+    }
+
+    fn new(channel: ChannelName, label: &'static str) -> Self {
+        Self { channel, label }
+    }
+
+    pub fn channel(&self) -> ChannelName {
+        self.channel
+    }
+
+    pub fn label(&self) -> &'static str {
+        self.label
+    }
+
+    pub fn range(&self) -> RangeInclusive<u8> {
+        0..=100
+    }
+
+    pub fn value_from_snapshot(&self, snapshot: Option<&SubmixChannelSnapshot>) -> u8 {
+        snapshot.map_or(50, SubmixChannelSnapshot::volume_percent)
+    }
+
+    pub fn command_for_percent(&self, percent: u16) -> PersonalCommand {
+        let percent = percent.min(100) as u8;
+        PersonalCommand::SetSubMixVolume(
+            self.channel,
+            SubmixChannelControl::percent_to_raw_volume(percent),
+        )
     }
 }
 
@@ -2964,6 +3284,7 @@ pub enum PersonalCommand {
     SetVolume(ChannelName, u8),
     SetFader(FaderName, ChannelName),
     SetFaderMuteFunction(FaderName, MuteFunction),
+    SetFaderMuteState(FaderName, MuteState),
     SetScribbleIcon(FaderName, Option<String>),
     SetScribbleText(FaderName, String),
     SetScribbleNumber(FaderName, String),
@@ -3112,6 +3433,9 @@ impl From<PersonalCommand> for GoXLRCommand {
             PersonalCommand::SetFaderMuteFunction(fader, function) => {
                 GoXLRCommand::SetFaderMuteFunction(fader, function)
             }
+            PersonalCommand::SetFaderMuteState(fader, state) => {
+                GoXLRCommand::SetFaderMuteState(fader, state)
+            }
             PersonalCommand::SetScribbleIcon(fader, icon) => {
                 GoXLRCommand::SetScribbleIcon(fader, icon)
             }
@@ -3155,6 +3479,8 @@ impl From<PersonalCommand> for GoXLRCommand {
             PersonalCommand::SetCompressorMakeupGain(gain) => {
                 GoXLRCommand::SetCompressorMakeupGain(gain)
             }
+            // Upstream `GoXLRCommand` spells this `SetDeeser` (one `s`). Local enum keeps the
+            // correct `SetDeesser` spelling; this is the bridge.
             PersonalCommand::SetDeesser(deesser) => GoXLRCommand::SetDeeser(deesser),
             PersonalCommand::SetClipGuardEnabled(enabled) => {
                 GoXLRCommand::SetClipGuardEnabled(enabled)
@@ -6925,6 +7251,28 @@ impl VolumeDebouncer {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum PendingConfirmationKind {
+    MainProfile,
+    LightingProfile,
+    MicProfile,
+    EffectPreset,
+    HeadphoneEqProfile,
+    SamplerFile,
+}
+
+impl From<ProfileBrowserKind> for PendingConfirmationKind {
+    fn from(kind: ProfileBrowserKind) -> Self {
+        match kind {
+            ProfileBrowserKind::Main => Self::MainProfile,
+            ProfileBrowserKind::LightingColours => Self::LightingProfile,
+            ProfileBrowserKind::Mic => Self::MicProfile,
+            ProfileBrowserKind::EffectsPreset => Self::EffectPreset,
+            ProfileBrowserKind::HeadphoneEq => Self::HeadphoneEqProfile,
+        }
+    }
+}
+
 pub struct PersonalUiApp {
     snapshot: AppSnapshot,
     commands: Sender<UiCommand>,
@@ -6945,12 +7293,7 @@ pub struct PersonalUiApp {
     volume_debouncer: VolumeDebouncer,
     started_at: Instant,
     last_repaint: Instant,
-    pending_mic_profile_confirmation: Option<PersonalCommand>,
-    pending_effect_preset_confirmation: Option<PersonalCommand>,
-    pending_headphone_eq_profile_confirmation: Option<PersonalCommand>,
-    pending_main_profile_confirmation: Option<PersonalCommand>,
-    pending_lighting_profile_confirmation: Option<PersonalCommand>,
-    pending_sampler_file_confirmation: Option<PersonalCommand>,
+    pending_confirmations: HashMap<PendingConfirmationKind, PersonalCommand>,
     sampler_file_path: String,
     sampler_browser_path: String,
     diagnostics_log: Vec<DiagnosticsLogEntry>,
@@ -6986,12 +7329,7 @@ impl PersonalUiApp {
             volume_debouncer: VolumeDebouncer::new(Duration::from_millis(150)),
             started_at: now,
             last_repaint: now,
-            pending_mic_profile_confirmation: None,
-            pending_effect_preset_confirmation: None,
-            pending_headphone_eq_profile_confirmation: None,
-            pending_main_profile_confirmation: None,
-            pending_lighting_profile_confirmation: None,
-            pending_sampler_file_confirmation: None,
+            pending_confirmations: HashMap::new(),
             sampler_file_path: String::new(),
             sampler_browser_path: Self::default_sampler_browser_path()
                 .to_string_lossy()
@@ -7104,18 +7442,31 @@ impl PersonalUiApp {
         )
     }
 
-    fn pending_profile_confirmation(&self, kind: ProfileBrowserKind) -> Option<&PersonalCommand> {
-        match kind {
-            ProfileBrowserKind::Main => self.pending_main_profile_confirmation.as_ref(),
-            ProfileBrowserKind::LightingColours => {
-                self.pending_lighting_profile_confirmation.as_ref()
+    fn pending_confirmation(&self, kind: PendingConfirmationKind) -> Option<&PersonalCommand> {
+        self.pending_confirmations.get(&kind)
+    }
+
+    fn set_pending_confirmation(
+        &mut self,
+        kind: PendingConfirmationKind,
+        command: Option<PersonalCommand>,
+    ) {
+        match command {
+            Some(c) => {
+                self.pending_confirmations.insert(kind, c);
             }
-            ProfileBrowserKind::Mic => self.pending_mic_profile_confirmation.as_ref(),
-            ProfileBrowserKind::EffectsPreset => self.pending_effect_preset_confirmation.as_ref(),
-            ProfileBrowserKind::HeadphoneEq => {
-                self.pending_headphone_eq_profile_confirmation.as_ref()
+            None => {
+                self.pending_confirmations.remove(&kind);
             }
         }
+    }
+
+    fn has_pending_confirmation(&self, kind: PendingConfirmationKind) -> bool {
+        self.pending_confirmations.contains_key(&kind)
+    }
+
+    fn pending_profile_confirmation(&self, kind: ProfileBrowserKind) -> Option<&PersonalCommand> {
+        self.pending_confirmation(kind.into())
     }
 
     fn set_pending_profile_confirmation(
@@ -7123,17 +7474,7 @@ impl PersonalUiApp {
         kind: ProfileBrowserKind,
         command: Option<PersonalCommand>,
     ) {
-        match kind {
-            ProfileBrowserKind::Main => self.pending_main_profile_confirmation = command,
-            ProfileBrowserKind::LightingColours => {
-                self.pending_lighting_profile_confirmation = command
-            }
-            ProfileBrowserKind::Mic => self.pending_mic_profile_confirmation = command,
-            ProfileBrowserKind::EffectsPreset => self.pending_effect_preset_confirmation = command,
-            ProfileBrowserKind::HeadphoneEq => {
-                self.pending_headphone_eq_profile_confirmation = command
-            }
-        }
+        self.set_pending_confirmation(kind.into(), command);
     }
 
     fn handle_profile_browser_action(
@@ -7156,14 +7497,13 @@ impl PersonalUiApp {
     fn handle_sampler_file_action(&mut self, action: &SamplerFileAction) {
         let command = action.command();
         let confirmed = self
-            .pending_sampler_file_confirmation
-            .as_ref()
+            .pending_confirmation(PendingConfirmationKind::SamplerFile)
             .is_some_and(|pending| pending == &command);
         if let Some(command) = action.command_if_confirmed(confirmed) {
-            self.pending_sampler_file_confirmation = None;
+            self.set_pending_confirmation(PendingConfirmationKind::SamplerFile, None);
             self.send(UiCommand::Send(command));
         } else {
-            self.pending_sampler_file_confirmation = Some(command);
+            self.set_pending_confirmation(PendingConfirmationKind::SamplerFile, Some(command));
         }
     }
 
@@ -7224,23 +7564,27 @@ impl PersonalUiApp {
     }
 
     fn accent() -> egui::Color32 {
-        egui::Color32::from_rgb(0, 210, 218)
+        egui::Color32::from_rgb(232, 132, 86)
     }
 
     fn bg() -> egui::Color32 {
-        egui::Color32::from_rgb(30, 38, 34)
+        egui::Color32::from_rgb(30, 27, 24)
     }
 
     fn panel_bg() -> egui::Color32 {
-        egui::Color32::from_rgb(43, 53, 49)
+        egui::Color32::from_rgb(40, 36, 32)
     }
 
     fn strip_bg() -> egui::Color32 {
-        egui::Color32::from_rgb(49, 61, 56)
+        egui::Color32::from_rgb(50, 45, 40)
+    }
+
+    fn panel_border() -> egui::Color32 {
+        egui::Color32::from_rgb(70, 62, 54)
     }
 
     fn muted_text() -> egui::Color32 {
-        egui::Color32::from_rgb(145, 154, 151)
+        egui::Color32::from_rgb(168, 158, 144)
     }
 
     fn diagnostics_severity_color(severity: DiagnosticsStatusSeverity) -> egui::Color32 {
@@ -7251,17 +7595,17 @@ impl PersonalUiApp {
         }
     }
 
-    fn apply_goxlr_style(ctx: &egui::Context) {
+    pub fn apply_goxlr_style(ctx: &egui::Context) {
         let mut style = (*ctx.style()).clone();
         style.visuals = egui::Visuals::dark();
         style.visuals.panel_fill = Self::bg();
         style.visuals.window_fill = Self::panel_bg();
-        style.visuals.faint_bg_color = egui::Color32::from_rgb(35, 44, 40);
-        style.visuals.widgets.inactive.bg_fill = egui::Color32::from_rgb(48, 59, 55);
-        style.visuals.widgets.inactive.fg_stroke.color = egui::Color32::from_rgb(226, 232, 230);
-        style.visuals.widgets.hovered.bg_fill = egui::Color32::from_rgb(56, 70, 65);
+        style.visuals.faint_bg_color = egui::Color32::from_rgb(44, 38, 33);
+        style.visuals.widgets.inactive.bg_fill = egui::Color32::from_rgb(54, 47, 41);
+        style.visuals.widgets.inactive.fg_stroke.color = egui::Color32::from_rgb(238, 234, 226);
+        style.visuals.widgets.hovered.bg_fill = egui::Color32::from_rgb(72, 60, 50);
         style.visuals.widgets.hovered.fg_stroke.color = Self::accent();
-        style.visuals.widgets.active.bg_fill = egui::Color32::from_rgb(33, 62, 60);
+        style.visuals.widgets.active.bg_fill = egui::Color32::from_rgb(78, 46, 28);
         style.visuals.widgets.active.fg_stroke.color = Self::accent();
         style.spacing.item_spacing = egui::vec2(10.0, 8.0);
         style.spacing.button_padding = egui::vec2(12.0, 8.0);
@@ -7271,7 +7615,7 @@ impl PersonalUiApp {
     fn panel_frame() -> egui::Frame {
         egui::Frame::new()
             .fill(Self::panel_bg())
-            .stroke(egui::Stroke::new(1.0, Self::accent()))
+            .stroke(egui::Stroke::new(1.0, Self::panel_border()))
             .corner_radius(egui::CornerRadius::same(2))
             .inner_margin(egui::Margin::same(12))
     }
@@ -7279,7 +7623,7 @@ impl PersonalUiApp {
     fn soft_panel_frame() -> egui::Frame {
         egui::Frame::new()
             .fill(Self::strip_bg())
-            .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(45, 77, 74)))
+            .stroke(egui::Stroke::new(1.0, Self::panel_border()))
             .corner_radius(egui::CornerRadius::same(2))
             .inner_margin(egui::Margin::same(10))
     }
@@ -7301,6 +7645,32 @@ impl PersonalUiApp {
                 frame
                     .show(ui, |ui| {
                         ui.set_min_width(width);
+                        ui.set_max_width(width);
+                        add_contents(ui)
+                    })
+                    .inner
+            },
+        )
+        .inner
+    }
+
+    fn bounded_sized_panel<R>(
+        ui: &mut egui::Ui,
+        width: f32,
+        height: f32,
+        add_contents: impl FnOnce(&mut egui::Ui) -> R,
+    ) -> R {
+        let frame = Self::panel_frame();
+        ui.allocate_ui_with_layout(
+            egui::vec2(width + frame.total_margin().sum().x, height),
+            egui::Layout::top_down(egui::Align::Min),
+            |ui| {
+                frame
+                    .show(ui, |ui| {
+                        ui.set_min_size(egui::vec2(
+                            width,
+                            (height - frame.total_margin().sum().y).max(0.0),
+                        ));
                         ui.set_max_width(width);
                         add_contents(ui)
                     })
@@ -7349,14 +7719,65 @@ impl PersonalUiApp {
             |ui| {
                 frame
                     .show(ui, |ui| {
-                        ui.set_min_width(width);
+                        ui.set_min_size(egui::vec2(
+                            width,
+                            (height - frame.total_margin().sum().y).max(0.0),
+                        ));
                         ui.set_max_width(width);
-                        ui.set_min_height((height - frame.total_margin().sum().y).max(0.0));
                         add_contents(ui)
                     })
                     .inner
             },
         )
+        .inner
+    }
+
+    fn centered_exact_width<R>(
+        ui: &mut egui::Ui,
+        width: f32,
+        add_contents: impl FnOnce(&mut egui::Ui) -> R,
+    ) -> R {
+        let left_margin = ((ui.available_width() - width) / 2.0).max(0.0);
+        ui.horizontal_top(|ui| {
+            ui.add_space(left_margin);
+            ui.allocate_ui_with_layout(
+                egui::vec2(width, ui.available_height()),
+                egui::Layout::top_down(egui::Align::Center),
+                |ui| {
+                    ui.set_min_width(width);
+                    ui.set_max_width(width);
+                    add_contents(ui)
+                },
+            )
+            .inner
+        })
+        .inner
+    }
+
+    fn centered_fixed_row<R>(
+        ui: &mut egui::Ui,
+        width: f32,
+        gap: f32,
+        add_contents: impl FnOnce(&mut egui::Ui) -> R,
+    ) -> R {
+        Self::centered_exact_width(ui, width, |ui| {
+            ui.horizontal_top(|ui| {
+                ui.spacing_mut().item_spacing.x = gap;
+                add_contents(ui)
+            })
+            .inner
+        })
+    }
+
+    fn mixer_card_row<R>(
+        ui: &mut egui::Ui,
+        gap: f32,
+        add_contents: impl FnOnce(&mut egui::Ui) -> R,
+    ) -> R {
+        ui.horizontal_top(|ui| {
+            ui.spacing_mut().item_spacing = egui::vec2(gap, gap);
+            add_contents(ui)
+        })
         .inner
     }
 
@@ -7431,7 +7852,7 @@ impl PersonalUiApp {
                 .color(Self::accent())
                 .strong(),
         )
-        .fill(egui::Color32::from_rgb(28, 43, 41))
+        .fill(egui::Color32::from_rgb(58, 36, 22))
         .stroke(egui::Stroke::new(1.0, Self::accent()))
         .min_size(egui::vec2(96.0, 34.0))
     }
@@ -7440,11 +7861,11 @@ impl PersonalUiApp {
         egui::Button::new(
             egui::RichText::new(label.into())
                 .monospace()
-                .color(egui::Color32::from_rgb(255, 128, 116))
+                .color(egui::Color32::from_rgb(245, 152, 130))
                 .strong(),
         )
-        .fill(egui::Color32::from_rgb(62, 32, 32))
-        .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(255, 92, 92)))
+        .fill(egui::Color32::from_rgb(70, 36, 32))
+        .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(200, 75, 70)))
         .min_size(egui::vec2(112.0, 36.0))
     }
 
@@ -7503,438 +7924,617 @@ impl PersonalUiApp {
     }
 
     fn render_scene_panel(&mut self, ui: &mut egui::Ui) {
-        Self::bounded_panel(ui, 245.0, |ui| {
-            ui.label(
-                egui::RichText::new("Profiles / Scenes")
-                    .monospace()
-                    .color(egui::Color32::WHITE)
-                    .size(16.0),
-            );
-            ui.separator();
-            if let Some(profile) = &self.snapshot.profile_name {
-                ui.label(
-                    egui::RichText::new(format!("✓ {profile}"))
-                        .monospace()
-                        .color(Self::accent()),
-                );
-            } else {
-                ui.label(
-                    egui::RichText::new("No profile reported")
-                        .monospace()
-                        .color(Self::muted_text()),
-                );
-            }
-            if let Some(mic_profile) = &self.snapshot.mic_profile_name {
-                ui.label(
-                    egui::RichText::new(format!("Mic: {mic_profile}"))
-                        .monospace()
-                        .color(Self::muted_text()),
-                );
-            }
-            ui.add_space(14.0);
-            ui.label(
-                egui::RichText::new("Quick scenes")
-                    .monospace()
-                    .color(Self::muted_text()),
-            );
-            for scene in QuickActions::scene_buttons(&self.scene_config.scenes()) {
-                let is_safe = scene.name().eq_ignore_ascii_case("safe now");
-                let response = if is_safe {
-                    ui.add(Self::danger_button(scene.name().to_string()))
-                } else {
-                    ui.add(Self::accent_button(scene.name().to_string()))
-                };
-                if response.clicked() {
-                    self.send(UiCommand::ApplyScene(scene));
-                }
-            }
-            ui.add_space(14.0);
-            ui.label(
-                egui::RichText::new("Personal presets")
-                    .monospace()
-                    .color(Self::muted_text()),
-            );
-            for preset in QuickActions::personal_preset_buttons(&PersonalPreset::daily_presets()) {
-                let response = if preset.is_safety_preset() {
-                    ui.add(Self::danger_button(preset.name().to_string()))
-                } else {
-                    ui.add(Self::accent_button(preset.name().to_string()))
-                }
-                .on_hover_text(preset.description());
-                if response.clicked() {
-                    self.send(UiCommand::ApplyScene(preset.to_scene()));
-                }
-            }
-            ui.add_space(10.0);
-            if let Some(error) = self.scene_config.reload_error() {
-                ui.colored_label(
-                    egui::Color32::YELLOW,
-                    format!("Scene reload issue: {error}"),
-                );
-            }
-        });
-    }
-
-    fn render_status_card(&mut self, ui: &mut egui::Ui) {
-        Self::bounded_panel(ui, 320.0, |ui| {
-            ui.vertical_centered(|ui| {
-                ui.label(
-                    egui::RichText::new("GOXLR")
-                        .monospace()
-                        .size(32.0)
-                        .strong()
-                        .color(egui::Color32::from_rgb(170, 174, 176)),
-                );
-                ui.label(
-                    egui::RichText::new(self.snapshot.status_line())
-                        .monospace()
-                        .color(if self.snapshot.connected {
-                            Self::accent()
-                        } else {
-                            egui::Color32::YELLOW
-                        }),
-                );
-            });
-            ui.separator();
-            ui.label(
-                egui::RichText::new("Device")
-                    .monospace()
-                    .color(Self::muted_text()),
-            );
-            ui.label(
-                egui::RichText::new(
-                    self.snapshot
-                        .device_type
-                        .as_deref()
-                        .unwrap_or("GoXLR device not reported"),
-                )
-                .monospace()
-                .color(egui::Color32::WHITE),
-            );
-            if let Some(serial) = &self.snapshot.device_serial {
-                ui.label(
-                    egui::RichText::new(serial)
-                        .monospace()
-                        .color(Self::muted_text()),
-                );
-            }
-            ui.add_space(8.0);
-            if self.snapshot.device_serials.len() > 1 {
-                let mut selected = self
-                    .device_selection
-                    .selected_serial()
-                    .unwrap_or("Select device")
-                    .to_string();
-                egui::ComboBox::from_label("Device")
-                    .selected_text(selected.clone())
-                    .show_ui(ui, |ui| {
-                        for serial in self.device_selection.available_serials() {
-                            ui.selectable_value(&mut selected, serial.clone(), serial);
-                        }
-                    });
-                if self.device_selection.selected_serial() != Some(selected.as_str()) {
-                    self.device_selection.select_serial(selected.clone());
-                    self.send(UiCommand::SelectDevice(selected));
-                }
-            }
-            ui.add_space(10.0);
-            ui.horizontal_wrapped(|ui| {
-                for (label, enabled) in [
-                    ("ClipGuard", self.snapshot.clip_guard_enabled),
-                    ("Limiter", self.snapshot.headphone_limiter_enabled),
-                    ("EQ", self.snapshot.headphone_eq_enabled),
-                ] {
-                    let color = if enabled {
-                        Self::accent()
-                    } else {
-                        Self::muted_text()
-                    };
+        Self::bounded_sized_panel(
+            ui,
+            MixerLayoutPolicy::panel_width(),
+            MixerLayoutPolicy::top_row_height(),
+            |ui| {
+                ui.add_space(28.0);
+                ui.vertical_centered(|ui| {
                     ui.label(
-                        egui::RichText::new(format!(
-                            "{label}: {}",
-                            if enabled { "ON" } else { "OFF" }
-                        ))
-                        .monospace()
-                        .color(color),
-                    );
-                }
-            });
-        });
-    }
-
-    fn render_active_streams_panel(&mut self, ui: &mut egui::Ui) {
-        Self::bounded_panel(ui, 320.0, |ui| {
-            ui.label(
-                egui::RichText::new(DashboardCopy::active_playback_heading())
-                    .monospace()
-                    .color(egui::Color32::WHITE)
-                    .size(16.0),
-            );
-            ui.label(
-                egui::RichText::new(self.snapshot.active_audio_streams.summary())
-                    .monospace()
-                    .color(Self::muted_text()),
-            );
-            if let Some(error) = &self.snapshot.active_audio_error {
-                ui.colored_label(egui::Color32::YELLOW, format!("pactl: {error}"));
-            }
-            ui.separator();
-            if self.snapshot.active_audio_streams.streams.is_empty() {
-                ui.label(
-                    egui::RichText::new("Start audio in an app to see its route here.")
-                        .monospace()
-                        .color(Self::muted_text()),
-                );
-            }
-            let route_targets = self.snapshot.active_audio_streams.route_targets.clone();
-            for stream in self.snapshot.active_audio_streams.streams.clone() {
-                Self::soft_panel_frame().show(ui, |ui| {
-                    ui.label(
-                        egui::RichText::new(&stream.display_name)
+                        egui::RichText::new("Profiles & Scenes")
                             .monospace()
                             .color(egui::Color32::WHITE)
+                            .size(16.0)
                             .strong(),
                     );
-                    ui.label(
-                        egui::RichText::new(format!("→ {}", stream.sink_label))
-                            .monospace()
-                            .color(Self::accent()),
-                    );
-                    let mut flags = Vec::new();
-                    if let Some(volume) = &stream.volume_percent {
-                        flags.push(format!("vol {volume}"));
-                    }
-                    if stream.muted {
-                        flags.push("muted".to_string());
-                    }
-                    if stream.corked {
-                        flags.push("paused".to_string());
-                    }
-                    if !flags.is_empty() {
+                    ui.separator();
+                    if let Some(profile) = &self.snapshot.profile_name {
                         ui.label(
-                            egui::RichText::new(flags.join(" • "))
+                            egui::RichText::new(format!("✓ {profile}"))
+                                .monospace()
+                                .color(Self::accent()),
+                        );
+                    } else {
+                        ui.label(
+                            egui::RichText::new("No profile reported")
                                 .monospace()
                                 .color(Self::muted_text()),
                         );
                     }
-                    ui.horizontal(|ui| {
-                        let mute_label = if stream.muted {
-                            "Unmute stream"
-                        } else {
-                            "Mute stream"
-                        };
-                        if ui.add(egui::Button::new(mute_label).small()).clicked() {
-                            self.send(UiCommand::SetAudioStreamMute {
-                                stream_id: stream.id,
-                                muted: !stream.muted,
-                            });
-                        }
-                        if let Some(mut volume) = stream.volume_percent_value() {
-                            ui.label(
-                                egui::RichText::new("Volume")
-                                    .monospace()
-                                    .color(Self::muted_text()),
+                    if let Some(mic_profile) = &self.snapshot.mic_profile_name {
+                        ui.label(
+                            egui::RichText::new(format!("Mic: {mic_profile}"))
+                                .monospace()
+                                .color(Self::muted_text()),
+                        );
+                    }
+                    ui.add_space(18.0);
+                    ui.label(
+                        egui::RichText::new("Quick scenes")
+                            .monospace()
+                            .color(Self::muted_text()),
+                    );
+                    let scene_buttons = QuickActions::scene_buttons(&self.scene_config.scenes());
+                    for row in scene_buttons.chunks(2) {
+                        let button_width = 150.0;
+                        let gap = 10.0;
+                        let row_width = row.len() as f32 * button_width
+                            + row.len().saturating_sub(1) as f32 * gap;
+                        ui.horizontal(|ui| {
+                            ui.add_space(
+                                ((MixerLayoutPolicy::panel_width() - row_width) / 2.0).max(0.0),
                             );
-                            if ui
-                                .add_sized(
-                                    egui::vec2(118.0, 18.0),
-                                    egui::Slider::new(&mut volume, 0..=100).suffix("%"),
-                                )
-                                .changed()
-                            {
-                                self.send(UiCommand::SetAudioStreamVolume {
-                                    stream_id: stream.id,
-                                    volume_percent: volume,
-                                });
-                            }
-                        }
-                    });
-                    if !route_targets.is_empty() {
-                        ui.horizontal_wrapped(|ui| {
-                            ui.label(
-                                egui::RichText::new(DashboardCopy::manual_route_label())
-                                    .monospace()
-                                    .color(Self::muted_text()),
-                            );
-                            for target in &route_targets {
-                                let already_on_target = stream.sink_label.contains(&target.label);
-                                if ui
-                                    .add_enabled(
-                                        !already_on_target,
-                                        egui::Button::new(target.label.clone()).small(),
+                            ui.spacing_mut().item_spacing.x = gap;
+                            for scene in row {
+                                let is_safe = scene.name().eq_ignore_ascii_case("safe now");
+                                let button_size = egui::vec2(button_width, 30.0);
+                                let response = if is_safe {
+                                    ui.add_sized(
+                                        button_size,
+                                        Self::danger_button(scene.name().to_string()),
                                     )
-                                    .clicked()
-                                {
-                                    self.send(UiCommand::MoveAudioStream {
-                                        stream_id: stream.id,
-                                        sink_name: target.sink_name.clone(),
-                                    });
+                                } else {
+                                    ui.add_sized(
+                                        button_size,
+                                        Self::accent_button(scene.name().to_string()),
+                                    )
+                                };
+                                if response.clicked() {
+                                    self.send(UiCommand::ApplyScene(scene.clone()));
                                 }
                             }
                         });
-                        ui.horizontal_wrapped(|ui| {
-                            ui.label(
-                                egui::RichText::new(DashboardCopy::persistent_route_label())
-                                    .monospace()
-                                    .color(Self::muted_text()),
+                        ui.add_space(10.0);
+                    }
+                    ui.add_space(18.0);
+                    ui.label(
+                        egui::RichText::new("Personal presets")
+                            .monospace()
+                            .color(Self::muted_text()),
+                    );
+                    let preset_buttons =
+                        QuickActions::personal_preset_buttons(&PersonalPreset::daily_presets());
+                    for row in preset_buttons.chunks(2) {
+                        let button_width = 150.0;
+                        let gap = 10.0;
+                        let row_width = row.len() as f32 * button_width
+                            + row.len().saturating_sub(1) as f32 * gap;
+                        ui.horizontal(|ui| {
+                            ui.add_space(
+                                ((MixerLayoutPolicy::panel_width() - row_width) / 2.0).max(0.0),
                             );
-                            for target in &route_targets {
-                                if ui
-                                    .add(egui::Button::new(target.label.clone()).small())
-                                    .on_hover_text(format!(
-                                        "Always route {} to {}",
-                                        stream.routing_rule_app_name(),
-                                        target.label
-                                    ))
-                                    .clicked()
-                                {
-                                    self.save_stream_route_rule(&stream, &target.label);
-                                    self.send(UiCommand::MoveAudioStream {
-                                        stream_id: stream.id,
-                                        sink_name: target.sink_name.clone(),
-                                    });
+                            ui.spacing_mut().item_spacing.x = gap;
+                            for preset in row {
+                                let button_size = egui::vec2(button_width, 30.0);
+                                let response = if preset.is_safety_preset() {
+                                    ui.add_sized(
+                                        button_size,
+                                        Self::danger_button(preset.name().to_string()),
+                                    )
+                                } else {
+                                    ui.add_sized(
+                                        button_size,
+                                        Self::accent_button(preset.name().to_string()),
+                                    )
+                                }
+                                .on_hover_text(preset.description());
+                                if response.clicked() {
+                                    self.send(UiCommand::ApplyScene(preset.to_scene()));
                                 }
                             }
                         });
+                        ui.add_space(10.0);
+                    }
+                    if let Some(error) = self.scene_config.reload_error() {
+                        ui.add_space(10.0);
+                        ui.colored_label(
+                            egui::Color32::YELLOW,
+                            format!("Scene reload issue: {error}"),
+                        );
                     }
                 });
-            }
-        });
+            },
+        );
+    }
+
+    fn render_status_card(&mut self, ui: &mut egui::Ui) {
+        Self::bounded_sized_panel(
+            ui,
+            MixerLayoutPolicy::panel_width(),
+            MixerLayoutPolicy::status_row_height(),
+            |ui| {
+                ui.add_space(56.0);
+                ui.vertical_centered(|ui| {
+                    ui.label(
+                        egui::RichText::new("GoXLR")
+                            .monospace()
+                            .size(32.0)
+                            .strong()
+                            .color(egui::Color32::from_rgb(170, 174, 176)),
+                    );
+                    ui.label(
+                        egui::RichText::new(self.snapshot.status_line())
+                            .monospace()
+                            .color(if self.snapshot.connected {
+                                Self::accent()
+                            } else {
+                                egui::Color32::YELLOW
+                            }),
+                    );
+                });
+                ui.separator();
+                ui.vertical_centered(|ui| {
+                    ui.label(
+                        egui::RichText::new("Device")
+                            .monospace()
+                            .color(Self::muted_text()),
+                    );
+                    ui.label(
+                        egui::RichText::new(
+                            self.snapshot
+                                .device_type
+                                .as_deref()
+                                .unwrap_or("GoXLR device not reported"),
+                        )
+                        .monospace()
+                        .color(egui::Color32::WHITE),
+                    );
+                    if let Some(serial) = &self.snapshot.device_serial {
+                        ui.label(
+                            egui::RichText::new(serial)
+                                .monospace()
+                                .color(Self::muted_text()),
+                        );
+                    }
+                    ui.add_space(8.0);
+                    if self.snapshot.device_serials.len() > 1 {
+                        let mut selected = self
+                            .device_selection
+                            .selected_serial()
+                            .unwrap_or("Select device")
+                            .to_string();
+                        egui::ComboBox::from_label("Device")
+                            .selected_text(selected.clone())
+                            .show_ui(ui, |ui| {
+                                for serial in self.device_selection.available_serials() {
+                                    ui.selectable_value(&mut selected, serial.clone(), serial);
+                                }
+                            });
+                        if self.device_selection.selected_serial() != Some(selected.as_str()) {
+                            self.device_selection.select_serial(selected.clone());
+                            self.send(UiCommand::SelectDevice(selected));
+                        }
+                    }
+                });
+                ui.add_space(20.0);
+                Self::centered_fixed_row(ui, 330.0, 18.0, |ui| {
+                    for (label, enabled) in [
+                        ("ClipGuard", self.snapshot.clip_guard_enabled),
+                        ("Limiter", self.snapshot.headphone_limiter_enabled),
+                        ("EQ", self.snapshot.headphone_eq_enabled),
+                    ] {
+                        let color = if enabled {
+                            Self::accent()
+                        } else {
+                            Self::muted_text()
+                        };
+                        ui.label(
+                            egui::RichText::new(format!(
+                                "{label}: {}",
+                                if enabled { "ON" } else { "OFF" }
+                            ))
+                            .monospace()
+                            .color(color),
+                        );
+                    }
+                });
+            },
+        );
+    }
+
+    fn render_active_streams_panel(&mut self, ui: &mut egui::Ui) {
+        Self::bounded_sized_panel(
+            ui,
+            MixerLayoutPolicy::panel_width(),
+            MixerLayoutPolicy::detail_panel_height(),
+            |ui| {
+                ui.vertical_centered(|ui| {
+                    ui.label(
+                        egui::RichText::new(DashboardCopy::active_playback_heading())
+                            .monospace()
+                            .color(egui::Color32::WHITE)
+                            .size(16.0)
+                            .strong(),
+                    );
+                    ui.label(
+                        egui::RichText::new(self.snapshot.active_audio_streams.summary())
+                            .monospace()
+                            .color(Self::muted_text()),
+                    );
+                    if let Some(error) = &self.snapshot.active_audio_error {
+                        ui.colored_label(egui::Color32::YELLOW, format!("pactl: {error}"));
+                    }
+                });
+                ui.separator();
+                if self.snapshot.active_audio_streams.streams.is_empty() {
+                    ui.vertical_centered(|ui| {
+                        ui.label(
+                            egui::RichText::new("Start audio in an app to see its route here.")
+                                .monospace()
+                                .color(Self::muted_text()),
+                        );
+                    });
+                }
+                let route_targets = self.snapshot.active_audio_streams.route_targets.clone();
+                for stream in self.snapshot.active_audio_streams.streams.clone() {
+                    Self::soft_panel_frame().show(ui, |ui| {
+                        ui.vertical_centered(|ui| {
+                            ui.label(
+                                egui::RichText::new(&stream.display_name)
+                                    .monospace()
+                                    .color(egui::Color32::WHITE)
+                                    .strong(),
+                            );
+                            ui.label(
+                                egui::RichText::new(format!("→ {}", stream.sink_label))
+                                    .monospace()
+                                    .color(Self::accent()),
+                            );
+                        });
+                        let mut flags = Vec::new();
+                        if let Some(volume) = &stream.volume_percent {
+                            flags.push(format!("vol {volume}"));
+                        }
+                        if stream.muted {
+                            flags.push("muted".to_string());
+                        }
+                        if stream.corked {
+                            flags.push("paused".to_string());
+                        }
+                        if !flags.is_empty() {
+                            ui.vertical_centered(|ui| {
+                                ui.label(
+                                    egui::RichText::new(flags.join(" • "))
+                                        .monospace()
+                                        .color(Self::muted_text()),
+                                );
+                            });
+                        }
+                        ui.horizontal_centered(|ui| {
+                            let mute_label = if stream.muted {
+                                "Unmute stream"
+                            } else {
+                                "Mute stream"
+                            };
+                            if ui.add(egui::Button::new(mute_label).small()).clicked() {
+                                self.send(UiCommand::SetAudioStreamMute {
+                                    stream_id: stream.id,
+                                    muted: !stream.muted,
+                                });
+                            }
+                            if let Some(mut volume) = stream.volume_percent_value() {
+                                ui.label(
+                                    egui::RichText::new("Volume")
+                                        .monospace()
+                                        .color(Self::muted_text()),
+                                );
+                                if ui
+                                    .add_sized(
+                                        egui::vec2(118.0, 18.0),
+                                        egui::Slider::new(&mut volume, 0..=100).suffix("%"),
+                                    )
+                                    .changed()
+                                {
+                                    self.send(UiCommand::SetAudioStreamVolume {
+                                        stream_id: stream.id,
+                                        volume_percent: volume,
+                                    });
+                                }
+                            }
+                        });
+                        if !route_targets.is_empty() {
+                            ui.horizontal_centered(|ui| {
+                                ui.label(
+                                    egui::RichText::new(DashboardCopy::manual_route_label())
+                                        .monospace()
+                                        .color(Self::muted_text()),
+                                );
+                                for target in &route_targets {
+                                    let already_on_target =
+                                        stream.sink_label.contains(&target.label);
+                                    if ui
+                                        .add_enabled(
+                                            !already_on_target,
+                                            egui::Button::new(target.label.clone()).small(),
+                                        )
+                                        .clicked()
+                                    {
+                                        self.send(UiCommand::MoveAudioStream {
+                                            stream_id: stream.id,
+                                            sink_name: target.sink_name.clone(),
+                                        });
+                                    }
+                                }
+                            });
+                            ui.horizontal_centered(|ui| {
+                                ui.label(
+                                    egui::RichText::new(DashboardCopy::persistent_route_label())
+                                        .monospace()
+                                        .color(Self::muted_text()),
+                                );
+                                for target in &route_targets {
+                                    if ui
+                                        .add(egui::Button::new(target.label.clone()).small())
+                                        .on_hover_text(format!(
+                                            "Always route {} to {}",
+                                            stream.routing_rule_app_name(),
+                                            target.label
+                                        ))
+                                        .clicked()
+                                    {
+                                        self.save_stream_route_rule(&stream, &target.label);
+                                        self.send(UiCommand::MoveAudioStream {
+                                            stream_id: stream.id,
+                                            sink_name: target.sink_name.clone(),
+                                        });
+                                    }
+                                }
+                            });
+                        }
+                    });
+                }
+            },
+        );
     }
 
     fn render_fader_assignment_panel(&mut self, ui: &mut egui::Ui) {
-        Self::bounded_panel(ui, MixerLayoutPolicy::assignment_panel_width(), |ui| {
-            ui.set_width(MixerLayoutPolicy::assignment_panel_width());
-            ui.label(
-                egui::RichText::new("FADER ASSIGNMENT")
-                    .monospace()
-                    .size(18.0)
-                    .color(egui::Color32::WHITE)
-                    .strong(),
-            );
-            ui.label("Safe first-pass hardware fader channel and mute-target controls.");
-            ui.add_space(8.0);
-            ui.scope(|ui| {
-                ui.spacing_mut().item_spacing = egui::vec2(
-                    MixerLayoutPolicy::assignment_card_gap(),
-                    MixerLayoutPolicy::assignment_card_gap(),
-                );
-                for row in FaderAssignmentControl::daily_controls()
-                    .chunks(MixerLayoutPolicy::assignment_cards_per_row())
-                {
-                    ui.horizontal(|ui| {
-                        for assignment in row {
-                            Self::soft_bounded_panel(
+        Self::bounded_sized_panel(
+            ui,
+            MixerLayoutPolicy::assignment_panel_width(),
+            MixerLayoutPolicy::detail_row_height(),
+            |ui| {
+                ui.set_width(MixerLayoutPolicy::assignment_panel_width());
+                ui.vertical_centered(|ui| {
+                    ui.label(
+                        egui::RichText::new("Fader assignment")
+                            .monospace()
+                            .size(18.0)
+                            .color(egui::Color32::WHITE)
+                            .strong(),
+                    );
+                    ui.label("Safe first-pass hardware fader channel and mute-target controls.");
+                });
+                ui.add_space(12.0);
+                Self::centered_exact_width(
+                    ui,
+                    MixerLayoutPolicy::assignment_card_width()
+                        * MixerLayoutPolicy::assignment_cards_per_row() as f32
+                        + MixerLayoutPolicy::assignment_card_gap()
+                            * (MixerLayoutPolicy::assignment_cards_per_row() - 1) as f32,
+                    |ui| {
+                        egui::Grid::new("mixer_fader_assignment_cards")
+                    .num_columns(MixerLayoutPolicy::assignment_cards_per_row())
+                    .spacing(egui::vec2(
+                        MixerLayoutPolicy::assignment_card_gap(),
+                        MixerLayoutPolicy::assignment_card_gap(),
+                    ))
+                    .show(ui, |ui| {
+                        for (index, assignment) in FaderAssignmentControl::daily_controls()
+                            .iter()
+                            .enumerate()
+                        {
+                            Self::soft_sized_panel(
                                 ui,
                                 MixerLayoutPolicy::assignment_card_width(),
+                                MixerLayoutPolicy::assignment_card_height(),
                                 |ui| {
-                                    ui.label(
-                                        egui::RichText::new(assignment.label())
-                                            .monospace()
-                                            .color(Self::muted_text()),
-                                    );
-                                    ui.label(assignment.description());
-                                    ui.horizontal_wrapped(|ui| {
-                                        for channel in FaderAssignmentControl::daily_channels() {
-                                            if ui
-                                                .add_sized(
-                                                    egui::vec2(
-                                                        MixerLayoutPolicy::assignment_button_width(),
-                                                        22.0,
-                                                    ),
-                                                    egui::Button::new(channel.to_string()).small(),
-                                                )
-                                                .on_hover_text(format!(
-                                                    "Assign {} to {}",
-                                                    channel,
-                                                    assignment.label()
-                                                ))
-                                                .clicked()
-                                            {
-                                                self.send(UiCommand::Send(
-                                                    assignment.assign_command(channel),
-                                                ));
-                                            }
-                                        }
+                                    ui.vertical_centered(|ui| {
+                                        ui.label(
+                                            egui::RichText::new(assignment.label())
+                                                .monospace()
+                                                .color(Self::muted_text()),
+                                        );
+                                        ui.label(assignment.description());
+                                    });
+                                    ui.vertical_centered(|ui| {
+                                        egui::Grid::new(format!("{}_channel_grid", assignment.label()))
+                                            .num_columns(4)
+                                            .spacing(egui::vec2(6.0, 6.0))
+                                            .show(ui, |ui| {
+                                                for (index, channel) in FaderAssignmentControl::daily_channels()
+                                                    .into_iter()
+                                                    .enumerate()
+                                                {
+                                                    if ui
+                                                        .add_sized(
+                                                            egui::vec2(62.0, 22.0),
+                                                            egui::Button::new(channel.to_string()).small(),
+                                                        )
+                                                        .on_hover_text(format!(
+                                                            "Assign {} to {}",
+                                                            channel,
+                                                            assignment.label()
+                                                        ))
+                                                        .clicked()
+                                                    {
+                                                        self.send(UiCommand::Send(
+                                                            assignment.assign_command(channel),
+                                                        ));
+                                                    }
+                                                    if (index + 1) % 4 == 0 {
+                                                        ui.end_row();
+                                                    }
+                                                }
+                                            });
                                     });
                                     ui.separator();
-                                    ui.label(
-                                        egui::RichText::new("Mute")
-                                            .monospace()
-                                            .color(Self::muted_text()),
-                                    );
+                                    ui.vertical_centered(|ui| {
+                                        ui.label(
+                                            egui::RichText::new("Mute")
+                                                .monospace()
+                                                .color(Self::muted_text()),
+                                        );
+                                    });
                                     if let Some(control) = FaderMuteFunctionControl::daily_controls()
                                         .into_iter()
                                         .find(|control| control.fader() == assignment.fader())
                                     {
-                                        ui.horizontal_wrapped(|ui| {
-                                            for function in FaderMuteFunctionControl::daily_functions() {
-                                                if ui
-                                                    .add_sized(
-                                                        egui::vec2(
-                                                            MixerLayoutPolicy::assignment_button_width(),
-                                                            22.0,
-                                                        ),
-                                                        egui::Button::new(function.to_string())
-                                                            .small(),
-                                                    )
-                                                    .on_hover_text(format!(
-                                                        "Set {} mute behaviour to {}",
-                                                        control.label(),
-                                                        function
-                                                    ))
-                                                    .clicked()
-                                                {
-                                                    self.send(UiCommand::Send(
-                                                        control.function_command(function),
-                                                    ));
-                                                }
-                                            }
+                                        ui.vertical_centered(|ui| {
+                                            egui::Grid::new(format!("{}_mute_function_grid", control.label()))
+                                                .num_columns(2)
+                                                .spacing(egui::vec2(8.0, 6.0))
+                                                .show(ui, |ui| {
+                                                    for (index, function) in FaderMuteFunctionControl::daily_functions()
+                                                        .into_iter()
+                                                        .enumerate()
+                                                    {
+                                                        if ui
+                                                            .add_sized(
+                                                                egui::vec2(118.0, 22.0),
+                                                                egui::Button::new(function.to_string()).small(),
+                                                            )
+                                                            .on_hover_text(format!(
+                                                                "Set {} mute behaviour to {}",
+                                                                control.label(),
+                                                                function
+                                                            ))
+                                                            .clicked()
+                                                        {
+                                                            self.send(UiCommand::Send(
+                                                                control.function_command(function),
+                                                            ));
+                                                        }
+                                                        if (index + 1) % 2 == 0 {
+                                                            ui.end_row();
+                                                        }
+                                                    }
+                                                });
+                                        });
+                                    }
+                                    ui.separator();
+                                    ui.vertical_centered(|ui| {
+                                        ui.label(
+                                            egui::RichText::new("Current state")
+                                                .monospace()
+                                                .color(Self::muted_text()),
+                                        );
+                                    });
+                                    if let Some(control) = FaderMuteStateControl::daily_controls()
+                                        .into_iter()
+                                        .find(|control| control.fader() == assignment.fader())
+                                    {
+                                        ui.vertical_centered(|ui| {
+                                            egui::Grid::new(format!("{}_mute_state_grid", control.label()))
+                                                .num_columns(3)
+                                                .spacing(egui::vec2(6.0, 6.0))
+                                                .show(ui, |ui| {
+                                                    for state in FaderMuteStateControl::daily_states() {
+                                                        if ui
+                                                            .add_sized(
+                                                                egui::vec2(82.0, 22.0),
+                                                                egui::Button::new(
+                                                                    FaderMuteStateControl::state_label(state),
+                                                                )
+                                                                .small(),
+                                                            )
+                                                            .on_hover_text(format!(
+                                                                "Set {} to {}",
+                                                                control.label(),
+                                                                state
+                                                            ))
+                                                            .clicked()
+                                                        {
+                                                            self.send(UiCommand::Send(
+                                                                control.state_command(state),
+                                                            ));
+                                                        }
+                                                    }
+                                                    ui.end_row();
+                                                });
                                         });
                                     }
                                 },
                             );
+                            if (index + 1) % MixerLayoutPolicy::assignment_cards_per_row() == 0 {
+                                ui.end_row();
+                            }
                         }
-                    });
-                }
-            });
-        });
+                            });
+                    },
+                );
+            },
+        );
     }
 
     fn render_monitor_mix_panel(&mut self, ui: &mut egui::Ui) {
-        Self::bounded_panel(ui, MixerLayoutPolicy::monitor_mix_panel_width(), |ui| {
-            ui.set_width(MixerLayoutPolicy::monitor_mix_panel_width());
-            ui.label(
-                egui::RichText::new("MONITOR MIX")
-                    .strong()
-                    .color(Self::accent()),
-            );
-            ui.label(
-                "Choose which output mix is monitored in headphones. This is the hardware monitor selector, not the monitor-with-FX toggle.",
-            );
-            ui.add_space(6.0);
+        Self::bounded_sized_panel(
+            ui,
+            MixerLayoutPolicy::monitor_mix_panel_width(),
+            MixerLayoutPolicy::status_row_height(),
+            |ui| {
+                ui.set_width(MixerLayoutPolicy::monitor_mix_panel_width());
+                ui.add_space(68.0);
+                ui.vertical_centered(|ui| {
+                    ui.label(
+                        egui::RichText::new("Monitor mix")
+                            .strong()
+                            .color(Self::accent()),
+                    );
+                    ui.label(
+                        "Choose which output mix is monitored in headphones. This is the hardware monitor selector, not the monitor-with-FX toggle.",
+                    );
+                    ui.add_space(14.0);
 
-            ui.horizontal_wrapped(|ui| {
-                for control in MonitorMixControl::daily_controls() {
-                    if ui
-                        .add_sized(
-                            egui::vec2(MixerLayoutPolicy::monitor_mix_button_width(), 24.0),
-                            Self::accent_button(control.label()),
-                        )
-                        .on_hover_text(control.description())
-                        .clicked()
-                    {
-                        self.send(UiCommand::Send(control.command()));
-                    }
-                }
-            });
-        });
+                    Self::centered_exact_width(
+                        ui,
+                        MixerLayoutPolicy::monitor_mix_button_width() * 2.0 + 12.0,
+                        |ui| {
+                            egui::Grid::new("monitor_mix_button_grid")
+                                .num_columns(2)
+                                .min_col_width(MixerLayoutPolicy::monitor_mix_button_width())
+                                .spacing(egui::vec2(12.0, 12.0))
+                                .show(ui, |ui| {
+                            for (index, control) in MonitorMixControl::daily_controls()
+                                .into_iter()
+                                .enumerate()
+                            {
+                                if ui
+                                    .add_sized(
+                                        egui::vec2(MixerLayoutPolicy::monitor_mix_button_width(), 28.0),
+                                        Self::accent_button(control.label()),
+                                    )
+                                    .on_hover_text(control.description())
+                                    .clicked()
+                                {
+                                    self.send(UiCommand::Send(control.command()));
+                                }
+                                if (index + 1) % 2 == 0 {
+                                    ui.end_row();
+                                }
+                            }
+                                });
+                        },
+                    );
+                });
+            },
+        );
     }
 
     fn render_submix_panel(&mut self, ui: &mut egui::Ui) {
         Self::bounded_panel(ui, MixerLayoutPolicy::submix_panel_width(), |ui| {
             ui.set_width(MixerLayoutPolicy::submix_panel_width());
-            ui.label(egui::RichText::new("SUBMIX").strong().color(Self::accent()));
+            ui.label(egui::RichText::new("Submix").strong().color(Self::accent()));
             ui.label(
                 "First-pass submix controls: enable/disable submix, set safe channel volume presets, link channels, and choose whether each output follows mix A or B.",
             );
@@ -7963,7 +8563,7 @@ impl PersonalUiApp {
             });
             ui.separator();
             ui.label(
-                egui::RichText::new("CHANNEL PRESETS")
+                egui::RichText::new("Channel presets")
                     .monospace()
                     .color(Self::muted_text()),
             );
@@ -8014,7 +8614,38 @@ impl PersonalUiApp {
             }
             ui.separator();
             ui.label(
-                egui::RichText::new("OUTPUT MIX")
+                egui::RichText::new("Custom channel volumes")
+                    .monospace()
+                    .color(Self::muted_text()),
+            );
+            for slider in SubmixVolumeSlider::daily_sliders() {
+                let snapshot = self
+                    .snapshot
+                    .submix_channels
+                    .iter()
+                    .find(|snapshot| snapshot.channel() == slider.channel());
+                let mut volume_percent = slider.value_from_snapshot(snapshot);
+                ui.horizontal_wrapped(|ui| {
+                    ui.label(slider.label());
+                    if ui
+                        .add_sized(
+                            egui::vec2(MixerLayoutPolicy::submix_slider_width(), 22.0),
+                            egui::Slider::new(&mut volume_percent, slider.range())
+                                .suffix("%")
+                                .clamping(egui::SliderClamping::Always),
+                        )
+                        .on_hover_text(format!("Set {} custom submix volume", slider.label()))
+                        .changed()
+                    {
+                        self.send(UiCommand::Send(
+                            slider.command_for_percent(volume_percent as u16),
+                        ));
+                    }
+                });
+            }
+            ui.separator();
+            ui.label(
+                egui::RichText::new("Output mix")
                     .monospace()
                     .color(Self::muted_text()),
             );
@@ -8045,7 +8676,7 @@ impl PersonalUiApp {
         Self::bounded_panel(ui, MixerLayoutPolicy::scribble_panel_width(), |ui| {
             ui.set_width(MixerLayoutPolicy::scribble_panel_width());
             ui.label(
-                egui::RichText::new("SCRIBBLE STRIPS")
+                egui::RichText::new("Scribble strips")
                     .monospace()
                     .size(18.0)
                     .color(egui::Color32::WHITE)
@@ -8131,7 +8762,7 @@ impl PersonalUiApp {
             ui.set_min_height(MixerLayoutPolicy::channel_strip_height());
             ui.vertical_centered(|ui| {
                 ui.label(
-                    egui::RichText::new(label.to_uppercase())
+                    egui::RichText::new(label)
                         .monospace()
                         .color(egui::Color32::WHITE),
                 );
@@ -8165,7 +8796,7 @@ impl PersonalUiApp {
             ui.vertical(|ui| {
                 ui.set_width(LightingLayoutPolicy::profile_panel_width());
                 ui.label(
-                    egui::RichText::new("LIGHTING PROFILE")
+                    egui::RichText::new("Lighting profile")
                         .monospace()
                         .size(18.0)
                         .color(egui::Color32::WHITE)
@@ -8175,8 +8806,7 @@ impl PersonalUiApp {
                 ui.add_space(6.0);
                 for action in LightingProfileAction::guarded_daily_actions("Personal") {
                     let confirmed = self
-                        .pending_lighting_profile_confirmation
-                        .as_ref()
+                        .pending_confirmation(PendingConfirmationKind::LightingProfile)
                         .is_some_and(|pending| pending == &action.command());
                     let label = if confirmed {
                         format!("Confirm {}", action.label())
@@ -8189,15 +8819,21 @@ impl PersonalUiApp {
                     );
                     if button.on_hover_text(action.description()).clicked() {
                         if let Some(command) = action.command_if_confirmed(confirmed) {
-                            self.pending_lighting_profile_confirmation = None;
+                            self.set_pending_confirmation(
+                                PendingConfirmationKind::LightingProfile,
+                                None,
+                            );
                             self.send(UiCommand::Send(command));
                         } else {
-                            self.pending_lighting_profile_confirmation = Some(action.command());
+                            self.set_pending_confirmation(
+                                PendingConfirmationKind::LightingProfile,
+                                Some(action.command()),
+                            );
                         }
                     }
                 }
             });
-            if self.pending_lighting_profile_confirmation.is_some() {
+            if self.has_pending_confirmation(PendingConfirmationKind::LightingProfile) {
                 ui.add_space(6.0);
                 ui.label(
                     egui::RichText::new("Click the same lighting action again to confirm.")
@@ -8283,7 +8919,7 @@ impl PersonalUiApp {
                         ui.vertical(|ui| {
                             ui.set_width(LightingLayoutPolicy::compact_editor_panel_width());
                             ui.label(
-                                egui::RichText::new("ANIMATION")
+                                egui::RichText::new("Animation")
                                     .monospace()
                                     .size(18.0)
                                     .color(egui::Color32::WHITE)
@@ -8370,7 +9006,7 @@ impl PersonalUiApp {
                         ui.vertical(|ui| {
                             ui.set_width(LightingLayoutPolicy::compact_editor_panel_width());
                             ui.label(
-                                egui::RichText::new("SIMPLE COLOURS")
+                                egui::RichText::new("Simple colours")
                                     .monospace()
                                     .size(18.0)
                                     .color(egui::Color32::WHITE)
@@ -8414,7 +9050,7 @@ impl PersonalUiApp {
                     ui.vertical(|ui| {
                         ui.set_width(LightingLayoutPolicy::wide_editor_panel_width());
                         ui.label(
-                            egui::RichText::new("FADERS")
+                            egui::RichText::new("Faders")
                                 .monospace()
                                 .size(18.0)
                                 .color(egui::Color32::WHITE)
@@ -8468,7 +9104,7 @@ impl PersonalUiApp {
                     ui.vertical(|ui| {
                         ui.set_width(LightingLayoutPolicy::wide_editor_panel_width());
                         ui.label(
-                            egui::RichText::new("BUTTONS")
+                            egui::RichText::new("Buttons")
                                 .monospace()
                                 .size(18.0)
                                 .color(egui::Color32::WHITE)
@@ -8519,7 +9155,7 @@ impl PersonalUiApp {
                     ui.vertical(|ui| {
                         ui.set_width(LightingLayoutPolicy::wide_editor_panel_width());
                         ui.label(
-                            egui::RichText::new("ENCODERS / SAMPLER")
+                            egui::RichText::new("Encoders & sampler")
                                 .monospace()
                                 .size(18.0)
                                 .color(egui::Color32::WHITE)
@@ -8567,10 +9203,12 @@ impl PersonalUiApp {
     }
 
     fn render_profile_browser_panel(&mut self, ui: &mut egui::Ui, browser: ProfileBrowser) {
-        Self::bounded_panel(ui, 520.0, |ui| {
-            ui.set_width(520.0);
+        let panel_width = 640.0;
+        let inner_width = panel_width - 28.0;
+        Self::bounded_panel(ui, panel_width, |ui| {
+            ui.set_width(inner_width);
             ui.label(
-                egui::RichText::new(browser.title().to_ascii_uppercase())
+                egui::RichText::new(browser.title())
                     .monospace()
                     .size(18.0)
                     .color(egui::Color32::WHITE)
@@ -8591,8 +9229,8 @@ impl PersonalUiApp {
 
             for row in browser.rows() {
                 Self::soft_panel_frame().show(ui, |ui| {
-                    ui.set_min_width(492.0);
-                    ui.set_max_width(492.0);
+                    ui.set_min_width(inner_width);
+                    ui.set_max_width(inner_width);
                     ui.horizontal_wrapped(|ui| {
                         let status = if row.is_active() {
                             "active"
@@ -8653,7 +9291,7 @@ impl PersonalUiApp {
         Self::bounded_panel(ui, SystemLayoutPolicy::profile_panel_width(), |ui| {
             ui.set_width(SystemLayoutPolicy::profile_panel_width());
             ui.label(
-                egui::RichText::new("MAIN PROFILE")
+                egui::RichText::new("Main profile")
                     .monospace()
                     .size(18.0)
                     .color(egui::Color32::WHITE)
@@ -8664,8 +9302,7 @@ impl PersonalUiApp {
             ui.horizontal_wrapped(|ui| {
                 for action in MainProfileAction::guarded_daily_actions("Personal") {
                     let confirmed = self
-                        .pending_main_profile_confirmation
-                        .as_ref()
+                        .pending_confirmation(PendingConfirmationKind::MainProfile)
                         .is_some_and(|pending| pending == &action.command());
                     let label = if confirmed {
                         format!("Confirm {}", action.label())
@@ -8680,15 +9317,21 @@ impl PersonalUiApp {
                         .clicked()
                     {
                         if let Some(command) = action.command_if_confirmed(confirmed) {
-                            self.pending_main_profile_confirmation = None;
+                            self.set_pending_confirmation(
+                                PendingConfirmationKind::MainProfile,
+                                None,
+                            );
                             self.send(UiCommand::Send(command));
                         } else {
-                            self.pending_main_profile_confirmation = Some(action.command());
+                            self.set_pending_confirmation(
+                                PendingConfirmationKind::MainProfile,
+                                Some(action.command()),
+                            );
                         }
                     }
                 }
             });
-            if self.pending_main_profile_confirmation.is_some() {
+            if self.has_pending_confirmation(PendingConfirmationKind::MainProfile) {
                 ui.add_space(6.0);
                 ui.label(
                     egui::RichText::new("Click the same main profile action again to confirm.")
@@ -8711,7 +9354,7 @@ impl PersonalUiApp {
         ui.horizontal_wrapped(|ui| {
             Self::bounded_panel(ui, DiagnosticsLayoutPolicy::panel_width(), |ui| {
                 ui.label(
-                    egui::RichText::new("LIVE STATUS")
+                    egui::RichText::new("Live status")
                         .monospace()
                         .color(egui::Color32::WHITE)
                         .size(16.0),
@@ -8755,7 +9398,7 @@ impl PersonalUiApp {
 
             Self::bounded_panel(ui, DiagnosticsLayoutPolicy::detail_panel_width(), |ui| {
                 ui.label(
-                    egui::RichText::new("IPC / SOCKET CANDIDATES")
+                    egui::RichText::new("IPC & socket candidates")
                         .monospace()
                         .color(egui::Color32::WHITE)
                         .size(16.0),
@@ -8802,7 +9445,7 @@ impl PersonalUiApp {
 
             Self::bounded_panel(ui, DiagnosticsLayoutPolicy::log_panel_width(), |ui| {
                 ui.label(
-                    egui::RichText::new("RECENT APP / IPC LOG")
+                    egui::RichText::new("Recent app & IPC log")
                         .monospace()
                         .color(egui::Color32::WHITE)
                         .size(16.0),
@@ -8872,47 +9515,60 @@ impl PersonalUiApp {
             "Use this page as an in-app checklist: implemented means daily native parity is solid; partial means useful controls exist but a full web-style browser/editor is still intentionally deferred.",
         );
         ui.add_space(12.0);
-        ui.horizontal_wrapped(|ui| {
-            for item in ImplementedParityItem::current_items() {
-                Self::bounded_panel(ui, AboutLayoutPolicy::panel_width(), |ui| {
-                    ui.horizontal_wrapped(|ui| {
-                        ui.label(
-                            egui::RichText::new(item.label())
-                                .monospace()
-                                .size(16.0)
-                                .color(egui::Color32::WHITE)
-                                .strong(),
-                        );
-                        let status_color = match item.status() {
-                            ImplementedParityStatus::Implemented => Self::accent(),
-                            ImplementedParityStatus::Partial => egui::Color32::YELLOW,
-                        };
-                        ui.add_sized(
-                            egui::vec2(AboutLayoutPolicy::status_badge_width(), 20.0),
-                            egui::Label::new(
-                                egui::RichText::new(item.status_label())
+        egui::Grid::new("about_implemented_parity_cards")
+            .num_columns(2)
+            .spacing(egui::vec2(
+                ContentLayoutPolicy::desktop_panel_gap(),
+                ContentLayoutPolicy::desktop_panel_gap(),
+            ))
+            .show(ui, |ui| {
+                for (index, item) in ImplementedParityItem::current_items().iter().enumerate() {
+                    Self::soft_sized_panel(
+                        ui,
+                        AboutLayoutPolicy::panel_width(),
+                        AboutLayoutPolicy::panel_height(),
+                        |ui| {
+                            ui.horizontal_wrapped(|ui| {
+                                ui.label(
+                                    egui::RichText::new(item.label())
+                                        .monospace()
+                                        .size(16.0)
+                                        .color(egui::Color32::WHITE)
+                                        .strong(),
+                                );
+                                let status_color = match item.status() {
+                                    ImplementedParityStatus::Implemented => Self::accent(),
+                                    ImplementedParityStatus::Partial => egui::Color32::YELLOW,
+                                };
+                                ui.add_sized(
+                                    egui::vec2(AboutLayoutPolicy::status_badge_width(), 20.0),
+                                    egui::Label::new(
+                                        egui::RichText::new(item.status_label())
+                                            .monospace()
+                                            .small()
+                                            .color(status_color),
+                                    ),
+                                );
+                            });
+                            ui.separator();
+                            ui.label(
+                                egui::RichText::new(item.description())
                                     .monospace()
-                                    .small()
-                                    .color(status_color),
-                            ),
-                        );
-                    });
-                    ui.separator();
-                    ui.label(
-                        egui::RichText::new(item.description())
-                            .monospace()
-                            .color(Self::muted_text()),
+                                    .color(Self::muted_text()),
+                            );
+                        },
                     );
-                });
-                ui.add_space(ContentLayoutPolicy::desktop_panel_gap());
-            }
-        });
+                    if index % 2 == 1 {
+                        ui.end_row();
+                    }
+                }
+            });
     }
 
     fn render_system_live_status_panel(&self, ui: &mut egui::Ui) {
         Self::bounded_panel(ui, SystemLayoutPolicy::profile_panel_width(), |ui| {
             ui.label(
-                egui::RichText::new("LIVE SYSTEM SETTINGS")
+                egui::RichText::new("Live system settings")
                     .monospace()
                     .size(18.0)
                     .color(egui::Color32::WHITE)
@@ -9011,7 +9667,7 @@ impl PersonalUiApp {
             |ui| {
                 ui.set_width(EffectsLayoutPolicy::preset_management_panel_width());
                 ui.label(
-                    egui::RichText::new("EFFECT PRESETS")
+                    egui::RichText::new("Effect presets")
                         .monospace()
                         .size(18.0)
                         .color(egui::Color32::WHITE)
@@ -9024,8 +9680,7 @@ impl PersonalUiApp {
                 ui.horizontal_wrapped(|ui| {
                     for action in EffectPresetAction::guarded_daily_actions("Personal") {
                         let confirmed = self
-                            .pending_effect_preset_confirmation
-                            .as_ref()
+                            .pending_confirmation(PendingConfirmationKind::EffectPreset)
                             .is_some_and(|pending| pending == &action.command());
                         let label = if confirmed {
                             format!("Confirm {}", action.label())
@@ -9043,15 +9698,21 @@ impl PersonalUiApp {
                             .clicked()
                         {
                             if let Some(command) = action.command_if_confirmed(confirmed) {
-                                self.pending_effect_preset_confirmation = None;
+                                self.set_pending_confirmation(
+                                    PendingConfirmationKind::EffectPreset,
+                                    None,
+                                );
                                 self.send(UiCommand::Send(command));
                             } else {
-                                self.pending_effect_preset_confirmation = Some(action.command());
+                                self.set_pending_confirmation(
+                                    PendingConfirmationKind::EffectPreset,
+                                    Some(action.command()),
+                                );
                             }
                         }
                     }
                 });
-                if self.pending_effect_preset_confirmation.is_some() {
+                if self.has_pending_confirmation(PendingConfirmationKind::EffectPreset) {
                     ui.add_space(6.0);
                     ui.label(
                         egui::RichText::new(
@@ -9171,7 +9832,7 @@ impl PersonalUiApp {
             |ui| {
                 Self::bounded_panel(ui, EffectsLayoutPolicy::amount_panel_width(), |ui| {
                     ui.label(
-                        egui::RichText::new("AMOUNTS")
+                        egui::RichText::new("Amounts")
                             .monospace()
                             .size(18.0)
                             .color(egui::Color32::WHITE)
@@ -9197,7 +9858,7 @@ impl PersonalUiApp {
                 ui.add_space(EffectsLayoutPolicy::detail_panel_gap());
                 Self::bounded_panel(ui, EffectsLayoutPolicy::style_panel_width(), |ui| {
                     ui.label(
-                        egui::RichText::new("STYLES")
+                        egui::RichText::new("Styles")
                             .monospace()
                             .size(18.0)
                             .color(egui::Color32::WHITE)
@@ -9269,7 +9930,7 @@ impl PersonalUiApp {
 
                 Self::bounded_panel(ui, EffectsLayoutPolicy::amount_panel_width(), |ui| {
                     ui.label(
-                        egui::RichText::new("ADVANCED DSP")
+                        egui::RichText::new("Advanced DSP")
                             .monospace()
                             .size(18.0)
                             .color(egui::Color32::WHITE)
@@ -9280,7 +9941,7 @@ impl PersonalUiApp {
                     );
                     ui.add_space(8.0);
                     ui.label(
-                        egui::RichText::new("REVERB SLIDERS")
+                        egui::RichText::new("Reverb sliders")
                             .monospace()
                             .color(egui::Color32::WHITE),
                     );
@@ -9300,7 +9961,7 @@ impl PersonalUiApp {
                     }
                     ui.add_space(8.0);
                     ui.label(
-                        egui::RichText::new("ECHO SLIDERS")
+                        egui::RichText::new("Echo sliders")
                             .monospace()
                             .color(egui::Color32::WHITE),
                     );
@@ -9320,7 +9981,7 @@ impl PersonalUiApp {
                     }
                     ui.add_space(8.0);
                     ui.label(
-                        egui::RichText::new("PITCH SLIDERS")
+                        egui::RichText::new("Pitch sliders")
                             .monospace()
                             .color(egui::Color32::WHITE),
                     );
@@ -9340,7 +10001,7 @@ impl PersonalUiApp {
                     }
                     ui.add_space(8.0);
                     ui.label(
-                        egui::RichText::new("MEGAPHONE SLIDERS")
+                        egui::RichText::new("Megaphone sliders")
                             .monospace()
                             .color(egui::Color32::WHITE),
                     );
@@ -9360,7 +10021,7 @@ impl PersonalUiApp {
                     }
                     ui.add_space(8.0);
                     ui.label(
-                        egui::RichText::new("ROBOT SLIDERS")
+                        egui::RichText::new("Robot sliders")
                             .monospace()
                             .color(egui::Color32::WHITE),
                     );
@@ -9380,7 +10041,7 @@ impl PersonalUiApp {
                     }
                     ui.add_space(8.0);
                     ui.label(
-                        egui::RichText::new("HARD TUNE SLIDERS")
+                        egui::RichText::new("Hard tune sliders")
                             .monospace()
                             .color(egui::Color32::WHITE),
                     );
@@ -9400,7 +10061,7 @@ impl PersonalUiApp {
                     }
                     ui.add_space(8.0);
                     ui.label(
-                        egui::RichText::new("QUICK DEFAULTS")
+                        egui::RichText::new("Quick defaults")
                             .monospace()
                             .color(egui::Color32::WHITE),
                     );
@@ -9435,7 +10096,7 @@ impl PersonalUiApp {
             |ui| {
                 Self::bounded_panel(ui, MicLayoutPolicy::panel_width(), |ui| {
                     ui.label(
-                        egui::RichText::new("MIC SETUP")
+                        egui::RichText::new("Mic setup")
                             .monospace()
                             .size(18.0)
                             .color(egui::Color32::WHITE)
@@ -9486,8 +10147,7 @@ impl PersonalUiApp {
                     ui.horizontal_wrapped(|ui| {
                         let save_profile_command = PersonalCommand::SaveMicProfile;
                         let save_profile_confirmed = self
-                            .pending_mic_profile_confirmation
-                            .as_ref()
+                            .pending_confirmation(PendingConfirmationKind::MicProfile)
                             .is_some_and(|pending| pending == &save_profile_command);
                         let save_profile_label = if save_profile_confirmed {
                             "Confirm save mic profile"
@@ -9502,10 +10162,16 @@ impl PersonalUiApp {
                             .clicked()
                         {
                             if save_profile_confirmed {
-                                self.pending_mic_profile_confirmation = None;
+                                self.set_pending_confirmation(
+                                    PendingConfirmationKind::MicProfile,
+                                    None,
+                                );
                                 self.send(UiCommand::Send(save_profile_command));
                             } else {
-                                self.pending_mic_profile_confirmation = Some(save_profile_command);
+                                self.set_pending_confirmation(
+                                    PendingConfirmationKind::MicProfile,
+                                    Some(save_profile_command),
+                                );
                             }
                         }
                         if ui
@@ -9522,7 +10188,7 @@ impl PersonalUiApp {
 
                 Self::bounded_panel(ui, MicLayoutPolicy::setup_guide_panel_width(), |ui| {
                     ui.label(
-                        egui::RichText::new("SETUP GUIDE")
+                        egui::RichText::new("Setup guide")
                             .monospace()
                             .size(18.0)
                             .color(egui::Color32::WHITE)
@@ -9541,7 +10207,7 @@ impl PersonalUiApp {
                         ui.add_space(4.0);
                     }
                     ui.separator();
-                    ui.label(egui::RichText::new("LIVE METER").monospace().strong());
+                    ui.label(egui::RichText::new("Live meter").monospace().strong());
                     ui.label(
                         egui::RichText::new(MicSetupGuideStep::live_meter_status_note())
                             .color(Self::muted_text()),
@@ -9608,7 +10274,7 @@ impl PersonalUiApp {
 
                 Self::bounded_panel(ui, MicLayoutPolicy::panel_width(), |ui| {
                     ui.label(
-                        egui::RichText::new("COMPRESSOR / SAFETY")
+                        egui::RichText::new("Compressor & safety")
                             .monospace()
                             .size(18.0)
                             .color(egui::Color32::WHITE)
@@ -9692,7 +10358,7 @@ impl PersonalUiApp {
 
                 Self::bounded_panel(ui, MicLayoutPolicy::eq_panel_width(), |ui| {
                     ui.label(
-                        egui::RichText::new("MIC EQ")
+                        egui::RichText::new("Mic EQ")
                             .monospace()
                             .size(18.0)
                             .color(egui::Color32::WHITE)
@@ -9757,7 +10423,7 @@ impl PersonalUiApp {
 
                 Self::bounded_panel(ui, MicLayoutPolicy::profile_panel_width(), |ui| {
                     ui.label(
-                        egui::RichText::new("MIC PROFILES")
+                        egui::RichText::new("Mic profiles")
                             .monospace()
                             .size(18.0)
                             .color(egui::Color32::WHITE)
@@ -9766,8 +10432,7 @@ impl PersonalUiApp {
                     ui.label("Guarded profile actions use an explicit named slot before destructive commands.");
                     for action in MicProfileAction::guarded_daily_actions("Personal") {
                         let confirmed = self
-                            .pending_mic_profile_confirmation
-                            .as_ref()
+                            .pending_confirmation(PendingConfirmationKind::MicProfile)
                             .is_some_and(|pending| pending == &action.command());
                         let label = if action.requires_confirmation() && confirmed {
                             format!("Confirm again: {}", action.label())
@@ -9784,14 +10449,20 @@ impl PersonalUiApp {
                             .clicked()
                         {
                             if let Some(command) = action.command_if_confirmed(confirmed) {
-                                self.pending_mic_profile_confirmation = None;
+                                self.set_pending_confirmation(
+                                    PendingConfirmationKind::MicProfile,
+                                    None,
+                                );
                                 self.send(UiCommand::Send(command));
                             } else {
-                                self.pending_mic_profile_confirmation = Some(action.command());
+                                self.set_pending_confirmation(
+                                    PendingConfirmationKind::MicProfile,
+                                    Some(action.command()),
+                                );
                             }
                         }
                     }
-                    if self.pending_mic_profile_confirmation.is_some() {
+                    if self.has_pending_confirmation(PendingConfirmationKind::MicProfile) {
                         ui.label(
                             egui::RichText::new(
                                 "A guarded profile action is armed; click the same action again to send it.",
@@ -9809,10 +10480,73 @@ impl PersonalUiApp {
         );
     }
 
+    fn render_headphone_audio_presets_panel(&mut self, ui: &mut egui::Ui) {
+        Self::bounded_panel(ui, HeadphoneEqLayoutPolicy::preset_panel_width(), |ui| {
+            ui.label(
+                egui::RichText::new("Listening presets")
+                    .monospace()
+                    .size(18.0)
+                    .color(egui::Color32::WHITE)
+                    .strong(),
+            );
+            ui.label(
+                egui::RichText::new(
+                    "Hardware-first listening presets: route to headphones, gain-stage, enable limiter, then apply EQ.",
+                )
+                .color(Self::muted_text()),
+            );
+            ui.add_space(6.0);
+            ui.horizontal_wrapped(|ui| {
+                for preset in HeadphoneListeningPreset::daily_presets() {
+                    Self::soft_sized_panel(
+                        ui,
+                        HeadphoneEqLayoutPolicy::preset_button_width(),
+                        HeadphoneEqLayoutPolicy::preset_card_height(),
+                        |ui| {
+                            let button = if preset.is_safety_preset() {
+                                Self::accent_button(preset.name())
+                            } else {
+                                egui::Button::new(preset.name())
+                            };
+                            if ui
+                                .add_sized(
+                                    egui::vec2(
+                                        HeadphoneEqLayoutPolicy::preset_button_width() - 16.0,
+                                        24.0,
+                                    ),
+                                    button,
+                                )
+                                .clicked()
+                            {
+                                self.send(UiCommand::ApplyScene(preset.to_scene()));
+                            }
+                            ui.add_space(4.0);
+                            ui.label(
+                                egui::RichText::new(preset.description())
+                                    .small()
+                                    .color(Self::muted_text()),
+                            );
+                        },
+                    );
+                }
+            });
+            ui.separator();
+            for step in HeadphoneAudioStep::recommended_steps() {
+                ui.label(egui::RichText::new(step.label()).strong());
+                ui.label(
+                    egui::RichText::new(step.description())
+                        .small()
+                        .color(Self::muted_text()),
+                );
+                ui.add_space(4.0);
+            }
+        });
+    }
+
     fn render_headphone_eq_profile_panel(&mut self, ui: &mut egui::Ui) {
         Self::bounded_panel(ui, HeadphoneEqLayoutPolicy::profile_panel_width(), |ui| {
             ui.label(
-                egui::RichText::new("EQ PROFILES")
+                egui::RichText::new("EQ profiles")
                     .monospace()
                     .size(18.0)
                     .color(egui::Color32::WHITE)
@@ -9828,8 +10562,7 @@ impl PersonalUiApp {
             ui.horizontal_wrapped(|ui| {
                 for action in HeadphoneEqProfileAction::guarded_daily_actions("Personal Phones") {
                     let confirmed = self
-                        .pending_headphone_eq_profile_confirmation
-                        .as_ref()
+                        .pending_confirmation(PendingConfirmationKind::HeadphoneEqProfile)
                         .is_some_and(|pending| pending == &action.command());
                     let label = if confirmed {
                         format!("CONFIRM {}", action.label())
@@ -9849,15 +10582,21 @@ impl PersonalUiApp {
                         .clicked()
                     {
                         if let Some(command) = action.command_if_confirmed(confirmed) {
-                            self.pending_headphone_eq_profile_confirmation = None;
+                            self.set_pending_confirmation(
+                                PendingConfirmationKind::HeadphoneEqProfile,
+                                None,
+                            );
                             self.send(UiCommand::Send(command));
                         } else {
-                            self.pending_headphone_eq_profile_confirmation = Some(action.command());
+                            self.set_pending_confirmation(
+                                PendingConfirmationKind::HeadphoneEqProfile,
+                                Some(action.command()),
+                            );
                         }
                     }
                 }
             });
-            if self.pending_headphone_eq_profile_confirmation.is_some() {
+            if self.has_pending_confirmation(PendingConfirmationKind::HeadphoneEqProfile) {
                 ui.add_space(6.0);
                 ui.label(
                     egui::RichText::new(
@@ -9875,83 +10614,86 @@ impl PersonalUiApp {
             ui,
             "Headphone EQ",
             "Ten-band headphone equalizer controls",
-            "Enable EQ, adjust preamp, and nudge each band through typed gain/frequency/Q commands.",
+            "Primary EQ controls stay in a fixed grid; presets and profile actions sit in aligned cards below.",
         );
         ui.add_space(12.0);
-        Self::polished_row(
-            ui,
-            egui::vec2(
+
+        ui.vertical(|ui| {
+            ui.spacing_mut().item_spacing = egui::vec2(
                 ContentLayoutPolicy::desktop_panel_gap(),
                 ContentLayoutPolicy::desktop_panel_gap(),
-            ),
-            |ui| {
-                Self::bounded_panel(ui, HeadphoneEqLayoutPolicy::panel_width(), |ui| {
-                    ui.label(
-                        egui::RichText::new("HEADPHONE EQ")
-                            .monospace()
-                            .size(18.0)
-                            .color(egui::Color32::WHITE)
-                            .strong(),
-                    );
-                    ui.horizontal_wrapped(|ui| {
-                        if ui.add(Self::accent_button("Enable EQ")).clicked() {
-                            self.send(UiCommand::Send(PersonalCommand::SetHeadphoneEqEnabled(
-                                true,
-                            )));
-                        }
-                        if ui.button("Disable EQ").clicked() {
-                            self.send(UiCommand::Send(PersonalCommand::SetHeadphoneEqEnabled(
-                                false,
-                            )));
-                        }
-                        if ui.button("Preamp 0 dB").clicked() {
-                            self.send(UiCommand::Send(PersonalCommand::SetHeadphoneEqPreamp(0.0)));
-                        }
-                    });
-                    ui.separator();
-                    let bands = HeadphoneEqBandControl::ten_band_editor();
-                    let columns = HeadphoneEqLayoutPolicy::grid_columns();
-                    ui.spacing_mut().item_spacing = egui::vec2(
-                        HeadphoneEqLayoutPolicy::band_card_gap(),
-                        HeadphoneEqLayoutPolicy::band_card_gap(),
-                    );
-                    for row in bands.chunks(columns) {
-                        ui.horizontal(|ui| {
-                            ui.spacing_mut().item_spacing.x =
-                                HeadphoneEqLayoutPolicy::band_card_gap();
-                            for band in row {
-                                Self::soft_sized_panel(
-                                    ui,
-                                    HeadphoneEqLayoutPolicy::band_card_width(),
-                                    HeadphoneEqLayoutPolicy::band_card_height(),
-                                    |ui| {
-                                        ui.label(
-                                            egui::RichText::new(band.label()).monospace().strong(),
-                                        );
-                                        if ui.button("Gain 0").clicked() {
-                                            self.send(UiCommand::Send(band.gain_command(0.0)));
-                                        }
-                                        if ui.button("Freq default").clicked() {
-                                            self.send(UiCommand::Send(
-                                                band.frequency_command(band.default_frequency_hz()),
-                                            ));
-                                        }
-                                        if ui.button("Q 0.9").clicked() {
-                                            self.send(UiCommand::Send(band.q_command(0.9)));
-                                        }
-                                    },
-                                );
-                            }
-                        });
+            );
+            Self::bounded_panel(ui, HeadphoneEqLayoutPolicy::panel_width(), |ui| {
+                ui.label(
+                    egui::RichText::new("Headphone EQ")
+                        .monospace()
+                        .size(18.0)
+                        .color(egui::Color32::WHITE)
+                        .strong(),
+                );
+                ui.horizontal_wrapped(|ui| {
+                    if ui.add(Self::accent_button("Enable EQ")).clicked() {
+                        self.send(UiCommand::Send(PersonalCommand::SetHeadphoneEqEnabled(
+                            true,
+                        )));
+                    }
+                    if ui.button("Disable EQ").clicked() {
+                        self.send(UiCommand::Send(PersonalCommand::SetHeadphoneEqEnabled(
+                            false,
+                        )));
+                    }
+                    if ui.button("Preamp 0 dB").clicked() {
+                        self.send(UiCommand::Send(PersonalCommand::SetHeadphoneEqPreamp(0.0)));
                     }
                 });
-                self.render_headphone_eq_profile_panel(ui);
-                self.render_profile_browser_panel(
-                    ui,
-                    self.profile_browser_for(ProfileBrowserKind::HeadphoneEq),
-                );
-            },
-        );
+                ui.separator();
+                let bands = HeadphoneEqBandControl::ten_band_editor();
+                let columns = HeadphoneEqLayoutPolicy::grid_columns();
+                egui::Grid::new("headphone_eq_band_grid")
+                    .num_columns(columns)
+                    .spacing(egui::vec2(
+                        HeadphoneEqLayoutPolicy::band_card_gap(),
+                        HeadphoneEqLayoutPolicy::band_card_gap(),
+                    ))
+                    .show(ui, |ui| {
+                        for (index, band) in bands.iter().enumerate() {
+                            Self::soft_sized_panel(
+                                ui,
+                                HeadphoneEqLayoutPolicy::band_card_width(),
+                                HeadphoneEqLayoutPolicy::band_card_height(),
+                                |ui| {
+                                    ui.set_min_width(
+                                        HeadphoneEqLayoutPolicy::band_card_width() - 20.0,
+                                    );
+                                    ui.label(
+                                        egui::RichText::new(band.label()).monospace().strong(),
+                                    );
+                                    if ui.button("Gain 0").clicked() {
+                                        self.send(UiCommand::Send(band.gain_command(0.0)));
+                                    }
+                                    if ui.button("Freq default").clicked() {
+                                        self.send(UiCommand::Send(
+                                            band.frequency_command(band.default_frequency_hz()),
+                                        ));
+                                    }
+                                    if ui.button("Q 0.9").clicked() {
+                                        self.send(UiCommand::Send(band.q_command(0.9)));
+                                    }
+                                },
+                            );
+                            if (index + 1) % columns == 0 {
+                                ui.end_row();
+                            }
+                        }
+                    });
+            });
+            self.render_headphone_audio_presets_panel(ui);
+            self.render_headphone_eq_profile_panel(ui);
+            self.render_profile_browser_panel(
+                ui,
+                self.profile_browser_for(ProfileBrowserKind::HeadphoneEq),
+            );
+        });
     }
 
     fn render_sampler_live_slots_panel(&mut self, ui: &mut egui::Ui) {
@@ -9960,7 +10702,7 @@ impl PersonalUiApp {
             SamplerLayoutPolicy::sample_browser_panel_width(),
             |ui| {
                 ui.label(
-                    egui::RichText::new("LIVE SAMPLE SLOTS")
+                    egui::RichText::new("Live sample slots")
                         .monospace()
                         .size(18.0)
                         .color(egui::Color32::WHITE)
@@ -10043,8 +10785,9 @@ impl PersonalUiApp {
                                             sample.index(),
                                         );
                                         let confirmed = self
-                                            .pending_sampler_file_confirmation
-                                            .as_ref()
+                                            .pending_confirmation(
+                                                PendingConfirmationKind::SamplerFile,
+                                            )
                                             .is_some_and(|pending| pending == &remove.command());
                                         let remove_label = if confirmed {
                                             format!("Confirm {}", remove.label())
@@ -10145,7 +10888,7 @@ impl PersonalUiApp {
     fn render_sampler_file_workflow_panel(&mut self, ui: &mut egui::Ui) {
         Self::bounded_panel(ui, SamplerLayoutPolicy::file_workflow_panel_width(), |ui| {
             ui.label(
-                egui::RichText::new("SAMPLE FILE WORKFLOW")
+                egui::RichText::new("Sample file workflow")
                     .monospace()
                     .size(18.0)
                     .color(egui::Color32::WHITE)
@@ -10209,7 +10952,10 @@ impl PersonalUiApp {
                                     .clicked()
                                 {
                                     self.sampler_file_path = row.path().to_string();
-                                    self.pending_sampler_file_confirmation = None;
+                                    self.set_pending_confirmation(
+                                        PendingConfirmationKind::SamplerFile,
+                                        None,
+                                    );
                                 }
                                 ui.label(row.display_name());
                             });
@@ -10227,7 +10973,7 @@ impl PersonalUiApp {
             let sample_path = self.sampler_file_path.clone();
             for bank in [SampleBank::A, SampleBank::B, SampleBank::C] {
                 ui.label(
-                    egui::RichText::new(format!("BANK {bank:?}"))
+                    egui::RichText::new(format!("Bank {bank:?}"))
                         .monospace()
                         .strong(),
                 );
@@ -10248,8 +10994,7 @@ impl PersonalUiApp {
                                 for action in actions {
                                     let command = action.command();
                                     let confirmed = self
-                                        .pending_sampler_file_confirmation
-                                        .as_ref()
+                                        .pending_confirmation(PendingConfirmationKind::SamplerFile)
                                         .is_some_and(|pending| pending == &command);
                                     let label = if action.requires_confirmation() && confirmed {
                                         format!("Confirm {}", action.label())
@@ -10279,7 +11024,7 @@ impl PersonalUiApp {
                 ui.add_space(6.0);
             }
 
-            if self.pending_sampler_file_confirmation.is_some() {
+            if self.has_pending_confirmation(PendingConfirmationKind::SamplerFile) {
                 ui.label(
                     egui::RichText::new(
                         "Click the same armed sampler file action again to send it.",
@@ -10305,16 +11050,15 @@ impl PersonalUiApp {
             "First-pass sampler parity focuses on bank selection, play/stop mode, play-next, stop, random order, safe workflow settings, and default trim reset controls.",
         );
         ui.add_space(12.0);
-        Self::polished_row(
-            ui,
-            egui::vec2(
+        ui.vertical(|ui| {
+            ui.spacing_mut().item_spacing = egui::vec2(
                 ContentLayoutPolicy::desktop_panel_gap(),
                 ContentLayoutPolicy::desktop_panel_gap(),
-            ),
-            |ui| {
+            );
+            {
                 Self::bounded_panel(ui, SamplerLayoutPolicy::panel_width(), |ui| {
                     ui.label(
-                        egui::RichText::new("WORKFLOW SETTINGS")
+                        egui::RichText::new("Workflow settings")
                             .monospace()
                             .size(18.0)
                             .color(egui::Color32::WHITE)
@@ -10342,7 +11086,7 @@ impl PersonalUiApp {
                 for bank in [SampleBank::A, SampleBank::B, SampleBank::C] {
                     Self::bounded_panel(ui, SamplerLayoutPolicy::panel_width(), |ui| {
                         ui.label(
-                            egui::RichText::new(format!("BANK {bank:?}"))
+                            egui::RichText::new(format!("Bank {bank:?}"))
                                 .monospace()
                                 .size(18.0)
                                 .color(egui::Color32::WHITE)
@@ -10420,8 +11164,8 @@ impl PersonalUiApp {
                         });
                     });
                 }
-            },
-        );
+            }
+        });
     }
 
     fn render_mixer_dashboard(&mut self, ui: &mut egui::Ui) {
@@ -10430,84 +11174,120 @@ impl PersonalUiApp {
             ui,
             "Mixer",
             "Profiles, scenes, faders, and active app routing",
-            "Daily controls are grouped into aligned cards so the dashboard reads left-to-right instead of floating in separate islands.",
+            "Daily controls are grouped in stable rows: overview first, hardware faders second, detailed routing below.",
         );
         ui.add_space(12.0);
-        Self::polished_row(
-            ui,
-            egui::vec2(
-                MixerLayoutPolicy::panel_gap(),
-                MixerLayoutPolicy::panel_gap(),
-            ),
-            |ui| {
-                self.render_scene_panel(ui);
-                Self::bounded_panel(ui, MixerLayoutPolicy::panel_width(), |ui| {
-                    ui.label(
-                        egui::RichText::new("MIXER")
-                            .monospace()
-                            .size(18.0)
-                            .color(egui::Color32::WHITE)
-                            .strong(),
-                    );
-                    ui.add_space(10.0);
-                    ui.horizontal_wrapped(|ui| {
-                        ui.spacing_mut().item_spacing = egui::vec2(8.0, 8.0);
+        let gap = MixerLayoutPolicy::panel_gap();
+
+        Self::mixer_card_row(ui, gap, |ui| {
+            self.render_scene_panel(ui);
+            Self::bounded_sized_panel(
+                ui,
+                MixerLayoutPolicy::panel_width(),
+                MixerLayoutPolicy::overview_panel_height(),
+                |ui| {
+                    ui.add_space(34.0);
+                    ui.vertical_centered(|ui| {
+                        ui.label(
+                            egui::RichText::new("Mixer")
+                                .monospace()
+                                .size(18.0)
+                                .color(egui::Color32::WHITE)
+                                .strong(),
+                        );
+                        ui.add_space(14.0);
                         let channel_labels = ControlledChannel::mvp_channels();
-                        for volume in self.pending_volumes.clone() {
-                            let label = channel_labels
-                                .iter()
-                                .find(|channel| channel.channel == volume.channel)
-                                .map(|channel| channel.label)
-                                .unwrap_or("Channel");
-                            self.render_channel_strip(ui, label, volume.channel, volume.value);
-                        }
+                        Self::centered_exact_width(ui, 406.0, |ui| {
+                            egui::Grid::new("mixer_channel_strip_grid")
+                                .num_columns(4)
+                                .min_col_width(MixerLayoutPolicy::channel_strip_width())
+                                .spacing(egui::vec2(10.0, 10.0))
+                                .show(ui, |ui| {
+                                    for (index, volume) in
+                                        self.pending_volumes.clone().into_iter().enumerate()
+                                    {
+                                        let label = channel_labels
+                                            .iter()
+                                            .find(|channel| channel.channel == volume.channel)
+                                            .map(|channel| channel.label)
+                                            .unwrap_or("Channel");
+                                        self.render_channel_strip(
+                                            ui,
+                                            label,
+                                            volume.channel,
+                                            volume.value,
+                                        );
+                                        if (index + 1) % 4 == 0 {
+                                            ui.end_row();
+                                        }
+                                    }
+                                });
+                        });
+                        ui.add_space(16.0);
+                        Self::centered_exact_width(ui, 474.0, |ui| {
+                            egui::Grid::new("mixer_action_button_grid")
+                                .num_columns(3)
+                                .min_col_width(150.0)
+                                .spacing(egui::vec2(12.0, 10.0))
+                                .show(ui, |ui| {
+                                    if ui
+                                        .add_sized(
+                                            egui::vec2(150.0, 34.0),
+                                            Self::accent_button("Enable ClipGuard"),
+                                        )
+                                        .clicked()
+                                    {
+                                        self.send(UiCommand::Send(
+                                            PersonalCommand::SetClipGuardEnabled(true),
+                                        ));
+                                    }
+                                    if ui
+                                        .add_sized(
+                                            egui::vec2(150.0, 34.0),
+                                            Self::accent_button("Enable limiter"),
+                                        )
+                                        .clicked()
+                                    {
+                                        self.send(UiCommand::Send(
+                                            PersonalCommand::SetHeadphoneLimiterEnabled(true),
+                                        ));
+                                    }
+                                    if ui
+                                        .add_sized(
+                                            egui::vec2(150.0, 34.0),
+                                            Self::accent_button("Enable EQ"),
+                                        )
+                                        .clicked()
+                                    {
+                                        self.send(UiCommand::Send(
+                                            PersonalCommand::SetHeadphoneEqEnabled(true),
+                                        ));
+                                    }
+                                    ui.end_row();
+                                });
+                        });
                     });
-                    ui.add_space(10.0);
-                    ui.horizontal_wrapped(|ui| {
-                        if ui
-                            .add_sized(
-                                egui::vec2(ContentLayoutPolicy::wide_action_button_width(), 34.0),
-                                Self::accent_button("Enable ClipGuard"),
-                            )
-                            .clicked()
-                        {
-                            self.send(UiCommand::Send(PersonalCommand::SetClipGuardEnabled(true)));
-                        }
-                        if ui
-                            .add_sized(
-                                egui::vec2(ContentLayoutPolicy::wide_action_button_width(), 34.0),
-                                Self::accent_button("Enable limiter"),
-                            )
-                            .clicked()
-                        {
-                            self.send(UiCommand::Send(
-                                PersonalCommand::SetHeadphoneLimiterEnabled(true),
-                            ));
-                        }
-                        if ui
-                            .add_sized(
-                                egui::vec2(ContentLayoutPolicy::min_action_button_width(), 34.0),
-                                Self::accent_button("Enable EQ"),
-                            )
-                            .clicked()
-                        {
-                            self.send(UiCommand::Send(PersonalCommand::SetHeadphoneEqEnabled(
-                                true,
-                            )));
-                        }
-                    });
-                });
-                self.render_fader_assignment_panel(ui);
-                self.render_monitor_mix_panel(ui);
-                self.render_submix_panel(ui);
-                self.render_scribble_strip_panel(ui);
-                ui.vertical(|ui| {
-                    self.render_status_card(ui);
-                    ui.add_space(12.0);
-                    self.render_active_streams_panel(ui);
-                });
-            },
-        );
+                },
+            );
+        });
+
+        ui.add_space(gap);
+        Self::mixer_card_row(ui, gap, |ui| {
+            self.render_status_card(ui);
+            self.render_monitor_mix_panel(ui);
+        });
+
+        ui.add_space(gap);
+        Self::mixer_card_row(ui, gap, |ui| {
+            self.render_fader_assignment_panel(ui);
+            self.render_active_streams_panel(ui);
+        });
+
+        ui.add_space(gap);
+        Self::mixer_card_row(ui, gap, |ui| {
+            self.render_submix_panel(ui);
+            self.render_scribble_strip_panel(ui);
+        });
     }
 
     fn apply_window_action(ctx: &egui::Context, action: WindowAction, always_on_top: bool) {
@@ -10570,8 +11350,6 @@ impl eframe::App for PersonalUiApp {
             self.last_repaint = Instant::now();
         }
 
-        Self::apply_goxlr_style(ctx);
-
         egui::CentralPanel::default()
             .frame(egui::Frame::new().fill(Self::bg()).inner_margin(egui::Margin::same(14)))
             .show(ctx, |ui| {
@@ -10604,8 +11382,8 @@ impl eframe::App for PersonalUiApp {
                         .monospace()
                         .color(if selected { Self::accent() } else { egui::Color32::WHITE });
                     let button = egui::Button::new(text)
-                        .fill(if selected { egui::Color32::from_rgb(35, 52, 50) } else { Self::bg() })
-                        .stroke(egui::Stroke::new(1.0, if selected { Self::accent() } else { egui::Color32::from_rgb(56, 66, 62) }))
+                        .fill(if selected { egui::Color32::from_rgb(58, 36, 22) } else { Self::bg() })
+                        .stroke(egui::Stroke::new(1.0, if selected { Self::accent() } else { Self::panel_border() }))
                         .min_size(egui::vec2(138.0, 34.0));
                     if ui.add(button).clicked() {
                         match label {
@@ -10625,9 +11403,9 @@ impl eframe::App for PersonalUiApp {
                 }
             });
 
-            egui::ScrollArea::both()
+            egui::ScrollArea::vertical()
                 .id_salt(ContentLayoutPolicy::scroll_area_id())
-                .auto_shrink([false, false])
+                .auto_shrink([false, true])
                 .show(ui, |ui| {
                     Self::centered_page_body(ui, |ui| {
                     if self.quick_actions.view_mode() == AppViewMode::QuickActions {
@@ -11679,7 +12457,8 @@ pub fn run_native() -> eframe::Result<()> {
     eframe::run_native(
         "GoXLR Personal Control",
         options,
-        Box::new(move |_creation_context| {
+        Box::new(move |creation_context| {
+            PersonalUiApp::apply_goxlr_style(&creation_context.egui_ctx);
             Ok(Box::new(PersonalUiApp::new(command_tx.clone(), event_rx)))
         }),
     )

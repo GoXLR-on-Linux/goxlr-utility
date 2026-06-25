@@ -12,10 +12,11 @@ use goxlr_personal_ui::{
     EffectsAmountControl, EffectsEchoSlider, EffectsHardTuneSlider, EffectsLayoutPolicy,
     EffectsMegaphoneSlider, EffectsPitchSlider, EffectsQuickPreset, EffectsReverbSlider,
     EffectsRobotSlider, EffectsStyleGroup, ExternalAudioTool, FaderAssignmentControl,
-    FaderMuteFunctionControl, HardwareScribbleControl, HeadphoneEqBandControl,
-    HeadphoneEqLayoutPolicy, HeadphoneEqProfileAction, ImplementedParityItem,
-    LightingAnimationControl, LightingButtonColourTarget, LightingFaderColourTarget,
-    LightingLayoutPolicy, LightingProfileAction, LightingQuickTheme, LightingSimpleColourTarget,
+    FaderMuteFunctionControl, FaderMuteStateControl, HardwareScribbleControl, HeadphoneAudioStep,
+    HeadphoneEqBandControl, HeadphoneEqLayoutPolicy, HeadphoneEqProfileAction,
+    HeadphoneListeningPreset, ImplementedParityItem, LightingAnimationControl,
+    LightingButtonColourTarget, LightingFaderColourTarget, LightingLayoutPolicy,
+    LightingProfileAction, LightingQuickTheme, LightingSimpleColourTarget,
     LightingTripleColourTarget, MainProfileAction, MicEqBandControl, MicLayoutPolicy,
     MicProfileAction, MicSetupGuideStep, MiniWindowMode, MixerLayoutPolicy, MonitorMixControl,
     OptionalBoolAction, PersonalCommand, PersonalPreset, ProfileBrowser, ProfileBrowserAction,
@@ -24,18 +25,18 @@ use goxlr_personal_ui::{
     SampleTrimAction, SampleTrimEditor, SamplerAction, SamplerFileAction, SamplerLayoutPolicy,
     SamplerLoadedSample, SamplerSampleBrowser, SamplerSlotSnapshot, SamplerWorkflowSetting,
     SceneEditor, SubmixChannelControl, SubmixChannelSnapshot, SubmixOutputMixControl,
-    SubmixOutputSnapshot, SystemLayoutPolicy, SystemSettingsAction, SystemSettingsSnapshot,
-    TrayAction, TrayMenuModel, UiCommand, UiScene, VolumeDebouncer, WindowAction,
-    ipc_socket_path_candidates,
+    SubmixOutputSnapshot, SubmixVolumeSlider, SystemLayoutPolicy, SystemSettingsAction,
+    SystemSettingsSnapshot, TrayAction, TrayMenuModel, UiCommand, UiScene, VolumeDebouncer,
+    WindowAction, ipc_socket_path_candidates,
 };
 use goxlr_types::{
     AnimationMode, Button, ButtonColourGroups, ButtonColourOffStyle, ChannelName,
     CompressorAttackTime, CompressorRatio, CompressorReleaseTime, EchoStyle, EffectBankPresets,
     EncoderColourTargets, EqFrequencies, FaderDisplayStyle, FaderName, GateTimes, GenderStyle,
     HardTuneSource, HardTuneStyle, InputDevice, MegaphoneStyle, MicrophoneType, MiniEqFrequencies,
-    Mix, MuteFunction, OutputDevice, PitchStyle, ReverbStyle, RobotRange, RobotStyle, SampleBank,
-    SampleButtons, SamplePlayOrder, SamplePlaybackMode, SamplerColourTargets, SimpleColourTargets,
-    VodMode, WaterfallDirection,
+    Mix, MuteFunction, MuteState, OutputDevice, PitchStyle, ReverbStyle, RobotRange, RobotStyle,
+    SampleBank, SampleButtons, SamplePlayOrder, SamplePlaybackMode, SamplerColourTargets,
+    SimpleColourTargets, VodMode, WaterfallDirection,
 };
 
 fn temp_scene_config_path(name: &str) -> PathBuf {
@@ -60,7 +61,7 @@ fn temp_test_dir(name: &str) -> PathBuf {
 fn content_layout_policy_keeps_main_content_scrollable_below_fixed_header() {
     assert!(ContentLayoutPolicy::main_content_scroll_enabled());
     assert!(ContentLayoutPolicy::main_content_vertical_scroll_enabled());
-    assert!(ContentLayoutPolicy::main_content_horizontal_scroll_enabled());
+    assert!(!ContentLayoutPolicy::main_content_horizontal_scroll_enabled());
     assert_eq!(
         ContentLayoutPolicy::scroll_area_id(),
         "personal_ui_main_content_scroll"
@@ -71,7 +72,7 @@ fn content_layout_policy_keeps_main_content_scrollable_below_fixed_header() {
     assert!(ContentLayoutPolicy::min_action_button_width() >= 112.0);
     assert!(ContentLayoutPolicy::wide_action_button_width() >= 140.0);
     assert!(ContentLayoutPolicy::slider_width() <= 190.0);
-    assert!(ContentLayoutPolicy::max_content_width() >= 1280.0);
+    assert!(ContentLayoutPolicy::max_content_width() >= 1200.0);
     assert!(ContentLayoutPolicy::max_content_width() <= 1320.0);
     assert!(ContentLayoutPolicy::desktop_panel_gap() >= 12.0);
     assert!(ContentLayoutPolicy::wrapped_rows_top_align());
@@ -467,14 +468,20 @@ fn mixer_layout_policy_supports_fader_assignment_editor() {
     assert_eq!(MicLayoutPolicy::panel_gap(), 8.0);
     assert!(MicLayoutPolicy::slider_width() <= 200.0);
 
-    assert!(MixerLayoutPolicy::uses_wrapped_dashboard_panels());
-    assert_eq!(MixerLayoutPolicy::panel_width(), 560.0);
+    assert!(!MixerLayoutPolicy::uses_wrapped_dashboard_panels());
+    assert!(MixerLayoutPolicy::uses_equal_height_within_rows());
+    assert_eq!(MixerLayoutPolicy::panel_width(), 640.0);
+    assert!(MixerLayoutPolicy::top_row_height() > MixerLayoutPolicy::status_row_height());
+    assert!(MixerLayoutPolicy::detail_row_height() > MixerLayoutPolicy::top_row_height());
     assert_eq!(MixerLayoutPolicy::channel_strip_width(), 94.0);
     assert_eq!(MixerLayoutPolicy::channel_strip_height(), 270.0);
     assert_eq!(MixerLayoutPolicy::channel_slider_height(), 190.0);
     assert!(MixerLayoutPolicy::uses_fader_assignment_editor());
     assert!(MixerLayoutPolicy::uses_compact_fader_assignment_cards());
-    assert!(MixerLayoutPolicy::assignment_panel_width() > MixerLayoutPolicy::panel_width());
+    assert_eq!(
+        MixerLayoutPolicy::assignment_panel_width(),
+        MixerLayoutPolicy::panel_width()
+    );
     assert_eq!(MixerLayoutPolicy::assignment_cards_per_row(), 2);
     assert!(
         MixerLayoutPolicy::assignment_card_width() * 2.0 + MixerLayoutPolicy::assignment_card_gap()
@@ -535,6 +542,63 @@ fn fader_assignment_controls_expose_daily_channels_and_mute_targets() {
 }
 
 #[test]
+fn fader_mute_state_controls_expose_direct_mute_unmute_actions() {
+    assert_eq!(MixerLayoutPolicy::fader_mute_state_button_width(), 92.0);
+
+    let controls = FaderMuteStateControl::daily_controls();
+    assert_eq!(controls.len(), 4);
+    assert_eq!(
+        controls
+            .iter()
+            .map(|control| control.fader())
+            .collect::<Vec<_>>(),
+        vec![FaderName::A, FaderName::B, FaderName::C, FaderName::D]
+    );
+    assert_eq!(controls[0].label(), "Fader A state");
+    assert_eq!(controls[0].default_state(), MuteState::Unmuted);
+    assert_eq!(
+        FaderMuteStateControl::daily_states(),
+        vec![
+            MuteState::Unmuted,
+            MuteState::MutedToX,
+            MuteState::MutedToAll
+        ]
+    );
+    assert_eq!(
+        FaderMuteStateControl::state_label(MuteState::Unmuted),
+        "Unmute"
+    );
+    assert_eq!(
+        FaderMuteStateControl::state_label(MuteState::MutedToX),
+        "Mute target"
+    );
+    assert_eq!(
+        FaderMuteStateControl::state_label(MuteState::MutedToAll),
+        "Mute all"
+    );
+    assert_eq!(
+        controls[2].state_command(MuteState::MutedToAll),
+        PersonalCommand::SetFaderMuteState(FaderName::C, MuteState::MutedToAll)
+    );
+    assert!(
+        controls
+            .iter()
+            .all(|control| !control.label().is_empty() && !control.description().is_empty())
+    );
+}
+
+#[test]
+fn fader_mute_state_commands_map_to_backend_commands() {
+    assert!(matches!(
+        goxlr_ipc::GoXLRCommand::from(PersonalCommand::SetFaderMuteState(
+            FaderName::D,
+            MuteState::MutedToX,
+        )),
+        goxlr_ipc::GoXLRCommand::SetFaderMuteState(FaderName::D, MuteState::MutedToX)
+    ));
+}
+
+#[test]
 fn fader_assignment_commands_map_to_backend_commands() {
     assert!(matches!(
         goxlr_ipc::GoXLRCommand::from(
@@ -554,7 +618,10 @@ fn fader_assignment_commands_map_to_backend_commands() {
 #[test]
 fn monitor_mix_controls_expose_safe_output_selector() {
     assert!(MixerLayoutPolicy::uses_monitor_mix_selector());
-    assert_eq!(MixerLayoutPolicy::monitor_mix_panel_width(), 520.0);
+    assert_eq!(
+        MixerLayoutPolicy::monitor_mix_panel_width(),
+        MixerLayoutPolicy::panel_width()
+    );
     assert_eq!(MixerLayoutPolicy::monitor_mix_button_width(), 118.0);
 
     let controls = MonitorMixControl::daily_controls();
@@ -633,6 +700,44 @@ fn submix_controls_expose_safe_daily_channel_actions() {
         controls
             .iter()
             .all(|control| !control.label().is_empty() && !control.description().is_empty())
+    );
+}
+
+#[test]
+fn submix_volume_sliders_expose_arbitrary_percent_commands() {
+    assert_eq!(MixerLayoutPolicy::submix_slider_width(), 220.0);
+
+    let sliders = SubmixVolumeSlider::daily_sliders();
+    assert_eq!(sliders.len(), 8);
+    assert_eq!(
+        sliders
+            .iter()
+            .map(|slider| slider.channel())
+            .collect::<Vec<_>>(),
+        vec![
+            ChannelName::Mic,
+            ChannelName::Chat,
+            ChannelName::Music,
+            ChannelName::Game,
+            ChannelName::Console,
+            ChannelName::LineIn,
+            ChannelName::System,
+            ChannelName::Sample,
+        ]
+    );
+    assert_eq!(sliders[0].label(), "Mic volume");
+    assert_eq!(sliders[0].range(), 0..=100);
+    assert_eq!(sliders[0].value_from_snapshot(None), 50);
+
+    let snapshot = SubmixChannelSnapshot::new(ChannelName::Mic, "Mic", 191, false, 0.75);
+    assert_eq!(sliders[0].value_from_snapshot(Some(&snapshot)), 74);
+    assert_eq!(
+        sliders[0].command_for_percent(75),
+        PersonalCommand::SetSubMixVolume(ChannelName::Mic, 191)
+    );
+    assert_eq!(
+        sliders[0].command_for_percent(250),
+        PersonalCommand::SetSubMixVolume(ChannelName::Mic, 255)
     );
 }
 
@@ -1786,9 +1891,131 @@ fn headphone_eq_editor_exposes_preamp_and_ten_bands() {
 }
 
 #[test]
+fn headphone_listening_presets_apply_safe_gain_staged_hardware_eq() {
+    assert!(HeadphoneEqLayoutPolicy::uses_listening_presets());
+    assert_eq!(
+        HeadphoneEqLayoutPolicy::preset_panel_width(),
+        HeadphoneEqLayoutPolicy::panel_width()
+    );
+    assert_eq!(HeadphoneEqLayoutPolicy::preset_button_width(), 144.0);
+
+    let presets = HeadphoneListeningPreset::daily_presets();
+    let names = presets
+        .iter()
+        .map(|preset| preset.name())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        names,
+        vec!["Neutral Base", "Music Detail", "Game Imaging", "Night Safe"]
+    );
+    assert!(
+        presets
+            .iter()
+            .all(|preset| !preset.description().is_empty())
+    );
+    assert!(presets.iter().all(|preset| preset.commands().len() >= 16));
+    assert!(presets.iter().all(|preset| {
+        preset
+            .commands()
+            .contains(&PersonalCommand::SetHeadphoneEqEnabled(true))
+    }));
+
+    let music = presets
+        .iter()
+        .find(|preset| preset.name() == "Music Detail")
+        .unwrap();
+    assert!(
+        music
+            .commands()
+            .contains(&PersonalCommand::SetVolume(ChannelName::Headphones, 76))
+    );
+    assert!(
+        music
+            .commands()
+            .contains(&PersonalCommand::SetHeadphoneLimiterThreshold(88))
+    );
+    assert!(
+        music
+            .commands()
+            .contains(&PersonalCommand::SetHeadphoneEqPreamp(-4.0))
+    );
+    assert!(
+        music
+            .commands()
+            .contains(&PersonalCommand::SetHeadphoneEqBandGain(0, 1.5))
+    );
+    assert!(
+        music
+            .commands()
+            .contains(&PersonalCommand::SetHeadphoneEqBandGain(7, 1.5))
+    );
+
+    let game = presets
+        .iter()
+        .find(|preset| preset.name() == "Game Imaging")
+        .unwrap();
+    assert!(
+        game.commands()
+            .contains(&PersonalCommand::SetVolume(ChannelName::Headphones, 74))
+    );
+    assert!(
+        game.commands()
+            .contains(&PersonalCommand::SetHeadphoneEqPreamp(-5.0))
+    );
+    assert!(
+        game.commands()
+            .contains(&PersonalCommand::SetHeadphoneEqBandGain(0, -3.0))
+    );
+    assert!(
+        game.commands()
+            .contains(&PersonalCommand::SetHeadphoneEqBandGain(7, 3.0))
+    );
+    assert!(
+        game.commands()
+            .contains(&PersonalCommand::SetHeadphoneEqBandGain(8, 2.0))
+    );
+
+    let night = presets
+        .iter()
+        .find(|preset| preset.name() == "Night Safe")
+        .unwrap();
+    assert!(night.is_safety_preset());
+    assert!(
+        night
+            .commands()
+            .contains(&PersonalCommand::SetVolume(ChannelName::Headphones, 55))
+    );
+    assert!(
+        night
+            .commands()
+            .contains(&PersonalCommand::SetHeadphoneLimiterThreshold(72))
+    );
+    assert!(
+        night
+            .commands()
+            .contains(&PersonalCommand::SetHeadphoneEqPreamp(-6.0))
+    );
+}
+
+#[test]
+fn headphone_audio_steps_explain_hardware_first_tuning_order() {
+    let steps = HeadphoneAudioStep::recommended_steps();
+    assert_eq!(steps.len(), 5);
+    assert_eq!(steps[0].label(), "1. Route intentionally");
+    assert!(steps[0].description().contains("Headphones"));
+    assert_eq!(steps[1].label(), "2. Gain-stage first");
+    assert!(steps[1].description().contains("preamp"));
+    assert_eq!(steps[4].label(), "5. Save after listening");
+    assert!(steps.iter().all(|step| !step.description().is_empty()));
+}
+
+#[test]
 fn headphone_eq_profile_actions_are_guarded_daily_workflows() {
     assert!(HeadphoneEqLayoutPolicy::uses_guarded_profile_actions());
-    assert_eq!(HeadphoneEqLayoutPolicy::profile_panel_width(), 420.0);
+    assert_eq!(
+        HeadphoneEqLayoutPolicy::profile_panel_width(),
+        HeadphoneEqLayoutPolicy::panel_width()
+    );
     assert_eq!(HeadphoneEqLayoutPolicy::profile_button_width(), 150.0);
 
     let actions = HeadphoneEqProfileAction::guarded_daily_actions("Personal Phones");

@@ -2,7 +2,7 @@
 
 Scope: practical parity for the personal Rust/egui GoXLR UI in `personal-ui`, not a full clone of every bundled web UI detail. Prioritize controls that are useful during daily desktop use and already have typed `GoXLRCommand` support.
 
-Last updated: 2026-05-02
+Last updated: 2026-05-05
 Branch: `personal-native-ui-safety`
 
 ## Status legend
@@ -33,13 +33,13 @@ Priority: keep stable; only extend if debugging or multiple-device use becomes a
 - [x] Persistent route buttons for active streams.
 - [x] PipeWire/PulseAudio routing helpers for local Linux workflow.
 - [x] Scene-style quick actions for common personal routing/mute states.
-- [~] First-pass fader assignment editor: Mixer dashboard exposes compact Fader A-D cards with assignment buttons for daily channels (Mic, Chat, Music, Game, Console, Line In, System, Sample) plus each fader's daily mute behaviour controls in the same card, backed by typed `SetFader` / `SetFaderMuteFunction` commands; less-used output/monitor assignments, hold/toggle behaviour, and rarer mute targets remain deferred.
-- [~] First-pass fader mute-behaviour editor: Mixer dashboard exposes safe mute-target buttons for All, Stream, Voice Chat, and Phones backed by typed `SetFaderMuteFunction` commands; hold/toggle and less-used mute targets remain pending.
+- [~] First-pass fader assignment editor: Mixer dashboard exposes compact Fader A-D cards with assignment buttons for daily channels (Mic, Chat, Music, Game, Console, Line In, System, Sample), each fader's daily mute behaviour controls, and direct current-state buttons for Unmute / Mute target / Mute all, backed by typed `SetFader`, `SetFaderMuteFunction`, and `SetFaderMuteState` commands; less-used output/monitor assignments, hold/toggle behaviour, and rarer mute targets remain deferred.
+- [~] First-pass fader mute-behaviour editor: Mixer dashboard exposes safe mute-target buttons for All, Stream, Voice Chat, and Phones backed by typed `SetFaderMuteFunction` commands, plus explicit current-state buttons backed by typed `SetFaderMuteState`; hold/toggle and less-used mute targets remain pending.
 - [~] First-pass scribble strip editor: Mixer dashboard exposes Fader A-D hardware strip label, number, icon preset, and invert buttons backed by typed scribble commands; free-text entry and full icon browsing remain deferred.
 - [x] First-pass monitor mix selector: Mixer dashboard exposes safe hardware monitor-source buttons for Headphones, Broadcast, Chat Mic, and Line Out backed by typed `SetMonitorMix` commands.
-- [~] First-pass submix controls: Mixer dashboard exposes safe enable/disable, daily channel volume presets/linking, and output mix A/B routing backed by typed `SetSubMixEnabled`, percent-to-raw `SetSubMixVolume`, `SetSubMixLinked`, and `SetSubMixOutputMix` commands; current daemon-reported channel volume/link state and output mix A/B state are reflected inline when available; arbitrary slider values and exhaustive output coverage remain deferred.
+- [x] First-pass submix controls: Mixer dashboard exposes safe enable/disable, daily channel volume presets/linking, arbitrary 0–100% channel volume sliders, and output mix A/B routing backed by typed `SetSubMixEnabled`, percent-to-raw `SetSubMixVolume`, `SetSubMixLinked`, and `SetSubMixOutputMix` commands; current daemon-reported channel volume/link state and output mix A/B state are reflected inline when available. Exhaustive output coverage remains deferred.
 
-Priority: medium. Daily mute/routing is already useful; fader assignment and scribbles would improve web parity but are less urgent than Lighting or full Effects.
+Priority: low. Daily mute/routing/submix coverage is now strong; remaining Mixer work is mainly true hold/toggle semantics, less-used fader/output edge cases, scribble free-text/icon browsing, and manual-QA/layout polish.
 
 ## 3. Routing
 
@@ -84,7 +84,7 @@ Priority: medium-low after current work. Mic basics are covered; EQ/profile poli
 - [x] Robot detailed controls: enable/style are native, plus arbitrary clamped sliders for low/mid/high gain, frequency, and width bands, waveform, pulse width, threshold, and dry mix backed by typed `SetRobot*` commands.
 - [x] Hard tune detailed controls: enable/style are native, plus arbitrary clamped sliders for amount, rate, and window backed by typed `SetHardTune*` commands; source remains an explicit advanced default button.
 
-Priority: partially implemented. The Effects page now has daily presets plus first-pass detailed sliders/style buttons; future Effects work should only go deeper if the missing advanced DSP parameters matter in day-to-day use.
+Priority: mostly implemented for daily personal use. Effects now has presets, amount/style controls, broad advanced defaults, and arbitrary sliders for the exposed typed DSP families; future work should focus only on guarded preset/file ergonomics or hidden Megaphone parameters if they become a real need.
 
 Implemented Effects detail chunk:
 
@@ -115,7 +115,7 @@ Implemented Effects detail chunk:
 - [x] Layout polish for dense Lighting controls: adaptive quick-theme cards and wrapped editor panel rows reduce the cramped left column, fit the four quick themes at an 800px-wide window, keep card heights consistent, keep animation/editor controls in vertical panel flow instead of skinny one-character wrapped columns, and give long fader/button/sampler style actions fixed widths.
 - [~] Load only lighting from profile: guarded named-slot colour-only load exists on the Lighting page with same-action second-click confirmation, and the page now includes a discovered `.goxlr` browser for guarded per-row lighting-only loads; arbitrary import/rename/location management remains pending.
 
-Priority: mostly implemented for daily personal use. Remaining Lighting work is profile-only loading and deeper per-button polish if the current editor feels too broad or too click-heavy.
+Priority: mostly implemented for daily personal use. Remaining Lighting work is profile/file-location management and targeted UX polish if the current editor feels too broad or click-heavy.
 
 Implemented first Lighting chunk:
 
@@ -144,7 +144,7 @@ Implemented Lighting colour-editor chunk:
 - [x] Sampler reset-on-clear setting.
 - [x] Sampler fade duration setting.
 
-Priority: partially implemented. The native page now covers safe playback/bank controls, workflow settings, conservative trim reset controls, guarded typed-path add/remove sample actions, a simple supported-audio directory browser, daemon-backed live sample slot/index rows, and per-index custom Start/Stop trim sliders. Richer waveform editing, drag/drop, and bulk sample workflows remain deferred.
+Priority: mostly implemented for safe personal workflows. The native page covers playback/bank controls, workflow settings, guarded typed-path add/remove actions, a simple supported-audio directory browser, daemon-backed live sample slot/index rows, and per-index custom Start/Stop trim sliders. Remaining work is richer waveform editing, drag/drop, and bulk sample management.
 
 ## 8. Profiles and persistence
 
@@ -168,6 +168,8 @@ Priority: medium. Useful once daily control pages are stable, but should be impl
 - [x] Lock faders toggle.
 - [x] VOD mode setting.
 - [x] Headphone EQ full editor: dedicated tab with enabled/preamp and ten-band gain/frequency/Q command controls; screenshot-polished into a compact fixed 5x2 equal-height band grid instead of a sparse staggered card flow.
+- [x] Hardware-first headphone listening presets: Headphone EQ page exposes `Neutral Base`, `Music Detail`, `Game Imaging`, and `Night Safe` command bundles that set headphone monitor source, safe volume, limiter enable/threshold, EQ enable/preamp, and ten-band EQ gain/frequency/Q values for practical listening goals beyond original web-app parity.
+- [x] Headphone tuning workflow guidance: Headphone EQ page documents the intended order of route intentionally, gain-stage/preamp first, enable limiter, tune by purpose, and save after real listening.
 - [x] General device/system settings page: first-pass safe daily controls for mute hold duration, cough hold/toggle and target, VC/chat mic coupling, monitor-with-FX, fader lock, VOD mode, and reload settings; the System page also shows a read-only live daemon settings snapshot for the same values. Destructive profile operations remain guarded separately.
 
 Priority: medium-low. Add only settings that solve a current annoyance; avoid building a settings junk drawer too early.
@@ -188,14 +190,19 @@ Priority: medium-low. Add only settings that solve a current annoyance; avoid bu
 
 ## Recommended next choices
 
-1. Manual QA of the newly added Mic EQ, guarded Mic profiles, advanced Effects, Headphone EQ, and Sampler pages.
-   - The current chunks intentionally favor typed safe controls over exhaustive file/profile managers; screenshots/use will reveal the next best polish pass.
+1. Finish production-readiness review, then commit the current combined safe chunk.
+   - Canonical Rust checks and the full personal UI test suite have passed after the dashboard label fix.
+   - `MANUAL_QA.md` now records the current running app session, production-use posture, clippy/audit tool blockers, and the remaining manual screenshot gate.
+   - Do one final hands-on pass through the running app before committing, but avoid stacking more feature work into this already-large verified slice.
 
-2. Fill the remaining file/workflow-heavy gaps only if they become real workflows.
-   - Sampler now has guarded typed-path add/remove actions, a simple audio-file directory browser, and live per-index sample rows; remaining higher-risk work is waveform/drag-drop/bulk editing and free-form profile import/rename/location management.
+2. If continuing polish before commit, keep it strictly screenshot/manual-QA driven.
+   - Effects, Lighting, Mixer, Sampler, Routing, Headphone EQ, System, Diagnostics, and About already have strong daily controls; only adjust layouts or labels that are visibly awkward in the current run.
 
-3. Further Lighting/editor UX tweaks.
-   - Only if manual testing still shows a specific pain point; prefer custom hex inputs or collapsible sections over more preset button spam.
+3. If continuing headphone audio work after commit, prefer measured/listening-driven iteration.
+   - Good candidates: refine the four preset EQ curves after actual listening, add a user-editable “My headphones” slot, or add profile-save reminders tied to the current preset.
+
+4. Keep file/workflow-heavy gaps deferred unless they become real workflows.
+   - Remaining higher-risk work is waveform/drag-drop/bulk sample editing, daemon/journal log tailing, hidden Megaphone profile parameters, and free-form profile import/rename/location management.
 
 Implemented routing matrix chunk:
 

@@ -36,7 +36,32 @@ Pages/features to spot-check manually in the running app:
 | Diagnostics | Connection/status summary and recent app/IPC log. | Page is read-only and does not shell out to journal/system controls. |
 | About | Implemented/partial parity summary. | Summary distinguishes completed daily parity from intentionally deferred full managers/editors. |
 
+## 2026-06-25 11:05 CEST — production-readiness stabilization pass
+
+Local run state:
+
+- Branch: `personal-native-ui-safety`
+- Running binary observed: `target/debug/goxlr-personal-ui`
+- PID observed: `679824`
+- Hermes process session: `proc_27be2ca0cb0c`
+- Stabilization goal: stop adding broad parity features, harden the current combined chunk, and prepare it for commit/manual production use.
+
+Fresh production-readiness checks:
+
+- Full canonical verification was run after the dashboard label fix in this session: formatting, package check, full personal UI tests, system-tray feature check, and whitespace diff check passed with `134` app-model tests passing.
+- Focused ad-hoc verification was also run through a temporary `/tmp/hermes-verify-*` script for the changed `DashboardCopy::active_playback_heading()` behavior; the temporary verifier was removed after passing.
+- `cargo clippy -p goxlr-personal-ui --all-targets --features system-tray -- -D warnings` could not run because the apt-managed Rust toolchain on this machine does not currently include the `cargo clippy` subcommand.
+- `cargo audit` could not run because the `cargo audit` subcommand is not installed.
+- `cargo tree -p goxlr-personal-ui --edges normal --duplicates` was run as a lightweight dependency sanity check; duplicate transitive GUI/Wayland crates exist through upstream `eframe`/`egui`/accessibility stacks and were not changed in this pass.
+
+Production-use posture:
+
+- Device-mutating actions are still routed through typed `PersonalCommand` / `GoXLRCommand` mappings instead of raw command editors.
+- Stateful/destructive profile, preset, lighting-profile, and sample-file actions remain guarded by same-action second-click confirmation.
+- Known intentionally partial areas remain deferred rather than rushed: waveform/drag-drop sample editing, free-form profile import/rename/location management, hidden Megaphone profile parameters, daemon/journal log tailing, and exhaustive fader/scribble edge cases.
+
 Open follow-up items:
 
 - Capture fresh screenshots manually or via a working portal/tool path, then append page-specific visual findings here.
+- Before commit, do one quick hands-on pass through Dashboard, Mixer, Effects, Headphone EQ, Sampler, System, Diagnostics, and About against the running PID above.
 - Keep `PARITY_CHECKLIST.md` at `[~]` for screenshot/manual QA until each major page has fresh visual notes or screenshots after the current local run.
