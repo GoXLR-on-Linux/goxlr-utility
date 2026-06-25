@@ -127,6 +127,12 @@ curl -H "Authorization: Bearer replace-with-a-strong-token" \
 
 This section tracks local source changes made on this machine so context survives restarts.
 
+* Expanded personal UI local production helpers:
+  * Added optional `--autostart` / `--uninstall-autostart` support to `personal-ui/scripts/install-local.sh`, writing a user login entry at `~/.config/autostart/goxlr-personal-ui.desktop`
+  * Added `personal-ui/scripts/smoke-local-install.sh` to verify the installed binary, desktop entry, optional autostart entry, and desktop metadata validation when `desktop-file-validate` is installed
+  * Added `personal-ui/scripts/diagnose-runtime.sh` to surface common installed-runtime blockers such as missing daemon/socket, missing installed binary, and unavailable `pactl` / PipeWire-Pulse routing support
+  * Polished desktop metadata with `GenericName`, `Keywords`, and `X-GNOME-Autostart-enabled` fields while keeping the existing `goxlr-utility` icon
+
 * Started a personal UI local production launcher/install chunk:
   * Added `personal-ui/scripts/install-local.sh` to build the native personal UI with the `system-tray` feature and install it into the current user's `~/.local/bin`
   * The script writes a desktop launcher at `~/.local/share/applications/goxlr-personal-ui.desktop` so the app can be started as `GoXLR Personal Control` from the desktop menu

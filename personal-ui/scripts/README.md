@@ -21,6 +21,24 @@ After installation, launch `GoXLR Personal Control` from the desktop/app launche
 ~/.local/bin/goxlr-personal-ui
 ```
 
+## Start on login
+
+Install or update the app and add a user autostart entry:
+
+```bash
+personal-ui/scripts/install-local.sh --autostart
+```
+
+Remove only the autostart entry:
+
+```bash
+personal-ui/scripts/install-local.sh --uninstall-autostart
+```
+
+The autostart file is written to:
+
+- `~/.config/autostart/goxlr-personal-ui.desktop`
+
 ## Fast reinstall from an existing build
 
 ```bash
@@ -32,6 +50,22 @@ personal-ui/scripts/install-local.sh --no-build
 ```bash
 personal-ui/scripts/install-local.sh --debug
 ```
+
+## Smoke test the local install
+
+```bash
+personal-ui/scripts/smoke-local-install.sh
+```
+
+This checks the installed binary, desktop entry, optional autostart entry, and runs `desktop-file-validate` when it is available on the system.
+
+## Diagnose runtime dependencies
+
+```bash
+personal-ui/scripts/diagnose-runtime.sh
+```
+
+This reports common runtime blockers for the installed personal UI: missing binary, missing GoXLR daemon/socket, missing or unreachable PipeWire/PulseAudio through `pactl`, and whether a personal scene config already exists.
 
 ## Notes
 

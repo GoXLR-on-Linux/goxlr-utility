@@ -78,3 +78,9 @@ Verification:
 - `personal-ui/scripts/install-local.sh` was syntax-checked with `bash -n`.
 - The script completed a release build with `--features system-tray` and installed the binary plus desktop entry.
 - A Python assertion checked that the installed binary exists and is executable, and that the desktop entry contains the expected name, `Exec`, icon, and categories.
+
+Follow-up production helper coverage:
+
+- `install-local.sh` now supports optional `--autostart` and `--uninstall-autostart` modes for `~/.config/autostart/goxlr-personal-ui.desktop`.
+- `smoke-local-install.sh` verifies installed binary, desktop entry, optional autostart entry, and desktop metadata validation when `desktop-file-validate` is available.
+- `diagnose-runtime.sh` reports common runtime blockers: missing installed binary, no known GoXLR IPC socket, missing daemon process, unavailable `pactl` / PipeWire-Pulse routing support, and missing personal scene config.
