@@ -7043,19 +7043,10 @@ pub enum WindowAction {
     MiniSize,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct MiniWindowMode {
     mini: bool,
     always_on_top: bool,
-}
-
-impl Default for MiniWindowMode {
-    fn default() -> Self {
-        Self {
-            mini: false,
-            always_on_top: false,
-        }
-    }
 }
 
 impl MiniWindowMode {
@@ -7189,7 +7180,7 @@ impl TrayMenuModel {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum WorkerEvent {
-    Snapshot(AppSnapshot),
+    Snapshot(Box<AppSnapshot>),
     Error(String),
 }
 
@@ -7347,6 +7338,7 @@ impl PersonalUiApp {
         while let Ok(event) = self.events.try_recv() {
             match event {
                 WorkerEvent::Snapshot(snapshot) => {
+                    let snapshot = *snapshot;
                     let status_line = snapshot.status_line();
                     self.device_selection
                         .sync_available_devices(snapshot.device_serials.clone());
@@ -9180,8 +9172,7 @@ impl PersonalUiApp {
                                 }
                                 if let Some(command) =
                                     target.off_style_command(ButtonColourOffStyle::DimmedColour2)
-                                {
-                                    if ui
+                                    && ui
                                         .add_sized(
                                             egui::vec2(
                                                 ContentLayoutPolicy::wide_action_button_width(),
@@ -9190,9 +9181,8 @@ impl PersonalUiApp {
                                             egui::Button::new("Sampler off: DimmedColour2").small(),
                                         )
                                         .clicked()
-                                    {
-                                        self.send(UiCommand::Send(command));
-                                    }
+                                {
+                                    self.send(UiCommand::Send(command));
                                 }
                             });
                         }
@@ -12134,17 +12124,22 @@ async fn ipc_worker_loop(commands: Receiver<UiCommand>, events: Sender<WorkerEve
 }
 
 pub fn ipc_socket_path_candidates() -> Vec<String> {
-    let mut candidates = vec![ipc_socket_path()];
+    let candidates = vec![ipc_socket_path()];
 
     #[cfg(target_family = "unix")]
     {
+        let mut candidates = candidates;
         let fallback = "/tmp/goxlr.socket".to_string();
         if !candidates.contains(&fallback) {
             candidates.push(fallback);
         }
+        candidates
     }
 
-    candidates
+    #[cfg(not(target_family = "unix"))]
+    {
+        candidates
+    }
 }
 
 async fn connect_ipc() -> Result<IPCClient> {
@@ -12274,17 +12269,16 @@ async fn poll_and_publish(
                             stream_id,
                             sink_name,
                         } = move_command
+                            && let Err(error) = move_audio_stream(stream_id, &sink_name)
                         {
-                            if let Err(error) = move_audio_stream(stream_id, &sink_name) {
-                                let _ = events.send(WorkerEvent::Error(error.to_string()));
-                            }
+                            let _ = events.send(WorkerEvent::Error(error.to_string()));
                         }
                     }
                     snapshot.active_audio_streams = streams;
                 }
                 Err(error) => snapshot.active_audio_error = Some(error.to_string()),
             }
-            let _ = events.send(WorkerEvent::Snapshot(snapshot));
+            let _ = events.send(WorkerEvent::Snapshot(Box::new(snapshot)));
         }
         Err(error) => {
             let _ = events.send(WorkerEvent::Error(error.to_string()));
@@ -12293,10 +12287,10 @@ async fn poll_and_publish(
 }
 
 fn active_serial(status: &DaemonStatus, selected_serial: Option<&str>) -> Result<String> {
-    if let Some(selected) = selected_serial {
-        if status.mixers.contains_key(selected) {
-            return Ok(selected.to_string());
-        }
+    if let Some(selected) = selected_serial
+        && status.mixers.contains_key(selected)
+    {
+        return Ok(selected.to_string());
     }
 
     let mut serials = status.mixers.keys().cloned().collect::<Vec<_>>();

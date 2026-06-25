@@ -13,7 +13,7 @@ goxlr-types = { path = "../types", features = ["serde"] }
 
 eframe = "0.33.2"
 egui = "0.33.2"
-ksni = { version = "0.3.4", default-features = false, features = ["async-io", "blocking"], optional = true }
+ksni = { version = "0.3.5", features = ["blocking"], optional = true }
 anyhow = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

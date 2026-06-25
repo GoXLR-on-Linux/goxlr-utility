@@ -127,6 +127,11 @@ curl -H "Authorization: Bearer replace-with-a-strong-token" \
 
 This section tracks local source changes made on this machine so context survives restarts.
 
+* Fixed CI failures on the personal UI production launcher branch:
+  * Updated the personal UI tray dependency to `ksni` 0.3.5 and switched the feature selection to the crate's default Tokio backend plus `blocking`, avoiding the CI `--all-features` conflict between `tokio` and `async-io`
+  * Addressed Clippy `-D warnings` findings in `personal-ui/src/lib.rs`: derived `MiniWindowMode::Default`, boxed the large `WorkerEvent::Snapshot` variant, collapsed flagged nested conditionals, and removed cross-platform unused mutability from IPC socket candidates
+  * Verified the personal UI package locally with formatting, all-feature package check, full app-model tests, and the system-tray feature check; workspace-wide `cargo check --all-features` remains blocked locally by missing `libclang` for the unrelated `speech-dispatcher-sys` build script
+
 * Expanded personal UI local production helpers:
   * Added optional `--autostart` / `--uninstall-autostart` support to `personal-ui/scripts/install-local.sh`, writing a user login entry at `~/.config/autostart/goxlr-personal-ui.desktop`
   * Added `personal-ui/scripts/smoke-local-install.sh` to verify the installed binary, desktop entry, optional autostart entry, and desktop metadata validation when `desktop-file-validate` is installed
