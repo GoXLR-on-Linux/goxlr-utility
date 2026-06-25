@@ -1703,6 +1703,9 @@ pub struct HeadphoneListeningPreset {
 }
 
 impl HeadphoneListeningPreset {
+    const SAFE_VOLUME_MAX: u8 = 80;
+    const SAFE_LIMITER_THRESHOLD_MAX: u8 = 90;
+
     pub fn daily_presets() -> Vec<Self> {
         vec![
             Self::new(
@@ -1772,6 +1775,16 @@ impl HeadphoneListeningPreset {
     }
     pub fn is_safety_preset(&self) -> bool {
         self.safety_preset
+    }
+    pub fn uses_safe_bounds(&self) -> bool {
+        self.headphone_volume <= Self::SAFE_VOLUME_MAX
+            && self.limiter_threshold <= Self::SAFE_LIMITER_THRESHOLD_MAX
+            && self.preamp_db <= 0.0
+            && self
+                .band_gains
+                .iter()
+                .copied()
+                .all(HeadphoneEqBandControl::gain_is_safe)
     }
     pub fn commands(&self) -> Vec<PersonalCommand> {
         let mut commands = vec![
@@ -1901,6 +1914,13 @@ pub struct HeadphoneEqBandControl {
 }
 
 impl HeadphoneEqBandControl {
+    const MIN_GAIN_DB: f32 = -12.0;
+    const MAX_GAIN_DB: f32 = 12.0;
+    const MIN_FREQUENCY_HZ: f32 = 20.0;
+    const MAX_FREQUENCY_HZ: f32 = 20_000.0;
+    const MIN_Q: f32 = 0.1;
+    const MAX_Q: f32 = 10.0;
+
     pub fn ten_band_editor() -> Vec<Self> {
         [
             ("31 Hz", 31.0),
@@ -1933,14 +1953,38 @@ impl HeadphoneEqBandControl {
     pub fn default_frequency_hz(self) -> f32 {
         self.default_frequency_hz
     }
+    pub fn clamp_gain(gain: f32) -> f32 {
+        if !gain.is_finite() {
+            return 0.0;
+        }
+        gain.clamp(Self::MIN_GAIN_DB, Self::MAX_GAIN_DB)
+    }
+    pub fn clamp_frequency(frequency: f32) -> f32 {
+        if !frequency.is_finite() {
+            return 1000.0;
+        }
+        frequency.clamp(Self::MIN_FREQUENCY_HZ, Self::MAX_FREQUENCY_HZ)
+    }
+    pub fn clamp_q(q: f32) -> f32 {
+        if !q.is_finite() {
+            return 0.9;
+        }
+        q.clamp(Self::MIN_Q, Self::MAX_Q)
+    }
+    pub fn gain_is_safe(gain: f32) -> bool {
+        if !gain.is_finite() {
+            return false;
+        }
+        (Self::MIN_GAIN_DB..=Self::MAX_GAIN_DB).contains(&gain)
+    }
     pub fn gain_command(self, gain: f32) -> PersonalCommand {
-        PersonalCommand::SetHeadphoneEqBandGain(self.index, gain)
+        PersonalCommand::SetHeadphoneEqBandGain(self.index, Self::clamp_gain(gain))
     }
     pub fn frequency_command(self, frequency: f32) -> PersonalCommand {
-        PersonalCommand::SetHeadphoneEqBandFrequency(self.index, frequency)
+        PersonalCommand::SetHeadphoneEqBandFrequency(self.index, Self::clamp_frequency(frequency))
     }
     pub fn q_command(self, q: f32) -> PersonalCommand {
-        PersonalCommand::SetHeadphoneEqBandQ(self.index, q)
+        PersonalCommand::SetHeadphoneEqBandQ(self.index, Self::clamp_q(q))
     }
 }
 

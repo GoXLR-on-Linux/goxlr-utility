@@ -1938,6 +1938,30 @@ fn headphone_eq_editor_exposes_preamp_and_ten_bands() {
         bands[2].q_command(0.9),
         PersonalCommand::SetHeadphoneEqBandQ(2, 0.9)
     );
+    assert_eq!(
+        bands[2].gain_command(99.0),
+        PersonalCommand::SetHeadphoneEqBandGain(2, 12.0)
+    );
+    assert_eq!(
+        bands[2].gain_command(f32::NAN),
+        PersonalCommand::SetHeadphoneEqBandGain(2, 0.0)
+    );
+    assert_eq!(
+        bands[2].frequency_command(5.0),
+        PersonalCommand::SetHeadphoneEqBandFrequency(2, 20.0)
+    );
+    assert_eq!(
+        bands[2].frequency_command(f32::INFINITY),
+        PersonalCommand::SetHeadphoneEqBandFrequency(2, 1000.0)
+    );
+    assert_eq!(
+        bands[2].q_command(99.0),
+        PersonalCommand::SetHeadphoneEqBandQ(2, 10.0)
+    );
+    assert_eq!(
+        bands[2].q_command(f32::NAN),
+        PersonalCommand::SetHeadphoneEqBandQ(2, 0.9)
+    );
     assert!(HeadphoneEqLayoutPolicy::uses_guarded_profile_actions());
 }
 
@@ -1970,6 +1994,11 @@ fn headphone_listening_presets_apply_safe_gain_staged_hardware_eq() {
             .commands()
             .contains(&PersonalCommand::SetHeadphoneEqEnabled(true))
     }));
+    assert!(
+        presets
+            .iter()
+            .all(HeadphoneListeningPreset::uses_safe_bounds)
+    );
 
     let music = presets
         .iter()

@@ -127,6 +127,12 @@ curl -H "Authorization: Bearer replace-with-a-strong-token" \
 
 This section tracks local source changes made on this machine so context survives restarts.
 
+* Hardened headphone EQ/listening preset safety bounds:
+  * Added explicit safe-bound checks for daily headphone listening presets: max headphone volume, max limiter threshold, non-positive EQ preamp, and finite in-range band gains
+  * Clamped headphone EQ band controls for gain, frequency, and Q before they emit backend commands
+  * Sanitized non-finite EQ inputs to conservative defaults instead of forwarding NaN/Infinity into commands
+  * Added focused tests for EQ clamping/sanitization and daily preset safety invariants
+
 * Hardened guarded profile/sample workflows after review:
   * Profile browsers now ignore directories that merely end with a profile suffix and ignore empty profile stems such as `.goxlr`
   * Typed sampler add-file actions now reject blank paths and unsupported extensions, matching the sampler browser's supported audio-file filter
