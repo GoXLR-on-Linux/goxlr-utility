@@ -319,7 +319,7 @@ pub async fn spawn_usb_handler(
                         warn!("Error Received from {}: {}", device.serial(), error);
                     }
                 } else {
-                    warn!("Cannot find registered device with serial: {}", &serial);
+                    warn!("Cannot find registered device with serial: {}", serial);
                 }
             }
             Some(event) = device_state_rx.recv() => {

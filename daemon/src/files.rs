@@ -66,7 +66,7 @@ impl FileManager {
     pub fn create_paths(paths: &FilePaths) {
         if !paths.profiles.exists() {
             if let Err(e) = create_path(&paths.profiles) {
-                warn!("Unable to Create Path: {:?}, {}", &paths.profiles, e);
+                warn!("Unable to Create Path: {:?}, {}", paths.profiles, e);
             } else if let Err(e) = extract_defaults(PathTypes::Profiles, &paths.profiles) {
                 warn!("Unable to Extract Default Profiles: {}", e);
             }
@@ -75,7 +75,7 @@ impl FileManager {
         // Microphone Path..
         if !&paths.mic_profiles.exists() {
             if let Err(e) = create_path(&paths.mic_profiles) {
-                warn!("Unable to Create Path: {:?}, {}", &paths.mic_profiles, e);
+                warn!("Unable to Create Path: {:?}, {}", paths.mic_profiles, e);
             } else if let Err(e) = extract_defaults(PathTypes::MicProfiles, &paths.mic_profiles) {
                 warn!("Unable to Extract Default Mic Profiles {}", e);
             }
@@ -84,7 +84,7 @@ impl FileManager {
         // Presets Path..
         if !&paths.presets.exists() {
             if let Err(e) = create_path(&paths.presets) {
-                warn!("Unable to Create Path: {:?}, {}", &paths.presets, e);
+                warn!("Unable to Create Path: {:?}, {}", paths.presets, e);
             } else if let Err(e) = extract_defaults(PathTypes::Presets, &paths.presets) {
                 warn!("Unable to Extract Default Presets: {}", e);
             }
@@ -93,7 +93,7 @@ impl FileManager {
         // Icons..
         if !&paths.icons.exists() {
             if let Err(e) = create_path(&paths.icons) {
-                warn!("Unable to Create Path: {:?}, {}", &paths.icons, e);
+                warn!("Unable to Create Path: {:?}, {}", paths.icons, e);
             } else if let Err(e) = extract_defaults(PathTypes::Icons, &paths.icons) {
                 warn!("Unable to Extract Default Icons: {}", e);
             }
@@ -110,7 +110,7 @@ impl FileManager {
         if !&paths.backups.exists()
             && let Err(e) = create_path(&paths.backups)
         {
-            warn!("Unable to Create Path: {:?}, {}", &paths.backups, e);
+            warn!("Unable to Create Path: {:?}, {}", paths.backups, e);
         }
     }
 
@@ -365,7 +365,7 @@ pub fn create_path(path: &Path) -> Result<()> {
     if !path.exists() {
         // Attempt to create the profile directory..
         if let Err(e) = create_dir_all(path) {
-            Err(e).context(format!("Could not create path {}", &path.to_string_lossy()))?;
+            Err(e).context(format!("Could not create path {}", path.to_string_lossy()))?;
         } else {
             info!("Created Path: {}", path.to_string_lossy());
         }

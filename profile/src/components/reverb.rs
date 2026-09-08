@@ -151,7 +151,7 @@ impl ReverbEncoderBase {
                 continue;
             }
 
-            println!("[ReverbEncoder] Unparsed Child Attribute: {}", &attr.name);
+            println!("[ReverbEncoder] Unparsed Child Attribute: {}", attr.name);
         }
 
         // Ok, we should be able to store this now..

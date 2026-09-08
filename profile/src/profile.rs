@@ -90,7 +90,7 @@ impl Profile {
             fs::remove_file(&tmp_file_name)?;
         }
 
-        debug!("Creating Temporary Save File: {:?}", &tmp_file_name);
+        debug!("Creating Temporary Save File: {:?}", tmp_file_name);
         let temp_file = File::create(&tmp_file_name)?;
 
         // Create a new ZipFile at the requested location
