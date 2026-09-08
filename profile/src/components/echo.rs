@@ -143,7 +143,7 @@ impl EchoEncoderBase {
                 continue;
             }
 
-            println!("[EchoEncoder] Unparsed Child Attribute: {}", &attr.name);
+            println!("[EchoEncoder] Unparsed Child Attribute: {}", attr.name);
         }
 
         self.preset_map[preset_enum] = preset;

@@ -92,7 +92,7 @@ impl RootElement {
         let mut elem = BytesStart::new("AppTree");
 
         let mut attributes: HashMap<String, String> = HashMap::default();
-        attributes.insert("ConnectedDeviceID".to_string(), format!("{}", &self.device));
+        attributes.insert("ConnectedDeviceID".to_string(), format!("{}", self.device));
         for (key, value) in &attributes {
             elem.push_attribute((key.as_str(), value.as_str()));
         }

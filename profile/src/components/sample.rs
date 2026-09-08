@@ -73,7 +73,7 @@ impl SampleBase {
         for attr in attributes {
             if attr.name.ends_with("state") && self.element_name != "sampleClear" {
                 if attr.value != "Empty" && attr.value != "Stopped" {
-                    println!("[Sampler] Unknown State: {}", &attr.value);
+                    println!("[Sampler] Unknown State: {}", attr.value);
                 }
                 self.state.clone_from(&attr.value);
                 continue;

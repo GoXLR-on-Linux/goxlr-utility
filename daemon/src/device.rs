@@ -204,7 +204,7 @@ impl<'a> Device<'a> {
             .await;
 
         debug!("--- DEVICE INFO ---");
-        debug!("Serial: {:?}", &serial);
+        debug!("Serial: {:?}", serial);
         debug!("Firmware: {:?}", hardware.versions.firmware);
         debug!("DICE: {:?}", hardware.versions.dice);
         debug!("Type: {:?}", hardware.device_type);

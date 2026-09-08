@@ -74,7 +74,7 @@ impl ColourMap {
     }
 
     pub fn read_colours(&mut self, attribute: &Attribute) -> Result<bool, ParseError> {
-        let mut attr_key = format!("{}offStyle", &self.prefix);
+        let mut attr_key = format!("{}offStyle", self.prefix);
         if attribute.name == attr_key {
             if attribute.value.is_empty() {
                 self.off_style = ColourOffStyle::Dimmed;
@@ -85,25 +85,25 @@ impl ColourMap {
             return Ok(true);
         }
 
-        attr_key = format!("{}selected", &self.prefix);
+        attr_key = format!("{}selected", self.prefix);
         if attribute.name == attr_key {
             self.selected = Some(u8::from_str(attribute.value.as_str())?);
             return Ok(true);
         }
 
-        attr_key = format!("{}velocity", &self.prefix);
+        attr_key = format!("{}velocity", self.prefix);
         if attribute.name == attr_key {
             self.velocity = Some(i8::from_str(attribute.value.as_str())?);
             return Ok(true);
         }
 
-        attr_key = format!("{}state", &self.prefix);
+        attr_key = format!("{}state", self.prefix);
         if attribute.name == attr_key {
             self.state = Some(ColourState::from_str(&attribute.value)?);
             return Ok(true);
         }
 
-        attr_key = format!("{}blink", &self.prefix);
+        attr_key = format!("{}blink", self.prefix);
         if attribute.name == attr_key {
             self.blink = Some(ColourState::from_str(&attribute.value)?);
             return Ok(true);
@@ -115,7 +115,7 @@ impl ColourMap {
             return Ok(true);
         }
 
-        attr_key = format!("{}colour", &self.prefix);
+        attr_key = format!("{}colour", self.prefix);
         if attribute.name.starts_with(attr_key.as_str()) {
             let color_list = self.colour_list.get_or_insert_with(|| {
                 let mut default = Vec::new();
@@ -137,7 +137,7 @@ impl ColourMap {
             return Ok(true);
         }
 
-        attr_key = format!("{}Display", &self.prefix);
+        attr_key = format!("{}Display", self.prefix);
         if attribute.name == attr_key {
             self.colour_display = Some(ColourDisplay::from_str(&attribute.value)?);
             return Ok(true);
