@@ -110,21 +110,14 @@ impl Player {
     }
 
     pub fn play_loop(&mut self) -> Result<()> {
-        while !self.stopping.load(Ordering::Relaxed) {
-            // Play the Sample..
-            self.play()?;
-
-            // Reload the file for next play..
-            let probe = Player::load_file(&self.file);
-            if probe.is_err() {
-                bail!(probe.err().unwrap());
-            }
-            self.probe = probe.unwrap();
-        }
-        Ok(())
+        self.play_internal(true)
     }
 
     pub fn play(&mut self) -> Result<()> {
+        self.play_internal(false)
+    }
+
+    fn play_internal(&mut self, looping: bool) -> Result<()> {
         let reader = &mut self.probe.format;
 
         // Grab the Track and it's ID
@@ -225,11 +218,33 @@ impl Player {
 
         let mut mono_playback = false;
 
+        // Keep the decoder and output stream alive when looping. Re-opening either at every EOF
+        // leaves the output callback without data and produces an audible gap.
+        let loop_start = first_frame.unwrap_or_default();
+
         // Loop over the input file..
         let result = 'main: loop {
             let packet = match reader.next_packet() {
                 Ok(packet) => packet,
                 Err(err) => {
+                    if looping
+                        && !self.stopping.load(Ordering::Relaxed)
+                        && matches!(&err, Error::IoError(error) if error.kind() == UnexpectedEof)
+                    {
+                        let seek_time = SeekTo::TimeStamp {
+                            ts: loop_start,
+                            track_id,
+                        };
+
+                        match reader.seek(SeekMode::Accurate, seek_time) {
+                            Ok(seeked_to) => {
+                                decoder.reset();
+                                samples_processed = seeked_to.actual_ts * channels as u64;
+                                continue;
+                            }
+                            Err(seek_error) => break Err(seek_error),
+                        }
+                    }
                     break Err(err);
                 }
             };
@@ -345,6 +360,21 @@ impl Player {
                         if let Some(stop_sample) = stop_sample
                             && samples_processed >= stop_sample
                         {
+                            if looping && !self.stopping.load(Ordering::Relaxed) {
+                                let seek_time = SeekTo::TimeStamp {
+                                    ts: loop_start,
+                                    track_id,
+                                };
+
+                                match reader.seek(SeekMode::Accurate, seek_time) {
+                                    Ok(seeked_to) => {
+                                        decoder.reset();
+                                        samples_processed = seeked_to.actual_ts * channels as u64;
+                                        continue 'main;
+                                    }
+                                    Err(error) => break 'main Err(error),
+                                }
+                            }
                             break Ok(());
                         }
 
