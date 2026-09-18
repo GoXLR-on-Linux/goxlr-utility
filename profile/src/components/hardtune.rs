@@ -127,7 +127,7 @@ impl HardtuneEffectBase {
                 continue;
             }
 
-            println!("[HardTuneEffect] Unparsed Child Attribute: {}", &attr.name);
+            println!("[HardTuneEffect] Unparsed Child Attribute: {}", attr.name);
         }
 
         self.preset_map[preset_enum] = preset;

@@ -115,7 +115,7 @@ impl PitchEncoderBase {
                 continue;
             }
 
-            println!("[PitchEncoder] Unparsed Child Attribute: {}", &attr.name);
+            println!("[PitchEncoder] Unparsed Child Attribute: {}", attr.name);
         }
 
         self.preset_map[preset_enum] = preset;

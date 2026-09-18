@@ -98,7 +98,7 @@ impl GenderEncoderBase {
                 continue;
             }
 
-            println!("[GenderEncoder] Unparsed Child Attribute: {}", &attr.name);
+            println!("[GenderEncoder] Unparsed Child Attribute: {}", attr.name);
         }
 
         self.preset_map[preset_enum] = preset;

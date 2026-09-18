@@ -151,7 +151,7 @@ impl MegaphoneEffectBase {
                 preset.trans_drive_pot_gain_comp_max = attr.value.parse::<c_float>()? as u8;
                 continue;
             }
-            println!("[MegaphoneEffect] Unparsed Child Attribute: {}", &attr.name);
+            println!("[MegaphoneEffect] Unparsed Child Attribute: {}", attr.name);
         }
         self.preset_map[preset_enum] = preset;
         Ok(())
