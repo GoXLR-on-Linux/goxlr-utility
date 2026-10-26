@@ -510,6 +510,7 @@ impl<'a> Device<'a> {
                     error!("{}", error);
                 }
                 self.button_states[button].hold_handled = true;
+                state_updated = true;
             }
         }
 
