@@ -510,6 +510,7 @@ impl<'a> Device<'a> {
                     error!("{}", error);
                 }
                 self.button_states[button].hold_handled = true;
+                state_updated = true;
             }
         }
 
@@ -1596,7 +1597,7 @@ impl<'a> Device<'a> {
 
         // When changing the Hard Tune amount, we need to update the pitch encoder..
         let pitch = self.profile.get_pitch_encoder_position();
-        self.goxlr.set_encoder_value(EncoderName::Pitch, pitch)?;
+        self.set_encoder_value(EncoderName::Pitch, pitch)?;
         self.profile.set_pitch_knob_position(pitch)?;
         self.apply_effects(LinkedHashSet::from_iter([EffectKey::PitchAmount]))?;
         Ok(())
@@ -2228,8 +2229,7 @@ impl<'a> Device<'a> {
                     .set_percentage_amount(amount)?;
 
                 let encoder_value = self.profile.get_reverb_value();
-                self.goxlr
-                    .set_encoder_value(EncoderName::Reverb, encoder_value)?;
+                self.set_encoder_value(EncoderName::Reverb, encoder_value)?;
                 self.apply_effects(LinkedHashSet::from_iter([EffectKey::ReverbAmount]))?;
             }
             GoXLRCommand::SetReverbDecay(value) => {
@@ -2307,8 +2307,7 @@ impl<'a> Device<'a> {
                     .set_percentage_value(value)?;
 
                 let encoder_value = self.profile.get_echo_value();
-                self.goxlr
-                    .set_encoder_value(EncoderName::Echo, encoder_value)?;
+                self.set_encoder_value(EncoderName::Echo, encoder_value)?;
 
                 self.apply_effects(LinkedHashSet::from_iter([EffectKey::EchoAmount]))?;
             }
@@ -2369,7 +2368,7 @@ impl<'a> Device<'a> {
                 // Force set the encoder position, when going from Wide -> Narrow, the encoder
                 // will still return it's 'Wide' value during polls which error out otherwise.
                 let value = self.profile.get_pitch_encoder_position();
-                self.goxlr.set_encoder_value(EncoderName::Pitch, value)?;
+                self.set_encoder_value(EncoderName::Pitch, value)?;
 
                 // Update the pitch 'Threshold' value which may have changed..
                 self.apply_effects(LinkedHashSet::from_iter([EffectKey::PitchThreshold]))?;
@@ -2381,7 +2380,7 @@ impl<'a> Device<'a> {
                     .set_knob_position(value, hard_tune_enabled)?;
 
                 let value = self.profile.get_pitch_encoder_position();
-                self.goxlr.set_encoder_value(EncoderName::Pitch, value)?;
+                self.set_encoder_value(EncoderName::Pitch, value)?;
 
                 self.apply_effects(LinkedHashSet::from_iter([EffectKey::PitchAmount]))?;
             }
@@ -2402,7 +2401,7 @@ impl<'a> Device<'a> {
                     .get_active_gender_profile_mut()
                     .set_amount(value)?;
                 let value = self.profile.get_gender_value();
-                self.goxlr.set_encoder_value(EncoderName::Gender, value)?;
+                self.set_encoder_value(EncoderName::Gender, value)?;
                 self.apply_effects(LinkedHashSet::from_iter([EffectKey::GenderAmount]))?;
             }
 
@@ -3911,19 +3910,27 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
+    // Sets an encoder position on the device and updates our cached state. Since the device
+    // doesn't report changes we make, this is the only way to ensure our cached values are never stale.
+    fn set_encoder_value(&mut self, encoder: EncoderName, value: i8) -> Result<()> {
+        self.goxlr.set_encoder_value(encoder, value)?;
+        self.encoder_states[encoder] = value;
+        Ok(())
+    }
+
     fn load_encoder_effects(&mut self) -> Result<()> {
         // For now, we'll simply set the knob positions, more to come!
         let mut value = self.profile.get_pitch_encoder_position();
-        self.goxlr.set_encoder_value(EncoderName::Pitch, value)?;
+        self.set_encoder_value(EncoderName::Pitch, value)?;
 
         value = self.profile.get_echo_value();
-        self.goxlr.set_encoder_value(EncoderName::Echo, value)?;
+        self.set_encoder_value(EncoderName::Echo, value)?;
 
         value = self.profile.get_gender_value();
-        self.goxlr.set_encoder_value(EncoderName::Gender, value)?;
+        self.set_encoder_value(EncoderName::Gender, value)?;
 
         value = self.profile.get_reverb_value();
-        self.goxlr.set_encoder_value(EncoderName::Reverb, value)?;
+        self.set_encoder_value(EncoderName::Reverb, value)?;
 
         Ok(())
     }
