@@ -87,6 +87,7 @@ pub async fn spawn_http_server(
             .service(get_scribble)
             .service(get_path)
             .service(upload_firmware)
+            .configure(crate::voicemeeter::http::configure)
             .default_service(web::to(default))
     })
     .bind((settings.bind_address.clone(), settings.port));

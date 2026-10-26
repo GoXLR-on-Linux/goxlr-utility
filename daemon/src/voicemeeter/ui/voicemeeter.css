@@ -1,0 +1,237 @@
+/* Voicemeeter tab, colours follow the GoXLR Utility UI */
+
+.vm-panel {
+    padding: 24px 40px 40px;
+    color: #fff;
+    font-family: LeagueMonoCondensed, sans-serif;
+    font-size: 10pt;
+    user-select: text;
+}
+
+.vm-panel select,
+.vm-panel input,
+.vm-panel button {
+    font-family: inherit;
+    font-size: inherit;
+}
+
+.vm-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 24px;
+    padding: 12px 16px;
+    margin-bottom: 15px;
+    background-color: #2d3230;
+}
+
+.vm-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.vm-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #c00;
+}
+
+.vm-dot.vm-ok {
+    background-color: #59b1b6;
+    box-shadow: 0 0 5px #59b1b6;
+}
+
+.vm-dot.vm-warn {
+    background-color: #d9a400;
+}
+
+.vm-dirty {
+    color: #f0b400;
+}
+
+.vm-flash {
+    color: #59b1b6;
+}
+
+.vm-spacer {
+    flex: 1;
+}
+
+.vm-field {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.vm-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.vm-groups.vm-disabled {
+    opacity: 0.5;
+}
+
+.vm-group {
+    padding: 8px 24px 24px;
+    background-color: #2d3230;
+}
+
+.vm-title {
+    padding: 16px 0 10px;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.vm-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 4px;
+}
+
+.vm-table th {
+    padding: 4px 8px;
+    color: #ccc;
+    font-weight: normal;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.vm-table td {
+    padding: 4px 8px;
+    background-color: #3b413f;
+    vertical-align: middle;
+}
+
+.vm-table td.vm-center {
+    text-align: center;
+}
+
+.vm-table td.vm-live {
+    white-space: nowrap;
+    color: #ccc;
+    min-width: 110px;
+}
+
+.vm-target {
+    display: flex;
+    gap: 6px;
+}
+
+.vm-panel select,
+.vm-panel input[type="text"],
+.vm-panel input[type="number"] {
+    box-sizing: border-box;
+    padding: 4px 6px;
+    color: #fff;
+    background-color: #252927;
+    border: 1px solid #49514e;
+    border-radius: 0;
+}
+
+.vm-panel select:focus,
+.vm-panel input:focus {
+    outline: none;
+    border-color: #59b1b6;
+}
+
+.vm-panel select:disabled {
+    color: #959796;
+}
+
+.vm-panel select {
+    max-width: 260px;
+}
+
+.vm-panel option,
+.vm-panel optgroup {
+    background-color: #252927;
+    color: #fff;
+}
+
+.vm-panel input[type="checkbox"] {
+    accent-color: #59b1b6;
+}
+
+.vm-number {
+    width: 70px;
+}
+
+.vm-custom {
+    min-width: 180px;
+}
+
+.vm-button {
+    padding: 4px 10px;
+    color: #ccc;
+    background-color: transparent;
+    border: 1px solid #ccc;
+    cursor: pointer;
+}
+
+.vm-button:hover {
+    color: #fff;
+    border-color: #fff;
+}
+
+.vm-button.vm-primary {
+    border-color: #417b80;
+}
+
+.vm-button.vm-primary:hover {
+    border-color: #59b1b6;
+}
+
+.vm-add {
+    margin-top: 8px;
+}
+
+.vm-remove {
+    padding: 2px 8px;
+    color: #ccc;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+}
+
+.vm-remove:hover {
+    color: #ff4040;
+}
+
+.vm-empty {
+    padding: 10px 8px;
+    color: #959796;
+}
+
+.vm-led {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1px solid #959796;
+}
+
+.vm-led.vm-on {
+    background-color: #59b1b6;
+    border-color: #59b1b6;
+    box-shadow: 0 0 4px #59b1b6;
+}
+
+.vm-help {
+    margin-top: 15px;
+    color: #959796;
+    line-height: 1.5;
+}
+
+.vm-help p {
+    margin: 2px 0;
+}
+
+.vm-file {
+    font-family: LeagueMono, monospace;
+    font-size: 9pt;
+}

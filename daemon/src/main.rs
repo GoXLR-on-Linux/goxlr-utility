@@ -54,6 +54,7 @@ mod settings;
 mod shutdown;
 mod tray;
 mod tts;
+mod voicemeeter;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -338,6 +339,14 @@ async fn run_utility() -> Result<()> {
 
     // Wait until the handler is setup
     let _ = ready_rx.await;
+
+    // Voicemeeter Module, wraps the device command channel used by the servers below.
+    let usb_tx = voicemeeter::spawn(
+        usb_tx,
+        broadcast_tx.clone(),
+        settings.clone(),
+        shutdown.clone(),
+    );
 
     // Launch the IPC Server..
     let ipc_socket = ipc_socket?;
